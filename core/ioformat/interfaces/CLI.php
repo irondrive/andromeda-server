@@ -10,7 +10,7 @@ use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php app action [--app:param:type:data]"; }
+class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php app action [--app_type_key data]"; }
 
 class CLI extends IOInterface
 {

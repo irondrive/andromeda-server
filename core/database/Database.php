@@ -16,7 +16,7 @@ class Database {
 
     public function __construct(bool $persistent = true)
     {
-        $this->connection = new PDO(_Config::CONNECT, _Config::USERNAME??null, _Config::PASSWORD??null,
+        $this->connection = new PDO(Config::CONNECT, Config::USERNAME??null, Config::PASSWORD??null,
             array(PDO::ATTR_PERSISTENT => $persistent, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
     }
     
