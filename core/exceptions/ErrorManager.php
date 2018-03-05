@@ -6,7 +6,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
-require_once(ROOT."/core/database/_Config.php"); use Andromeda\Core\Database\_Config;
+require_once(ROOT."/core/database/Config.php"); use Andromeda\Core\Database\Config;
 
 
 class DuplicateHandlerException extends Exceptions\ServerException  { public $message = "DUPLICATE_ERROR_HANDLER_NAME"; }
@@ -138,7 +138,7 @@ class ErrorManager
             {
                 $db = new Database(false);
                 
-                $db->query("INSERT INTO "._CONFIG::PREFIX."core_log_error ($columns) VALUES ($fields)", $data, false);
+                $db->query("INSERT INTO ".CONFIG::PREFIX."core_log_error ($columns) VALUES ($fields)", $data, false);
                 
                 $db->commit();
             }

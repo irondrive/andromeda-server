@@ -5,3 +5,4 @@ apps
 .settings
 combine.sh
 count.sh
+core/database/Config.php

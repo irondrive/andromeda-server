@@ -2,9 +2,9 @@
 
 require_once(ROOT."/core/Server.php"); use Andromeda\Core\Server;
 
-require_once(ROOT."/core/database/_Config.php");
+require_once(ROOT."/core/database/Config.php");
 require_once(ROOT."/core/database/ObjectDatabase.php");
-use Andromeda\Core\Database\{_Config, ObjectDatabase, ObjectNotFoundException};
+use Andromeda\Core\Database\{Config, ObjectDatabase, ObjectNotFoundException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;

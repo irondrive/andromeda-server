@@ -40,7 +40,7 @@ class ObjectDatabase extends Database
     private function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]);
-        return _CONFIG::PREFIX."objects_".strtolower(implode('_',$class));
+        return Config::PREFIX."objects_".strtolower(implode('_',$class));
     }
     
     private function GetJoinTableName(string $class1, string $class2) : string
@@ -50,7 +50,7 @@ class ObjectDatabase extends Database
         
         if ($class1 > $class2) { $swap = $class1; $class1 = $class2; $class2 = $swap; }
         
-        return _CONFIG::PREFIX."joins__".$class1."__".$class2;
+        return Config::PREFIX."joins__".$class1."__".$class2;
     }
     
     private function Rows2Objects($rows, $class, $replace = false) : array
