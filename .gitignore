@@ -1,0 +1,7 @@
+data
+apps
+.project
+.buildpath
+.settings
+combine.sh
+count.sh

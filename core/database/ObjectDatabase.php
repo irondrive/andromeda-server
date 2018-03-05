@@ -1,0 +1,277 @@
+<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
+
+require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+
+class ObjectTypeException extends Exceptions\ServerException            { public $message = "DBOBJECT_TYPE_MISMATCH"; }
+class DuplicateUniqueKeyException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBOBJECT_UNIQUE_VALUES"; }
+class UniqueKeyWithSpacesException extends Exceptions\ServerException   { public $message = "UNIQUE_KEY_LOAD_WITH_SPACE"; }
+
+class ObjectDatabase extends Database
+{
+    private $objects = array(); private $modified = array(); private $uniques = array();
+    
+    public function isModified(BaseObject $obj) : bool { return array_key_exists($obj->ID(), $this->modified); }
+    
+    public function setModified(BaseObject $obj) 
+    { 
+        if (!$this->isModified($obj)) $this->modified[$obj->ID()] = $obj;
+    }
+    
+    private function unsetObject(BaseObject $obj)
+    {
+        unset($this->objects[$obj->ID()]);
+        
+        if ($this->isModified($obj)) unset($this->modified[$obj->ID()]);
+    }
+    
+    public function getLoadedObjects() { return array_keys($this->objects); }
+    
+    public function commit() 
+    {
+        foreach ($this->modified as $object) { $object->Save(); }  
+        
+        parent::commit();
+        
+        $this->modified = array();
+    }
+    
+    private function GetClassTableName(string $class) : string
+    {
+        $class = explode('\\',$class); unset($class[0]);
+        return _CONFIG::PREFIX."objects_".strtolower(implode('_',$class));
+    }
+    
+    private function GetJoinTableName(string $class1, string $class2) : string
+    {
+        $class1 = explode('\\',$class1); unset($class1[0]); $class1 = strtolower(implode('_',$class1));
+        $class2 = explode('\\',$class2); unset($class2[0]); $class2 = strtolower(implode('_',$class2));
+        
+        if ($class1 > $class2) { $swap = $class1; $class1 = $class2; $class2 = $swap; }
+        
+        return _CONFIG::PREFIX."joins__".$class1."__".$class2;
+    }
+    
+    private function Rows2Objects($rows, $class, $replace = false) : array
+    {
+        $output = array(); 
+        
+        foreach ($rows as $row)
+        {
+            $object = new $class($this, $row); $id = $object->ID();
+
+            if (!$replace && in_array($id, array_keys($this->objects)))
+                $output[$id] = $this->objects[$id];
+            
+                else { $output[$id] = $object; $this->objects[$id] = $object; }
+        }       
+        
+        return $output; 
+    }
+    
+    public function LoadObjects(string $class, string $query, array $criteria, $limit = -1) : array
+    {
+        if (array_key_exists('id',$criteria) && in_array($criteria['id'],array_keys($this->objects)))
+        {
+            if (!is_a($this->objects[$criteria['id']],$class)) {
+                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$criteria['id']])); }
+                return array($this->objects[$criteria['id']]);
+        }
+        
+        $loaded = array(); $table = $this->GetClassTableName($class); 
+        
+        $query = "SELECT $table.* FROM $table $query".($limit>-1 ? "LIMIT $limit" : "");
+        
+        $result = $this->query($query, $criteria, true);
+        
+        return $this->Rows2Objects($result, $class, array_key_exists('id',$criteria));
+    }
+    
+    public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
+    {
+        if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
+        
+        $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
+
+        $objects = $this->LoadObjects($class, "WHERE `$field` = :value", array('value'=>$value));
+        
+        if (count($objects) > 1) throw new DuplicateUniqueKeyException("$class: $value");
+        
+        if (count($objects) == 1)
+        {
+            $object = array_values($objects)[0];
+            $this->uniques[$unique] = $object;
+            return $object;
+        }
+        else return null;
+    }
+    
+    public function LoadObjectsMatchingAny(string $class, string $field, array $values, int $limit = -1) : array
+    {
+        if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
+        
+        $criteria_string = ""; $data = array(); $i = 0; 
+        
+        foreach ($values as $value) {
+            $criteria_string .= "`$field` = :dat$i OR ";
+            $data["dat$i"] = $value; $i++;
+        }
+        
+        if ($criteria_string) $criteria_string = substr($criteria_string,0,-4);   
+        
+        $query = ($criteria_string?"WHERE $criteria_string ":"");
+        
+        return $this->LoadObjects($class, $query, $data, $limit);
+    }
+    
+    public function LoadObjectsMatchingAll(string $class, ?array $criteria, int $limit = -1) : array
+    {        
+        $criteria_string = ""; $data = array(); $i = 0; 
+        
+        if ($criteria !== null) foreach (array_keys($criteria) as $key) { 
+            $criteria_string .= "`$key` ".($criteria[$key] !== null ? "= :dat$i" : "IS NULL").' AND   '; 
+            if ($criteria[$key] !== null) $data["dat$i"] = $criteria[$key]; $i++;
+        }; 
+        
+        if ($criteria_string) $criteria_string = substr($criteria_string,0,-7);       
+        
+        $query = ($criteria_string?"WHERE $criteria_string ":"");
+        
+        return $this->LoadObjects($class, $query, $data, $limit);
+    }
+    
+    public function LoadObjectsByJoins(string $myclass, string $joinclass, string $joinid, int $limit = -1) : array
+    {        
+        $jointable = $this->GetJoinTableName($myclass, $joinclass); $mytable = $this->GetClassTableName($myclass);
+        
+        $myfield = explode('\\',$myclass); unset($myfield[0]); $myfield = implode('\\',$myfield);
+        $joinfield = explode('\\',$joinclass); unset($joinfield[0]); $joinfield = implode('\\',$joinfield);
+        
+        $query = "INNER JOIN $jointable ON $jointable.`$myfield` = $mytable.id WHERE $jointable.`$joinfield` = :dat0";
+        
+        return $this->LoadObjects($myclass, $query, array('dat0'=>$joinid), $limit);
+    }
+    
+    public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
+    {
+        $criteria_string = ""; $data = array('id'=>$object->ID()); $i = 0;
+        
+        foreach (array_keys($values) as $key) { 
+            if ($key == 'id') continue;
+            $criteria_string .= "`$key` = :dat$i, ";             
+            $data["dat$i"] = $values[$key]; $i++;
+        }; 
+        
+        foreach (array_keys($counters) as $key) {
+            $criteria_string .= "`$key` = `$key` + :dat$i, ";
+            $data["dat$i"] = $counters[$key]; $i++;
+        }; 
+        
+        if ($criteria_string)
+        {
+            $criteria_string = substr($criteria_string,0,-2);            
+            $table = $this->GetClassTableName($class);            
+            $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
+            $this->query($query, $data, false);
+        }
+        
+        return $object;
+    }
+    
+    public function SaveObjectJoins(string $myclass, string $joinclass, string $myid, array $added, array $deleted)
+    {        
+        $jointable = $this->GetJoinTableName($myclass, $joinclass); 
+        
+        $myfield = explode('\\',$myclass); unset($myfield[0]); $myfield = implode('\\',$myfield);
+        $joinfield = explode('\\',$joinclass); unset($joinfield[0]); $joinfield = implode('\\',$joinfield);
+        
+        $criteria_string = ""; $data = array('myid'=>$myid); $i = 0;
+        
+        foreach ($deleted as $object)
+        {
+            $data["dat$i"] = $object->ID();
+            $criteria_string .= "(`$myfield` = :myid AND `$joinfield` = :dat$i) OR "; $i++;
+        }
+
+        if ($criteria_string)
+        {
+            $criteria_string = substr($criteria_string,0,-4);            
+            $query = "DELETE FROM $jointable WHERE $criteria_string";            
+            $this->query($query, $data, false);           
+        }
+        
+        $criteria_string = ""; $data = array('myid'=>$myid); $i = 0;
+
+        foreach ($added as $object)
+        {
+            $data["dat$i"] = $object->ID();
+            $criteria_string .= "(:myid, :dat$i), "; $i++;
+        }
+        
+        if ($criteria_string)
+        {
+            $criteria_string = substr($criteria_string,0,-2);
+            $query = "INSERT INTO $jointable (`$myfield`, `$joinfield`) VALUES $criteria_string";
+            
+            $this->query($query, $data, false);
+        }
+    }
+    
+    public function CreateObject(string $class, array $input, ?int $idlen = null)
+    {
+        $table = $this->GetClassTableName($class); 
+        
+        $columns_string = ""; $data_string = ""; $data = array(); $i = 0;
+        
+        $input['id'] = Utilities::Random($idlen);
+        
+        foreach (array_keys($input) as $key) {
+            $columns_string .= "`$key`, "; $data_string .= ($input[$key] !== null ? ":dat$i, " : "NULL");
+            if ($input[$key] !== null) $data["dat$i"] = $input[$key]; $i++;
+        }
+        
+        if ($columns_string) $columns_string = substr($columns_string, 0, -2);
+        if ($data_string) $data_string = substr($data_string, 0, -2);
+        
+        $query = "INSERT INTO $table ($columns_string) VALUES ($data_string)";
+
+        $this->query($query, $data, false);
+        
+        return $class::LoadByID($this, $input['id']);
+    }
+    
+    public function DeleteObject(string $class, BaseObject $object) : void
+    {
+        $this->unsetObject($object);
+        
+        $table = $this->GetClassTableName($class); 
+        $this->query("DELETE FROM $table WHERE id=:id",array('id'=>$object->ID()),false);
+    }
+    
+    public function DeleteObjects(string $class, array $objects) : void
+    {
+        if (count($objects) < 1) return;
+        
+        $table = $this->GetClassTableName($class); 
+        
+        $criteria_string = ""; $data = array(); $i = 0;
+        
+        foreach ($objects as $object) {
+            $criteria_string .= "id = :dat$i OR ";
+            $data["dat$i"] = $object->ID(); $i++;            
+            $this->unsetObject($object);
+        }
+        
+        $criteria_string = substr($criteria_string,0,-4);   
+        
+        $this->query("DELETE FROM $table WHERE $criteria_string",$data,false);
+    }
+}
+
+
+
+
+
+
+
