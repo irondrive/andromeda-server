@@ -3,9 +3,10 @@
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require ROOT."/core/libraries/PHPMailer/src/Exception.php"; use PHPMailer\PHPMailer\Exception;
-require ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"; use PHPMailer\PHPMailer\PHPMailer;
-require ROOT."/core/libraries/PHPMailer/src/SMTP.php"; 
+if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) die("Missing library:PHPMailer - git submodule init/update?");
+require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use PHPMailer\PHPMailer\PHPMailer;
+require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php"); use PHPMailer\PHPMailer\Exception;
+require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php"); 
 
 /* TODO - note that this class is mostly a placeholder/demo */
 
