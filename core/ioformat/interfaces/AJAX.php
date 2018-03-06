@@ -10,7 +10,6 @@ use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class NoHtaccessException extends Exceptions\ServerException { public $message = "APACHE_HTACCESS_NOT_ENABLED"; }
 class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
 class InvalidParamException extends Exceptions\Client400Exception { public $message = "INVALID_PARAMETER_FORMAT"; }
 
@@ -27,8 +26,6 @@ class AJAX extends IOInterface
     
     public function GetInput() : Input
     {
-        if (!isset($_SERVER['HTACCESS'])) { throw new NoHtaccessException(); }
-        
         if (empty($_REQUEST['app']) || empty($_REQUEST['action'])) { 
             throw new NoAppActionException(); }
         
