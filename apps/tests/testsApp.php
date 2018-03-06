@@ -19,13 +19,6 @@ class TestsApp extends AppBase
 
         else throw new UnknownActionException();
     }    
-    public function Crash(Input $input) : array
-    {
-        $code =    $input->TryGetParam("code", SafeParam::TYPE_INT) ?? E_USER_ERROR;
-        $message = $input->TryGetParam("message", SafeParam::TYPE_TEXT) ?? "USER_INTENTIONAL_ERROR";
-        
-        trigger_error($message, $code); return array();
-    }
     
     public function TestJSON(Input $input) : array
     {
