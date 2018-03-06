@@ -21,7 +21,8 @@ class AJAX extends IOInterface
     
     public static function isApplicable() : bool
     {
-        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET) && count($_REQUEST) > 0;
+        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET) 
+            && ($_SERVER['REQUEST_SCHEME'] ?? '') == 'http';
     }
     
     public function GetInput() : Input
