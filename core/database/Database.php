@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+if (!class_exists('PDO')) die("PHP PDO Extension Required\n");
+
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class DatabaseReadOnlyException extends Exceptions\Client400Exception { public $message = "READ_ONLY_DATABASE"; }
