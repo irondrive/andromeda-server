@@ -1,4 +1,4 @@
-# Andromeda Server Core 
+# Overview
 
 The Andromeda Server Core is an app-based PHP framework that provides safe input/output handling
 and formatting, error handling and logging, and an object-oriented transactional database abstraction
@@ -154,4 +154,5 @@ Read the Wiki for a more detailed API!
 
 ## License
 
-Andromeda Server Core is licensed under the AGPLv3.  
+Andromeda Server Core including this readme, the wiki, and any documentation are copyrighted by the author.  All rights reserved.
+Use of the Andromeda Server Core and source code is licensed under the AGPLv3.  

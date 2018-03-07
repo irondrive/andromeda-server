@@ -1,12 +1,10 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-if (!class_exists('PDO')) die("PHP PDO Extension Required\n");
+if (!class_exists('PDO')) die("PHP PDO Extension Required\n"); use \PDO;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class DatabaseReadOnlyException extends Exceptions\Client400Exception { public $message = "READ_ONLY_DATABASE"; }
-
-use \PDO;
 
 class Database {
 
@@ -16,10 +14,10 @@ class Database {
     private $count_writes = 0;
     private $query_history = array();
 
-    public function __construct(bool $persistent = true)
+    public function __construct()
     {
-        $this->connection = new PDO(Config::CONNECT, Config::USERNAME??null, Config::PASSWORD??null,
-            array(PDO::ATTR_PERSISTENT => $persistent, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+        $this->connection = new PDO(Config::CONNECT, Config::USERNAME, Config::PASSWORD,
+            array(PDO::ATTR_PERSISTENT => Config::PERSISTENT, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
     }
     
     public function setReadOnly(bool $ro = true) : void { $this->read_only = $ro; }
