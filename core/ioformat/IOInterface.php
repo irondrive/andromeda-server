@@ -5,17 +5,13 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-class UnknownInterfaceException extends Exceptions\Client400Exception  { public $message = "UNKNOWN_INTERFACE"; }
-
 abstract class IOInterface
 {
-    public static function Get() : IOInterface
+    public static function TryGet() : ?IOInterface
     {
         if (Interfaces\AJAX::isApplicable()) return new Interfaces\AJAX();
         else if (Interfaces\CLI::isApplicable()) return new Interfaces\CLI();
-        else { throw new UnknownInterfaceException(); }
+        else return null;
     }
     
     public const MODE_AJAX = 1; public const MODE_CLI = 2;
