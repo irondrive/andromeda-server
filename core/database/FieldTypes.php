@@ -132,7 +132,7 @@ class ObjectRefs
         }
     }
     
-    public function SyncNotifies()
+    private function SyncNotifies()
     {
         foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
         foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
