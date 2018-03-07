@@ -74,7 +74,7 @@ class ObjectRefs
     protected $myclass; protected $myfield; protected $myid;
     protected $refclass; protected $reffield;
     
-    private $joins_added_notify = array(); private $joins_deleted_notify = array();
+    private $refs_added = array(); private $refs_deleted = array();
 
     public function __construct(ObjectDatabase $database, string $myclass, string $myid, string $refclass, string $reffield, string $myfield) 
     {
@@ -106,9 +106,9 @@ class ObjectRefs
     {
         if (!isset($this->objects))
         {
-            if (!in_array($object, $this->joins_added_notify))
+            if (!in_array($object, $this->refs_added))
             {
-                array_push($this->joins_added_notify, $object);
+                array_push($this->refs_added, $object);
             }
         }
         else if (!in_array($object, $this->objects))
@@ -121,9 +121,9 @@ class ObjectRefs
     {
         if (!isset($this->objects))
         {
-            if (!in_array($object, $this->joins_deleted_notify))
+            if (!in_array($object, $this->refs_deleted))
             {
-                array_push($this->joins_deleted_notify, $object);
+                array_push($this->refs_deleted, $object);
             }
         }
         else if (in_array($object, $this->objects))
@@ -134,40 +134,9 @@ class ObjectRefs
     
     public function SyncNotifies()
     {
-        foreach ($this->joins_added_notify as $object) $this->objects[$object->ID()] = $object;
-        foreach ($this->joins_deleted_notify as $object) unset($this->objects[$object->ID()]);
-        $this->joins_added_notify = array(); $this->joins_deleted_notify = array();
-    }
-}
-
-class ObjectJoins extends ObjectRefs
-{
-    private $joins_added_write = array(); private $joins_deleted_write = array();
-    
-    public function GetJoinsAdded() : array { return $this->joins_added_write; }
-    public function GetJoinsDeleted() : array { return $this->joins_deleted_write; }
-    
-    protected function LoadObjects()
-    {
-        $myclass = "Andromeda\\".$this->myclass; $refclass = "Andromeda\\".$this->refclass; 
-        $this->objects = $refclass::LoadManyByJoin($this->database, $myclass, $this->myid);
-        $this->SyncNotifies();
-    }
-    
-    public function AddObject(BaseObject $object, bool $notification)
-    {        
-        if (!$notification && !in_array($object, $this->joins_added_write)) 
-            array_push($this->joins_added_write, $object); 
-        
-        parent::AddObject($object, $notification);
-    }
-    
-    public function RemoveObject(BaseObject $object, bool $notification)
-    {
-        if (!$notification && !in_array($object, $this->joins_deleted_write))
-            array_push($this->joins_deleted_write, $object); 
-        
-        parent::RemoveObject($object, $notification);
+        foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
+        foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
+        $this->refs_added = array(); $this->refs_deleted = array();
     }
 }
 

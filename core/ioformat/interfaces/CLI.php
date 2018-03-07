@@ -25,6 +25,8 @@ class CLI extends IOInterface
     {
         global $argv; $time = microtime(true);
         
+        if (count($argv) > 1 && $argv[1] == '--version') die("Andromeda ".implode(".",VERSION)."\n");
+        
         if (count($argv) < 3) { throw new IncorrectCLIUsageException(); }
         
         $app = $argv[1]; $action = $argv[2]; $params = new SafeParams();
@@ -36,7 +38,7 @@ class CLI extends IOInterface
             $param = explode('_',substr($argv[$i],2),3);
             
             if ($param[0] == 'json') $this->output_json = true;
-            
+
             else if ($param[0] == 'app')
             {
                 if (count($param) != 3 || !isset($argv[$i+1])) { throw new IncorrectCLIUsageException(); }

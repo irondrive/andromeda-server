@@ -43,16 +43,6 @@ class ObjectDatabase extends Database
         return Config::PREFIX."objects_".strtolower(implode('_',$class));
     }
     
-    private function GetJoinTableName(string $class1, string $class2) : string
-    {
-        $class1 = explode('\\',$class1); unset($class1[0]); $class1 = strtolower(implode('_',$class1));
-        $class2 = explode('\\',$class2); unset($class2[0]); $class2 = strtolower(implode('_',$class2));
-        
-        if ($class1 > $class2) { $swap = $class1; $class1 = $class2; $class2 = $swap; }
-        
-        return Config::PREFIX."joins__".$class1."__".$class2;
-    }
-    
     private function Rows2Objects($rows, $class, $replace = false) : array
     {
         $output = array(); 
@@ -64,7 +54,7 @@ class ObjectDatabase extends Database
             if (!$replace && in_array($id, array_keys($this->objects)))
                 $output[$id] = $this->objects[$id];
             
-                else { $output[$id] = $object; $this->objects[$id] = $object; }
+            else { $output[$id] = $object; $this->objects[$id] = $object; }
         }       
         
         return $output; 
@@ -72,11 +62,13 @@ class ObjectDatabase extends Database
     
     public function LoadObjects(string $class, string $query, array $criteria, $limit = -1) : array
     {
-        if (array_key_exists('id',$criteria) && in_array($criteria['id'],array_keys($this->objects)))
+        if (array_key_exists('id',$criteria) && array_key_exists($criteria['id'], $this->objects))
         {
-            if (!is_a($this->objects[$criteria['id']],$class)) {
-                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$criteria['id']])); }
-                return array($this->objects[$criteria['id']]);
+            if (!is_a($this->objects[$criteria['id']],$class)) 
+            {
+                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$criteria['id']])); 
+            }
+            return array($this->objects[$criteria['id']]);
         }
         
         $loaded = array(); $table = $this->GetClassTableName($class); 
@@ -94,7 +86,9 @@ class ObjectDatabase extends Database
         
         $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
 
-        $objects = $this->LoadObjects($class, "WHERE `$field` = :value", array('value'=>$value));
+        $tempkey = ($field == 'id') ? 'id' : 'value';
+
+        $objects = $this->LoadObjects($class, "WHERE `$field` = :$tempkey", array("$tempkey"=>$value));
         
         if (count($objects) > 1) throw new DuplicateUniqueKeyException("$class: $value");
         
@@ -141,18 +135,6 @@ class ObjectDatabase extends Database
         return $this->LoadObjects($class, $query, $data, $limit);
     }
     
-    public function LoadObjectsByJoins(string $myclass, string $joinclass, string $joinid, int $limit = -1) : array
-    {        
-        $jointable = $this->GetJoinTableName($myclass, $joinclass); $mytable = $this->GetClassTableName($myclass);
-        
-        $myfield = explode('\\',$myclass); unset($myfield[0]); $myfield = implode('\\',$myfield);
-        $joinfield = explode('\\',$joinclass); unset($joinfield[0]); $joinfield = implode('\\',$joinfield);
-        
-        $query = "INNER JOIN $jointable ON $jointable.`$myfield` = $mytable.id WHERE $jointable.`$joinfield` = :dat0";
-        
-        return $this->LoadObjects($myclass, $query, array('dat0'=>$joinid), $limit);
-    }
-    
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
     {
         $criteria_string = ""; $data = array('id'=>$object->ID()); $i = 0;
@@ -177,45 +159,6 @@ class ObjectDatabase extends Database
         }
         
         return $object;
-    }
-    
-    public function SaveObjectJoins(string $myclass, string $joinclass, string $myid, array $added, array $deleted)
-    {        
-        $jointable = $this->GetJoinTableName($myclass, $joinclass); 
-        
-        $myfield = explode('\\',$myclass); unset($myfield[0]); $myfield = implode('\\',$myfield);
-        $joinfield = explode('\\',$joinclass); unset($joinfield[0]); $joinfield = implode('\\',$joinfield);
-        
-        $criteria_string = ""; $data = array('myid'=>$myid); $i = 0;
-        
-        foreach ($deleted as $object)
-        {
-            $data["dat$i"] = $object->ID();
-            $criteria_string .= "(`$myfield` = :myid AND `$joinfield` = :dat$i) OR "; $i++;
-        }
-
-        if ($criteria_string)
-        {
-            $criteria_string = substr($criteria_string,0,-4);            
-            $query = "DELETE FROM $jointable WHERE $criteria_string";            
-            $this->query($query, $data, false);           
-        }
-        
-        $criteria_string = ""; $data = array('myid'=>$myid); $i = 0;
-
-        foreach ($added as $object)
-        {
-            $data["dat$i"] = $object->ID();
-            $criteria_string .= "(:myid, :dat$i), "; $i++;
-        }
-        
-        if ($criteria_string)
-        {
-            $criteria_string = substr($criteria_string,0,-2);
-            $query = "INSERT INTO $jointable (`$myfield`, `$joinfield`) VALUES $criteria_string";
-            
-            $this->query($query, $data, false);
-        }
     }
     
     public function CreateObject(string $class, array $input, ?int $idlen = null)
