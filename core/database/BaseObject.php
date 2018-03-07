@@ -36,19 +36,19 @@ abstract class BaseObject
         return self::LoadManyMatchingAll($database, null); 
     }
         
-    public static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : BaseObject 
+    protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : BaseObject 
     {
         $class = static::class; $object = $database->TryLoadObjectByUniqueKey($class, $field, $key);
         if ($object !== null) return $object; else throw new ObjectNotFoundException($class);
     }
         
-    public static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?BaseObject 
+    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?BaseObject 
     {
         if ($key === null) return null;
         $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
     }
 
-    public static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys) : array 
+    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys) : array 
     {
         $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys); 
     }
@@ -58,25 +58,18 @@ abstract class BaseObject
         $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $limit); 
     } 
     
-    public static function LoadManyByJoin(ObjectDatabase $database, string $joinclass, string $joinid, int $limit = -1) : array 
-    {
-        $class = static::class; return $database->LoadObjectsByJoins($class, $joinclass, $joinid, $limit); 
-    }
-    
     public function ID() : string { return $this->scalars['id']->GetValue(); }
     
     protected $scalars = array();
     protected $objects = array();
     protected $objectpolys = array();
     protected $objectrefs = array();
-    protected $objectjoins = array();
-    
+
     protected function ExistsScalar(string $field) : bool { return array_key_exists($field, $this->scalars); }
     protected function ExistsObject(string $field) : bool { return array_key_exists($field, $this->objects); }
     protected function ExistsPolyObject(string $field) : bool  { return array_key_exists($field, $this->objectpolys); }
     protected function ExistsObjectRefs(string $field) : bool  { return array_key_exists($field, $this->objectrefs); }
-    protected function ExistsObjectJoins(string $field) : bool { return array_key_exists($field, $this->objectjoins); }
-    
+
     protected function GetScalar(string $field)
     {
         if (!$this->ExistsScalar($field)) throw new BaseObjectKeyNotFoundException($field);
@@ -122,18 +115,6 @@ abstract class BaseObject
     protected function TryGetObjectRefs(string $field)
     {
         if (!$this->ExistsObjectRefs($field)) return null;
-        return $this->objectrefs[$field]->GetObjects();
-    }
-    
-    protected function GetObjectJoins(string $field)
-    {
-        if (!$this->ExistsObjectJoins($field)) throw new BaseObjectKeyNotFoundException($field);
-        return $this->objectjoins[$field]->GetObjects();
-    }
-    
-    protected function TryGetObjectJoins(string $field)
-    {
-        if (!$this->ExistsObjectJoins($field)) return null;
         return $this->objectrefs[$field]->GetObjects();
     }
     
@@ -238,38 +219,6 @@ abstract class BaseObject
         return $this;
     }
     
-    protected function AddObjectJoin(string $field, BaseObject $object, bool $notification = false)
-    {
-        if (!$this->ExistsObjectJoins($field)) throw new BaseObjectKeyNotFoundException($field);
-        
-        $reffield = $this->objectjoins[$field]->GetRefField();
-        
-        if (!$notification) 
-        {
-            $object->AddObjectJoin($reffield, $this, true);
-            $this->database->setModified($this);
-        }
-        
-        $this->objectjoins[$field]->AddObject($object, $notification);
-        return $this;
-    }
-    
-    protected function RemoveObjectJoin(string $field, BaseObject $object, bool $notification = false)
-    {
-        if (!$this->ExistsObjectJoins($field)) throw new BaseObjectKeyNotFoundException($field);
-         
-        $reffield = $this->objectjoins[$field]->GetRefField();
-        
-        if (!$notification) 
-        {
-            $object->RemoveObjectJoin($reffield, $this, true);
-            $this->database->setModified($this);
-        }
-        
-        $this->objectjoins[$field]->RemoveObject($object, $notification);
-        return $this;
-    }
-    
     public function __construct(ObjectDatabase $database, array $data)
     {
         $this->database = $database;
@@ -306,12 +255,6 @@ abstract class BaseObject
                 {
                     $myfield = $header[0]; $class = $header[2]; $field = $header[3];
                     $this->objectrefs[$key] = new Fields\ObjectRefs($this->database, static::class, $this->ID(), $class, $field, $myfield); 
-                }
-                    
-                else if ($special == "objectjoins" && $count==4)
-                {
-                    $myfield = $header[0]; $class = $header[2]; $field = $header[3]; 
-                    $this->objectjoins[$key] = new Fields\ObjectJoins($this->database, static::class, $this->ID(), $class, $field, $myfield); 
                 }
                     
                 else throw new BaseObjectSpecialColumnException("Class ".static::class." Column $key");
@@ -353,14 +296,6 @@ abstract class BaseObject
             $values[$key] = $value->ToString();
         }
         
-        foreach($this->objectjoins as $join)
-        {
-            $added = $join->GetJoinsAdded(); $deleted = $join->GetJoinsDeleted(); 
-            $refclass = "Andromeda\\".$join->GetRefClass();
-            
-            $this->database->SaveObjectJoins($class, $refclass, $this->ID(), $added, $deleted);
-        }
-        
         return $this->database->SaveObject($class, $this, $values, $counters);
     } 
     
@@ -378,12 +313,6 @@ abstract class BaseObject
         {
             $objects = $refs->GetObjects(); $reffield = $refs->GetRefField();
             foreach ($objects as $object) $object->UnsetObject($reffield);
-        }
-        
-        foreach ($this->objectjoins as $join)
-        {
-            $objects = $join->GetObjects(); $reffield = $join->GetRefField();
-            foreach ($objects as $object) $object->RemoveObjectJoin($reffield, $this);
         }
         
         $this->database->DeleteObject($class, $this);

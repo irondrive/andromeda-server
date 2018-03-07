@@ -1,8 +1,10 @@
-data
-apps
 .project
 .buildpath
 .settings
-combine.sh
-count.sh
+
+data
+apps
+docs
+tools
+
 core/database/Config.php

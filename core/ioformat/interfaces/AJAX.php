@@ -48,7 +48,7 @@ class AJAX extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        header("Content-type: application/json");
+        if (!headers_sent()) header("Content-type: application/json");
         http_response_code($output->GetResponseCode());
         
         try { echo Utilities::JSONEncode($output->GetData()); }
