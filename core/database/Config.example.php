@@ -2,6 +2,9 @@
 
 class Config
 {
-    const CONNECT = "mysql: host=localhost; dbname=Andromeda2";
-    const USERNAME = "root"; const PASSWORD = "password"; const PREFIX = "a2_";
+    const PERSISTENT = false;
+    const CONNECT = "mysql: host=localhost; dbname=Andromeda2"; 
+    const PREFIX = "a2_";
+    const USERNAME = "root"; 
+    const PASSWORD = "password";     
 }
