@@ -181,9 +181,9 @@ abstract class BaseObject
         {   
             $field = Fields\Field::Init($this->database, $this, $key, $data[$key]); $key = $field->GetMyField();
             
-            if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\Scalar'))              $this->scalars[$key] = $field;
-            else if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\ObjectPointer'))  $this->objects[$key] = $field;
-            else if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\ObjectRefs'))     $this->objectrefs[$key] = $field;
+            if ($field instanceof Fields\Scalar)              $this->scalars[$key] = $field;
+            else if ($field instanceof Fields\ObjectPointer)  $this->objects[$key] = $field;
+            else if ($field instanceof Fields\ObjectRefs)     $this->objectrefs[$key] = $field;
         } 
     } 
     
@@ -197,7 +197,7 @@ abstract class BaseObject
             if (!$value->GetDelta()) continue;
             $column = $value->GetColumnName();
             
-            if (is_a($value, 'Andromeda\\Core\\Database\\Fields\\Counter')) 
+            if ($value instanceof Fields\Counter) 
                 $counters[$column] = $value->GetDBValue();
             else $values[$column] = $value->GetDBValue();
         }
