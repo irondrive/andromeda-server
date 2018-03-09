@@ -8,6 +8,7 @@ if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -26,10 +27,12 @@ try
     
     $input = $interface->GetInput();        
     
-    $output = $main->Run($input); 
+    $data = $main->Run($input); 
     
     $main->Commit();    
     
+    $output = Output::Success($data);
+
     if ($main->GetDebug()) $output->SetMetrics($main->GetMetrics());
     
     $interface->WriteOutput($output);

@@ -16,17 +16,16 @@ class ServerApp extends AppBase
         if ($action == 'random')        return $this->Random($input);
         else if ($action == 'version')  return $this->Version($input);
         else if ($action == 'getapps')  return $this->GetApps($input);
+        else if ($action == 'dumpinput') return $this->DumpInput($input);
         
         else throw new UnknownActionException();
     }
     
-    public function Random(Input $input) : array
+    public function Random(Input $input)
     {
         $length = $input->TryGetParam("length", SafeParam::TYPE_INT) ?? Utilities::IDLength;
         
-        $random = Utilities::Random($length);
-        
-        return array('random'=>$random);
+        return Utilities::Random($length);
     }
     
     public function Version(Input $input) { return VERSION; }
