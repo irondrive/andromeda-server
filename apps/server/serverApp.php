@@ -31,5 +31,6 @@ class ServerApp extends AppBase
     
     public function Version(Input $input) { return VERSION; }
     public function GetApps(Input $input) { return $this->API->GetServer()->GetApps(); }
+    public function DumpInput(Input $input) { return print_r($input, true); }
 }
 

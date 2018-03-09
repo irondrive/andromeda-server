@@ -37,10 +37,20 @@ class ObjectDatabase extends Database
         $this->modified = array();
     }
     
-    private function GetClassTableName(string $class) : string
+    public static function GetFullClassName(string $class) : string
+    {
+        return "Andromeda\\$class";
+    }
+    
+    public static function GetShortClassName(string $class)
+    {
+        $class = explode('\\',$class); unset($class[0]); return implode('\\',$class); 
+    }
+    
+    public static function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]);
-        return Config::PREFIX."objects_".strtolower(implode('_',$class));
+        return Config::PREFIX."objects_".strtolower(implode('_', $class));
     }
     
     private function Rows2Objects($rows, $class, $replace = false) : array
@@ -71,7 +81,7 @@ class ObjectDatabase extends Database
             return array($this->objects[$criteria['id']]);
         }
         
-        $loaded = array(); $table = $this->GetClassTableName($class); 
+        $loaded = array(); $table = self::GetClassTableName($class); 
         
         $query = "SELECT $table.* FROM $table $query".($limit>-1 ? "LIMIT $limit" : "");
         
@@ -153,7 +163,7 @@ class ObjectDatabase extends Database
         if ($criteria_string)
         {
             $criteria_string = substr($criteria_string,0,-2);            
-            $table = $this->GetClassTableName($class);            
+            $table = self::GetClassTableName($class);            
             $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
             $this->query($query, $data, false);
         }
@@ -163,7 +173,7 @@ class ObjectDatabase extends Database
     
     public function CreateObject(string $class, array $input, ?int $idlen = null)
     {
-        $table = $this->GetClassTableName($class); 
+        $table = self::GetClassTableName($class); 
         
         $columns_string = ""; $data_string = ""; $data = array(); $i = 0;
         
@@ -188,7 +198,7 @@ class ObjectDatabase extends Database
     {
         $this->unsetObject($object);
         
-        $table = $this->GetClassTableName($class); 
+        $table = self::GetClassTableName($class); 
         $this->query("DELETE FROM $table WHERE id=:id",array('id'=>$object->ID()),false);
     }
     
@@ -196,7 +206,7 @@ class ObjectDatabase extends Database
     {
         if (count($objects) < 1) return;
         
-        $table = $this->GetClassTableName($class); 
+        $table = self::GetClassTableName($class); 
         
         $criteria_string = ""; $data = array(); $i = 0;
         

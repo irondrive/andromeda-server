@@ -34,7 +34,9 @@ can probably be used (with the appropriate driver) but development is targeted a
 
 Andromeda and any app can be used over CLI or through a normal web server.
 
-Every request must include the "app" and "action" parameters, to indicate which app and function to run.  Requests can include additional parameters that are passed along to the app.  App parameters are always strongly typed.
+Every request must include the "app" and "action" parameters, to indicate which app and function to run.  Requests can include additional parameters that are passed along to the app.  App parameters must always specify their type. This strong typing facilitates automatic input filtering before passing to the app.
+### Parameter Types
+`bool int float alphanum text raw email object`
 
 ### CLI Usage
 
@@ -70,32 +72,27 @@ In Linux, you can use `export andromeda_type_key=value` or even add it to your b
 /index.php?app=test&action=test&type_key=value
 ```
 
+App and action must be GET variables, but everything else can be freely interchanged between GET, POST and cookies.
+
 ##### Response
 ```
 {"ok":true,"code":200,"appdata":"yay!"}
 ```
 
-### Parameter Types
-`bool int float alphanum text raw email object`
+### Arrays and Objects 
 
-The strong typing facilitates automatic input filtering before passing to the app.
-
-#### Arrays and Objects 
-
-Arrays and Objects are always given in JSON format. 
+Parameters can be given as arrays and objects, in the JSON format. 
 Any parameter type can be *preceded* by a + to indicate an array.
 Objects must use the ```type_key``` format as their keys.
-
-#### Full Example
 
 The following example specifies an object named "test2" and an integer array named "test1".
 "test2" contains a text "test5" and an object "test3" which contains an int "test4".
 
 ```
-php index.php tests testjson --app_+int_test1 [12,37,56] --app_object_test2 {\"text_test5\":\"yay!\",\"object_test3\":{\"int_test4\":300}}
+php index.php app action --app_+int_test1 [12,37,56] --app_object_test2 {\"text_test5\":\"yay!\",\"object_test3\":{\"int_test4\":300}}
 ```
 
-I recommend using the ```php index.php tests dumpinput``` command to experiment.
+I recommend using the ```php index.php server dumpinput``` command to experiment.
 
 
 
@@ -108,6 +105,8 @@ Check out the Wiki (in progress) for full API documentation, or read the existin
 To create an app called `test`, create a folder `apps/test` and a file `apps/test/testApp.php`
 In the PHP file, declare namespace `Andromeda\\Apps\\Test`, create a class `TestApp` that extends `AppBase` for which you should add a line to require and use.
 At a minimum your class must implement the following method: ```public function Run(Input $input)```.
+
+To activate the app, find the `objects_core_server` table in the database, and add "test" to the JSON array of apps.
 
 #### Minimal Example
 
