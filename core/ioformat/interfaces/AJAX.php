@@ -31,8 +31,8 @@ class AJAX extends IOInterface
         if (empty($_REQUEST['app']) || empty($_REQUEST['action'])) { 
             throw new NoAppActionException(); }
         
-        $app = $_REQUEST['app']; $action = $_REQUEST['action'];    
-        unset($_REQUEST['app']); unset($_REQUEST['action']); unset($_REQUEST['server']);
+        $app = $_GET['app'];        unset($_REQUEST['app']); 
+        $action = $_GET['action'];  unset($_REQUEST['action']);        
         
         $params = new SafeParams();  
         

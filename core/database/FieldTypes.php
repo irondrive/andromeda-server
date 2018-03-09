@@ -3,85 +3,192 @@
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php");use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/BaseObject.php");use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class Scalar
+class BaseObjectSpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
+
+abstract class Field
 {
-    protected $value; protected $delta = 0; const SPECIAL = null;
+    public static function Init(ObjectDatabase $database, BaseObject $me, string $key, $value)
+    {
+        if (strpos($key,'*') === false) return new Scalar($value, $key);
+        
+        else
+        {
+            $header = explode('*',$key); $key = $header[0]; $special = $header[1];
+            
+            if      ($special == "json")    return new JSON($value, $key);
+            else if ($special == "counter") return new Counter($value, $key);
+            
+            else if ($special == "object")     return new ObjectPointer($database, $value, $header);
+            else if ($special == "objectpoly") return new ObjectPolyPointer($database, $value, $header);
+            else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $me);
+            
+            else throw new BaseObjectSpecialColumnException("Class ".static::class." Column $key");
+        }
+    }
     
-    public function __construct($value) { $this->value = $value; }
+    public abstract function GetDBValue();
+    public abstract function GetMyField() : string;
+    public abstract function GetColumnName() : string;
+}
+
+class Scalar extends Field
+{
+    protected $myfield; protected $value; protected $delta = 0; const SPECIAL = null;
+    
+    public function __construct($value, string $myfield) { $this->myfield = $myfield; $this->value = $value; }
+    
     public function GetValue() { return $this->value; }
     public function GetDelta() : int { return $this->delta; }
     
-    public function ToString() { if ($this->value === false) return 0; else return $this->value; }
+    public function GetColumnName() : string
+    {
+        $header = array($this->myfield, self::SPECIAL);
+        return implode('*',array_filter($header));
+    }
     
-    public function SetValue($value) : void { if ($value != $this->value) { $this->delta++; $this->value = $value; } }
+    public function GetMyField() : string { return $this->myfield; }
+    
+    public function GetDBValue() { if ($this->value === false) return 0; else return $this->value; }
+    
+    public function SetValue($value, bool $temp = false) : void 
+    { 
+        if ($value == $this->value) return;
+
+        if (!$temp) $this->delta++; 
+        $this->value = $value; 
+    }
 }
 
 class Counter extends Scalar
 {
     const SPECIAL = "counter";
     public function Delta($delta) : void { $this->value += $delta; $this->delta += $delta; }
-    public function ToString() { return $this->delta; }
+    public function GetDBValue() { return $this->delta; }
 }
 
 class JSON extends Scalar
 {
     const SPECIAL = "json";
-    public function __construct(string $value) { $this->value = Utilities::JSONDecode($value); }
-    public function ToString() : string { return Utilities::JSONEncode($this->value); }
+    
+    public function __construct(string $value, string $myfield) 
+    { 
+        parent::__construct($value, $myfield); 
+        $this->value = Utilities::JSONDecode($value); 
+    }
+    
+    public function GetDBValue() : string { return Utilities::JSONEncode($this->value); }
 }
 
-class ObjectPointer
+class ObjectPointer extends Field
 {
-    private $object; private $pointer; private $delta = 0;
-    private $database; private $refclass; private $reffield;    
-
-    public function __construct(ObjectDatabase $database, ?string $pointer, ?string $refclass, ?string $reffield = null) { 
-        $this->pointer = $pointer; $this->refclass = $refclass; $this->reffield = $reffield; $this->database = $database; }
+    protected $database; protected $object; protected $pointer; protected $delta = 0;
+    protected $myfield; protected $refclass; protected $reffield;      
+    
+    public function __construct(ObjectDatabase $database, $value, array $header)
+    {
+        if (count($header) < 3) throw new BaseObjectSpecialColumnException(implode('*',$header));
+        
+        $this->database = $database; $this->pointer = $value; 
+        $this->myfield = $header[0]; $this->refclass = $header[2]; $this->reffield = $header[3] ?? null;
+    }
     
     public function GetDelta() : int { return $this->delta; }
     public function GetValue() : ?string { return $this->pointer; }
     public function GetPointer() : ?string { return $this->pointer; }
+    public function GetMyField() : string { return $this->myfield; }
     public function GetRefClass() : ?string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
     
-    public function SetObject(?BaseObject $object) : void 
-    { 
-        if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
-        
-        $this->object = $object; $this->delta++; 
+    public function GetDBValue() : ?string { return $this->pointer; }
+    
+    public function GetColumnName() : string
+    {
+        $header = array($this->myfield, "object", $this->refclass, $this->reffield);
+        return implode('*',array_filter($header));
     }
     
-    public function ToString() : ?string { return $this->pointer; }
-    
     public function GetObject() : ?BaseObject
-    { 
+    {
         if ($this->pointer === null) return null;
         
         if (!isset($this->object))
         {
-            $class = "Andromeda\\".$this->refclass;
+            $class = ObjectDatabase::GetFullClassName($this->refclass);
             
             $this->object = $class::LoadByID($this->database, $this->pointer);
-        }        
+        }
         return $this->object;
+    }
+    
+    public function SetObject(?BaseObject $object) : void 
+    { 
+        if ($object === $this->object) return;
+        
+        if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
+        
+        $this->object = $object; $this->delta++; 
     }
 }
 
-class ObjectRefs
+class ObjectPolyPointer extends ObjectPointer
+{
+    public function __construct(ObjectDatabase $database, $value, array $header)
+    {        
+        $this->database = $database;
+        $this->myfield = $header[0]; $this->reffield = $header[2] ?? null;
+        
+        if ($value === null) return;
+        
+        $value = explode('*',$value); $this->pointer = $value[0]; $this->refclass = $value[1];
+    }
+    
+    public function GetDBValue() : ?string { if ($this->pointer === null) return null; else return $this->pointer.'*'.$this->refclass; }
+    
+    public function GetColumnName() : string
+    {
+        $header = array($this->myfield, "objectpoly", $this->reffield);
+        return implode('*',array_filter($header));
+    }
+    
+    public function SetObject(?BaseObject $object) : void
+    {
+        if ($object === $this->object) return;
+        
+        parent::SetObject($object);
+        
+        $refclass = null; if ($object !== null) $refclass = ObjectDatabase::GetShortClassName(get_class($object));   
+        
+        $this->refclass = $refclass;
+    }
+}
+
+class ObjectRefs extends Field
 {
     protected $objects; protected $database;
     protected $myclass; protected $myfield; protected $myid;
     protected $refclass; protected $reffield;
     
-    private $refs_added = array(); private $refs_deleted = array();
-
-    public function __construct(ObjectDatabase $database, string $myclass, string $myid, string $refclass, string $reffield, string $myfield) 
+    protected $refs_added = array(); protected $refs_deleted = array();
+    
+    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $me)
     {
-        $this->database = $database; 
-        $myclass = explode('\\',$myclass); unset($myclass[0]); $this->myclass = implode('\\',$myclass);
-        $this->myfield = $myfield; $this->myid = $myid; 
-        $this->refclass = $refclass; $this->reffield = $reffield; 
+        if (count($header) < 4) throw new BaseObjectSpecialColumnException(implode('*',$header));
+        
+        $this->database = $database;
+        
+        $this->myclass = ObjectDatabase::GetShortClassName(get_class($me));
+        
+        $this->myfield = $header[0]; $this->myid = $me->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
+    }
+    
+    public function GetDBValue() { return null; }
+    
+    public function GetColumnName() : string
+    {
+        $header = array($this->myfield, "objectrefs", $this->refclass, $this->reffield);
+        return implode('*',array_filter($header));
     }
         
     public function GetRefClass() : string { return $this->refclass; }
@@ -97,9 +204,11 @@ class ObjectRefs
     
     protected function LoadObjects()
     {
-        $refclass = "Andromeda\\".$this->refclass; $reffield = $this->reffield."*object*".$this->myclass."*".$this->myfield;
-        $this->objects = $refclass::LoadManyMatchingAll($this->database, array("$reffield"=>$this->myid));        
-        $this->SyncNotifies();
+        $class = ObjectDatabase::GetFullClassName($this->refclass); $reffield = $this->reffield."*object*".$this->myclass."*".$this->myfield;
+        $this->objects = $class::LoadManyMatchingAll($this->database, array("$reffield"=>$this->myid));        
+        foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
+        foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
+        $this->refs_added = array(); $this->refs_deleted = array();
     }
     
     public function AddObject(BaseObject $object, bool $notification)
@@ -130,13 +239,6 @@ class ObjectRefs
         {
             unset($this->objects[$object->ID()]);
         }
-    }
-    
-    private function SyncNotifies()
-    {
-        foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
-        foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
-        $this->refs_added = array(); $this->refs_deleted = array();
     }
 }
 

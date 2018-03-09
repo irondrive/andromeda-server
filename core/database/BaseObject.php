@@ -3,7 +3,6 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class BaseObjectSpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
 class BaseObjectKeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
 class BaseObjectNotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
 class BaseObjectChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
@@ -62,12 +61,10 @@ abstract class BaseObject
     
     protected $scalars = array();
     protected $objects = array();
-    protected $objectpolys = array();
     protected $objectrefs = array();
 
     protected function ExistsScalar(string $field) : bool { return array_key_exists($field, $this->scalars); }
     protected function ExistsObject(string $field) : bool { return array_key_exists($field, $this->objects); }
-    protected function ExistsPolyObject(string $field) : bool  { return array_key_exists($field, $this->objectpolys); }
     protected function ExistsObjectRefs(string $field) : bool  { return array_key_exists($field, $this->objectrefs); }
 
     protected function GetScalar(string $field)
@@ -82,37 +79,25 @@ abstract class BaseObject
         return $this->scalars[$field]->GetValue();
     }
     
-    protected function GetObject(string $field)
+    protected function GetObject(string $field) : BaseObject
     {
         if (!$this->ExistsObject($field)) throw new BaseObjectKeyNotFoundException($field);
         return $this->objects[$field]->GetObject();
     }
     
-    protected function TryGetObject(string $field)
+    protected function TryGetObject(string $field) : ?BaseObject
     {
         if (!$this->ExistsObject($field)) return null;
         return $this->objects[$field]->GetObject();
     }
     
-    protected function GetPolyObject(string $field)
-    {
-        if (!$this->ExistsPolyObject($field)) throw new BaseObjectKeyNotFoundException($field);
-        return $this->objectpolys[$field]->GetObject();
-    }
-    
-    protected function TryGetPolyObject(string $field)
-    {
-        if (!$this->ExistsPolyObject($field)) return null;
-        return $this->objectpolys[$field]->GetObject();
-    }
-    
-    protected function GetObjectRefs(string $field)
+    protected function GetObjectRefs(string $field) : array
     {
         if (!$this->ExistsObjectRefs($field)) throw new BaseObjectKeyNotFoundException($field);
         return $this->objectrefs[$field]->GetObjects();
     }
     
-    protected function TryGetObjectRefs(string $field)
+    protected function TryGetObjectRefs(string $field) : ?array
     {
         if (!$this->ExistsObjectRefs($field)) return null;
         return $this->objectrefs[$field]->GetObjects();
@@ -121,7 +106,7 @@ abstract class BaseObject
     protected function SetScalar(string $field, $value, bool $temp = false)
     {    
         if (!$this->ExistsScalar($field)) throw new BaseObjectKeyNotFoundException($field);
-        $this->scalars[$field]->SetValue($value);
+        $this->scalars[$field]->SetValue($value, $temp);
         if (!$temp) $this->database->setModified($this);
         return $this;
     } 
@@ -153,56 +138,25 @@ abstract class BaseObject
             if ($oldref !== null && $reffield !== null)
                 $oldref->RemoveObjectRef($reffield, $this, true);
                 
-            if ($object !== null && $reffield !== null)
-                $object->AddObjectRef($reffield, $this, true);
+                if ($object !== null && $reffield !== null)
+                    $object->AddObjectRef($reffield, $this, true);
         }
         
         $this->objects[$field]->SetObject($object);
         $this->database->setModified($this);
+
         return $this;
     } 
-    
-    protected function SetPolyObject(string $field, ?BaseObject $object, bool $notification = false)
-    {
-        if (!$this->ExistsPolyObject($field)) throw new BaseObjectKeyNotFoundException($field);
-        if ($object == $this->objectpolys[$field]) return;
-        
-        if (!$notification)
-        {
-            $oldref = $this->objectpolys[$field]->GetObject();
-            $reffield = $this->objectpolys[$field]->GetRefField();
-            
-            if ($oldref !== null && $reffield !== null)
-                $oldref->RemoveObjectRef($reffield, $this, true);
-                
-            if ($object !== null && $reffield !== null)
-                $object->AddObjectRef($reffield, $this, true);
-        }
-        
-        $class = explode("\\",get_class($object)); unset($class[0]); $class = implode("\\",$class);
-        $this->SetScalar("type__$field", $class);
-        
-        $this->objectpolys[$field]->SetObject($object);
-        $this->database->setModified($this);
-        return $this;
-    }
     
     protected function UnsetObject(string $field, bool $notification = false) { 
         return $this->SetObject($field, null, $notification); }
         
-    protected function UnsetPolyObject(string $field, bool $notification = false) { 
-        return $this->SetPolyObject($field, null, $notification); }
-    
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false)
     {
         if (!$this->ExistsObjectRefs($field)) throw new BaseObjectKeyNotFoundException($field);
 
         $reffield = $this->objectrefs[$field]->GetRefField();        
-        if ($reffield !== null) {
-            if (substr($reffield, 0, 1) == "?") 
-                $object->SetPolyObject(substr($reffield, 1), $this, true);
-            else $object->SetObject($reffield, $this, true);
-        }
+        if ($reffield !== null) $object->SetObject($reffield, $this, true);
 
         $this->objectrefs[$field]->AddObject($object, $notification);
         return $this;
@@ -225,41 +179,12 @@ abstract class BaseObject
         
         foreach (array_keys($data) as $key) 
         {   
-            $value = $data[$key];
+            $field = Fields\Field::Init($this->database, $this, $key, $data[$key]); $key = $field->GetMyField();
             
-            if (strpos($key,'*') === false) $this->scalars[$key] = new Fields\Scalar($value);
-            else
-            {
-                $header = explode('*',$key); $key = $header[0]; $special = $header[1]; $count = count($header);
-                
-                if      ($special == "json")    $this->scalars[$key] = new Fields\JSON($value);
-                else if ($special == "counter") $this->scalars[$key] = new Fields\Counter($value);
-                
-                else if ($special == "object" && ($count==3 || $count==4)) 
-                {
-                    $class = $header[2]; $field = ($count==4) ? $header[3] : null;
-                    $this->objects[$key] = new Fields\ObjectPointer($this->database, $value, $class, $field);
-                }
-                
-                else if ($special == "objectpoly" && ($count==2 || $count==3))
-                {              
-                    $typefield = "type__$key"; 
-                    
-                    if ($value && !isset($data[$typefield])) throw new BaseObjectKeyNotFoundException("polyobject type missing: $typefield"); 
-                    
-                    $class = $data[$typefield]; $field = ($count==3) ? $header[2] : null;
-                    $this->objectpolys[$key] = new Fields\ObjectPointer($this->database, $value, $class, $field);
-                }
-                
-                else if ($special == "objectrefs" && $count==4) 
-                {
-                    $myfield = $header[0]; $class = $header[2]; $field = $header[3];
-                    $this->objectrefs[$key] = new Fields\ObjectRefs($this->database, static::class, $this->ID(), $class, $field, $myfield); 
-                }
-                    
-                else throw new BaseObjectSpecialColumnException("Class ".static::class." Column $key");
-            }
-        }        
+            if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\Scalar'))              $this->scalars[$key] = $field;
+            else if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\ObjectPointer'))  $this->objects[$key] = $field;
+            else if (is_a($field, 'Andromeda\\Core\\Database\\Fields\\ObjectRefs'))     $this->objectrefs[$key] = $field;
+        } 
     } 
     
     public function Save() 
@@ -268,32 +193,21 @@ abstract class BaseObject
         
         foreach(array_keys($this->scalars) as $key)
         {
-            $value = $this->scalars[$key]; $special = $value::SPECIAL ?? "";
+            $value = $this->scalars[$key];
             if (!$value->GetDelta()) continue;
-            if ($special) $key .= "*$special";
+            $column = $value->GetColumnName();
             
-            if ($special == "counter") $counters[$key] = $value->ToString();
-            else $values[$key] = $value->ToString();
+            if (is_a($value, 'Andromeda\\Core\\Database\\Fields\\Counter')) 
+                $counters[$column] = $value->GetDBValue();
+            else $values[$column] = $value->GetDBValue();
         }
         
         foreach(array_keys($this->objects) as $key)
         {
             $value = $this->objects[$key]; 
             if (!$value->GetDelta()) continue;
-            $key .= "*object*".$value->GetRefClass();
-            $reffield = $value->GetRefField(); 
-            if ($reffield !== null) $key .= "*$reffield";
-            $values[$key] = $value->ToString();
-        }
-        
-        foreach(array_keys($this->objectpolys) as $key)
-        {
-            $value = $this->objectpolys[$key];
-            if (!$value->GetDelta()) continue;
-            $key .= "*objectpoly";
-            $reffield = $value->GetRefField();
-            if ($reffield !== null) $key .= "*$reffield";
-            $values[$key] = $value->ToString();
+            $column = $value->GetColumnName();
+            $values[$column] = $value->GetDBValue();
         }
         
         return $this->database->SaveObject($class, $this, $values, $counters);
@@ -303,7 +217,7 @@ abstract class BaseObject
     {
         $class = static::class; 
         
-        foreach (array_merge($this->objects, $this->objectpolys) as $field)
+        foreach ($this->objects as $field)
         {
             $object = $field->GetObject(); $reffield = $field->GetRefField();
             if ($reffield !== null) $object->RemoveObjectRef($reffield, $this);
