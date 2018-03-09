@@ -12,7 +12,10 @@ use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
+require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 use Andromeda\Core\IOFormat\{IOInterface,Input,Output};
+use Andromeda\Core\IOFormat\Interfaces\AJAX;
+
 
 class UnknownAppException extends Exceptions\Client400Exception     { public $message = "UNKNOWN_APP"; }
 class MaintenanceException extends Exceptions\Client403Exception    { public $message = "SERVER_DISABLED"; }
@@ -47,7 +50,7 @@ class Main
         if ($this->server->isReadOnly()) $this->database->setReadOnly();    
     }
     
-    public function Run(Input $input) : Output
+    public function Run(Input $input)
     { 
         $prevContext = $this->context; $this->context = $input; 
 
@@ -66,12 +69,21 @@ class Main
         $data = $app_object->Run($input);
         $this->app_time = microtime(true) - $this->app_time;
         
-        $output = Output::Success($data);
-        
         $this->context = $prevContext;
 
-        return $output;
+        return $data;
     }     
+
+    public function RunRemote(string $url, Input $input)
+    {
+        $this->app_time = microtime(true);
+
+        $data = AJAX::RemoteRequest($url, $input);
+
+        $this->app_time = microtime(true) - $this->app_time;
+
+        return Output::Parse($data);
+    }
     
     public function Commit()
     {
