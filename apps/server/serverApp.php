@@ -16,6 +16,7 @@ class ServerApp extends AppBase
         if ($action == 'random')        return $this->Random($input);
         else if ($action == 'version')  return $this->Version($input);
         else if ($action == 'getapps')  return $this->GetApps($input);
+        else if ($action == 'dumpinput') return $this->DumpInput($input);
         
         else throw new UnknownActionException();
     }
