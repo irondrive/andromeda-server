@@ -12,6 +12,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
 class InvalidParamException extends Exceptions\Client400Exception { public $message = "INVALID_PARAMETER_FORMAT"; }
+class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
 class AJAX extends IOInterface
 {    
@@ -56,6 +57,50 @@ class AJAX extends IOInterface
         try { echo Utilities::JSONEncode($output->GetData()); }
         catch (\Andromeda\Core\JSONEncodingException $e) { 
             echo Utilities::JSONEncode(Output::ServerException()->GetData()); }
+    }
+
+    public static function RemoteRequest(string $url, Input $input) : array
+    {
+        $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
+
+        $post = AJAX::EncodeParams($input->GetParams());
+
+        $data = self::HTTPPost($url, $get, $post);
+        if ($data === null) throw new RemoteInvalidException();
+
+        try { return Utilities::JSONDecode($data); }
+        catch (JSONDecodingException $e) { throw new RemoteInvalidException(); }
+    }
+
+    public static function EncodeParams(SafeParams $params) : array
+    {
+        $params = $params->GetAllParams();
+
+        $output = array(); foreach (array_keys($params) as $key)
+        {
+            $param = $params[$key];
+
+            $key = $param->GetTypeString()."_".$key;
+            $value = $param->GetData();
+
+            $output[$key] = $value;
+        }
+
+        return $output;
+    }
+
+    public static function HTTPPost(string $url, array $get, array $post) : ?string
+    {
+        $url .= '?'.http_build_query($get);
+
+        $options = array('http'=>array(
+            'header' => 'Content-type: application/x-www-form-urlencoded\r\n',
+            'method' => 'POST', 'content' => http_build_query($post)
+        ));
+
+        $result = file_get_contents($url, false, stream_context_create($options));
+
+        if ($result === false) return null; else return $result;
     }
 }
 

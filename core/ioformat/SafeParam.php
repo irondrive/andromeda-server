@@ -35,6 +35,8 @@ class SafeParams
             
         return $this->params[$key]->getData();
     }
+
+    public function GetAllParams() { return $this->params; }
     
     public function TryGetParam(string $key, int $type)
     {
@@ -59,29 +61,42 @@ class SafeParam
     const TYPE_RAW      = 6;
     const TYPE_EMAIL    = 7;
     const TYPE_OBJECT   = 8;
+
     const TYPE_ID = self::TYPE_ALPHANUM;
     
     const TYPE_SINGLE = 0;
     const TYPE_ARRAY = 16;
+
+    const TYPE_STRINGS = array(
+        'bool' => self::TYPE_BOOL,
+        'int' => self::TYPE_INT,
+        'float' => self::TYPE_FLOAT,
+        'alphanum' => self::TYPE_ALPHANUM,
+        'text' => self::TYPE_TEXT,
+        'raw' => self::TYPE_RAW,
+        'email' => self::TYPE_EMAIL,
+        'object' => self::TYPE_OBJECT
+    );
     
     public function __construct(string $type, $data)
     {   
         if (strlen($type) > 0 && $type[0] == '+') { 
             $this->type = self::TYPE_ARRAY; $type = substr($type,1); }
         else { $this->type = self::TYPE_SINGLE; }
-        
-        if ($type == 'bool')       $this->type |= self::TYPE_BOOL;
-        else if ($type == 'int')        $this->type |= self::TYPE_INT;
-        else if ($type == 'float')      $this->type |= self::TYPE_FLOAT;
-        else if ($type == 'alphanum')   $this->type |= self::TYPE_ALPHANUM;
-        else if ($type == 'text')       $this->type |= self::TYPE_TEXT;
-        else if ($type == 'raw')        $this->type |= self::TYPE_RAW;
-        else if ($type == 'email')      $this->type |= self::TYPE_EMAIL;
-        else if ($type == 'object')     $this->type |= self::TYPE_OBJECT;
-        
-        else { throw new SafeParamUnknownException($type); }  
+
+        if (array_key_exists($type, self::TYPE_STRINGS))
+        {
+            $this->type |= self::TYPE_STRINGS[$type]; 
+        }
+        else throw new SafeParamUnknownException($type);
         
         $this->data = self::filterData($this->type, $data);       
+    }
+
+    public function GetTypeString() : string
+    {
+        $str = ($this->type >= self::TYPE_ARRAY) ? "+" : "";
+        return $str.array_flip(self::TYPE_STRINGS)[$this->type % self::TYPE_ARRAY];
     }
     
     public static function filterData(int $type, $data)

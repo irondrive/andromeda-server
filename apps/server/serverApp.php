@@ -21,13 +21,11 @@ class ServerApp extends AppBase
         else throw new UnknownActionException();
     }
     
-    public function Random(Input $input) : array
+    public function Random(Input $input)
     {
         $length = $input->TryGetParam("length", SafeParam::TYPE_INT) ?? Utilities::IDLength;
         
-        $random = Utilities::Random($length);
-        
-        return array('random'=>$random);
+        return Utilities::Random($length);
     }
     
     public function Version(Input $input) { return VERSION; }

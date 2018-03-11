@@ -7,6 +7,7 @@ class Input
     public function GetTime() : int { return $this->time; }
     public function GetApp() : string { return $this->app; }
     public function GetAction() : string { return $this->action; }
+    public function GetParams() : SafeParams { return $this->params; }
 
     public function GetParam(string $key, int $type) { 
         return $this->params->GetParam($key, $type); }
