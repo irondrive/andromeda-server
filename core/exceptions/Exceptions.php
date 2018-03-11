@@ -1,6 +1,9 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-class ClientException extends \Exception { public $code = 500; public $message = "UNKNOWN_CLIENT_EXCEPTION"; }
+class ClientException extends \Exception { 
+	public $code = 500; public $message = "UNKNOWN_CLIENT_EXCEPTION"; 
+	public function __construct(?string $message = null) { if ($message !== null) $this->message = $message; }
+}
 
 class Client400Exception extends ClientException { public $code = 400; public $message = "INVALID_REQUEST"; }
 class Client403Exception extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }

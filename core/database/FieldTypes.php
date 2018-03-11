@@ -9,7 +9,7 @@ class BaseObjectSpecialColumnException extends Exceptions\ServerException { publ
 
 abstract class Field
 {
-    public static function Init(ObjectDatabase $database, BaseObject $me, string $key, $value)
+    public static function Init(ObjectDatabase $database, BaseObject $parent, string $key, $value) : Field
     {
         if (strpos($key,'*') === false) return new Scalar($value, $key);
         
@@ -22,7 +22,7 @@ abstract class Field
             
             else if ($special == "object")     return new ObjectPointer($database, $value, $header);
             else if ($special == "objectpoly") return new ObjectPolyPointer($database, $value, $header);
-            else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $me);
+            else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $parent);
             
             else throw new BaseObjectSpecialColumnException("Class ".static::class." Column $key");
         }
@@ -95,10 +95,9 @@ class ObjectPointer extends Field
     }
     
     public function GetDelta() : int { return $this->delta; }
-    public function GetValue() : ?string { return $this->pointer; }
     public function GetPointer() : ?string { return $this->pointer; }
     public function GetMyField() : string { return $this->myfield; }
-    public function GetRefClass() : ?string { return $this->refclass; }
+    public function GetRefClass() : string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
     
     public function GetDBValue() : ?string { return $this->pointer; }
@@ -144,7 +143,11 @@ class ObjectPolyPointer extends ObjectPointer
         $value = explode('*',$value); $this->pointer = $value[0]; $this->refclass = $value[1];
     }
     
-    public function GetDBValue() : ?string { if ($this->pointer === null) return null; else return $this->pointer.'*'.$this->refclass; }
+    public function GetDBValue() : ?string 
+    { 
+        if ($this->pointer === null) return null; 
+        else return $this->pointer.'*'.$this->refclass; 
+    }
     
     public function GetColumnName() : string
     {
@@ -158,9 +161,7 @@ class ObjectPolyPointer extends ObjectPointer
         
         parent::SetObject($object);
         
-        $refclass = null; if ($object !== null) $refclass = ObjectDatabase::GetShortClassName(get_class($object));   
-        
-        $this->refclass = $refclass;
+        $this->refclass = ($object === null) ? null : ObjectDatabase::GetShortClassName(get_class($object));
     }
 }
 
@@ -172,15 +173,15 @@ class ObjectRefs extends Field
     
     protected $refs_added = array(); protected $refs_deleted = array();
     
-    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $me)
+    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $parent)
     {
         if (count($header) < 4) throw new BaseObjectSpecialColumnException(implode('*',$header));
         
         $this->database = $database;
         
-        $this->myclass = ObjectDatabase::GetShortClassName(get_class($me));
+        $this->myclass = ObjectDatabase::GetShortClassName(get_class($parent));
         
-        $this->myfield = $header[0]; $this->myid = $me->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
+        $this->myfield = $header[0]; $this->myid = $parent->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
     }
     
     public function GetDBValue() { return null; }
