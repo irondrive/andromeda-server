@@ -83,7 +83,7 @@ class ObjectDatabase extends Database
         
         $loaded = array(); $table = self::GetClassTableName($class); 
         
-        $query = "SELECT $table.* FROM $table $query".($limit>-1 ? "LIMIT $limit" : "");
+        $query = "SELECT $table.* FROM $table $query".($limit>-1 ? " LIMIT $limit" : "");
         
         $result = $this->query($query, $criteria, true);
         

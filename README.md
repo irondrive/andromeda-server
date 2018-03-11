@@ -100,7 +100,7 @@ I recommend using the ```php index.php server dumpinput``` command to experiment
  
 ## Creating a Simple App
 
-Check out the Wiki (in progress) for full API documentation, or read the existing server and test apps for simple examples.
+Check out the Wiki (in progress) for full API documentation, or read the existing server app for a simple example.
 
 To create an app called `test`, create a folder `apps/test` and a file `apps/test/testApp.php`
 In the PHP file, declare namespace `Andromeda\\Apps\\Test`, create a class `TestApp` that extends `AppBase` for which you should add a line to require and use.

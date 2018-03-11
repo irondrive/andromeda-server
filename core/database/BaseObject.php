@@ -138,8 +138,8 @@ abstract class BaseObject
             if ($oldref !== null && $reffield !== null)
                 $oldref->RemoveObjectRef($reffield, $this, true);
                 
-                if ($object !== null && $reffield !== null)
-                    $object->AddObjectRef($reffield, $this, true);
+            if ($object !== null && $reffield !== null)
+                $object->AddObjectRef($reffield, $this, true);
         }
         
         $this->objects[$field]->SetObject($object);
@@ -220,7 +220,7 @@ abstract class BaseObject
         foreach ($this->objects as $field)
         {
             $object = $field->GetObject(); $reffield = $field->GetRefField();
-            if ($reffield !== null) $object->RemoveObjectRef($reffield, $this);
+            if ($reffield !== null) $object->RemoveObjectRef($reffield, $this, true);
         }
         
         foreach ($this->objectrefs as $refs)

@@ -98,7 +98,7 @@ CREATE TABLE `a2_objects_core_server` (
 --
 
 INSERT INTO `a2_objects_core_server` (`id`, `datadir`, `apps*json`, `dates__created`, `features__debug_http`, `features__debug_log`, `features__debug_file`, `features__read_only`, `features__enabled`, `features__email`, `emailers*objectrefs*Core\Emailer*server`) VALUES
-('zFoHvcNrXTwxrsLm', NULL, '[\"server\",\"tests\"]', 0, 1, 2, 1, 0, 1, 0, NULL);
+('zFoHvcNrXTwxrsLm', NULL, '[\"server\"]', 0, 1, 2, 1, 0, 1, 0, NULL);
 
 --
 -- Indexes for dumped tables
