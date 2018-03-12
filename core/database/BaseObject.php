@@ -3,9 +3,9 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class BaseObjectKeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
-class BaseObjectNotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
-class BaseObjectChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
+class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
+class NotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
+class ChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
 class ObjectNotFoundException extends Exceptions\ServerException        { public $message = "OBJECT_NOT_FOUND"; }
 
 abstract class BaseObject
@@ -69,7 +69,7 @@ abstract class BaseObject
 
     protected function GetScalar(string $field)
     {
-        if (!$this->ExistsScalar($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         return $this->scalars[$field]->GetValue();
     }
     
@@ -81,7 +81,7 @@ abstract class BaseObject
     
     protected function GetObject(string $field) : BaseObject
     {
-        if (!$this->ExistsObject($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         return $this->objects[$field]->GetObject();
     }
     
@@ -93,7 +93,7 @@ abstract class BaseObject
     
     protected function GetObjectRefs(string $field) : array
     {
-        if (!$this->ExistsObjectRefs($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         return $this->objectrefs[$field]->GetObjects();
     }
     
@@ -105,7 +105,7 @@ abstract class BaseObject
     
     protected function SetScalar(string $field, $value, bool $temp = false)
     {    
-        if (!$this->ExistsScalar($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         $this->scalars[$field]->SetValue($value, $temp);
         if (!$temp) $this->database->setModified($this);
         return $this;
@@ -115,10 +115,10 @@ abstract class BaseObject
     {
         if ($delta == 0) return $this;
         
-        if (!$this->ExistsScalar($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         
         if (!($this->scalars[$field] instanceof Fields\Counter))
-            throw new BaseObjectNotCounterException(get_class($this->scalars[$field]));
+            throw new NotCounterException(get_class($this->scalars[$field]));
         
         $this->scalars[$field]->Delta($delta);
         $this->database->setModified($this);
@@ -127,7 +127,7 @@ abstract class BaseObject
     
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false)
     {
-        if (!$this->ExistsObject($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         if ($object == $this->objects[$field]) return;
         
         if (!$notification)
@@ -153,7 +153,7 @@ abstract class BaseObject
         
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false)
     {
-        if (!$this->ExistsObjectRefs($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
         $reffield = $this->objectrefs[$field]->GetRefField();        
         if ($reffield !== null) $object->SetObject($reffield, $this, true);
@@ -164,7 +164,7 @@ abstract class BaseObject
     
     protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false)
     {
-        if (!$this->ExistsObjectRefs($field)) throw new BaseObjectKeyNotFoundException($field);
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         
         $reffield = $this->objectrefs[$field]->GetRefField();
         if ($reffield !== null) $object->UnsetObject($reffield, true);

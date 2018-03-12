@@ -31,9 +31,9 @@ class Main
     public function GetContext() : ?Input { return $this->context; }
     public function GetServer() : ?Server { return $this->server; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
+    public function GetInterface() : IOInterface { return $this->interface; }
     
     private function GetErrorManager() : ErrorManager { return $this->error_manager; }  
-    private function GetInterface() : IOInterface { return $this->interface; }
     
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     {
