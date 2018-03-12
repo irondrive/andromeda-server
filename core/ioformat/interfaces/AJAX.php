@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Utilities.php");
+use Andromeda\Core\Utilities;
 
 require_once(ROOT."/core/ioformat/Input.php"); 
 require_once(ROOT."/core/ioformat/Output.php"); 
@@ -8,7 +9,8 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Exceptions;
+use Andromeda\Core\JSONDecodingException;
 
 class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
 class InvalidParamException extends Exceptions\Client400Exception { public $message = "INVALID_PARAMETER_FORMAT"; }
@@ -20,6 +22,16 @@ class AJAX extends IOInterface
     
     public const DEBUG_ALLOW_GET = true;
     
+    public function getAddress() : string
+    {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+    
+    public function getUserAgent() : string
+    {
+        return $_SERVER['HTTP_USER_AGENT'];
+    }
+  
     public static function isApplicable() : bool
     {
         $scheme = $_SERVER['REQUEST_SCHEME'] ?? '';
@@ -74,7 +86,7 @@ class AJAX extends IOInterface
 
     public static function EncodeParams(SafeParams $params) : array
     {
-        $params = $params->GetAllParams();
+        $params = $params->GetParamsArray();
 
         $output = array(); foreach (array_keys($params) as $key)
         {

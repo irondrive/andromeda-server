@@ -5,7 +5,8 @@ require_once(ROOT."/core/database/ObjectDatabase.php");use Andromeda\Core\Databa
 require_once(ROOT."/core/database/BaseObject.php");use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class BaseObjectSpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
+class SpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
+class TempAlreadyModifiedException extends Exceptions\ServerException { public $message = "SET_TEMP_ALREADY_MODIFIED"; }
 
 abstract class Field
 {
@@ -24,7 +25,7 @@ abstract class Field
             else if ($special == "objectpoly") return new ObjectPolyPointer($database, $value, $header);
             else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $parent);
             
-            else throw new BaseObjectSpecialColumnException("Class ".static::class." Column $key");
+            else throw new SpecialColumnException("Class ".static::class." Column $key");
         }
     }
     
@@ -54,10 +55,16 @@ class Scalar extends Field
     
     public function SetValue($value, bool $temp = false) : void 
     { 
-        if ($value == $this->value) return;
+        if ($value === $this->value) return;
+        if ($temp && $this->delta !== 0) throw new TempAlreadyModifiedException();
 
         if (!$temp) $this->delta++; 
         $this->value = $value; 
+    }
+    
+    public function EraseValue() : void
+    {
+        sodium_memzero($this->value);
     }
 }
 
@@ -88,7 +95,7 @@ class ObjectPointer extends Field
     
     public function __construct(ObjectDatabase $database, $value, array $header)
     {
-        if (count($header) < 3) throw new BaseObjectSpecialColumnException(implode('*',$header));
+        if (count($header) < 3) throw new SpecialColumnException(implode('*',$header));
         
         $this->database = $database; $this->pointer = $value; 
         $this->myfield = $header[0]; $this->refclass = $header[2]; $this->reffield = $header[3] ?? null;
@@ -175,7 +182,7 @@ class ObjectRefs extends Field
     
     public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $parent)
     {
-        if (count($header) < 4) throw new BaseObjectSpecialColumnException(implode('*',$header));
+        if (count($header) < 4) throw new SpecialColumnException(implode('*',$header));
         
         $this->database = $database;
         

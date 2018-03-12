@@ -16,6 +16,16 @@ class CLI extends IOInterface
 {
     public static function GetMode() : int { return IOInterface::MODE_CLI; }
     
+    public function getAddress() : string
+    {
+        return "CLI ".($_SERVER['COMPUTERNAME']??'').':'.($_SERVER['USERNAME']??'');
+    }
+    
+    public function getUserAgent() : string
+    {
+        return "CLI ".($_SERVER['OS']??'');
+    }  
+    
     public static function isApplicable() : bool
     {
         global $argv; return php_sapi_name() === "cli" && isset($argv);

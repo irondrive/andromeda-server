@@ -5,15 +5,17 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 use Andromeda\Core\JSONDecodingException;
 
-class SafeParamInvalidException extends Exceptions\Client400Exception  { public $message = "SAFEPARAM_INVALID_DATA"; }
+class SafeParamException extends Exceptions\Client400Exception { }
 
-class SafeParamUnknownException extends Exceptions\Client400Exception  { 
+class SafeParamInvalidException extends SafeParamException { public $message = "SAFEPARAM_INVALID_DATA"; }
+
+class SafeParamUnknownException extends SafeParamException{ 
     public function __construct(string $type) { $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
     
-class SafeParamKeyMissingException extends Exceptions\Client400Exception {
+class SafeParamKeyMissingException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_KEY_MISSING: $key"; } }
     
-class SafeParamKeyTypeException extends Exceptions\Client400Exception {
+class SafeParamKeyTypeException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_TYPE_MISMATCH: $key"; } }
 
 class SafeParams
@@ -36,7 +38,7 @@ class SafeParams
         return $this->params[$key]->getData();
     }
 
-    public function GetAllParams() { return $this->params; }
+    public function GetParamsArray() { return $this->params; }
     
     public function TryGetParam(string $key, int $type)
     {
@@ -68,14 +70,15 @@ class SafeParam
     const TYPE_ARRAY = 16;
 
     const TYPE_STRINGS = array(
-        'bool' => self::TYPE_BOOL,
-        'int' => self::TYPE_INT,
-        'float' => self::TYPE_FLOAT,
-        'alphanum' => self::TYPE_ALPHANUM,
-        'text' => self::TYPE_TEXT,
-        'raw' => self::TYPE_RAW,
-        'email' => self::TYPE_EMAIL,
-        'object' => self::TYPE_OBJECT
+        'bool'      => self::TYPE_BOOL,
+        'int'       => self::TYPE_INT,
+        'float'     => self::TYPE_FLOAT,
+        'alphanum'  => self::TYPE_ALPHANUM,
+        'text'      => self::TYPE_TEXT,
+        'raw'       => self::TYPE_RAW,
+        'email'     => self::TYPE_EMAIL,
+        'object'    => self::TYPE_OBJECT,
+        'id'        => self::TYPE_ALPHANUM,
     );
     
     public function __construct(string $type, $data)

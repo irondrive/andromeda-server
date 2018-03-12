@@ -18,6 +18,7 @@ class ErrorManager
     private $API; private $error_handlers = array();
     
     const DEBUG_DEFAULT = true;
+    const ALWAYS_FULL_DEBUG = false;
     
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
@@ -66,7 +67,8 @@ class ErrorManager
             
             'time'=>    time(),
             
-            'ipaddr'=>  $_SERVER['REMOTE_ADDR'] ?? 'CLI: '.($_SERVER['COMPUTERNAME']??'').':'.($_SERVER['USERNAME']??''),
+            'ipaddr'=>  isset($this->API) ? $this->API->GetInterface()->getAddress() : "",
+            'agent'=>   isset($this->API) ? $this->API->GetInterface()->getUserAgent() : "",
             
             'code'=>    $e->getCode(), 
             'file'=>    $e->getFile()."(".$e->getLine().")",
@@ -75,40 +77,37 @@ class ErrorManager
             'app'=>     (isset($this->API) && $this->API->GetContext() !== null) ? $this->API->GetContext()->GetApp() : "",
             'action'=>  (isset($this->API) && $this->API->GetContext() !== null) ? $this->API->GetContext()->GetAction() : "",
             
-            'trace_basic'=>"",'trace_full'=>"",'objects'=>"",'queries'=>"",'account'=>"",'client'=>"",
+            'trace_basic'=>"",'trace_full'=>"",'objects'=>"",'queries'=>"",
         );     
         
-        if ($details) $data['details'] = $details;
-        
-        if ((isset($this->API) && $this->API->GetServer() !== null && $this->API->GetServer()->GetDebugLogLevel() >= self::LOG_SENSITIVE) || self::DEBUG_DEFAULT)
+        if ((isset($this->API) && $this->API->GetServer() !== null && $this->API->GetServer()->GetDebugLogLevel() >= self::LOG_SENSITIVE) || self::ALWAYS_FULL_DEBUG)
         {
             $data['trace_basic'] = explode("\n",$e->getTraceAsString());   
             
             $data['objects'] = (isset($this->API) && $this->API->GetDatabase() !== null) ? $this->API->GetDatabase()->getLoadedObjects() : "";
             $data['queries'] = (isset($this->API) && $this->API->GetDatabase() !== null) ? $this->API->GetDatabase()->getHistory() : "";
 
-            $data['account'] = ""; $data['client'] = "";
-            
             $data['trace_full'] = $e->getTrace();
             
             foreach (array_keys($data['trace_full']) as $key)
             {
+                if (!array_key_exists('args', $data['trace_full'][$key])) continue;
                 try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
                 catch (JSONEncodingException $e) {
                     if (function_exists('mb_convert_encoding'))
                         $data['trace_full'][$key]['args'] = mb_convert_encoding(print_r($data['trace_full'][$key]['args'],true),'UTF-8');
-                        else unset($data['trace_full'][$key]['args']); }
-            }   
-        }        
-        
-        if ($asJson)
-        {
-            $data['objects'] = Utilities::JSONEncode($data['objects']);
-            $data['queries'] = Utilities::JSONEncode($data['queries']);
+                    else unset($data['trace_full'][$key]['args']); }
+            }
             
-            try { $data['trace_full'] = Utilities::JSONEncode($data['trace_full']); } 
-            catch (JSONEncodingException $e) { $data['trace_full'] = "TRACE_JSON_ENCODING_FAILURE"; }
-        }
+            if ($asJson)
+            {
+                $data['objects'] = Utilities::JSONEncode($data['objects']);
+                $data['queries'] = Utilities::JSONEncode($data['queries']);
+                
+                try { $data['trace_full'] = Utilities::JSONEncode($data['trace_full']); }
+                catch (JSONEncodingException $e) { $data['trace_full'] = "TRACE_JSON_ENCODING_FAILURE"; }
+            }
+        }        
         
         return $data;
     }   
@@ -120,34 +119,35 @@ class ErrorManager
     }
     
     private function Log(Throwable $e, string $details = "") : void
-    { 
+    {   
+        $data = $this->GetDebugData($e, $details, true);
+        
+        $logdir = $this->API->GetServer() !== null ? $this->API->GetServer()->GetDataDir() : null;
+        
+        $logged = false; if (isset($this->API) && $logdir !== null && $this->API->GetServer()->GetDebugLog2File()) 
+        { $this->Log2File($logdir, Utilities::JSONEncode($data)); $logged = true; }
+            
+        $fields = ""; $columns = "";            
+        foreach (array_keys($data) as $key) { $fields .= ":$key,"; $columns .= "$key,"; }
+        $fields = substr($fields, 0, -1); $columns = substr($columns, 0, -1);
+        
         try 
-        {        
-            $data = $this->GetDebugData($e, $details, true);
+        {
+            $db = new Database(false);
             
-            $logdir = $this->API->GetServer() !== null ? $this->API->GetServer()->GetDataDir() : null;
+            $db->query("INSERT INTO ".CONFIG::PREFIX."core_log_error ($columns) VALUES ($fields)", $data, false);
             
-            if (isset($this->API) && $logdir !== null && $this->API->GetServer()->GetDebugLog2File()) 
-                $this->Log2File($logdir, Utilities::JSONEncode($data));
-                
-            $fields = ""; $columns = "";            
-            foreach (array_keys($data) as $key) { $fields .= ":$key,"; $columns .= "$key,"; }
-            $fields = substr($fields, 0, -1); $columns = substr($columns, 0, -1);
-            
-            try 
+            $db->commit();
+        }
+        catch (Throwable $e) { 
+            if ($logdir !== null) 
             {
-                $db = new Database(false);
-                
-                $db->query("INSERT INTO ".CONFIG::PREFIX."core_log_error ($columns) VALUES ($fields)", $data, false);
-                
-                $db->commit();
+                $this->Log2File($logdir, Utilities::JSONEncode($this->GetDebugData($e))); 
+                if (!$logged) $this->Log2File($logdir, Utilities::JSONEncode($data)); 
             }
-            catch (Throwable $e) { try { if ($logdir !== null) 
-                $this->Log2File($logdir, Utilities::JSONEncode($data)); } catch (Throwable $e) { } }
-            
-            while (($e = $e->getPrevious()) !== null) { $this->Log($e); }
-        } 
-        catch (Throwable $e) { } 
+        }
+        
+        while (($e = $e->getPrevious()) !== null) { $this->Log($e); }
     }   
     
     private function Log2File(string $datadir, string $data) : void

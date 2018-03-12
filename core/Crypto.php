@@ -101,7 +101,7 @@ class CryptoPublic
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($recipient_private, $sender_public);
         $output = sodium_crypto_box_open($message, $nonce, $keypair);
-        sodium_memzero($message); sodium_memzero($nonce); sodium_memzero($recipient_public); sodium_memzero($sender_private);
+        sodium_memzero($message); sodium_memzero($nonce); sodium_memzero($recipient_private); sodium_memzero($sender_public);
         if ($output === false) throw new DecryptionFailedException();
         return $output;
     }

@@ -20,4 +20,7 @@ abstract class IOInterface
     abstract public static function isApplicable() : bool;
     abstract public function GetInput() : Input;
     abstract public function WriteOutput(Output $output);
+    
+    abstract public function getAddress() : string;
+    abstract public function getUserAgent() : string;
 }
