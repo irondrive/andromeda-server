@@ -26,7 +26,7 @@ class Main
 { 
     private $construct_time; private $app_time;
     
-    private $context; private $server; private $database; private $error_manager;  private $interface;
+    private $runs = array(); private $context; private $server; private $database; private $error_manager;  private $interface;
     
     public function GetContext() : ?Input { return $this->context; }
     public function GetServer() : ?Server { return $this->server; }
@@ -52,7 +52,7 @@ class Main
     
     public function Run(Input $input)
     { 
-        $prevContext = $this->context; $this->context = $input; 
+        $prevContext = $this->context; $this->context = $input;
 
         $app = $input->GetApp(); 
         
@@ -65,8 +65,11 @@ class Main
         if (!class_exists($app_class)) throw new FailedAppLoadException();
         
         $this->app_time = microtime(true);
+        
         $app_object = new $app_class($this);        
         $data = $app_object->Run($input);
+        array_push($this->runs, $app_object);
+        
         $this->app_time = microtime(true) - $this->app_time;
         
         $this->context = $prevContext;
@@ -89,6 +92,8 @@ class Main
     {
         $this->database->commit();
         
+        foreach($this->runs as $app) $app->Commit();
+        
         $this->error_manager->ResetErrorHandlers();
     }
     
@@ -103,7 +108,7 @@ class Main
         $metrics = array(
             'total_time' => microtime(true) - $this->construct_time,
             'app_time' => $this->app_time,
-            'memory_usage' => memory_get_peak_usage(),        
+            'peak_memory' => memory_get_peak_usage(),        
             'db_reads' => $this->database->getReads(),
             'db_writes' => $this->database->getWrites(),
             'queries' => $this->database->getHistory(),

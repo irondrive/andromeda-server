@@ -34,9 +34,7 @@ class AJAX extends IOInterface
   
     public static function isApplicable() : bool
     {
-        $scheme = $_SERVER['REQUEST_SCHEME'] ?? '';
-        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET) 
-            && ($scheme=='http' || $scheme=='https');
+        return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
     }
     
     public function GetInput() : Input
@@ -66,9 +64,7 @@ class AJAX extends IOInterface
         if (!headers_sent()) header("Content-type: application/json");
         http_response_code($output->GetResponseCode());
         
-        try { echo Utilities::JSONEncode($output->GetData()); }
-        catch (\Andromeda\Core\JSONEncodingException $e) { 
-            echo Utilities::JSONEncode(Output::ServerException()->GetData()); }
+        echo Utilities::JSONEncode($output->GetData());
     }
 
     public static function RemoteRequest(string $url, Input $input) : array
