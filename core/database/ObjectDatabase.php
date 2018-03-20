@@ -180,7 +180,7 @@ class ObjectDatabase extends Database
         $input['id'] = Utilities::Random($idlen);
         
         foreach (array_keys($input) as $key) {
-            $columns_string .= "`$key`, "; $data_string .= ($input[$key] !== null ? ":dat$i, " : "NULL");
+            $columns_string .= "`$key`, "; $data_string .= ($input[$key] !== null ? ":dat$i, " : "NULL, ");
             if ($input[$key] !== null) $data["dat$i"] = $input[$key]; $i++;
         }
         

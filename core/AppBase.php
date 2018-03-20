@@ -17,4 +17,5 @@ abstract class AppBase
     
     public abstract function Run(Input $input);
     
+    public function Commit() { }
 }

@@ -72,12 +72,7 @@ class CLI extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        if ($this->output_json)
-        {
-            try { echo Utilities::JSONEncode($output->GetData())."\n"; }
-            catch (\Andromeda\Core\JSONEncodingException $e) {
-                echo Utilities::JSONEncode(Output::ServerException()->GetData())."\n"; }
-        }
+        if ($this->output_json) echo Utilities::JSONEncode($output->GetData())."\n";
         else echo print_r($output->GetData(), true)."\n";
         
         $response = $output->GetResponseCode();

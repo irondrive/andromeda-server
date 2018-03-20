@@ -41,10 +41,6 @@ catch (Exceptions\ClientException $e)
 {
     $interface->WriteOutput($error_manager->HandleClientException($e));
 }
-catch (Exceptions\ServerException $e)
-{
-    $interface->WriteOutput($error_manager->HandleServerException($e));
-}
 catch (Throwable $e)
 {
     $interface->WriteOutput($error_manager->HandleThrowable($e));

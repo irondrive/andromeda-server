@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-class ClientException extends \Exception { 
-	public $code = 500; public $message = "UNKNOWN_CLIENT_EXCEPTION"; 
+abstract class ClientException extends \Exception { 
 	public function __construct(?string $message = null) { if ($message !== null) $this->message = $message; }
 }
 
@@ -22,4 +21,7 @@ class PHPException extends ServerException {
             catch (\Throwable $e) { $this->message = "PHP_ERROR"; }
     } }
 
-class NotImplementedException extends ClientException   { public $code = 501; public $message = "NOT_IMPLEMENTED"; }
+class NotImplementedException extends ClientException { 
+    public $code = 501; public $message = "NOT_IMPLEMENTED"; 
+    public function __construct(string $details = "") { $this->message = $this->message.($details?": $details":""); } 
+}

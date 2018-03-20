@@ -36,11 +36,12 @@ abstract class Field
 
 class Scalar extends Field
 {
-    protected $myfield; protected $value; protected $delta = 0; const SPECIAL = null;
+    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0; const SPECIAL = null;
     
-    public function __construct($value, string $myfield) { $this->myfield = $myfield; $this->value = $value; }
+    public function __construct($value, string $myfield) { 
+        $this->myfield = $myfield; $this->tempvalue = $value; $this->realvalue = $value; }
     
-    public function GetValue() { return $this->value; }
+    public function GetValue() { return $this->tempvalue; }
     public function GetDelta() : int { return $this->delta; }
     
     public function GetColumnName() : string
@@ -51,27 +52,37 @@ class Scalar extends Field
     
     public function GetMyField() : string { return $this->myfield; }
     
-    public function GetDBValue() { if ($this->value === false) return 0; else return $this->value; }
+    public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
     
     public function SetValue($value, bool $temp = false) : void 
     { 
-        if ($value === $this->value) return;
-        if ($temp && $this->delta !== 0) throw new TempAlreadyModifiedException();
+        if ($value === $this->tempvalue) return;
 
-        if (!$temp) $this->delta++; 
-        $this->value = $value; 
+        $this->tempvalue = $value;
+        
+        if (!$temp)
+        {
+            $this->realvalue = $value;
+            $this->delta++;
+        }
     }
     
     public function EraseValue() : void
     {
-        sodium_memzero($this->value);
+        if (function_exists('sodium_memzero')) 
+        {
+            sodium_memzero($this->tempvalue);
+            sodium_memzero($this->realvalue);
+        }
     }
 }
 
 class Counter extends Scalar
 {
     const SPECIAL = "counter";
-    public function Delta($delta) : void { $this->value += $delta; $this->delta += $delta; }
+    public function Delta($delta) : void { 
+        $this->tempvalue += $delta; $this->realvalue += $delta; $this->delta += $delta; }
+        
     public function GetDBValue() { return $this->delta; }
 }
 
@@ -82,10 +93,11 @@ class JSON extends Scalar
     public function __construct(string $value, string $myfield) 
     { 
         parent::__construct($value, $myfield); 
-        $this->value = Utilities::JSONDecode($value); 
+        $value = Utilities::JSONDecode($value); 
+        $this->tempvalue = $value; $this->realvalue = $value;
     }
     
-    public function GetDBValue() : string { return Utilities::JSONEncode($this->value); }
+    public function GetDBValue() : string { return Utilities::JSONEncode($this->realvalue); }
 }
 
 class ObjectPointer extends Field

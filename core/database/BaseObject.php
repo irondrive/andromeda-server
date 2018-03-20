@@ -103,7 +103,7 @@ abstract class BaseObject
         return $this->objectrefs[$field]->GetObjects();
     }
     
-    protected function SetScalar(string $field, $value, bool $temp = false)
+    protected function SetScalar(string $field, $value, bool $temp = false) : BaseObject
     {    
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         $this->scalars[$field]->SetValue($value, $temp);
@@ -111,7 +111,7 @@ abstract class BaseObject
         return $this;
     } 
     
-    protected function DeltaScalar(string $field, int $delta)
+    protected function DeltaScalar(string $field, int $delta) : BaseObject
     {
         if ($delta == 0) return $this;
         
@@ -125,10 +125,10 @@ abstract class BaseObject
         return $this;
     }
     
-    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false)
+    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        if ($object == $this->objects[$field]) return;
+        if ($object == $this->objects[$field]) return $this;
         
         if (!$notification)
         {
@@ -148,10 +148,10 @@ abstract class BaseObject
         return $this;
     } 
     
-    protected function UnsetObject(string $field, bool $notification = false) { 
+    protected function UnsetObject(string $field, bool $notification = false) : BaseObject { 
         return $this->SetObject($field, null, $notification); }
         
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false)
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
@@ -162,7 +162,7 @@ abstract class BaseObject
         return $this;
     }
     
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false)
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         
@@ -187,7 +187,7 @@ abstract class BaseObject
         } 
     } 
     
-    public function Save() 
+    public function Save() : BaseObject
     {
         $class = static::class; $values = array(); $counters = array();
         
