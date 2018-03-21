@@ -5,10 +5,12 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
 
+interface ClientObject { public function GetClientObject(int $level = 0) : array; }
+
 abstract class StandardObject extends BaseObject
 {
     protected function GetDate(string $name) : int                 { return $this->GetScalar("dates__$name"); }
-    protected function TryGetDate(string $name) : ?int             { return $this->TryGetScalar("dates__$name"); }
+    protected function TryGetDate(string $name) : ?int             { return $this->TryGetScalar("dates__$name"); } 
     
     protected function SetDate(string $name, int $value = null) : StandardObject 
     { 
@@ -30,11 +32,33 @@ abstract class StandardObject extends BaseObject
     
     protected function DeltaCounter(string $name, int $delta) : StandardObject 
     { 
-        if (($limit = $this->TryGetScalar("counter_limit__$name")) !== null) {
-            $value = $this->GetScalar("counter__$name") + $delta;
+        if (($limit = $this->TryGetCounterLimit($name)) !== null) {
+            $value = $this->GetCounter($name) + $delta;
             if ($value > $limit) throw new CounterOverLimitException($name); } 
             
         return $this->DeltaScalar("counter__$name",$delta); 
+    }
+    
+    protected function GetAllDates() : array    { return $this->GetAll('dates'); }
+    protected function GetAllFeatures() : array { return $this->GetAll('features'); }
+    protected function GetAllCounters() : array { return $this->GetAll('counters'); }
+    
+    private function GetAll(string $prefix) : array
+    {        
+        $output = array(); 
+        foreach (array_keys($this->scalars) as $key)
+        {
+            $obj = $this->scalars[$key]; 
+            $key = explode("__",$key,2);  
+            if (count($key) == 2 && $key[0] == $prefix)
+                $output[$key[1]] = $obj->GetValue();
+        }
+        return $output;
+    } 
+    
+    protected static function BaseCreate(ObjectDatabase $database, array $input, ?int $idlen = null)
+    {
+        $input['dates__created'] = time(); return parent::BaseCreate($database, $input, $idlen);
     }
 }
 
