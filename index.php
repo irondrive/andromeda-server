@@ -39,7 +39,9 @@ try
 } 
 catch (Exceptions\ClientException $e)
 {
-    $interface->WriteOutput($error_manager->HandleClientException($e));
+    $output = $error_manager->HandleClientException($e);
+    if ($main->GetDebug()) $output->SetMetrics($main->GetMetrics());    
+    $interface->WriteOutput($output);
 }
 catch (Throwable $e)
 {
