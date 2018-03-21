@@ -4,6 +4,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php");use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/BaseObject.php");use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\ObjectTypeException;
 
 class SpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
 class TempAlreadyModifiedException extends Exceptions\ServerException { public $message = "SET_TEMP_ALREADY_MODIFIED"; }
@@ -117,6 +118,7 @@ class ObjectPointer extends Field
     public function GetPointer() : ?string { return $this->pointer; }
     public function GetMyField() : string { return $this->myfield; }
     public function GetRefClass() : string { return $this->refclass; }
+    public function GetPolyClass() : string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
     
     public function GetDBValue() : ?string { return $this->pointer; }
@@ -144,6 +146,9 @@ class ObjectPointer extends Field
     { 
         if ($object === $this->object) return;
         
+        if ($object !== null && !is_a($object, ObjectDatabase::GetFullClassName($this->GetPolyClass()))) 
+            throw new ObjectTypeException();
+        
         if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
         
         $this->object = $object; $this->delta++; 
@@ -152,10 +157,16 @@ class ObjectPointer extends Field
 
 class ObjectPolyPointer extends ObjectPointer
 {
+    protected $refpolyclass;
+    
+    public function GetPolyClass() : string { return $this->refpolyclass; }
+    
     public function __construct(ObjectDatabase $database, $value, array $header)
     {        
         $this->database = $database;
-        $this->myfield = $header[0]; $this->reffield = $header[2] ?? null;
+        $this->myfield = $header[0]; 
+        $this->refpolyclass = $header[2] ?? null;
+        $this->reffield = $header[3] ?? null;
         
         if ($value === null) return;
         
@@ -172,6 +183,15 @@ class ObjectPolyPointer extends ObjectPointer
     {
         $header = array($this->myfield, "objectpoly", $this->reffield);
         return implode('*',array_filter($header));
+    }
+    
+    public function GetObject() : ?BaseObject
+    {
+        $object = parent::GetObject();
+        
+        if ($object === null) return null;
+        else if (is_a($object, ObjectDatabase::GetFullClassName($this->refpolyclass))) return $object;
+        else throw new ObjectTypeException();
     }
     
     public function SetObject(?BaseObject $object) : void
