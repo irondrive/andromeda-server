@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Mar 20, 2018 at 03:51 AM
+-- Generation Time: Mar 20, 2018 at 03:58 AM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
@@ -62,12 +62,32 @@ CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `queries` text
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `a2_objects_core_server`
+--
+
+CREATE TABLE `a2_objects_core_server` (
+  `id` varchar(16) NOT NULL,
+  `datadir` varchar(255) DEFAULT NULL,
+  `apps*json` text NOT NULL,
+  `dates__created` bigint(20) NOT NULL,
+  `features__debug_http` tinyint(1) NOT NULL,
+  `features__debug_log` tinyint(1) NOT NULL,
+  `features__debug_file` tinyint(1) NOT NULL,
+  `features__read_only` tinyint(1) NOT NULL,
+  `features__enabled` tinyint(1) NOT NULL,
+  `features__email` tinyint(1) NOT NULL,
+  `emailers*objectrefs*Core\Emailer*server` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 --
 -- Dumping data for table `a2_objects_core_server`
 --
 
 INSERT INTO `a2_objects_core_server` (`id`, `datadir`, `apps*json`, `dates__created`, `features__debug_http`, `features__debug_log`, `features__debug_file`, `features__read_only`, `features__enabled`, `features__email`, `emailers*objectrefs*Core\Emailer*server`) VALUES
-('zFoHvcNrXTwxrsLm', 'data', '[\"server\"]', 0, 1, 1, 1, 0, 1, 2, NULL);
+('zFoHvcNrXTwxrsLm', NULL, '[\"server\"]', 0, 1, 1, 1, 0, 1, 2, NULL);
 
 --
 -- Indexes for dumped tables
@@ -92,6 +112,14 @@ ALTER TABLE `a2_objects_core_exceptions_errorlogentry`
   ADD KEY `code` (`code`),
   ADD KEY `app` (`app`),
   ADD KEY `action` (`action`);
+
+--
+-- Indexes for table `a2_objects_core_server`
+--
+ALTER TABLE `a2_objects_core_server`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD KEY `id_2` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
