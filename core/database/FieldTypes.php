@@ -185,15 +185,6 @@ class ObjectPolyPointer extends ObjectPointer
         return implode('*',array_filter($header));
     }
     
-    public function GetObject() : ?BaseObject
-    {
-        $object = parent::GetObject();
-        
-        if ($object === null) return null;
-        else if (is_a($object, ObjectDatabase::GetFullClassName($this->refpolyclass))) return $object;
-        else throw new ObjectTypeException();
-    }
-    
     public function SetObject(?BaseObject $object) : void
     {
         if ($object === $this->object) return;
