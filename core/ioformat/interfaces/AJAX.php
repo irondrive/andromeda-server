@@ -49,7 +49,7 @@ class AJAX extends IOInterface
         
         foreach (array_keys($_REQUEST) as $key)
         {
-            $param = explode('_',$key,2); $data = $_REQUEST[$key];
+            $param = explode('_',$key,2);
             
             if (count($param) != 2) { throw new InvalidParamException(); }
             

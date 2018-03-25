@@ -26,7 +26,7 @@ class Database {
     public function getWrites() : int { return $this->count_writes; }
     public function getHistory(): array { return $this->query_history; }
 
-    public function query(string $sql, array $data, bool $read) 
+    public function query(string $sql, ?array $data = null, bool $read = true) 
     {
         if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
         
@@ -34,12 +34,12 @@ class Database {
         
         if (!$this->connection->inTransaction()) { $this->connection->beginTransaction(); }
         
-        $query = $this->connection->prepare($sql); $query->execute($data);
+        $query = $this->connection->prepare($sql); $query->execute($data ?? array());
 
         if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); $this->count_reads++; } 
         else { $result = $query->rowCount(); $this->count_writes++; }       
         
-        $query = null; return $result;    
+        unset($query); return $result;    
     }       
 
     public function inTransaction() : bool { return $this->connection->inTransaction(); }

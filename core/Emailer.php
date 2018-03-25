@@ -1,52 +1,103 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) die("Missing library:PHPMailer - git submodule init/update?");
 require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use PHPMailer\PHPMailer\PHPMailer;
-require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php"); use PHPMailer\PHPMailer\Exception;
+require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php");
 require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php"); 
 
-/* TODO - note that this class is mostly a placeholder/demo */
+class PHPMailException extends Exceptions\ServerException           { public $message = "PHPMAIL_FAILURE"; }
+class EmptyRecipientsException extends Exceptions\ServerException   { public $message = "NO_RECIPIENTS_GIVEN"; }
 
-class Emailer extends StandardObject
+class EmailRecipient
 {
-    public static function PHPMail(string $recipient, string $subject, string $message)
-    {
-        // TODO special care must be taken to send html email (content type header, etc)
-        mail($recipient, $subject, $message);
-    }
-    
-    public function SendMail(string $recipient, string $subject, string $message)
-    {
-        // TODO special care must be taken to send html email (content type header, etc)
-        // TODO should we support sending html files directly?
-        // $mail->isHTML(true);
-        // TODO there is a whole lot more of this interface
+    private $name = null; private $address = null;
+    public function GetAddress() : string { return $this->address; }
+    public function GetName() : ?string { return $this->name; }
+    public function __construct(string $address, string $name = null) {
+        $this->address = $address; $this->name = $name; }
         
-        $mail = new PHPMailer(true); $mail->isSMTP();         
+    public function ToString() : string
+    {
+        $addr = $this->GetAddress(); $name = $this->GetName();        
+        if ($name === null) return $addr;
+        else return "$name <$addr>";
+    }
+}
 
-        $mail->Host = $this->GetScalar('hostname');
-        $mail->Port = $this->GetScalar('port');
+interface Emailer
+{
+    public function SendMail(string $subject, string $message, array $recipients, ?EmailRecipient $from = null, bool $usebcc = false) : void;
+}
+
+class BasicEmailer implements Emailer
+{
+    public function SendMail(string $subject, string $message, array $recipients, ?EmailRecipient $from = null, bool $usebcc = false) : void
+    {
+        if (count($recipients) == 0) throw new EmptyRecipientsException(); 
+        
+        $recipients = implode(array_map(function($r){ return $r->ToString(); }, $recipients), ', ');
+        
+        $headers = array();        
+        if ($from) array_push($headers, "Reply-To: ".$from->ToString());
+        if ($usebcc) array_push($headers, "BCC: $recipients");
+        
+        $to = $usebcc ? $recipients : "undisclosed-recipients:;";
+        
+        if (!mail($to, $subject, $message, implode("\r\n", $headers))) throw new PHPMailException();
+    }
+}
+
+class FullEmailer extends StandardObject implements Emailer
+{    
+    private $mail = null;
+    
+    const MODE_SSL = 1; const MODE_TLS = 2;
+    
+    public function __construct(ObjectDatabase $database, array $data)
+    {
+        parent::__construct($database, $data);
+        
+        $mailer = new PHPMailer(true); $mailer->isSMTP();
+        
+        $mailer->Host = $this->GetScalar('hostname');
+        $mailer->Port = $this->GetScalar('port');
         
         if ($this->GetScalar('username') !== null)
         {
-            $mail->SMTPAuth = true;
-            $mail->Username = $this->GetScalar('username');
-            $mail->Password = $this->GetScalar('password');
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $this->GetScalar('username');
+            $mailer->Password = $this->GetScalar('password');
         }
         
         $secure = $this->GetScalar('secure');
-        if ($secure == 1) $mail->SMTPSecure = 'ssl';
-        else if ($secure == 2) $mail->SMTPSecure = 'tls';
+        if ($secure == self::MODE_SSL) $mailer->SMTPSecure = 'ssl';
+        else if ($secure == self::MODE_TLS) $mailer->SMTPSecure = 'tls';
         
-        $mail->setFrom($this->GetScalar('from_address'), $this->GetScalar('from_name'));
+        $mailer->setFrom($this->GetScalar('from_address'), $this->GetScalar('from_name'));
         
-        $mail->addAddress($recipient);        
+        $this->mailer = $mailer;
+    }
+    
+    public function SendMail(string $subject, string $message, array $recipients, ?EmailRecipient $from = null, bool $usebcc = false) : void
+    {
+        if (count($recipients) == 0) throw new EmptyRecipientsException();
         
-        $mail->Subject = $subject; $mail->Body = $message;
+        $mailer = $this->mailer;        
         
-        $mail->send();       
+        if ($from !== null) $mailer->addReplyTo($from->GetAddress(), $from->GetName());
+        
+        foreach ($recipients as $recipient) 
+        {
+            if ($usebcc) $mailer->addBCC($recipient->GetAddress(), $recipient->GetName());
+            else $mailer->addAddress($recipient->GetAddress(), $recipient->GetName());          
+        }                 
+ 
+        $mailer->Subject = $subject; $mailer->Body = $message;
+        
+        $mailer->send(); 
     }
 }

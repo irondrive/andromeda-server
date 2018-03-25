@@ -21,15 +21,15 @@ class ServerApp extends AppBase
         else throw new UnknownActionException();
     }
     
-    public function Random(Input $input)
+    protected function Random(Input $input)
     {
         $length = $input->TryGetParam("length", SafeParam::TYPE_INT) ?? Utilities::IDLength;
         
         return Utilities::Random($length);
     }
     
-    public function Version(Input $input) { return VERSION; }
-    public function GetApps(Input $input) { return $this->API->GetServer()->GetApps(); }
-    public function DumpInput(Input $input) { return print_r($input, true); }
+    protected function Version(Input $input) { return VERSION; }
+    protected function GetApps(Input $input) { return $this->API->GetServer()->GetApps(); }
+    protected function DumpInput(Input $input) { return print_r($input, true); }
 }
 

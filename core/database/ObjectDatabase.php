@@ -10,9 +10,16 @@ class UniqueKeyWithSpacesException extends Exceptions\ServerException   { public
 
 class ObjectDatabase extends Database
 {
-    private $objects = array(); private $modified = array(); private $uniques = array();
+    private $objects = array();     /* array[id => BaseObject] */
+    private $modified = array();    /* array[id => BaseObject] */
+    private $created = array();     /* array[id => BaseObject] */
+    private $defaults = array();    /* array[class => array(fields)] */
+    private $uniques = array();     /* array[uniquekey => BaseObject] */
     
-    public function isModified(BaseObject $obj) : bool { return array_key_exists($obj->ID(), $this->modified); }
+    public function isModified(BaseObject $obj) : bool 
+    { 
+        return array_key_exists($obj->ID(), $this->modified); 
+    }
     
     public function setModified(BaseObject $obj) 
     { 
@@ -26,15 +33,17 @@ class ObjectDatabase extends Database
         if ($this->isModified($obj)) unset($this->modified[$obj->ID()]);
     }
     
-    public function getLoadedObjects() { return array_keys($this->objects); }
+    public function getLoadedObjects() : array
+    { 
+        return array_map(function($e){ return $e->GetClass(); }, $this->objects);
+    }
     
-    public function commit() 
+    public function commit() : void
     {
-        foreach ($this->modified as $object) { $object->Save(); }  
+        foreach ($this->created as $object) $object->Save(true);
+        foreach ($this->modified as $object) $object->Save();        
         
         parent::commit();
-        
-        $this->modified = array();
     }
     
     public static function GetFullClassName(string $class) : string
@@ -42,7 +51,7 @@ class ObjectDatabase extends Database
         return "Andromeda\\$class";
     }
     
-    public static function GetShortClassName(string $class)
+    public static function GetShortClassName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]); return implode('\\',$class); 
     }
@@ -50,7 +59,7 @@ class ObjectDatabase extends Database
     public static function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]);
-        return Config::PREFIX."objects_".strtolower(implode('_', $class));
+        return '`'.Config::PREFIX."objects_".strtolower(implode('_', $class)).'`';
     }
     
     private function Rows2Objects($rows, $class, $replace = false) : array
@@ -85,7 +94,7 @@ class ObjectDatabase extends Database
         
         $query = "SELECT $table.* FROM $table $query".($limit>-1 ? " LIMIT $limit" : "");
         
-        $result = $this->query($query, $criteria, true);
+        $result = $this->query($query, $criteria);
         
         return $this->Rows2Objects($result, $class, array_key_exists('id',$criteria));
     }
@@ -160,38 +169,65 @@ class ObjectDatabase extends Database
             $data["dat$i"] = $counters[$key]; $i++;
         }; 
         
-        if ($criteria_string)
-        {
-            $criteria_string = substr($criteria_string,0,-2);            
-            $table = self::GetClassTableName($class);            
-            $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
-            $this->query($query, $data, false);
-        }
+        if (!$criteria_string) return $object;
+        
+        $criteria_string = substr($criteria_string,0,-2);            
+        $table = self::GetClassTableName($class);            
+        $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
+        $this->query($query, $data, false);    
+        
+        unset($this->modified[$object->ID()]);
         
         return $object;
     }
     
-    public function CreateObject(string $class, array $input, ?int $idlen = null)
-    {
-        $table = self::GetClassTableName($class); 
-        
+    public function SaveNewObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
+    {        
         $columns_string = ""; $data_string = ""; $data = array(); $i = 0;
         
-        $input['id'] = Utilities::Random($idlen);
+        $values['id'] = $object->ID();
         
-        foreach (array_keys($input) as $key) {
-            $columns_string .= "`$key`, "; $data_string .= ($input[$key] !== null ? ":dat$i, " : "NULL, ");
-            if ($input[$key] !== null) $data["dat$i"] = $input[$key]; $i++;
+        foreach (array_keys($values) as $key) {
+            $columns_string .= "`$key`, "; $data_string .= ($values[$key] !== null ? ":dat$i, " : "NULL, ");
+            if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
         }
         
         if ($columns_string) $columns_string = substr($columns_string, 0, -2);
         if ($data_string) $data_string = substr($data_string, 0, -2);
         
+        $table = self::GetClassTableName($class);
         $query = "INSERT INTO $table ($columns_string) VALUES ($data_string)";
-
         $this->query($query, $data, false);
         
-        return $class::LoadByID($this, $input['id']);
+        unset($this->created[$object->ID()]);
+        unset($this->modified[$object->ID()]);
+        
+        return $object;
+    }
+    
+    private function getDefaultFields(string $class) : array
+    {
+        if (array_key_exists($class,$this->defaults)) return $this->defaults[$class];
+        
+        $table = self::GetClassTableName($class);
+        $columns = $this->query("SHOW FIELDS FROM $table");        
+        $columns = array_map(function($e){ return $e['Field']; }, $columns);
+        
+        $this->defaults[$class] = $columns; return $columns;
+    }
+    
+    public function CreateObject(string $class) : BaseObject
+    {
+        $columns = $this->getDefaultFields($class);        
+        $data = array_fill_keys($columns, null);
+        $data['id'] = Utilities::Random();        
+        
+        $newobj = array_values($this->Rows2Objects(array($data), $class))[0];
+
+        $this->objects[$newobj->ID()] = $newobj;
+        $this->created[$newobj->ID()] = $newobj;
+        
+        return $newobj;
     }
     
     public function DeleteObject(string $class, BaseObject $object) : void
@@ -199,14 +235,12 @@ class ObjectDatabase extends Database
         $this->unsetObject($object);
         
         $table = self::GetClassTableName($class); 
-        $this->query("DELETE FROM $table WHERE id=:id",array('id'=>$object->ID()),false);
+        $this->query("DELETE FROM $table WHERE id=:id", array('id'=>$object->ID()), false);
     }
     
     public function DeleteObjects(string $class, array $objects) : void
     {
-        if (count($objects) < 1) return;
-        
-        $table = self::GetClassTableName($class); 
+        if (count($objects) < 1) return;        
         
         $criteria_string = ""; $data = array(); $i = 0;
         
@@ -218,6 +252,7 @@ class ObjectDatabase extends Database
         
         $criteria_string = substr($criteria_string,0,-4);   
         
+        $table = self::GetClassTableName($class);
         $this->query("DELETE FROM $table WHERE $criteria_string",$data,false);
     }
 }

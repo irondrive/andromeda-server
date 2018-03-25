@@ -128,7 +128,7 @@ abstract class BaseObject
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        if ($object == $this->objects[$field]) return $this;
+        if ($object === $this->objects[$field]) return $this;
         
         if (!$notification)
         {
@@ -187,7 +187,7 @@ abstract class BaseObject
         } 
     } 
     
-    public function Save() : BaseObject
+    public function Save(bool $new = false) : BaseObject
     {
         $class = static::class; $values = array(); $counters = array();
         
@@ -210,7 +210,8 @@ abstract class BaseObject
             $values[$column] = $value->GetDBValue();
         }
         
-        return $this->database->SaveObject($class, $this, $values, $counters);
+        if (!$new) return $this->database->SaveObject($class, $this, $values, $counters);
+        else return $this->database->SaveNewObject($class, $this, $values, $counters);
     } 
     
     public function Delete()
@@ -232,9 +233,9 @@ abstract class BaseObject
         $this->database->DeleteObject($class, $this);
     }
     
-    protected static function BaseCreate(ObjectDatabase $database, array $input, ?int $idlen = null)
+    protected static function BaseCreate(ObjectDatabase $database)
     {
-        $class = static::class; return $database->CreateObject($class, $input, $idlen);
+        $class = static::class; return $database->CreateObject($class);
     }
 
 }

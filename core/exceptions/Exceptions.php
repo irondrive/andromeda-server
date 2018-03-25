@@ -18,7 +18,7 @@ class PHPException extends ServerException {
     public function __construct(int $code, string $string, string $file, $line) {
         $this->code = $code; $this->details = $string; $this->file = $file; $this->line = $line;
         try { $this->message = array_flip(array_slice(get_defined_constants(true)['Core'], 0, 16, true))[$code]; }
-            catch (\Throwable $e) { $this->message = "PHP_ERROR"; }
+        catch (\Throwable $e) { $this->message = "PHP_GENERIC_ERROR"; }
     } }
 
 class NotImplementedException extends ClientException { 

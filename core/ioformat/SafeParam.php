@@ -108,23 +108,23 @@ class SafeParam
         
         if ($type == self::TYPE_BOOL)
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) != null) {
-                throw new SafeParamInvalidException(); }
+            if (($data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
+                throw new SafeParamInvalidException();
         }
         else if ($type == self::TYPE_INT)
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_INT)) === false) {
-                throw new SafeParamInvalidException(); }
+            if (($data = filter_var($data, FILTER_VALIDATE_INT)) === false)
+                throw new SafeParamInvalidException();
         }
         else if ($type == self::TYPE_FLOAT)
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false) {
-                throw new SafeParamInvalidException(); }
+            if (($data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
+                throw new SafeParamInvalidException();
         }
         else if ($type == self::TYPE_ALPHANUM)
         {
-            if (!preg_match("%^[a-zA-Z0-9_]+$%",$data)) {
-                throw new SafeParamInvalidException(); }
+            if (!preg_match("%^[a-zA-Z0-9_]+$%",$data))
+                throw new SafeParamInvalidException();
         }
         else if ($type == self::TYPE_TEXT)
         {
@@ -132,8 +132,8 @@ class SafeParam
         }
         else if ($type == self::TYPE_EMAIL)
         {
-            if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL))) {
-                throw new SafeParamInvalidException(); }
+            if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL)))
+                throw new SafeParamInvalidException();
         }
         else if ($type == self::TYPE_OBJECT)
         {
