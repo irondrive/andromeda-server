@@ -5,7 +5,7 @@ require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class EmailDisabledException extends Exceptions\ServerException    { public $message = "EMAIL_DISABLED"; }
+class EmailUnavailableException extends Exceptions\ServerException    { public $message = "EMAIL_UNAVAILABLE"; }
 
 class Server extends SingletonObject
 {
@@ -26,15 +26,15 @@ class Server extends SingletonObject
     {
         $feature = $this->TryGetFeature("email") ?? 0;
         
-        if ($feature == self::EMAIL_MODE_OFF) throw new EmailDisabledException();
+        if ($feature == self::EMAIL_MODE_OFF) throw new EmailUnavailableException();
         if ($feature == self::EMAIL_MODE_PHP) return new BasicEmailer();
         
         else if ($feature == self::EMAIL_MODE_LIB)
         {
             $emailers = $this->GetObjectRefs('emailers');
-            if (count($emailers) == 0) throw new EmailDisabledException();
+            if (count($emailers) == 0) throw new EmailUnavailableException();
             return $emailers[array_rand($emailers)];
         }
-        else throw new EmailDisabledException();
+        else throw new EmailUnavailableException();
     }
 }
