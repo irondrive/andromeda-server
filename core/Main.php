@@ -31,9 +31,8 @@ class Main
     public function GetContext() : ?Input { return $this->context; }
     public function GetServer() : ?Server { return $this->server; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
-    public function GetInterface() : IOInterface { return $this->interface; }
-    
-    private function GetErrorManager() : ErrorManager { return $this->error_manager; }  
+    public function GetInterface() : IOInterface { return $this->interface; }    
+    public function GetErrorManager() : ErrorManager { return $this->error_manager; }  
     
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     {
@@ -103,7 +102,7 @@ class Main
             $this->interface->getMode() == IOInterface::MODE_CLI;
     }
     
-    public function GetMetrics() : array
+    public function GetMetrics(bool $apptime = true) : array
     {        
         $metrics = array(
             'total_time' => microtime(true) - $this->construct_time,
@@ -113,6 +112,7 @@ class Main
             'db_writes' => $this->database->getWrites(),
             'queries' => $this->database->getHistory(),
         );
+        if (!$apptime) unset($metrics['app_time']);
         return $metrics;
     }
     

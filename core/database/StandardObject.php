@@ -20,15 +20,15 @@ abstract class StandardObject extends BaseObject
     
     protected function GetFeature(string $name) : int              { return $this->GetScalar("features__$name"); }
     protected function TryGetFeature(string $name) : ?int          { return $this->TryGetScalar("features__$name"); }
-    protected function SetFeature(string $name, int $value) : StandardObject { return $this->SetScalar("features__$name", $value); }
-    protected function EnableFeature(string $name) : StandardObject         { return $this->SetScalar("features__$name", 1); }
-    protected function DisableFeature(string $name) : StandardObject        { return $this->SetScalar("features__$name", 0); }
+    protected function SetFeature(string $name, ?int $value) : StandardObject   { return $this->SetScalar("features__$name", $value); }
+    protected function EnableFeature(string $name) : StandardObject             { return $this->SetScalar("features__$name", 1); }
+    protected function DisableFeature(string $name) : StandardObject            { return $this->SetScalar("features__$name", 0); }
     
-    protected function GetCounter(string $name) : int              { return $this->GetScalar("counter__$name"); }
-    protected function TryGetCounter(string $name) : ?int          { return $this->TryGetScalar("counter__$name"); }
-    protected function GetCounterLimit(string $name) : int         { return $this->GetScalar("counter_limit__$name"); }
-    protected function TryGetCounterLimit(string $name) : ?int     { return $this->TryGetScalar("counter_limit__$name"); }
-    protected function SetCounterLimit(string $name, int $value) : StandardObject { return $this->SetScalar("counter_limit__$name", $value); }
+    protected function GetCounter(string $name) : int              { return $this->GetScalar("counters__$name"); }
+    protected function TryGetCounter(string $name) : ?int          { return $this->TryGetScalar("counters__$name"); }
+    protected function GetCounterLimit(string $name) : int         { return $this->GetScalar("counters_limits__$name"); }
+    protected function TryGetCounterLimit(string $name) : ?int     { return $this->TryGetScalar("counters_limits__$name"); }
+    protected function SetCounterLimit(string $name, ?int $value) : StandardObject  { return $this->SetScalar("counters_limits__$name", $value); }
     
     protected function DeltaCounter(string $name, int $delta) : StandardObject 
     { 
@@ -36,12 +36,13 @@ abstract class StandardObject extends BaseObject
             $value = $this->GetCounter($name) + $delta;
             if ($value > $limit) throw new CounterOverLimitException($name); } 
             
-        return $this->DeltaScalar("counter__$name",$delta); 
+        return $this->DeltaScalar("counters__$name",$delta); 
     }
     
-    protected function GetAllDates() : array    { return $this->GetAll('dates'); }
-    protected function GetAllFeatures() : array { return $this->GetAll('features'); }
-    protected function GetAllCounters() : array { return $this->GetAll('counters'); }
+    protected function GetAllDates() : array        { return $this->GetAll('dates'); }
+    protected function GetAllFeatures() : array     { return $this->GetAll('features'); }
+    protected function GetAllCounters() : array     { return $this->GetAll('counters'); }
+    protected function GetAllCounterLimits() : array { return $this->GetAll('counters_limits'); }
     
     private function GetAll(string $prefix) : array
     {        
@@ -56,9 +57,11 @@ abstract class StandardObject extends BaseObject
         return $output;
     } 
     
-    protected static function BaseCreate(ObjectDatabase $database, array $input, ?int $idlen = null)
+    public function GetDateCreated() : int { return $this->GetDate('created'); }
+    
+    protected static function BaseCreate(ObjectDatabase $database, ?int $idlen = null)
     {
-        $input['dates__created'] = time(); return parent::BaseCreate($database, $input, $idlen);
+        return parent::BaseCreate($database, $idlen)->SetDate('created');
     }
 }
 

@@ -5,17 +5,16 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/ErrorLogEntry.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/Config.php"); use Andromeda\Core\Database\Config;
 
 class DuplicateHandlerException extends Exceptions\ServerException  { public $message = "DUPLICATE_ERROR_HANDLER_NAME"; }
 
-use \Throwable; use Andromeda\Core\JSONEncodingException;
-
 class ErrorManager
 {
-    private $API; private $error_handlers = array();
+    private $API; private $interface; private $error_handlers = array();
     
     const DEBUG_DEFAULT = true; const DEBUG_FULL_DEFAULT = true;
     
@@ -36,7 +35,7 @@ class ErrorManager
         return Output::ClientException($e, $debug);
     }
     
-    public function HandleThrowable(Throwable $e) : Output
+    public function HandleThrowable(\Throwable $e) : Output
     {
         $this->RunErrorHandlers();
         
@@ -47,13 +46,32 @@ class ErrorManager
         return Output::ServerException($debug);
     }
     
-    public function __construct()
+    public function __construct(IOInterface $interface)
     {
-        set_error_handler( function($code,$string,$file,$line){            
+        $this->interface = $interface;
+        
+        set_error_handler( function($code,$string,$file,$line){ 
             throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
+        
+        set_exception_handler( function(\Throwable $e)
+        {
+            if ($e instanceof Exceptions\ClientException)
+            {
+                $output = $this->HandleClientException($e);
+                
+                if (isset($this->API) && $this->API->GetDebug()) 
+                    $output->SetMetrics($this->API->GetMetrics(false));
+            }
+            else
+            {
+                $output = $this->HandleThrowable($e);
+            }
+            
+            $this->interface->WriteOutput($output);
+        });
     }
     
-    private function Log(Throwable $e) : void
+    private function Log(\Throwable $e) : void
     {         
         $logged = false; $logdir = null;
         if (isset($this->API) && $this->API->GetServer() !== null)
@@ -70,7 +88,7 @@ class ErrorManager
         {
             $db = new ObjectDatabase(false); $entry = ErrorLogEntry::Create($this->API, $db, $e); $db->commit();
         }
-        catch (Throwable $e2) { 
+        catch (\Throwable $e2) { 
             if ($logdir !== null) {                
                 $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e2))); 
                 if (!$logged) $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e))); 
@@ -109,7 +127,7 @@ class ErrorManager
         foreach (array_keys($this->error_handlers) as $name)
         {
             try { $this->error_handlers[$name]($this->API); } 
-            catch (Throwable $e) { $this->Log($e); }
+            catch (\Throwable $e) { $this->Log($e); }
 
             unset($this->error_handlers[$name]);
         }

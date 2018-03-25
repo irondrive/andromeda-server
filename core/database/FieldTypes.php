@@ -57,25 +57,22 @@ class Scalar extends Field
     
     public function SetValue($value, bool $temp = false) : void 
     { 
-        if ($value === $this->tempvalue) return;
-
         $this->tempvalue = $value;
         
-        if (!$temp)
+        if (!$temp && $value !== $this->realvalue)
         {
-            $this->realvalue = $value;
-            $this->delta++;
+            $this->realvalue = $value; $this->delta++;
         }
     }
     
     public function EraseValue() : void
     {
-        if (function_exists('sodium_memzero')) 
+        if (function_exists('sodium_memzero'))
         {
-            sodium_memzero($this->tempvalue);
-            sodium_memzero($this->realvalue);
+            if (isset($this->tempvalue)) sodium_memzero($this->tempvalue);
+            if (isset($this->realvalue)) sodium_memzero($this->realvalue);
         }
-    }
+    }            
 }
 
 class Counter extends Scalar
@@ -146,7 +143,8 @@ class ObjectPointer extends Field
     { 
         if ($object === $this->object) return;
         
-        if ($object !== null && !is_a($object, ObjectDatabase::GetFullClassName($this->GetPolyClass()))) 
+        $class = ObjectDatabase::GetFullClassName($this->GetPolyClass());
+        if ($object !== null && !is_a($object, $class)) 
             throw new ObjectTypeException();
         
         if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
@@ -181,8 +179,11 @@ class ObjectPolyPointer extends ObjectPointer
     
     public function GetColumnName() : string
     {
-        $header = array($this->myfield, "objectpoly", $this->reffield);
-        return implode('*',array_filter($header));
+        $header = array($this->myfield, "objectpoly", $this->refpolyclass, $this->reffield);
+        
+        if ($this->reffield === null) $header = array_filter($header);
+        
+        return implode('*', $header);
     }
     
     public function SetObject(?BaseObject $object) : void
@@ -235,8 +236,13 @@ class ObjectRefs extends Field
     
     protected function LoadObjects()
     {
-        $class = ObjectDatabase::GetFullClassName($this->refclass); $reffield = $this->reffield."*object*".$this->myclass."*".$this->myfield;
-        $this->objects = $class::LoadManyMatchingAll($this->database, array("$reffield"=>$this->myid));        
+        $class = ObjectDatabase::GetFullClassName($this->refclass); 
+        
+        $reffield = array($this->reffield, "object", $this->myclass, $this->myfield);
+        $reffield = implode('*',array_filter($reffield));
+
+        $this->objects = $class::LoadManyMatchingAll($this->database, array("$reffield"=>$this->myid));    
+        
         foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
         foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
         $this->refs_added = array(); $this->refs_deleted = array();

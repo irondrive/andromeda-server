@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\Emailer;
+require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, BasicEmailer, FullEmailer};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -22,23 +22,19 @@ class Server extends SingletonObject
     
     const EMAIL_MODE_OFF = 0; const EMAIL_MODE_PHP = 1; const EMAIL_MODE_LIB = 2;
     
-    public function SendMail(string $recipient, string $subject, string $message)
-    {        
+    public function GetMailer() : Emailer
+    {
         $feature = $this->TryGetFeature("email") ?? 0;
-        if ($feature <= self::EMAIL_MODE_OFF) throw new EmailDisabledException();
         
-        if ($feature == self::EMAIL_MODE_PHP)
-        {
-            Emailer::PHPMail($recipient, $subject, $message);
-        }
+        if ($feature == self::EMAIL_MODE_OFF) throw new EmailDisabledException();
+        if ($feature == self::EMAIL_MODE_PHP) return new BasicEmailer();
         
         else if ($feature == self::EMAIL_MODE_LIB)
         {
             $emailers = $this->GetObjectRefs('emailers');
-            if (count($emailers) == 0) throw new EmailDisabledException();            
-            $emailers[array_rand($emailers)]->SendMail($recipient, $subject, $message);
+            if (count($emailers) == 0) throw new EmailDisabledException();
+            return $emailers[array_rand($emailers)];
         }
-        
         else throw new EmailDisabledException();
     }
 }
