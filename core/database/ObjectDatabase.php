@@ -13,7 +13,7 @@ class ObjectDatabase extends Database
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
     private $created = array();     /* array[id => BaseObject] */
-    private $defaults = array();    /* array[class => array(fields)] */
+    private $columns = array();     /* array[class => array(fields)] */
     private $uniques = array();     /* array[uniquekey => BaseObject] */
     
     public function isModified(BaseObject $obj) : bool 
@@ -69,6 +69,9 @@ class ObjectDatabase extends Database
         foreach ($rows as $row)
         {
             $object = new $class($this, $row); $id = $object->ID();
+            
+            if (!array_key_exists($class, $this->columns))
+                $this->columns[$class] = array_keys($row);
 
             if (!$replace && in_array($id, array_keys($this->objects)))
                 $output[$id] = $this->objects[$id];
@@ -207,13 +210,13 @@ class ObjectDatabase extends Database
     
     private function getDefaultFields(string $class) : array
     {
-        if (array_key_exists($class,$this->defaults)) return $this->defaults[$class];
+        if (array_key_exists($class,$this->columns)) return $this->columns[$class];
         
         $table = self::GetClassTableName($class);
         $columns = $this->query("SHOW FIELDS FROM $table");        
         $columns = array_map(function($e){ return $e['Field']; }, $columns);
         
-        $this->defaults[$class] = $columns; return $columns;
+        $this->columns[$class] = $columns; return $columns;
     }
     
     public function CreateObject(string $class) : BaseObject
