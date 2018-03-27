@@ -82,7 +82,7 @@ class ObjectDatabase extends Database
         return $output; 
     }
     
-    public function LoadObjects(string $class, string $query, array $criteria, $limit = -1) : array
+    public function LoadObjects(string $class, string $query, array $criteria, ?int $limit = null) : array
     {
         if (array_key_exists('id',$criteria) && array_key_exists($criteria['id'], $this->objects))
         {
@@ -95,7 +95,7 @@ class ObjectDatabase extends Database
         
         $loaded = array(); $table = self::GetClassTableName($class); 
         
-        $query = "SELECT $table.* FROM $table $query".($limit>-1 ? " LIMIT $limit" : "");
+        $query = "SELECT $table.* FROM $table $query".($limit !== null ? " LIMIT $limit" : "");
         
         $result = $this->query($query, $criteria);
         
@@ -123,14 +123,14 @@ class ObjectDatabase extends Database
         else return null;
     }
     
-    public function LoadObjectsMatchingAny(string $class, string $field, array $values, int $limit = -1) : array
+    public function LoadObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, ?int $limit = null) : array
     {
         if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
         
-        $criteria_string = ""; $data = array(); $i = 0; 
+        $criteria_string = ""; $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
         
         foreach ($values as $value) {
-            $criteria_string .= "`$field` = :dat$i OR ";
+            $criteria_string .= "`$field` $s :dat$i OR ";
             $data["dat$i"] = $value; $i++;
         }
         
@@ -141,16 +141,16 @@ class ObjectDatabase extends Database
         return $this->LoadObjects($class, $query, $data, $limit);
     }
     
-    public function LoadObjectsMatchingAll(string $class, ?array $criteria, int $limit = -1) : array
+    public function LoadObjectsMatchingAll(string $class, ?array $criteria, bool $like = false, ?int $limit = null) : array
     {        
-        $criteria_string = ""; $data = array(); $i = 0; 
+        $criteria_string = ""; $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
         
         if ($criteria !== null) foreach (array_keys($criteria) as $key) { 
-            $criteria_string .= "`$key` ".($criteria[$key] !== null ? "= :dat$i" : "IS NULL").' AND   '; 
+            $criteria_string .= "`$key` ".($criteria[$key] !== null ? "$s :dat$i" : "IS NULL").' AND '; 
             if ($criteria[$key] !== null) $data["dat$i"] = $criteria[$key]; $i++;
         }; 
         
-        if ($criteria_string) $criteria_string = substr($criteria_string,0,-7);       
+        if ($criteria_string) $criteria_string = substr($criteria_string,0,-5);       
         
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         

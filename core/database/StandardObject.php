@@ -62,9 +62,9 @@ abstract class StandardObject extends BaseObject
     
     public function GetDateCreated() : int { return $this->GetDate('created'); }
     
-    protected static function BaseCreate(ObjectDatabase $database, ?int $idlen = null)
+    protected static function BaseCreate(ObjectDatabase $database)
     {
-        return parent::BaseCreate($database, $idlen)->SetDate('created');
+        return parent::BaseCreate($database)->SetDate('created');
     }
 }
 
