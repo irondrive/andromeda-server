@@ -47,14 +47,14 @@ abstract class BaseObject
         $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
     }
 
-    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys) : array 
+    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null) : array 
     {
-        $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys); 
+        $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys, $like, $limit); 
     }
 
-    public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, int $limit = -1) : array 
+    public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null) : array 
     {              
-        $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $limit); 
+        $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $like, $limit); 
     } 
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }

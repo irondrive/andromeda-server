@@ -45,7 +45,7 @@ class BasicEmailer implements Emailer
         if ($from) array_push($headers, "Reply-To: ".$from->ToString());
         if ($usebcc) array_push($headers, "BCC: $recipients");
         
-        $to = $usebcc ? $recipients : "undisclosed-recipients:;";
+        $to = !$usebcc ? $recipients : "undisclosed-recipients:;";
         
         if (!mail($to, $subject, $message, implode("\r\n", $headers))) throw new PHPMailException();
     }
