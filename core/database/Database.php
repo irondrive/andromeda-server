@@ -6,7 +6,9 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class DatabaseReadOnlyException extends Exceptions\Client400Exception { public $message = "READ_ONLY_DATABASE"; }
 
-class Database {
+interface Transactions { public function rollBack(); public function commit(); }
+
+class Database implements Transactions {
 
     private $read_only = false;
     private $connection; 
@@ -42,9 +44,19 @@ class Database {
         unset($query); return $result;    
     }       
 
-    public function inTransaction() : bool { return $this->connection->inTransaction(); }
-    public function rollBack() { if ($this->connection->inTransaction()) { $this->connection->rollBack(); }; $this->inTransaction = false; }
-    public function commit() { if ($this->connection->inTransaction()) { $this->connection->commit(); }; $this->inTransaction = false; }
+    public function rollBack() 
+    { 
+        if ($this->connection->inTransaction()) 
+            $this->connection->rollBack(); 
+        $this->inTransaction = false; 
+    }
+    
+    public function commit() 
+    { 
+        if ($this->connection->inTransaction()) 
+            $this->connection->commit(); 
+        $this->inTransaction = false; 
+    }
 }
 
 ?>
