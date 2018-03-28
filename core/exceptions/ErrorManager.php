@@ -14,7 +14,7 @@ class DuplicateHandlerException extends Exceptions\ServerException  { public $me
 
 class ErrorManager
 {
-    private $API; private $interface; private $error_handlers = array();
+    private $API; private $interface;
     
     const DEBUG_DEFAULT = true; const DEBUG_FULL_DEFAULT = true;
     
@@ -28,7 +28,7 @@ class ErrorManager
     
     public function HandleClientException(ClientException $e) : Output
     {
-        $this->RunErrorHandlers();
+        if (isset($this->API)) $this->API->rollBack();
             
         $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
             
@@ -37,7 +37,7 @@ class ErrorManager
     
     public function HandleThrowable(\Throwable $e) : Output
     {
-        $this->RunErrorHandlers();
+        if (isset($this->API)) $this->API->rollBack();
         
         if (isset($this->API) && $this->API->GetServer() !== null && $this->API->GetServer()->GetDebugLogLevel()) $this->Log($e);
         
@@ -50,26 +50,27 @@ class ErrorManager
     {
         $this->interface = $interface;
         
-        set_error_handler( function($code,$string,$file,$line){ 
-            throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
+        set_error_handler( function($code,$string,$file,$line){
+           throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
         
         set_exception_handler( function(\Throwable $e)
         {
-            if ($e instanceof Exceptions\ClientException)
+            $this->dead = true; if ($e instanceof Exceptions\ClientException)
             {
                 $output = $this->HandleClientException($e);
                 
                 if (isset($this->API) && $this->API->GetDebug()) 
                     $output->SetMetrics($this->API->GetMetrics(false));
             }
-            else
-            {
-                $output = $this->HandleThrowable($e);
-            }
+            else $output = $this->HandleThrowable($e);
+
+            $this->interface->WriteOutput($output); 
             
-            $this->interface->WriteOutput($output);
+            $this->DisableErrors(); die();           
         });
     }
+    
+    public function DisableErrors() : void { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
     private function Log(\Throwable $e) : void
     {         
@@ -101,35 +102,5 @@ class ErrorManager
     private function Log2File(string $datadir, string $data) : void
     {
         file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND);
-    }
-    
-    public function AddErrorHandler(string $name, callable $handler) : void
-    {
-        if (isset($this->error_handlers[$name])) { throw new DuplicateHandlerException(); }
-        else { $this->error_handlers[$name] = $handler; }
-    }
-    
-    public function RemoveErrorHandler(string $name) : void
-    {
-        unset($this->error_handlers[$name]);
-    }
-    
-    public function ResetErrorHandlers() : void
-    {
-        $this->error_handlers = array();
-    }
-    
-    private function RunErrorHandlers() : void
-    {
-        if (isset($this->API) && $this->API->GetDatabase() !== null) 
-            $this->API->GetDatabase()->rollBack();
-
-        foreach (array_keys($this->error_handlers) as $name)
-        {
-            try { $this->error_handlers[$name]($this->API); } 
-            catch (\Throwable $e) { $this->Log($e); }
-
-            unset($this->error_handlers[$name]);
-        }
     }
 }

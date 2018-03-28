@@ -4,7 +4,7 @@ require_once(ROOT."/core/Server.php"); use Andromeda\Core\Server;
 
 require_once(ROOT."/core/database/Config.php");
 require_once(ROOT."/core/database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Config, ObjectDatabase, ObjectNotFoundException};
+use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
@@ -16,23 +16,22 @@ require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 use Andromeda\Core\IOFormat\{IOInterface,Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
-
 class UnknownAppException extends Exceptions\Client400Exception     { public $message = "UNKNOWN_APP"; }
 class MaintenanceException extends Exceptions\Client403Exception    { public $message = "SERVER_DISABLED"; }
 class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
 
-class Main
+class Main implements Transactions
 { 
-    private $construct_time; private $app_time;
+    private $construct_time; private $app_time; private $runs = array(); 
     
-    private $runs = array(); private $context; private $server; private $database; private $error_manager;  private $interface;
+    private $context; private $server; private $database; private $error_manager;  private $interface;
     
     public function GetContext() : ?Input { return $this->context; }
     public function GetServer() : ?Server { return $this->server; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
-    public function GetInterface() : IOInterface { return $this->interface; }    
-    public function GetErrorManager() : ErrorManager { return $this->error_manager; }  
+    public function GetInterface() : IOInterface { return $this->interface; }        
+    private function GetErrorManager() : ErrorManager { return $this->error_manager; }  
     
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     {
@@ -66,8 +65,9 @@ class Main
         $this->app_time = microtime(true);
         
         $app_object = new $app_class($this);        
-        $data = $app_object->Run($input);
         array_push($this->runs, $app_object);
+        
+        $data = $app_object->Run($input);
         
         $this->app_time = microtime(true) - $this->app_time;
         
@@ -87,13 +87,16 @@ class Main
         return Output::Parse($data);
     }
     
-    public function Commit()
+    public function rollBack()
     {
-        $this->database->commit();
-        
-        foreach($this->runs as $app) $app->Commit();
-        
-        $this->error_manager->ResetErrorHandlers();
+        $this->database->rollback();        
+        foreach($this->runs as $app) $app->rollback();
+    }
+    
+    public function commit()
+    {
+        $this->database->commit();        
+        foreach($this->runs as $app) $app->commit();
     }
     
     public function GetDebug() : bool
