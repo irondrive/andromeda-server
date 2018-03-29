@@ -30,6 +30,4 @@ $output = Output::Success($data);
 
 if ($main->GetDebug()) $output->SetMetrics($main->GetMetrics());
 
-$interface->WriteOutput($output); 
-
-$error_manager->DisableErrors(); die();
+$interface->WriteOutput($output); die();

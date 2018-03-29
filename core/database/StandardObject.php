@@ -42,20 +42,22 @@ abstract class StandardObject extends BaseObject
         return $this->DeltaScalar("counters__$name",$delta); 
     }
     
-    protected function GetAllDates() : array        { return $this->GetAll('dates'); }
-    protected function GetAllFeatures() : array     { return $this->GetAll('features'); }
-    protected function GetAllCounters() : array     { return $this->GetAll('counters'); }
-    protected function GetAllCounterLimits() : array { return $this->GetAll('counters_limits'); }
+    protected function GetAllDates() : array        { return $this->GetAllScalars('dates'); }
+    protected function GetAllFeatures() : array     { return $this->GetAllScalars('features'); }
+    protected function GetAllCounters() : array     { return $this->GetAllScalars('counters'); }
+    protected function GetAllCounterLimits() : array { return $this->GetAllScalars('counters_limits'); }
     
-    private function GetAll(string $prefix) : array
+    private function GetAllScalars(string $prefix) : array
     {        
         $output = array(); 
         foreach (array_keys($this->scalars) as $key)
         {
-            $obj = $this->scalars[$key]; 
-            $key = explode("__",$key,2);  
-            if (count($key) == 2 && $key[0] == $prefix)
-                $output[$key[1]] = $obj->GetValue();
+            $keyarr = explode("__",$key); 
+            if ($keyarr[0] === $prefix)
+            {
+                $realkey = implode('__',array_slice($keyarr, 0, 2));
+                $output[$keyarr[1]] = $this->GetScalar($realkey);
+            }                
         }
         return $output;
     } 

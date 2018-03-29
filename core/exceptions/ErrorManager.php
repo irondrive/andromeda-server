@@ -64,13 +64,11 @@ class ErrorManager
             }
             else $output = $this->HandleThrowable($e);
 
-            $this->interface->WriteOutput($output); 
-            
-            $this->DisableErrors(); die();           
+            $this->interface->WriteOutput($output); die();         
         });
     }
     
-    public function DisableErrors() : void { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
+    public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
     private function Log(\Throwable $e) : void
     {         

@@ -6,7 +6,8 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
 class NotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
 class ChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
-class ObjectNotFoundException extends Exceptions\ServerException        { public $message = "OBJECT_NOT_FOUND"; }
+class ObjectNotFoundException extends Exceptions\ServerException { public $message = "OBJECT_NOT_FOUND"; }
+class NullValueException extends Exceptions\ServerException     { public $message = "VALUE_IS_NULL"; }
 
 abstract class BaseObject
 {
@@ -70,7 +71,8 @@ abstract class BaseObject
     protected function GetScalar(string $field)
     {
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
-        return $this->scalars[$field]->GetValue();
+        $value = $this->scalars[$field]->GetValue();
+        if ($value !== null) return $value; else throw new NullValueException($field);
     }
     
     protected function TryGetScalar(string $field)
@@ -82,7 +84,8 @@ abstract class BaseObject
     protected function GetObject(string $field) : BaseObject
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        return $this->objects[$field]->GetObject();
+        $value = $this->objects[$field]->GetObject();
+        if ($value !== null) return $value; else throw new NullValueException($field);
     }
     
     protected function TryGetObject(string $field) : ?BaseObject
@@ -227,7 +230,7 @@ abstract class BaseObject
         foreach ($this->objectrefs as $refs)
         {
             $objects = $refs->GetObjects(); $reffield = $refs->GetRefField();
-            foreach ($objects as $object) $object->UnsetObject($reffield);
+            foreach ($objects as $object) $object->UnsetObject($reffield, true);
         }
         
         $this->database->DeleteObject($class, $this);
