@@ -66,14 +66,14 @@ class FullEmailer extends StandardObject implements Emailer
         $mailer->Host = $this->GetScalar('hostname');
         $mailer->Port = $this->GetScalar('port');
         
-        if ($this->GetScalar('username') !== null)
+        if ($this->TryGetScalar('username') !== null)
         {
             $mailer->SMTPAuth = true;
             $mailer->Username = $this->GetScalar('username');
             $mailer->Password = $this->GetScalar('password');
         }
         
-        $secure = $this->GetScalar('secure');
+        $secure = $this->TryGetScalar('secure');
         if ($secure == self::MODE_SSL) $mailer->SMTPSecure = 'ssl';
         else if ($secure == self::MODE_TLS) $mailer->SMTPSecure = 'tls';
         

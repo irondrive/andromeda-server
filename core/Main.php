@@ -25,19 +25,18 @@ class Main implements Transactions
 { 
     private $construct_time; private $app_time; private $runs = array(); 
     
-    private $context; private $server; private $database; private $error_manager;  private $interface;
+    private $context; private $server; private $database; private $interface;
     
     public function GetContext() : ?Input { return $this->context; }
     public function GetServer() : ?Server { return $this->server; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
     public function GetInterface() : IOInterface { return $this->interface; }        
-    private function GetErrorManager() : ErrorManager { return $this->error_manager; }  
-    
+
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     {
         $this->construct_time = microtime(true);
         
-        $this->error_manager = $error_manager; $this->error_manager->SetAPI($this);  
+        $error_manager->SetAPI($this);  
         
         $this->interface = $interface; $this->database = new ObjectDatabase();
         
