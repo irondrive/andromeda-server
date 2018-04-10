@@ -56,7 +56,7 @@ abstract class StandardObject extends BaseObject
             if ($keyarr[0] === $prefix)
             {
                 $realkey = implode('__',array_slice($keyarr, 0, 2));
-                $output[$keyarr[1]] = $this->GetScalar($realkey);
+                $output[$keyarr[1]] = $this->TryGetScalar($realkey);
             }                
         }
         return $output;
