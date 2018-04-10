@@ -8,6 +8,7 @@ class NotCounterException extends Exceptions\ServerException    { public $messag
 class ChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
 class ObjectNotFoundException extends Exceptions\ServerException { public $message = "OBJECT_NOT_FOUND"; }
 class NullValueException extends Exceptions\ServerException     { public $message = "VALUE_IS_NULL"; }
+class SaveDeletedException extends Exceptions\ServerException   { public $message = "MODIFIED_DELETED_OBJECT"; }
 
 abstract class BaseObject
 {
@@ -114,6 +115,11 @@ abstract class BaseObject
         return $this;
     } 
     
+    protected function TrySetScalar(string $field, $value, bool $temp = false) : BaseObject
+    {
+        if ($this->ExistsScalar($field)) $this->SetScalar($field, $value, $temp); return $this;
+    } 
+    
     protected function DeltaScalar(string $field, int $delta) : BaseObject
     {
         if ($delta == 0) return $this;
@@ -149,6 +155,11 @@ abstract class BaseObject
         $this->database->setModified($this);
 
         return $this;
+    } 
+    
+    protected function TrySetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
+    {
+        if ($this->ExistsObject($field)) $this->SetObject($field, $object, $notification); return $this;
     } 
     
     protected function UnsetObject(string $field, bool $notification = false) : BaseObject { 
@@ -192,6 +203,8 @@ abstract class BaseObject
     
     public function Save(bool $new = false) : BaseObject
     {
+        if ($this->deleted) throw new SaveDeletedException();
+        
         $class = static::class; $values = array(); $counters = array();
         
         foreach(array_keys($this->scalars) as $key)
@@ -217,6 +230,8 @@ abstract class BaseObject
         else return $this->database->SaveNewObject($class, $this, $values, $counters);
     } 
     
+    private $deleted = false;
+    
     public function Delete()
     {
         $class = static::class; 
@@ -224,7 +239,7 @@ abstract class BaseObject
         foreach ($this->objects as $field)
         {
             $object = $field->GetObject(); $reffield = $field->GetRefField();
-            if ($reffield !== null) $object->RemoveObjectRef($reffield, $this, true);
+            if ($object !== null && $reffield !== null) $object->RemoveObjectRef($reffield, $this, true);
         }
         
         foreach ($this->objectrefs as $refs)
@@ -233,7 +248,7 @@ abstract class BaseObject
             foreach ($objects as $object) $object->UnsetObject($reffield, true);
         }
         
-        $this->database->DeleteObject($class, $this);
+        $this->database->DeleteObject($class, $this); $this->deleted = true;
     }
     
     protected static function BaseCreate(ObjectDatabase $database)

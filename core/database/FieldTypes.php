@@ -248,34 +248,36 @@ class ObjectRefs extends Field
         $this->refs_added = array(); $this->refs_deleted = array();
     }
     
-    public function AddObject(BaseObject $object, bool $notification)
+    public function AddObject(BaseObject $object, bool $notification) : bool
     {
         if (!isset($this->objects))
         {
             if (!in_array($object, $this->refs_added))
             {
-                array_push($this->refs_added, $object);
+                array_push($this->refs_added, $object); return true;
             }
         }
         else if (!in_array($object, $this->objects))
         {
-            $this->objects[$object->ID()] = $object;
+            $this->objects[$object->ID()] = $object; return true;
         }
+        return false;
     }
     
-    public function RemoveObject(BaseObject $object, bool $notification)
+    public function RemoveObject(BaseObject $object, bool $notification) : bool
     {
         if (!isset($this->objects))
         {
             if (!in_array($object, $this->refs_deleted))
             {
-                array_push($this->refs_deleted, $object);
+                array_push($this->refs_deleted, $object); return true;
             }
         }
         else if (in_array($object, $this->objects))
         {
-            unset($this->objects[$object->ID()]);
+            unset($this->objects[$object->ID()]); return true;
         }
+        return false;
     }
 }
 
