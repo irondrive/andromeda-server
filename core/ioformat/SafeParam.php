@@ -7,7 +7,8 @@ use Andromeda\Core\JSONDecodingException;
 
 class SafeParamException extends Exceptions\Client400Exception { }
 
-class SafeParamInvalidException extends SafeParamException { public $message = "SAFEPARAM_INVALID_DATA"; }
+class SafeParamInvalidException extends SafeParamException {
+    public function __construct(string $type) { $this->message = "SAFEPARAM_INVALID_DATA: $type"; } }
 
 class SafeParamUnknownException extends SafeParamException{ 
     public function __construct(string $type) { $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
@@ -93,7 +94,7 @@ class SafeParam
         }
         else throw new SafeParamUnknownException($type);
         
-        $this->data = self::filterData($this->type, $data);       
+        $this->data = $this->filterData($this->type, $data);       
     }
 
     public function GetTypeString() : string
@@ -102,29 +103,29 @@ class SafeParam
         return $str.array_flip(self::TYPE_STRINGS)[$this->type % self::TYPE_ARRAY];
     }
     
-    public static function filterData(int $type, $data)
+    public function filterData(int $type, $data)
     {
         if (is_string($data)) $data = trim($data);
         
         if ($type == self::TYPE_BOOL)
         {
             if (($data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
-                throw new SafeParamInvalidException();
+                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_INT)
         {
             if (($data = filter_var($data, FILTER_VALIDATE_INT)) === false)
-                throw new SafeParamInvalidException();
+                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_FLOAT)
         {
             if (($data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
-                throw new SafeParamInvalidException();
+                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_ALPHANUM)
         {
             if (!preg_match("%^[a-zA-Z0-9_]+$%",$data))
-                throw new SafeParamInvalidException();
+                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_TEXT)
         {
@@ -133,14 +134,14 @@ class SafeParam
         else if ($type == self::TYPE_EMAIL)
         {
             if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL)))
-                throw new SafeParamInvalidException();
+                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_OBJECT)
         {
             if (!is_array($data)) 
             {
                 try { $data = Utilities::JSONDecode($data); }
-                catch (JSONDecodingException $e) { throw new SafeParamInvalidException(); }
+                catch (JSONDecodingException $e) { throw new SafeParamInvalidException($this->GetTypeString()); }
             }
 
             $output = new SafeParams();
@@ -149,7 +150,7 @@ class SafeParam
             {
                 $param = explode('_',$key,2);               
                 
-                if (count($param) != 2) throw new SafeParamInvalidException();
+                if (count($param) != 2) throw new SafeParamInvalidException($this->GetTypeString());
                 
                 $output->AddParam($param[0], $param[1], $data[$key]);
             }
@@ -161,15 +162,12 @@ class SafeParam
             if (!is_array($data))
             {
                 try { $data = Utilities::JSONDecode($data); }
-                catch (JSONDecodingException $e) { throw new SafeParamInvalidException(); }
+                catch (JSONDecodingException $e) { throw new SafeParamInvalidException($this->GetTypeString()); }
             }
             
             $type -= self::TYPE_ARRAY;
             
-            for ($i = 0; $i < count($data); $i++)
-            {
-                $data[$i] = self::filterData($type, $data[$i]);
-            }
+            $data = array_map(function($value) use ($type){ return (new SafeParam($type, $value))->getData(); }, $data);
         }
         
         return $data;

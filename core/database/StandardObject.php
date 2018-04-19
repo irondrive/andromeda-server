@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
+class DuplicateSingletonException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBSINGLETON"; }
 
 interface ClientObject { public function GetClientObject(int $level = 0) : array; }
 
@@ -75,7 +76,7 @@ abstract class SingletonObject extends StandardObject
     public static function Load(ObjectDatabase $database) : StandardObject
     {
         $objects = self::LoadManyMatchingAll($database, null);
-        if (count($objects) > 1) throw new DuplicateUniqueKeyException();
+        if (count($objects) > 1) throw new DuplicateSingletonException();
         else if (count($objects) == 0) throw new ObjectNotFoundException();
         else return array_values($objects)[0];
     }

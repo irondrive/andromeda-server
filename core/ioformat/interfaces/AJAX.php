@@ -51,7 +51,7 @@ class AJAX extends IOInterface
         {
             $param = explode('_',$key,2);
             
-            if (count($param) != 2) { throw new InvalidParamException(); }
+            if (count($param) != 2) { throw new InvalidParamException(implode('_',$param)); }
             
             $params->AddParam($param[0], $param[1], $_REQUEST[$key]);
         }
