@@ -16,12 +16,12 @@ abstract class BaseObject
     
     public static function GetClass() : string { return static::class; }
     
-    public static function LoadByID(ObjectDatabase $database, string $id) : BaseObject 
+    public static function LoadByID(ObjectDatabase $database, string $id) : self
     {
         return self::LoadByUniqueKey($database,'id',$id);
     }
     
-    public static function TryLoadByID(ObjectDatabase $database, ?string $id) : ?BaseObject
+    public static function TryLoadByID(ObjectDatabase $database, ?string $id) : ?self
     {
         if ($id === null) return null;
         else return self::TryLoadByUniqueKey($database,'id',$id);
@@ -37,13 +37,13 @@ abstract class BaseObject
         return self::LoadManyMatchingAll($database, null); 
     }
         
-    protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : BaseObject 
+    protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
     {
         $class = static::class; $object = $database->TryLoadObjectByUniqueKey($class, $field, $key);
         if ($object !== null) return $object; else throw new ObjectNotFoundException($class);
     }
         
-    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?BaseObject 
+    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?self
     {
         if ($key === null) return null;
         $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
@@ -82,14 +82,14 @@ abstract class BaseObject
         return $this->scalars[$field]->GetValue();
     }
     
-    protected function GetObject(string $field) : BaseObject
+    protected function GetObject(string $field) : self
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         $value = $this->objects[$field]->GetObject();
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
     
-    protected function TryGetObject(string $field) : ?BaseObject
+    protected function TryGetObject(string $field) : ?self
     {
         if (!$this->ExistsObject($field)) return null;
         return $this->objects[$field]->GetObject();
@@ -107,7 +107,7 @@ abstract class BaseObject
         return $this->objectrefs[$field]->GetObjects();
     }
     
-    protected function SetScalar(string $field, $value, bool $temp = false) : BaseObject
+    protected function SetScalar(string $field, $value, bool $temp = false) : self
     {    
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         $this->scalars[$field]->SetValue($value, $temp);
@@ -115,12 +115,12 @@ abstract class BaseObject
         return $this;
     } 
     
-    protected function TrySetScalar(string $field, $value, bool $temp = false) : BaseObject
+    protected function TrySetScalar(string $field, $value, bool $temp = false) : self
     {
         if ($this->ExistsScalar($field)) $this->SetScalar($field, $value, $temp); return $this;
     } 
     
-    protected function DeltaScalar(string $field, int $delta) : BaseObject
+    protected function DeltaScalar(string $field, int $delta) : self
     {
         if ($delta == 0) return $this;
         
@@ -134,7 +134,7 @@ abstract class BaseObject
         return $this;
     }
     
-    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
+    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         if ($object === $this->objects[$field]) return $this;
@@ -157,15 +157,15 @@ abstract class BaseObject
         return $this;
     } 
     
-    protected function TrySetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
+    protected function TrySetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
         if ($this->ExistsObject($field)) $this->SetObject($field, $object, $notification); return $this;
     } 
     
-    protected function UnsetObject(string $field, bool $notification = false) : BaseObject { 
+    protected function UnsetObject(string $field, bool $notification = false) : self { 
         return $this->SetObject($field, null, $notification); }
         
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
+        protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
@@ -176,7 +176,7 @@ abstract class BaseObject
         return $this;
     }
     
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         
@@ -201,7 +201,7 @@ abstract class BaseObject
         } 
     } 
     
-    public function Save(bool $new = false) : BaseObject
+    public function Save(bool $new = false) : self
     {
         if ($this->deleted) throw new SaveDeletedException();
         

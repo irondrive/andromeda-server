@@ -39,7 +39,7 @@ class AJAX extends IOInterface
     
     public function GetInput() : Input
     {
-        if (empty($_REQUEST['app']) || empty($_REQUEST['action'])) { 
+        if (empty($_GET['app']) || empty($_GET['action'])) { 
             throw new NoAppActionException(); }
         
         $app = $_GET['app'];        unset($_REQUEST['app']); 

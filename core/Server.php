@@ -14,7 +14,7 @@ class Server extends SingletonObject
     public function GetApps() : array { return $this->GetScalar('apps'); }
     public function GetDataDir() : ?string { return $this->TryGetScalar('datadir'); }
     
-    const LOG_BASIC = 1; const LOG_SENSITIVE = 2;
+    const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_SENSITIVE = 2;
     
     public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_BASIC; }
     public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
