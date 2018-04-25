@@ -53,18 +53,18 @@ class ErrorManager
         set_error_handler( function($code,$string,$file,$line){
            throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
         
-        set_exception_handler( function(\Throwable $e)
+        set_exception_handler(function(\Throwable $e)
         {
-            $this->dead = true; if ($e instanceof Exceptions\ClientException)
+            if ($e instanceof Exceptions\ClientException)
             {
                 $output = $this->HandleClientException($e);
                 
-                if (isset($this->API) && $this->API->GetDebug()) 
+                if (isset($this->API) && $this->API->GetDebug())
                     $output->SetMetrics($this->API->GetMetrics(false));
             }
             else $output = $this->HandleThrowable($e);
-
-            $this->interface->WriteOutput($output); die();         
+            
+            $this->interface->WriteOutput($output); die();  
         });
     }
     
@@ -97,8 +97,12 @@ class ErrorManager
         while (($e = $e->getPrevious()) !== null) { $this->Log($e); }
     }   
     
+    private $logfileok = true;
+    
     private function Log2File(string $datadir, string $data) : void
     {
-        file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND);
+        if (!$this->logfileok) return;
+        try { file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND); }
+        catch (\Throwable $e) { $this->logfileok = false; $this->HandleThrowable($e); }
     }
 }
