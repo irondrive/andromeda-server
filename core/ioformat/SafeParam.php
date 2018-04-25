@@ -60,10 +60,11 @@ class SafeParam
     const TYPE_INT      = 2;
     const TYPE_FLOAT    = 3;    
     const TYPE_ALPHANUM = 4; 
-    const TYPE_TEXT     = 5;
-    const TYPE_RAW      = 6;
-    const TYPE_EMAIL    = 7;
-    const TYPE_OBJECT   = 8;
+    const TYPE_ALNUMEXT = 5;
+    const TYPE_EMAIL    = 6;
+    const TYPE_TEXT     = 7;
+    const TYPE_RAW      = 8;
+    const TYPE_OBJECT   = 9;
 
     const TYPE_ID = self::TYPE_ALPHANUM;
     
@@ -75,9 +76,10 @@ class SafeParam
         'int'       => self::TYPE_INT,
         'float'     => self::TYPE_FLOAT,
         'alphanum'  => self::TYPE_ALPHANUM,
+        'alnumext'  => self::TYPE_ALNUMEXT,
+        'email'     => self::TYPE_EMAIL,
         'text'      => self::TYPE_TEXT,
         'raw'       => self::TYPE_RAW,
-        'email'     => self::TYPE_EMAIL,
         'object'    => self::TYPE_OBJECT,
         'id'        => self::TYPE_ALPHANUM,
     );
@@ -124,17 +126,22 @@ class SafeParam
         }
         else if ($type == self::TYPE_ALPHANUM)
         {
-            if (!preg_match("%^[a-zA-Z0-9_]+$%",$data))
+            if (!preg_match("%^[a-zA-Z0-9_]+$%",$data) || strlen($data) > 255)
+                throw new SafeParamInvalidException($this->GetTypeString());
+        }
+        else if ($type == self::TYPE_ALNUMEXT)
+        {
+            if (!preg_match("%^[a-zA-Z0-9_'. ]+$%",$data) || strlen($data) > 255)
+                throw new SafeParamInvalidException($this->GetTypeString());
+        }
+        else if ($type == self::TYPE_EMAIL)
+        {
+            if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL)) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_TEXT)
         {
             $data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);   
-        }
-        else if ($type == self::TYPE_EMAIL)
-        {
-            if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL)))
-                throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_OBJECT)
         {
