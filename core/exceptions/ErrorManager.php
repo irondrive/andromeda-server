@@ -22,7 +22,7 @@ class ErrorManager
     
     public function GetDebug() : bool
     {
-        if (isset($this->API) && $this->API->GetServer() !== null) return $this->API->GetDebug();
+        if (isset($this->API) && $this->API->GetConfig() !== null) return $this->API->GetDebug();
         else return CLI::isApplicable() || self::DEBUG_DEFAULT;
     }
     
@@ -39,7 +39,7 @@ class ErrorManager
     {
         if (isset($this->API)) $this->API->rollBack();
         
-        if (isset($this->API) && $this->API->GetServer() !== null && $this->API->GetServer()->GetDebugLogLevel()) $this->Log($e);
+        if (isset($this->API) && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
         
         $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
         
@@ -73,10 +73,10 @@ class ErrorManager
     private function Log(\Throwable $e) : void
     {         
         $logged = false; $logdir = null;
-        if (isset($this->API) && $this->API->GetServer() !== null)
+        if (isset($this->API) && $this->API->GetConfig() !== null)
         {
-            $logdir = $this->API->GetServer()->GetDataDir();
-            if ($this->API->GetServer()->GetDebugLog2File()) 
+            $logdir = $this->API->GetConfig()->GetDataDir();
+            if ($this->API->GetConfig()->GetDebugLog2File()) 
             {
                 $data = Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e));
                 $this->Log2File($logdir, $data); $logged = true; 
