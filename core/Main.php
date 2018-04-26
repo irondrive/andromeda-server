@@ -113,6 +113,7 @@ class Main implements Transactions
             'db_reads' => $this->database->getReads(),
             'db_writes' => $this->database->getWrites(),
             'queries' => $this->database->getHistory(),
+            'objects' => $this->database->getLoadedObjects(),
         );
         if (!$apptime) unset($metrics['app_time']);
         return $metrics;
