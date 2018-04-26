@@ -55,14 +55,16 @@ class Scalar extends Field
     
     public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
     
-    public function SetValue($value, bool $temp = false) : void 
+    public function SetValue($value, bool $temp = false) : bool
     { 
         $this->tempvalue = $value;
-        
+
         if (!$temp && $value !== $this->realvalue)
         {
-            $this->realvalue = $value; $this->delta++;
+            $this->realvalue = $value; $this->delta++; return true;
         }
+        
+        return false;
     }
     
     public function EraseValue() : void
@@ -78,8 +80,12 @@ class Scalar extends Field
 class Counter extends Scalar
 {
     const SPECIAL = "counter";
-    public function Delta($delta) : void { 
-        $this->tempvalue += $delta; $this->realvalue += $delta; $this->delta += $delta; }
+    public function Delta($delta) : bool 
+    { 
+        if ($delta === 0) return false;
+        $this->tempvalue += $delta; $this->realvalue += $delta; 
+        $this->delta += $delta; return true;
+    }
         
     public function GetDBValue() { return $this->delta; }
 }
@@ -139,9 +145,9 @@ class ObjectPointer extends Field
         return $this->object;
     }
     
-    public function SetObject(?BaseObject $object) : void 
+    public function SetObject(?BaseObject $object) : bool
     { 
-        if ($object === $this->object) return;
+        if ($object === $this->object) return false;
         
         $class = ObjectDatabase::GetFullClassName($this->GetPolyClass());
         if ($object !== null && !is_a($object, $class)) 
@@ -149,7 +155,7 @@ class ObjectPointer extends Field
         
         if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
         
-        $this->object = $object; $this->delta++; 
+        $this->object = $object; $this->delta++; return true;
     }
 }
 
@@ -186,13 +192,15 @@ class ObjectPolyPointer extends ObjectPointer
         return implode('*', $header);
     }
     
-    public function SetObject(?BaseObject $object) : void
+    public function SetObject(?BaseObject $object) : bool
     {
-        if ($object === $this->object) return;
+        if ($object === $this->object) return false;
         
         parent::SetObject($object);
         
         $this->refclass = ($object === null) ? null : ObjectDatabase::GetShortClassName(get_class($object));
+        
+        return true;
     }
 }
 

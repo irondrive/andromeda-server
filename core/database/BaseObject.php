@@ -110,8 +110,8 @@ abstract class BaseObject
     protected function SetScalar(string $field, $value, bool $temp = false) : self
     {    
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
-        $this->scalars[$field]->SetValue($value, $temp);
-        if (!$temp) $this->database->setModified($this);
+        if ($this->scalars[$field]->SetValue($value, $temp))
+            $this->database->setModified($this);
         return $this;
     } 
     
@@ -129,8 +129,9 @@ abstract class BaseObject
         if (!($this->scalars[$field] instanceof Fields\Counter))
             throw new NotCounterException(get_class($this->scalars[$field]));
         
-        $this->scalars[$field]->Delta($delta);
-        $this->database->setModified($this);
+        if ($this->scalars[$field]->Delta($delta))
+            $this->database->setModified($this);
+        
         return $this;
     }
     
@@ -151,8 +152,8 @@ abstract class BaseObject
                 $object->AddObjectRef($reffield, $this, true);
         }
         
-        $this->objects[$field]->SetObject($object);
-        $this->database->setModified($this);
+        if ($this->objects[$field]->SetObject($object))
+            $this->database->setModified($this);
 
         return $this;
     } 
