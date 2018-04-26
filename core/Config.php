@@ -7,7 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class EmailUnavailableException extends Exceptions\ServerException    { public $message = "EMAIL_UNAVAILABLE"; }
 
-class Server extends SingletonObject
+class Config extends SingletonObject
 {
     public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
     public function isReadOnly() : bool { return $this->TryGetFeature('read_only') ?? false; }

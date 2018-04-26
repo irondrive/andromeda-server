@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/Server.php"); use Andromeda\Core\Server;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -42,7 +42,7 @@ class ErrorLogEntry extends BaseObject
             'action'=>  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
         );
         
-        if ((isset($api) && $api->GetServer() !== null) ? ($api->GetServer()->GetDebugLogLevel() >= Server::LOG_SENSITIVE) : ErrorManager::DEBUG_FULL_DEFAULT)
+        if ((isset($api) && $api->GetConfig() !== null) ? ($api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE) : ErrorManager::DEBUG_FULL_DEFAULT)
         {
             $data['trace_basic'] = $e->getTraceAsString();
             if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);

@@ -29,7 +29,7 @@ class ServerApp extends AppBase
     }
     
     protected function Version(Input $input) { return VERSION; }
-    protected function GetApps(Input $input) { return $this->API->GetServer()->GetApps(); }
+    protected function GetApps(Input $input) { return $this->API->GetConfig()->GetApps(); }
     protected function DumpInput(Input $input) { return print_r($input, true); }
 }
 

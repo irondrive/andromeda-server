@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Server.php"); use Andromeda\Core\Server;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/core/database/Config.php");
 require_once(ROOT."/core/database/ObjectDatabase.php");
@@ -23,12 +23,14 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 
 class Main implements Transactions
 { 
-    private $construct_time; private $app_time; private $runs = array(); 
+    private $construct_time;
     
-    private $context; private $server; private $database; private $interface;
+    private $runs = array(); private $run_stats = array();
+    
+    private $context; private $config; private $database; private $interface;
     
     public function GetContext() : ?Input { return $this->context; }
-    public function GetServer() : ?Server { return $this->server; }
+    public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
     public function GetInterface() : IOInterface { return $this->interface; }        
 
@@ -40,11 +42,11 @@ class Main implements Transactions
         
         $this->interface = $interface; $this->database = new ObjectDatabase();
         
-        try { $this->server = Server::Load($this->database); } 
+        try { $this->config = Config::Load($this->database); } 
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
 
-        if (!$this->server->isEnabled()) throw new MaintenanceException();
-        if ($this->server->isReadOnly()) $this->database->setReadOnly();    
+        if (!$this->config->isEnabled()) throw new MaintenanceException();
+        if ($this->config->isReadOnly()) $this->database->setReadOnly();    
     }
     
     public function Run(Input $input)
@@ -53,7 +55,7 @@ class Main implements Transactions
 
         $app = $input->GetApp(); 
         
-        if (!in_array($app, $this->server->GetApps())) throw new UnknownAppException();
+        if (!in_array($app, $this->config->GetApps())) throw new UnknownAppException();
         
         $path = ROOT."/apps/$app/$app"."App.php"; 
         $app_class = "Andromeda\\Apps\\$app\\$app".'App';
@@ -61,14 +63,22 @@ class Main implements Transactions
         if (is_file($path)) require_once($path); else throw new FailedAppLoadException();
         if (!class_exists($app_class)) throw new FailedAppLoadException();
         
-        $this->app_time = microtime(true);
+        $start = microtime(true); $this->database->resetStats();
         
         $app_object = new $app_class($this);        
         array_push($this->runs, $app_object);
         
         $data = $app_object->Run($input);
         
-        $this->app_time = microtime(true) - $this->app_time;
+        $total_time = microtime(true) - $start; 
+        $code_time = $total_time - $this->database->getReadTime() - $this->database->getWriteTime();
+        
+        array_push($this->run_stats, array(
+            'db_reads' => $this->database->getReads(),
+            'db_read_time' => $this->database->getReadTime(),
+            'code_time' => $code_time,
+            'total_time' => $total_time,
+        ));
         
         $this->context = $prevContext;
 
@@ -94,24 +104,24 @@ class Main implements Transactions
     
     public function commit()
     {
-        $this->database->commit();        
+        $this->database->resetStats()->commit();        
         foreach($this->runs as $app) $app->commit();
     }
     
     public function GetDebug() : bool
     {
-        return $this->server->GetDebugOverHTTP() ||
+        return $this->config->GetDebugOverHTTP() ||
             $this->interface->getMode() == IOInterface::MODE_CLI;
     }
     
     public function GetMetrics(bool $apptime = true) : array
     {        
         $metrics = array(
+            'run_stats' => $this->run_stats,
+            'commit_writes' => $this->database->getWrites(),
+            'commit_time' => $this->database->getWriteTime(),
             'total_time' => microtime(true) - $this->construct_time,
-            'app_time' => $this->app_time,
-            'peak_memory' => memory_get_peak_usage(),        
-            'db_reads' => $this->database->getReads(),
-            'db_writes' => $this->database->getWrites(),
+            'peak_memory' => memory_get_peak_usage(),
             'queries' => $this->database->getHistory(),
             'objects' => $this->database->getLoadedObjects(),
         );
