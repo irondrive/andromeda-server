@@ -109,7 +109,12 @@ abstract class BaseObject
     
     protected function SetScalar(string $field, $value, bool $temp = false) : self
     {    
-        if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
+        if (!$this->ExistsScalar($field))
+        {
+            if ($value === null) return $this;
+            else throw new KeyNotFoundException($field);
+        }
+        
         if ($this->scalars[$field]->SetValue($value, $temp))
             $this->database->setModified($this);
         return $this;
@@ -137,7 +142,12 @@ abstract class BaseObject
     
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
-        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        if (!$this->ExistsObject($field)) 
+        {
+            if ($object === null) return $this;
+            else throw new KeyNotFoundException($field);
+        }
+        
         if ($object === $this->objects[$field]) return $this;
         
         if (!$notification)
@@ -163,10 +173,12 @@ abstract class BaseObject
         if ($this->ExistsObject($field)) $this->SetObject($field, $object, $notification); return $this;
     } 
     
-    protected function UnsetObject(string $field, bool $notification = false) : self { 
-        return $this->SetObject($field, null, $notification); }
+    protected function UnsetObject(string $field, bool $notification = false) : self 
+    { 
+        return $this->SetObject($field, null, $notification); 
+    }
         
-        protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
