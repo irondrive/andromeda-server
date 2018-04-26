@@ -24,10 +24,10 @@ $input = $interface->GetInput();
 
 $data = $main->Run($input); 
 
-$main->Commit();    
-
 $output = Output::Success($data);
 
-if ($main->GetDebug()) $output->SetMetrics($main->GetMetrics());
+$metrics = $main->Commit(); 
+
+if ($metrics !== null) $output->SetMetrics($metrics);
 
 $interface->WriteOutput($output); die();

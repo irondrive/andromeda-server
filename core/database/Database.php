@@ -8,16 +8,27 @@ class DatabaseReadOnlyException extends Exceptions\Client400Exception { public $
 
 interface Transactions { public function rollBack(); public function commit(); }
 
+class DBStats
+{
+    private $reads = 0; private $writes = 0; private $read_time = 0; private $write_time = 0; private $temp = 0;
+    
+    public function getReads() : int        { return $this->reads; }
+    public function getWrites() : int       { return $this->writes; }
+    public function getReadTime() : float   { return $this->read_time; }
+    public function getWriteTime() : float  { return $this->write_time; }
+    
+    public function startTiming()                   { $this->temp = microtime(true); }
+    public function endRead()                       { $this->read_time += microtime(true) - $this->temp; $this->reads++; }
+    public function endWrite(bool $count = true)    { $this->write_time += microtime(true) - $this->temp; if ($count) $this->writes++; }
+}
+
 class Database implements Transactions {
 
     private $connection; 
     private $read_only = false;
     
-    private $count_reads = 0;
-    private $count_writes = 0;
-    
-    private $read_time = 0;
-    private $write_time = 0;
+    private $stats_stack_index = null;
+    private $stats_stack = array();
     
     private $query_history = array();
     
@@ -28,33 +39,44 @@ class Database implements Transactions {
     }
     
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
-    public function resetStats() : self { $this->read_time = 0; $this->write_time = 0; $this->count_reads = 0; $this->count_writes = 0; return $this; }
 
-    public function getReads() : int { return $this->count_reads; }
-    public function getWrites() : int { return $this->count_writes; }
-    public function getReadTime() : float { return $this->read_time; }
-    public function getWriteTime() : float { return $this->write_time; }
+    public function startStatsContext() : self
+    {
+        if ($this->stats_stack_index === null) 
+            $this->stats_stack_index = 0; 
+        else $this->stats_stack_index++;
+        
+        $this->stats_stack[$this->stats_stack_index] = new DBStats(); return $this;
+    }
+    
+    public function endStatsContext() : self { $this->stats_stack_index--; return $this; }
+    
+    public function getStatsContext() : ?DBStats
+    {
+        if ($this->stats_stack_index === null) return null;
+        else return $this->stats_stack[$this->stats_stack_index];
+    }
+
     public function getHistory(): array { return $this->query_history; }
 
     public function query(string $sql, ?array $data = null, bool $read = true) 
     {
         if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
         
-        $start = microtime(true);
-        
+        $stats = $this->getStatsContext();
+        if ($stats !== null) $stats->startTiming();
+
         array_push($this->query_history,$sql);
         
         if (!$this->connection->inTransaction()) { $this->connection->beginTransaction(); }
         
         $query = $this->connection->prepare($sql); $query->execute($data ?? array());
 
-        if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); $this->count_reads++; } 
-        else { $result = $query->rowCount(); $this->count_writes++; }            
+        if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
+        else { $result = $query->rowCount(); }  
         
-        $elapsed = microtime(true)-$start;
-        if ($read) $this->read_time += $elapsed;
-        else $this->write_time += $elapsed;
-        
+        if ($stats !== null) { if ($read) $stats->endRead(); else $stats->endWrite(); }
+
         unset($query); return $result;    
     }       
 
@@ -62,16 +84,21 @@ class Database implements Transactions {
     { 
         if ($this->connection->inTransaction()) 
             $this->connection->rollBack(); 
-        $this->inTransaction = false; 
-        return $this;
+        $this->inTransaction = false; return $this;
     }
     
     public function commit()
     { 
         if ($this->connection->inTransaction()) 
+        {
+            $stats = $this->getStatsContext();
+            if ($stats !== null) $stats->startTiming();
+            
             $this->connection->commit(); 
-        $this->inTransaction = false; 
-        return $this;
+            
+            if ($stats !== null) $stats->endWrite(false);
+        }            
+        $this->inTransaction = false; return $this;
     }
 }
 

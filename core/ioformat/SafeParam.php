@@ -131,7 +131,7 @@ class SafeParam
         }
         else if ($type == self::TYPE_ALNUMEXT)
         {
-            if (!preg_match("%^[a-zA-Z0-9_'. ]+$%",$data) || strlen($data) > 255)
+            if (!preg_match("%^[a-zA-Z0-9_'() ]+$%",$data) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
         else if ($type == self::TYPE_EMAIL)

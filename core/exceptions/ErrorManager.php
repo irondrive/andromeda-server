@@ -56,12 +56,7 @@ class ErrorManager
         set_exception_handler(function(\Throwable $e)
         {
             if ($e instanceof Exceptions\ClientException)
-            {
                 $output = $this->HandleClientException($e);
-                
-                if (isset($this->API) && $this->API->GetDebug())
-                    $output->SetMetrics($this->API->GetMetrics(false));
-            }
             else $output = $this->HandleThrowable($e);
             
             $this->interface->WriteOutput($output); die();  
@@ -102,7 +97,7 @@ class ErrorManager
     private function Log2File(string $datadir, string $data) : void
     {
         if (!$this->logfileok) return;
-        try { file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND); }
+        try { file_put_contents($datadir.DIRECTORY_SEPARATOR."error.log", $data."\r\n", FILE_APPEND); }
         catch (\Throwable $e) { $this->logfileok = false; $this->HandleThrowable($e); }
     }
 }

@@ -32,9 +32,9 @@ abstract class BaseObject
         return self::LoadManyMatchingAny($database, 'id', $ids); 
     }
         
-    public static function LoadAll(ObjectDatabase $database) : array 
+    public static function LoadAll(ObjectDatabase $database, ?int $limit = null) : array 
     {
-        return self::LoadManyMatchingAll($database, null); 
+        return self::LoadManyMatchingAll($database, null, false, $limit); 
     }
         
     protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
