@@ -23,7 +23,7 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 
 class Main implements Transactions
 { 
-    private $construct_time;
+    private $construct_time_start; private $construct_time_end;
     
     private $runs = array(); private $run_stats = array();
     
@@ -47,6 +47,8 @@ class Main implements Transactions
 
         if (!$this->config->isEnabled()) throw new MaintenanceException();
         if ($this->config->isReadOnly()) $this->database->setReadOnly();    
+        
+        $this->construct_time_elapsed = microtime(true) - $this->construct_time;
     }
     
     public function Run(Input $input)
@@ -63,22 +65,27 @@ class Main implements Transactions
         if (is_file($path)) require_once($path); else throw new FailedAppLoadException();
         if (!class_exists($app_class)) throw new FailedAppLoadException();
         
-        $start = microtime(true); $this->database->resetStats();
+        if ($this->GetDebug()) { $start = microtime(true); $this->database->startStatsContext(); }
         
         $app_object = new $app_class($this);        
         array_push($this->runs, $app_object);
         
         $data = $app_object->Run($input);
         
-        $total_time = microtime(true) - $start; 
-        $code_time = $total_time - $this->database->getReadTime() - $this->database->getWriteTime();
-        
-        array_push($this->run_stats, array(
-            'db_reads' => $this->database->getReads(),
-            'db_read_time' => $this->database->getReadTime(),
-            'code_time' => $code_time,
-            'total_time' => $total_time,
-        ));
+        if ($this->GetDebug()) 
+        {
+            $total_time = microtime(true) - $start; 
+            $stats = $this->database->getStatsContext();
+            $this->database->endStatsContext();
+            $code_time = $total_time - $stats->getReadTime();            
+            
+            array_push($this->run_stats, array(
+                'db_reads' => $stats->getReads(),
+                'db_read_time' => $stats->getReadTime(),
+                'code_time' => $code_time,
+                'total_time' => $total_time,
+            ));
+        }        
         
         $this->context = $prevContext;
 
@@ -102,10 +109,12 @@ class Main implements Transactions
         foreach($this->runs as $app) $app->rollback();
     }
     
-    public function commit()
+    public function commit() : ?array
     {
-        $this->database->resetStats()->commit();        
+        $this->database->startStatsContext()->commit();        
         foreach($this->runs as $app) $app->commit();
+        if ($this->GetDebug()) return $this->GetMetrics(); else return null;
+        $this->database->endStatsContext();
     }
     
     public function GetDebug() : bool
@@ -114,18 +123,19 @@ class Main implements Transactions
             $this->interface->getMode() == IOInterface::MODE_CLI;
     }
     
-    public function GetMetrics(bool $apptime = true) : array
+    private function GetMetrics() : array
     {        
+        $stats = $this->database->getStatsContext();
         $metrics = array(
+            'construct_time' => $this->construct_time_elapsed,
             'run_stats' => $this->run_stats,
-            'commit_writes' => $this->database->getWrites(),
-            'commit_time' => $this->database->getWriteTime(),
+            'commit_writes' => $stats->getWrites(),
+            'commit_time' => $stats->getWriteTime(),
             'total_time' => microtime(true) - $this->construct_time,
             'peak_memory' => memory_get_peak_usage(),
             'queries' => $this->database->getHistory(),
             'objects' => $this->database->getLoadedObjects(),
         );
-        if (!$apptime) unset($metrics['app_time']);
         return $metrics;
     }
     
