@@ -10,7 +10,7 @@ class SafeParamException extends Exceptions\Client400Exception { }
 class SafeParamInvalidException extends SafeParamException {
     public function __construct(string $type) { $this->message = "SAFEPARAM_INVALID_DATA: $type"; } }
 
-class SafeParamUnknownException extends SafeParamException{ 
+class SafeParamUnknownTypeException extends SafeParamException{ 
     public function __construct(string $type) { $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
     
 class SafeParamKeyMissingException extends SafeParamException {
@@ -83,21 +83,6 @@ class SafeParam
         'object'    => self::TYPE_OBJECT,
         'id'        => self::TYPE_ALPHANUM,
     );
-    
-    public function __construct(string $type, $data)
-    {   
-        if (strlen($type) > 0 && $type[0] == '+') { 
-            $this->type = self::TYPE_ARRAY; $type = substr($type,1); }
-        else { $this->type = self::TYPE_SINGLE; }
-
-        if (array_key_exists($type, self::TYPE_STRINGS))
-        {
-            $this->type |= self::TYPE_STRINGS[$type]; 
-        }
-        else throw new SafeParamUnknownException($type);
-        
-        $this->data = $this->filterData($this->type, $data);       
-    }
 
     public function GetTypeString() : string
     {
@@ -105,79 +90,87 @@ class SafeParam
         return $str.array_flip(self::TYPE_STRINGS)[$this->type % self::TYPE_ARRAY];
     }
     
-    public function filterData(int $type, $data)
+    public function __construct(string $typestr, $data)
     {
-        if (is_string($data)) $data = trim($data);
+        if (strlen($typestr) > 0 && $typestr[0] == '+') {
+            $this->type = self::TYPE_ARRAY; $typestr = substr($typestr,1); }
+        else { $this->type = self::TYPE_SINGLE; }
         
-        if ($type == self::TYPE_BOOL)
+        if (array_key_exists($typestr, self::TYPE_STRINGS))
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
+            $this->type |= self::TYPE_STRINGS[$typestr];
+        }
+        else throw new SafeParamUnknownTypeException($typestr);
+            
+        if (is_string($data)) $data = trim($data);
+ 
+        if ($this->type == self::TYPE_BOOL)
+        {
+            if (($this->data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($type == self::TYPE_INT)
+        else if ($this->type == self::TYPE_INT)
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_INT)) === false)
+            if (($this->data = filter_var($data, FILTER_VALIDATE_INT)) === false)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($type == self::TYPE_FLOAT)
+        else if ($this->type == self::TYPE_FLOAT)
         {
-            if (($data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
+            if (($this->data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($type == self::TYPE_ALPHANUM)
+        else if ($this->type == self::TYPE_ALPHANUM)
         {
             if (!preg_match("%^[a-zA-Z0-9_]+$%",$data) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
+            $this->data = $data;
         }
-        else if ($type == self::TYPE_ALNUMEXT)
+        else if ($this->type == self::TYPE_ALNUMEXT)
         {
             if (!preg_match("%^[a-zA-Z0-9_'() ]+$%",$data) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
+            $this->data = $data;
         }
-        else if ($type == self::TYPE_EMAIL)
+        else if ($this->type == self::TYPE_EMAIL)
         {
-            if (!($data = filter_var($data, FILTER_VALIDATE_EMAIL)) || strlen($data) > 255)
+            if (!($this->data = filter_var($data, FILTER_VALIDATE_EMAIL)) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($type == self::TYPE_TEXT)
+        else if ($this->type == self::TYPE_TEXT)
         {
-            $data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);   
+            $this->data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);   
         }
-        else if ($type == self::TYPE_OBJECT)
+        else if ($this->type == self::TYPE_OBJECT)
         {
             if (!is_array($data)) 
             {
                 try { $data = Utilities::JSONDecode($data); }
                 catch (JSONDecodingException $e) { throw new SafeParamInvalidException($this->GetTypeString()); }
             }
-
+            
             $output = new SafeParams();
             
             foreach (array_keys($data) as $key)
             {
                 $param = explode('_',$key,2);               
                 
-                if (count($param) != 2) throw new SafeParamInvalidException($this->GetTypeString());
+                if (count($param) != 2) throw new SafeParamInvalidException($this->GetTypeString()); 
                 
                 $output->AddParam($param[0], $param[1], $data[$key]);
             }
             
-            return $output;
+            $this->data = $output;
         }
-        else if ($type >= self::TYPE_ARRAY)
+        else if ($this->type >= self::TYPE_ARRAY)
         {
             if (!is_array($data))
             {
                 try { $data = Utilities::JSONDecode($data); }
                 catch (JSONDecodingException $e) { throw new SafeParamInvalidException($this->GetTypeString()); }
             }
-            
-            $type -= self::TYPE_ARRAY;
-            
-            $data = array_map(function($value) use ($type){ return (new SafeParam($type, $value))->getData(); }, $data);
+
+            $this->data = array_map(function($value) use ($typestr){ return (new SafeParam($typestr, $value))->getData(); }, $data);
         }
-        
-        return $data;
     }   
 
 }

@@ -47,7 +47,7 @@ class Scalar extends Field
     
     public function GetColumnName() : string
     {
-        $header = array($this->myfield, self::SPECIAL);
+        $header = array($this->myfield, static::SPECIAL);
         return implode('*',array_filter($header));
     }
     
