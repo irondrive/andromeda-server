@@ -138,7 +138,7 @@ class SafeParam
         }
         else if ($this->type == self::TYPE_TEXT)
         {
-            $this->data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);   
+            $this->data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);  
         }
         else if ($this->type == self::TYPE_OBJECT)
         {
@@ -171,6 +171,7 @@ class SafeParam
 
             $this->data = array_map(function($value) use ($typestr){ return (new SafeParam($typestr, $value))->getData(); }, $data);
         }
+        else { $this->data = $data; }
     }   
 
 }

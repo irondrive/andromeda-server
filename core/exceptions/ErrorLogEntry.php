@@ -40,13 +40,14 @@ class ErrorLogEntry extends BaseObject
             
             'app'=>     (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetApp() : "",
             'action'=>  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
+            
+            'trace_basic' => $e->getTraceAsString(),
         );
+        
+        if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
         
         if ((isset($api) && $api->GetConfig() !== null) ? ($api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE) : ErrorManager::DEBUG_FULL_DEFAULT)
         {
-            $data['trace_basic'] = $e->getTraceAsString();
-            if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
-            
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
             $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getHistory() : "";
             
