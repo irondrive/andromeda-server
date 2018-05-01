@@ -4,7 +4,6 @@ require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
-class DuplicateSingletonException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBSINGLETON"; }
 
 interface ClientObject { public function GetClientObject(int $level = 0) : array; }
 
@@ -18,6 +17,10 @@ abstract class StandardObject extends BaseObject
         if ($value === null) $value = time(); 
         return $this->SetScalar("dates__$name", $value); 
     }
+    
+    public function GetDateCreated() : int { return $this->GetDate('created'); }    
+    protected static function BaseCreate(ObjectDatabase $database) {
+        return parent::BaseCreate($database)->SetDate('created'); }
     
     protected function GetFeature(string $name) : ?int             { return $this->GetScalar("features__$name"); }
     protected function TryGetFeature(string $name) : ?int          { return $this->TryGetScalar("features__$name"); }
@@ -34,13 +37,26 @@ abstract class StandardObject extends BaseObject
     protected function ExistsCounterLimit(string $name) : ?int     { return $this->ExistsScalar("counters_limits__$name"); }
     protected function SetCounterLimit(string $name, ?int $value) : self  { return $this->SetScalar("counters_limits__$name", $value); }
     
-    protected function DeltaCounter(string $name, int $delta) : self
+    protected function DeltaCounter(string $name, int $delta = 1) : self
     { 
-        if (($limit = $this->TryGetCounterLimit($name)) !== null) {
+        if (($limit = $this->TryGetCounterLimit($name)) !== null) 
+        {
             $value = $this->GetCounter($name) + $delta;
-            if ($value > $limit) throw new CounterOverLimitException($name); } 
+            if ($value > $limit) throw new CounterOverLimitException($name); 
+        } 
             
         return $this->DeltaScalar("counters__$name",$delta); 
+    }
+    
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
+    {        
+        if (($limit = $this->TryGetCounterLimit($field)) !== null)
+        {
+            $value = count($this->GetObjectRefs($field));
+            if ($value === $limit) throw new CounterOverLimitException($field);
+        }
+        
+        return parent::AddObjectRef($field, $object, $notification);
     }
     
     protected function GetAllDates() : array        { return $this->GetAllScalars('dates'); }
@@ -49,7 +65,7 @@ abstract class StandardObject extends BaseObject
     protected function GetAllCounterLimits() : array { return $this->GetAllScalars('counters_limits'); }
     
     private function GetAllScalars(string $prefix) : array
-    {        
+    {
         $output = array(); 
         foreach (array_keys($this->scalars) as $key)
         {
@@ -63,13 +79,9 @@ abstract class StandardObject extends BaseObject
         return $output;
     } 
     
-    public function GetDateCreated() : int { return $this->GetDate('created'); }
-    
-    protected static function BaseCreate(ObjectDatabase $database)
-    {
-        return parent::BaseCreate($database)->SetDate('created');
-    }
 }
+
+class DuplicateSingletonException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBSINGLETON"; }
 
 abstract class SingletonObject extends StandardObject
 {

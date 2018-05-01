@@ -127,12 +127,12 @@ abstract class BaseObject
     
     protected function DeltaScalar(string $field, int $delta) : self
     {
-        if ($delta == 0) return $this;
+        if ($delta === 0) return $this;
         
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         
         if (!($this->scalars[$field] instanceof Fields\Counter))
-            throw new NotCounterException(get_class($this->scalars[$field]));
+            throw new NotCounterException($field);
         
         if ($this->scalars[$field]->Delta($delta))
             $this->database->setModified($this);
