@@ -6,57 +6,71 @@ class InvalidParseException extends Exceptions\ServerException { public $message
 
 class Output
 {
-    private $data;
+    private $ok; private $code; private $data; private $metrics; private $debug;
     
-    public function GetResponseCode() : int { return $this->data['code']; }
+    public function GetOK() : bool { return $this->ok; }
+    public function GetHTTPCode() : int { return $this->code; }
     
-    public function SetMetrics(array $metrics) { $this->data['metrics'] = $metrics; }
+    public function GetData() { return $this->data; }
+
+    public function SetMetrics(array $metrics) { $this->metrics = $metrics; }
+    public function SetDebug(array $debug) { $this->debug = $debug; }
     
-    public function GetData() : array { return $this->data; }
+    public function GetAsArray() : array 
+    {
+        $array = array('ok'=>$this->ok, 'code'=>$this->code);
+        
+        $array[($this->ok ? 'appdata' : 'message')] = $this->data;
+        
+        if ($this->metrics !== null) $array['metrics'] = $this->metrics;
+        if ($this->debug !== null) $array['debug'] = $this->debug;
+        
+        $array['version'] = VERSION;
+        
+        return $array; 
+    }
+    
+    private function __construct(bool $ok, int $code, $data)
+    {        
+        if (is_array($data) && count($data) === 1 && isset($data[0])) $data = $data[0];
+        
+        $this->ok = $ok; $this->code = $code; $this->data = $data;      
+    }
     
     public static function Success($data) : Output
     {
-        $output = new Output();
-        
-        $output->data = array('ok'=>true,'code'=>200,'appdata'=>$data,'version'=>VERSION);
-        
-        return $output;
+        return new Output(true, 200, $data);
     }
     
     public static function ClientException(\Throwable $e, ?array $debug = null) : Output
     {
-        $output = new Output();
+        $output = new Output(false, $e->getCode(), $e->getMessage());
         
-        $output->data = array('ok'=>false,'code'=>$e->getCode(),'message'=>$e->getMessage(),'version'=>VERSION);
-        
-        if (isset($debug)) $output->data['debug'] = $debug;
+        if ($debug !== null) $output->SetDebug($debug);
         
         return $output;
     }
     
     public static function ServerException(?array $debug = null) : Output
     {
-        $output = new Output();
+        $output = new Output(false, 500, 'SERVER_ERROR');
         
-        $output->data = array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR','version'=>VERSION);
-        
-        if (isset($debug)) $output->data['debug'] = $debug;
+        if ($debug !== null) $output->SetDebug($debug);
         
         return $output;
     }
 
-    public static function Parse(array $data)
+    public static function ParseArray(array $data) : Output
     {
-        if (!array_key_exists('ok',$data) || !array_key_exists('code',$data))
-            throw new InvalidParseException();
+        if (!array_key_exists('ok',$data) || !array_key_exists('code',$data)) throw new InvalidParseException();
 
         $ok = $data['ok']; $code = $data['code'];
 
-        if ($ok)
+        if ($ok === true)
         {
             if (!array_key_exists('appdata',$data)) throw new InvalidParseException();
 
-            return $data['appdata'];
+            return new Output($ok, $code, $data['appdata']);
         }
         else
         {

@@ -13,8 +13,8 @@ class ObjectDatabase extends Database
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
     private $created = array();     /* array[id => BaseObject] */
-    private $columns = array();     /* array[class => array(fields)] */
     private $uniques = array();     /* array[uniquekey => BaseObject] */
+    private $columns = array();     /* array[class => array(fields)] */
     
     public function isModified(BaseObject $obj) : bool 
     { 

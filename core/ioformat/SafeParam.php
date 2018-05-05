@@ -56,22 +56,22 @@ class SafeParam
     public function getData() { return $this->data; }
     public function getType() : int { return $this->type; }
     
-    const TYPE_BOOL     = 1;
-    const TYPE_INT      = 2;
-    const TYPE_FLOAT    = 3;    
-    const TYPE_ALPHANUM = 4; 
-    const TYPE_ALNUMEXT = 5;
-    const TYPE_EMAIL    = 6;
-    const TYPE_TEXT     = 7;
-    const TYPE_RAW      = 8;
-    const TYPE_OBJECT   = 9;
+    const TYPE_ID       = 1;
+    const TYPE_BOOL     = 2;
+    const TYPE_INT      = 3;
+    const TYPE_FLOAT    = 4;    
+    const TYPE_ALPHANUM = 5; 
+    const TYPE_ALNUMEXT = 6;
+    const TYPE_EMAIL    = 7;
+    const TYPE_TEXT     = 8;
+    const TYPE_RAW      = 9;
+    const TYPE_OBJECT   = 10;
 
-    const TYPE_ID = self::TYPE_ALPHANUM;
-    
     const TYPE_SINGLE = 0;
     const TYPE_ARRAY = 16;
 
     const TYPE_STRINGS = array(
+        'id'        => self::TYPE_ID,
         'bool'      => self::TYPE_BOOL,
         'int'       => self::TYPE_INT,
         'float'     => self::TYPE_FLOAT,
@@ -81,7 +81,6 @@ class SafeParam
         'text'      => self::TYPE_TEXT,
         'raw'       => self::TYPE_RAW,
         'object'    => self::TYPE_OBJECT,
-        'id'        => self::TYPE_ALPHANUM,
     );
 
     public function GetTypeString() : string
@@ -104,43 +103,43 @@ class SafeParam
             
         if (is_string($data)) $data = trim($data);
  
-        if ($this->type == self::TYPE_BOOL)
+        if ($this->type === self::TYPE_BOOL)
         {
             if (($this->data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($this->type == self::TYPE_INT)
+        else if ($this->type === self::TYPE_INT)
         {
             if (($this->data = filter_var($data, FILTER_VALIDATE_INT)) === false)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($this->type == self::TYPE_FLOAT)
+        else if ($this->type === self::TYPE_FLOAT)
         {
             if (($this->data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($this->type == self::TYPE_ALPHANUM)
+        else if ($this->type === self::TYPE_ALPHANUM || $this->type === self::TYPE_ID)
         {
             if (!preg_match("%^[a-zA-Z0-9_]+$%",$data) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
             $this->data = $data;
         }
-        else if ($this->type == self::TYPE_ALNUMEXT)
+        else if ($this->type === self::TYPE_ALNUMEXT)
         {
             if (!preg_match("%^[a-zA-Z0-9_'() ]+$%",$data) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
             $this->data = $data;
         }
-        else if ($this->type == self::TYPE_EMAIL)
+        else if ($this->type === self::TYPE_EMAIL)
         {
             if (!($this->data = filter_var($data, FILTER_VALIDATE_EMAIL)) || strlen($data) > 255)
                 throw new SafeParamInvalidException($this->GetTypeString());
         }
-        else if ($this->type == self::TYPE_TEXT)
+        else if ($this->type === self::TYPE_TEXT)
         {
             $this->data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);  
         }
-        else if ($this->type == self::TYPE_OBJECT)
+        else if ($this->type === self::TYPE_OBJECT)
         {
             if (!is_array($data)) 
             {

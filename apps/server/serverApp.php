@@ -14,10 +14,8 @@ class ServerApp extends AppBase
         $action = $input->GetAction();
         
         if ($action == 'random')        return $this->Random($input);
-        else if ($action == 'version')  return $this->Version($input);
         else if ($action == 'getapps')  return $this->GetApps($input);
-        else if ($action == 'dumpinput') return $this->DumpInput($input);
-        
+       
         else throw new UnknownActionException();
     }
     
@@ -28,8 +26,6 @@ class ServerApp extends AppBase
         return Utilities::Random($length);
     }
     
-    protected function Version(Input $input) { return VERSION; }
     protected function GetApps(Input $input) { return $this->API->GetConfig()->GetApps(); }
-    protected function DumpInput(Input $input) { return array_map(function($a){ return print_r($a,true);}, $input->GetParams()->GetParamsArray()); }
 }
 
