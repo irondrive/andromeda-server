@@ -23,7 +23,7 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 
 class Main implements Transactions
 { 
-    private $construct_time_start; private $construct_time_end;
+    private $construct_time_start; private $construct_time_elapsed;
     
     private $runs = array(); private $run_stats = array();
     
@@ -82,6 +82,8 @@ class Main implements Transactions
             array_push($this->run_stats, array(
                 'db_reads' => $stats->getReads(),
                 'db_read_time' => $stats->getReadTime(),
+                'db_writes' => $stats->getWrites(),
+                'db_write_time' => $stats->getWriteTime(),
                 'code_time' => $code_time,
                 'total_time' => $total_time,
             ));
@@ -94,13 +96,18 @@ class Main implements Transactions
 
     public function RunRemote(string $url, Input $input)
     {
-        $this->app_time = microtime(true);
+        $start = microtime(true); 
 
         $data = AJAX::RemoteRequest($url, $input);
 
-        $this->app_time = microtime(true) - $this->app_time;
+        if ($this->GetDebug())
+        {
+            array_push($this->run_stats, array(
+                'remote_time' => microtime(true) - $start,
+            ));
+        }  
 
-        return Output::Parse($data);
+        return Output::ParseArray($data)->GetData();
     }
     
     public function rollBack()

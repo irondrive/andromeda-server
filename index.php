@@ -1,6 +1,6 @@
 <?php define('Andromeda',true);
 
-define("VERSION",array(0,0,1)); define("ROOT",__DIR__);
+define("VERSION",array(0,0,1)); define("ROOT",__DIR__.'/');
 
 if (!version_compare(phpversion(),'7.1.0','>=')) { die("PHP must be 7.1.0 or greater (you have ".PHP_VERSION.")"); }
 
@@ -20,9 +20,11 @@ $error_manager = new ErrorManager($interface);
 
 $main = new Main($error_manager, $interface); 
 
-$input = $interface->GetInput();        
+// TODO - all or nothing transaction approach right now, support piecemeal
 
-$data = $main->Run($input); 
+$inputs = $interface->GetInputs(); $data = array();
+
+foreach ($inputs as $input) array_push($data, $main->Run($input));
 
 $output = Output::Success($data);
 
