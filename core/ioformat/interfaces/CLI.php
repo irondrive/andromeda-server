@@ -13,6 +13,7 @@ use Andromeda\Core\Exceptions\PHPException;
 
 class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php app action [--app_type_key data]"; }
 class UnknownBatchFileException extends Exceptions\Client400Exception { public $message = "UNKNOWN_BATCH_FILE"; }
+class BatchFileParseException extends Exceptions\Client400Exception { public $message = "BATCH_FILE_PARSE_ERROR"; }
 
 class CLI extends IOInterface
 {
@@ -37,49 +38,57 @@ class CLI extends IOInterface
     {
         global $argv; $time = microtime(true);
         
-        if (!isset($argv[1])) throw new IncorrectCLIUsageException();
-        
-        if ($argv[1] === '--version') die("Andromeda ".implode(".",VERSION)."\n");
-        
-        else if ($argv[1] === '--batch')
+        for ($i = 1; $i < count($argv); $i++)
         {
-            if (!isset($argv[2])) throw new IncorrectCLIUsageException();
-            
-            try { $lines = explode("\n", file_get_contents($argv[2])); } 
-            catch (PHPException $e) { throw new UnknownBatchFileException(); }
-
-            require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
-            
-            $line2input = function($line) use ($argv)
+            switch($argv[$i])
             {
-                $args = \Clue\Arguments\split($line); array_unshift($args, $argv[0]);
+                case '--version':   die("Andromeda ".implode(".",VERSION)."\n"); break;
+                case '--json':      $this->output_json = true; break;
                 
-                return self::GetInput($args);
-            };
-            
-            return array_map($line2input, $lines);
-        }        
-        else
-        {
-            return array(self::GetInput($argv));
+                case 'batch':     
+                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
+                    return self::GetBatch($argv[$i+1]); break;
+                    
+                case 'exec': $i++; default: return array(self::GetInput(array_slice($argv, $i))); break;                    
+            }
         }
+        
+        throw new IncorrectCLIUsageException();
     }
     
-    private function GetInput(array $argv)
+    private function GetBatch(string $file) : array
     {
-        if (count($argv) < 3) { throw new IncorrectCLIUsageException(); }
+        global $argv;
         
-        $app = $argv[1]; $action = $argv[2]; $params = new SafeParams();
+        try { $lines = explode("\n", file_get_contents($file)); }
+        catch (PHPException $e) { throw new UnknownBatchFileException(); }
         
-        for ($i = 3; $i < count($argv); $i++)
+        require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
+        
+        $line2input = function($line) use ($argv)
+        {
+            try { $args = \Clue\Arguments\split($line); }
+            catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
+            
+            return self::GetInput($args);
+        };
+        
+        return array_map($line2input, $lines);
+    }
+    
+    private function GetInput(array $argv) : Input
+    {
+        if (count($argv) < 2) { throw new IncorrectCLIUsageException(); }
+        
+        $app = $argv[0]; $action = $argv[1]; $params = new SafeParams();
+        
+        for ($i = 2; $i < count($argv); $i++)
         {
             if (substr($argv[$i],0,2) != "--") { throw new IncorrectCLIUsageException(); }
             
             $param = explode('_',substr($argv[$i],2),3);
             
-            if ($param[0] == 'json') $this->output_json = true;
-            
-            else if ($param[0] == 'app')
+            if ($param[0] == 'app')
             {
                 if (count($param) != 3 || !isset($argv[$i+1])) { throw new IncorrectCLIUsageException(); }
                 $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;

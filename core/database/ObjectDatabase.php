@@ -12,10 +12,9 @@ class ObjectDatabase extends Database
 {
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
-    private $created = array();     /* array[id => BaseObject] */
     private $uniques = array();     /* array[uniquekey => BaseObject] */
     private $columns = array();     /* array[class => array(fields)] */
-    
+
     public function isModified(BaseObject $obj) : bool 
     { 
         return array_key_exists($obj->ID(), $this->modified); 
@@ -23,7 +22,7 @@ class ObjectDatabase extends Database
     
     public function setModified(BaseObject $obj) 
     { 
-        if (!$this->isModified($obj)) $this->modified[$obj->ID()] = $obj;
+        $this->modified[$obj->ID()] = $obj;
     }
     
     private function unsetObject(BaseObject $obj)
@@ -40,7 +39,6 @@ class ObjectDatabase extends Database
     
     public function commit() : void
     {
-        foreach ($this->created as $object) $object->Save(true);
         foreach ($this->modified as $object) $object->Save();        
         
         parent::commit();
@@ -159,6 +157,8 @@ class ObjectDatabase extends Database
     
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
     {
+        if ($object->isCreated()) return $this->SaveNewObject($class, $object, $values, $counters);
+        
         $criteria_string = ""; $data = array('id'=>$object->ID()); $i = 0;
         
         foreach (array_keys($values) as $key) { 
@@ -202,7 +202,6 @@ class ObjectDatabase extends Database
         $query = "INSERT INTO $table ($columns_string) VALUES ($data_string)";
         $this->query($query, $data, false);
         
-        unset($this->created[$object->ID()]);
         unset($this->modified[$object->ID()]);
         
         return $object;
@@ -228,8 +227,7 @@ class ObjectDatabase extends Database
         $newobj = array_values($this->Rows2Objects(array($data), $class))[0];
 
         $this->objects[$newobj->ID()] = $newobj;
-        $this->created[$newobj->ID()] = $newobj;
-        
+         
         return $newobj;
     }
     

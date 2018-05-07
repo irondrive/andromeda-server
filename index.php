@@ -20,8 +20,6 @@ $error_manager = new ErrorManager($interface);
 
 $main = new Main($error_manager, $interface); 
 
-// TODO - all or nothing transaction approach right now, support piecemeal
-
 $inputs = $interface->GetInputs(); $data = array();
 
 foreach ($inputs as $input) array_push($data, $main->Run($input));
