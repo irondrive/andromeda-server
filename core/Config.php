@@ -24,14 +24,14 @@ class Config extends SingletonObject
     
     public function GetMailer() : Emailer
     {
-        $feature = $this->TryGetFeature("email") ?? 0;
+        $feature = $this->TryGetFeature("email") ?? self::EMAIL_MODE_OFF;
         
-        if ($feature == self::EMAIL_MODE_OFF) throw new EmailUnavailableException();
-        if ($feature == self::EMAIL_MODE_PHP) return new BasicEmailer();
+        if ($feature === self::EMAIL_MODE_OFF) throw new EmailUnavailableException();
+        if ($feature === self::EMAIL_MODE_PHP) return new BasicEmailer();
         
-        else if ($feature == self::EMAIL_MODE_LIB)
+        else if ($feature === self::EMAIL_MODE_LIB)
         {
-            $emailers = $this->GetObjectRefs('emailers');
+            $emailers = array_values(FullEmailer::LoadAll($this->database));
             if (count($emailers) == 0) throw new EmailUnavailableException();
             return $emailers[array_rand($emailers)];
         }

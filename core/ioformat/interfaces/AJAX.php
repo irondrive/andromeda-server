@@ -13,6 +13,7 @@ use Andromeda\Core\Exceptions;
 use Andromeda\Core\JSONDecodingException;
 
 class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
+class InvalidBatchException extends Exceptions\Client400Exception { public $message = "INVALID_BATCH_FORMAT"; }
 class InvalidParamException extends Exceptions\Client400Exception { public $message = "INVALID_PARAMETER_FORMAT"; }
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
@@ -37,25 +38,48 @@ class AJAX extends IOInterface
         return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
     }
     
-    public function GetInputs() : array     // TODO batching
+    public function GetInputs() : array
     {
-        if (empty($_GET['app']) || empty($_GET['action'])) throw new NoAppActionException();
+        if (isset($_GET['batch']) && is_array($_GET['batch']))
+        {
+            $size = max(array_keys($_REQUEST['batch'])); $inputs = array();
+            
+            for ($i = 0; $i < $size; $i++)
+            {
+                $req = $_REQUEST['batch'][$i] ?? array();
+                $get = $_GET['batch'][$i] ?? array();
+                
+                $globals = $_REQUEST; unset($globals['batch']); $req = array_merge($globals, $req);
+                $globals = $_GET; unset($globals['batch']); $get = array_merge($globals, $get);
+                
+                $inputs[$i] = self::GetInput($get, $req);
+            }
+            
+            return $inputs;
+        }
+        else return array(self::GetInput($_GET, $_REQUEST));
+    }
+    
+    private function GetInput(array $get, array $request) : Input
+    {
+        foreach (array('app','action') as $key)
+        {
+            if (empty($get[$key])) throw new NoAppActionException();
+            $$key = $get[$key]; unset($request[$key]);
+        }
+
+        $params = new SafeParams();
         
-        $app = $_GET['app']; unset($_REQUEST['app']); 
-        $action = $_GET['action']; unset($_REQUEST['action']);        
-        
-        $params = new SafeParams();  
-        
-        foreach (array_keys($_REQUEST) as $key)
+        foreach (array_keys($request) as $key)
         {
             $param = explode('_',$key,2);
             
             if (count($param) != 2) throw new InvalidParamException(implode('_',$param));
             
-            $params->AddParam($param[0], $param[1], $_REQUEST[$key]);
+            $params->AddParam($param[0], $param[1], $request[$key]);
         }
         
-        return array(new Input($app, $action, $params));
+        return new Input($app, $action, $params);
     }
     
     public function WriteOutput(Output $output)

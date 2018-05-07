@@ -39,7 +39,6 @@ CREATE TABLE `a2_objects_core_config` (
   `features__read_only` tinyint(1) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
   `features__email` tinyint(1) NOT NULL,
-  `emailers*objectrefs*Core\FullEmailer*config` tinyint(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
@@ -58,7 +57,7 @@ INSERT INTO `a2_objects_core_config` (`id`, `datadir`, `apps*json`, `dates__crea
 CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `id` varchar(16) NOT NULL,
   `time` bigint(20) NOT NULL,
-  `ipaddr` varchar(255) NOT NULL,
+  `addr` varchar(255) NOT NULL,
   `agent` varchar(255) NOT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
@@ -86,7 +85,6 @@ CREATE TABLE `a2_objects_core_fullemailer` (
   `secure` tinyint(1) NOT NULL,
   `from_address` varchar(255) NOT NULL,
   `from_name` varchar(255) NOT NULL,
-  `config*object*Core\Config*emailers` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
@@ -108,7 +106,7 @@ ALTER TABLE `a2_objects_core_exceptions_errorlogentry`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
   ADD KEY `time` (`time`),
-  ADD KEY `ipaddr` (`ipaddr`),
+  ADD KEY `addr` (`addr`),
   ADD KEY `code` (`code`),
   ADD KEY `app` (`app`),
   ADD KEY `action` (`action`);

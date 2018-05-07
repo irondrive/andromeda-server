@@ -40,25 +40,6 @@ class Database implements Transactions {
     
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
 
-    public function startStatsContext() : self
-    {
-        if ($this->stats_stack_index === null) 
-            $this->stats_stack_index = 0; 
-        else $this->stats_stack_index++;
-        
-        $this->stats_stack[$this->stats_stack_index] = new DBStats(); return $this;
-    }
-    
-    public function endStatsContext() : self { $this->stats_stack_index--; return $this; }
-    
-    public function getStatsContext() : ?DBStats
-    {
-        if ($this->stats_stack_index === null) return null;
-        else return $this->stats_stack[$this->stats_stack_index];
-    }
-
-    public function getHistory(): array { return $this->query_history; }
-
     public function query(string $sql, ?array $data = null, bool $read = true) 
     {
         if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
@@ -100,6 +81,24 @@ class Database implements Transactions {
         }            
         $this->inTransaction = false; return $this;
     }
+    
+    public function startStatsContext() : self
+    {
+        if ($this->stats_stack_index === null)
+            $this->stats_stack_index = 0;
+        else $this->stats_stack_index++;
+        
+        $this->stats_stack[$this->stats_stack_index] = new DBStats(); return $this;
+    }
+    
+    public function endStatsContext() : self { $this->stats_stack_index--; return $this; }
+    
+    public function getStatsContext() : ?DBStats
+    {
+        if ($this->stats_stack_index === null) return null;
+        else return $this->stats_stack[$this->stats_stack_index];
+    }
+    
+    public function getHistory(): array { return $this->query_history; }
 }
 
-?>
