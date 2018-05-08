@@ -14,6 +14,7 @@ use Andromeda\Core\Exceptions\PHPException;
 class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php app action [--app_type_key data]"; }
 class UnknownBatchFileException extends Exceptions\Client400Exception { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\Client400Exception { public $message = "BATCH_FILE_PARSE_ERROR"; }
+class InvalidFileException extends Exceptions\Client400Exception { public $message = "INACCESSIBLE_FILE"; }
 
 class CLI extends IOInterface
 {
@@ -42,8 +43,9 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {
-                case '--version':   die("Andromeda ".implode(".",VERSION)."\n"); break;
-                case '--json':      $this->output_json = true; break;
+                case '--json':  $this->output_json = true; break;
+                
+                case 'version': die("Andromeda ".implode(".",VERSION)."\n"); break;
                 
                 case 'batch':     
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -80,11 +82,11 @@ class CLI extends IOInterface
     {
         if (count($argv) < 2) { throw new IncorrectCLIUsageException(); }
         
-        $app = $argv[0]; $action = $argv[1]; $params = new SafeParams();
+        $app = $argv[0]; $action = $argv[1]; $params = new SafeParams(); $files = array();
         
         for ($i = 2; $i < count($argv); $i++)
         {
-            if (substr($argv[$i],0,2) != "--") { throw new IncorrectCLIUsageException(); }
+            if (substr($argv[$i],0,2) !== "--") { throw new IncorrectCLIUsageException(); }
             
             $param = explode('_',substr($argv[$i],2),3);
             
@@ -93,8 +95,17 @@ class CLI extends IOInterface
                 if (count($param) != 3 || !isset($argv[$i+1])) { throw new IncorrectCLIUsageException(); }
                 $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;
             }
+            
+            if ($param[0] == 'file')
+            {
+                while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
+                {
+                    if (!is_readable($argv[$i+1])) throw new InvalidFileException();
+                    array_push($files, $argv[$i+1]); $i++;
+                }
+            }
         }
-        
+
         foreach (array_keys($_SERVER) as $key)
         {
             $value = $_SERVER[$key];
@@ -104,7 +115,7 @@ class CLI extends IOInterface
                 $params->AddParam($key[1], $key[2], $value);
         }
         
-        return new Input($app, $action, $params);
+        return new Input($app, $action, $params, $files);
     }
     
     private $output_json = false;

@@ -6,7 +6,7 @@ if (!version_compare(phpversion(),'7.1.0','>=')) { die("PHP must be 7.1.0 or gre
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
 
-ignore_user_abort(); set_time_limit(0);
+ignore_user_abort();
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
@@ -20,9 +20,10 @@ $error_manager = new ErrorManager($interface);
 
 $main = new Main($error_manager, $interface); 
 
-$inputs = $interface->GetInputs(); $data = array();
+$inputs = $interface->GetInputs();
 
-foreach ($inputs as $input) array_push($data, $main->Run($input));
+$data = array_map(function($input)use($main){ 
+    return $main->Run($input); }, $inputs);
 
 $output = Output::Success($data);
 

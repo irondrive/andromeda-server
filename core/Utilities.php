@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 
 class JSONException extends Exceptions\ServerException {
     public function __construct() {
@@ -12,11 +13,9 @@ class JSONDecodingException extends JSONException { public $message = "JSON_DECO
 
 class Utilities
 {   
-    public const IDLength = 16;
-    
-    public static function Random(?int $length = self::IDLength) : string
+    public static function Random(?int $length = null) : string
     {
-        if ($length === null) $length = self::IDLength;
+        if ($length === null) $length = BaseObject::IDLength;
         $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; $string = ""; $range = strlen($chars)-1;
         for ($i = 0; $i < $length; $i++) { $string .= $chars[random_int(0, $range)]; }; return $string;        
     }

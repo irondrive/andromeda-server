@@ -25,7 +25,7 @@ class Main implements Transactions
 { 
     private $construct_time_start; private $construct_time_elapsed;
     
-    private $runs = array(); private $run_stats = array();
+    private $runs = array(); private $run_stats = array(); private $commit_stats;
     
     private $context; private $config; private $database; private $interface;
     
@@ -47,12 +47,13 @@ class Main implements Transactions
 
         if (!$this->config->isEnabled()) throw new MaintenanceException();
         if ($this->config->isReadOnly()) $this->database->setReadOnly();    
-        
-        $this->construct_time_elapsed = microtime(true) - $this->construct_time;
     }
     
     public function Run(Input $input)
-    { 
+    {
+        if (!isset($this->construct_time_elapsed)) 
+            $this->construct_time_elapsed = microtime(true) - $this->construct_time;
+        
         $prevContext = $this->context; $this->context = $input;
 
         $app = $input->GetApp(); 
@@ -74,10 +75,10 @@ class Main implements Transactions
         
         if ($this->GetDebug()) 
         {
-            $total_time = microtime(true) - $start; 
             $stats = $this->database->getStatsContext();
             $this->database->endStatsContext();
-            $code_time = $total_time - $stats->getReadTime();            
+            $total_time = microtime(true) - $start;
+            $code_time = $total_time - $stats->getReadTime();
             
             array_push($this->run_stats, array(
                 'db_reads' => $stats->getReads(),
@@ -90,7 +91,7 @@ class Main implements Transactions
         }        
         
         $this->context = $prevContext;
-
+        
         return $data;
     }     
 
@@ -120,8 +121,9 @@ class Main implements Transactions
     {
         $this->database->startStatsContext()->commit();        
         foreach($this->runs as $app) $app->commit();
-        if ($this->GetDebug()) return $this->GetMetrics(); else return null;
+        $this->commit_stats = $this->database->getStatsContext();
         $this->database->endStatsContext();
+        if ($this->GetDebug()) return $this->GetMetrics(); else return null;
     }
     
     public function GetDebug() : bool
@@ -132,18 +134,24 @@ class Main implements Transactions
     
     private function GetMetrics() : array
     {        
-        $stats = $this->database->getStatsContext();
-        $metrics = array(
+        $run_stats_sums = array();
+        if (isset($this->run_stats[0])) 
+            foreach (array_keys($this->run_stats[0]) as $key) {
+                $run_stats_sums[$key] = 0;                
+                foreach($this->run_stats as $stats)
+                    $run_stats_sums[$key] += $stats[$key]; }
+
+        return array(
             'construct_time' => $this->construct_time_elapsed,
             'run_stats' => $this->run_stats,
-            'commit_writes' => $stats->getWrites(),
-            'commit_time' => $stats->getWriteTime(),
+            'run_stats_sums' => $run_stats_sums,
+            'commit_writes' => $this->commit_stats->getWrites(),
+            'commit_time' => $this->commit_stats->getWriteTime(),
             'total_time' => microtime(true) - $this->construct_time,
             'peak_memory' => memory_get_peak_usage(),
             'queries' => $this->database->getHistory(),
             'objects' => $this->database->getLoadedObjects(),
         );
-        return $metrics;
     }
     
 }

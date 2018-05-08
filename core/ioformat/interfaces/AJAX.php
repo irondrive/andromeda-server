@@ -42,19 +42,19 @@ class AJAX extends IOInterface
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {
-            $size = max(array_keys($_REQUEST['batch'])); $inputs = array();
+            $global_req = $_REQUEST; unset($global_req['batch']);
+            $global_get = $_GET; unset($global_get['batch']);
             
-            for ($i = 0; $i < $size; $i++)
+            $inputs = array(); foreach(array_keys($_REQUEST['batch']) as $i)
             {
-                $req = $_REQUEST['batch'][$i] ?? array();
-                $get = $_GET['batch'][$i] ?? array();
-                
-                $globals = $_REQUEST; unset($globals['batch']); $req = array_merge($globals, $req);
-                $globals = $_GET; unset($globals['batch']); $get = array_merge($globals, $get);
+                $req = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
+                $get = is_array($_GET['batch'][$i] ?? null) ? $_GET['batch'][$i] : array();
+
+                $req = array_merge($global_req, $req);
+                $get = array_merge($global_get, $get);
                 
                 $inputs[$i] = self::GetInput($get, $req);
             }
-            
             return $inputs;
         }
         else return array(self::GetInput($_GET, $_REQUEST));
@@ -79,7 +79,9 @@ class AJAX extends IOInterface
             $params->AddParam($param[0], $param[1], $request[$key]);
         }
         
-        return new Input($app, $action, $params);
+        $files = array_map(function($f){ return $f['tmp_name']; }, $_FILES);
+        
+        return new Input($app, $action, $params, $files);
     }
     
     public function WriteOutput(Output $output)
@@ -120,7 +122,7 @@ class AJAX extends IOInterface
 
     public static function HTTPPost(string $url, array $get, array $post) : ?string
     {
-        $url .= '?'.http_build_query($get);
+        $url .= ((strpos($url,'?')<0)?'?':'&').http_build_query($get);
 
         $options = array('http'=>array(
             'header' => 'Content-type: application/x-www-form-urlencoded\r\n',

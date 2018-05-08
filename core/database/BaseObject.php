@@ -12,7 +12,7 @@ class AccessDeletedException extends Exceptions\ServerException   { public $mess
 
 abstract class BaseObject
 {
-    protected $database; 
+    protected $database; public const IDLength = 16;
     
     public static function GetClass() : string { return static::class; }
     
