@@ -172,5 +172,6 @@ class SafeParam
         }
         else { $this->data = $data; }
     }   
-
 }
+
+

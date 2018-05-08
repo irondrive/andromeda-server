@@ -97,7 +97,7 @@ class ErrorManager
     private function Log2File(string $datadir, string $data) : void
     {
         if (!$this->logfileok) return;
-        try { file_put_contents($datadir.DIRECTORY_SEPARATOR."error.log", $data."\r\n", FILE_APPEND); }
+        try { file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND); }
         catch (\Throwable $e) { $this->logfileok = false; $this->HandleThrowable($e); }
     }
 }

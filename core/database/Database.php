@@ -27,7 +27,7 @@ class Database implements Transactions {
     private $connection; 
     private $read_only = false;
     
-    private $stats_stack_index = null;
+    private $stats_stack_index = -1;
     private $stats_stack = array();
     
     private $query_history = array();
@@ -84,7 +84,7 @@ class Database implements Transactions {
     
     public function startStatsContext() : self
     {
-        if ($this->stats_stack_index === null)
+        if ($this->stats_stack_index < 0)
             $this->stats_stack_index = 0;
         else $this->stats_stack_index++;
         
@@ -95,7 +95,7 @@ class Database implements Transactions {
     
     public function getStatsContext() : ?DBStats
     {
-        if ($this->stats_stack_index === null) return null;
+        if ($this->stats_stack_index < 0) return null;
         else return $this->stats_stack[$this->stats_stack_index];
     }
     

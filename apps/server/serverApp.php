@@ -21,7 +21,7 @@ class ServerApp extends AppBase
     
     protected function Random(Input $input)
     {
-        $length = $input->TryGetParam("length", SafeParam::TYPE_INT) ?? Utilities::IDLength;
+        $length = $input->TryGetParam("length", SafeParam::TYPE_INT);
         
         return Utilities::Random($length);
     }

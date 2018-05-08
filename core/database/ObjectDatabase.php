@@ -222,7 +222,7 @@ class ObjectDatabase extends Database
     {
         $columns = $this->getDefaultFields($class);        
         $data = array_fill_keys($columns, null);
-        $data['id'] = Utilities::Random();        
+        $data['id'] = Utilities::Random(BaseObject::IDLength);        
         
         $newobj = array_values($this->Rows2Objects(array($data), $class))[0];
 
