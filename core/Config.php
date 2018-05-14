@@ -20,6 +20,8 @@ class Config extends SingletonObject
     public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
     public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }    
     
+    public function SetDebugLogLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug_log', $data, $temp); }
+    
     const EMAIL_MODE_OFF = 0; const EMAIL_MODE_PHP = 1; const EMAIL_MODE_LIB = 2;
     
     public function GetMailer() : Emailer

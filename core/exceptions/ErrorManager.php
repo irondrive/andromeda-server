@@ -16,14 +16,13 @@ class ErrorManager
 {
     private $API; private $interface;
     
-    const DEBUG_DEFAULT = true; const DEBUG_FULL_DEFAULT = true;
-    
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
     public function GetDebug() : bool
     {
-        if (isset($this->API) && $this->API->GetConfig() !== null) return $this->API->GetDebug();
-        else return CLI::isApplicable() || self::DEBUG_DEFAULT;
+        if (isset($this->API) && $this->API->GetConfig() !== null) 
+            return $this->API->GetDebug();
+        else return CLI::isApplicable();
     }
     
     public function HandleClientException(ClientException $e) : Output

@@ -9,14 +9,17 @@ use Andromeda\Core\UnknownActionException;
 
 class ServerApp extends AppBase
 {
+    public static function getVersion() : array { return array(0,0,1); } 
+    
     public function Run(Input $input)
     {
-        $action = $input->GetAction();
-        
-        if ($action == 'random')        return $this->Random($input);
-        else if ($action == 'getapps')  return $this->GetApps($input);
-       
-        else throw new UnknownActionException();
+        switch($input->GetAction())
+        {
+            case 'random':  return $this->Random($input); break;
+            case 'getapps': return $this->GetApps($input); break;
+            
+            default: throw new UnknownActionException();
+        }
     }
     
     protected function Random(Input $input)
@@ -26,6 +29,9 @@ class ServerApp extends AppBase
         return Utilities::Random($length);
     }
     
-    protected function GetApps(Input $input) { return $this->API->GetConfig()->GetApps(); }
+    protected function GetApps(Input $input) 
+    {
+        return array_map(function($app){ return $app::getVersion(); }, $this->API->GetApps());
+    }
 }
 

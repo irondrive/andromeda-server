@@ -24,9 +24,7 @@ class Output
         
         if ($this->metrics !== null) $array['metrics'] = $this->metrics;
         if ($this->debug !== null) $array['debug'] = $this->debug;
-        
-        $array['version'] = VERSION;
-        
+
         return $array; 
     }
     

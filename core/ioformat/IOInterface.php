@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
@@ -19,7 +20,7 @@ abstract class IOInterface
     abstract public static function getMode() : int;
     abstract public static function isApplicable() : bool;
     
-    abstract public function GetInputs() : array;
+    abstract public function GetInputs(Config $config) : array;
     abstract public function WriteOutput(Output $output);
     
     abstract public function getAddress() : string;

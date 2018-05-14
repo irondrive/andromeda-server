@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php");
-use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, JSONDecodingException};
 
 require_once(ROOT."/core/ioformat/Input.php"); 
 require_once(ROOT."/core/ioformat/Output.php"); 
@@ -9,8 +9,7 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
 
-use Andromeda\Core\Exceptions;
-use Andromeda\Core\JSONDecodingException;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
 class InvalidBatchException extends Exceptions\Client400Exception { public $message = "INVALID_BATCH_FORMAT"; }
@@ -22,6 +21,11 @@ class AJAX extends IOInterface
     public static function GetMode() : int { return IOInterface::MODE_AJAX; }
     
     public const DEBUG_ALLOW_GET = true;
+
+    public static function isApplicable() : bool
+    {
+        return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
+    }
     
     public function getAddress() : string
     {
@@ -33,12 +37,7 @@ class AJAX extends IOInterface
         return $_SERVER['HTTP_USER_AGENT'];
     }
   
-    public static function isApplicable() : bool
-    {
-        return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
-    }
-    
-    public function GetInputs() : array
+    public function GetInputs(Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {

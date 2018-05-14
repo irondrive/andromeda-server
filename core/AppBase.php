@@ -18,6 +18,8 @@ abstract class AppBase implements Transactions
     
     public abstract function Run(Input $input);
     
+    public static function getVersion() : array { return array(0,0,0); }
+    
     public function commit() { }
     public function rollBack() { }
 }

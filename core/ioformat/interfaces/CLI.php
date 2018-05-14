@@ -1,17 +1,19 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-use Andromeda\Core\Exceptions\PHPException;
 
-class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php app action [--app_type_key data]"; }
+require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
+
+class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php --flag app action [--app_type_key data]"; }
 class UnknownBatchFileException extends Exceptions\Client400Exception { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\Client400Exception { public $message = "BATCH_FILE_PARSE_ERROR"; }
 class InvalidFileException extends Exceptions\Client400Exception { public $message = "INACCESSIBLE_FILE"; }
@@ -19,6 +21,11 @@ class InvalidFileException extends Exceptions\Client400Exception { public $messa
 class CLI extends IOInterface
 {
     public static function GetMode() : int { return IOInterface::MODE_CLI; }
+    
+    public static function isApplicable() : bool
+    {
+        global $argv; return php_sapi_name() === "cli" && isset($argv);
+    }
     
     public function getAddress() : string
     {
@@ -30,12 +37,7 @@ class CLI extends IOInterface
         return "CLI ".($_SERVER['OS']??'');
     }  
     
-    public static function isApplicable() : bool
-    {
-        global $argv; return php_sapi_name() === "cli" && isset($argv);
-    }
-    
-    public function GetInputs() : array
+    public function GetInputs(Config $config) : array
     {
         global $argv; $time = microtime(true);
         
@@ -43,9 +45,13 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {
-                case '--json':  $this->output_json = true; break;
+                case '--json': $this->output_json = true; break;
                 
-                case 'version': die("Andromeda ".implode(".",VERSION)."\n"); break;
+                case '--debug':
+                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
+                    $config->SetDebugLogLevel((new SafeParam('int',$argv[$i+1]))->getData()); $i++; break;                
+                
+                case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
                 
                 case 'batch':     
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -63,7 +69,7 @@ class CLI extends IOInterface
         global $argv;
         
         try { $lines = explode("\n", file_get_contents($file)); }
-        catch (PHPException $e) { throw new UnknownBatchFileException(); }
+        catch (Exceptions\PHPException $e) { throw new UnknownBatchFileException(); }
         
         require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
         

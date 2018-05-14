@@ -25,10 +25,11 @@ class Main implements Transactions
 { 
     private $construct_time_start; private $construct_time_elapsed;
     
-    private $runs = array(); private $run_stats = array(); private $commit_stats;
+    private $apps = array(); private $run_stats = array(); private $commit_stats;
     
     private $context; private $config; private $database; private $interface;
     
+    public function GetApps() : array { return $this->apps; }
     public function GetContext() : ?Input { return $this->context; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
@@ -47,6 +48,17 @@ class Main implements Transactions
 
         if (!$this->config->isEnabled()) throw new MaintenanceException();
         if ($this->config->isReadOnly()) $this->database->setReadOnly();    
+        
+        foreach($this->config->GetApps() as $app)
+        {
+            $path = ROOT."/apps/$app/$app"."App.php";
+            $app_class = "Andromeda\\Apps\\$app\\$app".'App';
+            
+            if (is_file($path)) require_once($path); else throw new FailedAppLoadException();
+            if (!class_exists($app_class)) throw new FailedAppLoadException();
+            
+            $this->apps[$app] = new $app_class($this);
+        }
     }
     
     public function Run(Input $input)
@@ -58,20 +70,11 @@ class Main implements Transactions
 
         $app = $input->GetApp(); 
         
-        if (!in_array($app, $this->config->GetApps())) throw new UnknownAppException();
-        
-        $path = ROOT."/apps/$app/$app"."App.php"; 
-        $app_class = "Andromeda\\Apps\\$app\\$app".'App';
-        
-        if (is_file($path)) require_once($path); else throw new FailedAppLoadException();
-        if (!class_exists($app_class)) throw new FailedAppLoadException();
-        
+        if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
+
         if ($this->GetDebug()) { $start = microtime(true); $this->database->startStatsContext(); }
-        
-        $app_object = new $app_class($this);        
-        array_push($this->runs, $app_object);
-        
-        $data = $app_object->Run($input);
+
+        $data = $this->apps[$app]->Run($input);
         
         if ($this->GetDebug()) 
         {
@@ -114,13 +117,13 @@ class Main implements Transactions
     public function rollBack()
     {
         $this->database->rollback();        
-        foreach($this->runs as $app) $app->rollback();
+        foreach($this->apps as $app) $app->rollback();
     }
     
     public function commit() : ?array
     {
         $this->database->startStatsContext()->commit();        
-        foreach($this->runs as $app) $app->commit();
+        foreach($this->apps as $app) $app->commit();
         $this->commit_stats = $this->database->getStatsContext();
         $this->database->endStatsContext();
         if ($this->GetDebug()) return $this->GetMetrics(); else return null;
@@ -128,8 +131,8 @@ class Main implements Transactions
     
     public function GetDebug() : bool
     {
-        return $this->config->GetDebugOverHTTP() ||
-            $this->interface->getMode() == IOInterface::MODE_CLI;
+        return ($this->config->GetDebugOverHTTP() || $this->interface->getMode() == IOInterface::MODE_CLI)
+            && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
     }
     
     private function GetMetrics() : array
