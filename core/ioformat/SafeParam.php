@@ -23,6 +23,11 @@ class SafeParams
 {
     private $params = array();
     
+    public function HasParam(string $key)
+    {
+        return isset($this->params[$key]);
+    }
+    
     public function AddParam(string $type, string $key, $data) 
     { 
         $key = filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
@@ -44,7 +49,7 @@ class SafeParams
     public function TryGetParam(string $key, int $type)
     {
         if (!isset($this->params[$key])) return null;
-        if ($this->params[$key]->getType() != $type) return null;
+        if ($this->params[$key]->getType() !== $type) return null;
         return $this->params[$key]->getData();
     }
 }

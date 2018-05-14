@@ -25,9 +25,10 @@ abstract class StandardObject extends BaseObject
     protected function GetFeature(string $name) : ?int             { return $this->GetScalar("features__$name"); }
     protected function TryGetFeature(string $name) : ?int          { return $this->TryGetScalar("features__$name"); }
     protected function ExistsFeature(string $name) : ?int          { return $this->ExistsScalar("features__$name"); }
-    protected function SetFeature(string $name, ?int $value) : self   { return $this->SetScalar("features__$name", $value); }
-    protected function EnableFeature(string $name) : self             { return $this->SetScalar("features__$name", 1); }
-    protected function DisableFeature(string $name) : self            { return $this->SetScalar("features__$name", 0); }
+    
+    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self   { return $this->SetScalar("features__$name", $value, $temp); }
+    protected function EnableFeature(string $name, bool $temp = false) : self             { return $this->SetScalar("features__$name", 1, $temp); }
+    protected function DisableFeature(string $name, bool $temp = false) : self            { return $this->SetScalar("features__$name", 0, $temp); }
     
     protected function GetCounter(string $name) : ?int             { return $this->GetScalar("counters__$name"); }
     protected function TryGetCounter(string $name) : ?int          { return $this->TryGetScalar("counters__$name"); }
@@ -35,7 +36,8 @@ abstract class StandardObject extends BaseObject
     protected function GetCounterLimit(string $name) : ?int        { return $this->GetScalar("counters_limits__$name"); }
     protected function TryGetCounterLimit(string $name) : ?int     { return $this->TryGetScalar("counters_limits__$name"); }
     protected function ExistsCounterLimit(string $name) : ?int     { return $this->ExistsScalar("counters_limits__$name"); }
-    protected function SetCounterLimit(string $name, ?int $value) : self  { return $this->SetScalar("counters_limits__$name", $value); }
+    
+    protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self  { return $this->SetScalar("counters_limits__$name", $value, $temp); }
     
     protected function DeltaCounter(string $name, int $delta = 1) : self
     { 

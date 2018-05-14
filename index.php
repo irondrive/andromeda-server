@@ -1,6 +1,6 @@
-<?php define('Andromeda',true);
+<?php define('Andromeda',true); 
 
-define("VERSION",array(0,0,1)); define("ROOT",__DIR__.'/');
+define("ROOT",__DIR__.'/');
 
 if (!version_compare(phpversion(),'7.1.0','>=')) { die("PHP must be 7.1.0 or greater (you have ".PHP_VERSION.")"); }
 
@@ -20,7 +20,7 @@ $error_manager = new ErrorManager($interface);
 
 $main = new Main($error_manager, $interface); 
 
-$inputs = $interface->GetInputs();
+$inputs = $interface->GetInputs($main->GetConfig());
 
 $data = array_map(function($input)use($main){ 
     return $main->Run($input); }, $inputs);
