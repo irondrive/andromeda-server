@@ -113,6 +113,20 @@ abstract class BaseObject
         return $this->objectrefs[$field]->GetObjects();
     }
     
+    protected function CountObjectRefs(string $field) : int
+    {
+        if ($this->deleted) throw new AccessDeletedException();
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
+        return $this->objectrefs[$field]->GetValue();
+    }
+    
+    protected function TryCountObjectRefs(string $field) : int
+    {
+        if ($this->deleted) throw new AccessDeletedException();
+        if (!$this->ExistsObjectRefs($field)) return 0;
+        return $this->objectrefs[$field]->GetValue();
+    }
+    
     protected function SetScalar(string $field, $value, bool $temp = false) : self
     {    
         if ($this->deleted) throw new AccessDeletedException();
@@ -149,6 +163,12 @@ abstract class BaseObject
         
         return $this;
     }
+    
+    protected function TryDeltaScalar(string $field, int $delta) : self
+    {
+        if ($this->deleted) throw new AccessDeletedException();
+        if ($this->ExistsScalar($field)) $this->DeltaScalar($field, $delta); return $this;
+    } 
     
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
@@ -200,7 +220,9 @@ abstract class BaseObject
         $reffield = $this->objectrefs[$field]->GetRefField();        
         if ($reffield !== null) $object->SetObject($reffield, $this, true);
 
-        $this->objectrefs[$field]->AddObject($object, $notification);
+        if ($this->objectrefs[$field]->AddObject($object, $notification))
+            $this->database->setModified($this);
+        
         return $this;
     }
     
@@ -212,7 +234,9 @@ abstract class BaseObject
         $reffield = $this->objectrefs[$field]->GetRefField();
         if ($reffield !== null) $object->UnsetObject($reffield, true);
         
-        $this->objectrefs[$field]->RemoveObject($object, $notification);
+        if ($this->objectrefs[$field]->RemoveObject($object, $notification))
+            $this->database->setModified($this);
+        
         return $this;
     }
     
@@ -224,9 +248,9 @@ abstract class BaseObject
         {   
             $field = Fields\Field::Init($this->database, $this, $key, $data[$key]); $key = $field->GetMyField();
             
-            if ($field instanceof Fields\Scalar)              $this->scalars[$key] = $field;
-            else if ($field instanceof Fields\ObjectPointer)  $this->objects[$key] = $field;
-            else if ($field instanceof Fields\ObjectRefs)     $this->objectrefs[$key] = $field;
+            if ($field instanceof Fields\ObjectPointer)     $this->objects[$key] = $field;
+            else if ($field instanceof Fields\ObjectRefs)   $this->objectrefs[$key] = $field;
+            else if ($field instanceof Fields\Scalar)       $this->scalars[$key] = $field;            
         } 
     } 
     
@@ -236,25 +260,21 @@ abstract class BaseObject
         
         $class = static::class; $values = array(); $counters = array();
         
-        foreach(array_keys($this->scalars) as $key)
+        foreach (array('scalars','objects','objectrefs') as $set)
         {
-            $value = $this->scalars[$key];
-            if (!$value->GetDelta()) continue;
-            $column = $value->GetColumnName();
-            
-            if ($value instanceof Fields\Counter) 
-                $counters[$column] = $value->GetDBValue();
-            else $values[$column] = $value->GetDBValue();
+            foreach(array_keys($this->$set) as $key)
+            {
+                $value = $this->$set[$key];
+                
+                if (!$value->GetDelta()) continue;
+                $column = $value->GetColumnName();
+
+                if ($value instanceof Fields\Counter)
+                    $counters[$column] = $value->GetDBValue();
+                else $values[$column] = $value->GetDBValue();
+            }
         }
-        
-        foreach(array_keys($this->objects) as $key)
-        {
-            $value = $this->objects[$key]; 
-            if (!$value->GetDelta()) continue;
-            $column = $value->GetColumnName();
-            $values[$column] = $value->GetDBValue();
-        }
-        
+
         return $this->database->SaveObject($class, $this, $values, $counters);
     } 
     

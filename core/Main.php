@@ -25,7 +25,8 @@ class Main implements Transactions
 { 
     private $construct_time_start; private $construct_time_elapsed;
     
-    private $apps = array(); private $run_stats = array(); private $commit_stats;
+    private $apps = array(); private $run_stats = array(); 
+    private $construct_stats; private $commit_stats;
     
     private $context; private $config; private $database; private $interface;
     
@@ -43,6 +44,8 @@ class Main implements Transactions
         
         $this->interface = $interface; $this->database = new ObjectDatabase();
         
+        $this->database->startStatsContext();
+
         try { $this->config = Config::Load($this->database); } 
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
 
@@ -59,6 +62,9 @@ class Main implements Transactions
             
             $this->apps[$app] = new $app_class($this);
         }
+        
+        $this->construct_stats = $this->database->getStatsContext();
+        $this->database->endStatsContext();
     }
     
     public function Run(Input $input)
@@ -72,11 +78,11 @@ class Main implements Transactions
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        if ($this->GetDebug()) { $start = microtime(true); $this->database->startStatsContext(); }
+        $debug = $this->GetDebug(); if ($debug) { $start = microtime(true); $this->database->startStatsContext(); }
 
         $data = $this->apps[$app]->Run($input);
         
-        if ($this->GetDebug()) 
+        if ($debug) 
         {
             $stats = $this->database->getStatsContext();
             $this->database->endStatsContext();
@@ -148,6 +154,7 @@ class Main implements Transactions
 
         return array(
             'construct_time' => $this->construct_time_elapsed,
+            'construct_reads' => $this->construct_stats->getReads(),
             'run_stats' => $this->run_stats,
             'run_stats_sums' => $run_stats_sums,
             'commit_writes' => $this->commit_stats->getWrites(),
