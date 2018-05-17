@@ -54,10 +54,10 @@ abstract class StandardObject extends BaseObject
     {        
         if (($limit = $this->TryGetCounterLimit($field)) !== null)
         {
-            $value = count($this->GetObjectRefs($field));
+            $value = $this->TryCountObjectRefs($field);
             if ($value === $limit) throw new CounterOverLimitException($field);
         }
-        
+
         return parent::AddObjectRef($field, $object, $notification);
     }
     

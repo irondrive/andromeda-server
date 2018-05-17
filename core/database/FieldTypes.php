@@ -31,27 +31,26 @@ abstract class Field
     }
     
     public abstract function GetDBValue();
-    public abstract function GetMyField() : string;
     public abstract function GetColumnName() : string;
+    
+    protected $myfield; public function GetMyField() : string { return $this->myfield; }
+    protected $delta = 0; public function GetDelta() : int { return $this->delta; }
 }
 
 class Scalar extends Field
 {
-    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0; const SPECIAL = null;
+    protected $tempvalue; protected $realvalue; protected $delta = 0; const SPECIAL = null;
     
     public function __construct($value, string $myfield) { 
         $this->myfield = $myfield; $this->tempvalue = $value; $this->realvalue = $value; }
     
     public function GetValue() { return $this->tempvalue; }
-    public function GetDelta() : int { return $this->delta; }
-    
+
     public function GetColumnName() : string
     {
         $header = array($this->myfield, static::SPECIAL);
         return implode('*',array_filter($header));
     }
-    
-    public function GetMyField() : string { return $this->myfield; }
     
     public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
     
@@ -80,7 +79,7 @@ class Scalar extends Field
 class Counter extends Scalar
 {
     const SPECIAL = "counter";
-    public function Delta($delta) : bool 
+    public function Delta(int $delta = 1) : bool 
     { 
         if ($delta === 0) return false;
         $this->tempvalue += $delta; $this->realvalue += $delta; 
@@ -106,8 +105,8 @@ class JSON extends Scalar
 
 class ObjectPointer extends Field
 {
-    protected $database; protected $object; protected $pointer; protected $delta = 0;
-    protected $myfield; protected $refclass; protected $reffield;      
+    protected $database; protected $object; protected $pointer;
+    protected $refclass; protected $reffield;      
     
     public function __construct(ObjectDatabase $database, $value, array $header)
     {
@@ -117,9 +116,7 @@ class ObjectPointer extends Field
         $this->myfield = $header[0]; $this->refclass = $header[2]; $this->reffield = $header[3] ?? null;
     }
     
-    public function GetDelta() : int { return $this->delta; }
     public function GetPointer() : ?string { return $this->pointer; }
-    public function GetMyField() : string { return $this->myfield; }
     public function GetRefClass() : string { return $this->refclass; }
     public function GetPolyClass() : string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
@@ -204,10 +201,10 @@ class ObjectPolyPointer extends ObjectPointer
     }
 }
 
-class ObjectRefs extends Field
+class ObjectRefs extends Counter
 {
-    protected $objects; protected $database;
-    protected $myclass; protected $myfield; protected $myid;
+    protected $database; protected $objects; 
+    protected $myclass; protected $myid;
     protected $refclass; protected $reffield;
     
     protected $refs_added = array(); protected $refs_deleted = array();
@@ -216,14 +213,12 @@ class ObjectRefs extends Field
     {
         if (count($header) < 4) throw new SpecialColumnException(implode('*',$header));
         
-        $this->database = $database;
-        
+        $this->database = $database; parent::__construct($value ?? 0, $header[0]);     
+
         $this->myclass = ObjectDatabase::GetShortClassName(get_class($parent));
         
-        $this->myfield = $header[0]; $this->myid = $parent->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
-    }
-    
-    public function GetDBValue() { return null; }
+        $this->myid = $parent->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
+    }    
     
     public function GetColumnName() : string
     {
@@ -234,7 +229,6 @@ class ObjectRefs extends Field
     public function GetRefClass() : string { return $this->refclass; }
     public function GetRefField() : string { return $this->reffield; }
     public function GetMyClass() : string { return $this->myclass; }
-    public function GetMyField() : string { return $this->myfield; }
 
     public function GetObjects() : array
     {
@@ -262,12 +256,14 @@ class ObjectRefs extends Field
         {
             if (!in_array($object, $this->refs_added))
             {
-                array_push($this->refs_added, $object); return true;
+                array_push($this->refs_added, $object); 
+                parent::Delta(); return true;
             }
         }
         else if (!in_array($object, $this->objects))
         {
-            $this->objects[$object->ID()] = $object; return true;
+            $this->objects[$object->ID()] = $object; 
+            parent::Delta(); return true;
         }
         return false;
     }
@@ -278,12 +274,14 @@ class ObjectRefs extends Field
         {
             if (!in_array($object, $this->refs_deleted))
             {
-                array_push($this->refs_deleted, $object); return true;
+                array_push($this->refs_deleted, $object); 
+                parent::Delta(-1); return true;
             }
         }
         else if (in_array($object, $this->objects))
         {
-            unset($this->objects[$object->ID()]); return true;
+            unset($this->objects[$object->ID()]);
+            parent::Delta(-1); return true;
         }
         return false;
     }

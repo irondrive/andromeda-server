@@ -102,7 +102,7 @@ class CLI extends IOInterface
                 $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;
             }
             
-            if ($param[0] == 'file')
+            else if ($param[0] == 'file')
             {
                 while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
                 {

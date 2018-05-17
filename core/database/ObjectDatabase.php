@@ -60,7 +60,7 @@ class ObjectDatabase extends Database
         return '`'.Config::PREFIX."objects_".strtolower(implode('_', $class)).'`';
     }
     
-    private function Rows2Objects($rows, $class, $replace = false) : array
+    private function Rows2Objects(array $rows, string $class, $replace = false) : array
     {
         $output = array(); 
         
