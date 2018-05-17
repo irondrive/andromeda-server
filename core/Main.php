@@ -116,12 +116,14 @@ class Main implements Transactions
     
     public function rollBack()
     {
+        set_time_limit(0);
         $this->database->rollback();        
         foreach($this->apps as $app) $app->rollback();
     }
     
     public function commit() : ?array
     {
+        set_time_limit(0);
         $this->database->startStatsContext()->commit();        
         foreach($this->apps as $app) $app->commit();
         $this->commit_stats = $this->database->getStatsContext();

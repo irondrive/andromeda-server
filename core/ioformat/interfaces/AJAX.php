@@ -7,7 +7,7 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php"); 
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParams};
+use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParams};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -80,7 +80,11 @@ class AJAX extends IOInterface
         
         $files = array_map(function($f){ return $f['tmp_name']; }, $_FILES);
         
-        return new Input($app, $action, $params, $files);
+        $user = $_SERVER['PHP_AUTH_USER'] ?? null;
+        $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
+        $auth = ($user !== null && $pass !== null) ? (new InputAuth($user, $pass)) : null;
+        
+        return new Input($app, $action, $params, $files, $auth);
     }
     
     public function WriteOutput(Output $output)

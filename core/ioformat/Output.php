@@ -30,7 +30,7 @@ class Output
     
     private function __construct(bool $ok, int $code, $data)
     {        
-        if (is_array($data) && count($data) === 1 && isset($data[0])) $data = $data[0];
+        if (is_array($data) && count($data) === 1 && array_key_exists(0,$data)) $data = $data[0];
         
         $this->ok = $ok; $this->code = $code; $this->data = $data;      
     }
