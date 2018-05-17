@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Apr 26, 2018 at 06:02 PM
+-- Generation Time: May 15, 2018 at 08:44 PM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
@@ -38,15 +38,15 @@ CREATE TABLE `a2_objects_core_config` (
   `features__debug_file` tinyint(1) NOT NULL,
   `features__read_only` tinyint(1) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
-  `features__email` tinyint(1) NOT NULL,
+  `features__email` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `a2_objects_core_config`
 --
 
-INSERT INTO `a2_objects_core_config` (`id`, `datadir`, `apps*json`, `dates__created`, `features__debug_log`, `features__debug_http`, `features__debug_file`, `features__read_only`, `features__enabled`, `features__email`, `emailers*objectrefs*Core\FullEmailer*config`) VALUES
-('zFoHvcNrXTwxrsLm', NULL, '[\"server\"]', 0, 2, 1, 0, 0, 1, 0, NULL);
+INSERT INTO `a2_objects_core_config` (`id`, `datadir`, `apps*json`, `dates__created`, `features__debug_log`, `features__debug_http`, `features__debug_file`, `features__read_only`, `features__enabled`, `features__email`) VALUES
+('zFoHvcNrXTwxrsLm', NULL, '[\"server\"]', 0, 1, 1, 1, 0, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -84,7 +84,7 @@ CREATE TABLE `a2_objects_core_fullemailer` (
   `password` text,
   `secure` tinyint(1) NOT NULL,
   `from_address` varchar(255) NOT NULL,
-  `from_name` varchar(255) NOT NULL,
+  `from_name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --

@@ -19,13 +19,16 @@ class SafeParamKeyMissingException extends SafeParamException {
 class SafeParamKeyTypeException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_TYPE_MISMATCH: $key"; } }
 
+class SafeParamNullValueException extends SafeParamException {
+    public function __construct(string $key) { $this->message = "SAFEPARAM_VALUE_NULL: $key"; } }
+    
 class SafeParams
 {
     private $params = array();
     
     public function HasParam(string $key)
     {
-        return isset($this->params[$key]);
+        return array_key_exists($key, $this->params);
     }
     
     public function AddParam(string $type, string $key, $data) 
@@ -36,19 +39,21 @@ class SafeParams
     
     public function GetParam(string $key, int $type)
     {
-        if (!isset($this->params[$key])) throw new SafeParamKeyMissingException($key);
+        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
         
         if ($this->params[$key]->getType() != $type)
             throw new SafeParamKeyTypeException("$key was ".$this->params[$key]->getType()." expected $type");
-            
-        return $this->params[$key]->getData();
+        
+        $data = $this->params[$key]->getData();
+        if ($data !== null) return $data;
+        else throw new SafeParamNullValueException($key);
     }
 
     public function GetParamsArray() { return $this->params; }
     
     public function TryGetParam(string $key, int $type)
     {
-        if (!isset($this->params[$key])) return null;
+        if (!$this->HasParam($key)) return null;
         if ($this->params[$key]->getType() !== $type) return null;
         return $this->params[$key]->getData();
     }
@@ -108,7 +113,9 @@ class SafeParam
             
         if (is_string($data)) $data = trim($data);
  
-        if ($this->type === self::TYPE_BOOL)
+        if ($data === null || $data === "" || $data === "null") $this->data = null;
+        
+        else if ($this->type === self::TYPE_BOOL)
         {
             if (($this->data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($this->GetTypeString());
