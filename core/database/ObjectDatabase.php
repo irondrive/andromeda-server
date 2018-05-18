@@ -37,11 +37,11 @@ class ObjectDatabase extends Database
         return array_map(function($e){ return $e->GetClass(); }, $this->objects);
     }
     
-    public function commit() : void
+    public function commit(bool $dryrun = false) : void
     {
         foreach ($this->modified as $object) $object->Save();        
         
-        parent::commit();
+        if (!$dryrun) parent::commit(); else parent::rollBack();
     }
     
     public static function GetFullClassName(string $class) : string

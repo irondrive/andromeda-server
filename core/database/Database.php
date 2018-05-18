@@ -63,8 +63,15 @@ class Database implements Transactions {
 
     public function rollBack()
     { 
-        if ($this->connection->inTransaction()) 
-            $this->connection->rollBack(); 
+        if ($this->connection->inTransaction())
+        {
+            $stats = $this->getStatsContext();
+            if ($stats !== null) $stats->startTiming();
+            
+            $this->connection->rollback();
+            
+            if ($stats !== null) $stats->endWrite(false);
+        }
         $this->inTransaction = false; return $this;
     }
     

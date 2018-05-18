@@ -13,7 +13,8 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
-class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = "usage: php index.php --flag app action [--app_type_key data]"; }
+class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = 'usage: php index.php --$flag $app $action [--app_$type_$key $data]'; }
+
 class UnknownBatchFileException extends Exceptions\Client400Exception { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\Client400Exception { public $message = "BATCH_FILE_PARSE_ERROR"; }
 class InvalidFileException extends Exceptions\Client400Exception { public $message = "INACCESSIBLE_FILE"; }
@@ -49,7 +50,9 @@ class CLI extends IOInterface
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $config->SetDebugLogLevel((new SafeParam('int',$argv[$i+1]))->getData()); $i++; break;                
+                    $config->SetDebugLogLevel((new SafeParam('int',$argv[$i+1]))->getData()); $i++; break;   
+                    
+                case '--dryrun': $config->SetReadOnly(Config::RUN_DRYRUN); break;
                 
                 case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
                 
@@ -57,7 +60,8 @@ class CLI extends IOInterface
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     return self::GetBatch($argv[$i+1]); break;
                     
-                case 'exec': $i++; default: return array(self::GetInput(array_slice($argv, $i))); break;                    
+                case 'exec': case 'run': $i++; 
+                default: return array(self::GetInput(array_slice($argv, $i))); break;                    
             }
         }
         
