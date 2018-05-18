@@ -50,7 +50,7 @@ class Main implements Transactions
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
 
         if (!$this->config->isEnabled()) throw new MaintenanceException();
-        if ($this->config->isReadOnly()) $this->database->setReadOnly();    
+        if ($this->config->isReadOnly() == Config::RUN_READONLY) $this->database->setReadOnly();    
         
         foreach($this->config->GetApps() as $app)
         {
@@ -129,9 +129,14 @@ class Main implements Transactions
     
     public function commit() : ?array
     {
-        set_time_limit(0);
-        $this->database->startStatsContext()->commit();        
-        foreach($this->apps as $app) $app->commit();
+        set_time_limit(0); $this->database->startStatsContext();
+        
+        $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
+        
+        $this->database->commit($dryrun);        
+        
+        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
+        
         $this->commit_stats = $this->database->getStatsContext();
         $this->database->endStatsContext();
         if ($this->GetDebug()) return $this->GetMetrics(); else return null;

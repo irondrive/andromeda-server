@@ -89,10 +89,10 @@ abstract class SingletonObject extends StandardObject
 {
     private static $instances = array();
     
-    /* PHP hackery: singletonobject keeps its own private static array of instances
+    /* PHP hackery: singletonobject keeps its own global private static array of instances of subclasses
      * When a subclass runs load, it uses its own class name to index the global array of instances
-     * Can't just have a single $instance because php doesn't consider it as part of the subclass 
-     * the static keyword can refer to the subclass but self *only* refers to the base class */
+     * Can't just have a single $instance because php doesn't consider the static property as part of the 
+     * subclass ... the static:: keyword can refer to the subclass but self:: only refers to the base class */
     
     public static function Load(ObjectDatabase $database) : self
     {

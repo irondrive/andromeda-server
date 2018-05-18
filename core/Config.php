@@ -10,17 +10,20 @@ class EmailUnavailableException extends Exceptions\ServerException    { public $
 class Config extends SingletonObject
 {
     public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
-    public function isReadOnly() : bool { return $this->TryGetFeature('read_only') ?? false; }
+    
+    const RUN_NORMAL = 0; const RUN_READONLY = 1; const RUN_DRYRUN = 2;
+    public function isReadOnly() : int { return $this->TryGetFeature('read_only') ?? self::RUN_NORMAL; }
+    public function SetReadOnly(int $data, bool $temp = true) : self { return $this->SetFeature('read_only', $data, $temp); }
+    
     public function GetApps() : array { return $this->GetScalar('apps'); }
     public function GetDataDir() : ?string { return $this->TryGetScalar('datadir'); }
     
-    const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_SENSITIVE = 2;
-    
+    const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_SENSITIVE = 2;    
     public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_BASIC; }
-    public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
-    public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }    
-    
     public function SetDebugLogLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug_log', $data, $temp); }
+    
+    public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
+    public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }        
     
     const EMAIL_MODE_OFF = 0; const EMAIL_MODE_PHP = 1; const EMAIL_MODE_LIB = 2;
     
