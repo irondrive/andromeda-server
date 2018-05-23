@@ -99,6 +99,14 @@ abstract class BaseObject
         return $this->objects[$field]->GetObject();
     }
     
+    protected function GetObjectID(string $field) : ?string
+    {
+        if ($this->deleted) throw new AccessDeletedException();
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        $value = $this->objects[$field]->GetPointer();
+        if ($value !== null) return $value; else throw new NullValueException($field);
+    }
+    
     protected function GetObjectRefs(string $field) : array
     {
         if ($this->deleted) throw new AccessDeletedException();

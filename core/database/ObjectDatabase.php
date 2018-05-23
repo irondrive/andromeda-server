@@ -80,17 +80,21 @@ class ObjectDatabase extends Database
         return $output; 
     }
     
-    public function LoadObjects(string $class, string $query, array $criteria, ?int $limit = null) : array
+    private function TryPreloadObjectByID(string $class, string $id) : ?BaseObject
     {
-        if (array_key_exists('id',$criteria) && array_key_exists($criteria['id'], $this->objects))
+        if (array_key_exists($id, $this->objects))
         {
-            if (!is_a($this->objects[$criteria['id']],$class)) 
+            if (!is_a($this->objects[$id],$class))
             {
-                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$criteria['id']])); 
+                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$id]));
             }
-            return array($this->objects[$criteria['id']]);
-        }
-        
+            else return $this->objects[$id];
+        } 
+        else return null;
+    }
+    
+    private function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null) : array
+    {           
         $loaded = array(); $table = self::GetClassTableName($class); 
         
         $query = "SELECT $table.* FROM $table $query".($limit !== null ? " LIMIT $limit" : "");
@@ -101,14 +105,15 @@ class ObjectDatabase extends Database
     }
     
     public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
-    {
+    {        
+        if ($field == 'id' && ($obj = $this->TryPreloadObjectByID($class, $value)) !== null) return $obj;
+        
         if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
         
         $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
 
         $tempkey = ($field == 'id') ? 'id' : 'value';
-
-        $objects = $this->LoadObjects($class, "WHERE `$field` = :$tempkey", array("$tempkey"=>$value));
+        $objects = $this->LoadObjectsByQuery($class, "WHERE `$field` = :$tempkey", array("$tempkey"=>$value));
         
         if (count($objects) > 1) throw new DuplicateUniqueKeyException("$class: $value");
         
@@ -125,8 +130,20 @@ class ObjectDatabase extends Database
     {
         if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
         
+        $preloaded = array(); if ($field == 'id')
+        {
+            foreach($values as $value)
+            {
+                $obj = $this->TryPreloadObjectByID($class, $value);
+                if ($obj !== null) $preloaded[$obj->ID()] = $obj;
+            }     
+            
+            $values = array_filter($values, function($value)use($preloaded){
+                return !array_key_exists($value, $preloaded); });
+        }
+
         $criteria_string = ""; $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
-        
+
         foreach ($values as $value) {
             $criteria_string .= "`$field` $s :dat$i OR ";
             $data["dat$i"] = $value; $i++;
@@ -136,7 +153,9 @@ class ObjectDatabase extends Database
         
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         
-        return $this->LoadObjects($class, $query, $data, $limit);
+        $loaded = (!count($data) && count($preloaded)) ? array() : $this->LoadObjectsByQuery($class, $query, $data, $limit);
+        
+        return array_merge($preloaded, $loaded);
     }
     
     public function LoadObjectsMatchingAll(string $class, ?array $criteria, bool $like = false, ?int $limit = null) : array
@@ -152,7 +171,7 @@ class ObjectDatabase extends Database
         
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         
-        return $this->LoadObjects($class, $query, $data, $limit);
+        return $this->LoadObjectsByQuery($class, $query, $data, $limit);
     }
     
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
