@@ -6,7 +6,6 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 class ObjectTypeException extends Exceptions\ServerException            { public $message = "DBOBJECT_TYPE_MISMATCH"; }
 class DuplicateUniqueKeyException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBOBJECT_UNIQUE_VALUES"; }
-class UniqueKeyWithSpacesException extends Exceptions\ServerException   { public $message = "UNIQUE_KEY_LOAD_WITH_SPACE"; }
 
 class ObjectDatabase extends Database
 {
@@ -108,8 +107,6 @@ class ObjectDatabase extends Database
     {        
         if ($field == 'id' && ($obj = $this->TryPreloadObjectByID($class, $value)) !== null) return $obj;
         
-        if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
-        
         $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
 
         $tempkey = ($field == 'id') ? 'id' : 'value';
@@ -128,8 +125,6 @@ class ObjectDatabase extends Database
     
     public function LoadObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, ?int $limit = null) : array
     {
-        if (strpos($field," ") !== false) throw new UniqueKeyWithSpacesException();
-        
         $preloaded = array(); if ($field == 'id')
         {
             foreach($values as $value)
@@ -153,7 +148,7 @@ class ObjectDatabase extends Database
         
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         
-        $loaded = (!count($data) && count($preloaded)) ? array() : $this->LoadObjectsByQuery($class, $query, $data, $limit);
+        $loaded = count($data) ? $this->LoadObjectsByQuery($class, $query, $data, $limit) : array();
         
         return array_merge($preloaded, $loaded);
     }
