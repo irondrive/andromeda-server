@@ -2,7 +2,9 @@
 
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 
+if (!file_exists(ROOT."/core/database/Config.php")) die("Missing core/database/Config.php\n");
 require_once(ROOT."/core/database/Config.php");
+
 require_once(ROOT."/core/database/ObjectDatabase.php");
 use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException};
 
@@ -123,7 +125,7 @@ class Main implements Transactions
     public function rollBack()
     {
         set_time_limit(0);
-        $this->database->rollback();        
+        if (isset($this->database)) $this->database->rollback();        
         foreach($this->apps as $app) $app->rollback();
     }
     
