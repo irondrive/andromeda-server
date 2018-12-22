@@ -87,7 +87,7 @@ class ErrorManager
             }
         }
         
-        while (($e = $e->getPrevious()) !== null) { $this->Log($e); }
+        if ($e = $e->getPrevious() !== null) $this->Log($e);
     }   
     
     private $logfileok = true;
