@@ -90,63 +90,71 @@ class Authenticator
         if (!$this->account->isAdmin()) throw new AdminRequiredException(); return $this;
     }
     
-    public function RequireTwoFactor() : self
+    public function TryRequireTwoFactor() : self
     {
-        self::StaticRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
+        self::StaticTryRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
     }
     
-    public static function StaticRequireTwoFactor(Input $input, Account $account, ?Session $session = null) : void
+    public static function StaticTryRequireTwoFactor(Input $input, Account $account, ?Session $session = null) : void
     {
         if (!$account->HasTwoFactor()) return; 
-        self::StaticRequireCrypto($input, $account, $session);
+        self::StaticRequireCrypto($input, $account);
         
         $twofactor = $input->TryGetParam('auth_twofactor',SafeParam::TYPE_ALPHANUM);
         if ($twofactor === null) throw new TwoFactorRequiredException();
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
     
-    public function RequirePassword() : self
+    public function RequirePassword(bool $allowRecovery = false) : self
     {
         $password = $this->input->TryGetParam('auth_password',SafeParam::TYPE_RAW);
-        if ($password === null) throw new PasswordRequiredException();
+        $recoverykey = $this->input->TryGetParam('recoverykey', SafeParam::TYPE_ALPHANUM);
         
-        $this->RequireCrypto(); 
-     
         $account = $this->realaccount;
         
-        if (!$account->CryptoAvailable())
+        if ($password !== null)
         {
             if (!$account->VerifyPassword($password))
                 throw new AuthenticationFailedException();
         }
+        else if ($recoverykey !== null && $allowRecovery)
+        {
+            if (!$account->CheckRecoveryCode($recoverykey))
+                throw new AuthenticationFailedException();
+        }
+        else throw new PasswordRequiredException();
 
         return $this;
-    }   
-    
-    public function RequireCrypto() : self
-    {
-        self::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
     }
     
-    public static function StaticRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
+    public function TryRequireCrypto(bool $allowRecovery = true) : self
     {
-        if ($account->CryptoAvailable() || !$account->hasCrypto()) return;
+        if (!$this->account->hasCrypto()) return $this;
+        return $this->RequireCrypto($allowRecovery);
+    }
+    
+    public function RequireCrypto(bool $allowRecovery = true) : self
+    {
+        self::StaticRequireCrypto($this->input, $this->account, $allowRecovery); return $this;    
+    }
+    
+    public static function StaticRequireCrypto(Input $input, Account $account, bool $allowRecovery = true) : void
+    {
+        if ($account->CryptoAvailable()) return;
         
         $password = $input->TryGetParam('auth_password', SafeParam::TYPE_RAW);
-        $cryptokey = $input->TryGetParam('auth_cryptokey', SafeParam::TYPE_ALPHANUM);
+        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_ALPHANUM);
         
         if ($password !== null)
         {
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
-        }
-        
-        else if ($session !== null && $session->hasCrypto() && $cryptokey !== null)
+        }        
+        else if ($recoverykey !== null && $allowRecovery)
         {
-            try { $account->UnlockCryptoFromKeySource($session, $cryptokey); }
-            catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
-        }
-        
+            if (!$account->CheckRecoveryCode($recoverykey))
+                throw new AuthenticationFailedException();
+        }        
         else throw new CryptoKeyRequiredException();
     }
   

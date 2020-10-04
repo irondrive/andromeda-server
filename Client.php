@@ -8,9 +8,39 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Config.php");
 
-class Client extends StandardObject implements ClientObject
+class AuthObject extends StandardObject
+{    
+    const KEY_LENGTH = 32;
+    
+    public function GetAuthKey(bool $asHash = false) : string {
+        return $this->GetScalar('authkey', !$asHash);
+    }
+    
+    protected function SetAuthKey(string $key) : self {
+        $algo = Utilities::GetHashAlgo();
+        $dohash = password_needs_rehash($this->GetAuthKey(true),$algo);
+        if ($dohash) $this->SetScalar('authkey', password_hash($key, $algo));
+        return $this->SetScalar('authkey', $key, true);
+    }
+    
+    public function CreateAuthKey() : self {
+        $algo = Utilities::GetHashAlgo();
+        $key = Utilities::Random(self::KEY_LENGTH);
+        $this->SetScalar('authkey', password_hash($key, $algo));
+        return $this->SetScalar('authkey', $key, true);        
+    }
+    
+    public function CheckKeyMatch(string $key) : bool
+    {
+        $hash = $this->GetAuthKey(true);
+        $correct = password_verify($key, $hash);
+        if ($correct) $this->SetAuthKey($key);
+        return $correct;
+    }
+}
+
+class Client extends AuthObject implements ClientObject
 {
-    public function GetKey() : string { return $this->GetScalar('authkey'); }
     public function GetLastAddress() : string { return $this->GetScalar('lastaddr'); }
     public function GetUserAgent() : string { return $this->GetScalar('useragent'); }
     
@@ -21,15 +51,13 @@ class Client extends StandardObject implements ClientObject
     public function setActiveDate() : Client    { return $this->SetDate('active'); }
     public function getLoggedonDate() : int     { return $this->GetDate('loggedon'); }
     public function setLoggedonDate() : Client  { return $this->SetDate('loggedon'); }
-    
-    const KEY_LENGTH = 32;
+
     
     public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account) : Client
     {
         $client = parent::BaseCreate($database);
         
-        return $client
-            ->SetScalar('authkey',Utilities::Random(self::KEY_LENGTH))
+        return $client->CreateAuthKey()
             ->SetScalar('lastaddr',$interface->getAddress())
             ->SetScalar('useragent',$interface->getUserAgent())
             ->SetObject('account',$account);
@@ -42,20 +70,15 @@ class Client extends StandardObject implements ClientObject
         return $good;
     }
     
-    public function CheckKeyMatch(string $key) : bool
-    {
-        $max = $this->GetAccount()->GetMaxClientAge();  
-        
-        if ($max !== null && time()-$this->getActiveDate() > $max) 
-        { 
-            $this->Delete(); return false; 
-        }
-        
-        else return strlen($key) > 0 && $this->GetKey() === $key;
-    }
-    
     public function CheckMatch(IOInterface $interface, string $key) : bool
     {
+        $max = $this->GetAccount()->GetMaxClientAge();
+        
+        if ($max !== null && time()-$this->getActiveDate() > $max)
+        {
+            $this->Delete(); return false;
+        }
+        
         return $this->CheckAgentMatch($interface) && $this->CheckKeyMatch($key);
     }
     
@@ -67,6 +90,8 @@ class Client extends StandardObject implements ClientObject
         parent::Delete();
     }
     
+    const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
+    
     public function GetClientObject(int $level = 0) : array
     {
         $data = array(
@@ -76,8 +101,11 @@ class Client extends StandardObject implements ClientObject
             'dates' => $this->GetAllDates(),
         );     
         
+        if ($level === self::OBJECT_WITHSECRET)
+            $data['authkey'] = $this->GetAuthKey();
+        
         if (($session = $this->GetSession()) === null) $data['session'] = null;
-        else $data['session'] = $session->GetClientObject();
+        else $data['session'] = $session->GetClientObject($level);
 
         return $data;        
     }

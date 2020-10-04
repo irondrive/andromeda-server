@@ -5,7 +5,6 @@ require_once(ROOT."/apps/accounts/AuthEntity.php");
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoPublic;
 
 class Group extends AuthEntity implements ClientObject
 {
@@ -19,11 +18,7 @@ class Group extends AuthEntity implements ClientObject
     public function TryGetMembersObject(string $field) { return parent::TryGetObject("members__$field"); }
     
     public function GetPriority() : int { return $this->TryGetScalar('priority') ?? 0; }
-    
-    public function hasCrypto() : bool { return $this->TryGetScalar('public_key') !== null; }
-    public function useCrypto() : bool { return $this->TryGetMembersScalar('features__encryption') ?? false; }
-    public function hasCryptoPending() : bool { return $this->TryGetCounter('crypto_pending') ?? 0; }
-    
+
     public function GetAccountMemberships() : array { return $this->GetObjectRefs('accounts'); }
     public function CountAccountMemberships() : int { return $this->TryCountObjectRefs('accounts'); }
     
@@ -89,17 +84,5 @@ class Group extends AuthEntity implements ClientObject
             
             'accounts' => array_map(function($e){ return $e->ID(); }, $this->GetAccounts()),
         );        
-    }
-    
-    public function InitializeCrypto() : string
-    {
-        $keypair = CryptoPublic::GenerateKeyPair();        
-        $this->SetScalar('public_key', $keypair['public']);         
-        return $keypair['private'];
-    }
-    
-    public function RemoveCrypto() : self
-    {
-        $this->SetScalar('public_key', null); return $this;
     }
 }

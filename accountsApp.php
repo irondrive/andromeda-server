@@ -6,7 +6,7 @@ require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
 
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Authenticator.php");
@@ -16,7 +16,6 @@ require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/ContactInfo.php");
 require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/GroupMembership.php");
-require_once(ROOT."/apps/accounts/MasterKeySource.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
@@ -175,25 +174,28 @@ class AccountsApp extends AppBase
             if (!$account->CheckRecoveryCode($recoverykey)) 
                 throw new AuthenticationFailedException();
         }
-        else if (!$this->authenticator->isSudoUser()) 
-            $this->authenticator->RequirePassword();
+        else 
+        {
+            $this->authenticator->TryRequireCrypto();
+            if (!$this->authenticator->isSudoUser()) 
+                $this->authenticator->RequirePassword();
+        }
         
-        try { $account->ChangePassword($new_password); }
-        catch (RekeyOldPasswordRequired $e) { throw new PasswordRequiredException(); }
-    
+        $account->ChangePassword($new_password);
+
         return $this->StandardReturn($input, null, $account);
     }
     
     private function capitalizeWords($str){ 
         return implode(" ",array_map(function($p){ 
             return strtoupper(substr($p,0,1)).substr($p,1); 
-        }, explode(" ", $str))); }
+        }, explode(" ", trim($str)))); }
     
     protected function SetFullName(Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
-        $fullname = $this->capitalizeWords($input->GetParam("fullname", SafeParam::TYPE_ALNUMEXT));
+        $fullname = $this->capitalizeWords($input->GetParam("fullname", SafeParam::TYPE_NAME));
         $this->authenticator->GetAccount()->SetFullName($fullname);
         
         return $this->StandardReturn($input);
@@ -208,8 +210,7 @@ class AccountsApp extends AppBase
         if ($account === null) throw new UnknownAccountException();
         
         if ($account->hasCrypto()) throw new RecoveryKeyFailedException();        
-        if ($account->HasTwoFactor()) Authenticator::StaticRequireTwoFactor($input, $account);
-        
+
         $key = RecoveryKey::Create($this->API->GetDatabase(), $account)->InitializeKey();   
         
         $subject = "Andromeda Account Recovery Key";
@@ -247,6 +248,7 @@ class AccountsApp extends AppBase
         {
             $contact->SetIsValid(false);
             
+            $code = Utilities::Random(8);
             $account->setEnabled(false)->setUnlockCode($code);
             
             $mailer = $this->API->GetConfig()->GetMailer();
@@ -333,31 +335,35 @@ class AccountsApp extends AppBase
         /* if a clientid is provided, check that it and the clientkey are correct */
         if ($clientid !== null && $clientkey !== null)
         {
-            if ($account->ForceTwoFactor()) Authenticator::StaticRequireTwoFactor($input, $account);
+            if ($account->ForceTwoFactor()) Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::TryLoadByID($database, $clientid);
             if ($client === null || !$client->CheckMatch($this->API->GetInterface(), $clientkey)) 
                 throw new UnknownClientException();
         } 
-        else { /* if no clientkey, require either a recoverykey or twofactor, create a client */
+        else /* if no clientkey, require either a recoverykey or twofactor, create a client */
+        { 
             if (($recoverykey = $input->TryGetParam("recoverykey", SafeParam::TYPE_ALPHANUM)) !== null)
             {
                 if (!$account->CheckRecoveryCode($recoverykey))
                     throw new AuthenticationFailedException();
             }
-            else Authenticator::StaticRequireTwoFactor($input, $account);
+            else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::Create($this->API->GetInterface(), $database, $account);
         }
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */
-        try { $account->UnlockCryptoFromPassword($password); }
-        catch (DecryptionFailedException $e)
+        if ($account->hasCrypto())
         {
-            $old_password = $input->TryGetParam("old_password", SafeParam::TYPE_RAW);
-            if ($old_password === null) throw new OldPasswordRequiredException();
-            try { $account->ChangePassword($password, $old_password); }
-            catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
+            try { $account->UnlockCryptoFromPassword($password); }
+            catch (DecryptionFailedException $e)
+            {
+                $old_password = $input->TryGetParam("old_password", SafeParam::TYPE_RAW);
+                if ($old_password === null) throw new OldPasswordRequiredException();
+                try { $account->ChangePassword($password, $old_password); }
+                catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
+            }
         }
         
         /* check account password age, possibly require a new one */
@@ -374,20 +380,13 @@ class AccountsApp extends AppBase
 
         $session = Session::Create($database, $account, $client);
         
-        /* update dates, return ids/keys, init crypto and return key if needed */
+        /* update object dates */
         $session->setActiveDate();
         $client->setLoggedonDate()->setActiveDate();
         $account->setLoggedonDate()->setActiveDate();
         
-        $return = array(
-            'auth_clientid' => $client->ID(),
-            'auth_clientkey' => $client->GetKey(),
-            'auth_sessionid' => $session->ID(),
-            'auth_sessionkey' => $session->GetKey(),
-        );
+        $return = $client->GetClientObject(Client::OBJECT_WITHSECRET);
 
-        if ($session->useCrypto()) $return['auth_cryptokey'] = $session->InitializeCrypto(); 
-        
         return $this->StandardReturn($input, $return, $account);
     }
     
@@ -395,7 +394,7 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
-        $this->authenticator->RequireTwoFactor()->RequirePassword();
+        $this->authenticator->TryRequireTwoFactor()->RequirePassword()->RequireCrypto();
         
         $account = $this->authenticator->GetAccount();
         
@@ -411,7 +410,8 @@ class AccountsApp extends AppBase
     protected function CreateTwoFactor(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
-        $this->authenticator->RequirePassword();
+        
+        $this->authenticator->RequirePassword()->RequireCrypto();
         
         $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
         
@@ -425,6 +425,9 @@ class AccountsApp extends AppBase
     protected function VerifyTwoFactor(Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $this->authenticator->RequireCrypto();
+        
         $account = $this->authenticator->GetAccount();
         
         $twofactorid = $input->GetParam("twofactorid", SafeParam::TYPE_ID);
@@ -503,7 +506,7 @@ class AccountsApp extends AppBase
         
         $this->authenticator->RequirePassword();
         
-        if (!$this->authenticator->isSudoUser()) $this->authenticator->RequireTwoFactor();
+        if (!$this->authenticator->isSudoUser()) $this->authenticator->TryRequireTwoFactor();
             
         $this->authenticator->GetAccount()->Delete();
     }
@@ -555,8 +558,7 @@ class AccountsApp extends AppBase
         
         if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
         
-        $clients = $this->authenticator->GetAccount()->GetClients();
-        
+        $clients = $this->authenticator->GetAccount()->GetClients();        
         foreach ($clients as $client) $client->Delete();
         
         return $this->StandardReturn($input);
@@ -633,14 +635,13 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $name = $input->GetParam("name", SafeParam::TYPE_ALNUMEXT);
+        $name = $input->GetParam("name", SafeParam::TYPE_NAME);
         $priority = $input->TryGetParam("priority", SafeParam::TYPE_INT);
         $comment = $input->TryGetParam("comment", SafeParam::TYPE_TEXT);
         
         $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
         if ($duplicate !== null) throw new GroupExistsException();
         
-        // TODO should group crypto default be a config option?
         $group = Group::Create($this->API->GetDatabase(), $name, $priority, $comment);
         
         $return = array('group' => $group->GetClientObject());  
@@ -706,6 +707,55 @@ class AccountsApp extends AppBase
         return $this->StandardReturn($input);
     }
 
+    public static function Test(Main $api)
+    {
+        $config = Config::Load($api->GetDatabase());
+        
+        $old1 = $config->GetAllowCreateAccount(); $config->SetAllowCreateAccount(true);
+        $old2 = $config->GetUseEmailAsUsername(); $config->SetUseEmailAsUsername(false);
+        $old3 = $config->GetRequireContact(); $config->SetRequireContact(Config::CONTACT_EXIST);
+        
+        $results = array(); $app = "accounts";
+        
+        $email = Utilities::Random(8)."@unittest.com";
+        $user = Utilities::Random(8); 
+        $password = Utilities::Random(16);
+        
+        $test = $api->Run(new Input($app,'createaccount', (new SafeParams())
+            ->AddParam('email','email',$email)
+            ->AddParam('alphanum','username',$user)
+            ->AddParam('raw','password',$password)));
+        array_push($results, $test); $api->commit();
+        
+        $test = $api->Run(new Input($app,'createsession', (new SafeParams())
+            ->AddParam('text','username',$user)
+            ->AddParam('raw','auth_password',$password)));
+        array_push($results, $test); $api->commit();
+        
+        $sessionid = $test['session']['id'];
+        $sessionkey = $test['session']['authkey'];
+        
+        $password2 = Utilities::Random(16);
+        $test = $api->Run(new Input($app,'changepassword', (new SafeParams())
+            ->AddParam('id','auth_sessionid',$sessionid)
+            ->AddParam('alphanum','auth_sessionkey',$sessionkey)
+            ->AddParam('bool','getaccount',true)
+            ->AddParam('raw','auth_password',$password)
+            ->AddParam('raw','new_password',$password2)));
+        array_push($results, $test); $api->commit();
+        $password = $password2;
+        
+        $test = $api->Run(new Input($app,'deleteaccount', (new SafeParams())
+            ->AddParam('id','auth_sessionid',$sessionid)
+            ->AddParam('alphanum','auth_sessionkey',$sessionkey)
+            ->AddParam('raw','auth_password',$password)));
+        array_push($results, $test); $api->commit();
+        
+        $config->SetAllowCreateAccount($old1);
+        $config->SetUseEmailAsUsername($old2);
+        $config->SetRequireContact($old3);
+                        
+        return $results;
+    }
 }
-
 
