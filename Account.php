@@ -7,7 +7,6 @@ require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/GroupMembership.php");
 require_once(ROOT."/apps/accounts/Session.php");
-require_once(ROOT."/apps/accounts/MasterKeySource.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 
 require_once(ROOT."/apps/accounts/auth/Local.php");
@@ -18,7 +17,6 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class CryptoUnavailableException extends Exceptions\ServerException     { public $message = "CRYPTO_UNAVAILABLE"; }
 class CryptoUnlockRequiredException extends Exceptions\ServerException  { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
 class RekeyOldPasswordRequired extends Exceptions\ServerException       { public $message = "REKEY_OLD_PASSWORD_REQUIRED"; }
 
@@ -59,6 +57,8 @@ class Account extends AuthEntity implements ClientObject
     
     public function HasTwoFactor() : bool
     { 
+        if ($this->TryCountObjectRefs('recoverykeys') <= 0) return false;
+        
         $twofactors = $this->GetTwoFactors();
         foreach ($twofactors as $twofactor) { 
             if ($twofactor->GetIsValid()) return true; }
@@ -143,8 +143,6 @@ class Account extends AuthEntity implements ClientObject
         foreach (array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup())) as $group)
             GroupMembership::Create($database, $account, $group);
 
-        if ($account->allowCrypto()) $account->InitializeCrypto($password);        
-
         return $account;
     }
     
@@ -162,7 +160,7 @@ class Account extends AuthEntity implements ClientObject
     const OBJECT_FULL = 0; const OBJECT_SIMPLE = 1;     
     const OBJECT_USER = 0; const OBJECT_ADMIN = 2;
     
-    public function GetClientObject(int $level = self::OBJECT_FULL) : array
+    public function GetClientObject(int $level = self::OBJECT_FULL | self::OBJECT_USER) : array
     {
         $mapobj = function($e) { return $e->GetClientObject(); };
         
@@ -194,20 +192,27 @@ class Account extends AuthEntity implements ClientObject
         return $data;
     }
 
-    protected function GetScalar(string $field)
+    protected function GetScalar(string $field, bool $allowTemp = true)
     {
-        if ($this->ExistsScalar($field)) $value = parent::GetScalar($field);
+        if ($this->ExistsScalar($field)) $value = parent::GetScalar($field, $allowTemp);
         else if ($this->ExistsScalar($field."__inherits")) $value = $this->InheritableSearch($field)->GetValue();
         else throw new KeyNotFoundException($field);
         
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
-    protected function TryGetScalar(string $field)
+    protected function TryGetScalar(string $field, bool $allowTemp = true)
     {
-        if ($this->ExistsScalar($field)) return parent::TryGetScalar($field);
+        if ($this->ExistsScalar($field)) return parent::TryGetScalar($field, $allowTemp);
         else if ($this->ExistsScalar($field."__inherits")) return $this->InheritableSearch($field)->GetValue();
         else return null;
+    }
+    
+    protected function SetScalar(string $field, $value, bool $temp = false) : BaseObject
+    {  
+        if ($this->ExistsScalar($field."__inherits"))
+            $field .= "__inherits";
+        return parent::SetScalar($field, $value, $temp);
     }
     
     protected function GetObject(string $field) : BaseObject
@@ -224,6 +229,13 @@ class Account extends AuthEntity implements ClientObject
         if ($this->ExistsObject($field)) return parent::TryGetObject($field);
         else if ($this->ExistsObject($field."__inherits")) return $this->InheritableSearch($field, true)->GetValue();
         else return null;
+    }
+    
+    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
+    {
+        if ($this->ExistsObject($field."__inherits"))
+            $field .= "__inherits";
+        return parent::SetObject($field, $object, $notification);
     }
     
     protected function TryGetInheritsScalarFrom(string $field) : ?AuthEntity
@@ -264,6 +276,8 @@ class Account extends AuthEntity implements ClientObject
     
     public function CheckTwoFactor(string $code) : bool
     {
+        if (!$this->HasTwoFactor()) return false;  
+        
         foreach ($this->GetTwoFactors() as $twofactor) { 
             if ($twofactor->CheckCode($code)) return true; }
         
@@ -274,10 +288,8 @@ class Account extends AuthEntity implements ClientObject
     {
         if (!$this->HasRecoveryKeys()) return false;    
 
-        foreach ($this->GetRecoveryKeys() as $source)
-        {
-            if ($source->CheckCode($key)) return true;
-        }
+        foreach ($this->GetRecoveryKeys() as $source) {
+            if ($source->CheckCode($key)) return true; }
         
         return false;
     }
@@ -295,11 +307,6 @@ class Account extends AuthEntity implements ClientObject
         
         if ($date < 0) return false; else return ($max === null || time()-$date < $max);
     }
-    
-    const CRYPTO_FORCE_OFF = 0; const CRYPTO_DEFAULT_OFF = 1; const CRYPTO_DEFAULT_ON = 2; const CRYPTO_FORCE_ON = 3;
-    
-    public function allowCrypto() : bool    { return ($this->TryGetFeature('encryption') ?? self::CRYPTO_FORCE_OFF) >= self::CRYPTO_DEFAULT_OFF; }
-    public function useCrypto() : bool      { return ($this->TryGetFeature('encryption') ?? self::CRYPTO_FORCE_OFF) >= self::CRYPTO_DEFAULT_ON; }
     
     public function hasCrypto() : bool { return $this->TryGetScalar('master_key') !== null; }
     
@@ -325,7 +332,7 @@ class Account extends AuthEntity implements ClientObject
     
     public function EncryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable || !$this->allowCrypto()) throw new CryptoUnavailableException();    
+        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();    
         
         $master = $this->GetScalar('master_key');
         return CryptoSecret::Encrypt($data, $nonce, $master);
@@ -333,40 +340,24 @@ class Account extends AuthEntity implements ClientObject
     
     public function DecryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnavailableException();
+        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
         
         $master = $this->GetScalar('master_key');
         return CryptoSecret::Decrypt($data, $nonce, $master);
     }
 
-    public function EncryptKeyFor(AuthEntity $recipient, string $data, string $nonce) : string
-    {
-        if (!$this->cryptoAvailable || !$recipient->hasCrypto()) throw new CryptoUnavailableException();
-        if (!$this->allowCrypto() || !$recipient->useCrypto()) throw new CryptoUnavailableException();
-        return CryptoPublic::Encrypt($data, $nonce, $recipient->GetPublicKey(), $this->GetScalar('private_key'));
-    }
-    
-    public function DecryptKeyFrom(AuthEntity $sender, string $data, string $nonce) : string
-    {
-        if (!$this->cryptoAvailable || !$sender->hasCrypto()) throw new CryptoUnavailableException();
-        return CryptoPublic::Decrypt($data, $nonce, $this->GetScalar('private_key'), $sender->GetPublicKey());
-    }   
-    
     public function GetEncryptedMasterKey(string $nonce, string $key) : string
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnavailableException();
+        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
         return CryptoSecret::Encrypt($this->GetScalar('master_key'), $nonce, $key);
     }
     
-    public function UnlockCryptoFromPassword(string $password) : bool
+    public function UnlockCryptoFromPassword(string $password) : self
     {
-        if ($this->cryptoAvailable) return true; 
+        if ($this->cryptoAvailable) return $this; 
         
         if (!$this->hasCrypto())
-        {
-            if (!$this->allowCrypto()) return false;
-            else $this->InitializeCrypto($password);
-        }
+           $this->InitializeCrypto($password);
 
         $master = $this->GetScalar('master_key');
         $master_nonce = $this->GetScalar('master_nonce');
@@ -375,30 +366,20 @@ class Account extends AuthEntity implements ClientObject
         $password_key = CryptoSecret::DeriveKey($password, $master_salt);        
         $master = CryptoSecret::Decrypt($master, $master_nonce, $password_key);
         
-        return $this->UnlockCryptoFromKey($master);
+        $this->SetScalar('master_key', $master, true);
+        
+        $this->cryptoAvailable = true; return $this;
     }
     
-    public function UnlockCryptoFromKeySource(MasterKeySource $source, string $key) : bool
+    public function UnlockCryptoFromRecovery(RecoveryKey $source, string $key) : self
     {
-        if ($this->cryptoAvailable) return true;        
-        if (!$this->hasCrypto()) return false;
+        if ($this->cryptoAvailable) return $this;
         
         $master = $source->GetUnlockedKey($key);
         
-        return $this->UnlockCryptoFromKey($master);
-    }
-    
-    private function UnlockCryptoFromKey(string $master) : bool
-    {
-        $private = $this->GetScalar('private_key');
-        $private_nonce = $this->GetScalar('private_nonce');
-
-        $private = CryptoSecret::Decrypt($private, $private_nonce, $master);
+        $this->SetScalar('master_key', $master, true);
         
-        $this->SetScalar('master_key',  $master, true);
-        $this->SetScalar('private_key', $private,true);
-        
-        $this->cryptoAvailable = true; return true;
+        $this->cryptoAvailable = true; return $this;
     }
     
     private function InitializeCrypto(string $password) : self
@@ -406,28 +387,16 @@ class Account extends AuthEntity implements ClientObject
         $master_salt = CryptoSecret::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);
         
         $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce',  $master_nonce);   
-        $private_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('private_nonce', $private_nonce);
         
         $password_key = CryptoSecret::DeriveKey($password, $master_salt);
         
         $master = CryptoSecret::GenerateKey();
         $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
-        
-        $keypair = CryptoPublic::GenerateKeyPair();
-        $public = $keypair['public']; $private = $keypair['private'];        
-        $private_encrypted = CryptoSecret::Encrypt($private, $private_nonce, $master);        
-
-        $this->SetScalar('public_key',    $public);
-        $this->SetScalar('private_key',   $private_encrypted);        
-        $this->SetScalar('master_key',    $master_encrypted); 
-        
-        $this->SetScalar('master_key',  $master, true); sodium_memzero($master); 
-        $this->SetScalar('private_key', $private,true); sodium_memzero($private);       
+  
+        $this->SetScalar('master_key', $master_encrypted);         
+        $this->SetScalar('master_key', $master, true); sodium_memzero($master);      
         
         $this->cryptoAvailable = true; 
-        
-        foreach ($this->GetRecoveryKeys() as $recovery) $recovery->EnableCrypto();
-        foreach ($this->GetTwoFactors() as $twofactor) $twofactor->EnableCrypto();
 
         return $this;
     }
@@ -453,7 +422,6 @@ class Account extends AuthEntity implements ClientObject
     public function __destruct()
     {
         $this->scalars['master_key']->EraseValue();
-        $this->scalars['private_key']->EraseValue();
     }
 }
 

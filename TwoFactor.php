@@ -30,10 +30,7 @@ class TwoFactor extends StandardObject implements ClientObject
     public function GetComment() : ?string { return $this->TryGetScalar("comment"); }
     
     private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
-    
-    public function useCrypto() : bool { return $this->GetAccount()->useCrypto(); }
-    public function hasCrypto() : bool { return $this->TryGetScalar('nonce') !== null; }
-    
+
     public function GetIsValid() : bool     { return $this->GetScalar('valid'); }
     public function SetIsValid(bool $data = true) : self { return $this->SetScalar('valid',$data); }
     
@@ -43,11 +40,8 @@ class TwoFactor extends StandardObject implements ClientObject
         
         $secret = $ga->createSecret(self::SECRET_LENGTH); $nonce = null;
         
-        if ($account->useCrypto())
-        {
-            $nonce = CryptoSecret::GenerateNonce();
-            $secret = $account->EncryptSecret($secret, $nonce);
-        }
+        $nonce = CryptoSecret::GenerateNonce();
+        $secret = $account->EncryptSecret($secret, $nonce);
         
         return parent::BaseCreate($database) 
             ->SetScalar('secret',$secret)
@@ -59,8 +53,11 @@ class TwoFactor extends StandardObject implements ClientObject
     public function GetURL() : string
     {
         $ga = new PHPGangsta_GoogleAuthenticator();
-        
-        return $ga->getQRCodeGoogleUrl("Andromeda", $this->GetScalar('secret'));
+
+        $secret = $this->GetAccount()->DecryptSecret(
+            $this->GetScalar('secret'), $this->GetScalar('nonce'));  
+
+        return $ga->getQRCodeGoogleUrl("Andromeda", $secret);
     }
         
     public function CheckCode(string $code) : bool
@@ -69,11 +66,7 @@ class TwoFactor extends StandardObject implements ClientObject
         
         $account = $this->GetAccount(); $secret = $this->GetScalar('secret');        
 
-        if ($this->hasCrypto())
-        {
-            if (!$account->CryptoAvailable()) throw new CryptoUnlockRequiredException();
-            $secret = $account->DecryptSecret($secret, $this->GetScalar('nonce'));
-        }        
+        $secret = $account->DecryptSecret($secret, $this->GetScalar('nonce'));    
 
         foreach ($this->GetUsedTokens() as $usedtoken)
         {
@@ -82,31 +75,12 @@ class TwoFactor extends StandardObject implements ClientObject
         }
 
         if (!$ga->verifyCode($secret, $code, self::TIME_TOLERANCE)) return false;
-        
-        if ($this->useCrypto() && !$this->hasCrypto()) $this->EnableCrypto();
-        else if (!$this->useCrypto() && $this->hasCrypto()) $this->DisableCrypto();
-        
+
         UsedToken::Create($this->database, $this, $code);
 
         $this->SetIsValid();
         
         return true;
-    }
-    
-    public function EnableCrypto() : void
-    {
-        if ($this->hasCrypto()) return;
-        $account = $this->GetAccount(); if (!$account->CryptoAvailable()) return;
-        $nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('nonce', $nonce);
-        $this->SetScalar('secret', $account->EncryptSecret($this->GetScalar('secret'), $nonce));
-    }
-    
-    public function DisableCrypto() : void
-    {
-        if (!$this->hasCrypto()) return;
-        $account = $this->GetAccount(); if (!$account->CryptoAvailable()) throw new CryptoUnlockRequiredException();
-        $secret = $account->DecryptSecret($this->GetScalar('secret'), $this->GetScalar('nonce'));
-        $this->SetScalar('secret', $secret); $this->SetScalar('nonce', null);
     }
     
     const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;

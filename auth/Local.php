@@ -1,10 +1,11 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, SingletonObject};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
 require_once(ROOT."/apps/accounts/auth/LDAP.php");
 require_once(ROOT."/apps/accounts/auth/IMAP.php");
@@ -27,9 +28,7 @@ class Local extends SingletonObject implements Source
         
         $correct = password_verify($password, $hash);
         
-        $algo = defined('PASSWORD_ARGON2I') ? PASSWORD_ARGON2I : PASSWORD_DEFAULT;
-        
-        if ($correct && password_needs_rehash($hash, $algo))
+        if ($correct && password_needs_rehash($hash, Utilities::GetHashAlgo()))
             $account->SetScalar('password', self::HashPassword($password));
             
         return $correct;
@@ -37,9 +36,7 @@ class Local extends SingletonObject implements Source
     
     public static function HashPassword(string $password) : string
     {
-        $algo = defined('PASSWORD_ARGON2I') ? PASSWORD_ARGON2I : PASSWORD_DEFAULT;
-        
-        return password_hash($password, $algo);
+        return password_hash($password, Utilities::GetHashAlgo());
     }
     
     public function GetAccountGroup() : ?Group { return null; }

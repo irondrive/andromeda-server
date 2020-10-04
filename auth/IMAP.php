@@ -46,9 +46,7 @@ class IMAP extends BaseObject implements Source
 
         $imap = null; $good = false; try 
         { 
-            $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN);
-            
-            $good = ($imap !== false);
+            $good = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN) !== false;
         }
         catch (Exceptions\PHPException $e) { return false; } 
         
