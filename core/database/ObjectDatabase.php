@@ -19,18 +19,11 @@ class ObjectDatabase extends Database
         return array_key_exists($obj->ID(), $this->modified); 
     }
     
-    public function setModified(BaseObject $obj) 
-    { 
+    public function setModified(BaseObject $obj) : void
+    {
         $this->modified[$obj->ID()] = $obj;
     }
-    
-    private function unsetObject(BaseObject $obj)
-    {
-        unset($this->objects[$obj->ID()]);
-        
-        if ($this->isModified($obj)) unset($this->modified[$obj->ID()]);
-    }
-    
+     
     public function getLoadedObjects() : array
     { 
         return array_map(function($e){ return $e->GetClass(); }, $this->objects);
@@ -38,7 +31,7 @@ class ObjectDatabase extends Database
     
     public function commit(bool $dryrun = false) : void
     {
-        foreach ($this->modified as $object) $object->Save();        
+        foreach ($this->modified as $object) $object->Save();
         
         if (!$dryrun) parent::commit(); else parent::rollBack();
     }
@@ -137,15 +130,14 @@ class ObjectDatabase extends Database
                 return !array_key_exists($value, $preloaded); });
         }
 
-        $criteria_string = ""; $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
+        $criteria = array(); $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
 
         foreach ($values as $value) {
-            $criteria_string .= "`$field` $s :dat$i OR ";
+            array_push($criteria, "`$field` $s :dat$i");
             $data["dat$i"] = $value; $i++;
         }
         
-        if ($criteria_string) $criteria_string = substr($criteria_string,0,-4);   
-        
+        $criteria_string = implode(' OR ', $criteria);
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         
         $loaded = count($data) ? $this->LoadObjectsByQuery($class, $query, $data, $limit) : array();
@@ -153,72 +145,68 @@ class ObjectDatabase extends Database
         return array_merge($preloaded, $loaded);
     }
     
-    public function LoadObjectsMatchingAll(string $class, ?array $criteria, bool $like = false, ?int $limit = null) : array
+    public function LoadObjectsMatchingAll(string $class, ?array $values, bool $like = false, ?int $limit = null) : array
     {        
-        $criteria_string = ""; $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
+        $criteria = array(); $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
         
-        if ($criteria !== null) foreach (array_keys($criteria) as $key) { 
-            $criteria_string .= "`$key` ".($criteria[$key] !== null ? "$s :dat$i" : "IS NULL").' AND '; 
-            if ($criteria[$key] !== null) $data["dat$i"] = $criteria[$key]; $i++;
-        }; 
+        if ($values !== null) foreach (array_keys($values) as $key) { 
+            array_push($criteria, "`$key` ".($values[$key] !== null ? "$s :dat$i" : "IS NULL")); 
+            if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
+        };
         
-        if ($criteria_string) $criteria_string = substr($criteria_string,0,-5);       
-        
+        $criteria_string = implode(' AND ',$criteria);
         $query = ($criteria_string?"WHERE $criteria_string ":"");
         
         return $this->LoadObjectsByQuery($class, $query, $data, $limit);
     }
     
-    public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
+    public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
     {
+        unset($this->modified[$object->ID()]);
+        
+        if ($object->isDeleted()) return $this;
         if ($object->isCreated()) return $this->SaveNewObject($class, $object, $values, $counters);
         
-        $criteria_string = ""; $data = array('id'=>$object->ID()); $i = 0;
+        $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
-        foreach (array_keys($values) as $key) { 
-            if ($key == 'id') continue;
-            $criteria_string .= "`$key` = :dat$i, ";             
+        foreach (array_keys($values) as $key) {
+            array_push($criteria, "`$key` = :dat$i");
             $data["dat$i"] = $values[$key]; $i++;
         }; 
         
         foreach (array_keys($counters) as $key) {
-            $criteria_string .= "`$key` = `$key` + :dat$i, ";
+            array_push($criteria, "`$key` = `$key` + :dat$i");
             $data["dat$i"] = $counters[$key]; $i++;
         }; 
         
-        if (!$criteria_string) return $object;
+        if (!count($criteria)) return $this;
         
-        $criteria_string = substr($criteria_string,0,-2);            
+        $criteria_string = implode(',',$criteria);
         $table = self::GetClassTableName($class);            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
         $this->query($query, $data, false);    
         
-        unset($this->modified[$object->ID()]);
-        
-        return $object;
+        return $this;
     }
     
-    public function SaveNewObject(string $class, BaseObject $object, array $values, array $counters) : BaseObject
-    {        
-        $columns_string = ""; $data_string = ""; $data = array(); $i = 0;
+    private function SaveNewObject(string $class, BaseObject $object, array $values, array $counters) : self
+    {
+        $columns = array(); $indexes = array(); $data = array(); $i = 0;
         
         $values['id'] = $object->ID();
         
         foreach (array_keys($values) as $key) {
-            $columns_string .= "`$key`, "; $data_string .= ($values[$key] !== null ? ":dat$i, " : "NULL, ");
+            array_push($columns,"`$key`"); 
+            array_push($indexes, $values[$key] !== null ? ":dat$i" : "NULL");
             if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
         }
         
-        if ($columns_string) $columns_string = substr($columns_string, 0, -2);
-        if ($data_string) $data_string = substr($data_string, 0, -2);
-        
         $table = self::GetClassTableName($class);
-        $query = "INSERT INTO $table ($columns_string) VALUES ($data_string)";
+        $columns_string = implode(',',$columns); $indexes_string = implode(',',$indexes);
+        $query = "INSERT INTO $table ($columns_string) VALUES ($indexes_string)";
         $this->query($query, $data, false);
         
-        unset($this->modified[$object->ID()]);
-        
-        return $object;
+        return $this;
     }
     
     private function getDefaultFields(string $class) : array
@@ -247,8 +235,6 @@ class ObjectDatabase extends Database
     
     public function DeleteObject(string $class, BaseObject $object) : void
     {
-        $this->unsetObject($object);
-        
         $table = self::GetClassTableName($class); 
         $this->query("DELETE FROM $table WHERE id=:id", array('id'=>$object->ID()), false);
     }
@@ -257,15 +243,14 @@ class ObjectDatabase extends Database
     {
         if (count($objects) < 1) return;        
         
-        $criteria_string = ""; $data = array(); $i = 0;
+        $criteria = array(); $data = array(); $i = 0;
         
         foreach ($objects as $object) {
-            $criteria_string .= "id = :dat$i OR ";
-            $data["dat$i"] = $object->ID(); $i++;            
-            $this->unsetObject($object);
+            array_push($criteria, "id = :dat$i");
+            $data["dat$i"] = $object->ID(); $i++;
         }
         
-        $criteria_string = substr($criteria_string,0,-4);   
+        $criteria_string = implode(' OR ',$criteria);   
         
         $table = self::GetClassTableName($class);
         $this->query("DELETE FROM $table WHERE $criteria_string",$data,false);

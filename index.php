@@ -26,8 +26,7 @@ $data = array_map(function($input)use($main){
     return $main->Run($input); }, $inputs);
 
 $output = Output::Success($data);
-
-$metrics = $main->Commit(); 
+$metrics = $main->commit(); 
 
 if ($metrics !== null) $output->SetMetrics($metrics);
 
