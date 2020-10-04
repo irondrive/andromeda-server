@@ -33,4 +33,11 @@ class Utilities
             throw new JSONDecodingException(); };
         return $data;
     }
+    
+    public static function GetHashAlgo()
+    {
+        if (defined('PASSWORD_ARGON2ID')) return PASSWORD_ARGON2ID;
+        if (defined('PASSWORD_ARGON2I')) return PASSWORD_ARGON2I;
+        else return PASSWORD_DEFAULT;
+    }
 }

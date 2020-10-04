@@ -50,7 +50,7 @@ class ErrorManager
         
         set_error_handler( function($code,$string,$file,$line){
            throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
-        
+
         set_exception_handler(function(\Throwable $e)
         {
             if ($e instanceof Exceptions\ClientException)

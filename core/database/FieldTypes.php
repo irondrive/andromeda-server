@@ -35,6 +35,7 @@ abstract class Field
     
     protected $myfield; public function GetMyField() : string { return $this->myfield; }
     protected $delta = 0; public function GetDelta() : int { return $this->delta; }
+    public function ResetDelta() : self { $this->delta = 0; return $this; }
 }
 
 class Scalar extends Field
@@ -45,6 +46,7 @@ class Scalar extends Field
         $this->myfield = $myfield; $this->tempvalue = $value; $this->realvalue = $value; }
     
     public function GetValue() { return $this->tempvalue; }
+    public function GetRealValue() { return $this->realvalue; }
 
     public function GetColumnName() : string
     {
@@ -55,7 +57,7 @@ class Scalar extends Field
     public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
     
     public function SetValue($value, bool $temp = false) : bool
-    { 
+    {
         $this->tempvalue = $value;
 
         if (!$temp && $value !== $this->realvalue)

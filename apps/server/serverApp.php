@@ -17,6 +17,7 @@ class ServerApp extends AppBase
         {
             case 'random':  return $this->Random($input); break;
             case 'getapps': return $this->GetApps($input); break;
+            case 'runtests': return $this->RunTests($input); break;
             
             default: throw new UnknownActionException();
         }
@@ -32,6 +33,19 @@ class ServerApp extends AppBase
     protected function GetApps(Input $input) 
     {
         return array_map(function($app){ return $app::getVersion(); }, $this->API->GetApps());
+    }
+    
+    protected function RunTests(Input $input)
+    {
+        set_time_limit(0);
+        
+        if ($this->API->GetDebug())
+        {
+            return array_map(function($app){
+                return get_class($app)::Test($this->API);
+            }, $this->API->GetApps());
+        }
+        else throw new UnknownActionException();
     }
 }
 

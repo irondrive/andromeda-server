@@ -27,9 +27,7 @@ class Database implements Transactions {
     private $connection; 
     private $read_only = false;
     
-    private $stats_stack_index = -1;
     private $stats_stack = array();
-    
     private $query_history = array();
     
     public function __construct()
@@ -61,7 +59,7 @@ class Database implements Transactions {
         unset($query); return $result;    
     }       
 
-    public function rollBack()
+    public function rollBack() : void
     { 
         if ($this->connection->inTransaction())
         {
@@ -72,11 +70,11 @@ class Database implements Transactions {
             
             if ($stats !== null) $stats->endWrite(false);
         }
-        $this->inTransaction = false; return $this;
+        $this->inTransaction = false;
     }
     
-    public function commit()
-    { 
+    public function commit() : void
+    {
         if ($this->connection->inTransaction()) 
         {
             $stats = $this->getStatsContext();
@@ -86,24 +84,18 @@ class Database implements Transactions {
             
             if ($stats !== null) $stats->endWrite(false);
         }            
-        $this->inTransaction = false; return $this;
+        $this->inTransaction = false;
     }
     
     public function startStatsContext() : self
     {
-        if ($this->stats_stack_index < 0)
-            $this->stats_stack_index = 0;
-        else $this->stats_stack_index++;
-        
-        $this->stats_stack[$this->stats_stack_index] = new DBStats(); return $this;
+        array_push($this->stats_stack, new DBStats()); return $this;
     }
-    
-    public function endStatsContext() : self { $this->stats_stack_index--; return $this; }
-    
+
     public function getStatsContext() : ?DBStats
     {
-        if ($this->stats_stack_index < 0) return null;
-        else return $this->stats_stack[$this->stats_stack_index];
+        $size = count($this->stats_stack);
+        return $size ? $this->stats_stack[$size-1] : null;
     }
     
     public function getHistory(): array { return $this->query_history; }

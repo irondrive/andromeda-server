@@ -36,7 +36,7 @@ class Main implements Transactions
     public function GetContext() : ?Input { return $this->context; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
-    public function GetInterface() : IOInterface { return $this->interface; }        
+    public function GetInterface() : IOInterface { return $this->interface; }
 
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     {
@@ -66,7 +66,6 @@ class Main implements Transactions
         }
         
         $this->construct_stats = $this->database->getStatsContext();
-        $this->database->endStatsContext();
     }
     
     public function Run(Input $input)
@@ -80,14 +79,14 @@ class Main implements Transactions
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        $debug = $this->GetDebug(); if ($debug) { $start = microtime(true); $this->database->startStatsContext(); }
+        $debug = $this->GetDebug(); if ($debug) { 
+            $start = microtime(true); $this->database->startStatsContext(); }
 
         $data = $this->apps[$app]->Run($input);
         
         if ($debug) 
         {
             $stats = $this->database->getStatsContext();
-            $this->database->endStatsContext();
             $total_time = microtime(true) - $start;
             $code_time = $total_time - $stats->getReadTime();
             
@@ -140,7 +139,6 @@ class Main implements Transactions
         foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
         
         $this->commit_stats = $this->database->getStatsContext();
-        $this->database->endStatsContext();
         if ($this->GetDebug()) return $this->GetMetrics(); else return null;
     }
     
