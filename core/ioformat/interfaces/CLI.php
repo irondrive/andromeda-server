@@ -7,10 +7,10 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
+use Andromeda\Core\IOFormat\{Input,Output,Address,IOInterface,SafeParam,SafeParams};
+use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = 'usage: php index.php --$flag $app $action [--app_$type_$key $data]'; }
@@ -36,7 +36,11 @@ class CLI extends IOInterface
     public function getUserAgent() : string
     {
         return "CLI ".($_SERVER['OS']??'');
-    }  
+    }
+    
+    const OUTPUT_PLAIN = 0; const OUTPUT_PRINTR = 1; const OUTPUT_JSON = 2;
+    
+    private $outmode = self::OUTPUT_PLAIN;
     
     public function GetInputs(Config $config) : array
     {
@@ -46,7 +50,8 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {
-                case '--json': $this->output_json = true; break;
+                case '--json': $this->outmode = self::OUTPUT_JSON; break;
+                case '--printr': $this->outmode = self::OUTPUT_PRINTR; break;
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -125,17 +130,26 @@ class CLI extends IOInterface
                 $params->AddParam($key[1], $key[2], $value);
         }
         
-        return new Input($app, $action, $params, $files);
+        $addr = "CLI ".($_SERVER['COMPUTERNAME']??'').':'.($_SERVER['USERNAME']??'');
+        $agent = "CLI ".($_SERVER['OS']??'');
+        $addrobj = new Address($addr, $agent);
+        
+        return new Input($app, $action, $params, $addrobj, $files);
     }
     
     private $output_json = false;
     
     public function WriteOutput(Output $output)
     {
-        if ($this->output_json) echo Utilities::JSONEncode($output->GetAsArray())."\n";
-        else echo print_r($output->GetAsArray(), true)."\n";
-        
+        $outdata = $output->GetAsArray();
+        if ($this->outmode == self::OUTPUT_PLAIN)
+        {
+            try { echo $output->GetAsString(); } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
+        }
+        if ($this->outmode == self::OUTPUT_PRINTR) echo print_r($outdata, true)."\n";
+        if ($this->outmode == self::OUTPUT_JSON)   echo Utilities::JSONEncode($outdata)."\n";
+
         $response = $output->GetHTTPCode();
-        if ($response != 200) exit(-1); else exit(0);
+        if ($response != 200) exit(1); else exit(0);
     }
 }

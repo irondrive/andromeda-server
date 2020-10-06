@@ -31,8 +31,8 @@ class ErrorLogEntry extends BaseObject
             
             'time'=>    time(),
             
-            'addr'=>    isset($api) ? $api->GetInterface()->getAddress() : "",
-            'agent'=>   isset($api) ? $api->GetInterface()->getUserAgent() : "",
+            'addr'=>    (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAddress()->GetAddress() : "",
+            'agent'=>   (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAddress()->GetAgent() : "",
             
             'code'=>    $e->getCode(),
             'file'=>    $e->getFile()."(".$e->getLine().")",

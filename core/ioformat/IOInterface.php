@@ -22,7 +22,4 @@ abstract class IOInterface
     
     abstract public function GetInputs(Config $config) : array;
     abstract public function WriteOutput(Output $output);
-    
-    abstract public function getAddress() : string;
-    abstract public function getUserAgent() : string;
 }
