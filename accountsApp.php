@@ -68,7 +68,7 @@ class AccountsApp extends AppBase
     
     public function Run(Input $input)
     {   
-        $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $this->API->GetInterface(), $input);
+        $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $input);
         
         switch($input->GetAction())
         {       
@@ -143,7 +143,7 @@ class AccountsApp extends AppBase
     }
     
     protected function GetAccount(Input $input) : ?array
-    {       
+    {
         if ($this->authenticator === null) return null;
         else return $this->authenticator->GetAccount()->GetClientObject();
     }
@@ -337,7 +337,7 @@ class AccountsApp extends AppBase
             if ($account->ForceTwoFactor()) Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::TryLoadByID($database, $clientid);
-            if ($client === null || !$client->CheckMatch($this->API->GetInterface(), $clientkey)) 
+            if ($client === null || !$client->CheckMatch($input->GetAddress(), $clientkey)) 
                 throw new UnknownClientException();
         } 
         else /* if no clientkey, require either a recoverykey or twofactor, create a client */
@@ -349,7 +349,7 @@ class AccountsApp extends AppBase
             }
             else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $client = Client::Create($this->API->GetInterface(), $database, $account);
+            $client = Client::Create($input->GetAddress(), $database, $account);
         }
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */

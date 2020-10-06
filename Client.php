@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, Address};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
@@ -51,26 +51,25 @@ class Client extends AuthObject implements ClientObject
     public function setActiveDate() : Client    { return $this->SetDate('active'); }
     public function getLoggedonDate() : int     { return $this->GetDate('loggedon'); }
     public function setLoggedonDate() : Client  { return $this->SetDate('loggedon'); }
-
     
-    public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account) : Client
+    public static function Create(Address $address, ObjectDatabase $database, Account $account) : Client
     {
         $client = parent::BaseCreate($database);
         
         return $client->CreateAuthKey()
-            ->SetScalar('lastaddr',$interface->getAddress())
-            ->SetScalar('useragent',$interface->getUserAgent())
+            ->SetScalar('lastaddr',$address->GetAddress())
+            ->SetScalar('useragent',$address->GetAgent())
             ->SetObject('account',$account);
     }
     
-    public function CheckAgentMatch(IOInterface $interface) : bool
+    public function CheckAgentMatch(Address $address) : bool
     {
-        $good = $interface->getUserAgent() === $this->GetUserAgent();        
-        if ($good) $this->SetScalar('lastaddr', $interface->getAddress());        
+        $good = $address->GetAgent() === $this->GetUserAgent();        
+        if ($good) $this->SetScalar('lastaddr', $address->GetAddress());        
         return $good;
     }
     
-    public function CheckMatch(IOInterface $interface, string $key) : bool
+    public function CheckMatch(Address $address, string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxClientAge();
         
@@ -79,7 +78,7 @@ class Client extends AuthObject implements ClientObject
             $this->Delete(); return false;
         }
         
-        return $this->CheckAgentMatch($interface) && $this->CheckKeyMatch($key);
+        return $this->CheckAgentMatch($address) && $this->CheckKeyMatch($key);
     }
     
     public function Delete() : void
