@@ -5,20 +5,18 @@ require_once(ROOT."/apps/accounts/ContactInfo.php");
 require_once(ROOT."/apps/accounts/Client.php"); 
 require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/Group.php");
-require_once(ROOT."/apps/accounts/GroupMembership.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 
 require_once(ROOT."/apps/accounts/auth/Local.php");
 
-require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoPublic};
+require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class CryptoUnlockRequiredException extends Exceptions\ServerException  { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
-class RekeyOldPasswordRequired extends Exceptions\ServerException       { public $message = "REKEY_OLD_PASSWORD_REQUIRED"; }
+class CryptoUnlockRequiredException extends Exceptions\ServerException { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
 
 use Andromeda\Core\Database\KeyNotFoundException;
 use Andromeda\Core\Database\NullValueException;
@@ -29,16 +27,18 @@ class Account extends AuthEntity implements ClientObject
     public function GetUsername() : string  { return $this->GetScalar('username'); }
     public function GetFullName() : ?string { return $this->TryGetScalar('fullname'); }
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
+
+    public function GetGroups() : array { return $this->GetObjectRefs('groups'); }
+    public function CountGroups() : int { return $this->CountObjectRefs('groups'); }
     
-    public function GetGroupMemberships() : array { return $this->GetObjectRefs('groups'); }    
-    public function CountGroupMembeships() : int  { return $this->TryCountObjectRefs('groups'); }
+    public function AddGroup(Group $group) : self { return $this->AddObjectRef('groups', $group); }
+    public function RemoveGroup(Group $group) : self { return $this->RemoveObjectRef('groups', $group); }
     
-    public function GetGroups() : array 
-    { 
-        $ids = array_values(array_map(function($m){ return $m->GetGroupID(); }, $this->GetGroupMemberships()));        
-        return Group::LoadManyByID($this->database, $ids);
+    public function GetGroupAddedDate(Group $group) : ?int {
+        $joinobj = $this->TryGetJoinObject('groups', $group);
+        return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
-    
+
     public function GetAuthSource() : Auth\Source 
     { 
         $authsource = $this->TryGetObject('authsource');
@@ -47,10 +47,12 @@ class Account extends AuthEntity implements ClientObject
     }
     
     public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
+    public function HasClients() : int          { return $this->CountObjectRefs('clients') > 0; }
     public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
+    public function HasSessions() : int         { return $this->CountObjectRefs('sessions') > 0; }
    
     public function GetContactInfos() : array   { return $this->GetObjectRefs('contactinfos'); }    
-    public function CountContactInfos() : int   { return $this->TryCountObjectRefs('contactinfos'); }
+    public function HasContactInfos() : int     { return $this->TryCountObjectRefs('contactinfos'); }
     
     private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
     public function HasRecoveryKeys() : bool    { return $this->TryCountObjectRefs('recoverykeys') > 0; }
@@ -139,21 +141,21 @@ class Account extends AuthEntity implements ClientObject
         $account->SetScalar('username',$username)->ChangePassword($password);
         
         if (!($source instanceof Auth\Local)) $account->SetObject('authsource',$source);
-        
-        foreach (array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup())) as $group)
-            GroupMembership::Create($database, $account, $group);
+
+        $defaults = array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup()));
+        foreach ($defaults as $group) $account->AddObjectRef('groups', $group);
 
         return $account;
     }
     
     public function Delete() : void
     {
-        foreach ($this->GetSessions() as $session)          $session->Delete();
-        foreach ($this->GetClients() as $client)            $client->Delete();
-        foreach ($this->GetTwoFactors() as $twofactor)      $twofactor->Delete();
-        foreach ($this->GetContactInfos() as $contactinfo)  $contactinfo->Delete();
-        foreach ($this->GetGroupMemberships() as $groupm)   $groupm->Delete();
-        
+        if ($this->HasSessions())     foreach ($this->GetSessions() as $session)         $session->Delete();
+        if ($this->HasClients())      foreach ($this->GetClients() as $client)           $client->Delete();
+        if ($this->HasTwoFactor())    foreach ($this->GetTwoFactors() as $twofactor)     $twofactor->Delete();
+        if ($this->HasContactInfos()) foreach ($this->GetContactInfos() as $contactinfo) $contactinfo->Delete();        
+        if ($this->HasRecoveryKeys()) foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->Delete();
+
         parent::Delete();
     }
     
@@ -255,7 +257,7 @@ class Account extends AuthEntity implements ClientObject
         
         if ($value !== null) return new InheritedProperty($value, $this);
         
-        $priority = PHP_INT_MIN; $source = null;
+        $priority = null; $source = null;
         
         foreach ($this->GetGroups() as $group)
         {
@@ -264,13 +266,13 @@ class Account extends AuthEntity implements ClientObject
             
             $temp_priority = $group->GetPriority();
             
-            if ($temp_value !== null && $temp_priority > $priority)
+            if ($temp_value !== null && ($temp_priority > $priority || $priority == null))
             {
                 $value = $temp_value; $source = $group; 
                 $priority = $temp_priority;
             }
         }
-
+        
         return new InheritedProperty($value, $source);
     }
     
@@ -318,7 +320,7 @@ class Account extends AuthEntity implements ClientObject
         {
             if (!$this->CryptoAvailable())
             {
-                if (!$old_password) throw new RekeyOldPasswordRequired();
+                if (!$old_password) throw new CryptoUnlockRequiredException();
                 $this->UnlockCryptoFromPassword($old_password); 
             }
             $this->CryptoRekey($new_password);
@@ -403,7 +405,7 @@ class Account extends AuthEntity implements ClientObject
     
     private function CryptoRekey(string $password) : self
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnavailableException();
+        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
         
         $master_salt = CryptoSecret::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);        
         $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce', $master_nonce);

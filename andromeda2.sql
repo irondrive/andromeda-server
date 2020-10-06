@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 4.7.7
+-- version 5.0.2
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jun 28, 2018 at 01:54 AM
+-- Generation Time: Oct 06, 2020 at 10:46 AM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -42,18 +41,14 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `max_password_age__inherits` bigint(20) DEFAULT NULL,
   `features__admin__inherits` tinyint(1) DEFAULT NULL,
   `features__enabled__inherits` tinyint(1) DEFAULT NULL,
-  `features__encryption__inherits` tinyint(1) DEFAULT NULL,
   `features__forcetwofactor__inherits` tinyint(1) DEFAULT NULL,
   `comment` text,
-  `public_key` tinyblob,
-  `private_key` tinyblob,
-  `private_nonce` tinyblob,
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
   `password` varchar(255) DEFAULT NULL,
   `authsource*objectpoly*Apps\Accounts\Auth\Source` varchar(255) DEFAULT NULL,
-  `groups*objectrefs*Apps\Accounts\GroupMembership*account` tinyint(4) NOT NULL DEFAULT '0',
+  `groups*objectjoin*Apps\Accounts\GroupMembership*accounts` tinyint(4) NOT NULL DEFAULT '0',
   `sessions*objectrefs*Apps\Accounts\Session*account` tinyint(4) NOT NULL DEFAULT '0',
   `contactinfos*objectrefs*Apps\Accounts\ContactInfo*account` tinyint(4) NOT NULL DEFAULT '0',
   `clients*objectrefs*Apps\Accounts\Client*account` tinyint(4) NOT NULL DEFAULT '0',
@@ -114,13 +109,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_local` (
   `id` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `a2_objects_apps_accounts_auth_local`
---
-
-INSERT INTO `a2_objects_apps_accounts_auth_local` (`id`) VALUES
-('47ikv0hrb442n_4x');
-
 -- --------------------------------------------------------
 
 --
@@ -141,7 +129,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_sourcepointer` (
 
 CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` varchar(16) NOT NULL,
-  `authkey` varchar(64) NOT NULL,
+  `authkey` varchar(255) NOT NULL,
   `lastaddr` varchar(255) NOT NULL,
   `useragent` text NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
@@ -164,13 +152,6 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
   `features__requirecontact` tinyint(1) NOT NULL,
   `default_group*object*Apps\Accounts\Group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `a2_objects_apps_accounts_config`
---
-
-INSERT INTO `a2_objects_apps_accounts_config` (`id`, `features__createaccount`, `features__emailasusername`, `features__requirecontact`, `default_group*object*Apps\Accounts\Group`) VALUES
-('z1rewca3b42ge60n', 1, 0, 0, 'NcAq7fDCdnGLz4xm');
 
 -- --------------------------------------------------------
 
@@ -199,25 +180,15 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `name` varchar(255) NOT NULL,
   `comment` text,
   `priority` tinyint(4) NOT NULL DEFAULT '0',
-  `public_key` tinyblob,
-  `counters__crypto_pending*counter` mediumint(9) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL,
   `members__features__admin` tinyint(1) DEFAULT NULL,
   `members__features__enabled` tinyint(1) DEFAULT NULL,
-  `members__features__encryption` tinyint(1) DEFAULT NULL,
   `members__features__forcetwofactor` tinyint(1) DEFAULT NULL,
   `members__max_client_age` bigint(20) DEFAULT NULL,
   `members__max_session_age` bigint(20) DEFAULT NULL,
   `members__max_password_age` bigint(20) DEFAULT NULL,
-  `accounts*objectrefs*Apps\Accounts\GroupMembership*group` int(11) NOT NULL DEFAULT '0'
+  `accounts*objectjoin*Apps\Accounts\GroupMembership*groups` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `a2_objects_apps_accounts_group`
---
-
-INSERT INTO `a2_objects_apps_accounts_group` (`id`, `name`, `comment`, `priority`, `public_key`, `counters__crypto_pending*counter`, `dates__created`, `members__features__admin`, `members__features__enabled`, `members__features__encryption`, `members__features__forcetwofactor`, `members__max_client_age`, `members__max_session_age`, `members__max_password_age`, `accounts*objectrefs*Apps\Accounts\GroupMembership*group`) VALUES
-('NcAq7fDCdnGLz4xm', 'Global Group', 'All users belong to this group.', 0, 0xf4dca2771d589d7740261bfa23b3f90a7da0e74705b03eb7d04d4a1c68ff5b17, 0, 0, 1, 1, 2, NULL, NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -226,13 +197,10 @@ INSERT INTO `a2_objects_apps_accounts_group` (`id`, `name`, `comment`, `priority
 --
 
 CREATE TABLE `a2_objects_apps_accounts_groupmembership` (
-  `id` varchar(255) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `private_key` tinyblob,
-  `private_nonce` tinyblob,
-  `key_sender*object*Apps\Accounts\Account` varchar(16) DEFAULT NULL,
-  `account*object*Apps\Accounts\Account*groups` varchar(16) NOT NULL,
-  `group*object*Apps\Accounts\Group*accounts` varchar(16) NOT NULL
+  `id` varchar(16) NOT NULL,
+  `dates__created` int(11) NOT NULL,
+  `accounts*object*Apps\Accounts\Account*groups` varchar(16) NOT NULL,
+  `groups*object*Apps\Accounts\Group*accounts` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -244,7 +212,6 @@ CREATE TABLE `a2_objects_apps_accounts_groupmembership` (
 CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
-  `authkey` varchar(48) DEFAULT NULL,
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
@@ -259,7 +226,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
 
 CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` varchar(16) NOT NULL,
-  `authkey` varchar(64) NOT NULL,
+  `authkey` varchar(255) NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `master_key` tinyblob,
@@ -309,7 +276,8 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 ALTER TABLE `a2_objects_apps_accounts_account`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `username` (`username`),
+  ADD KEY `username_2` (`username`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_auth_ftp`
@@ -386,9 +354,9 @@ ALTER TABLE `a2_objects_apps_accounts_group`
 --
 ALTER TABLE `a2_objects_apps_accounts_groupmembership`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`),
-  ADD KEY `account*object*Apps\Accounts\Account*groups` (`account*object*Apps\Accounts\Account*groups`),
-  ADD KEY `group*object*Apps\Accounts\Group*accounts` (`group*object*Apps\Accounts\Group*accounts`);
+  ADD KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts*object*Apps\Accounts\Account*groups`),
+  ADD KEY `groups*object*Apps\Accounts\Group*accounts` (`groups*object*Apps\Accounts\Group*accounts`),
+  ADD KEY `id` (`id`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_recoverykey`

@@ -20,8 +20,7 @@ class Session extends AuthObject implements ClientObject
     {
         $session = parent::BaseCreate($database);
         
-        $session->CreateAuthKey()
-            ->SetObject('account',$account)->SetObject('client',$client);
+        $session->CreateAuthKey()->SetObject('account',$account)->SetObject('client',$client);
         
         $client->SetObject('session',$session);
         

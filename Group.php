@@ -6,6 +6,15 @@ require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipi
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
+class InheritedProperty
+{
+    private $value; private $source;
+    public function GetValue() { return $this->value; }
+    public function GetSource() : ?AuthEntity { return $this->source; }
+    public function __construct($value, ?AuthEntity $source){
+        $this->value = $value; $this->source = $source; }
+}
+
 class Group extends AuthEntity implements ClientObject
 {
     public function GetName() : string { return $this->GetScalar('name'); }
@@ -18,14 +27,16 @@ class Group extends AuthEntity implements ClientObject
     public function TryGetMembersObject(string $field) { return parent::TryGetObject("members__$field"); }
     
     public function GetPriority() : int { return $this->TryGetScalar('priority') ?? 0; }
-
-    public function GetAccountMemberships() : array { return $this->GetObjectRefs('accounts'); }
-    public function CountAccountMemberships() : int { return $this->TryCountObjectRefs('accounts'); }
     
-    public function GetAccounts() : array
-    {
-        $ids = array_values(array_map(function($m){ return $m->GetAccountID(); }, $this->GetAccountMemberships()));
-        return Account::LoadManyByID($this->database, $ids);
+    public function GetAccounts() : array { return $this->GetObjectRefs('accounts'); }
+    public function CountAccounts() : int { return $this->CountObjectRefs('accounts'); }
+    
+    public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
+    public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
+    
+    public function GetAccountAddedDate(Account $account) : ?int {
+        $joinobj = $this->TryGetJoinObject('accounts', $account);
+        return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
     
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
