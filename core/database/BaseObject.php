@@ -330,6 +330,6 @@ abstract class BaseObject
     
     public function MatchesUniqueKey(string $field, string $value)
     {
-        return $this->GetScalar($field) === $value;
+        return $this->GetScalar($field) === $value; // TODO what about objects?
     }
 }

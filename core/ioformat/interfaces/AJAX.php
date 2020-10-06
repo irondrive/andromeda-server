@@ -7,7 +7,7 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php"); 
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
-use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParams};
+use Andromeda\Core\IOFormat\{Input,InputAuth,Address,Output,IOInterface,SafeParams};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -25,16 +25,6 @@ class AJAX extends IOInterface
     public static function isApplicable() : bool
     {
         return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
-    }
-    
-    public function getAddress() : string
-    {
-        return $_SERVER['REMOTE_ADDR'];
-    }
-    
-    public function getUserAgent() : string
-    {
-        return $_SERVER['HTTP_USER_AGENT'];
     }
   
     public function GetInputs(Config $config) : array
@@ -84,7 +74,9 @@ class AJAX extends IOInterface
         $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
         $auth = ($user !== null && $pass !== null) ? (new InputAuth($user, $pass)) : null;
         
-        return new Input($app, $action, $params, $files, $auth);
+        $addr = new Address($_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+        
+        return new Input($app, $action, $params, $addr, $files, $auth);
     }
     
     public function WriteOutput(Output $output)
