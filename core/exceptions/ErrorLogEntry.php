@@ -46,7 +46,7 @@ class ErrorLogEntry extends BaseObject
         
         if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
         
-        if ((isset($api) && $api->GetConfig() !== null) ? ($api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE) : ErrorManager::DEBUG_FULL_DEFAULT)
+        if (isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE)
         {
             $data['params'] =  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";

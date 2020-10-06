@@ -1,8 +1,9 @@
 <?php namespace Andromeda\Core\Database\Fields; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/database/ObjectDatabase.php");use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/database/BaseObject.php");use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 use Andromeda\Core\Database\ObjectTypeException;
 
@@ -25,8 +26,9 @@ abstract class Field
             else if ($special == "object")     return new ObjectPointer($database, $value, $header);
             else if ($special == "objectpoly") return new ObjectPolyPointer($database, $value, $header);
             else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $parent);
+            else if ($special == "objectjoin") return new ObjectJoin($database, $value, $header, $parent);
             
-            else throw new SpecialColumnException("Class ".static::class." Column $key");
+            else throw new SpecialColumnException("Class ".$parent->GetDBClass()." Column $key");
         }
     }
     
@@ -51,7 +53,7 @@ class Scalar extends Field
     public function GetColumnName() : string
     {
         $header = array($this->myfield, static::SPECIAL);
-        return implode('*',array_filter($header));
+        return '`'.implode('*',array_filter($header)).'`';
     }
     
     public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
@@ -119,8 +121,7 @@ class ObjectPointer extends Field
     }
     
     public function GetPointer() : ?string { return $this->pointer; }
-    public function GetRefClass() : string { return $this->refclass; }
-    public function GetPolyClass() : string { return $this->refclass; }
+    public function GetRefClass() : ?string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
     
     public function GetDBValue() : ?string { return $this->pointer; }
@@ -128,7 +129,7 @@ class ObjectPointer extends Field
     public function GetColumnName() : string
     {
         $header = array($this->myfield, "object", $this->refclass, $this->reffield);
-        return implode('*',array_filter($header));
+        return '`'.implode('*',array_filter($header)).'`';
     }
     
     public function GetObject() : ?BaseObject
@@ -148,7 +149,7 @@ class ObjectPointer extends Field
     { 
         if ($object === $this->object) return false;
         
-        $class = ObjectDatabase::GetFullClassName($this->GetPolyClass());
+        $class = ObjectDatabase::GetFullClassName($this->refclass);
         if ($object !== null && !is_a($object, $class)) 
             throw new ObjectTypeException();
         
@@ -160,15 +161,11 @@ class ObjectPointer extends Field
 
 class ObjectPolyPointer extends ObjectPointer
 {
-    protected $refpolyclass;
-    
-    public function GetPolyClass() : string { return $this->refpolyclass; }
-    
     public function __construct(ObjectDatabase $database, $value, array $header)
     {        
         $this->database = $database;
         $this->myfield = $header[0]; 
-        $this->refpolyclass = $header[2] ?? null;
+        $this->refbaseclass = $header[2] ?? null;
         $this->reffield = $header[3] ?? null;
         
         if ($value === null) return;
@@ -184,20 +181,19 @@ class ObjectPolyPointer extends ObjectPointer
     
     public function GetColumnName() : string
     {
-        $header = array($this->myfield, "objectpoly", $this->refpolyclass, $this->reffield);
+        $header = array($this->myfield, "objectpoly", $this->refbaseclass, $this->reffield);
         
         if ($this->reffield === null) $header = array_filter($header);
         
-        return implode('*', $header);
+        return '`'.implode('*', $header).'`';
     }
     
     public function SetObject(?BaseObject $object) : bool
     {
-        if ($object === $this->object) return false;
+        if (!parent::SetObject($object, $notification)) return false;
         
-        parent::SetObject($object);
-        
-        $this->refclass = ($object === null) ? null : ObjectDatabase::GetShortClassName(get_class($object));
+        $this->refclass = ($object === null) ? null : 
+            ObjectDatabase::GetShortClassName(get_class($object));
         
         return true;
     }
@@ -220,17 +216,16 @@ class ObjectRefs extends Counter
         $this->myclass = ObjectDatabase::GetShortClassName(get_class($parent));
         
         $this->myid = $parent->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
-    }    
+    }
     
     public function GetColumnName() : string
     {
         $header = array($this->myfield, "objectrefs", $this->refclass, $this->reffield);
-        return implode('*',array_filter($header));
+        return '`'.implode('*',array_filter($header)).'`';
     }
         
     public function GetRefClass() : string { return $this->refclass; }
     public function GetRefField() : string { return $this->reffield; }
-    public function GetMyClass() : string { return $this->myclass; }
 
     public function GetObjects() : array
     {
@@ -245,8 +240,14 @@ class ObjectRefs extends Counter
         $reffield = array($this->reffield, "object", $this->myclass, $this->myfield);
         $reffield = implode('*',array_filter($reffield));
 
-        $this->objects = $class::LoadManyMatchingAll($this->database, array("$reffield"=>$this->myid));    
+        $criteria = array("`$reffield`" => $this->myid);
+        $this->objects = $class::LoadManyMatchingAll($this->database, $criteria);    
         
+        $this->MergeWithObjectChanges();
+    }
+    
+    protected function MergeWithObjectChanges()
+    {
         foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
         foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
         $this->refs_added = array(); $this->refs_deleted = array();
@@ -289,4 +290,42 @@ class ObjectRefs extends Counter
     }
 }
 
+class ObjectJoin extends ObjectRefs
+{
+    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $parent)
+    {
+        $this->parent = $parent; parent::__construct($database, $value, $header, $parent);
+    }
+    
+    protected function LoadObjects()
+    {        
+        $joinclass = ObjectDatabase::GetFullClassName($this->refclass);
+        $joinobject = $this->database->CreateObject($joinclass, true, JoinObject::class);
+        $destclass = $joinobject->GetObjectClassName($this->myfield);
+        
+        $joinfield = array($this->myfield, "object", $destclass, $this->reffield);
+        $joinfield = "`".implode('*',array_filter($joinfield))."`";
 
+        $destfield = array($this->reffield, "object", $this->myclass, $this->myfield);
+        $destfield = "`".implode('*',array_filter($destfield))."`";
+
+        $destclass = ObjectDatabase::GetFullClassName($destclass);
+        $joinstr = ObjectDatabase::BuildJoinQuery($joinclass, $joinfield, $destclass, 'id');
+        
+        $criteria = array( $destfield => $this->myid );
+        $this->objects = $destclass::LoadManyMatchingAll($this->database, $criteria, false, null, $joinstr);
+        
+        $this->MergeWithObjectChanges();
+    }
+    
+    public function GetJoinObject(BaseObject $joinobj) : ?JoinObject
+    {
+        return JoinObject::LoadJoinObject($this->database, $this, $this->parent, $joinobj);
+    }
+    
+    public function GetColumnName() : string
+    {
+        $header = array($this->myfield, "objectjoin", $this->refclass, $this->reffield);
+        return '`'.implode('*',array_filter($header)).'`';
+    }
+}

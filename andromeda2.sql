@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 4.7.7
+-- version 5.0.2
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: May 15, 2018 at 08:44 PM
+-- Generation Time: Oct 06, 2020 at 10:45 AM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -41,13 +40,6 @@ CREATE TABLE `a2_objects_core_config` (
   `features__email` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `a2_objects_core_config`
---
-
-INSERT INTO `a2_objects_core_config` (`id`, `datadir`, `apps*json`, `dates__created`, `features__debug_log`, `features__debug_http`, `features__debug_file`, `features__read_only`, `features__enabled`, `features__email`) VALUES
-('zFoHvcNrXTwxrsLm', NULL, '[\"server\"]', 0, 1, 1, 1, 0, 1, 0);
-
 -- --------------------------------------------------------
 
 --
@@ -67,7 +59,8 @@ CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `trace_basic` text,
   `trace_full` text,
   `objects` text,
-  `queries` text
+  `queries` text,
+  `params` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -106,10 +99,10 @@ ALTER TABLE `a2_objects_core_exceptions_errorlogentry`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
   ADD KEY `time` (`time`),
-  ADD KEY `addr` (`addr`),
   ADD KEY `code` (`code`),
   ADD KEY `app` (`app`),
-  ADD KEY `action` (`action`);
+  ADD KEY `action` (`action`),
+  ADD KEY `addr` (`addr`) USING BTREE;
 
 --
 -- Indexes for table `a2_objects_core_fullemailer`

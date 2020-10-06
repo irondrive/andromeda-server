@@ -38,9 +38,9 @@ class ErrorManager
         if (isset($this->API)) $this->API->rollBack();
         
         if (isset($this->API) && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
-        
+
         $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
-        
+
         return Output::ServerException($debug);
     }
     
