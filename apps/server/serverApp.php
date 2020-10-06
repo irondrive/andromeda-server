@@ -41,8 +41,8 @@ class ServerApp extends AppBase
         
         if ($this->API->GetDebug())
         {
-            return array_map(function($app){
-                return get_class($app)::Test($this->API);
+            return array_map(function($app) use ($input){
+                return get_class($app)::Test($this->API, $input);
             }, $this->API->GetApps());
         }
         else throw new UnknownActionException();

@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields\ObjectJoin;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
@@ -13,7 +13,7 @@ abstract class BaseObject
 {
     protected $database; public const IDLength = 16;
     
-    public static function GetClass() : string { return static::class; }
+    public function GetDBClass() : string { return $this->dbclass; }
     
     public static function LoadByID(ObjectDatabase $database, string $id) : self
     {
@@ -48,14 +48,14 @@ abstract class BaseObject
         $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
     }
 
-    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null) : array 
+    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null, ?string $joinstr = null) : array 
     {
-        $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys, $like, $limit); 
+        $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys, $like, $limit, $joinstr); 
     }
 
-    public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null) : array 
+    public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null, ?string $joinstr = null) : array 
     {              
-        $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $like, $limit); 
+        $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $like, $limit, $joinstr); 
     } 
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
@@ -123,6 +123,18 @@ abstract class BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) return 0;
         return $this->objectrefs[$field]->GetValue();
+    }
+    
+    protected function GetJoinObject(string $field, BaseObject $obj) : StandardObject
+    {
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
+        return $this->objectrefs[$field]->GetJoinObject($obj);
+    }
+    
+    protected function TryGetJoinObject(string $field, BaseObject $obj) : ?StandardObject
+    {
+        if (!$this->ExistsObjectRefs($field)) return 0;
+        return $this->objectrefs[$field]->GetJoinObject($obj);
     }
     
     protected function SetScalar(string $field, $value, bool $temp = false) : self
@@ -205,10 +217,17 @@ abstract class BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
-        $reffield = $this->objectrefs[$field]->GetRefField();        
-        if ($reffield !== null) $object->SetObject($reffield, $this, true);
+        $fieldobj = $this->objectrefs[$field];        
+        if ($fieldobj instanceof ObjectJoin && !$notification)
+        {
+            JoinObject::CreateJoin($this->database, $fieldobj, $this, $object); return $this;
+        }
+        
+        $reffield = $fieldobj->GetRefField();        
+        if ($reffield !== null && !$notification) 
+            $object->SetObject($reffield, $this, true);
 
-        if ($this->objectrefs[$field]->AddObject($object, $notification))
+        if ($fieldobj->AddObject($object, $notification))
             $this->database->setModified($this);
         
         return $this;
@@ -218,8 +237,15 @@ abstract class BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         
+        $fieldobj = $this->objectrefs[$field];        
+        if ($fieldobj instanceof ObjectJoin && !$notification)
+        {
+            JoinObject::DeleteJoin($this->database, $fieldobj, $this, $object); return $this;
+        }
+        
         $reffield = $this->objectrefs[$field]->GetRefField();
-        if ($reffield !== null) $object->UnsetObject($reffield, true);
+        if ($reffield !== null && !$notification) 
+            $object->UnsetObject($reffield, true);
         
         if ($this->objectrefs[$field]->RemoveObject($object, $notification))
             $this->database->setModified($this);
@@ -227,9 +253,10 @@ abstract class BaseObject
         return $this;
     }
     
-    public function __construct(ObjectDatabase $database, array $data)
+    public function __construct(ObjectDatabase $database, string $dbclass, array $data)
     {
         $this->database = $database;
+        $this->dbclass = $dbclass;
         
         foreach (array_keys($data) as $key) 
         {   
@@ -243,7 +270,7 @@ abstract class BaseObject
     
     public function Save() : self
     {
-        $class = static::class; $values = array(); $counters = array();
+        $class = $this->GetDBClass(); $values = array(); $counters = array();
         
         foreach (array('scalars','objects','objectrefs') as $set)
         {
@@ -267,31 +294,42 @@ abstract class BaseObject
     
     private $deleted = false; public function isDeleted() : bool { return $this->deleted; }
     
-    public function Delete()
+    public function Delete() : void
     {
-        $class = static::class; 
+        if ($this->deleted) return;
         
         foreach ($this->objects as $field)
         {
-            $object = $field->GetObject(); $reffield = $field->GetRefField();
-            if ($object !== null && $reffield !== null) $object->RemoveObjectRef($reffield, $this, true);
+            $object = $field->GetObject(); $myfield = $field->GetMyField();
+            if ($object !== null) $this->UnsetObject($myfield);
         }
         
         foreach ($this->objectrefs as $refs)
         {
-            $objects = $refs->GetObjects(); $reffield = $refs->GetRefField();
-            foreach ($objects as $object) $object->UnsetObject($reffield, true);
+            if (!$refs->GetValue() > 0) continue;
+            $objects = $refs->GetObjects(); $myfield = $refs->GetMyField();
+            foreach ($refs->GetObjects() as $object) $this->RemoveObjectRef($myfield, $object);
         }
         
-        $this->database->DeleteObject($class, $this); $this->deleted = true;
+        $this->database->DeleteObject($this->GetDBClass(), $this); $this->deleted = true;
     }
     
-    private $created = false; public function isCreated() : bool { return $this->created; }
+    protected $created = false; public function isCreated() : bool { return $this->created; }
     
     protected static function BaseCreate(ObjectDatabase $database)
     {
-        $obj = $database->CreateObject(static::class); 
+        $obj = $database->CreateObject(static::class, false); 
         $obj->created = true; return $obj;
     }
 
+    public function GetObjectClassName(string $field) : string
+    {
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        return $this->objects[$field]->GetRefClass();
+    }
+    
+    public function MatchesUniqueKey(string $field, string $value)
+    {
+        return $this->GetScalar($field) === $value;
+    }
 }

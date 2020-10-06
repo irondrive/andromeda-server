@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -11,6 +12,7 @@ class ObjectDatabase extends Database
 {
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
+    private $created = array();     /* array[id => BaseObject] */
     private $uniques = array();     /* array[uniquekey => BaseObject] */
     private $columns = array();     /* array[class => array(fields)] */
 
@@ -26,7 +28,7 @@ class ObjectDatabase extends Database
      
     public function getLoadedObjects() : array
     { 
-        return array_map(function($e){ return $e->GetClass(); }, $this->objects);
+        return array_map(function($e){ return get_class($e); }, $this->objects);
     }
     
     public function commit(bool $dryrun = false) : void
@@ -52,21 +54,19 @@ class ObjectDatabase extends Database
         return '`'.Config::PREFIX."objects_".strtolower(implode('_', $class)).'`';
     }
     
-    private function Rows2Objects(array $rows, string $class, $replace = false) : array
+    private function Rows2Objects(array $rows, string $class, bool $fake = false, ?string $outClass = null) : array
     {
         $output = array(); 
         
         foreach ($rows as $row)
         {
-            $object = new $class($this, $row); $id = $object->ID();
+            $outClass = $outClass ?? $class;
+            $object = new $outClass($this, $class, $row); $id = $object->ID();
             
             if (!array_key_exists($class, $this->columns))
                 $this->columns[$class] = array_keys($row);
 
-            if (!$replace && in_array($id, array_keys($this->objects)))
-                $output[$id] = $this->objects[$id];
-            
-            else { $output[$id] = $object; $this->objects[$id] = $object; }
+            $output[$id] = $object; if (!$fake) $this->objects[$id] = $object;
         }       
         
         return $output; 
@@ -85,7 +85,7 @@ class ObjectDatabase extends Database
         else return null;
     }
     
-    private function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null) : array
+    public function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null, ?string $outClass = null) : array
     {           
         $loaded = array(); $table = self::GetClassTableName($class); 
         
@@ -93,71 +93,77 @@ class ObjectDatabase extends Database
         
         $result = $this->query($query, $criteria);
         
-        return $this->Rows2Objects($result, $class, array_key_exists('id',$criteria));
+        return $this->Rows2Objects($result, $class, false, $outClass);
+    }
+    
+    public static function BuildJoinQuery(string $joinclass, string $joinclassprop, string $class, string $classprop) : string
+    {
+        $joinclass = self::GetClassTableName($joinclass); $class = self::GetClassTableName($class);
+        return "JOIN $joinclass ON $joinclass.$joinclassprop = $class.$classprop ";        
+    }    
+    
+    public static function BuildMatchAllWhereQuery(array &$data, ?array $values, bool $like = false) : string
+    {
+        $criteria = array(); $i = 0; $s = $like ? 'LIKE' : '=';
+        
+        if ($values !== null) foreach (array_keys($values) as $key) {
+            array_push($criteria, "$key ".($values[$key] !== null ? "$s :dat$i" : "IS NULL"));
+            if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
+        };
+        
+        $criteria_string = implode(' AND ',$criteria);
+        return ($criteria_string?"WHERE $criteria_string ":"");
+    }
+    
+    public static function BuildMatchAnyWhereQuery(array &$data, string $field, array $values, bool $like = false) : string
+    {
+        $criteria = array(); $i = 0; $s = $like ? 'LIKE' : '=';
+        
+        foreach ($values as $value) {
+            array_push($criteria, "$field $s :dat$i");
+            $data["dat$i"] = $value; $i++;
+        }
+        
+        $criteria_string = implode(' OR ', $criteria);
+        return ($criteria_string?"WHERE $criteria_string ":"");
     }
     
     public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
     {        
         if ($field == 'id' && ($obj = $this->TryPreloadObjectByID($class, $value)) !== null) return $obj;
         
+        foreach ($this->created as $newobj)
+        {
+            if (is_a($newobj, $class) && $newobj->MatchesUniqueKey($field, $value)) return $newobj;
+        }
+        
         $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
 
-        $tempkey = ($field == 'id') ? 'id' : 'value';
-        $objects = $this->LoadObjectsByQuery($class, "WHERE `$field` = :$tempkey", array("$tempkey"=>$value));
-        
-        if (count($objects) > 1) throw new DuplicateUniqueKeyException("$class: $value");
-        
-        if (count($objects) == 1)
+        $data = array(); $query = self::BuildMatchAllWhereQuery($data, array($field=>$value));
+        $objects = $this->LoadObjectsByQuery($class, $query, $data);
+
+        if (!count($objects)) return null;
+        else if (count($objects) == 1)
         {
             $object = array_values($objects)[0];
             $this->uniques[$unique] = $object;
             return $object;
         }
-        else return null;
+        else throw new DuplicateUniqueKeyException("$class: $value");
     }
     
-    public function LoadObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, ?int $limit = null) : array
+    public function LoadObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, 
+                                           ?int $limit = null, ?string $joinstr = null) : array
     {
-        $preloaded = array(); if ($field == 'id')
-        {
-            foreach($values as $value)
-            {
-                $obj = $this->TryPreloadObjectByID($class, $value);
-                if ($obj !== null) $preloaded[$obj->ID()] = $obj;
-            }     
-            
-            $values = array_filter($values, function($value)use($preloaded){
-                return !array_key_exists($value, $preloaded); });
-        }
-
-        $criteria = array(); $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
-
-        foreach ($values as $value) {
-            array_push($criteria, "`$field` $s :dat$i");
-            $data["dat$i"] = $value; $i++;
-        }
-        
-        $criteria_string = implode(' OR ', $criteria);
-        $query = ($criteria_string?"WHERE $criteria_string ":"");
-        
-        $loaded = count($data) ? $this->LoadObjectsByQuery($class, $query, $data, $limit) : array();
-        
-        return array_merge($preloaded, $loaded);
+        $data = array(); $query = ($joinstr??"").self::BuildMatchAnyWhereQuery($data, $field, $values, $like);       
+        return $this->LoadObjectsByQuery($class, $query, $data, $limit);
     }
     
-    public function LoadObjectsMatchingAll(string $class, ?array $values, bool $like = false, ?int $limit = null) : array
+    public function LoadObjectsMatchingAll(string $class, ?array $values, bool $like = false, 
+        ?int $limit = null, ?string $joinstr = null, ?string $outClass = null) : array
     {        
-        $criteria = array(); $data = array(); $i = 0; $s = $like ? 'LIKE' : '=';
-        
-        if ($values !== null) foreach (array_keys($values) as $key) { 
-            array_push($criteria, "`$key` ".($values[$key] !== null ? "$s :dat$i" : "IS NULL")); 
-            if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
-        };
-        
-        $criteria_string = implode(' AND ',$criteria);
-        $query = ($criteria_string?"WHERE $criteria_string ":"");
-        
-        return $this->LoadObjectsByQuery($class, $query, $data, $limit);
+        $data = array(); $query = ($joinstr??"").self::BuildMatchAllWhereQuery($data, $values, $like);
+        return $this->LoadObjectsByQuery($class, $query, $data, $limit, $outClass);
     }
     
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
@@ -170,12 +176,12 @@ class ObjectDatabase extends Database
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
         foreach (array_keys($values) as $key) {
-            array_push($criteria, "`$key` = :dat$i");
+            array_push($criteria, "$key = :dat$i");
             $data["dat$i"] = $values[$key]; $i++;
         }; 
         
         foreach (array_keys($counters) as $key) {
-            array_push($criteria, "`$key` = `$key` + :dat$i");
+            array_push($criteria, "$key = $key + :dat$i");
             $data["dat$i"] = $counters[$key]; $i++;
         }; 
         
@@ -196,7 +202,7 @@ class ObjectDatabase extends Database
         $values['id'] = $object->ID();
         
         foreach (array_keys($values) as $key) {
-            array_push($columns,"`$key`"); 
+            array_push($columns, $key); 
             array_push($indexes, $values[$key] !== null ? ":dat$i" : "NULL");
             if ($values[$key] !== null) $data["dat$i"] = $values[$key]; $i++;
         }
@@ -209,7 +215,7 @@ class ObjectDatabase extends Database
         return $this;
     }
     
-    private function getDefaultFields(string $class) : array
+    private function getDBFields(string $class) : array
     {
         if (array_key_exists($class,$this->columns)) return $this->columns[$class];
         
@@ -220,21 +226,20 @@ class ObjectDatabase extends Database
         $this->columns[$class] = $columns; return $columns;
     }
     
-    public function CreateObject(string $class) : BaseObject
+    public function CreateObject(string $class, bool $fake = false, ?string $outClass = null) : BaseObject
     {
-        $columns = $this->getDefaultFields($class);        
+        $columns = $this->getDBFields($class);        
         $data = array_fill_keys($columns, null);
         $data['id'] = Utilities::Random(BaseObject::IDLength);        
         
-        $newobj = array_values($this->Rows2Objects(array($data), $class))[0];
-
-        $this->objects[$newobj->ID()] = $newobj;
-         
+        $newobj = array_values($this->Rows2Objects(array($data), $class, $fake, $outClass))[0];
+        $this->created[$newobj->ID()] = $newobj;
         return $newobj;
     }
     
     public function DeleteObject(string $class, BaseObject $object) : void
     {
+        if ($object->isCreated()) return;
         $table = self::GetClassTableName($class); 
         $this->query("DELETE FROM $table WHERE id=:id", array('id'=>$object->ID()), false);
     }
@@ -246,6 +251,7 @@ class ObjectDatabase extends Database
         $criteria = array(); $data = array(); $i = 0;
         
         foreach ($objects as $object) {
+            if ($object->isCreated()) continue;
             array_push($criteria, "id = :dat$i");
             $data["dat$i"] = $object->ID(); $i++;
         }
