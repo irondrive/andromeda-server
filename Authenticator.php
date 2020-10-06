@@ -3,7 +3,6 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamException};
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php");
@@ -27,7 +26,7 @@ use Andromeda\Core\DecryptionFailedException;
 class Authenticator
 {
     private $account = null; private $session = null; private $client = null; 
-    private $interface = null; private $database = null; private $input = null;
+    private $database = null; private $input = null;
     
     public function GetAccount() : Account { return $this->account; }
     public function GetSession() : Session { return $this->session; }
@@ -36,23 +35,23 @@ class Authenticator
     private $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
     private $realaccount = null; public function GetRealAccount() : Account { return $this->realaccount; }
     
-    private function __construct(ObjectDatabase $database, IOInterface $interface, Input $input)
+    private function __construct(ObjectDatabase $database, Input $input)
     {
         $auth = $input->GetAuth();
 
         $sessionid = ($auth !== null) ? $auth->GetUsername() : $input->GetParam('auth_sessionid',SafeParam::TYPE_ID);
         $sessionkey = ($auth !== null) ? $auth->GetPassword() : $input->GetParam('auth_sessionkey',SafeParam::TYPE_ALPHANUM);
-        
-        $session = Session::TryLoadByID($database, $sessionid);     
+
+        $session = Session::TryLoadByID($database, $sessionid);
         
         if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
             
         $account = $session->GetAccount(); $client = $session->GetClient();
         
         $this->realaccount = $account; $this->session = $session; $this->client = $client;
-        $this->interface = $interface; $this->database = $database; $this->input = $input;
+        $this->database = $database; $this->input = $input;
         
-        if (!$client->CheckAgentMatch($interface)) throw new InvalidSessionException();
+        if (!$client->CheckAgentMatch($input->GetAddress())) throw new InvalidSessionException();
         
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
@@ -73,14 +72,14 @@ class Authenticator
         $this->account = $account;
     }
     
-    public static function Authenticate(ObjectDatabase $database, IOInterface $interface, Input $input) : self
+    public static function Authenticate(ObjectDatabase $database, Input $input) : self
     {
-        return new self($database, $interface, $input);
+        return new self($database, $input);
     }
     
-    public static function TryAuthenticate(ObjectDatabase $database, IOInterface $interface, Input $input) : ?self
+    public static function TryAuthenticate(ObjectDatabase $database, Input $input) : ?self
     {
-        try { return new self($database, $interface, $input); }
+        try { return new self($database, $input); }
         catch (AuthenticationFailedException | SafeParamException $e) { return null; }
     }
     
