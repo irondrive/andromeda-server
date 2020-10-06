@@ -54,7 +54,7 @@ class SourcePointer extends BaseObject implements ClientObject
     
     public function GetDescription()
     {
-        return $this->TryGetScalar("description") ?? $this->GetClass();
+        return $this->TryGetScalar("description") ?? get_class($this);
     }
     
     public function GetClientObject(int $level = 0) : array

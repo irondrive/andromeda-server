@@ -15,7 +15,6 @@ require_once(ROOT."/apps/accounts/Client.php");
 require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/ContactInfo.php");
 require_once(ROOT."/apps/accounts/Group.php");
-require_once(ROOT."/apps/accounts/GroupMembership.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
@@ -598,7 +597,7 @@ class AccountsApp extends AppBase
         if ($type == ContactInfo::TYPE_EMAIL)
         {
             $require = $this->config->GetRequireEmails();
-            if ($require >= Config::CONTACT_EXIST && $account->CountContactInfos() < 1)
+            if ($require >= Config::CONTACT_EXIST && !$account->HasContactInfos())
                 throw new EmailAddressRequiredException();  
         }
 
@@ -680,11 +679,9 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        $duplicate = GroupMembership::TryLoadByAccountAndGroup($this->API->GetDatabase(), $account, $group);
-        if ($duplicate !== null) throw new GroupMembershipExistsException();        
-        
-        $membership = GroupMembership::Create($this->API->GetDatabase(), $account, $group);
-        
+        if (!$account->HasGroup($group)) $account->AddGroup($group);
+        else throw new GroupMembershipExistsException();
+
         return $this->StandardReturn($input);
     }
     
@@ -693,29 +690,36 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $membershipid = $input->GetParam("membershipid", SafeParam::TYPE_ID);       
-        $membership = GroupMembership::TryLoadByID($this->API->GetDatabase(), $membershipid);
-        if ($membership === null) throw new UnknownGroupMembershipException();
+        $accountid = $input->GetParam("accountid", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("groupid", SafeParam::TYPE_ID);
         
-        $group = $membership->GetGroup();
+        $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
+        if ($account === null) throw new UnknownAccountException();
+        
+        $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
+        if ($group === null) throw new UnknownGroupException();
+        
         $default1 = $this->config->GetDefaultGroup();
         $default2 = $membership->GetAccount()->GetAuthSource()->GetAccountGroup();
         if ($group === $default1 || $group === $default2) throw new MandatoryGroupException();
         
-        $membership->Delete();
+        if ($account->HasGroup($group)) $account->RemoveGroup($group);
+        else throw new UnknownGroupMembershipException();
         
         return $this->StandardReturn($input);
     }
 
-    public static function Test(Main $api)
+    public static function Test(Main $api, Input $input)
     {
         $config = Config::Load($api->GetDatabase());
         
         $old1 = $config->GetAllowCreateAccount(); $config->SetAllowCreateAccount(true);
         $old2 = $config->GetUseEmailAsUsername(); $config->SetUseEmailAsUsername(false);
         $old3 = $config->GetRequireContact(); $config->SetRequireContact(Config::CONTACT_EXIST);
-        
+
         $results = array(); $app = "accounts";
+        
+        $commits = $input->TryGetParam('commits',SafeParam::TYPE_BOOL) ?? false;
         
         $email = Utilities::Random(8)."@unittest.com";
         $user = Utilities::Random(8); 
@@ -725,12 +729,14 @@ class AccountsApp extends AppBase
             ->AddParam('email','email',$email)
             ->AddParam('alphanum','username',$user)
             ->AddParam('raw','password',$password)));
-        array_push($results, $test); $api->commit();
+        array_push($results, $test); 
+        if ($commits) $api->commit();
         
         $test = $api->Run(new Input($app,'createsession', (new SafeParams())
             ->AddParam('text','username',$user)
             ->AddParam('raw','auth_password',$password)));
-        array_push($results, $test); $api->commit();
+        array_push($results, $test);
+        if ($commits) $api->commit();
         
         $sessionid = $test['session']['id'];
         $sessionkey = $test['session']['authkey'];
@@ -742,19 +748,21 @@ class AccountsApp extends AppBase
             ->AddParam('bool','getaccount',true)
             ->AddParam('raw','auth_password',$password)
             ->AddParam('raw','new_password',$password2)));
-        array_push($results, $test); $api->commit();
+        array_push($results, $test); 
+        if ($commits) $api->commit();
         $password = $password2;
         
         $test = $api->Run(new Input($app,'deleteaccount', (new SafeParams())
             ->AddParam('id','auth_sessionid',$sessionid)
             ->AddParam('alphanum','auth_sessionkey',$sessionkey)
             ->AddParam('raw','auth_password',$password)));
-        array_push($results, $test); $api->commit();
+        array_push($results, $test);
+        if ($commits) $api->commit();
         
         $config->SetAllowCreateAccount($old1);
         $config->SetUseEmailAsUsername($old2);
         $config->SetRequireContact($old3);
-                        
+        
         return $results;
     }
 }

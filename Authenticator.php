@@ -9,7 +9,6 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Client.php");
 require_once(ROOT."/apps/accounts/Group.php");
-require_once(ROOT."/apps/accounts/GroupMembership.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
 
