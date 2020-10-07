@@ -50,7 +50,7 @@ class ErrorLogEntry extends BaseObject
         {
             $data['params'] =  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
-            $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getHistory() : "";
+            $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
             
             $data['trace_full'] = $e->getTrace();
             

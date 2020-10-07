@@ -25,26 +25,24 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 
 class Main implements Transactions
 { 
-    private $construct_time_start; private $construct_time_elapsed;
+    private $start_time; private $construct_stats; private $commit_stats; private $run_stats = array(); 
     
-    private $apps = array(); private $run_stats = array(); 
-    private $construct_stats; private $commit_stats;
-    
-    private $context; private $config; private $database;
+    private $apps = array(); private $contexts = array(); private $config; private $database;
     
     public function GetApps() : array { return $this->apps; }
-    public function GetContext() : ?Input { return $this->context; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
 
+    public function GetContext() : ?Input { return Utilities::array_last($this->contexts) ?? $this->lastcontext; }
+    
     public function __construct(ErrorManager $error_manager)
-    {
-        $this->construct_time = microtime(true);
+    { 
+        $this->start_time = microtime(true);
         
         $error_manager->SetAPI($this);          
         $this->database = new ObjectDatabase();
         
-        $this->database->startStatsContext();
+        $this->database->pushStatsContext(true);
 
         try { $this->config = Config::Load($this->database); } 
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
@@ -63,42 +61,21 @@ class Main implements Transactions
             $this->apps[$app] = new $app_class($this);
         }
         
-        $this->construct_stats = $this->database->getStatsContext();
+        $this->construct_stats = $this->database->popStatsContext()->getStats();
     }
     
     public function Run(Input $input)
-    {
-        if (!isset($this->construct_time_elapsed)) 
-            $this->construct_time_elapsed = microtime(true) - $this->construct_time;
-        
-        $prevContext = $this->context; $this->context = $input;
-
-        $app = $input->GetApp(); 
-        
+    {        
+        $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        $debug = $this->GetDebug(); if ($debug) { 
-            $start = microtime(true); $this->database->startStatsContext(); }
+        $this->database->pushStatsContext($this->GetDebug());
 
+        array_push($this->contexts, $input);
         $data = $this->apps[$app]->Run($input);
+        array_pop($this->contexts);
         
-        if ($debug) 
-        {
-            $stats = $this->database->getStatsContext();
-            $total_time = microtime(true) - $start;
-            $code_time = $total_time - $stats->getReadTime();
-            
-            array_push($this->run_stats, array(
-                'db_reads' => $stats->getReads(),
-                'db_read_time' => $stats->getReadTime(),
-                'db_writes' => $stats->getWrites(),
-                'db_write_time' => $stats->getWriteTime(),
-                'code_time' => $code_time,
-                'total_time' => $total_time,
-            ));
-        }        
-        
-        $this->context = $prevContext;
+        array_push($this->run_stats, $this->database->popStatsContext()->getStats());
         
         return $data;
     }     
@@ -128,7 +105,7 @@ class Main implements Transactions
     
     public function commit() : ?array
     {
-        set_time_limit(0); $this->database->startStatsContext();
+        set_time_limit(0); $this->database->pushStatsContext($this->GetDebug());
         
         $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
         
@@ -136,7 +113,7 @@ class Main implements Transactions
         
         foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
         
-        $this->commit_stats = $this->database->getStatsContext();
+        $this->commit_stats = $this->database->popStatsContext()->getStats();
         if ($this->GetDebug()) return $this->GetMetrics(); else return null;
     }
     
@@ -147,26 +124,31 @@ class Main implements Transactions
     }
     
     private function GetMetrics() : array
-    {        
+    {
         $run_stats_sums = array();
         if (isset($this->run_stats[0])) 
-            foreach (array_keys($this->run_stats[0]) as $key) {
+        {
+            $prototype = $this->run_stats[0];
+            foreach (array_keys($prototype) as $key)
+            {
+                if (!is_numeric($prototype[$key])) continue;
                 $run_stats_sums[$key] = 0;                
-                foreach($this->run_stats as $stats)
-                    $run_stats_sums[$key] += $stats[$key]; }
+                foreach($this->run_stats as $runstats)
+                    $run_stats_sums[$key] += $runstats[$key];
+            }
+        }
 
-        return array(
-            'construct_time' => $this->construct_time_elapsed,
-            'construct_reads' => $this->construct_stats->getReads(),
+        $ret = array(
+            'construct_stats' => $this->construct_stats,
             'run_stats' => $this->run_stats,
-            'run_stats_sums' => $run_stats_sums,
-            'commit_writes' => $this->commit_stats->getWrites(),
-            'commit_time' => $this->commit_stats->getWriteTime(),
-            'total_time' => microtime(true) - $this->construct_time,
+            'run_stats_total' => $run_stats_sums,
+            'commit_stats' => $this->commit_stats,
+            'total_time' => microtime(true) - $this->start_time,
             'peak_memory' => memory_get_peak_usage(),
-            'queries' => $this->database->getHistory(),
             'objects' => $this->database->getLoadedObjects(),
         );
+        if (count($this->run_stats) < 2) unset($ret['run_stats_total']);
+        return $ret;
     }
     
 }

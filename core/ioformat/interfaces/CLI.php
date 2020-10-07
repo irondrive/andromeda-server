@@ -93,6 +93,8 @@ class CLI extends IOInterface
         return array_map($line2input, $lines);
     }
     
+    private $tmpfiles = array();
+    
     private function GetInput(array $argv) : Input
     {
         if (count($argv) < 2) { throw new IncorrectCLIUsageException(); }
@@ -115,8 +117,14 @@ class CLI extends IOInterface
             {
                 while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
                 {
-                    if (!is_readable($argv[$i+1])) throw new InvalidFileException();
-                    array_push($files, $argv[$i+1]); $i++;
+                    $infile = $argv[++$i];
+                    if (!is_readable($infile)) throw new InvalidFileException();   
+                    
+                    $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
+                    copy($infile, $tmpfile); 
+                    
+                    array_push($this->tmpfiles, $tmpfile);
+                    array_push($files, $tmpfile); $i++;
                 }
             }
         }
@@ -135,6 +143,11 @@ class CLI extends IOInterface
         $addrobj = new Address($addr, $agent);
         
         return new Input($app, $action, $params, $addrobj, $files);
+    }
+    
+    public function __destruct()
+    {
+        foreach ($this->tmpfiles as $file) unlink($file);
     }
     
     private $output_json = false;

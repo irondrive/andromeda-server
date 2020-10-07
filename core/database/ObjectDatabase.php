@@ -12,8 +12,6 @@ class ObjectDatabase extends Database
 {
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
-    private $created = array();     /* array[id => BaseObject] */
-    private $uniques = array();     /* array[uniquekey => BaseObject] */
     private $columns = array();     /* array[class => array(fields)] */
 
     public function isModified(BaseObject $obj) : bool 
@@ -31,10 +29,14 @@ class ObjectDatabase extends Database
         return array_map(function($e){ return get_class($e); }, $this->objects);
     }
     
-    public function commit(bool $dryrun = false) : void
+    public function saveObjects() : void
     {
         foreach ($this->modified as $object) $object->Save();
-        
+    }
+    
+    public function commit(bool $dryrun = false) : void
+    {
+        $this->SaveObjects();        
         if (!$dryrun) parent::commit(); else parent::rollBack();
     }
     
@@ -131,25 +133,12 @@ class ObjectDatabase extends Database
     public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
     {        
         if ($field == 'id' && ($obj = $this->TryPreloadObjectByID($class, $value)) !== null) return $obj;
-        
-        foreach ($this->created as $newobj)
-        {
-            if (is_a($newobj, $class) && $newobj->MatchesUniqueKey($field, $value)) return $newobj;
-        }
-        
-        $unique = "$class\n$field\n$value"; if (array_key_exists($unique, $this->uniques)) return $this->uniques[$unique];
 
         $data = array(); $query = self::BuildMatchAllWhereQuery($data, array($field=>$value));
         $objects = $this->LoadObjectsByQuery($class, $query, $data);
 
         if (!count($objects)) return null;
-        else if (count($objects) == 1)
-        {
-            $object = array_values($objects)[0];
-            $this->uniques[$unique] = $object;
-            return $object;
-        }
-        else throw new DuplicateUniqueKeyException("$class: $value");
+        else return array_values($objects)[0];
     }
     
     public function LoadObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, 
@@ -232,9 +221,7 @@ class ObjectDatabase extends Database
         $data = array_fill_keys($columns, null);
         $data['id'] = Utilities::Random(BaseObject::IDLength);        
         
-        $newobj = array_values($this->Rows2Objects(array($data), $class, $fake, $outClass))[0];
-        $this->created[$newobj->ID()] = $newobj;
-        return $newobj;
+        return array_values($this->Rows2Objects(array($data), $class, $fake, $outClass))[0];
     }
     
     public function DeleteObject(string $class, BaseObject $object) : void
@@ -242,24 +229,6 @@ class ObjectDatabase extends Database
         if ($object->isCreated()) return;
         $table = self::GetClassTableName($class); 
         $this->query("DELETE FROM $table WHERE id=:id", array('id'=>$object->ID()), false);
-    }
-    
-    public function DeleteObjects(string $class, array $objects) : void
-    {
-        if (count($objects) < 1) return;        
-        
-        $criteria = array(); $data = array(); $i = 0;
-        
-        foreach ($objects as $object) {
-            if ($object->isCreated()) continue;
-            array_push($criteria, "id = :dat$i");
-            $data["dat$i"] = $object->ID(); $i++;
-        }
-        
-        $criteria_string = implode(' OR ',$criteria);   
-        
-        $table = self::GetClassTableName($class);
-        $this->query("DELETE FROM $table WHERE $criteria_string",$data,false);
     }
 }
 

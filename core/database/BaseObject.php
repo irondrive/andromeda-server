@@ -321,15 +321,16 @@ abstract class BaseObject
         $obj = $database->CreateObject(static::class, false); 
         $obj->created = true; return $obj;
     }
+    
+    protected static function GetObjectColumnName(ObjectDatabase $database, string $field) : string
+    {
+        $obj = $database->CreateObject(static::class, true);
+        return $obj->objects[$field]->GetColumnName();
+    }
 
     public function GetObjectClassName(string $field) : string
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         return $this->objects[$field]->GetRefClass();
-    }
-    
-    public function MatchesUniqueKey(string $field, string $value)
-    {
-        return $this->GetScalar($field) === $value; // TODO what about objects?
     }
 }

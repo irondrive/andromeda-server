@@ -40,4 +40,9 @@ class Utilities
         if (defined('PASSWORD_ARGON2I')) return PASSWORD_ARGON2I;
         else return PASSWORD_DEFAULT;
     }
+    
+    public static function array_last(array $arr)
+    {
+        $size = count($arr); return $size ? $arr[count($arr)-1] : null;
+    }
 }
