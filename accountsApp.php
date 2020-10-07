@@ -719,8 +719,6 @@ class AccountsApp extends AppBase
 
         $results = array(); $app = "accounts";
         
-        $commits = $input->TryGetParam('commits',SafeParam::TYPE_BOOL) ?? false;
-        
         $email = Utilities::Random(8)."@unittest.com";
         $user = Utilities::Random(8); 
         $password = Utilities::Random(16);
@@ -730,13 +728,13 @@ class AccountsApp extends AppBase
             ->AddParam('alphanum','username',$user)
             ->AddParam('raw','password',$password)));
         array_push($results, $test); 
-        if ($commits) $api->commit();
+        $api->GetDatabase()->saveObjects();
         
         $test = $api->Run(new Input($app,'createsession', (new SafeParams())
             ->AddParam('text','username',$user)
             ->AddParam('raw','auth_password',$password)));
         array_push($results, $test);
-        if ($commits) $api->commit();
+        $api->GetDatabase()->saveObjects();
         
         $sessionid = $test['session']['id'];
         $sessionkey = $test['session']['authkey'];
@@ -749,7 +747,7 @@ class AccountsApp extends AppBase
             ->AddParam('raw','auth_password',$password)
             ->AddParam('raw','new_password',$password2)));
         array_push($results, $test); 
-        if ($commits) $api->commit();
+        $api->GetDatabase()->saveObjects();
         $password = $password2;
         
         $test = $api->Run(new Input($app,'deleteaccount', (new SafeParams())
@@ -757,7 +755,7 @@ class AccountsApp extends AppBase
             ->AddParam('alphanum','auth_sessionkey',$sessionkey)
             ->AddParam('raw','auth_password',$password)));
         array_push($results, $test);
-        if ($commits) $api->commit();
+        $api->GetDatabase()->saveObjects();
         
         $config->SetAllowCreateAccount($old1);
         $config->SetUseEmailAsUsername($old2);
