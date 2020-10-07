@@ -78,7 +78,7 @@ class ErrorManager
         
         try 
         {
-            $db = new ObjectDatabase(false); $entry = ErrorLogEntry::Create($this->API, $db, $e); $db->commit();
+            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->commit();
         }
         catch (\Throwable $e2) { 
             if ($logdir !== null) {                

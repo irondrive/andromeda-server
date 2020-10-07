@@ -2,6 +2,7 @@
 
 if (!class_exists('PDO')) die("PHP PDO Extension Required\n"); use \PDO;
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class DatabaseReadOnlyException extends Exceptions\Client400Exception { public $message = "READ_ONLY_DATABASE"; }
@@ -10,25 +11,55 @@ interface Transactions { public function rollBack(); public function commit(); }
 
 class DBStats
 {
-    private $reads = 0; private $writes = 0; private $read_time = 0; private $write_time = 0; private $temp = 0;
+    private $reads = 0; private $writes = 0; private $read_time = 0; private $write_time = 0; private $queries = array();
     
-    public function getReads() : int        { return $this->reads; }
-    public function getWrites() : int       { return $this->writes; }
-    public function getReadTime() : float   { return $this->read_time; }
-    public function getWriteTime() : float  { return $this->write_time; }
+    public function __construct(bool $dotime){ $this->dotime = $dotime; if ($dotime) $this->start_time = microtime(true); }
+
+    public function startQuery() : void { if ($this->dotime) $this->temp = microtime(true); }
+    public function endQuery(string $sql, bool $read) : void
+    { 
+        if ($this->dotime)
+        {
+            $el = microtime(true) - $this->temp;
+            if ($read) $this->read_time += $el; else $this->write_time += $el;
+            if ($read) $this->reads++; else $this->writes++;
+        }
+     
+        array_push($this->queries, $this->dotime ? array('query'=>$sql, 'time'=>$el) : $sql);
+    }
     
-    public function startTiming()                   { $this->temp = microtime(true); }
-    public function endRead()                       { $this->read_time += microtime(true) - $this->temp; $this->reads++; }
-    public function endWrite(bool $count = true)    { $this->write_time += microtime(true) - $this->temp; if ($count) $this->writes++; }
+    public function endCommit() : void
+    {
+        if ($this->dotime)
+        {
+            $el = microtime(true) - $this->temp;
+            $this->write_time += $el;
+        }
+    }
+    
+    public function getQueries() : array { return $this->queries; }
+    
+    public function getStats() : array
+    {
+        $totaltime = microtime(true) - $this->start_time;
+        $codetime = $totaltime - $this->read_time - $this->write_time;
+        return array(
+            'db_reads' => $this->reads,
+            'db_read_time' => $this->read_time,
+            'db_writes' => $this->writes,
+            'db_write_time' => $this->write_time,
+            'code_time' => $codetime,
+            'total_time' => $totaltime,
+            'queries' => $this->queries
+        );
+    }
 }
 
 class Database implements Transactions {
 
     private $connection; 
-    private $read_only = false;
-    
+    private $read_only = false;    
     private $stats_stack = array();
-    private $query_history = array();
     
     public function __construct()
     {
@@ -42,19 +73,16 @@ class Database implements Transactions {
     {
         if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
         
-        $stats = $this->getStatsContext();
-        if ($stats !== null) $stats->startTiming();
-
-        array_push($this->query_history,$sql);
+        $this->startTimingQuery();
         
-        if (!$this->connection->inTransaction()) { $this->connection->beginTransaction(); }
+        if (!$this->connection->inTransaction()) $this->connection->beginTransaction();
         
         $query = $this->connection->prepare($sql); $query->execute($data ?? array());
-
+        
         if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
         else { $result = $query->rowCount(); }  
         
-        if ($stats !== null) { if ($read) $stats->endRead(); else $stats->endWrite(); }
+        $this->stopTimingQuery($sql, $read);
 
         unset($query); return $result;    
     }       
@@ -63,12 +91,9 @@ class Database implements Transactions {
     { 
         if ($this->connection->inTransaction())
         {
-            $stats = $this->getStatsContext();
-            if ($stats !== null) $stats->startTiming();
-            
+            $this->startTimingQuery();            
             $this->connection->rollback();
-            
-            if ($stats !== null) $stats->endWrite(false);
+            $this->stopTimingCommit();
         }
         $this->inTransaction = false;
     }
@@ -77,27 +102,47 @@ class Database implements Transactions {
     {
         if ($this->connection->inTransaction()) 
         {
-            $stats = $this->getStatsContext();
-            if ($stats !== null) $stats->startTiming();
-            
-            $this->connection->commit(); 
-            
-            if ($stats !== null) $stats->endWrite(false);
+            $this->startTimingQuery();            
+            $this->connection->commit();             
+            $this->stopTimingCommit();
         }            
         $this->inTransaction = false;
     }
     
-    public function startStatsContext() : self
+    private function startTimingQuery() : void
     {
-        array_push($this->stats_stack, new DBStats()); return $this;
-    }
-
-    public function getStatsContext() : ?DBStats
-    {
-        $size = count($this->stats_stack);
-        return $size ? $this->stats_stack[$size-1] : null;
+        $s = Utilities::array_last($this->stats_stack);
+        if ($s !== null) $s->startQuery();
     }
     
-    public function getHistory(): array { return $this->query_history; }
+    private function stopTimingQuery(string $sql, bool $read) : void
+    {
+        $s = Utilities::array_last($this->stats_stack);
+        if ($s !== null) $s->endQuery($sql, $read);
+    }
+    
+    private function stopTimingCommit() : void
+    {
+        $s = Utilities::array_last($this->stats_stack);
+        if ($s !== null) $s->endCommit();
+    }
+    
+    public function pushStatsContext(bool $dotime) : self
+    {
+        array_push($this->stats_stack, new DBStats($dotime)); return $this;
+    }
+
+    public function popStatsContext() : ?DBStats
+    {
+        return array_pop($this->stats_stack);
+    }
+    
+    public function getAllQueries() : array
+    {
+        $retval = array();
+        foreach ($this->stats_stack as $stats)
+            $retval = array_merge($retval, $stats->getQueries());
+        return $retval;
+    }
 }
 

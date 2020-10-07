@@ -64,7 +64,15 @@ abstract class StandardObject extends BaseObject
     
     protected function GetAllDates() : array        { return $this->GetAllScalars('dates'); }
     protected function GetAllFeatures() : array     { return $this->GetAllScalars('features'); }
-    protected function GetAllCounters() : array     { return $this->GetAllScalars('counters'); }
+    
+    protected function GetAllCounters() : array
+    { 
+        $counters = $this->GetAllScalars('counters'); 
+        foreach (array_keys($this->objectrefs) as $refskey) 
+            $counters[$refskey] = $this->objectrefs[$refskey]->GetValue();
+        return $counters;
+    }
+    
     protected function GetAllCounterLimits() : array { return $this->GetAllScalars('counters_limits'); }
     
     private function GetAllScalars(string $prefix) : array
