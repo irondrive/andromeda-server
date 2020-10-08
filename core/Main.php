@@ -6,7 +6,7 @@ if (!file_exists(ROOT."/core/database/Config.php")) die("Missing core/database/C
 require_once(ROOT."/core/database/Config.php");
 
 require_once(ROOT."/core/database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException};
+use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException, DBStats};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
@@ -15,7 +15,7 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
-use Andromeda\Core\IOFormat\{IOInterface,Input,Output};
+use Andromeda\Core\IOFormat\{Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 class UnknownAppException extends Exceptions\Client400Exception     { public $message = "UNKNOWN_APP"; }
@@ -25,7 +25,8 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 
 class Main implements Transactions
 { 
-    private $start_time; private $construct_stats; private $commit_stats; private $run_stats = array(); 
+    private $construct_stats; private $commit_stats; 
+    private $run_stats = array(); private $sum_stats = null;
     
     private $apps = array(); private $contexts = array(); private $config; private $database;
     
@@ -37,7 +38,7 @@ class Main implements Transactions
     
     public function __construct(ErrorManager $error_manager)
     { 
-        $this->start_time = microtime(true);
+        $this->sum_stats = new DBStats();
         
         $error_manager->SetAPI($this);          
         $this->database = new ObjectDatabase();
@@ -60,8 +61,9 @@ class Main implements Transactions
             
             $this->apps[$app] = new $app_class($this);
         }
-        
-        $this->construct_stats = $this->database->popStatsContext()->getStats();
+
+        $this->construct_stats = $this->database->popStatsContext();
+        $this->sum_stats->Add($this->construct_stats);
     }
     
     public function Run(Input $input)
@@ -84,7 +86,8 @@ class Main implements Transactions
              
         if ($this->GetDebug())
         {
-            $newstats = $this->database->popStatsContext();   
+            $newstats = $this->database->popStatsContext();
+            $this->sum_stats->add($newstats);
             $this->run_stats = array_merge($this->run_stats, $newstats->getStats());
             $oldstats[$idx-1] = &$this->run_stats; $this->run_stats = &$oldstats;
         }
@@ -127,8 +130,8 @@ class Main implements Transactions
         
         if ($this->GetDebug()) 
         {
-            $stats = $this->database->popStatsContext();
-            $this->commit_stats = $stats->getStats();
+            $this->commit_stats = $this->database->popStatsContext();
+            $this->sum_stats->Add($this->commit_stats);
             return $this->GetMetrics(); 
         }
         else return null;
@@ -141,29 +144,14 @@ class Main implements Transactions
     
     private function GetMetrics() : array
     {
-        $run_stats_sums = array();
-        if (isset($this->run_stats[0])) 
-        {
-            $prototype = $this->run_stats[0];
-            foreach (array_keys($prototype) as $key)
-            {
-                if (!is_numeric($prototype[$key])) continue;
-                $run_stats_sums[$key] = 0;                
-                foreach($this->run_stats as $runstats)
-                    $run_stats_sums[$key] += $runstats[$key];
-            }
-        }
-
         $ret = array(
-            'construct_stats' => $this->construct_stats,
+            'construct_stats' => $this->construct_stats->getStats(),
             'run_stats' => $this->run_stats,
-            'run_stats_total' => $run_stats_sums,
-            'commit_stats' => $this->commit_stats,
-            'total_time' => microtime(true) - $this->start_time,
+            'commit_stats' => $this->commit_stats->getStats(),
+            'stats_total' => $this->sum_stats->getStats(),
             'peak_memory' => memory_get_peak_usage(),
             'objects' => $this->database->getLoadedObjects(),
         );
-        if (count($this->run_stats) < 2) unset($ret['run_stats_total']);
         return $ret;
     }
     
