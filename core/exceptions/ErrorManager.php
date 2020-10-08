@@ -64,7 +64,7 @@ class ErrorManager
     public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
     private function Log(\Throwable $e) : void
-    {         
+    {
         $logged = false; $logdir = null;
         if (isset($this->API) && $this->API->GetConfig() !== null)
         {
@@ -78,7 +78,7 @@ class ErrorManager
         
         try 
         {
-            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->commit();
+            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->commit(); 
         }
         catch (\Throwable $e2) { 
             if ($logdir !== null) {                

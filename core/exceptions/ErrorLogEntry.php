@@ -17,7 +17,7 @@ class ErrorLogEntry extends BaseObject
         
         $data = self::GetDebugData($api, $e, true);
         
-        array_walk($data, function($value, $key) use ($base) { 
+        array_walk($data, function($value, $key) use($base) { 
             $base->SetScalar($key, $value); });
         
         return $base;
@@ -66,6 +66,7 @@ class ErrorLogEntry extends BaseObject
             
             if ($asJson)
             {
+                $data['params'] = Utilities::JSONEncode($data['params']);
                 $data['objects'] = Utilities::JSONEncode($data['objects']);
                 $data['queries'] = Utilities::JSONEncode($data['queries']);
                 

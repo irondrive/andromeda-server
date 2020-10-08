@@ -17,14 +17,14 @@ class Output
     public function SetMetrics(array $metrics) { $this->metrics = $metrics; }
     public function SetDebug(array $debug) { $this->debug = $debug; }
     
-    public function GetAsArray() : array 
+    public function GetAsArray(bool $debug = true) : array 
     {
         $array = array('ok'=>$this->ok, 'code'=>$this->code);
         
         $array[($this->ok ? 'appdata' : 'message')] = $this->data;
         
-        if ($this->metrics !== null) $array['metrics'] = $this->metrics;
-        if ($this->debug !== null) $array['debug'] = $this->debug;
+        if ($this->metrics !== null && $debug) $array['metrics'] = $this->metrics;
+        if ($this->debug !== null && $debug) $array['debug'] = $this->debug;
 
         return $array; 
     }
