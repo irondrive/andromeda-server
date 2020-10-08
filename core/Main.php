@@ -33,7 +33,7 @@ class Main implements Transactions
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
 
-    public function GetContext() : ?Input { return Utilities::array_last($this->contexts) ?? $this->lastcontext; }
+    public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
     
     public function __construct(ErrorManager $error_manager)
     { 
@@ -42,7 +42,7 @@ class Main implements Transactions
         $error_manager->SetAPI($this);          
         $this->database = new ObjectDatabase();
         
-        $this->database->pushStatsContext(true);
+        $this->database->pushStatsContext();
 
         try { $this->config = Config::Load($this->database); } 
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
@@ -69,13 +69,25 @@ class Main implements Transactions
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        $this->database->pushStatsContext($this->GetDebug());
+        if ($this->GetDebug()) $this->database->pushStatsContext();
+        
+        if ($this->GetDebug())
+        { 
+            $oldstats = &$this->run_stats; 
+            $idx = array_push($oldstats,array()); 
+            $this->run_stats = &$oldstats[$idx-1];
+        }
 
         array_push($this->contexts, $input);
         $data = $this->apps[$app]->Run($input);
-        array_pop($this->contexts);
-        
-        array_push($this->run_stats, $this->database->popStatsContext()->getStats());
+        array_pop($this->contexts);        
+             
+        if ($this->GetDebug())
+        {
+            $newstats = $this->database->popStatsContext();   
+            $this->run_stats = array_merge($this->run_stats, $newstats->getStats());
+            $oldstats[$idx-1] = &$this->run_stats; $this->run_stats = &$oldstats;
+        }
         
         return $data;
     }     
@@ -105,22 +117,26 @@ class Main implements Transactions
     
     public function commit() : ?array
     {
-        set_time_limit(0); $this->database->pushStatsContext($this->GetDebug());
+        set_time_limit(0); if ($this->GetDebug()) $this->database->pushStatsContext();
         
         $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
         
         $this->database->commit($dryrun);        
         
-        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
+        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();        
         
-        $this->commit_stats = $this->database->popStatsContext()->getStats();
-        if ($this->GetDebug()) return $this->GetMetrics(); else return null;
+        if ($this->GetDebug()) 
+        {
+            $stats = $this->database->popStatsContext();
+            $this->commit_stats = $stats->getStats();
+            return $this->GetMetrics(); 
+        }
+        else return null;
     }
     
     public function GetDebug() : bool
     {
-        return ($this->config->GetDebugOverHTTP() || $this->interface->getMode() == IOInterface::MODE_CLI)
-            && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
+        return $this->config->GetDebugOverHTTP() && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
     }
     
     private function GetMetrics() : array

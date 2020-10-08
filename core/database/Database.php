@@ -13,28 +13,22 @@ class DBStats
 {
     private $reads = 0; private $writes = 0; private $read_time = 0; private $write_time = 0; private $queries = array();
     
-    public function __construct(bool $dotime){ $this->dotime = $dotime; if ($dotime) $this->start_time = microtime(true); }
+    public function __construct(){ $this->start_time = microtime(true); }
 
-    public function startQuery() : void { if ($this->dotime) $this->temp = microtime(true); }
+    public function startQuery() : void { $this->temp = microtime(true); }
     public function endQuery(string $sql, bool $read) : void
     { 
-        if ($this->dotime)
-        {
-            $el = microtime(true) - $this->temp;
-            if ($read) $this->read_time += $el; else $this->write_time += $el;
-            if ($read) $this->reads++; else $this->writes++;
-        }
+        $el = microtime(true) - $this->temp;
+        if ($read) $this->read_time += $el; else $this->write_time += $el;
+        if ($read) $this->reads++; else $this->writes++;
      
-        array_push($this->queries, $this->dotime ? array('query'=>$sql, 'time'=>$el) : $sql);
+        array_push($this->queries, array('query'=>$sql, 'time'=>$el));
     }
     
     public function endCommit() : void
     {
-        if ($this->dotime)
-        {
-            $el = microtime(true) - $this->temp;
-            $this->write_time += $el;
-        }
+        $el = microtime(true) - $this->temp;
+        $this->write_time += $el;
     }
     
     public function getQueries() : array { return $this->queries; }
@@ -60,6 +54,7 @@ class Database implements Transactions {
     private $connection; 
     private $read_only = false;    
     private $stats_stack = array();
+    private $queries = array();
     
     public function __construct()
     {
@@ -82,7 +77,7 @@ class Database implements Transactions {
         if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
         else { $result = $query->rowCount(); }  
         
-        $this->stopTimingQuery($sql, $read);
+        array_push($this->queries, $sql); $this->stopTimingQuery($sql, $read);
 
         unset($query); return $result;    
     }       
@@ -127,9 +122,9 @@ class Database implements Transactions {
         if ($s !== null) $s->endCommit();
     }
     
-    public function pushStatsContext(bool $dotime) : self
+    public function pushStatsContext() : self
     {
-        array_push($this->stats_stack, new DBStats($dotime)); return $this;
+        array_push($this->stats_stack, new DBStats()); return $this;
     }
 
     public function popStatsContext() : ?DBStats
@@ -139,10 +134,7 @@ class Database implements Transactions {
     
     public function getAllQueries() : array
     {
-        $retval = array();
-        foreach ($this->stats_stack as $stats)
-            $retval = array_merge($retval, $stats->getQueries());
-        return $retval;
+        return $this->queries;
     }
 }
 

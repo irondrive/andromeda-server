@@ -40,7 +40,7 @@ class CLI extends IOInterface
     
     const OUTPUT_PLAIN = 0; const OUTPUT_PRINTR = 1; const OUTPUT_JSON = 2;
     
-    private $outmode = self::OUTPUT_PLAIN;
+    private $outmode = self::OUTPUT_PLAIN; private $debug = true;
     
     public function GetInputs(Config $config) : array
     {
@@ -55,7 +55,9 @@ class CLI extends IOInterface
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $config->SetDebugLogLevel((new SafeParam('int',$argv[$i+1]))->getData()); $i++; break;   
+                    $this->debug = (new SafeParam('bool',$argv[$i+1]))->getData(); $i++;
+                    if (!$config->GetDebugLogLevel()) $config->SetDebugLogLevel(Config::LOG_BASIC,true);
+                    break;   
                     
                 case '--dryrun': $config->SetReadOnly(Config::RUN_DRYRUN); break;
                 
@@ -74,15 +76,13 @@ class CLI extends IOInterface
     }
     
     private function GetBatch(string $file) : array
-    {
-        global $argv;
-        
+    {       
         try { $lines = explode("\n", file_get_contents($file)); }
         catch (Exceptions\PHPException $e) { throw new UnknownBatchFileException(); }
         
         require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
         
-        $line2input = function($line) use ($argv)
+        global $argv; $line2input = function($line) use ($argv)
         {
             try { $args = \Clue\Arguments\split($line); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
@@ -154,7 +154,7 @@ class CLI extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        $outdata = $output->GetAsArray();
+        $outdata = $output->GetAsArray($this->debug);
         if ($this->outmode == self::OUTPUT_PLAIN)
         {
             try { echo $output->GetAsString(); } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
