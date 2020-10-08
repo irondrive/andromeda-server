@@ -47,6 +47,14 @@ class DBStats
             'queries' => $this->queries
         );
     }
+    
+    public function Add(self $stats) : void
+    {
+        $this->reads += $stats->reads;
+        $this->read_time += $stats->read_time;
+        $this->writes += $stats->writes;
+        $this->write_time += $stats->write_time;
+    }
 }
 
 class Database implements Transactions {
