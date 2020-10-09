@@ -5,6 +5,7 @@ require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 if (!file_exists(ROOT."/core/database/Config.php")) die("Missing core/database/Config.php\n");
 require_once(ROOT."/core/database/Config.php");
 
+require_once(ROOT."/core/database/DBStats.php");
 require_once(ROOT."/core/database/ObjectDatabase.php");
 use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException, DBStats};
 
