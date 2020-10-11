@@ -2,6 +2,7 @@
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -11,6 +12,25 @@ use \Throwable; use Andromeda\Core\JSONEncodingException;
 
 class ErrorLogEntry extends BaseObject
 {    
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'time' => null,
+            'addr' => null,
+            'agent' => null,
+            'app' => null,
+            'action' => null,
+            'code' => null,
+            'file' => null,
+            'message' => null,
+            'trace_basic' => null,
+            'trace_full' => null,
+            'objects' => null,
+            'queries' => null,
+            'params' => null,
+         ));
+    }
+    
     public static function Create(?Main $api, ObjectDatabase $database, Throwable $e) : ErrorLogEntry
     {
         $base = parent::BaseCreate($database);

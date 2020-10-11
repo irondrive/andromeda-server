@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, BasicEmailer, FullEmailer};
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -9,6 +10,20 @@ class EmailUnavailableException extends Exceptions\ServerException    { public $
 
 class Config extends SingletonObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'datadir' => null,
+            'features__debug_log' => null,
+            'features__debug_http' => null,
+            'features__debug_file' => null,
+            'features__read_only' => null,
+            'features__enabled' => null,
+            'features__email' => null,
+            'apps' => new FieldTypes\JSON()
+        ));
+    }
+    
     public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
     
     const RUN_NORMAL = 0; const RUN_READONLY = 1; const RUN_DRYRUN = 2;

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Oct 06, 2020 at 10:45 AM
+-- Generation Time: Oct 11, 2020 at 10:41 PM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
@@ -30,7 +30,7 @@ SET time_zone = "+00:00";
 CREATE TABLE `a2_objects_core_config` (
   `id` varchar(16) NOT NULL,
   `datadir` varchar(255) DEFAULT NULL,
-  `apps*json` text NOT NULL,
+  `apps` text NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `features__debug_log` tinyint(1) NOT NULL,
   `features__debug_http` tinyint(1) NOT NULL,

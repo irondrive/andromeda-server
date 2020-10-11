@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields\ObjectJoin;
+require_once(ROOT."/core/database/JoinUtils.php"); use Andromeda\Core\Database\JoinUtils;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
@@ -14,6 +15,8 @@ abstract class BaseObject
     protected $database; public const IDLength = 16;
     
     public function GetDBClass() : string { return $this->dbclass; }
+    
+    public static function GetFieldTemplate() : array { return array(); }
     
     public static function LoadByID(ObjectDatabase $database, string $id) : self
     {
@@ -97,7 +100,7 @@ abstract class BaseObject
     protected function GetObjectID(string $field) : ?string
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        $value = $this->objects[$field]->GetPointer();
+        $value = $this->objects[$field]->GetRealValue();
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
     
@@ -161,7 +164,7 @@ abstract class BaseObject
         
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
         
-        if (!($this->scalars[$field] instanceof Fields\Counter))
+        if ($this->scalars[$field]->GetOperatorType() !== FieldTypes\OPERATOR_INCREMENT)
             throw new NotCounterException($field);
         
         if ($this->scalars[$field]->Delta($delta))
@@ -185,20 +188,32 @@ abstract class BaseObject
         
         if ($object === $this->objects[$field]) return $this;
         
+        if ($this->objects[$field]->SetObject($object))
+            $this->database->setModified($this);
+        
         if (!$notification)
         {
             $oldref = $this->objects[$field]->GetObject();
             $reffield = $this->objects[$field]->GetRefField();
-            
-            if ($oldref !== null && $reffield !== null)
-                $oldref->RemoveObjectRef($reffield, $this, true);
+            $usemany = $this->objects[$field]->GetRefIsMany();
+
+            if ($reffield !== null)
+            {
+                if ($oldref !== null)
+                {
+                    if ($usemany)
+                        $oldref->RemoveObjectRef($reffield, $this, true);
+                    else $oldref->UnsetObject($reffield, true);
+                }
                 
-            if ($object !== null && $reffield !== null)
-                $object->AddObjectRef($reffield, $this, true);
+                if ($object !== null)
+                {
+                    if ($usemany)
+                        $object->AddObjectRef($reffield, $this, true);
+                    else $object->SetObject($reffield, $this, true);
+                }
+            }
         }
-        
-        if ($this->objects[$field]->SetObject($object))
-            $this->database->setModified($this);
 
         return $this;
     } 
@@ -218,17 +233,12 @@ abstract class BaseObject
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
 
         $fieldobj = $this->objectrefs[$field];        
-        if ($fieldobj instanceof ObjectJoin && !$notification)
-        {
-            JoinObject::CreateJoin($this->database, $fieldobj, $this, $object); return $this;
-        }
         
-        $reffield = $fieldobj->GetRefField();        
-        if ($reffield !== null && !$notification) 
-            $object->SetObject($reffield, $this, true);
-
         if ($fieldobj->AddObject($object, $notification))
             $this->database->setModified($this);
+        
+        if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE) 
+            $object->SetObject($fieldobj->GetRefField(), $this, true);
         
         return $this;
     }
@@ -238,17 +248,12 @@ abstract class BaseObject
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
         
         $fieldobj = $this->objectrefs[$field];        
-        if ($fieldobj instanceof ObjectJoin && !$notification)
-        {
-            JoinObject::DeleteJoin($this->database, $fieldobj, $this, $object); return $this;
-        }
-        
-        $reffield = $this->objectrefs[$field]->GetRefField();
-        if ($reffield !== null && !$notification) 
-            $object->UnsetObject($reffield, true);
         
         if ($this->objectrefs[$field]->RemoveObject($object, $notification))
-            $this->database->setModified($this);
+            $this->database->setModified($this);            
+
+        if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE)
+            $object->UnsetObject($fieldobj->GetRefField(), true);
         
         return $this;
     }
@@ -257,33 +262,44 @@ abstract class BaseObject
     {
         $this->database = $database;
         $this->dbclass = $dbclass;
+
+        $fields = static::GetFieldTemplate();
         
-        foreach (array_keys($data) as $key) 
-        {   
-            $field = Fields\Field::Init($this->database, $this, $key, $data[$key]); $key = $field->GetMyField();
-            
-            if ($field instanceof Fields\ObjectPointer)     $this->objects[$key] = $field;
-            else if ($field instanceof Fields\ObjectRefs)   $this->objectrefs[$key] = $field;
-            else if ($field instanceof Fields\Scalar)       $this->scalars[$key] = $field;            
-        } 
+        foreach (array_keys($fields) as $field)
+            if (!array_key_exists($field, $data))
+                $data[$field] = null;
+
+        foreach (array_keys($data) as $column) 
+        {
+            $field = $fields[$column] ?? new FieldTypes\Scalar();
+            $field->Initialize($this->database, $this, $column, $data[$column]);
+
+            $key = $field->GetMyField();
+            switch ($field->GetReturnType())
+            {
+                case FieldTypes\RETURN_SCALAR: $this->scalars[$key] = $field; break;
+                case FieldTypes\RETURN_OBJECT: $this->objects[$key] = $field; break;
+                case FieldTypes\RETURN_OBJECTS: $this->objectrefs[$key] = $field; break;
+            }
+        }
     } 
     
     public function Save() : self
     {
         $class = $this->GetDBClass(); $values = array(); $counters = array();
-        
+
         foreach (array('scalars','objects','objectrefs') as $set)
         {
             foreach(array_keys($this->$set) as $key)
             {
                 $value = $this->$set[$key];
-                
-                if (!$value->GetDelta()) continue;
-                $column = $value->GetColumnName();
 
-                if ($value instanceof Fields\Counter)
-                    $counters[$column] = $value->GetDBValue();
-                else $values[$column] = $value->GetDBValue();
+                if (!$value->GetDelta()) continue;
+
+                if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
+                    $counters[$key] = $value->GetDBValue();
+                else $values[$key] = $value->GetDBValue();
+                
                 $value->ResetDelta();
             }
         }
@@ -308,7 +324,7 @@ abstract class BaseObject
         {
             if (!$refs->GetValue() > 0) continue;
             $objects = $refs->GetObjects(); $myfield = $refs->GetMyField();
-            foreach ($refs->GetObjects() as $object) $this->RemoveObjectRef($myfield, $object);
+            foreach ($objects as $object) $this->RemoveObjectRef($myfield, $object);
         }
         
         $this->database->DeleteObject($this->GetDBClass(), $this); $this->deleted = true;
@@ -318,19 +334,7 @@ abstract class BaseObject
     
     protected static function BaseCreate(ObjectDatabase $database)
     {
-        $obj = $database->CreateObject(static::class, false); 
+        $obj = $database->CreateObject(static::class); 
         $obj->created = true; return $obj;
-    }
-    
-    protected static function GetObjectColumnName(ObjectDatabase $database, string $field) : string
-    {
-        $obj = $database->CreateObject(static::class, true);
-        return $obj->objects[$field]->GetColumnName();
-    }
-
-    public function GetObjectClassName(string $field) : string
-    {
-        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        return $this->objects[$field]->GetRefClass();
     }
 }

@@ -30,7 +30,7 @@ class Database implements Transactions {
     {
         if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
         
-        $this->startTimingQuery();
+        $this->startTimingQuery(); array_push($this->queries, $sql); 
         
         if (!$this->connection->inTransaction()) $this->connection->beginTransaction();
         
@@ -39,7 +39,7 @@ class Database implements Transactions {
         if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
         else { $result = $query->rowCount(); }  
         
-        array_push($this->queries, $sql); $this->stopTimingQuery($sql, $read);
+        $this->stopTimingQuery($sql, $read);
 
         unset($query); return $result;    
     }       
