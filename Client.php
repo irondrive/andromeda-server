@@ -1,7 +1,8 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, Address};
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\Address;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
@@ -10,6 +11,13 @@ require_once(ROOT."/apps/accounts/Config.php");
 
 class AuthObject extends StandardObject
 {    
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'authkey' => null
+        ));
+    }
+    
     const KEY_LENGTH = 32;
     
     public function GetAuthKey(bool $asHash = false) : string {
@@ -41,6 +49,18 @@ class AuthObject extends StandardObject
 
 class Client extends AuthObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'lastaddr' => null,
+            'useragent' => null,
+            'dates__active' => null,
+            'dates__loggedon' => null,            
+            'account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
+            'session' => new FieldTypes\ObjectRef(Session::class, 'client', false)
+        ));
+    }
+    
     public function GetLastAddress() : string { return $this->GetScalar('lastaddr'); }
     public function GetUserAgent() : string { return $this->GetScalar('useragent'); }
     

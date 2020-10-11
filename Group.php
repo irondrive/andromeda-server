@@ -5,18 +5,26 @@ require_once(ROOT."/apps/accounts/AuthEntity.php");
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-
-class InheritedProperty
-{
-    private $value; private $source;
-    public function GetValue() { return $this->value; }
-    public function GetSource() : ?AuthEntity { return $this->source; }
-    public function __construct($value, ?AuthEntity $source){
-        $this->value = $value; $this->source = $source; }
-}
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
 class Group extends AuthEntity implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'name' => null,
+            'comment' => null,
+            'priority' => null,
+            'members__features__admin' => null,
+            'members__features__enabled' => null,
+            'members__features__forcetwofactor' => null,
+            'members__max_client_age' => null,
+            'members__max_session_age' => null,
+            'members__max_password_age' => null,            
+            'accounts' => new FieldTypes\ObjectJoin(Account::class, 'groups', GroupJoin::class)
+        ));
+    }
+    
     public function GetName() : string { return $this->GetScalar('name'); }
     public function GetComment() : ?string { return $this->TryGetScalar('comment'); }
     

@@ -1,8 +1,8 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
-require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
+use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Client.php");
@@ -10,6 +10,18 @@ require_once(ROOT."/apps/accounts/Config.php");
 
 class Session extends AuthObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'dates__active' => null,
+            'master_key' => null,
+            'master_nonce' => null,
+            'master_salt' => null,            
+            'account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
+            'client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
+        ));
+    }
+    
     public function GetClient() : Client { return $this->GetObject('client'); }
     public function GetAccount() : Account  { return $this->GetObject('account'); }
     

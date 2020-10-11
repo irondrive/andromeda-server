@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, SingletonObject};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -17,8 +18,18 @@ interface Source
     public function GetAccountGroup() : ?Group;
 }
 
+abstract class External extends BaseObject
+{
+    public static function GetFieldTemplate() : array
+    {
+        return array(
+            'default_group' => new FieldTypes\ObjectRef(Group::class)
+        );
+    }
+}
+
 class Local extends SingletonObject implements Source
-{                
+{    
     public function VerifyPassword(string $username, string $password) : bool
     {
         $account = Account::TryLoadByUsername($this->database, $username);
@@ -44,6 +55,14 @@ class Local extends SingletonObject implements Source
 
 class SourcePointer extends BaseObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'description' => null,
+            'authsource' => new FieldTypes\ObjectPoly(Source::class)
+        ));
+    }
+    
     public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?Source
     {
         $authsource = self::TryLoadByID($database, $pointer);

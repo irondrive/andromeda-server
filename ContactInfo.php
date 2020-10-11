@@ -3,9 +3,21 @@
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
 class ContactInfo extends StandardObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'type' => null,
+            'info' => null,
+            'valid' => null,
+            'unlockcode' => null,          
+            'account' => new FieldTypes\ObjectRef(Account::class, 'contactinfos')
+        ));
+    }
+    
     const TYPE_EMAIL = 1;
 
     public static function LoadByInfo(ObjectDatabase $database, string $info) : ContactInfo

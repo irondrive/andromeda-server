@@ -3,6 +3,7 @@
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 if (!file_exists(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/GoogleAuthenticator.php")) 
@@ -11,6 +12,14 @@ require_once(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/Googl
 
 class UsedToken extends StandardObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'code' => null,         
+            'twofactor' => new FieldTypes\ObjectRef(TwoFactor::class, 'usedtokens')
+        ));
+    }
+    
     public function GetCode() : string          { return $this->GetScalar('code'); }
     public function GetTwoFactor() : TwoFactor  { return $this->GetObject('twofactor'); }
     
@@ -24,6 +33,18 @@ class UsedToken extends StandardObject
 
 class TwoFactor extends StandardObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'comment' => null,
+            'secret' => null,
+            'nonce' => null,
+            'valid' => null,         
+            'account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
+            'usedtokens' => new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor')
+        ));
+    }
+    
     const SECRET_LENGTH = 32; const TIME_TOLERANCE = 2;
     
     public function GetAccount() : Account { return $this->GetObject('account'); }
