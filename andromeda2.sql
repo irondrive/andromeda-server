@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Oct 06, 2020 at 10:46 AM
+-- Generation Time: Oct 11, 2020 at 10:47 PM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.2.2
 
@@ -47,13 +47,13 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
   `password` varchar(255) DEFAULT NULL,
-  `authsource*objectpoly*Apps\Accounts\Auth\Source` varchar(255) DEFAULT NULL,
-  `groups*objectjoin*Apps\Accounts\GroupMembership*accounts` tinyint(4) NOT NULL DEFAULT '0',
-  `sessions*objectrefs*Apps\Accounts\Session*account` tinyint(4) NOT NULL DEFAULT '0',
-  `contactinfos*objectrefs*Apps\Accounts\ContactInfo*account` tinyint(4) NOT NULL DEFAULT '0',
-  `clients*objectrefs*Apps\Accounts\Client*account` tinyint(4) NOT NULL DEFAULT '0',
-  `twofactors*objectrefs*Apps\Accounts\TwoFactor*account` tinyint(4) NOT NULL DEFAULT '0',
-  `recoverykeys*objectrefs*Apps\Accounts\RecoveryKey*account` tinyint(4) NOT NULL DEFAULT '0'
+  `authsource` varchar(255) DEFAULT NULL,
+  `groups` tinyint(4) NOT NULL DEFAULT '0',
+  `sessions` tinyint(4) NOT NULL DEFAULT '0',
+  `contactinfos` tinyint(4) NOT NULL DEFAULT '0',
+  `clients` tinyint(4) NOT NULL DEFAULT '0',
+  `twofactors` tinyint(4) NOT NULL DEFAULT '0',
+  `recoverykeys` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -67,7 +67,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) NOT NULL,
   `secure` tinyint(1) NOT NULL,
-  `account_group*object*Apps\Accounts\Group` varchar(16) DEFAULT NULL
+  `account_group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -82,7 +82,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) NOT NULL,
   `secure` tinyint(1) NOT NULL,
-  `account_group*object*Apps\Accounts\Group` varchar(16) DEFAULT NULL
+  `account_group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -96,7 +96,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
-  `account_group*object*Apps\Accounts\Group` varchar(16) DEFAULT NULL
+  `account_group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -117,7 +117,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_local` (
 
 CREATE TABLE `a2_objects_apps_accounts_auth_sourcepointer` (
   `id` varchar(16) NOT NULL,
-  `authsource*objectpoly*Apps\Accounts\Auth\Source` varchar(255) NOT NULL,
+  `authsource` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -135,8 +135,8 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `dates__loggedon` bigint(20) NOT NULL DEFAULT '0',
-  `account*object*Apps\Accounts\Account*clients` varchar(16) NOT NULL,
-  `session*object*Apps\Accounts\Session` varchar(16) DEFAULT NULL
+  `account` varchar(16) NOT NULL,
+  `session` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -150,7 +150,7 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
   `features__createaccount` tinyint(1) NOT NULL,
   `features__emailasusername` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(1) NOT NULL,
-  `default_group*object*Apps\Accounts\Group` varchar(16) DEFAULT NULL
+  `default_group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -166,7 +166,7 @@ CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
   `valid` tinyint(1) NOT NULL DEFAULT '1',
   `unlockcode` varchar(16) DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `account*object*Apps\Accounts\Account*contactinfos` varchar(16) CHARACTER SET latin1 NOT NULL
+  `account` varchar(16) CHARACTER SET latin1 NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -187,20 +187,20 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `members__max_client_age` bigint(20) DEFAULT NULL,
   `members__max_session_age` bigint(20) DEFAULT NULL,
   `members__max_password_age` bigint(20) DEFAULT NULL,
-  `accounts*objectjoin*Apps\Accounts\GroupMembership*groups` int(11) NOT NULL DEFAULT '0'
+  `accounts` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `a2_objects_apps_accounts_groupmembership`
+-- Table structure for table `a2_objects_apps_accounts_groupjoin`
 --
 
-CREATE TABLE `a2_objects_apps_accounts_groupmembership` (
+CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` varchar(16) NOT NULL,
   `dates__created` int(11) NOT NULL,
-  `accounts*object*Apps\Accounts\Account*groups` varchar(16) NOT NULL,
-  `groups*object*Apps\Accounts\Group*accounts` varchar(16) NOT NULL
+  `accounts` varchar(16) NOT NULL,
+  `groups` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -215,7 +215,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
-  `account*object*Apps\Accounts\Account*recoverykeys` varchar(16) NOT NULL
+  `account` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -232,8 +232,8 @@ CREATE TABLE `a2_objects_apps_accounts_session` (
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
-  `account*object*Apps\Accounts\Account*sessions` varchar(16) NOT NULL,
-  `client*object*Apps\Accounts\Client` varchar(16) NOT NULL
+  `account` varchar(16) NOT NULL,
+  `client` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -249,8 +249,8 @@ CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `nonce` tinyblob,
   `valid` tinyint(1) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL,
-  `account*object*Apps\Accounts\Account*twofactors` varchar(16) NOT NULL,
-  `usedtokens*objectrefs*Apps\Accounts\UsedToken*twofactor` tinyint(4) NOT NULL DEFAULT '0'
+  `account` varchar(16) NOT NULL,
+  `usedtokens` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -263,7 +263,7 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `id` varchar(16) NOT NULL,
   `code` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `twofactor*object*Apps\Accounts\TwoFactor*usedtokens` varchar(16) NOT NULL
+  `twofactor` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
@@ -313,7 +313,7 @@ ALTER TABLE `a2_objects_apps_accounts_auth_local`
 ALTER TABLE `a2_objects_apps_accounts_auth_sourcepointer`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
-  ADD KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource*objectpoly*Apps\Accounts\Auth\Source`);
+  ADD KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_client`
@@ -321,8 +321,8 @@ ALTER TABLE `a2_objects_apps_accounts_auth_sourcepointer`
 ALTER TABLE `a2_objects_apps_accounts_client`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
-  ADD KEY `account*object*Apps\Accounts\Account*clients` (`account*object*Apps\Accounts\Account*clients`),
-  ADD KEY `session*object*Apps\Accounts\Session` (`session*object*Apps\Accounts\Session`);
+  ADD KEY `account*object*Apps\Accounts\Account*clients` (`account`),
+  ADD KEY `session*object*Apps\Accounts\Session` (`session`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_config`
@@ -339,7 +339,7 @@ ALTER TABLE `a2_objects_apps_accounts_contactinfo`
   ADD UNIQUE KEY `id` (`id`),
   ADD UNIQUE KEY `alias` (`info`),
   ADD KEY `type` (`type`),
-  ADD KEY `account*object*Apps\Accounts\Account*aliases` (`account*object*Apps\Accounts\Account*contactinfos`);
+  ADD KEY `account*object*Apps\Accounts\Account*aliases` (`account`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_group`
@@ -350,12 +350,12 @@ ALTER TABLE `a2_objects_apps_accounts_group`
   ADD UNIQUE KEY `name` (`name`);
 
 --
--- Indexes for table `a2_objects_apps_accounts_groupmembership`
+-- Indexes for table `a2_objects_apps_accounts_groupjoin`
 --
-ALTER TABLE `a2_objects_apps_accounts_groupmembership`
+ALTER TABLE `a2_objects_apps_accounts_groupjoin`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts*object*Apps\Accounts\Account*groups`),
-  ADD KEY `groups*object*Apps\Accounts\Group*accounts` (`groups*object*Apps\Accounts\Group*accounts`),
+  ADD KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts`),
+  ADD KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
   ADD KEY `id` (`id`);
 
 --
@@ -364,22 +364,22 @@ ALTER TABLE `a2_objects_apps_accounts_groupmembership`
 ALTER TABLE `a2_objects_apps_accounts_recoverykey`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id` (`id`),
-  ADD KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account*object*Apps\Accounts\Account*recoverykeys`);
+  ADD KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_session`
 --
 ALTER TABLE `a2_objects_apps_accounts_session`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `aid` (`account*object*Apps\Accounts\Account*sessions`),
-  ADD KEY `cid` (`client*object*Apps\Accounts\Client`);
+  ADD KEY `aid` (`account`),
+  ADD KEY `cid` (`client`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_twofactor`
 --
 ALTER TABLE `a2_objects_apps_accounts_twofactor`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `account*object*Apps\Accounts\Account` (`account*object*Apps\Accounts\Account*twofactors`);
+  ADD KEY `account*object*Apps\Accounts\Account` (`account`);
 
 --
 -- Indexes for table `a2_objects_apps_accounts_usedtoken`
