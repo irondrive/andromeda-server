@@ -2,10 +2,21 @@
 
 require_once(ROOT."/apps/accounts/Group.php");
 
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{SingletonObject, ClientObject};
 
 class Config extends SingletonObject implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'features__createaccount' => null,
+            'features__emailasusername' => null,
+            'features__requirecontact' => null,            
+            'default_group' => new FieldTypes\ObjectRef(Group::class)
+        ));
+    }
+    
     public function GetDefaultGroup() : ?Group      { return $this->TryGetObject('default_group'); }
     public function GetAllowCreateAccount() : bool  { return $this->TryGetFeature('createaccount') ?? false; }
     public function GetUseEmailAsUsername() : bool  { return $this->TryGetFeature('emailasusername') ?? false; }

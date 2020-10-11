@@ -12,8 +12,9 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
-require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{BaseObject, ClientObject};
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CryptoUnlockRequiredException extends Exceptions\ServerException { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
@@ -24,6 +25,36 @@ use Andromeda\Core\EmailUnavailableException;
 
 class Account extends AuthEntity implements ClientObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'username' => null, 
+            'fullname' => null, 
+            'unlockcode' => null,
+            'comment' => null,
+            'master_key' => null,
+            'master_nonce' => null,
+            'master_salt' => null,
+            'password' => null,
+            'dates__passwordset' => null,
+            'dates__loggedon' => null,
+            'dates__active' => null,
+            'max_client_age__inherits' => null,
+            'max_session_age__inherits' => null,
+            'max_password_age__inherits' => null,
+            'features__admin__inherits' => null,
+            'features__enabled__inherits' => null,
+            'features__forcetwofactor__inherits' => null,
+            'authsource'    => new FieldTypes\ObjectPoly(Auth\Source::class),
+            'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
+            'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
+            'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
+            'twofactors'    => new FieldTypes\ObjectRefs(TwoFactor::class, 'account'),
+            'recoverykeys'  => new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'),
+            'groups'        => new FieldTypes\ObjectJoin(Group::class, 'accounts', GroupJoin::class)
+        ));
+    }
+    
     public function GetUsername() : string  { return $this->GetScalar('username'); }
     public function GetFullName() : ?string { return $this->TryGetScalar('fullname'); }
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
@@ -143,7 +174,7 @@ class Account extends AuthEntity implements ClientObject
         if (!($source instanceof Auth\Local)) $account->SetObject('authsource',$source);
 
         $defaults = array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup()));
-        foreach ($defaults as $group) $account->AddObjectRef('groups', $group);
+        foreach ($defaults as $group) $account->AddGroup($group);
 
         return $account;
     }

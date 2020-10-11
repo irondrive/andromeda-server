@@ -1,21 +1,31 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/apps/accounts/auth/Local.php");
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class LDAPExtensionException extends Exceptions\ServerException   { public $message = "LDAP_EXTENSION_MISSING"; }
 
-class LDAP extends BaseObject implements Source
+class LDAP extends External implements Source
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'secure' => null,
+            'hostname' => null,
+            'userprefix' => null
+        ));
+    }
+    
     private $ldap = null;
     
     public function GetHostname() : string { return $this->GetScalar('hostname'); }
     public function GetUserPrefix() : ?string { return $this->TryGetScalar('userprefix'); }
     public function GetUseSSL() : bool { return $this->GetScalar('secure'); }
     
-    public function GetAccountGroup() : ?Group { return $this->TryGetObject('account_group'); }
+    public function GetAccountGroup() : ?Group { return $this->TryGetObject('default_group'); }
     
     public function __construct(ObjectDatabase $database, array $data)
     {
