@@ -1,62 +1,40 @@
-<?php namespace Andromeda\Core\Database\Fields; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\JoinObject;
+require_once(ROOT."/core/database/JoinUtils.php"); use Andromeda\Core\Database\JoinUtils;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 use Andromeda\Core\Database\ObjectTypeException;
 
 class SpecialColumnException extends Exceptions\ServerException { public $message = "DB_INVALID_SPEICAL_COLUMN"; }
 class TempAlreadyModifiedException extends Exceptions\ServerException { public $message = "SET_TEMP_ALREADY_MODIFIED"; }
 
-abstract class Field
+const OPERATOR_SETEQUAL = 0; const OPERATOR_INCREMENT = 1;
+const RETURN_SCALAR = 0; const RETURN_OBJECT = 1; const RETURN_OBJECTS = 2;
+
+class Scalar
 {
-    public static function Init(ObjectDatabase $database, BaseObject $parent, string $key, $value) : Field
+    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0;
+    
+    public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
+    public static function GetReturnType(){ return RETURN_SCALAR; }
+
+    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
-        if (strpos($key,'*') === false) return new Scalar($value, $key);
-        
-        else
-        {
-            $header = explode('*',$key); $key = $header[0]; $special = $header[1];
-            
-            if      ($special == "json")    return new JSON($value, $key);
-            else if ($special == "counter") return new Counter($value, $key);
-            
-            else if ($special == "object")     return new ObjectPointer($database, $value, $header);
-            else if ($special == "objectpoly") return new ObjectPolyPointer($database, $value, $header);
-            else if ($special == "objectrefs") return new ObjectRefs($database, $value, $header, $parent);
-            else if ($special == "objectjoin") return new ObjectJoin($database, $value, $header, $parent);
-            
-            else throw new SpecialColumnException("Class ".$parent->GetDBClass()." Column $key");
-        }
+        $this->database = $database; $this->parent = $parent; $this->myfield = $myfield; 
+        $this->tempvalue = $value; $this->realvalue = $value;
     }
     
-    public abstract function GetDBValue();
-    public abstract function GetColumnName() : string;
-    
-    protected $myfield; public function GetMyField() : string { return $this->myfield; }
-    protected $delta = 0; public function GetDelta() : int { return $this->delta; }
-    public function ResetDelta() : self { $this->delta = 0; return $this; }
-}
-
-class Scalar extends Field
-{
-    protected $tempvalue; protected $realvalue; protected $delta = 0; const SPECIAL = null;
-    
-    public function __construct($value, string $myfield) { 
-        $this->myfield = $myfield; $this->tempvalue = $value; $this->realvalue = $value; }
+    public function GetMyField() : string { return $this->myfield; }
     
     public function GetValue() { return $this->tempvalue; }
     public function GetRealValue() { return $this->realvalue; }
-
-    public function GetColumnName() : string
-    {
-        $header = array($this->myfield, static::SPECIAL);
-        return '`'.implode('*',array_filter($header)).'`';
-    }
     
-    public function GetDBValue() { if ($this->realvalue === false) return 0; else return $this->realvalue; }
+    public function GetDelta() : int { return $this->delta; }
+    public function ResetDelta() : self { $this->delta = 0; return $this; }
+
+    public function GetDBValue() { return ($this->realvalue === false) ? 0 : $this->realvalue; }
     
     public function SetValue($value, bool $temp = false) : bool
     {
@@ -82,7 +60,8 @@ class Scalar extends Field
 
 class Counter extends Scalar
 {
-    const SPECIAL = "counter";
+    public static function GetOperatorType(){ return OPERATOR_INCREMENT; }
+    
     public function Delta(int $delta = 1) : bool 
     { 
         if ($delta === 0) return false;
@@ -95,52 +74,40 @@ class Counter extends Scalar
 
 class JSON extends Scalar
 {
-    const SPECIAL = "json";
-    
-    public function __construct(string $value, string $myfield) 
-    { 
-        parent::__construct($value, $myfield); 
-        $value = Utilities::JSONDecode($value); 
-        $this->tempvalue = $value; $this->realvalue = $value;
+    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value) 
+    {
+        parent::Initialize($database, $parent, $myfield, $value);
+        $value = Utilities::JSONDecode($value);
+        $this->realvalue = $value; $this->tempvalue = $value;
     }
     
     public function GetDBValue() : string { return Utilities::JSONEncode($this->realvalue); }
 }
 
-class ObjectPointer extends Field
+class ObjectRef extends Scalar
 {
-    protected $database; protected $object; protected $pointer;
-    protected $refclass; protected $reffield;      
+    protected $database; protected $object;
+    protected $refclass; protected $reffield;   
     
-    public function __construct(ObjectDatabase $database, $value, array $header)
+    public static function GetReturnType(){ return RETURN_OBJECT; }
+
+    public function __construct(string $refclass, ?string $reffield = null, bool $refmany = true)
     {
-        if (count($header) < 3) throw new SpecialColumnException(implode('*',$header));
-        
-        $this->database = $database; $this->pointer = $value; 
-        $this->myfield = $header[0]; $this->refclass = $header[2]; $this->reffield = $header[3] ?? null;
+        $this->refclass = $refclass; $this->reffield = $reffield; $this->refmany = $refmany;
     }
     
-    public function GetPointer() : ?string { return $this->pointer; }
+    public function GetBaseClass() : ?string { return $this->refclass; }
     public function GetRefClass() : ?string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
-    
-    public function GetDBValue() : ?string { return $this->pointer; }
-    
-    public function GetColumnName() : string
-    {
-        $header = array($this->myfield, "object", $this->refclass, $this->reffield);
-        return '`'.implode('*',array_filter($header)).'`';
-    }
+    public function GetRefIsMany() : bool { return $this->refmany; }
     
     public function GetObject() : ?BaseObject
     {
-        if ($this->pointer === null) return null;
+        if ($this->realvalue === null) return null;
         
         if (!isset($this->object))
         {
-            $class = ObjectDatabase::GetFullClassName($this->refclass);
-            
-            $this->object = $class::LoadByID($this->database, $this->pointer);
+            $this->object = $this->GetRefClass()::LoadByID($this->database, $this->realvalue);
         }
         return $this->object;
     }
@@ -149,81 +116,70 @@ class ObjectPointer extends Field
     { 
         if ($object === $this->object) return false;
         
-        $class = ObjectDatabase::GetFullClassName($this->refclass);
-        if ($object !== null && !is_a($object, $class)) 
+        if ($object !== null && !is_a($object, $this->GetBaseClass())) 
             throw new ObjectTypeException();
         
-        if ($object !== null) $this->pointer = $object->ID(); else $this->pointer = null;
+        if ($object !== null) $this->realvalue = $object->ID(); else $this->realvalue = null;
         
         $this->object = $object; $this->delta++; return true;
     }
 }
 
-class ObjectPolyPointer extends ObjectPointer
+class ObjectPoly extends ObjectRef
 {
-    public function __construct(ObjectDatabase $database, $value, array $header)
-    {        
-        $this->database = $database;
-        $this->myfield = $header[0]; 
-        $this->refbaseclass = $header[2] ?? null;
-        $this->reffield = $header[3] ?? null;
-        
+    public function __construct(string $refclass, ?string $reffield = null, bool $refmany = true)
+    {
+        $this->baseclass = $refclass;
+        parent::__construct($refclass, $reffield, $refmany);        
+    }
+    
+    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
+    {
+        parent::Initialize($database, $parent, $myfield, $value);
+
         if ($value === null) return;
         
-        $value = explode('*',$value); $this->pointer = $value[0]; $this->refclass = $value[1];
+        $value = explode('*',$value);
+        $this->realvalue = $value[0];
+        $this->tempvalue = $value[0];
+        $this->refclass = $value[1];
     }
+    
+    public function GetBaseClass() : ?string { return $this->baseclass; }
     
     public function GetDBValue() : ?string 
     { 
-        if ($this->pointer === null) return null; 
-        else return $this->pointer.'*'.$this->refclass; 
-    }
-    
-    public function GetColumnName() : string
-    {
-        $header = array($this->myfield, "objectpoly", $this->refbaseclass, $this->reffield);
-        
-        if ($this->reffield === null) $header = array_filter($header);
-        
-        return '`'.implode('*', $header).'`';
+        if ($this->realvalue === null) return null; 
+        else return $this->realvalue.'*'.$this->refclass; 
     }
     
     public function SetObject(?BaseObject $object) : bool
     {
-        if (!parent::SetObject($object, $notification)) return false;
+        if (!parent::SetObject($object)) return false;
         
-        $this->refclass = ($object === null) ? null : 
-            ObjectDatabase::GetShortClassName(get_class($object));
+        $this->refclass = ($object === null) ? null : get_class($object);
         
         return true;
     }
 }
 
+const REFSTYPE_SINGLE = 0; const REFSTYPE_MANY = 1;
+
 class ObjectRefs extends Counter
 {
     protected $database; protected $objects; 
-    protected $myclass; protected $myid;
-    protected $refclass; protected $reffield;
+    protected $parent; protected $refclass; protected $reffield;
     
     protected $refs_added = array(); protected $refs_deleted = array();
     
-    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $parent)
+    public static function GetReturnType(){ return RETURN_OBJECTS; }
+    public static function GetRefsType(){ return REFSTYPE_SINGLE; }
+    
+    public function __construct(string $refclass, ?string $reffield = null)
     {
-        if (count($header) < 4) throw new SpecialColumnException(implode('*',$header));
-        
-        $this->database = $database; parent::__construct($value ?? 0, $header[0]);     
-
-        $this->myclass = ObjectDatabase::GetShortClassName(get_class($parent));
-        
-        $this->myid = $parent->ID(); $this->refclass = $header[2]; $this->reffield = $header[3]; 
+        $this->refclass = $refclass; $this->reffield = $reffield;
     }
     
-    public function GetColumnName() : string
-    {
-        $header = array($this->myfield, "objectrefs", $this->refclass, $this->reffield);
-        return '`'.implode('*',array_filter($header)).'`';
-    }
-        
     public function GetRefClass() : string { return $this->refclass; }
     public function GetRefField() : string { return $this->reffield; }
 
@@ -235,13 +191,8 @@ class ObjectRefs extends Counter
     
     protected function LoadObjects()
     {
-        $class = ObjectDatabase::GetFullClassName($this->refclass); 
-        
-        $reffield = array($this->reffield, "object", $this->myclass, $this->myfield);
-        $reffield = implode('*',array_filter($reffield));
-
-        $criteria = array("`$reffield`" => $this->myid);
-        $this->objects = $class::LoadManyMatchingAll($this->database, $criteria);    
+        $criteria = array("`".$this->reffield."`" => $this->parent->ID());
+        $this->objects = $this->refclass::LoadManyMatchingAll($this->database, $criteria);    
         
         $this->MergeWithObjectChanges();
     }
@@ -292,40 +243,44 @@ class ObjectRefs extends Counter
 
 class ObjectJoin extends ObjectRefs
 {
-    public function __construct(ObjectDatabase $database, $value, array $header, BaseObject $parent)
+    protected $parent; protected $joinclass;
+    
+    public static function GetRefsType(){ return REFSTYPE_MANY; }
+    
+    public function GetJoinClass() : string { return $this->joinclass; }
+    
+    public function __construct(string $refclass, ?string $reffield, string $joinclass)
     {
-        $this->parent = $parent; parent::__construct($database, $value, $header, $parent);
+        parent::__construct($refclass, $reffield);
+        $this->joinclass = $joinclass;
     }
     
     protected function LoadObjects()
-    {        
-        $joinclass = ObjectDatabase::GetFullClassName($this->refclass);
-        $joinobject = $this->database->CreateObject($joinclass, true, JoinObject::class);
-        $destclass = $joinobject->GetObjectClassName($this->myfield);
+    {
+        $joinstr = ObjectDatabase::BuildJoinQuery($this->joinclass, $this->myfield, $this->refclass, 'id');
         
-        $joinfield = array($this->myfield, "object", $destclass, $this->reffield);
-        $joinfield = "`".implode('*',array_filter($joinfield))."`";
-
-        $destfield = array($this->reffield, "object", $this->myclass, $this->myfield);
-        $destfield = "`".implode('*',array_filter($destfield))."`";
-
-        $destclass = ObjectDatabase::GetFullClassName($destclass);
-        $joinstr = ObjectDatabase::BuildJoinQuery($joinclass, $joinfield, $destclass, 'id');
-        
-        $criteria = array( $destfield => $this->myid );
-        $this->objects = $destclass::LoadManyMatchingAll($this->database, $criteria, false, null, $joinstr);
+        $criteria = array( ObjectDatabase::GetClassTableName($this->joinclass).'.'.$this->reffield => $this->parent->ID() );
+        $this->objects = $this->refclass::LoadManyMatchingAll($this->database, $criteria, false, null, $joinstr);
         
         $this->MergeWithObjectChanges();
     }
     
-    public function GetJoinObject(BaseObject $joinobj) : ?JoinObject
+    public function GetJoinObject(BaseObject $joinobj) : ?BaseObject
     {
-        return JoinObject::LoadJoinObject($this->database, $this, $this->parent, $joinobj);
+        return JoinUtils::LoadJoinObject($this->database, $this, $this->parent, $joinobj);
     }
     
-    public function GetColumnName() : string
+    public function AddObject(BaseObject $object, bool $notification) : bool
     {
-        $header = array($this->myfield, "objectjoin", $this->refclass, $this->reffield);
-        return '`'.implode('*',array_filter($header)).'`';
+        if ($notification) return parent::AddObject($object, $notification);
+        
+        JoinUtils::CreateJoin($this->database, $this, $this->parent, $object); return false;
+    }
+    
+    public function RemoveObject(BaseObject $object, bool $notification) : bool
+    {
+        if ($notification) return parent::RemoveObject($object, $notification);
+        
+        JoinUtils::DeleteJoin($this->database, $this, $this->parent, $object); return false;
     }
 }

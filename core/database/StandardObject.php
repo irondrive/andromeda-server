@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\Fields;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
@@ -10,6 +9,13 @@ interface ClientObject { public function GetClientObject(int $level = 0) : array
 
 abstract class StandardObject extends BaseObject
 {
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'dates__created' => null
+        ));
+    }
+    
     protected function GetDate(string $name) : ?int                { return $this->GetScalar("dates__$name"); }
     protected function TryGetDate(string $name) : ?int             { return $this->TryGetScalar("dates__$name"); } 
     
@@ -97,12 +103,7 @@ class DuplicateSingletonException extends Exceptions\ServerException    { public
 abstract class SingletonObject extends StandardObject
 {
     private static $instances = array();
-    
-    /* PHP hackery: singletonobject keeps its own global private static array of instances of subclasses
-     * When a subclass runs load, it uses its own class name to index the global array of instances
-     * Can't just have a single $instance because php doesn't consider the static property as part of the 
-     * subclass ... the static:: keyword can refer to the subclass but self:: only refers to the base class */
-    
+
     public static function Load(ObjectDatabase $database) : self
     {
         if (array_key_exists(static::class, self::$instances)) 
@@ -113,65 +114,6 @@ abstract class SingletonObject extends StandardObject
         else if (count($objects) == 0) throw new ObjectNotFoundException();
         
         else return (self::$instances[static::class] = array_values($objects)[0]);
-    }
-}
-
-class JoinObject extends StandardObject
-{
-    static $createdjoins = array();
-    
-    private static function SerializeJoin(string $refclass, BaseObject $thisobj, BaseObject $destobj) : string
-    {
-        return $refclass.$thisobj->ID().$destobj->ID();
-    }
-    
-    private static function TryGetCreatedJoin(string $refclass, BaseObject $obj1, BaseObject $obj2) : ?string
-    {
-        $try = self::SerializeJoin($refclass, $obj1, $obj2); 
-        if (array_key_exists($try, self::$createdjoins)) return $try;
-        
-        $try = self::SerializeJoin($refclass, $obj2, $obj1);
-        if (array_key_exists($try, self::$createdjoins)) return $try;        
-        return null;
-    }
-    
-    public static function CreateJoin(ObjectDatabase $database, Fields\ObjectJoin $joinobj, BaseObject $thisobj, BaseObject $destobj) : void
-    {
-        $refclass = ObjectDatabase::GetFullClassName($joinobj->GetRefClass());
-        $newobj = $database->CreateObject($refclass, false, static::class)
-            ->SetObject($joinobj->GetMyField(), $destobj, true)->SetDate('created')
-            ->SetObject($joinobj->GetRefField(), $thisobj, true);
-        $newobj->created = true;
-        
-        $thisobj->AddObjectRef($joinobj->GetMyField(), $destobj, true);
-        $destobj->AddObjectRef($joinobj->GetRefField(), $thisobj, true);
-        self::$createdjoins[self::SerializeJoin($refclass, $thisobj, $destobj)] = $newobj;
-    }
-    
-    public static function LoadJoinObject(ObjectDatabase $database, Fields\ObjectJoin $joinobj, BaseObject $thisobj, BaseObject $destobj) : ?self
-    {
-        $refclass = ObjectDatabase::GetFullClassName($joinobj->GetRefClass());
-        $created = self::TryGetCreatedJoin($refclass, $thisobj, $destobj);
-        if ($created !== null) return self::$createdjoins[$created];        
-        
-        $tempobj = $database->CreateObject($refclass, true, static::class);
-        
-        $mycolname = $tempobj->objects[$joinobj->GetMyField()]->GetColumnName();
-        $refcolname = $tempobj->objects[$joinobj->GetRefField()]->GetColumnName();
-        $criteria = array($mycolname => $destobj->ID(), $refcolname => $thisobj->ID());
-        
-        $objects = $database->LoadObjectsMatchingAll($refclass, $criteria, false, null, null, static::class);
-        return (count($objects) == 1) ? array_values($objects)[0] : null;
-    }
-    
-    public static function DeleteJoin(ObjectDatabase $database, Fields\ObjectJoin $joinobj, BaseObject $thisobj, BaseObject $destobj) : void
-    {
-        $obj = self::LoadJoinObject($database, $joinobj, $thisobj, $destobj);
-        if ($obj !== null) $obj->Delete(); 
-        
-        $refclass = ObjectDatabase::GetFullClassName($joinobj->GetRefClass());
-        $created = self::TryGetCreatedJoin($refclass, $thisobj, $destobj);
-        if ($created !== null) unset(self::$createdjoins[$created]);
     }
 }
 

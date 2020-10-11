@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -56,6 +57,19 @@ class FullEmailer extends StandardObject implements Emailer
     private $mail = null;
     
     const MODE_SSL = 1; const MODE_TLS = 2;
+    
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'hostname' => null,
+            'port' => null,
+            'username' => null,
+            'password' => null,
+            'secure' => null,
+            'from_address' => null,
+            'from_name' => null
+        ));
+    }
     
     public function __construct(ObjectDatabase $database, array $data)
     {

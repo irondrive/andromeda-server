@@ -1,9 +1,8 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\JoinObject;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class ObjectTypeException extends Exceptions\ServerException            { public $message = "DBOBJECT_TYPE_MISMATCH"; }
 class DuplicateUniqueKeyException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBOBJECT_UNIQUE_VALUES"; }
@@ -12,7 +11,6 @@ class ObjectDatabase extends Database
 {
     private $objects = array();     /* array[id => BaseObject] */
     private $modified = array();    /* array[id => BaseObject] */
-    private $columns = array();     /* array[class => array(fields)] */
 
     public function isModified(BaseObject $obj) : bool 
     { 
@@ -39,36 +37,22 @@ class ObjectDatabase extends Database
         $this->SaveObjects();        
         if (!$dryrun) parent::commit(); else parent::rollBack();
     }
-    
-    public static function GetFullClassName(string $class) : string
-    {
-        return "Andromeda\\$class";
-    }
-    
-    public static function GetShortClassName(string $class) : string
-    {
-        $class = explode('\\',$class); unset($class[0]); return implode('\\',$class); 
-    }
-    
+
     public static function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]);
         return '`'.Config::PREFIX."objects_".strtolower(implode('_', $class)).'`';
     }
     
-    private function Rows2Objects(array $rows, string $class, bool $fake = false, ?string $outClass = null) : array
+    private function Rows2Objects(array $rows, string $class) : array
     {
         $output = array(); 
         
         foreach ($rows as $row)
         {
-            $outClass = $outClass ?? $class;
-            $object = new $outClass($this, $class, $row); $id = $object->ID();
-            
-            if (!array_key_exists($class, $this->columns))
-                $this->columns[$class] = array_keys($row);
+            $object = new $class($this, $class, $row); $id = $object->ID();
 
-            $output[$id] = $object; if (!$fake) $this->objects[$id] = $object;
+            $output[$id] = $object; $this->objects[$id] = $object;
         }       
         
         return $output; 
@@ -87,7 +71,7 @@ class ObjectDatabase extends Database
         else return null;
     }
     
-    public function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null, ?string $outClass = null) : array
+    public function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null) : array
     {           
         $loaded = array(); $table = self::GetClassTableName($class); 
         
@@ -95,13 +79,13 @@ class ObjectDatabase extends Database
         
         $result = $this->query($query, $criteria);
         
-        return $this->Rows2Objects($result, $class, false, $outClass);
+        return $this->Rows2Objects($result, $class, false);
     }
     
-    public static function BuildJoinQuery(string $joinclass, string $joinclassprop, string $class, string $classprop) : string
+    public static function BuildJoinQuery(string $joinclass, string $joinclassprop, string $destclass, string $classprop) : string
     {
-        $joinclass = self::GetClassTableName($joinclass); $class = self::GetClassTableName($class);
-        return "JOIN $joinclass ON $joinclass.$joinclassprop = $class.$classprop ";        
+        $joinclass = self::GetClassTableName($joinclass); $destclass = self::GetClassTableName($destclass);
+        return "JOIN $joinclass ON $joinclass.$joinclassprop = $destclass.$classprop ";        
     }    
     
     public static function BuildMatchAllWhereQuery(array &$data, ?array $values, bool $like = false) : string
@@ -149,10 +133,10 @@ class ObjectDatabase extends Database
     }
     
     public function LoadObjectsMatchingAll(string $class, ?array $values, bool $like = false, 
-        ?int $limit = null, ?string $joinstr = null, ?string $outClass = null) : array
+                                           ?int $limit = null, ?string $joinstr = null) : array
     {        
         $data = array(); $query = ($joinstr??"").self::BuildMatchAllWhereQuery($data, $values, $like);
-        return $this->LoadObjectsByQuery($class, $query, $data, $limit, $outClass);
+        return $this->LoadObjectsByQuery($class, $query, $data, $limit);
     }
     
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
@@ -187,8 +171,9 @@ class ObjectDatabase extends Database
     private function SaveNewObject(string $class, BaseObject $object, array $values, array $counters) : self
     {
         $columns = array(); $indexes = array(); $data = array(); $i = 0;
-        
+
         $values['id'] = $object->ID();
+        $values = array_merge($values, $counters);
         
         foreach (array_keys($values) as $key) {
             array_push($columns, $key); 
@@ -203,25 +188,11 @@ class ObjectDatabase extends Database
         
         return $this;
     }
-    
-    private function getDBFields(string $class) : array
+
+    public function CreateObject(string $class) : BaseObject
     {
-        if (array_key_exists($class,$this->columns)) return $this->columns[$class];
-        
-        $table = self::GetClassTableName($class);
-        $columns = $this->query("SHOW FIELDS FROM $table");        
-        $columns = array_map(function($e){ return $e['Field']; }, $columns);
-        
-        $this->columns[$class] = $columns; return $columns;
-    }
-    
-    public function CreateObject(string $class, bool $fake = false, ?string $outClass = null) : BaseObject
-    {
-        $columns = $this->getDBFields($class);        
-        $data = array_fill_keys($columns, null);
-        $data['id'] = Utilities::Random(BaseObject::IDLength);        
-        
-        return array_values($this->Rows2Objects(array($data), $class, $fake, $outClass))[0];
+        $data = array('id' => Utilities::Random(BaseObject::IDLength));       
+        return array_values($this->Rows2Objects(array($data), $class, $class))[0];
     }
     
     public function DeleteObject(string $class, BaseObject $object) : void
