@@ -5,7 +5,7 @@ require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Tr
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class UnknownActionException extends Exceptions\Client400Exception { public $message = "UNKNOWN_ACTION"; }
+class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
 
 abstract class AppBase implements Transactions
 {
