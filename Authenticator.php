@@ -11,7 +11,7 @@ require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
 
-class AuthenticationFailedException extends Exceptions\Client403Exception { public $message = "AUTHENTICATION_FAILED"; }
+class AuthenticationFailedException extends Exceptions\ClientDeniedException { public $message = "AUTHENTICATION_FAILED"; }
 
 class AccountDisabledException extends AuthenticationFailedException      { public $message = "ACCOUNT_DISABLED"; }
 class InvalidSessionException extends AuthenticationFailedException       { public $message = "INVALID_SESSION"; }

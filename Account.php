@@ -38,7 +38,7 @@ class Account extends AuthEntity implements ClientObject
             'password' => null,
             'dates__passwordset' => null,
             'dates__loggedon' => null,
-            'dates__active' => null,
+            'dates__active' => new FieldTypes\Scalar(null, true),
             'max_client_age__inherits' => null,
             'max_session_age__inherits' => null,
             'max_password_age__inherits' => null,
