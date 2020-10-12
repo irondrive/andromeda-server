@@ -19,8 +19,8 @@ require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
-class UnknownAppException extends Exceptions\Client400Exception     { public $message = "UNKNOWN_APP"; }
-class MaintenanceException extends Exceptions\Client403Exception    { public $message = "SERVER_DISABLED"; }
+class UnknownAppException extends Exceptions\ClientErrorException     { public $message = "UNKNOWN_APP"; }
+class MaintenanceException extends Exceptions\ClientDeniedException    { public $message = "SERVER_DISABLED"; }
 class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
 

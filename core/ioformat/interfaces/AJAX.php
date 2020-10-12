@@ -12,9 +12,9 @@ use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class NoAppActionException extends Exceptions\Client400Exception { public $message = "APP_OR_ACTION_MISSING"; }
-class InvalidBatchException extends Exceptions\Client400Exception { public $message = "INVALID_BATCH_FORMAT"; }
-class InvalidParamException extends Exceptions\Client400Exception { public $message = "INVALID_PARAMETER_FORMAT"; }
+class NoAppActionException extends Exceptions\ClientErrorException { public $message = "APP_OR_ACTION_MISSING"; }
+class InvalidBatchException extends Exceptions\ClientErrorException { public $message = "INVALID_BATCH_FORMAT"; }
+class InvalidParamException extends Exceptions\ClientErrorException { public $message = "INVALID_PARAMETER_FORMAT"; }
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
 class AJAX extends IOInterface

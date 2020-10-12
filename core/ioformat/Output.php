@@ -83,9 +83,9 @@ class Output
             if (!array_key_exists('message',$data)) throw new InvalidParseException();
 
             if ($code >= 500)       throw new Exceptions\ServerException($data['message']);
-            else if ($code == 404)  throw new Exceptions\Client404Exception($data['message']);
-            else if ($code == 403)  throw new Exceptions\CLient403Exception($data['message']);
-            else if ($code == 400)  throw new Exceptions\Client400Exception($data['message']);
+            else if ($code == 404)  throw new Exceptions\ClientNotFoundException($data['message']);
+            else if ($code == 403)  throw new Exceptions\ClientDeniedException($data['message']);
+            else if ($code == 400)  throw new Exceptions\ClientErrorException($data['message']);
             else throw new InvalidParseException();
         }
     }

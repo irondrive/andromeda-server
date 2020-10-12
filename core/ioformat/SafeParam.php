@@ -6,7 +6,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 use Andromeda\Core\JSONDecodingException;
 
-class SafeParamException extends Exceptions\Client400Exception { }
+class SafeParamException extends Exceptions\ClientErrorException { }
 
 class SafeParamInvalidException extends SafeParamException {
     public function __construct(string $type) { $this->message = "SAFEPARAM_INVALID_DATA: $type"; } }

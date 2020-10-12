@@ -4,9 +4,9 @@ abstract class ClientException extends \Exception {
 	public function __construct(?string $message = null) { if ($message !== null) $this->message = $message; }
 }
 
-class Client400Exception extends ClientException { public $code = 400; public $message = "INVALID_REQUEST"; }
-class Client403Exception extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }
-class Client404Exception extends ClientException { public $code = 404; public $message = "NOT_FOUND"; }
+class ClientErrorException extends ClientException { public $code = 400; public $message = "INVALID_REQUEST"; }
+class ClientDeniedException extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }
+class ClientNotFoundException extends ClientException { public $code = 404; public $message = "NOT_FOUND"; }
 
 class ServerException extends \Exception { 
     public $code = 500; public $message = "GENERIC_SERVER_ERROR";

@@ -13,11 +13,11 @@ use Andromeda\Core\IOFormat\InvalidOutputException;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
-class IncorrectCLIUsageException extends Exceptions\Client400Exception { public $message = 'usage: php index.php --$flag $app $action [--app_$type_$key $data]'; }
+class IncorrectCLIUsageException extends Exceptions\ClientErrorException { public $message = 'usage: php index.php --$flag $app $action [--app_$type_$key $data]'; }
 
-class UnknownBatchFileException extends Exceptions\Client400Exception { public $message = "UNKNOWN_BATCH_FILE"; }
-class BatchFileParseException extends Exceptions\Client400Exception { public $message = "BATCH_FILE_PARSE_ERROR"; }
-class InvalidFileException extends Exceptions\Client400Exception { public $message = "INACCESSIBLE_FILE"; }
+class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
+class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
+class InvalidFileException extends Exceptions\ClientErrorException { public $message = "INACCESSIBLE_FILE"; }
 
 class CLI extends IOInterface
 {
