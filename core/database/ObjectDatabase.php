@@ -28,7 +28,7 @@ class ObjectDatabase extends Database
         return array_map(function($e){ return get_class($e); }, $this->objects);
     }
     
-    public function saveObjects() : void
+    public function saveObjects(bool $isRollback = false) : void
     {
         foreach ($this->modified as $object) $object->Save();
     }
@@ -36,7 +36,15 @@ class ObjectDatabase extends Database
     public function commit(bool $dryrun = false) : void
     {
         $this->SaveObjects();        
-        if (!$dryrun) parent::commit(); else parent::rollBack();
+        if (!$dryrun) parent::commit(); 
+        else parent::rollBack();
+    }
+    
+    public function rollback() : void
+    {
+        parent::rollBack();
+        $this->SaveObjects(true);
+        parent::commit();
     }
 
     public static function GetClassTableName(string $class) : string
