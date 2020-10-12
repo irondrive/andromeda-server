@@ -84,13 +84,6 @@ class Group extends AuthEntity implements ClientObject
         
         return $group;
     }
-    
-    public function Delete() : void
-    {
-        foreach ($this->GetAccountMemberships() as $accountm) $accountm->Delete();
-        
-        parent::Delete();
-    }
 
     public function GetClientObject(int $level = 0) : array
     {

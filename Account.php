@@ -129,20 +129,10 @@ class Account extends AuthEntity implements ClientObject
         return self::TryLoadByUniqueKey($database, 'username', $username);
     }
     
-    public static function LoadByUsername(ObjectDatabase $database, string $username) : self
-    {
-        return self::LoadByUniqueKey($database, 'username', $username);
-    }
-    
     public static function TryLoadByContactInfo(ObjectDatabase $database, string $info) : ?self
     {
         $info = ContactInfo::TryLoadByInfo($database, $info);
         if ($info === null) return null; else return $info->GetAccount();
-    }
-    
-    public static function LoadByContactInfo(ObjectDatabase $database, string $info) : self
-    {
-        return ContactInfo::LoadByInfo($database, $info)->GetAccount();
     }
     
     public function GetEmailRecipients(bool $redacted = false) : array
@@ -181,16 +171,15 @@ class Account extends AuthEntity implements ClientObject
     
     public function Delete() : void
     {
-        if ($this->HasSessions())     foreach ($this->GetSessions() as $session)         $session->Delete();
-        if ($this->HasClients())      foreach ($this->GetClients() as $client)           $client->Delete();
-        if ($this->HasTwoFactor())    foreach ($this->GetTwoFactors() as $twofactor)     $twofactor->Delete();
-        if ($this->HasContactInfos()) foreach ($this->GetContactInfos() as $contactinfo) $contactinfo->Delete();        
-        if ($this->HasRecoveryKeys()) foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->Delete();
-
+        if ($this->HasClients()) Client::DeleteByAccount($this->database, $this);
+        if ($this->HasTwoFactor()) TwoFactor::DeleteByAccount($this->database, $this);
+        if ($this->HasContactInfos()) ContactInfo::DeleteByAccount($this->database, $this);
+        if ($this->HasRecoveryKeys()) RecoveryKey::DeleteByAccount($this->database, $this);
+        
         parent::Delete();
     }
     
-    const OBJECT_FULL = 0; const OBJECT_SIMPLE = 1;     
+    const OBJECT_SIMPLE = 0; const OBJECT_FULL = 1;     
     const OBJECT_USER = 0; const OBJECT_ADMIN = 2;
     
     public function GetClientObject(int $level = self::OBJECT_FULL | self::OBJECT_USER) : array
@@ -208,18 +197,21 @@ class Account extends AuthEntity implements ClientObject
             'timeout' => $this->GetMaxSessionAge(),
         );   
         
-        if ($level % self::OBJECT_ADMIN === self::OBJECT_FULL)
+        if ($level & self::OBJECT_FULL)
         {
             $data['clients'] = array_map($mapobj, $this->GetClients());
             $data['twofactors'] = array_map($mapobj, $this->GetTwoFactors());
             $data['contactinfos'] = array_map($mapobj, $this->GetContactInfos());
         }
         
-        if ($level >= self::OBJECT_ADMIN)
+        if ($level & self::OBJECT_ADMIN)
         {
-            $data['comment'] = $this->TryGetScalar('comment');
-            
+            $data['comment'] = $this->TryGetScalar('comment');            
             $data['groups'] = array_map(function($e){ return $e->ID(); }, $this->GetGroups());
+        }
+        else
+        {
+            unset($data['counters']['groups']);
         }
 
         return $data;

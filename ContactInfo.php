@@ -50,6 +50,11 @@ class ContactInfo extends StandardObject implements ClientObject
             ->SetObject('account', $account);
     }
     
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
+    }
+    
     public static function GetEmails(array $contactinfos) : array
     {
         $output = array();

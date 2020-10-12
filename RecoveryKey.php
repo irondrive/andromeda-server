@@ -51,6 +51,11 @@ class RecoveryKey extends StandardObject
             ->SetScalar('master_key', $account->GetEncryptedMasterKey($master_nonce, $cryptokey_key));
     }
     
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
+    }
+    
     public function CheckCode(string $code) : bool
     {
         $account = $this->GetAccount();

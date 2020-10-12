@@ -82,6 +82,12 @@ class Client extends AuthObject implements ClientObject
             ->SetObject('account',$account);
     }
     
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        Session::DeleteByAccount($database, $account);
+        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
+    }
+    
     public function CheckAgentMatch(Address $address) : bool
     {
         $good = $address->GetAgent() === $this->GetUserAgent();        
