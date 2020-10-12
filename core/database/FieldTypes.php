@@ -15,13 +15,14 @@ const RETURN_SCALAR = 0; const RETURN_OBJECT = 1; const RETURN_OBJECTS = 2;
 
 class Scalar
 {
-    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0;
+    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0; protected $alwaysSave;
     
     public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
     public static function GetReturnType(){ return RETURN_SCALAR; }
     
-    public function __construct($defvalue = null)
+    public function __construct($defvalue = null, bool $alwaysSave = false)
     {
+        $this->alwaysSave = $alwaysSave;
         if ($defvalue != null)
         {
             $this->tempvalue = $defvalue;
@@ -39,6 +40,7 @@ class Scalar
     }
     
     public function GetMyField() : string { return $this->myfield; }
+    public function GetAlwaysSave() : bool { return $this->alwaysSave; }
     
     public function GetValue() { return $this->tempvalue; }
     public function GetRealValue() { return $this->realvalue; }

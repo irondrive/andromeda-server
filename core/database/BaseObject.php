@@ -291,7 +291,7 @@ abstract class BaseObject
         }
     } 
     
-    public function Save() : self
+    public function Save(bool $isRollback = false) : self
     {
         $class = static::class; $values = array(); $counters = array();
 
@@ -302,6 +302,7 @@ abstract class BaseObject
                 $value = $this->$set[$key];
 
                 if (!$value->GetDelta()) continue;
+                if ($isRollback && !$value->GetAlwaysSave()) continue;
 
                 if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
                     $counters[$key] = $value->GetDBValue();

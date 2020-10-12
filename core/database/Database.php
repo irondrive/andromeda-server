@@ -32,14 +32,22 @@ class Database implements Transactions {
     {
         if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
         
-        $this->startTimingQuery(); array_push($this->queries, $sql); 
+        $this->startTimingQuery();
         
-        if (!$this->connection->inTransaction()) $this->connection->beginTransaction();
+        if (!$this->connection->inTransaction()) 
+        {
+            array_push($this->queries, "beginTransaction()");
+            $this->connection->beginTransaction();
+        }
         
-        $query = $this->connection->prepare($sql); $query->execute($data ?? array());
+        array_push($this->queries, $sql); 
         
-        if ($type & self::QUERY_READ) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
-        else { $result = $query->rowCount(); }  
+        $query = $this->connection->prepare($sql); 
+        $query->execute($data ?? array());
+        
+        if ($type & self::QUERY_READ) 
+            $result = $query->fetchAll(PDO::FETCH_ASSOC);
+        else $result = $query->rowCount();
         
         $this->stopTimingQuery($sql, $type);
 
@@ -48,6 +56,7 @@ class Database implements Transactions {
 
     public function rollBack() : void
     { 
+        array_push($this->queries, "rollBack()");
         if ($this->connection->inTransaction())
         {
             $this->startTimingQuery();            
@@ -59,6 +68,7 @@ class Database implements Transactions {
     
     public function commit() : void
     {
+        array_push($this->queries, "commit()");
         if ($this->connection->inTransaction()) 
         {
             $this->startTimingQuery();            
