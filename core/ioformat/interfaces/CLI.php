@@ -38,20 +38,20 @@ class CLI extends IOInterface
         return "CLI ".($_SERVER['OS']??'');
     }
     
-    const OUTPUT_PLAIN = 0; const OUTPUT_PRINTR = 1; const OUTPUT_JSON = 2;
+    private $debug = true;
     
-    private $outmode = self::OUTPUT_PLAIN; private $debug = true;
+    public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
     public function GetInputs(Config $config) : array
     {
-        global $argv; $time = microtime(true);
+        global $argv;
         
         for ($i = 1; $i < count($argv); $i++)
         {
             switch($argv[$i])
             {
-                case '--json': $this->outmode = self::OUTPUT_JSON; break;
-                case '--printr': $this->outmode = self::OUTPUT_PRINTR; break;
+                case '--json': $this->outmode = static::OUTPUT_JSON; break;
+                case '--printr': $this->outmode = static::OUTPUT_PRINTR; break;
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -154,13 +154,21 @@ class CLI extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        $outdata = $output->GetAsArray($this->debug);
         if ($this->outmode == self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString(); } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
+            try { echo $output->GetAsString()."\n"; } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
-        if ($this->outmode == self::OUTPUT_PRINTR) echo print_r($outdata, true)."\n";
-        if ($this->outmode == self::OUTPUT_JSON)   echo Utilities::JSONEncode($outdata)."\n";
+
+        if ($this->outmode == self::OUTPUT_PRINTR)
+        {
+            $outdata = $output->GetAsArray($this->debug);
+            echo print_r($outdata, true)."\n";
+        }        
+        else if ($this->outmode == self::OUTPUT_JSON)
+        {
+            $outdata = $output->GetAsArray($this->debug);
+            echo Utilities::JSONEncode($outdata)."\n";
+        }
 
         $response = $output->GetHTTPCode();
         if ($response != 200) exit(1); else exit(0);

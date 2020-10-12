@@ -48,7 +48,7 @@ class ObjectDatabase extends Database
     private function Rows2Objects(array $rows, string $class) : array
     {
         $output = array(); 
-        
+
         foreach ($rows as $row)
         {
             $id = $row['id'];

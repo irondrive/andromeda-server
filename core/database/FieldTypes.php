@@ -19,14 +19,23 @@ class Scalar
     
     public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
     public static function GetReturnType(){ return RETURN_SCALAR; }
+    
+    public function __construct($defvalue = null)
+    {
+        if ($defvalue != null)
+        {
+            $this->tempvalue = $defvalue;
+            $this->realvalue = $defvalue;
+        }
+    }
 
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
         $this->database = $database; 
         $this->parent = $parent; 
         $this->myfield = $myfield; 
-        $this->tempvalue = $value; 
-        $this->realvalue = $value;
+        $this->tempvalue = $this->tempvalue ?? $value; 
+        $this->realvalue = $this->realvalue ?? $value;
     }
     
     public function GetMyField() : string { return $this->myfield; }
@@ -39,7 +48,7 @@ class Scalar
 
     public function GetDBValue() { return ($this->realvalue === false) ? 0 : $this->realvalue; }
     
-    public function SetValue($value, bool $temp = false) : bool
+    public function SetValue(?string $value, bool $temp = false) : bool
     {
         $this->tempvalue = $value;
 
