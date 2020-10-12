@@ -39,6 +39,12 @@ class Session extends AuthObject implements ClientObject
         return $session;
     }
     
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {        
+        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
+        //throw new Andromeda\Core\Exceptions\ServerException("hooray");
+    }
+    
     public function CheckMatch(string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxSessionAge();

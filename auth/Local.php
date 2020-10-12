@@ -29,7 +29,7 @@ abstract class External extends BaseObject
 }
 
 class Local extends SingletonObject implements Source
-{    
+{
     public function VerifyPassword(string $username, string $password) : bool
     {
         $account = Account::TryLoadByUsername($this->database, $username);

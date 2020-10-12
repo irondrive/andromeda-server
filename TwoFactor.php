@@ -29,6 +29,11 @@ class UsedToken extends StandardObject
             ->SetScalar('code',$code)
             ->SetObject('twofactor',$twofactor);            
     }
+    
+    public static function DeleteByTwoFactor(ObjectDatabase $database, TwoFactor $twofactor) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('twofactor' => $twofactor->ID()));
+    }
 }
 
 class TwoFactor extends StandardObject implements ClientObject
@@ -69,6 +74,11 @@ class TwoFactor extends StandardObject implements ClientObject
             ->SetScalar('nonce',$nonce)
             ->SetScalar('comment',$comment)
             ->SetObject('account',$account);
+    }
+    
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
     }
     
     public function GetURL() : string
@@ -121,8 +131,8 @@ class TwoFactor extends StandardObject implements ClientObject
     
     public function Delete() : void
     {
-        foreach ($this->GetUsedTokens() as $token) $token->Delete();
-        
+        UsedToken::DeleteByTwoFactor($this->database, $this);
+
         parent::Delete();
     }
 }
