@@ -4,16 +4,16 @@ class InputAuth
 { 
     public function __construct(string $username, string $password) { 
         $this->username = $username; $this->password = $password; }
-    public function GetUsername() { return $this->username; }
-    public function GetPassword() { return $this->password; }
+    public function GetUsername() : string { return $this->username; }
+    public function GetPassword() : string { return $this->password; }
 }
 
 class Address
 {
-    public function __construct(string $ipaddr = "", string $agent = "") {
+    public function __construct(string $ipaddr, string $agent) {
         $this->ipaddr = $ipaddr; $this->agent = $agent; }
-    public function GetAddress(){ return $this->ipaddr; }
-    public function GetAgent(){ return $this->agent; }
+    public function GetAddress() : string { return $this->ipaddr; }
+    public function GetAgent() : string { return $this->agent; }
 }
 
 class Input
@@ -42,7 +42,7 @@ class Input
     {
         $this->time = time(); $this->params = $params; $this->files = $files; $this->auth = $auth;
         
-        $this->addr = $addr ?? new Address();
+        $this->addr = $addr ?? new Address("","");
 
         $this->app = (new SafeParam("alphanum", strtolower($app)))->GetData();
         $this->action = (new SafeParam("alphanum", strtolower($action)))->GetData();

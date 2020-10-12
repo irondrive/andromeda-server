@@ -8,6 +8,7 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 use Andromeda\Core\IOFormat\{Input,InputAuth,Address,Output,IOInterface,SafeParams};
+use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -27,6 +28,8 @@ class AJAX extends IOInterface
         return isset($_SERVER['HTTP_USER_AGENT']) && (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || self::DEBUG_ALLOW_GET);
     }
   
+    public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
+    
     public function GetInputs(Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
@@ -81,10 +84,24 @@ class AJAX extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        if (!headers_sent()) header("Content-type: application/json");
-        http_response_code($output->GetHTTPCode());
+        if (!headers_sent()) http_response_code($output->GetHTTPCode());
         
-        echo Utilities::JSONEncode($output->GetAsArray());
+        if ($this->outmode == self::OUTPUT_PLAIN)
+        {
+            try { echo $output->GetAsString(); } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
+        }        
+        
+        if ($this->outmode == self::OUTPUT_PRINTR) 
+        {
+            $outdata = $output->GetAsArray();
+            echo print_r($outdata, true);
+        }        
+        else if ($this->outmode == self::OUTPUT_JSON)
+        {
+            if (!headers_sent()) header("Content-type: application/json");
+            $outdata = $output->GetAsArray();
+            echo Utilities::JSONEncode($outdata);
+        }
     }
 
     public static function RemoteRequest(string $url, Input $input) : array

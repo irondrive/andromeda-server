@@ -31,8 +31,9 @@ class Output
     
     public function GetAsString() : string
     {
-        if (!is_string($this->data) || $this->debug != null) throw new InvalidOutputException();
-        return ($this->ok?"ok":"err")." ".$this->code.": ".$this->data;
+        if (!is_string($this->data) || $this->debug != null) 
+            throw new InvalidOutputException();
+        return $this->data;
     }
     
     private function __construct(bool $ok, int $code, $data)

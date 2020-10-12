@@ -15,10 +15,17 @@ abstract class IOInterface
         else return null;
     }
     
-    public const MODE_AJAX = 1; public const MODE_CLI = 2;
+    const MODE_AJAX = 1; const MODE_CLI = 2;
     
     abstract public static function getMode() : int;
     abstract public static function isApplicable() : bool;
+    
+    const OUTPUT_NONE = 0; const OUTPUT_PLAIN = 1; const OUTPUT_JSON = 2; const OUTPUT_PRINTR = 3;
+
+    public function SetOutmode(int $outmode) : self { $this->outmode = $outmode; return $this; }
+    abstract public static function GetDefaultOutmode() : int;
+    
+    public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
     abstract public function GetInputs(Config $config) : array;
     abstract public function WriteOutput(Output $output);

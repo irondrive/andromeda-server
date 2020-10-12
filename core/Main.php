@@ -16,7 +16,7 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
-use Andromeda\Core\IOFormat\{Input,Output};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 class UnknownAppException extends Exceptions\Client400Exception     { public $message = "UNKNOWN_APP"; }
@@ -29,19 +29,22 @@ class Main implements Transactions
     private $construct_stats; private $commit_stats; 
     private $run_stats = array(); private $sum_stats = null;
     
-    private $apps = array(); private $contexts = array(); private $config; private $database;
+    private $apps = array(); private $contexts = array(); 
+    private $config; private $database; private $interface;
     
     public function GetApps() : array { return $this->apps; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
+    public function GetInterface() : IOInterface { return $this->interface; }
 
     public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
     
-    public function __construct(ErrorManager $error_manager)
+    public function __construct(ErrorManager $error_manager, IOInterface $interface)
     { 
         $this->sum_stats = new DBStats();
         
-        $error_manager->SetAPI($this);          
+        $error_manager->SetAPI($this); 
+        $this->interface = $interface;
         $this->database = new ObjectDatabase();
         
         $this->database->pushStatsContext();
@@ -139,7 +142,8 @@ class Main implements Transactions
     
     public function GetDebug() : bool
     {
-        return $this->config->GetDebugOverHTTP() && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
+        return ($this->config->GetDebugOverHTTP() || $this->interface->getMode() == IOInterface::MODE_CLI) 
+                && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
     }
     
     private function GetMetrics() : array
