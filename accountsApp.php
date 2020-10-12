@@ -29,28 +29,28 @@ use Andromeda\Core\Database\ObjectNotFoundException;
 use Andromeda\Core\Exceptions\NotImplementedException;
 use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
-class AccountExistsException extends Exceptions\Client400Exception          { public $message = "ACCOUNT_ALREADY_EXISTS"; }
-class GroupExistsException extends Exceptions\Client400Exception            { public $message = "GROUP_ALREADY_EXISTS"; }
-class ContactInfoExistsException extends Exceptions\Client400Exception      { public $message = "CONTACTINFO_ALREADY_EXISTS"; }
-class GroupMembershipExistsException extends Exceptions\Client400Exception  { public $message = "GROUPMEMBERSHIP_ALREADY_EXISTS"; }
+class AccountExistsException extends Exceptions\ClientErrorException          { public $message = "ACCOUNT_ALREADY_EXISTS"; }
+class GroupExistsException extends Exceptions\ClientErrorException            { public $message = "GROUP_ALREADY_EXISTS"; }
+class ContactInfoExistsException extends Exceptions\ClientErrorException      { public $message = "CONTACTINFO_ALREADY_EXISTS"; }
+class GroupMembershipExistsException extends Exceptions\ClientErrorException  { public $message = "GROUPMEMBERSHIP_ALREADY_EXISTS"; }
 
-class ChangeExternalPasswordException extends Exceptions\Client400Exception { public $message = "CANNOT_CHANGE_EXTERNAL_PASSWORD"; }
-class RecoveryKeyFailedException extends Exceptions\Client400Exception      { public $message = "CANNOT_GENERATE_RECOVERY_KEY"; }
-class RecoveryKeyDeliveryException extends Exceptions\Client400Exception    { public $message = "CANNOT_DELIVER_RECOVERY_KEY"; }
-class OldPasswordRequiredException extends Exceptions\Client400Exception    { public $message = "OLD_PASSWORD_REQUIRED"; }
-class NewPasswordRequiredException extends Exceptions\Client400Exception    { public $message = "NEW_PASSWORD_REQUIRED"; }
+class ChangeExternalPasswordException extends Exceptions\ClientErrorException { public $message = "CANNOT_CHANGE_EXTERNAL_PASSWORD"; }
+class RecoveryKeyFailedException extends Exceptions\ClientErrorException      { public $message = "CANNOT_GENERATE_RECOVERY_KEY"; }
+class RecoveryKeyDeliveryException extends Exceptions\ClientErrorException    { public $message = "CANNOT_DELIVER_RECOVERY_KEY"; }
+class OldPasswordRequiredException extends Exceptions\ClientErrorException    { public $message = "OLD_PASSWORD_REQUIRED"; }
+class NewPasswordRequiredException extends Exceptions\ClientErrorException    { public $message = "NEW_PASSWORD_REQUIRED"; }
 
-class EmailAddressRequiredException extends Exceptions\Client403Exception   { public $message = "EMAIL_ADDRESS_REQUIRED"; }
-class MandatoryGroupException extends Exceptions\Client403Exception         { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
+class EmailAddressRequiredException extends Exceptions\ClientDeniedException   { public $message = "EMAIL_ADDRESS_REQUIRED"; }
+class MandatoryGroupException extends Exceptions\ClientDeniedException         { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
 
-class UnknownAuthSourceException extends Exceptions\Client404Exception      { public $message = "UNKNOWN_AUTHSOURCE"; }
-class UnknownAccountException extends Exceptions\Client404Exception         { public $message = "UNKNOWN_ACCOUNT"; }
-class UnknownGroupException extends Exceptions\Client404Exception           { public $message = "UNKNOWN_GROUP"; }
-class UnknownClientException extends Exceptions\Client404Exception          { public $message = "UNKNOWN_CLIENT"; }
-class UnknownSessionException extends Exceptions\Client404Exception         { public $message = "UNKNOWN_SESSION"; }
-class UnknownTwoFactorException extends Exceptions\Client404Exception       { public $message = "UNKNOWN_TWOFACTOR"; }
-class UnknownContactInfoException extends Exceptions\Client404Exception     { public $message = "UNKNOWN_CONTACTINFO"; }
-class UnknownGroupMembershipException extends Exceptions\Client404Exception { public $message = "UNKNOWN_GROUPMEMBERSHIP"; }
+class UnknownAuthSourceException extends Exceptions\ClientNotFoundException      { public $message = "UNKNOWN_AUTHSOURCE"; }
+class UnknownAccountException extends Exceptions\ClientNotFoundException         { public $message = "UNKNOWN_ACCOUNT"; }
+class UnknownGroupException extends Exceptions\ClientNotFoundException           { public $message = "UNKNOWN_GROUP"; }
+class UnknownClientException extends Exceptions\ClientNotFoundException          { public $message = "UNKNOWN_CLIENT"; }
+class UnknownSessionException extends Exceptions\ClientNotFoundException         { public $message = "UNKNOWN_SESSION"; }
+class UnknownTwoFactorException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_TWOFACTOR"; }
+class UnknownContactInfoException extends Exceptions\ClientNotFoundException     { public $message = "UNKNOWN_CONTACTINFO"; }
+class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_GROUPMEMBERSHIP"; }
 
 class AccountsApp extends AppBase
 {   
@@ -202,7 +202,7 @@ class AccountsApp extends AppBase
     
     protected function EmailRecovery(Input $input) : array
     {
-        if ($this->authenticator !== null) throw new Exceptions\Client403Exception();
+        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
         $account = Account::TryLoadByUsername($this->API->GetDatabase(), $username);
@@ -224,7 +224,7 @@ class AccountsApp extends AppBase
     protected function CreateAccount(Input $input) : array
     {
         if ($this->authenticator !== null) $this->authenticator->RequireAdmin();        
-        else if (!$this->config->GetAllowCreateAccount()) throw new Exceptions\Client403Exception();
+        else if (!$this->config->GetAllowCreateAccount()) throw new Exceptions\ClientDeniedException();
         $admin = $this->authenticator !== null;
 
         $emailasuser = $this->config->GetUseEmailAsUsername();
@@ -267,7 +267,7 @@ class AccountsApp extends AppBase
     
     protected function UnlockAccount(Input $input) : ?array
     {
-        if ($this->authenticator !== null) throw new Exceptions\Client403Exception();
+        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $accountid = $input->GetParam("accountid", SafeParam::TYPE_ID);        
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
@@ -289,7 +289,7 @@ class AccountsApp extends AppBase
     
     protected function CreateSession(Input $input) : array
     {
-        if ($this->authenticator !== null) throw new Exceptions\Client403Exception();
+        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
         $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW); 

@@ -13,10 +13,10 @@ class Session extends AuthObject implements ClientObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'dates__active' => null,
             'master_key' => null,
             'master_nonce' => null,
-            'master_salt' => null,            
+            'master_salt' => null,    
+            'dates__active' => new FieldTypes\Scalar(null, true),
             'account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
             'client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
         ));

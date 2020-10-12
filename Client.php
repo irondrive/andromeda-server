@@ -54,8 +54,8 @@ class Client extends AuthObject implements ClientObject
         return array_merge(parent::GetFieldTemplate(), array(
             'lastaddr' => null,
             'useragent' => null,
-            'dates__active' => null,
             'dates__loggedon' => null,            
+            'dates__active' => new FieldTypes\Scalar(null, true),
             'account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
             'session' => new FieldTypes\ObjectRef(Session::class, 'client', false)
         ));
