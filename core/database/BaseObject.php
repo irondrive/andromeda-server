@@ -2,7 +2,7 @@
 
 require_once(ROOT."/core/database/JoinUtils.php"); use Andromeda\Core\Database\JoinUtils;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Exceptions;
 
 class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
 class NotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
@@ -13,8 +13,6 @@ class NullValueException extends Exceptions\ServerException     { public $messag
 abstract class BaseObject
 {
     protected $database; public const IDLength = 16;
-    
-    public function GetDBClass() : string { return $this->dbclass; }
     
     public static function GetFieldTemplate() : array { return array(); }
     
@@ -59,6 +57,16 @@ abstract class BaseObject
     public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null, ?string $joinstr = null) : array 
     {              
         $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $like, $limit, $joinstr); 
+    } 
+    
+    protected static function DeleteManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null) : void
+    {
+        $class = static::class; $database->DeleteObjectsMatchingAny($class, $field, $keys, $like, $limit);
+    }
+    
+    protected static function DeleteManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null) : void
+    {
+        $class = static::class; $database->DeleteObjectsMatchingAll($class, $criteria, $like, $limit);
     } 
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
@@ -258,13 +266,12 @@ abstract class BaseObject
         return $this;
     }
     
-    public function __construct(ObjectDatabase $database, string $dbclass, array $data)
+    public function __construct(ObjectDatabase $database, array $data)
     {
         $this->database = $database;
-        $this->dbclass = $dbclass;
 
         $fields = static::GetFieldTemplate();
-        
+
         foreach (array_keys($fields) as $field)
             if (!array_key_exists($field, $data))
                 $data[$field] = null;
@@ -286,7 +293,7 @@ abstract class BaseObject
     
     public function Save() : self
     {
-        $class = $this->GetDBClass(); $values = array(); $counters = array();
+        $class = static::class; $values = array(); $counters = array();
 
         foreach (array('scalars','objects','objectrefs') as $set)
         {
@@ -313,7 +320,7 @@ abstract class BaseObject
     public function Delete() : void
     {
         if ($this->deleted) return;
-        
+
         foreach ($this->objects as $field)
         {
             $object = $field->GetObject(); $myfield = $field->GetMyField();
@@ -326,15 +333,17 @@ abstract class BaseObject
             $objects = $refs->GetObjects(); $myfield = $refs->GetMyField();
             foreach ($objects as $object) $this->RemoveObjectRef($myfield, $object);
         }
-        
-        $this->database->DeleteObject($this->GetDBClass(), $this); $this->deleted = true;
+
+        $this->database->setModified($this);
+        $this->deleted = true;
     }
     
     protected $created = false; public function isCreated() : bool { return $this->created; }
     
     protected static function BaseCreate(ObjectDatabase $database)
     {
-        $obj = $database->CreateObject(static::class); 
+        $obj = $database->CreateObject(static::class);         
+        $database->setModified($obj);
         $obj->created = true; return $obj;
     }
 }

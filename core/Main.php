@@ -72,10 +72,9 @@ class Main implements Transactions
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        if ($this->GetDebug()) $this->database->pushStatsContext();
-        
         if ($this->GetDebug())
         { 
+            $this->database->pushStatsContext();
             $oldstats = &$this->run_stats; 
             $idx = array_push($oldstats,array()); 
             $this->run_stats = &$oldstats[$idx-1];
@@ -152,6 +151,7 @@ class Main implements Transactions
             'stats_total' => $this->sum_stats->getStats(),
             'peak_memory' => memory_get_peak_usage(),
             'objects' => $this->database->getLoadedObjects(),
+            'queries' => $this->database->getAllQueries()
         );
         return $ret;
     }

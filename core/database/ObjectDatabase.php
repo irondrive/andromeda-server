@@ -19,6 +19,7 @@ class ObjectDatabase extends Database
     
     public function setModified(BaseObject $obj) : void
     {
+        if ($obj->isDeleted()) return;
         $this->modified[$obj->ID()] = $obj;
     }
      
@@ -50,9 +51,15 @@ class ObjectDatabase extends Database
         
         foreach ($rows as $row)
         {
-            $object = new $class($this, $class, $row); $id = $object->ID();
-
-            $output[$id] = $object; $this->objects[$id] = $object;
+            $id = $row['id'];
+            
+            if (in_array($id, array_keys($this->objects)))
+                $output[$id] = $this->objects[$id];                
+            else 
+            { 
+                $object = new $class($this, $row);
+                $output[$id] = $object; $this->objects[$id] = $object; 
+            }
         }       
         
         return $output; 
@@ -73,13 +80,30 @@ class ObjectDatabase extends Database
     
     public function LoadObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null) : array
     {           
-        $loaded = array(); $table = self::GetClassTableName($class); 
+        $table = self::GetClassTableName($class); 
         
         $query = "SELECT $table.* FROM $table $query".($limit !== null ? " LIMIT $limit" : "");
         
-        $result = $this->query($query, $criteria);
+        $result = $this->query($query, $criteria, Database::QUERY_READ);
         
-        return $this->Rows2Objects($result, $class, false);
+        return $this->Rows2Objects($result, $class);
+    }
+    
+    public function DeleteObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null, bool $notify = false) : self
+    {
+        $table = self::GetClassTableName($class);
+        
+        $query = "DELETE FROM $table $query".($limit !== null ? " LIMIT $limit":"").(!$notify ? " RETURNING *":"");
+        
+        $qtype = Database::QUERY_WRITE | (!$notify ? Database::QUERY_READ : 0);
+        $result = $this->query($query, $criteria, $qtype);
+
+        if (!$notify) foreach ($this->Rows2Objects($result, $class) as $obj) 
+        {
+            $obj->Delete(); unset($this->modified[$obj->ID()]);
+        }
+        
+        return $this;
     }
     
     public static function BuildJoinQuery(string $joinclass, string $joinclassprop, string $destclass, string $classprop) : string
@@ -98,7 +122,7 @@ class ObjectDatabase extends Database
         };
         
         $criteria_string = implode(' AND ',$criteria);
-        return ($criteria_string?"WHERE $criteria_string ":"");
+        return ($criteria_string?"WHERE $criteria_string":"");
     }
     
     public static function BuildMatchAnyWhereQuery(array &$data, string $field, array $values, bool $like = false) : string
@@ -111,7 +135,7 @@ class ObjectDatabase extends Database
         }
         
         $criteria_string = implode(' OR ', $criteria);
-        return ($criteria_string?"WHERE $criteria_string ":"");
+        return ($criteria_string?"WHERE $criteria_string":"");
     }
     
     public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
@@ -139,12 +163,27 @@ class ObjectDatabase extends Database
         return $this->LoadObjectsByQuery($class, $query, $data, $limit);
     }
     
+    public function DeleteObjectsMatchingAny(string $class, string $field, array $values, bool $like = false, 
+                                             ?int $limit = null, bool $notify = false) : self
+    {
+        $data = array(); $query = self::BuildMatchAnyWhereQuery($data, $field, $values, $like);
+        return $this->DeleteObjectsByQuery($class, $query, $data, $limit, $notify);
+    }
+    
+    public function DeleteObjectsMatchingAll(string $class, ?array $values, bool $like = false, 
+                                             ?int $limit = null, bool $notify = false) : self
+    {
+        $data = array(); $query = self::BuildMatchAllWhereQuery($data, $values, $like);
+        return $this->DeleteObjectsByQuery($class, $query, $data, $limit, $notify);
+    }
+    
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
     {
         unset($this->modified[$object->ID()]);
-        
-        if ($object->isDeleted()) return $this;
+
+        if ($object->isCreated() && $object->isDeleted()) return $this;        
         if ($object->isCreated()) return $this->SaveNewObject($class, $object, $values, $counters);
+        if ($object->isDeleted()) return $this->DeleteObjectsMatchingAll($class, array('id'=>$object->ID()), false, null, true);
         
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
@@ -163,7 +202,7 @@ class ObjectDatabase extends Database
         $criteria_string = implode(',',$criteria);
         $table = self::GetClassTableName($class);            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
-        $this->query($query, $data, false);    
+        $this->query($query, $data, Database::QUERY_WRITE);    
         
         return $this;
     }
@@ -184,7 +223,7 @@ class ObjectDatabase extends Database
         $table = self::GetClassTableName($class);
         $columns_string = implode(',',$columns); $indexes_string = implode(',',$indexes);
         $query = "INSERT INTO $table ($columns_string) VALUES ($indexes_string)";
-        $this->query($query, $data, false);
+        $this->query($query, $data, Database::QUERY_WRITE);
         
         return $this;
     }
@@ -192,14 +231,7 @@ class ObjectDatabase extends Database
     public function CreateObject(string $class) : BaseObject
     {
         $data = array('id' => Utilities::Random(BaseObject::IDLength));       
-        return array_values($this->Rows2Objects(array($data), $class, $class))[0];
-    }
-    
-    public function DeleteObject(string $class, BaseObject $object) : void
-    {
-        if ($object->isCreated()) return;
-        $table = self::GetClassTableName($class); 
-        $this->query("DELETE FROM $table WHERE id=:id", array('id'=>$object->ID()), false);
+        return array_values($this->Rows2Objects(array($data), $class))[0];
     }
 }
 
