@@ -25,10 +25,12 @@ class Database implements Transactions {
     }
     
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
+    
+    const QUERY_READ = 1; const QUERY_WRITE = 2;
 
-    public function query(string $sql, ?array $data = null, bool $read = true) 
+    public function query(string $sql, ?array $data = null, int $type) 
     {
-        if (!$read && $this->read_only) throw new DatabaseReadOnlyException();
+        if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
         
         $this->startTimingQuery(); array_push($this->queries, $sql); 
         
@@ -36,10 +38,10 @@ class Database implements Transactions {
         
         $query = $this->connection->prepare($sql); $query->execute($data ?? array());
         
-        if ($read) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
+        if ($type & self::QUERY_READ) { $result = $query->fetchAll(PDO::FETCH_ASSOC); } 
         else { $result = $query->rowCount(); }  
         
-        $this->stopTimingQuery($sql, $read);
+        $this->stopTimingQuery($sql, $type);
 
         unset($query); return $result;    
     }       
@@ -72,10 +74,10 @@ class Database implements Transactions {
         if ($s !== null) $s->startQuery();
     }
     
-    private function stopTimingQuery(string $sql, bool $read) : void
+    private function stopTimingQuery(string $sql, int $type) : void
     {
         $s = Utilities::array_last($this->stats_stack);
-        if ($s !== null) $s->endQuery($sql, $read);
+        if ($s !== null) $s->endQuery($sql, $type);
     }
     
     private function stopTimingCommit() : void

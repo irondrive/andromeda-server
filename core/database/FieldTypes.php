@@ -22,8 +22,11 @@ class Scalar
 
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
-        $this->database = $database; $this->parent = $parent; $this->myfield = $myfield; 
-        $this->tempvalue = $value; $this->realvalue = $value;
+        $this->database = $database; 
+        $this->parent = $parent; 
+        $this->myfield = $myfield; 
+        $this->tempvalue = $value; 
+        $this->realvalue = $value;
     }
     
     public function GetMyField() : string { return $this->myfield; }
@@ -62,10 +65,16 @@ class Counter extends Scalar
 {
     public static function GetOperatorType(){ return OPERATOR_INCREMENT; }
     
+    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
+    {
+        parent::Initialize($database, $parent, $myfield, $value ?? 0);
+    }
+    
     public function Delta(int $delta = 1) : bool 
     { 
         if ($delta === 0) return false;
-        $this->tempvalue += $delta; $this->realvalue += $delta; 
+        $this->tempvalue += $delta; 
+        $this->realvalue += $delta; 
         $this->delta += $delta; return true;
     }
         
