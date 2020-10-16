@@ -138,8 +138,8 @@ class ObjectDatabase extends Database
         $criteria = array(); $i = 0; $s = $like ? 'LIKE' : '=';
         
         foreach ($values as $value) {
-            array_push($criteria, "$key $s :dat$i");
-            $data["dat$i"] = $value; $i++;
+            array_push($criteria, "$key ".($value !== null ? "$s :dat$i" : "IS NULL"));
+            if ($value !== null) $data["dat$i"] = $value; $i++;
         }
         
         $criteria_string = implode(' OR ', $criteria);
@@ -207,7 +207,7 @@ class ObjectDatabase extends Database
         
         if (!count($criteria)) return $this;
         
-        $criteria_string = implode(',',$criteria);
+        $criteria_string = implode(', ',$criteria);
         $table = self::GetClassTableName($class);            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
         $this->query($query, $data, Database::QUERY_WRITE);    
