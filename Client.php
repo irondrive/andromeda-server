@@ -3,7 +3,7 @@
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\Address;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
@@ -20,21 +20,23 @@ class AuthObject extends StandardObject
     
     const KEY_LENGTH = 32;
     
+    const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
+    
     public function GetAuthKey(bool $asHash = false) : string {
         return $this->GetScalar('authkey', !$asHash);
     }
     
     protected function SetAuthKey(string $key) : self {
         $algo = Utilities::GetHashAlgo();
-        $dohash = password_needs_rehash($this->GetAuthKey(true),$algo);
-        if ($dohash) $this->SetScalar('authkey', password_hash($key, $algo));
+        $dohash = password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS);
+        if ($dohash) $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
         return $this->SetScalar('authkey', $key, true);
     }
     
     public function CreateAuthKey() : self {
         $algo = Utilities::GetHashAlgo();
         $key = Utilities::Random(self::KEY_LENGTH);
-        $this->SetScalar('authkey', password_hash($key, $algo));
+        $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
         return $this->SetScalar('authkey', $key, true);        
     }
     
@@ -47,7 +49,7 @@ class AuthObject extends StandardObject
     }
 }
 
-class Client extends AuthObject implements ClientObject
+class Client extends AuthObject
 {
     public static function GetFieldTemplate() : array
     {

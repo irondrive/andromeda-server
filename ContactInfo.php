@@ -1,11 +1,11 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
-class ContactInfo extends StandardObject implements ClientObject
+class ContactInfo extends StandardObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -79,7 +79,7 @@ class ContactInfo extends StandardObject implements ClientObject
         return "$name@$domain";
     }
     
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject() : array
     {
         return array(
             'id' => $this->ID(),

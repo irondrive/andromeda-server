@@ -3,9 +3,9 @@
 require_once(ROOT."/apps/accounts/Group.php");
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{SingletonObject, ClientObject};
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
 
-class Config extends SingletonObject implements ClientObject
+class Config extends SingletonObject
 {
     public static function GetFieldTemplate() : array
     {

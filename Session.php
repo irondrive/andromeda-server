@@ -1,14 +1,13 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Client.php");
 require_once(ROOT."/apps/accounts/Config.php");
 
-class Session extends AuthObject implements ClientObject
+class Session extends AuthObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -42,7 +41,6 @@ class Session extends AuthObject implements ClientObject
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
     {        
         parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
-        //throw new Andromeda\Core\Exceptions\ServerException("hooray");
     }
     
     public function CheckMatch(string $key) : bool

@@ -3,11 +3,10 @@
 require_once(ROOT."/apps/accounts/AuthEntity.php");
 
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
-class Group extends AuthEntity implements ClientObject
+class Group extends AuthEntity
 {
     public static function GetFieldTemplate() : array
     {
@@ -85,7 +84,7 @@ class Group extends AuthEntity implements ClientObject
         return $group;
     }
 
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject() : array
     {
         return array(
             'id' => $this->ID(),

@@ -3,7 +3,6 @@
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, SingletonObject};
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -53,7 +52,7 @@ class Local extends SingletonObject implements Source
     public function GetAccountGroup() : ?Group { return null; }
 }
 
-class SourcePointer extends BaseObject implements ClientObject
+class SourcePointer extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -76,7 +75,7 @@ class SourcePointer extends BaseObject implements ClientObject
         return $this->TryGetScalar("description") ?? get_class($this);
     }
     
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject() : array
     {
         return array(
             'id' => $this->ID(),
