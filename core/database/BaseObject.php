@@ -12,7 +12,8 @@ class NullValueException extends Exceptions\ServerException     { public $messag
 
 abstract class BaseObject
 {
-    protected $database; public const IDLength = 16;
+    public const IDLength = 16;
+    protected ObjectDatabase $database; 
     
     public static function GetFieldTemplate() : array { return array(); }
     
@@ -71,9 +72,9 @@ abstract class BaseObject
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
     
-    protected $scalars = array();
-    protected $objects = array();
-    protected $objectrefs = array();
+    protected array $scalars = array();
+    protected array $objects = array();
+    protected array $objectrefs = array();
 
     protected function ExistsScalar(string $field) : bool { return array_key_exists($field, $this->scalars); }
     protected function ExistsObject(string $field) : bool { return array_key_exists($field, $this->objects); }
@@ -82,14 +83,14 @@ abstract class BaseObject
     protected function GetScalar(string $field, bool $allowTemp = true)
     {
         if (!$this->ExistsScalar($field)) throw new KeyNotFoundException($field);
-        $value = $allowTemp ? $this->scalars[$field]->GetValue() : $this->scalars[$field]->GetRealValue();
+        $value = $this->scalars[$field]->GetValue($allowTemp);
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
     
     protected function TryGetScalar(string $field, bool $allowTemp = true)
     {
         if (!$this->ExistsScalar($field)) return null;
-        return $allowTemp ? $this->scalars[$field]->GetValue() : $this->scalars[$field]->GetRealValue();
+        return $this->scalars[$field]->GetValue($allowTemp);
     }
     
     protected function GetObject(string $field) : self
@@ -108,8 +109,7 @@ abstract class BaseObject
     protected function GetObjectID(string $field) : ?string
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
-        $value = $this->objects[$field]->GetRealValue();
-        if ($value !== null) return $value; else throw new NullValueException($field);
+        return $this->objects[$field]->GetValue();
     }
     
     protected function GetObjectRefs(string $field) : array
@@ -196,9 +196,6 @@ abstract class BaseObject
         
         if ($object === $this->objects[$field]) return $this;
         
-        if ($this->objects[$field]->SetObject($object))
-            $this->database->setModified($this);
-        
         if (!$notification)
         {
             $oldref = $this->objects[$field]->GetObject();
@@ -222,6 +219,9 @@ abstract class BaseObject
                 }
             }
         }
+        
+        if ($this->objects[$field]->SetObject($object))
+            $this->database->setModified($this);            
 
         return $this;
     } 
@@ -239,7 +239,7 @@ abstract class BaseObject
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
-
+        
         $fieldobj = $this->objectrefs[$field];        
         
         if ($fieldobj->AddObject($object, $notification))
@@ -288,11 +288,16 @@ abstract class BaseObject
                 case FieldTypes\RETURN_OBJECT: $this->objects[$key] = $field; break;
                 case FieldTypes\RETURN_OBJECTS: $this->objectrefs[$key] = $field; break;
             }
-        }
-    } 
+        }        
+        $this->SubConstruct();
+    }
+    
+    protected function SubConstruct() : void { }
     
     public function Save(bool $isRollback = false) : self
     {
+        if ($isRollback && ($this->created || $this->deleted)) return $this;
+        
         $class = static::class; $values = array(); $counters = array();
 
         foreach (array('scalars','objects','objectrefs') as $set)
@@ -316,7 +321,7 @@ abstract class BaseObject
         $this->created = false; return $this;
     } 
     
-    private $deleted = false; public function isDeleted() : bool { return $this->deleted; }
+    private bool $deleted = false; public function isDeleted() : bool { return $this->deleted; }
     
     public function Delete() : void
     {
@@ -339,7 +344,7 @@ abstract class BaseObject
         $this->deleted = true;
     }
     
-    protected $created = false; public function isCreated() : bool { return $this->created; }
+    protected bool $created = false; public function isCreated() : bool { return $this->created; }
     
     protected static function BaseCreate(ObjectDatabase $database)
     {

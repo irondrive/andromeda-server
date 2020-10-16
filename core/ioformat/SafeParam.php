@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\ClientObject;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 use Andromeda\Core\JSONDecodingException;
@@ -24,9 +23,9 @@ class SafeParamKeyTypeException extends SafeParamException {
 class SafeParamNullValueException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_VALUE_NULL: $key"; } }
     
-class SafeParams implements ClientObject
+class SafeParams
 {
-    private $params = array();
+    private array $params = array();
     
     public function HasParam(string $key) : bool
     {
@@ -61,7 +60,7 @@ class SafeParams implements ClientObject
         return $this->params[$key]->getData();
     }
     
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject() : array
     {
         return array_map(function($param){
             return $param->getData();
@@ -71,7 +70,7 @@ class SafeParams implements ClientObject
 
 class SafeParam
 {
-    private $data; private $type;
+    private $data; private int $type;
     
     public function getData() { return $this->data; }
     public function getType() : int { return $this->type; }

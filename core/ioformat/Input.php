@@ -18,15 +18,13 @@ class Address
 
 class Input
 {
-    private $time; private $app; private $action; private $params; private $addr; private $files; private $auth;
-    
-    public function GetTime() : int { return $this->time; }
-    public function GetApp() : string { return $this->app; }
-    public function GetAction() : string { return $this->action; }
-    public function GetParams() : SafeParams { return $this->params; }
-    public function GetAddress() : Address { return $this->addr; }
-    public function GetFiles() : array { return $this->files; }
-    public function GetAuth() : ?InputAuth { return $this->auth; }
+    private int $time;          public function GetTime() : int { return $this->time; }
+    private string $app;        public function GetApp() : string { return $this->app; }
+    private string $action;     public function GetAction() : string { return $this->action; }
+    private SafeParams $params; public function GetParams() : SafeParams { return $this->params; }
+    private Address $addr;      public function GetAddress() : Address { return $this->addr; }
+    private array $files;       public function GetFiles() : array { return $this->files; }
+    private ?InputAuth $auth;   public function GetAuth() : ?InputAuth { return $this->auth; }
     
     public function HasParam(string $key) {
         return $this->params->HasParam($key); }
