@@ -13,7 +13,7 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{BaseObject, ClientObject};
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -23,7 +23,7 @@ use Andromeda\Core\Database\KeyNotFoundException;
 use Andromeda\Core\Database\NullValueException;
 use Andromeda\Core\EmailUnavailableException;
 
-class Account extends AuthEntity implements ClientObject
+class Account extends AuthEntity
 {
     public static function GetFieldTemplate() : array
     {
@@ -233,14 +233,14 @@ class Account extends AuthEntity implements ClientObject
         else return null;
     }
     
-    protected function SetScalar(string $field, $value, bool $temp = false) : BaseObject
+    protected function SetScalar(string $field, $value, bool $temp = false) : self
     {  
         if ($this->ExistsScalar($field."__inherits"))
             $field .= "__inherits";
         return parent::SetScalar($field, $value, $temp);
     }
     
-    protected function GetObject(string $field) : BaseObject
+    protected function GetObject(string $field) : self
     {
         if ($this->ExistsObject($field)) $value = parent::GetObject($field);
         else if ($this->ExistsObject($field."__inherits")) $value = $this->InheritableSearch($field, true)->GetValue();
@@ -249,14 +249,14 @@ class Account extends AuthEntity implements ClientObject
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
-    protected function TryGetObject(string $field) : ?BaseObject
+    protected function TryGetObject(string $field) : ?self
     {
         if ($this->ExistsObject($field)) return parent::TryGetObject($field);
         else if ($this->ExistsObject($field."__inherits")) return $this->InheritableSearch($field, true)->GetValue();
         else return null;
     }
     
-    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : BaseObject
+    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
         if ($this->ExistsObject($field."__inherits"))
             $field .= "__inherits";
@@ -335,7 +335,7 @@ class Account extends AuthEntity implements ClientObject
     
     public function hasCrypto() : bool { return $this->TryGetScalar('master_key') !== null; }
     
-    private $cryptoAvailable = false; public function CryptoAvailable() : bool { return $this->cryptoAvailable; }
+    private bool $cryptoAvailable = false; public function CryptoAvailable() : bool { return $this->cryptoAvailable; }
     
     public function ChangePassword(string $new_password, string $old_password = "") : Account
     {

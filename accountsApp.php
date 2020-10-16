@@ -54,7 +54,8 @@ class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException
 
 class AccountsApp extends AppBase
 {   
-    private $config = null; private $authenticator = null;
+    private Config $config; 
+    private ?Authenticator $authenticator;
     
     public static function getVersion() : array { return array(0,0,1); } 
     

@@ -12,7 +12,7 @@ abstract class AuthEntity extends StandardObject
 
 class InheritedProperty
 {
-    private $value; private $source;
+    private $value; private ?AuthEntity $source;
     public function GetValue() { return $this->value; }
     public function GetSource() : ?AuthEntity { return $this->source; }
     public function __construct($value, ?AuthEntity $source){

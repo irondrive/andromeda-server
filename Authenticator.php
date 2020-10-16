@@ -25,15 +25,19 @@ use Andromeda\Core\DecryptionFailedException;
 
 class Authenticator
 {
-    private $account = null; private $session = null; private $client = null; 
-    private $database = null; private $input = null;
+    private Account $account; 
+    private Session $session; 
+    private Client $client;     
+    private Input $input;
     
+    private ObjectDatabase $database; 
+   
     public function GetAccount() : Account { return $this->account; }
     public function GetSession() : Session { return $this->session; }
     public function GetClient() : Client { return $this->client; }
     
-    private $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
-    private $realaccount = null; public function GetRealAccount() : Account { return $this->realaccount; }
+    private bool $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
+    private ?Account $realaccount;    public function GetRealAccount() : Account { return $this->realaccount; }
     
     private function __construct(ObjectDatabase $database, Input $input)
     {

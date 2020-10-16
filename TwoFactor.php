@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\{StandardObject, ClientObject};
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -36,7 +36,7 @@ class UsedToken extends StandardObject
     }
 }
 
-class TwoFactor extends StandardObject implements ClientObject
+class TwoFactor extends StandardObject
 {
     public static function GetFieldTemplate() : array
     {
