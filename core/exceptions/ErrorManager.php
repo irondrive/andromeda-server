@@ -13,20 +13,21 @@ class DuplicateHandlerException extends Exceptions\ServerException  { public $me
 
 class ErrorManager
 {
-    private $API; private $interface;
+    private ?Main $API = null; 
+    private IOInterface $interface;
     
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
     public function GetDebug() : bool
     {
-        if (isset($this->API) && $this->API->GetConfig() !== null) 
+        if ($this->API !== null && $this->API->GetConfig() !== null) 
             return $this->API->GetDebug();
         else return CLI::isApplicable();
     }
     
     public function HandleClientException(ClientException $e) : Output
     {
-        if (isset($this->API)) $this->API->rollBack();
+        if ($this->API !== null) $this->API->rollBack();
             
         $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
             
@@ -35,9 +36,9 @@ class ErrorManager
     
     public function HandleThrowable(\Throwable $e) : Output
     {
-        if (isset($this->API)) $this->API->rollBack();
+        if ($this->API !== null) $this->API->rollBack();
         
-        if (isset($this->API) && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
+        if ($this->API !== null && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
 
         $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
 
@@ -66,7 +67,7 @@ class ErrorManager
     private function Log(\Throwable $e) : void
     {
         $logged = false; $logdir = null;
-        if (isset($this->API) && $this->API->GetConfig() !== null)
+        if ($this->API !== null && $this->API->GetConfig() !== null)
         {
             $logdir = $this->API->GetConfig()->GetDataDir();
             if ($this->API->GetConfig()->GetDebugLog2File()) 
@@ -90,7 +91,7 @@ class ErrorManager
         if ($e = $e->getPrevious() !== null) $this->Log($e);
     }   
     
-    private $logfileok = true;
+    private bool $logfileok = true;
     
     private function Log2File(string $datadir, string $data) : void
     {

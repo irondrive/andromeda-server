@@ -15,7 +15,11 @@ const RETURN_SCALAR = 0; const RETURN_OBJECT = 1; const RETURN_OBJECTS = 2;
 
 class Scalar
 {
-    protected $myfield; protected $tempvalue; protected $realvalue; protected $delta = 0; protected $alwaysSave;
+    protected string $myfield; 
+    protected $tempvalue;
+    protected $realvalue; 
+    protected int $delta = 0; 
+    protected bool $alwaysSave = false;
     
     public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
     public static function GetReturnType(){ return RETURN_SCALAR; }
@@ -35,16 +39,15 @@ class Scalar
         $this->database = $database; 
         $this->parent = $parent; 
         $this->myfield = $myfield; 
-        $this->tempvalue = $this->tempvalue ?? $value; 
-        $this->realvalue = $this->realvalue ?? $value;
+        $this->tempvalue ??= $value; 
+        $this->realvalue ??= $value;
     }
     
     public function GetMyField() : string { return $this->myfield; }
     public function GetAlwaysSave() : bool { return $this->alwaysSave; }
     
-    public function GetValue() { return $this->tempvalue; }
-    public function GetRealValue() { return $this->realvalue; }
-    
+    public function GetValue(bool $allowTemp = true) { return $allowTemp ? $this->tempvalue : $this->realvalue; }
+
     public function GetDelta() : int { return $this->delta; }
     public function ResetDelta() : self { $this->delta = 0; return $this; }
 
@@ -79,7 +82,7 @@ class Counter extends Scalar
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
         parent::Initialize($database, $parent, $myfield, $value ?? 0);
-    }
+    }        
     
     public function Delta(int $delta = 1) : bool 
     { 
@@ -106,8 +109,11 @@ class JSON extends Scalar
 
 class ObjectRef extends Scalar
 {
-    protected $database; protected $object;
-    protected $refclass; protected $reffield;   
+    protected ObjectDatabase $database; 
+    protected ?BaseObject $object = null;
+    
+    protected string $refclass; 
+    protected ?string $reffield;   
     
     public static function GetReturnType(){ return RETURN_OBJECT; }
 
@@ -123,13 +129,10 @@ class ObjectRef extends Scalar
     
     public function GetObject() : ?BaseObject
     {
-        if ($this->realvalue === null) return null;
+        $id = $this->GetValue();
+        if ($id === null) return null;
         
-        if (!isset($this->object))
-        {
-            $this->object = $this->GetRefClass()::LoadByID($this->database, $this->realvalue);
-        }
-        return $this->object;
+        return $this->object ?? $this->GetRefClass()::LoadByID($this->database, $id);
     }
     
     public function SetObject(?BaseObject $object) : bool
@@ -139,7 +142,7 @@ class ObjectRef extends Scalar
         if ($object !== null && !is_a($object, $this->GetBaseClass())) 
             throw new ObjectTypeException();
         
-        if ($object !== null) $this->realvalue = $object->ID(); else $this->realvalue = null;
+        $this->SetValue( ($object !== null) ? $object->ID() : null );
         
         $this->object = $object; $this->delta++; return true;
     }
@@ -160,8 +163,7 @@ class ObjectPoly extends ObjectRef
         if ($value === null) return;
         
         $value = explode('*',$value);
-        $this->realvalue = $value[0];
-        $this->tempvalue = $value[0];
+        $this->SetValue($value[0]);
         $this->refclass = $value[1];
     }
     
@@ -169,8 +171,8 @@ class ObjectPoly extends ObjectRef
     
     public function GetDBValue() : ?string 
     { 
-        if ($this->realvalue === null) return null; 
-        else return $this->realvalue.'*'.$this->refclass; 
+        if ($this->GetValue() === null) return null; 
+        else return $this->GetValue().'*'.$this->refclass; 
     }
     
     public function SetObject(?BaseObject $object) : bool
@@ -187,10 +189,15 @@ const REFSTYPE_SINGLE = 0; const REFSTYPE_MANY = 1;
 
 class ObjectRefs extends Counter
 {
-    protected $database; protected $objects; 
-    protected $parent; protected $refclass; protected $reffield;
+    protected ObjectDatabase $database; 
+    protected array $objects; 
     
-    protected $refs_added = array(); protected $refs_deleted = array();
+    protected BaseObject $parent; 
+    protected string $refclass; 
+    protected string $reffield;
+    
+    protected array $refs_added = array();
+    protected array $refs_deleted = array();
     
     public static function GetReturnType(){ return RETURN_OBJECTS; }
     public static function GetRefsType(){ return REFSTYPE_SINGLE; }
@@ -263,7 +270,8 @@ class ObjectRefs extends Counter
 
 class ObjectJoin extends ObjectRefs
 {
-    protected $parent; protected $joinclass;
+    protected BaseObject $parent; 
+    protected string $joinclass;
     
     public static function GetRefsType(){ return REFSTYPE_MANY; }
     

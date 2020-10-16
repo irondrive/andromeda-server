@@ -15,10 +15,12 @@ class EmptyRecipientsException extends Exceptions\ServerException   { public $me
 
 class EmailRecipient
 {
-    private $name = null; private $address = null;
-    public function GetAddress() : string { return $this->address; }
+    private ?string $name; 
+    private string $address;
+    
     public function GetName() : ?string { return $this->name; }
-    public function __construct(string $address, string $name = null) {
+    public function GetAddress() : string { return $this->address; }
+    public function __construct(string $address, ?string $name = null) {
         $this->address = $address; $this->name = $name; }
         
     public function ToString() : string

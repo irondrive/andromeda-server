@@ -13,10 +13,10 @@ interface Transactions { public function rollBack(); public function commit(); }
 class Database implements Transactions {
 
     private $connection; 
-    private $read_only = false;
+    private bool $read_only = false;
     
-    private $stats_stack = array();
-    private $queries = array();
+    private array $stats_stack = array();
+    private array $queries = array();
     
     public function __construct()
     {

@@ -7,7 +7,12 @@ class InvalidOutputException extends Exceptions\ServerException { public $messag
 
 class Output
 {
-    private $ok; private $code; private $data; private $metrics; private $debug;
+    private bool $ok; 
+    private int $code; 
+    private $data; 
+    
+    private ?array $metrics = null; 
+    private ?array $debug = null;
     
     public function GetOK() : bool { return $this->ok; }
     public function GetHTTPCode() : int { return $this->code; }

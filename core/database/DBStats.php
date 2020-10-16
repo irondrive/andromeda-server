@@ -2,7 +2,11 @@
 
 class DBStats
 {
-    private $reads = 0; private $writes = 0; private $read_time = 0; private $write_time = 0; private $queries = array();
+    private int $reads = 0; 
+    private int $writes = 0; 
+    private float $read_time = 0; 
+    private float $write_time = 0; 
+    private array $queries = array();
     
     public function __construct(){ $this->start_time = microtime(true); }
 

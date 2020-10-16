@@ -9,8 +9,8 @@ class DuplicateUniqueKeyException extends Exceptions\ServerException    { public
 
 class ObjectDatabase extends Database
 {
-    private $objects = array();     /* array[id => BaseObject] */
-    private $modified = array();    /* array[id => BaseObject] */
+    private array $objects = array();     /* array[id => BaseObject] */
+    private array $modified = array();    /* array[id => BaseObject] */
 
     public function isModified(BaseObject $obj) : bool 
     { 
@@ -30,7 +30,7 @@ class ObjectDatabase extends Database
     
     public function saveObjects(bool $isRollback = false) : void
     {
-        foreach ($this->modified as $object) $object->Save();
+        foreach ($this->modified as $object) $object->Save($isRollback);
     }
     
     public function commit(bool $dryrun = false) : void
@@ -133,12 +133,12 @@ class ObjectDatabase extends Database
         return ($criteria_string?"WHERE $criteria_string":"");
     }
     
-    public static function BuildMatchAnyWhereQuery(array &$data, string $field, array $values, bool $like = false) : string
+    public static function BuildMatchAnyWhereQuery(array &$data, string $key, array $values, bool $like = false) : string
     {
         $criteria = array(); $i = 0; $s = $like ? 'LIKE' : '=';
         
         foreach ($values as $value) {
-            array_push($criteria, "$field $s :dat$i");
+            array_push($criteria, "$key $s :dat$i");
             $data["dat$i"] = $value; $i++;
         }
         

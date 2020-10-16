@@ -19,18 +19,24 @@ require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
-class UnknownAppException extends Exceptions\ClientErrorException     { public $message = "UNKNOWN_APP"; }
-class MaintenanceException extends Exceptions\ClientDeniedException    { public $message = "SERVER_DISABLED"; }
+class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
+class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
 class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
 
 class Main implements Transactions
 { 
-    private $construct_stats; private $commit_stats; 
-    private $run_stats = array(); private $sum_stats = null;
+    private array $construct_stats; 
+    private array $commit_stats; 
+    private array $run_stats = array(); 
+    private DBStats $sum_stats;
     
-    private $apps = array(); private $contexts = array(); 
-    private $config; private $database; private $interface;
+    private array $apps = array(); 
+    private array $contexts = array(); 
+    
+    private ?Config $config; 
+    private ?ObjectDatabase $database; 
+    private IOInterface $interface;
     
     public function GetApps() : array { return $this->apps; }
     public function GetConfig() : ?Config { return $this->config; }
@@ -66,8 +72,9 @@ class Main implements Transactions
             $this->apps[$app] = new $app_class($this);
         }
 
-        $this->construct_stats = $this->database->popStatsContext();
-        $this->sum_stats->Add($this->construct_stats);
+        $construct_stats = $this->database->popStatsContext();
+        $this->sum_stats->Add($construct_stats);
+        $this->construct_stats = $construct_stats->getStats();
     }
     
     public function Run(Input $input)
@@ -133,8 +140,9 @@ class Main implements Transactions
         
         if ($this->GetDebug()) 
         {
-            $this->commit_stats = $this->database->popStatsContext();
-            $this->sum_stats->Add($this->commit_stats);
+            $commit_stats = $this->database->popStatsContext();
+            $this->sum_stats->Add($commit_stats);
+            $this->commit_stats = $commit_stats->getStats();
             return $this->GetMetrics(); 
         }
         else return null;
@@ -149,9 +157,9 @@ class Main implements Transactions
     private function GetMetrics() : array
     {
         $ret = array(
-            'construct_stats' => $this->construct_stats->getStats(),
+            'construct_stats' => $this->construct_stats,
             'run_stats' => $this->run_stats,
-            'commit_stats' => $this->commit_stats->getStats(),
+            'commit_stats' => $this->commit_stats,
             'stats_total' => $this->sum_stats->getStats(),
             'peak_memory' => memory_get_peak_usage(),
             'objects' => $this->database->getLoadedObjects(),

@@ -9,7 +9,7 @@ class UnknownActionException extends Exceptions\ClientErrorException { public $m
 
 abstract class AppBase implements Transactions
 {
-    protected $API;
+    protected Main $API;
 
     public function __construct(Main $API)
     {

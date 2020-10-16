@@ -5,8 +5,6 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
 
-interface ClientObject { public function GetClientObject(int $level = 0) : array; }
-
 abstract class StandardObject extends BaseObject
 {
     public static function GetFieldTemplate() : array
