@@ -97,19 +97,19 @@ class CLI extends IOInterface
     
     private function GetInput(array $argv) : Input
     {
-        if (count($argv) < 2) { throw new IncorrectCLIUsageException(); }
+        if (count($argv) < 2) throw new IncorrectCLIUsageException();
         
         $app = $argv[0]; $action = $argv[1]; $params = new SafeParams(); $files = array();
         
         for ($i = 2; $i < count($argv); $i++)
         {
-            if (substr($argv[$i],0,2) !== "--") { throw new IncorrectCLIUsageException(); }
+            if (substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
             
             $param = explode('_',substr($argv[$i],2),3);
             
             if ($param[0] == 'app')
             {
-                if (count($param) != 3 || !isset($argv[$i+1])) { throw new IncorrectCLIUsageException(); }
+                if (count($param) != 3 || !isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                 $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;
             }
             
@@ -117,14 +117,14 @@ class CLI extends IOInterface
             {
                 while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
                 {
-                    $infile = $argv[++$i];
+                    $infile = $argv[$i+1];
                     if (!is_readable($infile)) throw new InvalidFileException();   
                     
                     $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
-                    copy($infile, $tmpfile); 
+                    copy($infile, $tmpfile); // TODO optional param to move
                     
                     array_push($this->tmpfiles, $tmpfile);
-                    array_push($files, $tmpfile); $i++;
+                    $files[basename($infile)] = $tmpfile; $i++;
                 }
             }
         }
@@ -147,7 +147,7 @@ class CLI extends IOInterface
     
     public function __destruct()
     {
-        foreach ($this->tmpfiles as $file) unlink($file);
+        foreach ($this->tmpfiles as $file) try { unlink($file); } catch (\Throwable $e) { }
     }
     
     private $output_json = false;
@@ -156,7 +156,7 @@ class CLI extends IOInterface
     {
         if ($this->outmode == self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString()."\n"; } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
+            try { echo $output->GetAsString($this->debug)."\n"; } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
 
         if ($this->outmode == self::OUTPUT_PRINTR)

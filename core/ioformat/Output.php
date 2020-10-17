@@ -34,9 +34,9 @@ class Output
         return $array; 
     }
     
-    public function GetAsString() : string
+    public function GetAsString(bool $debug = true) : string
     {
-        if (!is_string($this->data) || $this->debug != null) 
+        if (!is_string($this->data) || ($debug && $this->debug !== null))
             throw new InvalidOutputException();
         return $this->data;
     }
