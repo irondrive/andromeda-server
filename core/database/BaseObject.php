@@ -43,9 +43,8 @@ abstract class BaseObject
         if ($obj !== null) return $obj; else throw new ObjectNotFoundException($class);
     }
         
-    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?self
+    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : ?self
     {
-        if ($key === null) return null;
         $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
     }
 
