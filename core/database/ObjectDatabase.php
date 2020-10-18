@@ -69,7 +69,7 @@ class ObjectDatabase extends Database
             }
         }
         
-        return array_filter($output, function($obj){ return !$obj->isDeleted(); });
+        return $output;
     }
     
     private function TryPreloadObjectByID(string $class, string $id) : ?BaseObject
@@ -93,7 +93,9 @@ class ObjectDatabase extends Database
         
         $result = $this->query($query, $criteria, Database::QUERY_READ);
         
-        return $this->Rows2Objects($result, $class);
+        $objects = $this->Rows2Objects($result, $class);
+        
+        return array_filter($objects, function($obj){ return !$obj->isDeleted(); });
     }
     
     public function DeleteObjectsByQuery(string $class, string $query, array $criteria, ?int $limit = null, bool $notify = false) : self
