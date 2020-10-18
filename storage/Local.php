@@ -49,4 +49,47 @@ class Local extends Storage
     {
         return unlink($this->GetPath().$path);
     }
+    
+    public function ImportFile(string $src, string $dest) : bool
+    {
+        return rename($src, $this->GetPath().$dest);
+    }
+    
+    private $handles = array();
+    
+    public function ReadBytes(string $path, int $start, int $length) : string
+    {
+        $path = $this->GetPath().$path;
+        if (!array_key_exists($path, $this->handles))
+            $handles[$path] = fopen($path,'rb');
+        
+        fseek($handles[$path], $start);
+        return fread($handles[$path], $length);
+    }
+    
+    public function __destruct()
+    {
+        foreach ($this->handles as $handle) fclose($handle);
+    }
+    
+    public function RenameFile(string $old, string $new) : bool
+    {
+        return rename($this->GetPath().$old, $this->GetPath().$new);
+    }
+    
+    public function RenameFolder(string $old, string $new) : bool
+    {
+        return rename($this->GetPath().$old, $this->GetPath().$new);
+    }
+    
+    public function MoveFile(string $old, string $new) : bool
+    {
+        return rename($this->GetPath().$old, $this->GetPath().$new);
+    }
+    
+    public function MoveFolder(string $old, string $new) : bool
+    {
+        return rename($this->GetPath().$old, $this->GetPath().$new);
+    }
 }
+

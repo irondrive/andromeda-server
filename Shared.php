@@ -16,20 +16,22 @@ class Shared extends FilesystemImpl
         else return $this->GetItemPath($parent).'/'.$item->GetName();
     }
     
+    private function GetFilePath(File $file) : string { return $this->GetItemPath($file); }
+    private function GetFolderPath(Folder $folder) : string { return $this->GetItemPath($folder).'/'; }
+    
     public function RefreshFile(File $file, ?string $path = null) : self
     {
         $storage = $this->GetStorage();        
         if ($path === null)
         {
-            $path = $this->GetItemPath($file);
+            $path = $this->GetFilePath($file);
             if (!$storage->isFile($path)) { $file->NotifyDelete(); return $this; }
         }
 
         $file->SetAccessed($storage->GetATime($path))
              ->SetCreated($storage->GetCTime($path))
              ->SetModified($storage->GetMTime($path))
-             ->SetSize($storage->GetSize($path))->Save();
-        
+             ->SetSize($storage->GetSize($path))->Save();        
         return $this;
     }
     
@@ -38,7 +40,7 @@ class Shared extends FilesystemImpl
         $storage = $this->GetStorage();
         if ($path === null)
         {
-            $path = $this->GetItemPath($folder).'/';
+            $path = $this->GetFolderPath($folder);
             if (!$storage->isFolder($path)) { $folder->NotifyDelete(); return $this; }
         }
  
@@ -46,9 +48,9 @@ class Shared extends FilesystemImpl
                ->SetCreated($storage->GetCTime($path))
                ->SetModified($storage->GetMTime($path))->Save();
 
-        if ($doContents) $this->RefreshFolderContents($folder, $path);
-        
-        return $this;
+        if ($doContents) 
+            $this->RefreshFolderContents($folder, $path);         
+        return $this;        
     }
     
     private function RefreshFolderContents(Folder $folder, string $path) : void
@@ -82,11 +84,10 @@ class Shared extends FilesystemImpl
             if ($dbitem === null)
             {
                 $itemclass = $isfile ? File::class : Folder::class;
-                $dbitem = $itemclass::Create($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem, true);       
+                $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem);       
             }
             
-            if ($isfile) $this->RefreshFile($dbitem, $fspath);
-                  else $this->RefreshFolder($dbitem, false, $fspath);
+            $dbitem->Refresh();
         }
         
         foreach ($dbitems as $dbitem) $dbitem->NotifyDelete();
@@ -94,22 +95,67 @@ class Shared extends FilesystemImpl
     
     public function CreateFolder(Folder $folder) : self
     {
-        $path = $this->GetItemPath($folder).'/';
+        $path = $this->GetFolderPath($folder);
         $this->GetStorage()->CreateFolder($path);
         return $this;
     }
 
     public function DeleteFolder(Folder $folder) : self
     {
-        $path = $this->GetItemPath($folder).'/';
+        $path = $this->GetFolderPath($folder);
         $this->GetStorage()->DeleteFolder($path);
+        return $this;
+    }
+    
+    public function ImportFile(File $file, string $path) : self
+    {
+        $dest = $this->GetFilePath($file);
+        $this->GetStorage()->ImportFile($path, $dest);
         return $this;
     }
     
     public function DeleteFile(File $file) : self
     {
-        $path = $this->GetItemPath($file);
+        $path = $this->GetFilePath($file);
         $this->GetStorage()->DeleteFile($path);
+        return $this;
+    }
+    
+    public function ReadBytes(File $file, int $start, int $length) : string
+    {
+        $path = $this->GetFilePath($file);
+        return $this->GetStorage()->ReadBytes($path, $start, $length);
+    }
+    
+    public function RenameFile(File $file, string $name) : self
+    { 
+        $oldpath = $this->GetFilePath($file);
+        $newpath = $this->GetFolderPath($file->GetParent()).$name;
+        $this->GetStorage()->RenameFolder($oldpath, $newpath);
+        return $this;
+    }
+    
+    public function RenameFolder(Folder $folder, string $name) : self
+    { 
+        $oldpath = $this->GetFolderPath($folder);
+        $newpath = $this->GetFolderPath($folder->GetParent()).$name;
+        $this->GetStorage()->RenameFolder($oldpath, $newpath);
+        return $this;
+    }
+    
+    public function MoveFile(File $file, Folder $parent) : self
+    { 
+        $path = $this->GetFilePath($file);
+        $dest = $this->GetFolderPath($parent).$file->GetName();
+        $this->GetStorage()->MoveFile($path, $dest);
+        return $this;
+    }
+    
+    public function MoveFolder(Folder $folder, Folder $parent) : self
+    { 
+        $path = $this->GetFolderPath($folder);
+        $dest = $this->GetFolderPath($parent).$folder->GetName();
+        $this->GetStorage()->MoveFolder($path, $dest);
         return $this;
     }
     

@@ -13,41 +13,63 @@ class File extends Item
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
+            'size' => null,   
             'parent' => new FieldTypes\ObjectRef(Folder::class, 'files')
         ));
-    }
-    
-    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $isNotify = false) : self
-    {
-        $file = parent::BaseCreate($database)->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name);
-        
-        // if (!$isNotify) $file->GetFilesystemImpl()->CreateFile($file);
-        // TODO FILE CRAETE send to underlying storage, and notify parameter
-        
-        return $file;
     }
     
     public function GetName() : string   { return $this->GetScalar('name'); }
     public function GetParent() : Folder { return $this->GetObject('parent'); }
     
-    public function SetSize(int $size) : self { return $this->DeltaCounter('size', $size - ($this->TryGetCounter('size') ?? 0)); }
+    public function GetSize() : int { return $this->TryGetScalar('size') ?? 0; }
     
-    private bool $refreshed = false;
-    protected function Refresh() : void
+    public function SetSize(int $size) : self 
     {
-        if ($this->isDeleted()) return;
+        $oldsize = $this->TryGetScalar('size') ?? 0;
+        $this->GetParent()->DeltaSize($size-$oldsize);
+        return $this->SetScalar('size', $size); 
+    }
+        
+    private bool $refreshed = false;
+    public function Refresh() : self
+    {
+        if ($this->deleted) return $this;
         else if (!$this->refreshed)
         {
             $this->refreshed = true;
             $this->GetFilesystemImpl()->RefreshFile($this);
         }
+        return $this;
     }
     
-    public static function DeleteByParent(ObjectDatabase $database, Parent $parent) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('parent'=>$parent->ID()));
+    public function SetName(string $name) : self 
+    { 
+        $this->GetFilesystemImpl()->RenameFile($this, $name); 
+        return parent::SetName($name); 
     }
+    
+    public function SetParent(Folder $folder) : self
+    {
+        $this->GetFilesystemImpl()->MoveFile($this, $folder);
+        return parent::SetParent($folder);
+    }
+
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
+    {
+        return parent::BaseCreate($database)->SetObject('filesystem',$parent->GetFilesystem())
+            ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name);
+    }
+    
+    public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path) : self
+    {
+        $file = self::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path));        
+        $file->GetFilesystemImpl()->ImportFile($file, $path); return $file;       
+    }
+    
+    public function ReadBytes(int $start, int $length) : string
+    {
+        $this->SetAccessed(); return $this->GetFilesystemImpl()->ReadBytes($this, $start, $length);
+    }    
     
     public function NotifyDelete() : void { parent::Delete(); }
 
@@ -60,14 +82,14 @@ class File extends Item
         $this->NotifyDelete();
     }
     
-    public function GetClientObject() : array
+    public function GetClientObject() : ?array
     {
-        $this->Refresh();
         if ($this->isDeleted()) return null;
         
         $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
+            'size' => $this->TryGetScalar('size'),
             'dates' => $this->GetAllDates(),
             'counters' => $this->GetAllCounters(),
             'owner' => $this->GetObjectID('owner'),

@@ -32,7 +32,7 @@ class Filesystem extends StandardObject
     }
     
     public function isShared() : bool { return $this->TryGetScalar('shared') ?? false; }
-    public function isReadOnly() : bool { return $this->TryGetScalar('readonly') ?? false; } // TODO read-only
+    public function isReadOnly() : bool { return $this->TryGetScalar('readonly') ?? false; }
     
     public function GetName() : ?string { return $this->TryGetScalar('name'); }
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
@@ -46,14 +46,23 @@ class Filesystem extends StandardObject
         // TODO FUTURE maybe use a manual query to get this done in a single query        
         $found = static::LoadManyMatchingAll($database, array('owner'=>$account->ID(),'name'=>null));
         if (!count($found)) $found = static::LoadManyMatchingAll($database, array('owner'=>null,'name'=>null));
-        return array_values($found)[0];
+        return array_values($found)[0]; // TODO what if all their FSes have a name? should not be an error
+        // I don't like using the name to determine the default, maybe we could even let the user change the default?
     }
     
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
-        // TODO FUTURE maybe use a manual query to get this done in a single query
-        $mine = static::LoadManyMatchingAll($database, array('owner'=>$account->ID()));
-        $global = static::LoadManyMatchingAll($database, array('owner'=>null));
-        return array_merge($mine, $global);
+        return static::LoadManyMatchingAny($database, 'owner', array(null, $account->ID()));
+    }
+    
+    public function GetClientObject() : array
+    {
+        return array(
+            'id' => $this->ID(),
+            'name' => $this->TryGetScalar('name'),
+            'shared' => $this->GetScalar('shared'),
+            'readonly' => $this->GetScalar('readonly'),
+            'owner' => $this->GetObjectID('owner')
+        );
     }
 }
