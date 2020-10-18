@@ -19,7 +19,6 @@ class ObjectDatabase extends Database
     
     public function setModified(BaseObject $obj) : void
     {
-        if ($obj->isDeleted()) return;
         $this->modified[$obj->ID()] = $obj;
     }
      
@@ -68,9 +67,9 @@ class ObjectDatabase extends Database
                 $object = new $class($this, $row);
                 $output[$id] = $object; $this->objects[$id] = $object; 
             }
-        }       
+        }
         
-        return $output; 
+        return array_filter($output, function($obj){ return !$obj->isDeleted(); });
     }
     
     private function TryPreloadObjectByID(string $class, string $id) : ?BaseObject

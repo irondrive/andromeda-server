@@ -22,10 +22,9 @@ abstract class BaseObject
         return self::LoadByUniqueKey($database,'id',$id);
     }
     
-    public static function TryLoadByID(ObjectDatabase $database, ?string $id) : ?self
+    public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
     {
-        if ($id === null) return null;
-        else return self::TryLoadByUniqueKey($database,'id',$id);
+        return self::TryLoadByUniqueKey($database,'id',$id);
     }
         
     public static function LoadManyByID(ObjectDatabase $database, array $ids) : array 
@@ -40,8 +39,8 @@ abstract class BaseObject
         
     protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
     {
-        $class = static::class; $object = $database->TryLoadObjectByUniqueKey($class, $field, $key);
-        if ($object !== null) return $object; else throw new ObjectNotFoundException($class);
+        $class = static::class; $obj = $database->TryLoadObjectByUniqueKey($class, $field, $key);
+        if ($obj !== null) return $obj; else throw new ObjectNotFoundException($class);
     }
         
     protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, ?string $key) : ?self
@@ -321,7 +320,7 @@ abstract class BaseObject
         $this->created = false; return $this;
     } 
     
-    private bool $deleted = false; public function isDeleted() : bool { return $this->deleted; }
+    protected bool $deleted = false; public function isDeleted() : bool { return $this->deleted; }
     
     public function Delete() : void
     {
