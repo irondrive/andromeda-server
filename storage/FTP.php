@@ -22,6 +22,11 @@ class FTP extends Storage
     }
     
     private $ftp = null;
+    
+    // TODO maybe use PHP regular fopen/fread protocol wrappers stuff?
+    // not sure how else to read a byte range with FTP
+    // https://stackoverflow.com/questions/20997757/send-partial-of-ftp-stream-to-php-output
+    // probably could use a base class here if all the functions will be the same
 
     public function SubConstruct() : void
     {

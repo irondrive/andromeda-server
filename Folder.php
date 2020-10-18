@@ -1,11 +1,15 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/Item.php");
+
+class MoveLoopException extends Exceptions\ClientErrorException { public $message = "CANNOT_MOVE_FOLDER_INTO_ITSELF"; }
 
 class Folder extends Item
 {
@@ -13,29 +17,102 @@ class Folder extends Item
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'counters__visits' => new FieldTypes\Counter(),
+            'counters__size' => new FieldTypes\Counter(),   
             'parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
             'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
-            'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent')
+            'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
+            'counters__subfiles' => new FieldTypes\Counter(),
+            'counters__subfolders' => new FieldTypes\Counter()
         ));
     }
-    
-    // TODO FUTURE folders will need to track number of subfiles/folders separately since the ObjectRefs is not recursive...
-    
+
     public function GetName() : ?string   { return $this->TryGetScalar('name'); }
+    public function GetSize() : int       { return $this->TryGetCounter('size') ?? 0; }
     public function GetParent() : ?Folder { return $this->TryGetObject('parent'); }
     public function GetFiles() : array    { $this->Refresh(true); return $this->GetObjectRefs('files'); }
-    public function GetFolders() : array  { $this->Refresh(true); return $this->GetObjectRefs('folders'); }   
+    public function GetFolders() : array  { $this->Refresh(true); return $this->GetObjectRefs('folders'); }
+    
+    public function CountVisit() : self   { return $this->DeltaCounter('visits'); }
+    
+    public function DeltaSize(int $size) : self 
+    { 
+        if (($parent = $this->GetParent()) !== null)
+            $parent->DeltaSize($size);
+        return $this->DeltaCounter('size',$size); 
+    }   
+    
+    public function SetName(string $name) : self
+    {
+        $this->GetFilesystemImpl()->RenameFolder($this, $name);
+        return parent::SetName($name);
+    }
+    
+    public function SetParent(Folder $folder) : self
+    {
+        if ($folder->ID() === $this->ID())
+            throw new MoveLoopException();
+        
+        $tmpparent = $folder;
+        while (($tmpparent = $tmpparent->GetParent()) !== null)
+        {
+            if ($tmpparent->ID() === $this->ID())
+                throw new MoveLoopException();
+        }
+        
+        $this->GetFilesystemImpl()->MoveFolder($this, $folder);
+        
+        return parent::SetParent($folder);
+    }
+    
+    private function AddItemCounts(BaseObject $object) : void
+    {
+        $this->SetModified();
+        $this->DeltaCounter('size', $object->GetSize());
+        $this->DeltaCounter('bandwidth', $object->GetBandwidth());
+        $this->DeltaCounter('downloads', $object->GetDownloads());
+        if (is_a($object, File::class)) $this->DeltaCounter('subfiles');
+        if (is_a($object, Folder::class)) $this->DeltaCounter('subfolders');
+        
+        $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($object);
+    }
+    
+    private function SubItemCounts(BaseObject $object) : void
+    {
+        $this->SetModified();
+        $this->DeltaCounter('size', $object->GetSize() * -1);
+        $this->DeltaCounter('bandwidth', $object->GetBandwidth() * -1);
+        $this->DeltaCounter('downloads', $object->GetDownloads() * -1);
+        if (is_a($object, File::class)) $this->DeltaCounter('subfiles', -1);
+        if (is_a($object, Folder::class)) $this->DeltaCounter('subfolders', -1);
+        
+        $parent = $this->GetParent(); if ($parent !== null) $parent->SubItemCounts($object);
+    }
+
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    {
+        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object);
+        
+        return parent::AddObjectRef($field, $object, $notification);
+    }
+    
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    {        
+        if ($field === 'files' || $field === 'folders') $this->SubItemCounts($object);
+        
+        return parent::RemoveObjectRef($field, $object, $notification);
+    }
     
     private bool $refreshed = false;
     private bool $subrefreshed = false;
-    protected function Refresh(bool $doContents) : void
+    public function Refresh(bool $doContents = false) : self
     {
-        if ($this->isDeleted()) return;
+        if ($this->deleted) return $this;
         else if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true; $this->subrefreshed = $doContents;
             $this->GetFilesystemImpl()->RefreshFolder($this, $doContents);   
         }
+        return $this;
     }
 
     private static function CreateRoot(ObjectDatabase $database, Filesystem $filesystem, ?Account $account) : self
@@ -43,34 +120,18 @@ class Folder extends Item
         return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
     }
     
-    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $isNotify = false) : self
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = self::CreateRoot($database, $parent->GetFilesystem(), $account)
-            ->SetObject('parent',$parent)->SetScalar('name',$name);
-
-        if (!$isNotify) $folder->GetFilesystemImpl()->CreateFolder($folder);
-            
-        return $folder;
-    }
-
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
-    {
-        $loaded = self::TryLoadByID($database, $id);        
-        if (!$loaded) return null;
-        
-        $owner = $loaded->GetObjectID('owner');
-        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
+        return self::CreateRoot($database, $parent->GetFilesystem(), $account)
+        ->SetObject('parent',$parent)->SetScalar('name',$name);
     }
     
-    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, Account $account, string $name) : ?self
+    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $criteria = array('parent'=>$parent->ID(), 'name'=>$name);
-        $loaded = self::LoadManyMatchingAll($database, $criteria);
-        
-        if (!count($loaded)) return null; else $loaded = array_values($loaded)[0];
-        
-        $owner = $loaded->GetObjectID('owner');
-        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
+        $folder = self::NotifyCreate($database, $parent, $account, $name);
+        $folder->GetFilesystemImpl()->CreateFolder($folder);
+            
+        return $folder;
     }
     
     public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?Filesystem $filesystem = null) : self
@@ -89,20 +150,15 @@ class Folder extends Item
         else
         {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
-            return self::CreateRoot($database, $filesystem, $owner);
+            return self::CreateRoot($database, $filesystem, $owner)->Refresh();
         }
-    }
-    
-    public static function DeleteByParent(ObjectDatabase $database, Parent $parent) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('parent'=>$parent->ID()));
     }
     
     private bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
     
     public function DeleteChildren(bool $isNotify = true) : void
     {
-        $this->Refresh(true);
+        if (!$isNotify) $this->Refresh(true);
         $this->notifyDeleted = $isNotify;
         File::DeleteByParent($this->database, $this);
         Folder::DeleteByParent($this->database, $this);
@@ -132,8 +188,9 @@ class Folder extends Item
     
     public function GetClientObject(int $level = self::ONLYSELF) : ?array
     {
-        $this->Refresh(false); 
         if ($this->isDeleted()) return null;
+        
+        $this->SetAccessed();
 
         $data = array(
             'id' => $this->ID(),

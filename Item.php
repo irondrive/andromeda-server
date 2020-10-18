@@ -1,11 +1,15 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/Filesystem.php");
+
+class CrossFilesystemException extends Exceptions\ClientErrorException      { public $message = "FILESYSTEM_MISMATCH"; }
 
 abstract class Item extends StandardObject
 {
@@ -15,21 +19,85 @@ abstract class Item extends StandardObject
             'name' => null,
             'dates__created' => null,
             'dates__modified' => null,
-            'dates__accessed' => new FieldTypes\Scalar(null, true),
-            'counters__size' => new FieldTypes\Counter(),            
+            'dates__accessed' => new FieldTypes\Scalar(null, true),         
             'counters__bandwidth' => new FieldTypes\Counter(null, true),
-            'counters__downloads' => new FieldTypes\Counter(),
+            'counters__downloads' => new FieldTypes\Counter(null, true),
             'owner' => new FieldTypes\ObjectRef(Account::class),
             'filesystem' => new FieldTypes\ObjectRef(Filesystem::class)
         ));
     }
     
+    public abstract function Refresh() : self;
+    
+    public function isDeleted() : bool { $this->Refresh(); return parent::isDeleted(); }
+    
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
     
-    public function SetAccessed(int $time) : self { return $this->SetDate('accessed', $time); }
-    public function SetCreated(int $time) : self { return $this->SetDate('created', $time); }
-    public function SetModified(int $time) : self { return $this->SetDate('modified', $time); }
+    public abstract function GetName() : ?string;
+    public abstract function GetSize() : int;
+    public abstract function GetParent() : ?Folder;
+    
+    public function SetName(string $name) : self { return $this->SetScalar('name', $name); }
+    
+    public function SetParent(Folder $folder) : self
+    {
+        if ($folder->GetFilesystemID() !== $this->GetFilesystemID())
+            throw new CrossFilesystemException();
+        return $this->SetObject('parent', $folder);
+    }
     
     protected function GetFilesystem() : Filesystem { return $this->GetObject('filesystem'); }
+    protected function GetFilesystemID() : string { return $this->GetObjectID('filesystem'); }
     protected function GetFilesystemImpl() : FilesystemImpl { return $this->GetFilesystem()->GetIface(); }
+    
+    public function SetAccessed(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('accessed', $time); }
+    public function SetCreated(?int $time = null) : self  { $time ??= microtime(true); return $this->SetDate('created', $time); }
+    public function SetModified(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('modified', $time); }
+    
+    public function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }
+    public function GetDownloads() : int { return $this->GetCounter('downloads'); }
+    
+    public function CountDownload() : self            
+    { 
+        $parent = $this->GetParent();
+        if ($parent !== null) $parent->CountDownload();
+        return $this->DeltaCounter('downloads'); 
+    }
+    
+    public function CountBandwidth(int $bytes) : self 
+    {
+        $parent = $this->GetParent();
+        if ($parent !== null) $parent->CountBandwidth($bytes);
+        return $this->DeltaCounter('bandwidth', $bytes); 
+    }
+
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    {
+        $loaded = self::TryLoadByID($database, $id);
+        if (!$loaded) return null;
+        
+        $owner = $loaded->GetObjectID('owner');
+        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
+    }
+    
+    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, Account $account, string $name) : ?self
+    {
+        $criteria = array('parent'=>$parent->ID(), 'name'=>$name);
+        $loaded = self::LoadManyMatchingAll($database, $criteria);
+        
+        if (!count($loaded)) return null; else $loaded = array_values($loaded)[0];
+        
+        $owner = $loaded->GetObjectID('owner');
+        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
+    }
+    
+    public static function DeleteByParent(ObjectDatabase $database, Parent $parent) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('parent'=>$parent->ID()));
+    }
+    
+    public static function DeleteByOwner(ObjectDatabase $database, Account $owner) : void
+    {
+        parent::DeleteManyMatchingAll($database, array('owner'=>$owner->ID()));
+    }
 }
