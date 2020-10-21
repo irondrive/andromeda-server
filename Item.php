@@ -7,7 +7,8 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/apps/files/Filesystem.php");
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/filesystem/FSImpl.php"); use Andromeda\Apps\Files\Filesystem\FSImpl;
 
 class CrossFilesystemException extends Exceptions\ClientErrorException      { public $message = "FILESYSTEM_MISMATCH"; }
 
@@ -23,7 +24,7 @@ abstract class Item extends StandardObject
             'counters__bandwidth' => new FieldTypes\Counter(null, true),
             'counters__downloads' => new FieldTypes\Counter(null, true),
             'owner' => new FieldTypes\ObjectRef(Account::class),
-            'filesystem' => new FieldTypes\ObjectRef(Filesystem::class)
+            'filesystem' => new FieldTypes\ObjectRef(FSManager::class)
         ));
     }
     
@@ -46,9 +47,9 @@ abstract class Item extends StandardObject
         return $this->SetObject('parent', $folder);
     }
     
-    protected function GetFilesystem() : Filesystem { return $this->GetObject('filesystem'); }
+    protected function GetFilesystem() : FSManager { return $this->GetObject('filesystem'); }
     protected function GetFilesystemID() : string { return $this->GetObjectID('filesystem'); }
-    protected function GetFilesystemImpl() : FilesystemImpl { return $this->GetFilesystem()->GetIface(); }
+    protected function GetFSImpl() : FSImpl { return $this->GetFilesystem()->GetFSImpl(); }
     
     public function SetAccessed(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('accessed', $time); }
     public function SetCreated(?int $time = null) : self  { $time ??= microtime(true); return $this->SetDate('created', $time); }

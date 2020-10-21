@@ -4,11 +4,12 @@ require_once(ROOT."/apps/files/Config.php");
 require_once(ROOT."/apps/files/Item.php");
 require_once(ROOT."/apps/files/File.php");
 require_once(ROOT."/apps/files/Folder.php");
-require_once(ROOT."/apps/files/Filesystem.php");
 
 require_once(ROOT."/apps/files/storage/Storage.php");
 require_once(ROOT."/apps/files/storage/Local.php");
-require_once(ROOT."/apps/files/storage/FTP.php"); use Andromeda\Apps\Files\Storage;
+require_once(ROOT."/apps/files/storage/FTP.php");
+
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -115,6 +116,7 @@ class FilesApp extends AppBase
         if ($file === null) throw new UnknownFileException();
         
         // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
+        // TODO if no page is configured, configure outmode as PLAIN and just show "404 - not found" with MIME type text/plain (do this at the beginning of this function)
         
         $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
         
@@ -157,8 +159,7 @@ class FilesApp extends AppBase
         {
             if (connection_aborted()) break;
             $data = $file->ReadBytes($byte, $chunksize);
-            $file->CountBandwidth(strlen($data));
-            echo $data;
+            $file->CountBandwidth(strlen($data)); echo $data;
         }
         
         return array();
@@ -200,7 +201,7 @@ class FilesApp extends AppBase
             $filesys = $input->TryGetParam('filesystem',SafeParam::TYPE_ID);
             if ($filesys !== null)
             {
-                $filesys = Filesystem::TryLoadByID($this->database, $filesys);  
+                $filesys = FSManager::TryLoadByID($this->database, $filesys);  
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
                 

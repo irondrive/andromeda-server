@@ -55,21 +55,63 @@ class Local extends Storage
         return rename($src, $this->GetPath().$dest);
     }
     
-    private $handles = array();
+    public function CreateFile(string $path) : bool
+    {
+        return touch($this->GetPath().$path);
+    }
+    
+    private $reading = array(); private $writing = array();
+    
+    private function GetHandle(string $path, bool $isWrite)
+    {
+        $writing = array_key_exists($path, $this->writing);
+        $reading = array_key_exists($path, $this->reading);
+        
+        if ($isWrite && $writing)  return $this->writing[$path];
+        if (!$isWrite && $reading) return $this->reading[$path];
+        
+        if ($isWrite)
+        {
+            if ($reading) fclose($this->reading[$path]);            
+            $this->writing[$path] = fopen($path, $reading?'rwb':'wb');            
+            if ($reading) $this->reading[$path] = $this->writing[$path];
+        }
+        else // isRead
+        {
+            if ($writing) fclose($this->writing[$path]);
+            $this->reading[$path] = fopen($path, $writing?'rwb':'rb');
+            if ($writing) $this->writing[$path] = $this->reading[$path];
+        }
+        
+        return $isWrite ? $this->writing[$path] : $this->reading[$path];
+    }
     
     public function ReadBytes(string $path, int $start, int $length) : string
     {
         $path = $this->GetPath().$path;
-        if (!array_key_exists($path, $this->handles))
-            $handles[$path] = fopen($path,'rb');
-        
-        fseek($handles[$path], $start);
-        return fread($handles[$path], $length);
+        $handle = $this->GetHandle($path, false);        
+        fseek($handle, $start); return fread($handle, $length);
+    }
+    
+    public function WriteBytes(string $path, int $start, string $data) : bool
+    {
+        $path = $this->GetPath().$path;
+        $handle = $this->GetHandle($path, true);        
+        fseek($handle, $start); return fwrite($handle, $data);
+    }
+    
+    public function Truncate(string $path, int $length) : bool
+    {
+        $path = $this->GetPath().$path;
+        $handle = $this->GetHandle($path, true);        
+        return ftruncate($handle, $length);
     }
     
     public function __destruct()
     {
-        foreach ($this->handles as $handle) fclose($handle);
+        $handles = array_merge($this->reading, $this->writing);
+        try { foreach ($handles as $handle) fclose($handle); }
+        catch (\Throwable $e) { }        
     }
     
     public function RenameFile(string $old, string $new) : bool

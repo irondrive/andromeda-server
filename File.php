@@ -37,20 +37,20 @@ class File extends Item
         else if (!$this->refreshed)
         {
             $this->refreshed = true;
-            $this->GetFilesystemImpl()->RefreshFile($this);
+            $this->GetFSImpl()->RefreshFile($this);
         }
         return $this;
     }
     
     public function SetName(string $name) : self 
     { 
-        $this->GetFilesystemImpl()->RenameFile($this, $name); 
+        $this->GetFSImpl()->RenameFile($this, $name); 
         return parent::SetName($name); 
     }
     
     public function SetParent(Folder $folder) : self
     {
-        $this->GetFilesystemImpl()->MoveFile($this, $folder);
+        $this->GetFSImpl()->MoveFile($this, $folder);
         return parent::SetParent($folder);
     }
 
@@ -63,12 +63,12 @@ class File extends Item
     public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path) : self
     {
         $file = self::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path));        
-        $file->GetFilesystemImpl()->ImportFile($file, $path); return $file;       
+        $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }
     
     public function ReadBytes(int $start, int $length) : string
     {
-        $this->SetAccessed(); return $this->GetFilesystemImpl()->ReadBytes($this, $start, $length);
+        $this->SetAccessed(); return $this->GetFSImpl()->ReadBytes($this, $start, $length);
     }    
     
     public function NotifyDelete() : void { parent::Delete(); }
@@ -77,7 +77,7 @@ class File extends Item
     {
         $parent = $this->GetParent();
         $isReal = ($parent === null || !$parent->isNotifyDeleted());
-        if ($isReal) $this->GetFilesystemImpl()->DeleteFile($this);
+        if ($isReal) $this->GetFSImpl()->DeleteFile($this);
         
         $this->NotifyDelete();
     }

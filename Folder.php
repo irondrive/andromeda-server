@@ -9,6 +9,8 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 
 require_once(ROOT."/apps/files/Item.php");
 
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+
 class MoveLoopException extends Exceptions\ClientErrorException { public $message = "CANNOT_MOVE_FOLDER_INTO_ITSELF"; }
 
 class Folder extends Item
@@ -43,7 +45,7 @@ class Folder extends Item
     
     public function SetName(string $name) : self
     {
-        $this->GetFilesystemImpl()->RenameFolder($this, $name);
+        $this->GetFSImpl()->RenameFolder($this, $name);
         return parent::SetName($name);
     }
     
@@ -59,7 +61,7 @@ class Folder extends Item
                 throw new MoveLoopException();
         }
         
-        $this->GetFilesystemImpl()->MoveFolder($this, $folder);
+        $this->GetFSImpl()->MoveFolder($this, $folder);
         
         return parent::SetParent($folder);
     }
@@ -110,12 +112,12 @@ class Folder extends Item
         else if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true; $this->subrefreshed = $doContents;
-            $this->GetFilesystemImpl()->RefreshFolder($this, $doContents);   
+            $this->GetFSImpl()->RefreshFolder($this, $doContents);   
         }
         return $this;
     }
 
-    private static function CreateRoot(ObjectDatabase $database, Filesystem $filesystem, ?Account $account) : self
+    private static function CreateRoot(ObjectDatabase $database, FSManager $filesystem, ?Account $account) : self
     {
         return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
     }
@@ -129,14 +131,14 @@ class Folder extends Item
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         $folder = self::NotifyCreate($database, $parent, $account, $name);
-        $folder->GetFilesystemImpl()->CreateFolder($folder);
+        $folder->GetFSImpl()->CreateFolder($folder);
             
         return $folder;
     }
     
-    public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?Filesystem $filesystem = null) : self
+    public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : self
     {
-        $filesystem ??= Filesystem::LoadDefaultByAccount($database, $account);
+        $filesystem ??= FSManager::LoadDefaultByAccount($database, $account);
         $criteria = array('owner'=>$account->ID(), 'filesystem'=>$filesystem->ID(), 'parent'=>null);
         $loaded = self::LoadManyMatchingAll($database, $criteria);
         
@@ -179,7 +181,7 @@ class Folder extends Item
         $this->DeleteChildren($isNotify);
         
         if (!$isNotify && $parent !== null) 
-            $this->GetFilesystemImpl()->DeleteFolder($this);
+            $this->GetFSImpl()->DeleteFolder($this);
         
         parent::Delete();
     }
