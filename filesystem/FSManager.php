@@ -1,46 +1,69 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
-require_once(ROOT."/apps/files/Shared.php");
-require_once(ROOT."/apps/files/Native.php");
+require_once(ROOT."/apps/files/filesystem/Shared.php");
+require_once(ROOT."/apps/files/filesystem/Native.php");
+require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
-class Filesystem extends StandardObject
+class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
+
+class FSManager extends StandardObject
 {
-    const TYPE_NATIVE = 0; const TYPE_SHARED = 1;
+    const TYPE_NATIVE = 0; const TYPE_NATIVE_CRYPT = 1; const TYPE_SHARED = 2;
     
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
-            'shared' => null,
+            'type' => null,
             'readonly' => null,
             'storage' => new FieldTypes\ObjectPoly(Storage::class),
-            'owner' => new FieldTypes\ObjectRef(Account::class)
+            'owner' => new FieldTypes\ObjectRef(Account::class),
+            'crypto_masterkey' => null,
+            'crypto_chunksize' => null
         ));
     }
     
     protected function SubConstruct() : void
     {
-        $this->interface = $this->isShared() ? new Shared($this) : new Native($this);
+        if ($this->GetType() === self::TYPE_NATIVE)
+        {
+            $this->interface = new Native($this);
+        }
+        else if ($this->GetType() === self::TYPE_NATIVE_CRYPT)
+        {
+            $masterkey = $this->GetScalar('crypto_masterkey');
+            $chunksize = $this->GetScalar('crypto_chunksize');
+            $this->interface = new NativeCrypt($this, $masterkey, $chunksize);
+        }
+        else if ($this->GetType() === self::TYPE_SHARED)
+        {
+            $this->interface = new Shared($this);
+        }
+        else throw new InvalidFSTypeException();
     }
     
-    public function isShared() : bool { return $this->TryGetScalar('shared') ?? false; }
     public function isReadOnly() : bool { return $this->TryGetScalar('readonly') ?? false; }
+    public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
+    public function isSecure() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
     
     public function GetName() : ?string { return $this->TryGetScalar('name'); }
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
+    
+    private function GetType() : int { return $this->GetScalar('type'); }
     public function GetStorage() : Storage { return $this->GetObject('storage'); }
     
     public function GetDatabase() : ObjectDatabase { return $this->database; }
-    public function GetIface() : FilesystemImpl { return $this->interface; }
-    
+    public function GetFSImpl() : FSImpl { return $this->interface; }
+
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : self
     {
         // TODO FUTURE maybe use a manual query to get this done in a single query        

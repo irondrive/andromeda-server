@@ -1,23 +1,28 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/apps/files/FilesystemImpl.php");
-require_once(ROOT."/apps/files/Filesystem.php");
+require_once(ROOT."/apps/files/filesystem/FSImpl.php");
+require_once(ROOT."/apps/files/filesystem/FSManager.php");
+require_once(ROOT."/apps/files/filesystem/Native.php");
+
+require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
+require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
+require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 
 class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_INVALID"; }
 
-class Shared extends FilesystemImpl
+class Shared extends BaseFileFS
 {
-    private function GetItemPath(?Item $item) : string
+    protected function GetItemPath(?Item $item) : string
     {
         $parent = $item->GetParent();
         if ($parent === null) return "";
         else return $this->GetItemPath($parent).'/'.$item->GetName();
     }
     
-    private function GetFilePath(File $file) : string { return $this->GetItemPath($file); }
-    private function GetFolderPath(Folder $folder) : string { return $this->GetItemPath($folder).'/'; }
+    protected function GetFilePath(File $file) : string { return $this->GetItemPath($file); }
+    protected function GetFolderPath(Folder $folder) : string { return $this->GetItemPath($folder).'/'; }
     
     public function RefreshFile(File $file, ?string $path = null) : self
     {
@@ -105,27 +110,7 @@ class Shared extends FilesystemImpl
         $path = $this->GetFolderPath($folder);
         $this->GetStorage()->DeleteFolder($path);
         return $this;
-    }
-    
-    public function ImportFile(File $file, string $path) : self
-    {
-        $dest = $this->GetFilePath($file);
-        $this->GetStorage()->ImportFile($path, $dest);
-        return $this;
-    }
-    
-    public function DeleteFile(File $file) : self
-    {
-        $path = $this->GetFilePath($file);
-        $this->GetStorage()->DeleteFile($path);
-        return $this;
-    }
-    
-    public function ReadBytes(File $file, int $start, int $length) : string
-    {
-        $path = $this->GetFilePath($file);
-        return $this->GetStorage()->ReadBytes($path, $start, $length);
-    }
+    }    
     
     public function RenameFile(File $file, string $name) : self
     { 
