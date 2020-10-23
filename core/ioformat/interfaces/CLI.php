@@ -55,8 +55,9 @@ class CLI extends IOInterface
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->debug = (new SafeParam('bool',$argv[$i+1]))->getData(); $i++;
-                    if (!$config->GetDebugLogLevel()) $config->SetDebugLogLevel(Config::LOG_BASIC,true);
+                    $debug = (new SafeParam('int',$argv[$i+1]))->getData();
+                    $this->debug = ($debug !== 0); $i++;
+                    $config->SetDebugLogLevel($debug, true);
                     break;   
                     
                 case '--dryrun': $config->SetReadOnly(Config::RUN_DRYRUN); break;
