@@ -36,7 +36,7 @@ class Shared extends BaseFileFS
         $file->SetAccessed($storage->GetATime($path))
              ->SetCreated($storage->GetCTime($path))
              ->SetModified($storage->GetMTime($path))
-             ->SetSize($storage->GetSize($path))->Save();        
+             ->SetSize($storage->GetSize($path),true)->Save();        
         return $this;
     }
     

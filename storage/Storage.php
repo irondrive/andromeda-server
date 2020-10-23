@@ -14,6 +14,8 @@ abstract class Storage extends StandardObject implements Transactions
             'owner' => new FieldTypes\ObjectRef(Account::class)
         ));
     }
+    
+    public abstract function GetClientObject() : array;
 
     public function commit() { }
     public function rollback() { }

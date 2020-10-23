@@ -28,8 +28,11 @@ class UnknownFileException  extends Exceptions\ClientNotFoundException      { pu
 class UnknownFolderException  extends Exceptions\ClientNotFoundException    { public $message = "UNKNOWN_FOLDER"; }
 class UnknownFilesystemException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_FILESYSTEM"; }
 
+class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; }
+
 class DuplicateFileException extends Exceptions\ClientErrorException        { public $message = "FILE_ALREADY_EXISTS"; }
-class InvalidFileRangeException extends Exceptions\ClientException          { public $code = 416; }
+class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
+class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
 class FilesApp extends AppBase
 {
@@ -55,6 +58,8 @@ class FilesApp extends AppBase
             
             case 'upload':     return $this->UploadFile($input); break;  
             case 'download':   return $this->DownloadFile($input); break;
+            case 'ftruncate':  return $this->TruncateFile($input); break;
+            case 'writefile':  return $this->WriteToFile($input); break;
             case 'fileinfo':   return $this->GetFileInfo($input); break;
             
             case 'getfolder':    return $this->GetFolder($input); break;
@@ -101,6 +106,8 @@ class FilesApp extends AppBase
                 else throw new DuplicateFileException();
             }
             
+            $parent->CountBandwidth(filesize($name));
+            
             $file = File::Import($this->database, $parent, $account, $name, $files[$name]);
             array_push($return, $file->GetClientObject());
         }        
@@ -128,41 +135,143 @@ class FilesApp extends AppBase
         header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
         header('Content-Transfer-Encoding: binary');
 
-        $fsize = $file->GetSize(); $fstart = 0; $flast = $fsize-1;
-        if (isset($_SERVER['HTTP_RANGE'])) // TODO allow supplying this in a param also
+        $fsize = $file->GetSize();        
+        $fstart = $input->TryGetParam('fstart',SafeParam::TYPE_INT) ?? 0;
+        $flast  = $input->TryGetParam('flast',SafeParam::TYPE_INT) ?? $fsize-1;
+        
+        if (isset($_SERVER['HTTP_RANGE']))
         {
             $ranges = explode('=',$_SERVER['HTTP_RANGE']);
             if (count($ranges) != 2 || trim($ranges[0]) != "bytes")
-                throw new InvalidFileRangeException();
+                throw new InvalidDLRangeException();
             
             $ranges = explode('-',$ranges[1]);
-            if (count($ranges) != 2) throw new InvalidFileRangeException();
+            if (count($ranges) != 2) throw new InvalidDLRangeException();
             
             $fstart = intval($ranges[0]); 
             $flast2 = intval($ranges[1]); 
-            if ($flast2) $flast = $flast2;
-            
-            http_response_code(206);
-            header("Content-Range: bytes $fstart-$flast/$fsize");            
-        }        
+            if ($flast2) $flast = $flast2;     
+        }
 
-        if ($flast >= $fsize || $flast+1 < $fstart)
-            throw new InvalidFileRangeException();        
+        if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
+            throw new InvalidDLRangeException();
+        
+        if ($fstart != 0 || $flast != $fsize-1)
+        {
+            http_response_code(206);
+            header("Content-Range: bytes $fstart-$flast/$fsize");     
+        }
+        
         header("Content-Length: ".($flast-$fstart+1));
 
         try { while (@ob_end_flush()); } catch (\Throwable $e) { }
         
         $file->CountDownload();
+
+        $fschunksize = $file->GetChunkSize();
+        $chunksize = $this->config->GetChunkSize();     
         
-        $chunksize = $this->config->GetChunkSize();             
+        $align = ($fschunksize !== null);
+        if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;
+
         for ($byte = $fstart; $byte <= $flast; $byte += $chunksize)
         {
-            if (connection_aborted()) break;
-            $data = $file->ReadBytes($byte, $chunksize);
-            $file->CountBandwidth(strlen($data)); echo $data;
+            $maxlen = min($chunksize, $flast - $byte + 1);
+            
+            if ($align)
+            {
+                $rstart = intdiv($byte, $chunksize) * $chunksize;                
+                $roffset = $byte - $rstart;
+                
+                $data = $file->ReadBytes($rstart, $chunksize);
+                
+                if ($roffset || $maxlen != strlen($data))
+                    $data = substr($data, $roffset, $maxlen);
+                
+                $byte = $rstart;
+            }
+            else $data = $file->ReadBytes($byte, $maxlen);
+
+            $file->CountBandwidth(strlen($data)); 
+            if (connection_aborted()) break; else echo $data;
         }
-        
+
         return array();
+    }
+    
+    protected function WriteToFile(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        if ($file === null) throw new UnknownFileException();
+        
+        $files = array_values($input->GetFiles());
+        if (count($files) === 1) $filepath = $files[0];
+        else throw new InvalidFileWriteException();        
+        
+        $wstart = $input->TryGetParam('offset',SafeParam::TYPE_INT) ?? 0;
+        $length = filesize($filepath); $wlast = $wstart + $length - 1;
+        $flength = $file->GetSize();
+        
+        if ($wstart < 0 || $wlast < $wstart || $wlast >= $flength)
+            throw new InvalidFileRangeException();
+        
+        $file->CountBandwidth($length);        
+        
+        $fschunksize = $file->GetChunkSize();
+        $chunksize = $this->config->GetChunkSize();  
+        
+        $align = ($fschunksize !== null);
+        if ($align) $chunksize = ceil(min($length,$chunksize)/$fschunksize)*$fschunksize;
+
+        $rhandle = fopen($filepath, 'rb');
+
+        for ($wbyte = $wstart; $wbyte <= $wlast; $wbyte += $chunksize)
+        {
+            $rbyte = $wbyte - $wstart;
+            fseek($rhandle, $rbyte);
+
+            if ($align)
+            {              
+                $roffset = $wbyte % $chunksize;                
+                $rlength = min($wlast+1-$wbyte, $chunksize-$roffset);                
+                $padlast = min($chunksize-$roffset, $flength-$wbyte) - $rlength;
+                
+                if ($roffset || $padlast)
+                    $dataf = $file->ReadBytes($wbyte-$roffset, $chunksize);
+                             
+                $data = fread($rhandle, $rlength);
+                
+                if ($roffset) $data = substr($dataf, 0, $roffset).$data;                
+                if ($padlast) $data = $data.substr($dataf, -$padlast);
+
+                $wbyte -= $roffset;
+            }
+            else $data = fread($rhandle, $chunksize);
+
+            $file->WriteBytes($wbyte, $data);
+        }
+
+        return $file->GetClientObject();
+    }
+    
+    protected function TruncateFile(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        if ($file === null) throw new UnknownFileException();
+        
+        $size = $input->GetParam('size',SafeParam::TYPE_INT);
+        
+        if ($size < 0) throw new InvalidFileRangeException();
+        
+        $file->SetSize($size);
+        
+        return $file->GetClientObject();
     }
     
     protected function GetFileInfo(Input $input) : array
@@ -181,7 +290,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $filesystems = Filesystem::LoadByAccount($this->database, $account);
+        $filesystems = FSManager::LoadByAccount($this->database, $account);
         return array_map(function($filesystem){ return $filesystem->GetClientObject(); }, $filesystems);
     }
     
@@ -241,7 +350,7 @@ class FilesApp extends AppBase
         $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
-        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal transactions?
+        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal catch exception per item? better
         
         $file->Delete();
         return array();
@@ -255,7 +364,7 @@ class FilesApp extends AppBase
         $folder = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('folder',SafeParam::TYPE_ID));
         if ($folder === null) throw new UnknownFolderException();
         
-        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal transactions?
+        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal catch exception per item? better
         
         $folder->Delete();        
         return array();

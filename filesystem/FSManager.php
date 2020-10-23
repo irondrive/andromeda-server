@@ -78,14 +78,20 @@ class FSManager extends StandardObject
         return static::LoadManyMatchingAny($database, 'owner', array(null, $account->ID()));
     }
     
-    public function GetClientObject() : array
+    public function GetClientObject(bool $priv = false) : array
     {
-        return array(
+        $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
-            'shared' => $this->GetScalar('shared'),
-            'readonly' => $this->GetScalar('readonly'),
-            'owner' => $this->GetObjectID('owner')
+            'owner' => $this->GetObjectID('owner'),
+            'shared' => $this->isShared(),
+            'secure' => $this->isSecure(),
+            'readonly' => $this->isReadOnly(),
+            'chunksize' => $this->TryGetScalar('crypto_chunksize')
         );
+        
+        if ($priv) $data['storage'] = $this->GetStorage()->GetClientObject();
+        
+        return $data;
     }
 }

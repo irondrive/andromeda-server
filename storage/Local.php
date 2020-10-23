@@ -11,6 +11,15 @@ class Local extends Storage
         ));
     }
     
+    public function GetClientObject() : array
+    {
+        return array(
+            'id' => $this->ID(),
+            'owner' => $this->GetObjectID('owner'),
+            'path' => $this->GetPath()
+        );
+    }
+    
     protected function GetPath() : string { return $this->GetScalar('path').'/'; }
     
     // TODO create a class with these properties so we can return it all with a single stat()
@@ -72,17 +81,12 @@ class Local extends Storage
         
         if ($isWrite)
         {
-            if ($reading) fclose($this->reading[$path]);            
-            $this->writing[$path] = fopen($path, $reading?'rwb':'wb');            
-            if ($reading) $this->reading[$path] = $this->writing[$path];
+            if ($reading) fclose($this->reading[$path]);
+            $this->writing[$path] = fopen($path,'rb+');
+            $this->reading[$path] = $this->writing[$path];
         }
-        else // isRead
-        {
-            if ($writing) fclose($this->writing[$path]);
-            $this->reading[$path] = fopen($path, $writing?'rwb':'rb');
-            if ($writing) $this->writing[$path] = $this->reading[$path];
-        }
-        
+        else $this->reading[$path] = fopen($path,'rb');
+
         return $isWrite ? $this->writing[$path] : $this->reading[$path];
     }
     
@@ -109,8 +113,7 @@ class Local extends Storage
     
     public function __destruct()
     {
-        $handles = array_merge($this->reading, $this->writing);
-        try { foreach ($handles as $handle) fclose($handle); }
+        try { foreach ($this->reading as $handle) fclose($handle); }
         catch (\Throwable $e) { }        
     }
     

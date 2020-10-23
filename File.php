@@ -23,8 +23,11 @@ class File extends Item
     
     public function GetSize() : int { return $this->TryGetScalar('size') ?? 0; }
     
-    public function SetSize(int $size) : self 
+    public function SetSize(int $size, bool $notify = false) : self 
     {
+        if (!$notify)
+            $this->GetFSImpl()->Truncate($this, $size);
+        
         $oldsize = $this->TryGetScalar('size') ?? 0;
         $this->GetParent()->DeltaSize($size-$oldsize);
         return $this->SetScalar('size', $size); 
@@ -62,13 +65,20 @@ class File extends Item
     
     public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path) : self
     {
-        $file = self::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path));        
+        $file = self::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path),true);        
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }
+    
+    public function GetChunkSize() : ?int { return $this->GetFSImpl()->GetChunkSize(); }
     
     public function ReadBytes(int $start, int $length) : string
     {
         $this->SetAccessed(); return $this->GetFSImpl()->ReadBytes($this, $start, $length);
+    }
+    
+    public function WriteBytes(int $start, string $data) : self
+    {
+        $this->SetModified(); $this->GetFSImpl()->WriteBytes($this, $start, $data); return $this;
     }    
     
     public function NotifyDelete() : void { parent::Delete(); }

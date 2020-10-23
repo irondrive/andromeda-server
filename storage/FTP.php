@@ -21,6 +21,11 @@ class FTP extends Storage
         ));
     }
     
+    public function GetClientObject() : array
+    {
+        
+    }
+    
     private $ftp = null;
     
     // TODO maybe use PHP regular fopen/fread protocol wrappers stuff?
