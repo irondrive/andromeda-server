@@ -169,6 +169,11 @@ class ObjectPoly extends ObjectRef
     
     public function GetBaseClass() : ?string { return $this->baseclass; }
     
+    public static function GetValueFromObject(BaseObject $obj)
+    {
+        return $obj->ID()."*".get_class($obj);
+    }
+    
     public function GetDBValue() : ?string 
     { 
         if ($this->GetValue() === null) return null; 
