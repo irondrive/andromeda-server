@@ -74,7 +74,7 @@ class AccountsApp extends AppBase
         switch($input->GetAction())
         {       
             case 'getconfig':           return $this->GetConfig($input); break;
-            case 'getextauthsources':   return $this->GetExtAuthSources($input); break;
+            case 'getauthsources':      return $this->GetAuthSources($input); break;
             
             case 'getaccount':          return $this->GetAccount($input); break;
             case 'setfullname':         return $this->SetFullName($input); break;
@@ -136,10 +136,10 @@ class AccountsApp extends AppBase
         return $this->config->GetClientObject(Config::OBJECT_ADMIN);
     }
     
-    protected function GetExtAuthSources(Input $input) : array
+    protected function GetAuthSources(Input $input) : array
     {
-        $data = array(); $sources = Auth\SourcePointer::LoadAll($this->API->GetDatabase());        
-        foreach ($sources as $source) array_push($data, $source->GetClientObject());        
+        $data = array(); $pointers = Auth\Pointer::LoadAll($this->API->GetDatabase());        
+        foreach ($pointers as $pointer) array_push($data, $pointer->GetClientObject());        
         return $data;
     }
     
@@ -282,7 +282,8 @@ class AccountsApp extends AppBase
         $account->setUnlockCode(null)->setEnabled(null);
         
         $contacts = $account->GetContactInfos();
-        if (count($contacts) !== 1) throw new NotImplementedException();    // TODO can there ever be > 1 ?
+        if (count($contacts) !== 1) throw new NotImplementedException();    
+        // TODO can there ever be > 1 ? maybe if admin were to re-lock, maybe require contact info ID? or keep track of what we sent it out to in the first place
         array_values($contacts)[0]->SetIsValid(true);
         
         return $this->StandardReturn($input, null, $account);
@@ -300,7 +301,7 @@ class AccountsApp extends AppBase
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if (($authsource = $input->TryGetParam("authsourceid", SafeParam::TYPE_ID)) !== null) 
         {
-            $authsource = Auth\SourcePointer::TryLoadSourceByPointer($database, $authsource);
+            $authsource = Auth\Pointer::TryLoadSourceByPointer($database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
         }
         else $authsource = Auth\Local::Load($database);     
@@ -452,6 +453,7 @@ class AccountsApp extends AppBase
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
         }        
         
+        // TODO info may not be initialized
         if (ContactInfo::TryLoadByInfo($this->API->GetDatabase(), $info) !== null) throw new ContactInfoExistsException();
 
         $contact = ContactInfo::Create($this->API->GetDatabase(), $account, $type, $info);

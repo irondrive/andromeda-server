@@ -11,10 +11,12 @@ require_once(ROOT."/apps/accounts/auth/LDAP.php");
 require_once(ROOT."/apps/accounts/auth/IMAP.php");
 require_once(ROOT."/apps/accounts/auth/FTP.php");
 
-interface Source
+interface ISource
 {
-    public function VerifyPassword(string $username, string $password) : bool;
+    public function ID() : string;
     public function GetAccountGroup() : ?Group;
+    
+    public function VerifyPassword(string $username, string $password) : bool;    
 }
 
 abstract class External extends BaseObject
@@ -27,7 +29,7 @@ abstract class External extends BaseObject
     }
 }
 
-class Local extends SingletonObject implements Source
+class Local extends SingletonObject implements ISource
 {
     public function VerifyPassword(string $username, string $password) : bool
     {
@@ -52,27 +54,33 @@ class Local extends SingletonObject implements Source
     public function GetAccountGroup() : ?Group { return null; }
 }
 
-class SourcePointer extends BaseObject
+class Pointer extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'description' => null,
-            'authsource' => new FieldTypes\ObjectPoly(Source::class)
+            'authsource' => new FieldTypes\ObjectPoly(ISource::class)
         ));
     }
     
-    public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?Source
+    public static function LoadBySource(ObjectDatabase $database, ISource $source) : ?ISource
+    {
+        $criteria = array('authsource' => FieldTypes\ObjectPoly::GetValueFromObject($source));
+        return self::LoadManyMatchingAll($database, $criteria)[0];
+    }
+    
+    public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?ISource
     {
         $authsource = self::TryLoadByID($database, $pointer);
         if ($authsource === null) return null; else return $authsource->GetSource();
     }
     
-    public function GetSource() : Source { return $this->GetObject('authsource'); }
+    public function GetSource() : ISource { return $this->GetObject('authsource'); }
     
     public function GetDescription()
     {
-        return $this->TryGetScalar("description") ?? get_class($this);
+        return $this->TryGetScalar("description") ?? get_class($this->GetSource());
     }
     
     public function GetClientObject() : array

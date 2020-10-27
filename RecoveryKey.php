@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
+require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
@@ -40,9 +40,9 @@ class RecoveryKey extends StandardObject
     {
         $cryptokey = Utilities::Random(self::CRYPTOKEY_LENGTH);
         
-        $master_salt = CryptoSecret::GenerateSalt();
+        $master_salt = CryptoKey::GenerateSalt();
         $master_nonce = CryptoSecret::GenerateNonce();        
-        $cryptokey_key = CryptoSecret::DeriveKey($cryptokey, $master_salt);
+        $cryptokey_key = CryptoKey::DeriveKey($cryptokey, $master_salt, CryptoSecret::KeyLength());
 
         return parent::BaseCreate($database)
             ->SetObject('account',$account)
@@ -80,7 +80,7 @@ class RecoveryKey extends StandardObject
         $master_nonce = $this->GetScalar('master_nonce');
         $master_salt = $this->GetScalar('master_salt');
         
-        $cryptokey = CryptoSecret::DeriveKey($cryptokey, $master_salt);
+        $cryptokey = CryptoKey::DeriveKey($cryptokey, $master_salt, CryptoSecret::KeyLength());
         
         return CryptoSecret::Decrypt($master, $master_nonce, $cryptokey);
     }
