@@ -21,12 +21,13 @@ class Local extends Storage
     }
     
     protected function GetPath() : string { return $this->GetScalar('path').'/'; }
-    
-    // TODO create a class with these properties so we can return it all with a single stat()
-    public function GetATime(string $path) : int { return fileatime($this->GetPath().$path); }
-    public function GetCTime(string $path) : int { return filectime($this->GetPath().$path); }
-    public function GetMTime(string $path) : int { return filemtime($this->GetPath().$path); }
-    public function GetSize(string $path) : int  { return filesize($this->GetPath().$path); }
+
+    public function ItemStat(string $path) : ItemStat
+    {
+        $data = stat($this->GetPath().$path);
+        if (!$data) throw new ItemStatFailedException();
+        return new ItemStat($data['atime'], $data['ctime'], $data['mtime'], $data['size']);
+    }
     
     public function isFolder(string $path) : bool
     {
@@ -44,29 +45,38 @@ class Local extends Storage
         return array_filter(scandir($path), function($item){ return $item !== "." && $item !== ".."; });
     }
     
-    public function CreateFolder(string $path) : bool
+    public function CreateFolder(string $path) : self
     {
-        return mkdir($this->GetPath().$path);        
+        if (is_dir($path)) return $this;
+        if (!mkdir($this->GetPath().$path)) throw new FolderCreateFailedException();
+        else return $this;
     }
     
-    public function DeleteFolder(string $path) : bool
+    public function DeleteFolder(string $path) : self
     {
-        return rmdir($this->GetPath().$path);
+        if (!is_dir($path)) return $this;
+        if (!rmdir($this->GetPath().$path)) throw new FolderDeleteFailedException();
+        else return $this;
     }
     
-    public function DeleteFile(string $path) : bool
+    public function DeleteFile(string $path) : self
     {
-        return unlink($this->GetPath().$path);
+        if (!is_file($path)) return $this;
+        if (!unlink($this->GetPath().$path)) throw new FileDeleteFailedException();
+        else return $this;
     }
     
-    public function ImportFile(string $src, string $dest) : bool
+    public function ImportFile(string $src, string $dest) : self
     {
-        return rename($src, $this->GetPath().$dest);
+        if (!rename($src, $this->GetPath().$dest))
+            throw new FileCreateFailedException();
     }
     
-    public function CreateFile(string $path) : bool
+    public function CreateFile(string $path) : self
     {
-        return touch($this->GetPath().$path);
+        if (is_file($path)) return $this;
+        if (!touch($this->GetPath().$path)) throw new FileCreateFailedException();
+        return $this;
     }
     
     private $reading = array(); private $writing = array();
@@ -83,9 +93,16 @@ class Local extends Storage
         {
             if ($reading) fclose($this->reading[$path]);
             $this->writing[$path] = fopen($path,'rb+');
+            if ($this->writing[$path] === false)
+                throw new FileWriteFailedException();
             $this->reading[$path] = $this->writing[$path];
         }
-        else $this->reading[$path] = fopen($path,'rb');
+        else 
+        {
+            $this->reading[$path] = fopen($path,'rb');
+            if ($this->reading[$path] === false)
+                throw new FileReadFailedException();
+        }
 
         return $isWrite ? $this->writing[$path] : $this->reading[$path];
     }
@@ -94,21 +111,29 @@ class Local extends Storage
     {
         $path = $this->GetPath().$path;
         $handle = $this->GetHandle($path, false);        
-        fseek($handle, $start); return fread($handle, $length);
+        if (fseek($handle, $start) !== 0)
+            throw new FileReadFailedException();
+        $data = fread($handle, $length);
+        if ($data === false) throw new FileReadFailedException();
+        else return $data;
     }
     
-    public function WriteBytes(string $path, int $start, string $data) : bool
+    public function WriteBytes(string $path, int $start, string $data) : self
     {
         $path = $this->GetPath().$path;
         $handle = $this->GetHandle($path, true);        
-        fseek($handle, $start); return fwrite($handle, $data);
+        if (fseek($handle, $start) !== 0 || !fwrite($handle, $data))
+            throw new FileWriteFailedException();
+        return $this;
     }
     
-    public function Truncate(string $path, int $length) : bool
+    public function Truncate(string $path, int $length) : self
     {
         $path = $this->GetPath().$path;
         $handle = $this->GetHandle($path, true);        
-        return ftruncate($handle, $length);
+        if (!ftruncate($handle, $length))
+            throw new FileWriteFailedException();
+        return $this;
     }
     
     public function __destruct()
@@ -117,24 +142,32 @@ class Local extends Storage
         catch (\Throwable $e) { }        
     }
     
-    public function RenameFile(string $old, string $new) : bool
+    public function RenameFile(string $old, string $new) : self
     {
-        return rename($this->GetPath().$old, $this->GetPath().$new);
+        if (!rename($this->GetPath().$old, $this->GetPath().$new))
+            throw new FileRenameFailedException();
+        return $this;
     }
     
-    public function RenameFolder(string $old, string $new) : bool
+    public function RenameFolder(string $old, string $new) : self
     {
-        return rename($this->GetPath().$old, $this->GetPath().$new);
+        if (!rename($this->GetPath().$old, $this->GetPath().$new))
+            throw new FolderRenameFailedException();
+        return $this;
     }
     
-    public function MoveFile(string $old, string $new) : bool
+    public function MoveFile(string $old, string $new) : self
     {
-        return rename($this->GetPath().$old, $this->GetPath().$new);
+        if (!rename($this->GetPath().$old, $this->GetPath().$new))
+            throw new FileMoveFailedException();
+        return $this;
     }
     
-    public function MoveFolder(string $old, string $new) : bool
+    public function MoveFolder(string $old, string $new) : self
     {
-        return rename($this->GetPath().$old, $this->GetPath().$new);
+        if (!rename($this->GetPath().$old, $this->GetPath().$new))
+            throw new FolderMoveFailedException();
+        return $this;
     }
 }
 

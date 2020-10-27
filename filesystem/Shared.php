@@ -32,11 +32,10 @@ class Shared extends BaseFileFS
             $path = $this->GetFilePath($file);
             if (!$storage->isFile($path)) { $file->NotifyDelete(); return $this; }
         }
-
-        $file->SetAccessed($storage->GetATime($path))
-             ->SetCreated($storage->GetCTime($path))
-             ->SetModified($storage->GetMTime($path))
-             ->SetSize($storage->GetSize($path),true)->Save();        
+        
+        $stat = $storage->ItemStat($path);
+        $file->SetAccessed($stat->atime)->SetCreated($stat->ctime)
+            ->SetModified($stat->mtime)->SetSize($stat->size,true)->Save();        
         return $this;
     }
     
@@ -48,10 +47,10 @@ class Shared extends BaseFileFS
             $path = $this->GetFolderPath($folder);
             if (!$storage->isFolder($path)) { $folder->NotifyDelete(); return $this; }
         }
- 
-        $folder->SetAccessed($storage->GetATime($path))
-               ->SetCreated($storage->GetCTime($path))
-               ->SetModified($storage->GetMTime($path))->Save();
+        
+        $stat = $storage->ItemStat($path);
+        $folder->SetAccessed($stat->atime)->SetCreated($stat->ctime)
+            ->SetModified($stat->mtime)->Save(); 
 
         if ($doContents) 
             $this->RefreshFolderContents($folder, $path);         
