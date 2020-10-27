@@ -71,11 +71,10 @@ class AJAX extends IOInterface
             $params->AddParam($param[0], $param[1], $request[$key]);
         }
         
-        // TODO this is completely untested - the structure is apparently not guaranteed
-        $files = array(); for ($i = 0; $i < count($_FILES['tmp_name'] ?? array()); $i++)
+        $files = array(); foreach($_FILES as $file)
         {
-            if (!is_uploaded_file($_FILES['tmp_name'][$i]) || $_FILES['error'][$i]) continue;
-            $files[basename($_FILES['name'][$i])] = $_FILES['tmp_name'][$i]; 
+            if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
+            $files[basename($file['name'])] = $file['tmp_name']; 
         }
         
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;

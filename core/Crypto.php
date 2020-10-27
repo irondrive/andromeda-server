@@ -24,7 +24,7 @@ class CryptoKey
     }
 }
 
-class CryptoAEAD
+class CryptoSecret
 {
     public static function KeyLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; }
     public static function NonceLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; }
