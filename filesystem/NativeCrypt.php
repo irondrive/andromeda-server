@@ -4,7 +4,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
-require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoAEAD;
+require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 
 class UnalignedAccessException extends Exceptions\ServerException { public $message = "FS_ACCESS_NOT_ALIGNED"; }
 
@@ -91,21 +91,20 @@ class NativeCrypt extends Native
     {
         $length = max($length, 0);
         
-        $noncesize = CryptoAEAD::NonceLength();
-        $extrasize = $noncesize + CryptoAEAD::OutputOverhead();
+        $noncesize = CryptoSecret::NonceLength();
+        $extrasize = $noncesize + CryptoSecret::OutputOverhead();
         
         $chunks = $this->GetNumChunks($length);
         $rlength = $chunks * $extrasize + $length;
-
         $length0 = $file->GetSize();
-        
+
         if ($init && $length != $length0)
         {            
             $chunks0 = $this->GetNumChunks($length0);
+            $remain = ($length-1) % $this->chunksize + 1;    
             if ($chunks <= $chunks0)
-            {
-                $remain = ($length-1) % $this->chunksize + 1;             
-                if ($remain) $data = $this->ReadChunk($file, $chunks-1);                
+            {     
+                if ($remain) $data = $this->ReadChunk($file, $chunks-1);    
                 parent::Truncate($file, $rlength);
                 
                 if ($remain) // rewrite new last chunk
@@ -115,7 +114,7 @@ class NativeCrypt extends Native
                 }                
             }
             else // write new chunks
-            {        
+            {
                 if ($chunks0) $data0 = $this->ReadChunk($file, $chunks0-1);
                 parent::Truncate($file, $rlength);
                 
@@ -131,7 +130,7 @@ class NativeCrypt extends Native
                     for ($chunk = $chunks0; $chunk < $chunks; $chunk++)
                     {
                         if ($chunk == $chunks-1) // trim last chunk
-                            $datan = substr($datan, 0, $length % $this->chunksize);
+                            $datan = substr($datan, 0, $remain);
                         $this->WriteChunk($file, $chunk, $datan);
                     }
                 }
@@ -144,8 +143,8 @@ class NativeCrypt extends Native
     
     protected function ReadChunk(File $file, int $index) : string
     {       
-        $noncesize = CryptoAEAD::NonceLength();
-        $datasize = $this->chunksize + CryptoAEAD::OutputOverhead();
+        $noncesize = CryptoSecret::NonceLength();
+        $datasize = $this->chunksize + CryptoSecret::OutputOverhead();
         
         $nonceoffset = $index * ($noncesize + $datasize);
         $dataoffset = $nonceoffset + $noncesize;
@@ -154,22 +153,22 @@ class NativeCrypt extends Native
         $data = parent::ReadBytes($file, $dataoffset, $datasize);
         $auth = $this->GetAuthString($file, $index);
         
-        return CryptoAEAD::Decrypt($data, $nonce, $this->masterkey, $auth);
+        return CryptoSecret::Decrypt($data, $nonce, $this->masterkey, $auth);
     }
 
     protected function WriteChunk(File $file, int $index, string $data) : self
     {
-        $noncesize = CryptoAEAD::NonceLength();
-        $datasize = $this->chunksize + CryptoAEAD::OutputOverhead();
+        $noncesize = CryptoSecret::NonceLength();
+        $datasize = $this->chunksize + CryptoSecret::OutputOverhead();
         $blocksize = $datasize + $noncesize;
         
         $nonceoffset = $index * $blocksize;
         $dataoffset = $nonceoffset + $noncesize;
 
-        $nonce = CryptoAEAD::GenerateNonce();
+        $nonce = CryptoSecret::GenerateNonce();
         $auth = $this->GetAuthString($file, $index);
         
-        $data = CryptoAEAD::Encrypt($data, $nonce, $this->masterkey, $auth);
+        $data = CryptoSecret::Encrypt($data, $nonce, $this->masterkey, $auth);
 
         parent::WriteBytes($file, $nonceoffset, $nonce);
         parent::WriteBytes($file, $dataoffset, $data);

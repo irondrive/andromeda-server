@@ -24,13 +24,16 @@ use Andromeda\Core\UnknownConfigException;
 
 use Andromeda\Core\Database\ObjectNotFoundException;
 
+class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
 class UnknownFileException  extends Exceptions\ClientNotFoundException      { public $message = "UNKNOWN_FILE"; }
 class UnknownFolderException  extends Exceptions\ClientNotFoundException    { public $message = "UNKNOWN_FOLDER"; }
+class UnknownParentException  extends Exceptions\ClientNotFoundException    { public $message = "UNKNOWN_PARENT"; }
 class UnknownFilesystemException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_FILESYSTEM"; }
 
 class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; }
 
 class DuplicateFileException extends Exceptions\ClientErrorException        { public $message = "FILE_ALREADY_EXISTS"; }
+class DuplicateFolderException extends Exceptions\ClientErrorException      { public $message = "FOLDER_ALREADY_EXISTS"; }
 class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
 class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
@@ -56,14 +59,15 @@ class FilesApp extends AppBase
         {
             case 'getconfig': return $this->GetConfig($input); break;
             
-            case 'upload':     return $this->UploadFile($input); break;  
+            case 'upload':     return $this->UploadFiles($input); break;  
             case 'download':   return $this->DownloadFile($input); break;
             case 'ftruncate':  return $this->TruncateFile($input); break;
             case 'writefile':  return $this->WriteToFile($input); break;
-            case 'fileinfo':   return $this->GetFileInfo($input); break;
             
-            case 'getfolder':    return $this->GetFolder($input); break;
-            case 'createfolder': return $this->CreateFolder($input); break;
+            case 'fileinfo':      return $this->GetFileInfo($input); break;
+            case 'getfolder':     return $this->GetFolder($input); break;
+            case 'getitembypath': return $this->GetItemByPath($input); break;
+            case 'createfolder':  return $this->CreateFolder($input); break;
             
             case 'deletefile':   return $this->DeleteFile($input); break;
             case 'deletefolder': return $this->DeleteFolder($input); break;            
@@ -72,6 +76,7 @@ class FilesApp extends AppBase
             case 'movefile':     return $this->MoveFile($input); break;
             case 'movefolder':   return $this->MoveFolder($input); break;
             
+            case 'getfilesystem':  return $this->GetFilesystem($input); break;
             case 'getfilesystems': return $this->GetFilesystems($input); break;
             
             default: throw new UnknownActionException();
@@ -86,17 +91,18 @@ class FilesApp extends AppBase
         // TODO GET CONFIG (if there is any)
     }
     
-    protected function UploadFile(Input $input) : array
+    protected function UploadFiles(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
         $parent = Folder::TryLoadByID($this->database, $input->GetParam('parent',SafeParam::TYPE_ID));
-        if ($parent === null) throw new UnknownFolderException();
+        if ($parent === null) throw new UnknownParentException();
         
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
         $return = array(); $files = $input->GetFiles();
+        if (!count($files)) throw new UnknownFileException();
         foreach (array_keys($files) as $name)
         {
             $file = File::TryLoadByParentAndName($this->database, $parent, $account, $name);
@@ -106,7 +112,7 @@ class FilesApp extends AppBase
                 else throw new DuplicateFileException();
             }
             
-            $parent->CountBandwidth(filesize($name));
+            $parent->CountBandwidth(filesize($files[$name]));
             
             $file = File::Import($this->database, $parent, $account, $name, $files[$name]);
             array_push($return, $file->GetClientObject());
@@ -124,16 +130,6 @@ class FilesApp extends AppBase
         
         // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
         // TODO if no page is configured, configure outmode as PLAIN and just show "404 - not found" with MIME type text/plain (do this at the beginning of this function)
-        
-        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
-        
-        set_time_limit(0);  
-        
-        header("Accept-Ranges: bytes");
-        header("Cache-Control: max-age=0");
-        header("Content-type: application/octet-stream");        
-        header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
-        header('Content-Transfer-Encoding: binary');
 
         $fsize = $file->GetSize();        
         $fstart = $input->TryGetParam('fstart',SafeParam::TYPE_INT) ?? 0;
@@ -156,18 +152,28 @@ class FilesApp extends AppBase
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
         
+        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
+        
         if ($fstart != 0 || $flast != $fsize-1)
         {
             http_response_code(206);
             header("Content-Range: bytes $fstart-$flast/$fsize");     
         }
+        else $file->CountDownload();
         
-        header("Content-Length: ".($flast-$fstart+1));
+        header("Content-Length: ".($flast-$fstart+1));       
+
+        header("Accept-Ranges: bytes");
+        header("Cache-Control: max-age=0");
+        header("Content-type: application/octet-stream");
+        header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
+        header('Content-Transfer-Encoding: binary');       
+        
+        set_time_limit(0);
 
         try { while (@ob_end_flush()); } catch (\Throwable $e) { }
         
-        $file->CountDownload();
-
+        
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetChunkSize();     
         
@@ -215,7 +221,11 @@ class FilesApp extends AppBase
         $length = filesize($filepath); $wlast = $wstart + $length - 1;
         $flength = $file->GetSize();
         
-        if ($wstart < 0 || $wlast < $wstart || $wlast >= $flength)
+        if ($wlast >= $flength)
+            $file->SetSize($wlast+1);
+        $flength = $file->GetSize();
+        
+        if ($wstart < 0 || $wlast < $wstart)
             throw new InvalidFileRangeException();
         
         $file->CountBandwidth($length);        
@@ -230,8 +240,7 @@ class FilesApp extends AppBase
 
         for ($wbyte = $wstart; $wbyte <= $wlast; $wbyte += $chunksize)
         {
-            $rbyte = $wbyte - $wstart;
-            fseek($rhandle, $rbyte);
+            fseek($rhandle, $wbyte - $wstart);
 
             if ($align)
             {              
@@ -285,7 +294,21 @@ class FilesApp extends AppBase
         return $file->GetClientObject();
     }
     
-    protected function GetFilesystems(Input $array) : array
+    protected function GetFilesystem(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        if (($filesystem = $input->TryGetParam('filesystem',SafeParam::TYPE_ID)) !== null)
+        {
+            $filesystem = FSManager::TryLoadByID($this->Database, $filesystem);
+            if ($filesystem === null) throw new UnknownFilesystemException();
+            return $filesystem->GetClientObject();
+        }
+        else return FSManager::LoadDefaultbyAccount($this->database, $account)->GetClientObject();
+    }
+    
+    protected function GetFilesystems(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -326,13 +349,63 @@ class FilesApp extends AppBase
         if ($return === null) throw new UnknownFolderException(); return $return;
     }
     
+    protected function GetItemByPath(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        $folder = $input->TryGetParam('rootfolder',SafeParam::TYPE_ID);   
+        
+        if ($folder !== null)
+        {
+            $folder = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+        }
+        else
+        {
+            $filesys = $input->TryGetParam('filesystem',SafeParam::TYPE_ID);
+            if ($filesys !== null)
+            {
+                $filesys = FSManager::TryLoadByID($this->database, $filesys);
+                if ($filesys === null) throw new UnknownFilesystemException();
+            }
+            
+            $folder = Folder::LoadRootByAccount($this->database, $account, $filesys);
+        }        
+        
+        $path = $input->TryGetParam('path',SafeParam::TYPE_TEXT) ?? '/';
+        $path = array_filter(explode('/',$path), function($p){ return $p; });        
+        $name = array_pop($path);
+
+        foreach ($path as $subfolder)
+        {
+            $subfolder = Folder::TryLoadByParentAndName($this->database, $folder, $account, $subfolder);
+            if ($subfolder === null) throw new UnknownFolderException(); else $folder = $subfolder;
+        }
+        
+        $item = null; $isfile = $input->TryGetParam('isfile',SafeParam::TYPE_BOOL);
+        
+        if ($name === null) $item = $folder;
+        else
+        {                     
+            if ($isfile === null || $isfile) $item = File::TryLoadByParentAndName($this->database, $folder, $account, $name);
+            if ($item === null && !$isfile)  $item = Folder::TryLoadByParentAndName($this->database, $folder, $account, $name);        
+        }
+        
+        if ($item === null) throw new UnknownItemException();
+        
+        if ($isfile === false) $retval = $item->GetClientObject(Folder::WITHCONTENT);
+        else $retval = $item->GetClientObject();
+        
+        $retval['isfile'] = is_a($item, File::class); return $retval;
+    }
+    
     protected function CreateFolder(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
         $parent = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('parent',SafeParam::TYPE_ID));
-        if ($parent === null) throw new UnknownFolderException();
+        if ($parent === null) throw new UnknownParentException();
 
         $name = $input->GetParam('name',SafeParam::TYPE_TEXT);
         
@@ -347,13 +420,27 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
-        if ($file === null) throw new UnknownFileException();
-        
-        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal catch exception per item? better
-        
-        $file->Delete();
-        return array();
+        $file = $input->TryGetParam('file',SafeParam::TYPE_ID);
+        $files = $input->TryGetParam('files',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
+
+        if ($file !== null)
+        {
+            $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
+            if ($fileobj === null) throw new UnknownFileException();            
+            $fileobj->Delete(); return array();
+        }
+        else if ($files !== null)
+        {
+            $retval = array();
+            foreach ($files as $file)
+            {
+                $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
+                try { $fileobj->Delete(); $retval[$file] = true; } 
+                catch (\Throwable $e){ $retval[$file] = false; }
+            };
+            return $retval;
+        }
+        else throw new UnknownFileException();
     }
     
     protected function DeleteFolder(Input $input) : array
@@ -361,13 +448,27 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $folder = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('folder',SafeParam::TYPE_ID));
-        if ($folder === null) throw new UnknownFolderException();
+        $folder = $input->TryGetParam('folder',SafeParam::TYPE_ID);
+        $folders = $input->TryGetParam('folders',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
         
-        // TODO DELETE allow sending an array of items to delete also... batch? piecemeal catch exception per item? better
-        
-        $folder->Delete();        
-        return array();
+        if ($folder !== null)
+        {
+            $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+            if ($folderobj === null) throw new UnknownFolderException();
+            $folderobj->Delete(); return array();
+        }
+        else if ($folders !== null)
+        {
+            $retval = array();
+            foreach ($folders as $folder)
+            {
+                $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+                try { $folderobj->Delete(); $retval[$folder] = true; }
+                catch (\Throwable $e){ $retval[$folder] = false; }
+            };
+            return $retval;
+        }
+        else throw new UnknownFolderException();
     }
     
     protected function RenameFile(Input $input) : array
@@ -379,6 +480,11 @@ class FilesApp extends AppBase
         if ($file === null) throw new UnknownFileException();
         
         $name = basename($input->GetParam('name',SafeParam::TYPE_TEXT));        
+        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
+        
+        $oldfile = File::TryLoadByParentAndName($this->database, $file->GetParent(), $account, $name);
+        if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else throw new DuplicateFileException(); }
+        
         return $file->SetName($name)->GetClientObject();
     }
     
@@ -390,7 +496,12 @@ class FilesApp extends AppBase
         $folder = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('folder',SafeParam::TYPE_ID));
         if ($folder === null) throw new UnknownFolderException();
         
-        $name = basename($input->GetParam('name',SafeParam::TYPE_TEXT));        
+        $name = basename($input->GetParam('name',SafeParam::TYPE_TEXT));   
+        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
+        
+        $oldfolder = File::TryLoadByParentAndName($this->database, $folder->GetParent(), $account, $name);
+        if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else throw new DuplicateFolderException(); }
+        
         return $folder->SetName($name)->GetClientObject();
     }
     
@@ -399,15 +510,41 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
-        if ($file === null) throw new UnknownFileException();
+        $file = $input->TryGetParam('file',SafeParam::TYPE_ID);
+        $files = $input->TryGetParam('files',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
+        
+        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
         $parent = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('parent',SafeParam::TYPE_ID));
-        if ($parent === null) throw new UnknownFolderException();
+        if ($parent === null) throw new UnknownParentException();
         
-        // TODO batch moving of files also
-        
-        return $file->SetParent($parent)->GetClientObject();
+        if ($file !== null)
+        {
+            $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
+            if ($fileobj === null) throw new UnknownFileException();
+            
+            $oldfile = File::TryLoadByParentAndName($this->database, $parent, $account, $fileobj->GetName());
+            if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else throw new DuplicateFileException(); }       
+            
+            return $fileobj->SetParent($parent)->GetClientObject();
+        }
+        else if ($files !== null)
+        {
+            $retval = array();
+            foreach ($files as $file)
+            {
+                $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
+                if ($fileobj === null) { $retval[$file] = false; continue; }
+                
+                $oldfile = File::TryLoadByParentAndName($this->database, $parent, $account, $fileobj->GetName());
+                if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else { $retval[$file] = false; continue; } }
+                
+                try { $retval[$file] = $fileobj->SetParent($parent)->GetClientObject(); }
+                catch(\Throwable $e) { $retval[$file] = false; }
+            };
+            return $retval;
+        }
+        else throw new UnknownFileException();
     }
     
     protected function MoveFolder(Input $input) : array
@@ -415,15 +552,41 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $folder = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('folder',SafeParam::TYPE_ID));
-        if ($folder === null) throw new UnknownFolderException();
+        $folder = $input->TryGetParam('folder',SafeParam::TYPE_ID);
+        $folders = $input->TryGetParam('folders',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
+        
+        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
         $parent = Folder::TryLoadByAccountAndID($this->database, $account, $input->GetParam('parent',SafeParam::TYPE_ID));
-        if ($parent === null) throw new UnknownFolderException();
+        if ($parent === null) throw new UnknownParentException();
         
-        // TODO batch moving of folders also
-
-        return $folder->SetParent($parent)->GetClientObject();
+        if ($folder !== null)
+        {
+            $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+            if ($folderobj === null) throw new UnknownFolderException();
+            
+            $oldfolder = Folder::TryLoadByParentAndName($this->database, $parent, $account, $folderobj->GetName());
+            if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else throw new DuplicateFolderException(); }
+            
+            return $folderobj->SetParent($parent)->GetClientObject();
+        }
+        else if ($folders !== null)
+        {
+            $retval = array();
+            foreach ($folders as $folder)
+            {
+                $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+                if ($folderobj === null) { $retval[$folder] = false; continue; }
+                
+                $oldfolder = Folder::TryLoadByParentAndName($this->database, $parent, $account, $folderobj->GetName());
+                if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else { $retval[$folder] = false; continue; } }
+                
+                try { $retval[$folder] = $folderobj->SetParent($parent)->GetClientObject(); }
+                catch(\Throwable $e) { $retval[$folder] = false; }
+            };
+            return $retval;
+        }
+        else throw new UnknownFolderException();
     }
 }
 
