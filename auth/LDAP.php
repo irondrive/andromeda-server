@@ -8,7 +8,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class LDAPExtensionException extends Exceptions\ServerException   { public $message = "LDAP_EXTENSION_MISSING"; }
 
-class LDAP extends External implements Source
+class LDAP extends External implements ISource
 {
     public static function GetFieldTemplate() : array
     {

@@ -25,7 +25,7 @@ class ContactInfo extends StandardObject
         return self::LoadByUniqueKey($database, 'info', $info);
     }
     
-    public static function TryLoadByInfo(ObjectDatabase $database, ?string $info) : ?ContactInfo
+    public static function TryLoadByInfo(ObjectDatabase $database, string $info) : ?ContactInfo
     {
         return self::TryLoadByUniqueKey($database, 'info', $info);
     }

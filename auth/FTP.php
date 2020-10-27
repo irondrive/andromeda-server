@@ -7,7 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 class FTPExtensionException extends Exceptions\ServerException   { public $message = "FTP_EXTENSION_MISSING"; }
 class FTPConnectionFailure extends Exceptions\ServerException    { public $message = "FTP_CONNECTION_FAILURE"; }
 
-class FTP extends External implements Source
+class FTP extends External implements ISource
 {
     public static function GetFieldTemplate() : array
     {

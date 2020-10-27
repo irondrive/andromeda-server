@@ -35,8 +35,7 @@ class Config extends SingletonObject
     public function GetClientObject(int $level = 0) : array
     {
         $data = array(
-            'id' => $this->ID(),
-            'features' => $this->GetAllFeatures(),
+            'features' => $this->GetAllFeatures()
         );
         
         if ($level == self::OBJECT_ADMIN) $data['default_group'] = $this->GetDefaultGroup()->ID();

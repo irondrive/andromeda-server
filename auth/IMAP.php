@@ -8,7 +8,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class IMAPExtensionException extends Exceptions\ServerException   { public $message = "IMAP_EXTENSION_MISSING"; }
 
-class IMAP extends External implements Source
+class IMAP extends External implements ISource
 {
     public static function GetFieldTemplate() : array
     {

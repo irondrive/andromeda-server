@@ -10,7 +10,7 @@ require_once(ROOT."/apps/accounts/RecoveryKey.php");
 
 require_once(ROOT."/apps/accounts/auth/Local.php");
 
-require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
+require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
@@ -45,7 +45,7 @@ class Account extends AuthEntity
             'features__admin__inherits' => null,
             'features__enabled__inherits' => null,
             'features__forcetwofactor__inherits' => null,
-            'authsource'    => new FieldTypes\ObjectPoly(Auth\Source::class),
+            'authsource'    => new FieldTypes\ObjectPoly(Auth\ISource::class),
             'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
             'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
             'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
@@ -70,7 +70,7 @@ class Account extends AuthEntity
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
 
-    public function GetAuthSource() : Auth\Source 
+    public function GetAuthSource() : Auth\ISource
     { 
         $authsource = $this->TryGetObject('authsource');
         if ($authsource !== null) return $authsource;
@@ -155,7 +155,7 @@ class Account extends AuthEntity
         $mailer->SendMail($subject, $message, $recipients, $from);
     }
     
-    public static function Create(ObjectDatabase $database, Auth\Source $source, string $username, string $password) : self
+    public static function Create(ObjectDatabase $database, Auth\ISource $source, string $username, string $password) : self
     {        
         $account = parent::BaseCreate($database); $config = Config::Load($database);
         
@@ -388,7 +388,7 @@ class Account extends AuthEntity
         $master_nonce = $this->GetScalar('master_nonce');
         $master_salt = $this->GetScalar('master_salt');
         
-        $password_key = CryptoSecret::DeriveKey($password, $master_salt);        
+        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());        
         $master = CryptoSecret::Decrypt($master, $master_nonce, $password_key);
         
         $this->SetScalar('master_key', $master, true);
@@ -409,11 +409,11 @@ class Account extends AuthEntity
     
     private function InitializeCrypto(string $password) : self
     {
-        $master_salt = CryptoSecret::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);
+        $master_salt = CryptoKey::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);
         
         $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce',  $master_nonce);   
         
-        $password_key = CryptoSecret::DeriveKey($password, $master_salt);
+        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());
         
         $master = CryptoSecret::GenerateKey();
         $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
@@ -430,10 +430,10 @@ class Account extends AuthEntity
     {
         if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
         
-        $master_salt = CryptoSecret::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);        
+        $master_salt = CryptoKey::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);        
         $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce', $master_nonce);
         
-        $password_key = CryptoSecret::DeriveKey($password, $master_salt);
+        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());
         
         $master = $this->GetScalar('master_key');
         $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
