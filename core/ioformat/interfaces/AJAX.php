@@ -27,6 +27,16 @@ class AJAX extends IOInterface
     {
         return isset($_SERVER['HTTP_USER_AGENT']);
     }
+    
+    public function getAddress() : string
+    {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+    
+    public function getUserAgent() : string
+    {
+        return $_SERVER['HTTP_USER_AGENT'];
+    }
   
     public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
     
@@ -80,10 +90,8 @@ class AJAX extends IOInterface
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;
         $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
         $auth = ($user !== null && $pass !== null) ? (new InputAuth($user, $pass)) : null;
-        
-        $addr = new Address($_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
-        
-        return new Input($app, $action, $params, $addr, $files, $auth);
+
+        return new Input($app, $action, $params, $files, $auth);
     }
     
     public function WriteOutput(Output $output)

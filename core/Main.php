@@ -82,7 +82,7 @@ class Main implements Transactions
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        if ($this->GetDebug())
+        if ($this->GetDebugState())
         { 
             $this->database->pushStatsContext();
             $oldstats = &$this->run_stats; 
@@ -92,9 +92,10 @@ class Main implements Transactions
 
         array_push($this->contexts, $input);
         $data = $this->apps[$app]->Run($input);
+        $this->database->saveObjects();
         array_pop($this->contexts);        
              
-        if ($this->GetDebug())
+        if ($this->GetDebugState())
         {
             $newstats = $this->database->popStatsContext();
             $this->sum_stats->add($newstats);
@@ -111,7 +112,7 @@ class Main implements Transactions
 
         $data = AJAX::RemoteRequest($url, $input);
 
-        if ($this->GetDebug())
+        if ($this->GetDebugState())
         {
             array_push($this->run_stats, array(
                 'remote_time' => microtime(true) - $start,
@@ -130,7 +131,7 @@ class Main implements Transactions
     
     public function commit() : ?array
     {
-        set_time_limit(0); if ($this->GetDebug()) $this->database->pushStatsContext();
+        set_time_limit(0); if ($this->GetDebugState()) $this->database->pushStatsContext();
         
         $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
         
@@ -138,7 +139,7 @@ class Main implements Transactions
         
         foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();        
         
-        if ($this->GetDebug()) 
+        if ($this->GetDebugState()) 
         {
             $commit_stats = $this->database->popStatsContext();
             $this->sum_stats->Add($commit_stats);
@@ -148,11 +149,15 @@ class Main implements Transactions
         else return null;
     }
     
-    public function GetDebug() : bool
+    public function GetDebugState() : bool
     {
         return ($this->config->GetDebugOverHTTP() || $this->interface->getMode() == IOInterface::MODE_CLI) 
                 && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
     }
+    
+    private array $debuglog = array();    
+    public function PrintDebug(string $data){ if ($this->GetDebugState()) array_push($this->debuglog, $data); }
+    public function GetDebugLog() : ?array { return $this->GetDebugState() && count($this->debuglog) ? $this->debuglog : null; }
     
     private function GetMetrics() : array
     {

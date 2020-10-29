@@ -18,29 +18,29 @@ class ErrorManager
     
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
-    public function GetDebug() : bool
+    private function GetDebugState() : bool
     {
         if ($this->API !== null && $this->API->GetConfig() !== null) 
-            return $this->API->GetDebug();
+            return $this->API->GetDebugState();
         else return CLI::isApplicable();
     }
     
-    public function HandleClientException(ClientException $e) : Output
+    private function HandleClientException(ClientException $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack();
             
-        $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+        $debug = null; if ($this->GetDebugState()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
             
         return Output::ClientException($e, $debug);
     }
     
-    public function HandleThrowable(\Throwable $e) : Output
+    private function HandleThrowable(\Throwable $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack();
         
         if ($this->API !== null && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
 
-        $debug = null; if ($this->GetDebug()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+        $debug = null; if ($this->GetDebugState()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
 
         return Output::ServerException($debug);
     }

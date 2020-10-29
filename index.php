@@ -30,4 +30,7 @@ $metrics = $main->commit();
 
 if ($metrics !== null) $output->SetMetrics($metrics);
 
+$debuglog = $main->GetDebugLog();
+if ($debuglog !== null) $output->SetDebug(array('log'=>$debuglog));
+
 $interface->WriteOutput($output); die();

@@ -20,6 +20,9 @@ abstract class IOInterface
     abstract public static function getMode() : int;
     abstract public static function isApplicable() : bool;
     
+    abstract public function getAddress() : string;    
+    abstract public function getUserAgent() : string;
+    
     const OUTPUT_NONE = 0; const OUTPUT_PLAIN = 1; const OUTPUT_JSON = 2; const OUTPUT_PRINTR = 3;
 
     public function SetOutmode(int $outmode) : self { $this->outmode = $outmode; return $this; }

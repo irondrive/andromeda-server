@@ -28,6 +28,7 @@ class ErrorLogEntry extends BaseObject
             'objects' => null,
             'queries' => null,
             'params' => null,
+            'log' => null
          ));
     }
     
@@ -51,8 +52,8 @@ class ErrorLogEntry extends BaseObject
             
             'time'=>    time(),
             
-            'addr'=>    (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAddress()->GetAddress() : "",
-            'agent'=>   (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAddress()->GetAgent() : "",
+            'addr'=>    isset($api) ? $api->GetInterface()->GetAddress() : "",
+            'agent'=>   isset($api) ? $api->GetInterface()->GetUserAgent() : "",
             
             'code'=>    $e->getCode(),
             'file'=>    $e->getFile()."(".$e->getLine().")",
@@ -61,17 +62,32 @@ class ErrorLogEntry extends BaseObject
             'app'=>     (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetApp() : "",
             'action'=>  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
             
-            'trace_basic' => $e->getTraceAsString(),
+            'log' =>    isset($api) ? $api->GetDebugLog() : ""
         );
         
-        if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
+        if ($asJson) $data['log'] = Utilities::JSONEncode($data['log']);
         
-        if (isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE)
+        $sensitive = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE;
+        
+        if ($sensitive)
         {
             $data['params'] =  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
             $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
             
+            if ($asJson)
+            {
+                $data['params'] = Utilities::JSONEncode($data['params']);
+                $data['objects'] = Utilities::JSONEncode($data['objects']);
+                $data['queries'] = Utilities::JSONEncode($data['queries']);
+            }
+        }
+        
+        $data['trace_basic'] = $e->getTraceAsString();
+        if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
+          
+        if ($sensitive)
+        {
             $data['trace_full'] = $e->getTrace();
             
             foreach (array_keys($data['trace_full']) as $key)
@@ -86,10 +102,6 @@ class ErrorLogEntry extends BaseObject
             
             if ($asJson)
             {
-                $data['params'] = Utilities::JSONEncode($data['params']);
-                $data['objects'] = Utilities::JSONEncode($data['objects']);
-                $data['queries'] = Utilities::JSONEncode($data['queries']);
-                
                 try { $data['trace_full'] = Utilities::JSONEncode($data['trace_full']); }
                 catch (JSONEncodingException $e) { $data['trace_full'] = "TRACE_JSON_ENCODING_FAILURE"; }
             }
