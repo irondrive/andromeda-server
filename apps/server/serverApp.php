@@ -39,7 +39,7 @@ class ServerApp extends AppBase
     {
         set_time_limit(0);
         
-        if ($this->API->GetDebug())
+        if ($this->API->GetDebugState())
         {
             return array_map(function($app) use ($input){
                 return get_class($app)::Test($this->API, $input);
