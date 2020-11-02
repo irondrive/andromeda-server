@@ -8,6 +8,7 @@ require_once(ROOT."/apps/files/Folder.php");
 require_once(ROOT."/apps/files/storage/Storage.php");
 require_once(ROOT."/apps/files/storage/Local.php");
 require_once(ROOT."/apps/files/storage/FTP.php");
+require_once(ROOT."/apps/files/storage/SFTP.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
@@ -23,6 +24,8 @@ use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 
 use Andromeda\Core\Database\ObjectNotFoundException;
+
+use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException};
 
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
 class UnknownFileException  extends Exceptions\ClientNotFoundException      { public $message = "UNKNOWN_FILE"; }
@@ -53,7 +56,7 @@ class FilesApp extends AppBase
     {
         $this->database = $this->API->GetDatabase();
         
-        $this->authenticator = Authenticator::TryAuthenticate($this->database, $input);
+        $this->authenticator = Authenticator::TryAuthenticate($this->database, $input, $this->API->GetInterface());
 
         switch($input->GetAction())
         {
@@ -87,8 +90,6 @@ class FilesApp extends AppBase
     {
         $account = $this->authenticator->GetAccount();
         $admin = $account !== null && $account->isAdmin();
-        
-        // TODO GET CONFIG (if there is any)
     }
     
     protected function UploadFiles(Input $input) : array
@@ -102,7 +103,7 @@ class FilesApp extends AppBase
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
         $return = array(); $files = $input->GetFiles();
-        if (!count($files)) throw new UnknownFileException();
+        if (!count($files)) throw new InvalidFileWriteException();
         foreach (array_keys($files) as $name)
         {
             $file = File::TryLoadByParentAndName($this->database, $parent, $account, $name);
@@ -152,7 +153,8 @@ class FilesApp extends AppBase
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
         
-        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
+        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false))
+            $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
         
         if ($fstart != 0 || $flast != $fsize-1)
         {
@@ -342,7 +344,7 @@ class FilesApp extends AppBase
 
         if ($folder === null) throw new UnknownFolderException();
 
-        // TODO user param to get only folders or only files
+        // TODO user param to get only folders or only files ALSO limit/offset
 
         $recursive = $input->TryGetParam('recursive',SafeParam::TYPE_BOOL) ?? false;
         $return = $folder->CountVisit()->GetClientObject($recursive ? Folder::RECURSIVE : Folder::WITHCONTENT);
@@ -373,8 +375,7 @@ class FilesApp extends AppBase
         }        
         
         $path = $input->TryGetParam('path',SafeParam::TYPE_TEXT) ?? '/';
-        $path = array_filter(explode('/',$path), function($p){ return $p; });        
-        $name = array_pop($path);
+        $path = array_filter(explode('/',$path)); $name = array_pop($path);
 
         foreach ($path as $subfolder)
         {
@@ -384,9 +385,9 @@ class FilesApp extends AppBase
         
         $item = null; $isfile = $input->TryGetParam('isfile',SafeParam::TYPE_BOOL);
         
-        if ($name === null) $item = $folder;
+        if ($name === null) $item = $isfile !== true ? $folder : null;
         else
-        {                     
+        {
             if ($isfile === null || $isfile) $item = File::TryLoadByParentAndName($this->database, $folder, $account, $name);
             if ($item === null && !$isfile)  $item = Folder::TryLoadByParentAndName($this->database, $folder, $account, $name);        
         }
@@ -436,7 +437,7 @@ class FilesApp extends AppBase
             {
                 $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
                 try { $fileobj->Delete(); $retval[$file] = true; } 
-                catch (\Throwable $e){ $retval[$file] = false; }
+                catch (StorageException | ReadOnlyException $e){ $retval[$file] = false; }
             };
             return $retval;
         }
@@ -464,7 +465,7 @@ class FilesApp extends AppBase
             {
                 $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
                 try { $folderobj->Delete(); $retval[$folder] = true; }
-                catch (\Throwable $e){ $retval[$folder] = false; }
+                catch (StorageException | ReadOnlyException $e){ $retval[$folder] = false; }
             };
             return $retval;
         }
@@ -533,14 +534,15 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($files as $file)
             {
-                $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
-                if ($fileobj === null) { $retval[$file] = false; continue; }
-                
-                $oldfile = File::TryLoadByParentAndName($this->database, $parent, $account, $fileobj->GetName());
-                if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else { $retval[$file] = false; continue; } }
-                
-                try { $retval[$file] = $fileobj->SetParent($parent)->GetClientObject(); }
-                catch(\Throwable $e) { $retval[$file] = false; }
+                try {
+                    $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
+                    if ($fileobj === null) { $retval[$file] = false; continue; }
+                    
+                    $oldfile = File::TryLoadByParentAndName($this->database, $parent, $account, $fileobj->GetName());
+                    if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else { $retval[$file] = false; continue; } }
+                    
+                    $retval[$file] = $fileobj->SetParent($parent)->GetClientObject(); 
+                } catch(StorageException | ReadOnlyException $e) { $retval[$file] = false; }
             };
             return $retval;
         }
@@ -575,14 +577,15 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($folders as $folder)
             {
-                $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
-                if ($folderobj === null) { $retval[$folder] = false; continue; }
-                
-                $oldfolder = Folder::TryLoadByParentAndName($this->database, $parent, $account, $folderobj->GetName());
-                if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else { $retval[$folder] = false; continue; } }
-                
-                try { $retval[$folder] = $folderobj->SetParent($parent)->GetClientObject(); }
-                catch(\Throwable $e) { $retval[$folder] = false; }
+                try { 
+                    $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
+                    if ($folderobj === null) { $retval[$folder] = false; continue; }
+                    
+                    $oldfolder = Folder::TryLoadByParentAndName($this->database, $parent, $account, $folderobj->GetName());
+                    if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else { $retval[$folder] = false; continue; } }
+                    
+                    $retval[$folder] = $folderobj->SetParent($parent)->GetClientObject(); 
+                } catch(StorageException | ReadOnlyException $e) { $retval[$folder] = false; }
             };
             return $retval;
         }

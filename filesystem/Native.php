@@ -47,6 +47,5 @@ class Native extends BaseFileFS
     public function MoveFile(File $file, Folder $parent) : self { return $this; }
     public function MoveFolder(Folder $folder, Folder $parent) : self { return $this; }
  
-    // TODO FUTURE hierarchy of files by prefix folders? like git
     protected function GetFilePath(File $file) : string { return $file->ID(); }
 }

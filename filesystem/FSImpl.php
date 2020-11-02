@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 
@@ -19,7 +20,7 @@ abstract class FSImpl implements Transactions
     protected function GetStorage(){ return $this->filesystem->GetStorage(); }
     protected function GetAccount(){ return $this->filesystem->GetAccount(); }
     protected function GetDatabase(){ return $this->filesystem->GetDatabase(); }
-    
+
     public abstract function RefreshFile(File $file) : self;
     public abstract function RefreshFolder(Folder $folder) : self;
     
