@@ -32,8 +32,7 @@ class NativeCrypt extends Native
         $chunks = $this->GetNumChunks($length);
         
         $this->GetStorage()->CreateFile($newpath);
-        $this->Truncate($file, $length, false);
-        
+
         $handle = fopen($oldpath,'rb');
         
         for ($chunk = 0; $chunk < $chunks; $chunk++)

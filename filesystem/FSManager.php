@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -60,6 +61,7 @@ class FSManager extends StandardObject
     
     private function GetType() : int { return $this->GetScalar('type'); }
     public function GetStorage() : Storage { return $this->GetObject('storage'); }
+    public function GetStorageType() : string { return $this->GetObjectType('storage'); }
     
     public function GetDatabase() : ObjectDatabase { return $this->database; }
     public function GetFSImpl() : FSImpl { return $this->interface; }
@@ -71,6 +73,7 @@ class FSManager extends StandardObject
         if (!count($found)) $found = static::LoadManyMatchingAll($database, array('owner'=>null,'name'=>null));
         return array_values($found)[0]; // TODO what if all their FSes have a name? should not be an error
         // I don't like using the name to determine the default, maybe we could even let the user change the default?
+        // TODO - have a flag for default, don't use null name. Also make this a TRY - it's conceivable the admin could not configure a storage and leave it up to the users
     }
     
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
@@ -87,7 +90,8 @@ class FSManager extends StandardObject
             'shared' => $this->isShared(),
             'secure' => $this->isSecure(),
             'readonly' => $this->isReadOnly(),
-            'chunksize' => $this->TryGetScalar('crypto_chunksize')
+            'chunksize' => $this->TryGetScalar('crypto_chunksize'),
+            'storagetype' => Utilities::array_last(explode('\\',$this->GetStorageType()))
         );
         
         if ($priv) $data['storage'] = $this->GetStorage()->GetClientObject();

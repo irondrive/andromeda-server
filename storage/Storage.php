@@ -3,13 +3,17 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+
+use Andromeda\Core\Exceptions\ClientDeniedException;
+
+class ReadOnlyException extends ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
 
 class StorageException extends Exceptions\ServerException { }
-
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
 class FolderDeleteFailedException extends StorageException  { public $message = "FOLDER_DELETE_FAILED"; }
 class FolderMoveFailedException extends StorageException    { public $message = "FOLDER_MOVE_FAILED"; }
@@ -21,6 +25,7 @@ class FileRenameFailedException extends StorageException    { public $message = 
 class FileReadFailedException extends StorageException      { public $message = "FILE_READ_FAILED"; }
 class FileWriteFailedException extends StorageException     { public $message = "FILE_WRITE_FAILED"; }
 class ItemStatFailedException extends StorageException      { public $message = "ITEM_STAT_FAILED"; }
+class FreeSpaceFailedException extends StorageException     { public $message = "FREE_SPACE_FAILED"; }
 
 class ItemStat
 {
@@ -34,11 +39,48 @@ abstract class Storage extends StandardObject implements Transactions
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
+            'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
             'owner' => new FieldTypes\ObjectRef(Account::class)
         ));
     }
     
-    public abstract function GetClientObject() : array;
+    public function GetClientObject() : array
+    {
+        return array(
+            'id' => $this->ID(),
+            'owner' => $this->GetObjectID('owner'),
+            'filesystem' => $this->GetObjectID('filesystem')
+        );
+    }
+    
+    public function GetOwner() : Account { return $this->GetObject('owner'); }
+    public function GetFilesystem() : FSManager { return $this->GetObject('filesystem'); }    
+    
+    protected function CheckReadOnly(){ if ($this->GetFilesystem()->isReadOnly()) throw new ReadOnlyException(); }
+
+    public function GetFreeSpace() : ?int { return null; }
+    
+    public abstract function ItemStat(string $path) : ItemStat;    
+    public abstract function isFolder(string $path) : bool;    
+    public abstract function isFile(string $path) : bool;
+    
+    public abstract function ReadFolder(string $path) : ?array;    
+    public abstract function CreateFolder(string $path) : self; 
+    
+    public abstract function DeleteFolder(string $path) : self;    
+    public abstract function DeleteFile(string $path) : self;
+    
+    public abstract function ImportFile(string $src, string $dest) : self;    
+    public abstract function CreateFile(string $path) : self;
+    
+    public abstract function ReadBytes(string $path, int $start, int $length) : string;    
+    public abstract function WriteBytes(string $path, int $start, string $data) : self;    
+    public abstract function Truncate(string $path, int $length) : self;
+
+    public abstract function RenameFile(string $old, string $new) : self;    
+    public abstract function RenameFolder(string $old, string $new) : self;    
+    public abstract function MoveFile(string $old, string $new) : self;    
+    public abstract function MoveFolder(string $old, string $new) : self;
 
     public function commit() { }
     public function rollback() { }
