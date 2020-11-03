@@ -169,8 +169,8 @@ abstract class FWrapper extends Storage
     
     public function __destruct()
     {
-        try { foreach ($this->reading as $handle) fclose($handle); }
-        catch (\Throwable $e) { }
+        foreach ($this->reading as $handle) 
+            try { fclose($handle); } catch (\Throwable $e) { }        
     }
 }
 

@@ -16,8 +16,8 @@ require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Authenticator.php"); use Andromeda\Apps\Accounts\{Authenticator, AuthenticationFailedException};
 
 use Andromeda\Core\UnknownActionException;
@@ -47,15 +47,21 @@ class FilesApp extends AppBase
     public function __construct(Main $api)
     {
         parent::__construct($api);
+        $this->database = $api->GetDatabase();
         
-        try { $this->config = Config::Load($api->GetDatabase()); }
+        try { $this->config = Config::Load($this->database); }
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
-    }
-    
-    public function Run(Input $input)
-    {
-        $this->database = $this->API->GetDatabase();
         
+        Account::RegisterDeleteHandler(function(Account $account)
+        { 
+            File::DeleteByAccount($this->database, $account);
+            Folder::DeleteByAccount($this->database, $account);
+            FSManager::DeleteByAccount($this->database, $account); 
+        });
+    }
+        
+    public function Run(Input $input)
+    {        
         $this->authenticator = Authenticator::TryAuthenticate($this->database, $input, $this->API->GetInterface());
 
         switch($input->GetAction())
@@ -147,7 +153,7 @@ class FilesApp extends AppBase
             
             $fstart = intval($ranges[0]); 
             $flast2 = intval($ranges[1]); 
-            if ($flast2) $flast = $flast2;     
+            if ($flast2) $flast = $flast2;
         }
 
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
@@ -161,7 +167,7 @@ class FilesApp extends AppBase
             http_response_code(206);
             header("Content-Range: bytes $fstart-$flast/$fsize");     
         }
-        else $file->CountDownload();
+        else $file->CountDownload(); // TODO only count download on guest download
         
         header("Content-Length: ".($flast-$fstart+1));       
 
@@ -173,8 +179,7 @@ class FilesApp extends AppBase
         
         set_time_limit(0);
 
-        try { while (@ob_end_flush()); } catch (\Throwable $e) { }
-        
+        try { while (@ob_end_flush()); } catch (\Throwable $e) { }        
         
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetChunkSize();     
@@ -345,6 +350,7 @@ class FilesApp extends AppBase
         if ($folder === null) throw new UnknownFolderException();
 
         // TODO user param to get only folders or only files
+        // TODO only count visit on guest access
         
         $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
         $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
