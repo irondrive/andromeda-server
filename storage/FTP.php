@@ -50,18 +50,15 @@ class FTP extends Storage
         else $this->ftp = $this->ftp = ftp_connect($host, $port);
         if (!$this->ftp) throw new FTPConnectionFailure();   
         
-        if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();    
-        
-        ftp_pasv($this->ftp, true);
+        if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();
     }
 
     public function __destruct()
     {
-       try {           
-           foreach ($this->appending_handles as $handle) fclose($handle);
-           ftp_close($this->ftp); 
-       } 
-       catch (Exceptions\PHPException $e) { }
+      foreach ($this->appending_handles as $handle) fclose($handle);
+           try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
+       
+       try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
     }
     
     protected function GetPath($path) : string { return $this->GetScalar('path').'/'.$path; }
@@ -110,7 +107,9 @@ class FTP extends Storage
             
         $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$start)));
         $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
-        $data = fread($handle, $length); fclose($handle);
+        
+        $data = fread($handle, $length);
+        try { fclose($handle); } catch (\Throwable $e) { }
         
         if ($data === false) throw new FileReadFailedException();
         else return $data;

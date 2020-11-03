@@ -90,4 +90,14 @@ abstract class Item extends StandardObject
         $loaded = parent::LoadByQuery($database, $q->Where($where));
         return count($loaded) ? array_values($loaded)[0] : null;
     }
+    
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        parent::DeleteByObject($database, 'owner', $account);
+    }
+    
+    public static function DeleteByFSManager(ObjectDatabase $database, FSManager $filesystem) : void
+    {
+        parent::DeleteByObject($database, 'filesystem', $filesystem);
+    }
 }

@@ -15,6 +15,9 @@ require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
+require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
+require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
+
 class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
 
 class FSManager extends StandardObject
@@ -84,6 +87,21 @@ class FSManager extends StandardObject
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
         return parent::LoadByObject($database, 'account', $account);
+    }
+    
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        parent::DeleteByObject($database, 'owner', $account);
+    }
+    
+    public function Delete() : void
+    {        
+        $this->DeleteObject('storage');
+
+        File::DeleteByFSManager($this->database, $this);
+        Folder::DeleteByFSManager($this->database, $this);
+        
+        parent::Delete();
     }
     
     public function GetClientObject(bool $priv = false) : array
