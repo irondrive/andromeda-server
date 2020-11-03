@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -31,8 +32,9 @@ class Folder extends Item
     public function GetName() : ?string   { return $this->TryGetScalar('name'); }
     public function GetSize() : int       { return $this->TryGetCounter('size') ?? 0; }
     public function GetParent() : ?Folder { return $this->TryGetObject('parent'); }
-    public function GetFiles() : array    { $this->Refresh(true); return $this->GetObjectRefs('files'); }
-    public function GetFolders() : array  { $this->Refresh(true); return $this->GetObjectRefs('folders'); }
+    
+    public function GetFiles(?int $limit = null, ?int $offset = null) : array    { $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
+    public function GetFolders(?int $limit = null, ?int $offset = null) : array  { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
     
     public function CountVisit() : self   { return $this->DeltaCounter('visits'); }
     
@@ -136,21 +138,17 @@ class Folder extends Item
         return $folder;
     }
     
-    public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : self
+    public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {
-        $filesystem ??= FSManager::LoadDefaultByAccount($database, $account);
-        $criteria = array('owner'=>$account->ID(), 'filesystem'=>$filesystem->ID(), 'parent'=>null);
-        $loaded = self::LoadManyMatchingAll($database, $criteria);
+        $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
         
-        if (!count($loaded))
-        {
-            $criteria['owner'] = null;
-            $loaded = self::LoadManyMatchingAll($database, $criteria);
-        }
-
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'),
+                                                  $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
+        
+        $loaded = self::LoadByQuery($database, $q->Where($where));
+        
         if (count($loaded)) return array_values($loaded)[0];
-        else
-        {
+        else {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
             return self::CreateRoot($database, $filesystem, $owner)->Refresh();
         }
@@ -162,8 +160,8 @@ class Folder extends Item
     {
         if (!$isNotify) $this->Refresh(true);
         $this->notifyDeleted = $isNotify;
-        File::DeleteByParent($this->database, $this);
-        Folder::DeleteByParent($this->database, $this);
+        $this->DeleteObjects('files');
+        $this->DeleteObjects('folders');
     }
     
     public function NotifyDelete(bool $isNotify = true) : void
@@ -188,7 +186,7 @@ class Folder extends Item
     
     const ONLYSELF = 1; const WITHCONTENT = 2; const RECURSIVE = 3;
     
-    public function GetClientObject(int $level = self::ONLYSELF) : ?array
+    public function GetClientObject(int $level = self::ONLYSELF, ?int $limit = null, ?int $offset = null) : ?array
     {
         if ($this->isDeleted()) return null;
         
@@ -206,9 +204,12 @@ class Folder extends Item
         
         if ($level != self::ONLYSELF)
         {
-            $sublevel = ($level === self::RECURSIVE) ? self::RECURSIVE : self::ONLYSELF;
-            $data['folders'] = array_map(function($folder)use($sublevel){ return $folder->GetClientObject($sublevel); }, $this->GetFolders());
-            $data['files'] = array_map(function($file){ return $file->GetClientObject(); }, $this->GetFiles());            
+            $subv = ($level === self::RECURSIVE) ? self::RECURSIVE : self::ONLYSELF;
+            $data['folders'] = array_map(function($folder)use($subv){ return $folder->GetClientObject($subv); }, $this->GetFolders($limit,$offset));
+            
+            if ($limit !== null) $limit -= count($data['folders']);           
+            if ($offset !== null) $offset -= count($data['folders']);
+            $data['files'] = array_map(function($file){ return $file->GetClientObject(); }, $this->GetFiles($limit,$offset));            
         }        
 
         return $data;

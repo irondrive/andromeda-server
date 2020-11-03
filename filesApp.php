@@ -344,10 +344,14 @@ class FilesApp extends AppBase
 
         if ($folder === null) throw new UnknownFolderException();
 
-        // TODO user param to get only folders or only files ALSO limit/offset
+        // TODO user param to get only folders or only files
+        
+        $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+        $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
 
         $recursive = $input->TryGetParam('recursive',SafeParam::TYPE_BOOL) ?? false;
-        $return = $folder->CountVisit()->GetClientObject($recursive ? Folder::RECURSIVE : Folder::WITHCONTENT);
+        $level = $recursive ? Folder::RECURSIVE : Folder::WITHCONTENT;
+        $return = $folder->CountVisit()->GetClientObject($level, $limit, $offset);
         if ($return === null) throw new UnknownFolderException(); return $return;
     }
     
@@ -372,7 +376,9 @@ class FilesApp extends AppBase
             }
             
             $folder = Folder::LoadRootByAccount($this->database, $account, $filesys);
-        }        
+        }
+        
+        if ($folder === null) throw new UnknownFolderException();
         
         $path = $input->TryGetParam('path',SafeParam::TYPE_TEXT) ?? '/';
         $path = array_filter(explode('/',$path)); $name = array_pop($path);

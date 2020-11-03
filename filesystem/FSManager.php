@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -66,19 +67,23 @@ class FSManager extends StandardObject
     public function GetDatabase() : ObjectDatabase { return $this->database; }
     public function GetFSImpl() : FSImpl { return $this->interface; }
 
-    public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : self
+    public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
-        // TODO FUTURE maybe use a manual query to get this done in a single query        
-        $found = static::LoadManyMatchingAll($database, array('owner'=>$account->ID(),'name'=>null));
-        if (!count($found)) $found = static::LoadManyMatchingAll($database, array('owner'=>null,'name'=>null));
-        return array_values($found)[0]; // TODO what if all their FSes have a name? should not be an error
-        // I don't like using the name to determine the default, maybe we could even let the user change the default?
-        // TODO - have a flag for default, don't use null name. Also make this a TRY - it's conceivable the admin could not configure a storage and leave it up to the users
+        $q1 = new QueryBuilder(); $q1->Where($q1->And($q1->IsNull('name'), $q1->Equals('owner',$account->ID())));
+        $found = self::LoadByQuery($database, $q1);
+        
+        if (!count($found))
+        {
+            $q2 = new QueryBuilder(); $q2->Where($q2->And($q2->IsNull('name'), $q2->IsNull('owner')));
+            $found = self::LoadByQuery($database, $q2);
+        }
+        
+        return count($found) ? array_values($found)[0] : null;
     }
     
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
-        return static::LoadManyMatchingAny($database, 'owner', array(null, $account->ID()));
+        return parent::LoadByObject($database, 'account', $account);
     }
     
     public function GetClientObject(bool $priv = false) : array

@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -83,22 +84,10 @@ abstract class Item extends StandardObject
     
     public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, Account $account, string $name) : ?self
     {
-        $criteria = array('parent'=>$parent->ID(), 'name'=>$name);
-        $loaded = self::LoadManyMatchingAll($database, $criteria);
-        
-        if (!count($loaded)) return null; else $loaded = array_values($loaded)[0];
-        
-        $owner = $loaded->GetObjectID('owner');
-        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
-    }
-    
-    public static function DeleteByParent(ObjectDatabase $database, Parent $parent) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('parent'=>$parent->ID()));
-    }
-    
-    public static function DeleteByOwner(ObjectDatabase $database, Account $owner) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('owner'=>$owner->ID()));
+        $q = new QueryBuilder(); 
+        $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name),
+                         $q->Or($q->Equals('owner',$account->ID()),$q->IsNull('owner')));
+        $loaded = parent::LoadByQuery($database, $q->Where($where));
+        return count($loaded) ? array_values($loaded)[0] : null;
     }
 }
