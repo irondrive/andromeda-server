@@ -4,6 +4,8 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, SingletonObject};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
@@ -66,8 +68,8 @@ class Pointer extends BaseObject
     
     public static function LoadBySource(ObjectDatabase $database, ISource $source) : ?ISource
     {
-        $criteria = array('authsource' => FieldTypes\ObjectPoly::GetValueFromObject($source));
-        return self::LoadManyMatchingAll($database, $criteria)[0];
+        $objval = FieldTypes\ObjectPoly::GetValueFromObject($source);
+        $q = new QueryBuilder(); return self::LoadByQuery($database, $q->Where($q->Equals('authsource', $objval)));
     }
     
     public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?ISource

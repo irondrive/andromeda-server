@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Client.php");
@@ -37,12 +37,7 @@ class Session extends AuthObject
         
         return $session;
     }
-    
-    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
-    {        
-        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
-    }
-    
+
     public function CheckMatch(string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxSessionAge();

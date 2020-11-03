@@ -69,7 +69,7 @@ class AccountsApp extends AppBase
     
     public function Run(Input $input)
     {   
-        $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $input);
+        $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $input, $this->API->GetInterface());
         
         switch($input->GetAction())
         {       
@@ -130,8 +130,6 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
-        
-        // TODO implement setconfig
         
         return $this->config->GetClientObject(Config::OBJECT_ADMIN);
     }
@@ -333,13 +331,15 @@ class AccountsApp extends AppBase
         $clientid = $input->TryGetParam("auth_clientid", SafeParam::TYPE_ID);
         $clientkey = $input->TryGetParam("auth_clientkey", SafeParam::TYPE_ALPHANUM);
         
+        $interface = $this->API->GetInterface();
+        
         /* if a clientid is provided, check that it and the clientkey are correct */
         if ($clientid !== null && $clientkey !== null)
         {
             if ($account->ForceTwoFactor()) Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::TryLoadByID($database, $clientid);
-            if ($client === null || !$client->CheckMatch($input->GetAddress(), $clientkey)) 
+            if ($client === null || !$client->CheckMatch($interface, $clientkey)) 
                 throw new UnknownClientException();
         } 
         else /* if no clientkey, require either a recoverykey or twofactor, create a client */
@@ -351,7 +351,7 @@ class AccountsApp extends AppBase
             }
             else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $client = Client::Create($input->GetAddress(), $database, $account);
+            $client = Client::Create($interface, $database, $account);
         }
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */
@@ -453,7 +453,6 @@ class AccountsApp extends AppBase
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
         }        
         
-        // TODO info may not be initialized
         if (ContactInfo::TryLoadByInfo($this->API->GetDatabase(), $info) !== null) throw new ContactInfoExistsException();
 
         $contact = ContactInfo::Create($this->API->GetDatabase(), $account, $type, $info);
@@ -614,11 +613,13 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT); 
+        $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT);
+        $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
+        
         $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ?? false;
         $type = ($full ? Account::OBJECT_FULL : Account::OBJECT_SIMPLE) | Account::OBJECT_ADMIN;
         
-        $accounts = Account::LoadAll($this->API->GetDatabase(), $limit);        
+        $accounts = Account::LoadAll($this->API->GetDatabase(), $limit, $offset);        
         return array_map(function($account)use($type){ return $account->GetClientObject($type); }, $accounts);
     }
     
@@ -628,7 +629,9 @@ class AccountsApp extends AppBase
         $this->authenticator->RequireAdmin();
         
         $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT);
-        $groups = Group::LoadAll($this->API->GetDatabase(), $limit);
+        $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
+        
+        $groups = Group::LoadAll($this->API->GetDatabase(), $limit, $offset);
         return array_map(function($group){ return $group->GetClientObject(); }, $groups);
     }
     
@@ -730,14 +733,12 @@ class AccountsApp extends AppBase
             ->AddParam('email','email',$email)
             ->AddParam('alphanum','username',$user)
             ->AddParam('raw','password',$password)));
-        array_push($results, $test); 
-        $api->GetDatabase()->saveObjects();
+        array_push($results, $test);
         
         $test = $api->Run(new Input($app,'createsession', (new SafeParams())
             ->AddParam('text','username',$user)
             ->AddParam('raw','auth_password',$password)));
         array_push($results, $test);
-        $api->GetDatabase()->saveObjects();
         
         $sessionid = $test['session']['id'];
         $sessionkey = $test['session']['authkey'];
@@ -750,7 +751,6 @@ class AccountsApp extends AppBase
             ->AddParam('raw','auth_password',$password)
             ->AddParam('raw','new_password',$password2)));
         array_push($results, $test); 
-        $api->GetDatabase()->saveObjects();
         $password = $password2;
         
         $test = $api->Run(new Input($app,'deleteaccount', (new SafeParams())
@@ -758,7 +758,6 @@ class AccountsApp extends AppBase
             ->AddParam('alphanum','auth_sessionkey',$sessionkey)
             ->AddParam('raw','auth_password',$password)));
         array_push($results, $test);
-        $api->GetDatabase()->saveObjects();
         
         $config->SetAllowCreateAccount($old1);
         $config->SetUseEmailAsUsername($old2);

@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -48,11 +48,6 @@ class ContactInfo extends StandardObject
             ->SetScalar('info',$info)
             ->SetScalar('type',$type)
             ->SetObject('account', $account);
-    }
-    
-    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
     }
     
     public static function GetEmails(array $contactinfos) : array

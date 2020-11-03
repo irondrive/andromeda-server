@@ -15,6 +15,7 @@ require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipi
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CryptoUnlockRequiredException extends Exceptions\ServerException { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
@@ -121,7 +122,7 @@ class Account extends AuthEntity
     
     public static function SearchByFullName(ObjectDatabase $database, string $fullname) : array
     {
-        return self::LoadManyMatchingAll($database, array('fullname'=>"%$fullname%"), true);
+        $q = new QueryBuilder(); return parent::LoadByQuery($database, $q->Where($q->Like('fullname',$fullname)));
     }
     
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
@@ -171,10 +172,11 @@ class Account extends AuthEntity
     
     public function Delete() : void
     {
-        if ($this->HasClients()) Client::DeleteByAccount($this->database, $this);
-        if ($this->HasTwoFactor()) TwoFactor::DeleteByAccount($this->database, $this);
-        if ($this->HasContactInfos()) ContactInfo::DeleteByAccount($this->database, $this);
-        if ($this->HasRecoveryKeys()) RecoveryKey::DeleteByAccount($this->database, $this);
+        if ($this->HasSessions()) $this->DeleteObjectRefs('sessions'); 
+        if ($this->HasClients()) $this->DeleteObjectRefs('clients');
+        if ($this->HasTwoFactor()) $this->DeleteObjectRefs('twofactors');
+        if ($this->HasContactInfos()) $this->DeleteObjectRefs('contactinfos');
+        if ($this->HasRecoveryKeys()) $this->DeleteObjectRefs('recoverykeys');
         
         parent::Delete();
     }

@@ -4,7 +4,8 @@ require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+
+require_once(ROOT."/apps/accounts/Account.php");
 
 if (!file_exists(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/GoogleAuthenticator.php")) 
     die("Missing library: GoogleAuthenticator - git submodule init/update?");
@@ -29,11 +30,6 @@ class UsedToken extends StandardObject
             ->SetScalar('code',$code)
             ->SetObject('twofactor',$twofactor);            
     }
-    
-    public static function DeleteByTwoFactor(ObjectDatabase $database, TwoFactor $twofactor) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('twofactor' => $twofactor->ID()));
-    }
 }
 
 class TwoFactor extends StandardObject
@@ -56,6 +52,7 @@ class TwoFactor extends StandardObject
     public function GetComment() : ?string { return $this->TryGetScalar("comment"); }
     
     private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
+    private function CountUsedTokens() : int { return $this->CountObjectRefs('usedtokens'); }
 
     public function GetIsValid() : bool     { return $this->GetScalar('valid'); }
     public function SetIsValid(bool $data = true) : self { return $this->SetScalar('valid',$data); }
@@ -75,12 +72,7 @@ class TwoFactor extends StandardObject
             ->SetScalar('comment',$comment)
             ->SetObject('account',$account);
     }
-    
-    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
-    {
-        parent::DeleteManyMatchingAll($database, array('account' => $account->ID()));
-    }
-    
+
     public function GetURL() : string
     {
         $ga = new PHPGangsta_GoogleAuthenticator();
@@ -131,8 +123,9 @@ class TwoFactor extends StandardObject
     
     public function Delete() : void
     {
-        UsedToken::DeleteByTwoFactor($this->database, $this);
-
+        if ($this->CountUsedTokens())
+            $this->DeleteObjectRefs('usedtokens');
+        
         parent::Delete();
     }
 }
