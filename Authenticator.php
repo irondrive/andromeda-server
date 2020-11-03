@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamException};
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php");
@@ -39,7 +40,7 @@ class Authenticator
     private bool $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
     private ?Account $realaccount;    public function GetRealAccount() : Account { return $this->realaccount; }
     
-    private function __construct(ObjectDatabase $database, Input $input)
+    private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {
         $auth = $input->GetAuth();
 
@@ -55,7 +56,7 @@ class Authenticator
         $this->realaccount = $account; $this->session = $session; $this->client = $client;
         $this->database = $database; $this->input = $input;
         
-        if (!$client->CheckAgentMatch($input->GetAddress())) throw new InvalidSessionException();
+        if (!$client->CheckAgentMatch($interface)) throw new InvalidSessionException();
         
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
@@ -76,14 +77,14 @@ class Authenticator
         $this->account = $account;
     }
     
-    public static function Authenticate(ObjectDatabase $database, Input $input) : self
+    public static function Authenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : self
     {
-        return new self($database, $input);
+        return new self($database, $input, $interface);
     }
     
-    public static function TryAuthenticate(ObjectDatabase $database, Input $input) : ?self
+    public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
-        try { return new self($database, $input); }
+        try { return new self($database, $input, $interface); }
         catch (AuthenticationFailedException | SafeParamException $e) { return null; }
     }
     
