@@ -68,7 +68,7 @@ class Shared extends BaseFileFS
         foreach ($fsitems as $fsitem)
         {
             // TODO FUTURE could use SQL order by to make this a lot faster (scandir is already sorted)
-            // just add ORDER BY to the API like you have $limit
+            // not sure how to pass in ORDER BY since loading the objects happens under the hood...
 
             $fspath = $path.$fsitem;
             $isfile = $storage->isFile($fspath);
