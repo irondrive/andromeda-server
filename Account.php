@@ -170,8 +170,14 @@ class Account extends AuthEntity
         return $account;
     }
     
+    private static $delete_handlers = array();
+    
+    public static function RegisterDeleteHandler(callable $func){ array_push(static::$delete_handlers,$func); }
+    
     public function Delete() : void
     {
+        foreach (static::$delete_handlers as $func) $func($this);
+        
         if ($this->HasSessions()) $this->DeleteObjectRefs('sessions'); 
         if ($this->HasClients()) $this->DeleteObjectRefs('clients');
         if ($this->HasTwoFactor()) $this->DeleteObjectRefs('twofactors');
