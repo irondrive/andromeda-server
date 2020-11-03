@@ -11,6 +11,21 @@ class JSONException extends Exceptions\ServerException {
 class JSONEncodingException extends JSONException { public $message = "JSON_ENCODE_FAIL"; }
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
 
+abstract class Singleton
+{
+    private static $instances = array();
+    public static function GetInstance() : self
+    {
+        return self::$instances[static::class];
+    }
+    public function __construct()
+    {
+        if (array_key_exists(static::class, self::$instances))
+            throw new DuplicateSingletonException();
+            else self::$instances[static::class] = $this;
+    }
+}
+
 class Utilities
 {   
     public static function Random(?int $length = null) : string

@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
+require_once(ROOT."/core/Config.php");
+require_once(ROOT."/core/Utilities.php");
 
 if (!file_exists(ROOT."/core/database/Config.php")) die("Missing core/database/Config.php\n");
 require_once(ROOT."/core/database/Config.php");
@@ -23,8 +24,9 @@ class UnknownAppException extends Exceptions\ClientErrorException   { public $me
 class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
 class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
+class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
 
-class Main implements Transactions
+class Main extends Singleton implements Transactions
 { 
     private array $construct_stats; 
     private array $commit_stats; 
@@ -34,19 +36,21 @@ class Main implements Transactions
     private array $apps = array(); 
     private array $contexts = array(); 
     
-    private ?Config $config; 
-    private ?ObjectDatabase $database; 
+    private ?Config $config = null; 
+    private ?ObjectDatabase $database = null; 
     private IOInterface $interface;
     
     public function GetApps() : array { return $this->apps; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
     public function GetInterface() : IOInterface { return $this->interface; }
-
-    public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
     
+    public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
+
     public function __construct(ErrorManager $error_manager, IOInterface $interface)
     { 
+        parent::__construct();
+        
         $this->sum_stats = new DBStats();
         
         $error_manager->SetAPI($this); 
@@ -155,9 +159,9 @@ class Main implements Transactions
                 && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
     }
     
-    private array $debuglog = array();    
-    public function PrintDebug(string $data){ if ($this->GetDebugState()) array_push($this->debuglog, $data); }
-    public function GetDebugLog() : ?array { return $this->GetDebugState() && count($this->debuglog) ? $this->debuglog : null; }
+    private static array $debuglog = array();    
+    public static function PrintDebug(string $data){ array_push(self::$debuglog, $data); }
+    public function GetDebugLog() : ?array { return $this->GetDebugState() && count(self::$debuglog) ? self::$debuglog : null; }
     
     private function GetMetrics() : array
     {

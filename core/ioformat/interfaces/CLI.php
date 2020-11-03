@@ -114,7 +114,7 @@ class CLI extends IOInterface
                 $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;
             }
             
-            else if ($param[0] == 'file')
+            else if (in_array($param[0], array('file','move-file','copy-file')))
             {
                 while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
                 {
@@ -122,7 +122,10 @@ class CLI extends IOInterface
                     if (!is_readable($infile)) throw new InvalidFileException();   
                     
                     $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
-                    copy($infile, $tmpfile); // TODO optional param to move
+                    
+                    if ($param[0] === 'move-file') 
+                        rename($infile, $tmpfile); 
+                    else copy($infile, $tmpfile);
                     
                     array_push($this->tmpfiles, $tmpfile);
                     $files[basename($infile)] = $tmpfile; $i++;
@@ -139,11 +142,7 @@ class CLI extends IOInterface
                 $params->AddParam($key[1], $key[2], $value);
         }
         
-        $addr = "CLI ".($_SERVER['COMPUTERNAME']??'').':'.($_SERVER['USERNAME']??'');
-        $agent = "CLI ".($_SERVER['OS']??'');
-        $addrobj = new Address($addr, $agent);
-        
-        return new Input($app, $action, $params, $addrobj, $files);
+        return new Input($app, $action, $params, $files);
     }
     
     public function __destruct()

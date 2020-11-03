@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/core/database/StandardObject.php");
+require_once(ROOT."/core/database/QueryBuilder.php");
 
 abstract class JoinUtils extends StandardObject
 {    
@@ -18,10 +19,9 @@ abstract class JoinUtils extends StandardObject
     
     public static function LoadJoinObject(ObjectDatabase $database, FieldTypes\ObjectJoin $joinobj, BaseObject $thisobj, BaseObject $destobj) : ?self
     {
-        $criteria = array($joinobj->getRefField() => $destobj->ID(), $joinobj->getMyField() => $thisobj->ID());
-        
-        $joinclass = $joinobj->GetJoinClass();
-        $objects = $database->LoadObjectsMatchingAll($joinclass, $criteria);
+        $joinclass = $joinobj->GetJoinClass(); $q = new QueryBuilder();
+        $q->Where($q->And($q->Equals($joinobj->getRefField(),$destobj->ID()),$q->Equals($joinobj->getMyField(),$thisobj->ID())));
+        $objects = $database->LoadObjectsByQuery($joinclass, $q);
         return (count($objects) == 1) ? array_values($objects)[0] : null;
     }
     

@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Singleton,Utilities};
 require_once(ROOT."/core/exceptions/ErrorLogEntry.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
@@ -11,11 +11,11 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 
 class DuplicateHandlerException extends Exceptions\ServerException  { public $message = "DUPLICATE_ERROR_HANDLER_NAME"; }
 
-class ErrorManager
+class ErrorManager extends Singleton
 {
     private ?Main $API = null; 
     private IOInterface $interface;
-    
+
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
     private function GetDebugState() : bool
@@ -47,6 +47,8 @@ class ErrorManager
     
     public function __construct(IOInterface $interface)
     {
+        parent::__construct();        
+        
         $this->interface = $interface;
         
         set_error_handler( function($code,$string,$file,$line){
@@ -88,7 +90,7 @@ class ErrorManager
             }
         }
         
-        if ($e = $e->getPrevious() !== null) $this->Log($e);
+        if (is_a($e = $e->getPrevious(), \Throwable::class)) $this->Log($e);
     }   
     
     private bool $logfileok = true;
