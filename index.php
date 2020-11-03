@@ -28,9 +28,9 @@ $data = array_map(function($input)use($main){
 $output = Output::Success($data);
 $metrics = $main->commit(); 
 
-if ($metrics !== null) $output->SetMetrics($metrics);
-
 $debuglog = $main->GetDebugLog();
 if ($debuglog !== null) $output->SetDebug(array('log'=>$debuglog));
+
+if ($metrics !== null) $output->SetMetrics($metrics);
 
 $interface->WriteOutput($output); die();

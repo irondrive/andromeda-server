@@ -1,8 +1,10 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/JoinUtils.php"); use Andromeda\Core\Database\JoinUtils;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/JoinUtils.php");
+require_once(ROOT."/core/database/FieldTypes.php");
+require_once(ROOT."/core/database/QueryBuilder.php");
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Exceptions;
 
 class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
 class NotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
@@ -26,47 +28,52 @@ abstract class BaseObject
     {
         return self::TryLoadByUniqueKey($database,'id',$id);
     }
-        
-    public static function LoadManyByID(ObjectDatabase $database, array $ids) : array 
+    
+    public static function DeleteByID(ObjectDatabase $database, string $id) : void
     {
-        return self::LoadManyMatchingAny($database, 'id', $ids); 
+        self::DeleteByUniqueKey($database,'id',$id);
     }
         
-    public static function LoadAll(ObjectDatabase $database, ?int $limit = null) : array 
+    public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array 
     {
-        return self::LoadManyMatchingAll($database, null, false, $limit); 
+        return self::LoadByQuery($database, (new QueryBuilder())->Limit($limit)->Offset($offset));
     }
-        
+    
+    public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
+    {
+        return $database->LoadObjectsByQuery(static::class, $query);
+    }
+    
+    protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object) : array
+    {
+        $q = new QueryBuilder(); return self::LoadByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+    }
+    
+    protected static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
+    {
+        $database->DeleteObjectsByQuery(static::class, $query);
+    }
+    
+    public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object) : void
+    {
+        $q = new QueryBuilder(); self::DeleteByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+    }
+    
     protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
     {
-        $class = static::class; $obj = $database->TryLoadObjectByUniqueKey($class, $field, $key);
-        if ($obj !== null) return $obj; else throw new ObjectNotFoundException($class);
+        $obj = $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
+        if ($obj !== null) return $obj; else throw new ObjectNotFoundException(static::class);
     }
-        
+    
     protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : ?self
     {
-        $class = static::class; return $database->TryLoadObjectByUniqueKey($class, $field, $key); 
-    }
-
-    protected static function LoadManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null, ?string $joinstr = null) : array 
-    {
-        $class = static::class; return $database->LoadObjectsMatchingAny($class, $field, $keys, $like, $limit, $joinstr); 
-    }
-
-    public static function LoadManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null, ?string $joinstr = null) : array 
-    {              
-        $class = static::class; return $database->LoadObjectsMatchingAll($class, $criteria, $like, $limit, $joinstr); 
-    } 
-    
-    protected static function DeleteManyMatchingAny(ObjectDatabase $database, string $field, array $keys, bool $like = false, ?int $limit = null) : void
-    {
-        $class = static::class; $database->DeleteObjectsMatchingAny($class, $field, $keys, $like, $limit);
+        return $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
     }
     
-    protected static function DeleteManyMatchingAll(ObjectDatabase $database, ?array $criteria, bool $like = false, ?int $limit = null) : void
+    protected static function DeleteByUniqueKey(ObjectDatabase $database, string $field, string $key) : void
     {
-        $class = static::class; $database->DeleteObjectsMatchingAll($class, $criteria, $like, $limit);
-    } 
+        $q = new QueryBuilder(); self::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
+    }
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
     
@@ -104,22 +111,40 @@ abstract class BaseObject
         return $this->objects[$field]->GetObject();
     }
     
+    protected function HasObject(string $field) : bool
+    {
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        return boolval($this->objects[$field]->GetValue());
+    }
+    
     protected function GetObjectID(string $field) : ?string
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
         return $this->objects[$field]->GetValue();
     }
     
-    protected function GetObjectRefs(string $field) : array
+    protected function GetObjectType(string $field) : ?string
     {
-        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
-        return $this->objectrefs[$field]->GetObjects();
+        if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        return $this->objects[$field]->GetRefClass();
     }
     
-    protected function TryGetObjectRefs(string $field) : ?array
+    protected function DeleteObject(string $field) : self
+    {
+        if (!$this->ExistsObject($field)) return $this;
+        $this->objects[$field]->DeleteObject(); return $this;
+    }
+    
+    protected function GetObjectRefs(string $field, ?int $limit = null, ?int $offset = null) : array
+    {
+        if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
+        return $this->objectrefs[$field]->GetObjects($limit, $offset);
+    }
+    
+    protected function TryGetObjectRefs(string $field, ?int $limit = null, ?int $offset = null) : ?array
     {
         if (!$this->ExistsObjectRefs($field)) return null;
-        return $this->objectrefs[$field]->GetObjects();
+        return $this->objectrefs[$field]->GetObjects($limit, $offset);
     }
     
     protected function CountObjectRefs(string $field) : int
@@ -144,6 +169,12 @@ abstract class BaseObject
     {
         if (!$this->ExistsObjectRefs($field)) return 0;
         return $this->objectrefs[$field]->GetJoinObject($obj);
+    }
+    
+    protected function DeleteObjectRefs(string $field) : self
+    {
+        if (!$this->ExistsObjectRefs($field)) return $this;
+        $this->objectrefs[$field]->DeleteObjects(); return $this;
     }
     
     protected function SetScalar(string $field, $value, bool $temp = false) : self

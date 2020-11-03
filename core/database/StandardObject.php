@@ -107,7 +107,7 @@ abstract class SingletonObject extends StandardObject
         if (array_key_exists(static::class, self::$instances)) 
             return self::$instances[static::class];
         
-        $objects = self::LoadManyMatchingAll($database, null);
+        $objects = self::LoadAll($database);
         if (count($objects) > 1) throw new DuplicateSingletonException();
         else if (count($objects) == 0) throw new ObjectNotFoundException();
         

@@ -26,9 +26,16 @@ class Database implements Transactions {
     
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
     
+    public function importFile(string $path) : void
+    {
+        $lines = array_filter(file($path),function($line){ return substr($line,0,2) != "--"; });
+        $queries = array_filter(explode(";",preg_replace( "/\r|\n/", "", implode("", $lines))));
+        foreach ($queries as $query) $this->query($query, 0);
+    }
+    
     const QUERY_READ = 1; const QUERY_WRITE = 2;
 
-    public function query(string $sql, ?array $data = null, int $type) 
+    public function query(string $sql, int $type, ?array $data = null) 
     {
         if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
         

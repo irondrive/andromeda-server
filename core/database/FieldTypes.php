@@ -4,6 +4,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/JoinUtils.php"); use Andromeda\Core\Database\JoinUtils;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 use Andromeda\Core\Database\ObjectTypeException;
 
@@ -129,9 +130,7 @@ class ObjectRef extends Scalar
     
     public function GetObject() : ?BaseObject
     {
-        $id = $this->GetValue();
-        if ($id === null) return null;
-        
+        $id = $this->GetValue(); if ($id === null) return null;        
         return $this->object ?? $this->GetRefClass()::LoadByID($this->database, $id);
     }
     
@@ -146,13 +145,20 @@ class ObjectRef extends Scalar
         
         $this->object = $object; $this->delta++; return true;
     }
+    
+    public function DeleteObject() : void
+    {
+        $id = $this->GetValue(); if ($id === null) return;        
+        $this->GetRefClass()::DeleteByID($this->database, $id);
+    }
 }
 
 class ObjectPoly extends ObjectRef
 {
+    protected ?string $realclass = null;
+    
     public function __construct(string $refclass, ?string $reffield = null, bool $refmany = true)
     {
-        $this->baseclass = $refclass;
         parent::__construct($refclass, $reffield, $refmany);        
     }
     
@@ -164,10 +170,11 @@ class ObjectPoly extends ObjectRef
         
         $value = explode('*',$value);
         $this->SetValue($value[0]);
-        $this->refclass = $value[1];
+        $this->realclass = "Andromeda\\".$value[1];
     }
     
-    public function GetBaseClass() : ?string { return $this->baseclass; }
+    public function GetBaseClass() : ?string { return $this->refclass; }
+    public function GetRefClass() : ?string { return $this->realclass; }
     
     public static function GetValueFromObject(BaseObject $obj)
     {
@@ -177,14 +184,16 @@ class ObjectPoly extends ObjectRef
     public function GetDBValue() : ?string 
     { 
         if ($this->GetValue() === null) return null; 
-        else return $this->GetValue().'*'.$this->refclass; 
+        
+        $class = implode('\\',array_slice(explode('\\', $this->realclass),1)); 
+        return $this->GetValue().'*'.$class; 
     }
     
     public function SetObject(?BaseObject $object) : bool
     {
         if (!parent::SetObject($object)) return false;
         
-        $this->refclass = ($object === null) ? null : get_class($object);
+        $this->realclass = ($object === null) ? null : get_class($object);
         
         return true;
     }
@@ -196,6 +205,7 @@ class ObjectRefs extends Counter
 {
     protected ObjectDatabase $database; 
     protected array $objects; 
+    protected bool $isLoaded = false;
     
     protected BaseObject $parent; 
     protected string $refclass; 
@@ -215,21 +225,28 @@ class ObjectRefs extends Counter
     public function GetRefClass() : string { return $this->refclass; }
     public function GetRefField() : string { return $this->reffield; }
 
-    public function GetObjects() : array
+    public function GetObjects(?int $limit = null, ?int $offset = null) : array
     {
-        if (!isset($this->objects)) $this->LoadObjects();
+        if (!$this->isLoaded) $this->LoadObjects($limit, $offset);
+        
         return $this->objects;
     }
     
-    protected function LoadObjects()
+    protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $criteria = array("`".$this->reffield."`" => $this->parent->ID());
-        $this->objects = $this->refclass::LoadManyMatchingAll($this->database, $criteria);    
+        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $this->parent->ID()));
+        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));        
+        $this->isLoaded = ($limit === null && $offset === null);
         
         $this->MergeWithObjectChanges();
     }
     
-    protected function MergeWithObjectChanges()
+    public function DeleteObjects() : void
+    {
+        $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent);
+    }
+    
+    protected function MergeWithObjectChanges() : void
     {
         foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
         foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
@@ -238,7 +255,7 @@ class ObjectRefs extends Counter
     
     public function AddObject(BaseObject $object, bool $notification) : bool
     {
-        if (!isset($this->objects))
+        if (!$this->isLoaded)
         {
             if (!in_array($object, $this->refs_added))
             {
@@ -288,12 +305,12 @@ class ObjectJoin extends ObjectRefs
         $this->joinclass = $joinclass;
     }
     
-    protected function LoadObjects()
+    protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $joinstr = ObjectDatabase::BuildJoinQuery($this->joinclass, $this->myfield, $this->refclass, 'id');
-        
-        $criteria = array( ObjectDatabase::GetClassTableName($this->joinclass).'.'.$this->reffield => $this->parent->ID() );
-        $this->objects = $this->refclass::LoadManyMatchingAll($this->database, $criteria, false, null, $joinstr);
+        $q = new QueryBuilder(); $key = ObjectDatabase::GetClassTableName($this->joinclass).'.'.$this->reffield;
+        $q->Where($q->Equals($key, $this->parent->ID()))->Join($this->joinclass, $this->myfield, $this->refclass, 'id');
+        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
+        $this->isLoaded = ($limit === null && $offset === null);
         
         $this->MergeWithObjectChanges();
     }
