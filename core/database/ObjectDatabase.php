@@ -139,14 +139,14 @@ class ObjectDatabase extends Database
         
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
-        foreach (array_keys($values) as $key) {
+        foreach ($values as $key=>$value) {
             array_push($criteria, "$key = :d$i");
-            $data["d$i"] = $values[$key]; $i++;
+            $data["d$i"] = $value; $i++;
         }; 
         
-        foreach (array_keys($counters) as $key) {
+        foreach ($counters as $key=>$counter) {
             array_push($criteria, "$key = $key + :d$i");
-            $data["d$i"] = $counters[$key]; $i++;
+            $data["d$i"] = $counter; $i++;
         }; 
         
         if (!count($criteria)) return $this;
@@ -166,10 +166,10 @@ class ObjectDatabase extends Database
         $values['id'] = $object->ID();
         $values = array_merge($values, $counters);
         
-        foreach (array_keys($values) as $key) {
+        foreach ($values as $key=>$value) {
             array_push($columns, $key); 
-            array_push($indexes, $values[$key] !== null ? ":d$i" : "NULL");
-            if ($values[$key] !== null) $data["d$i"] = $values[$key]; $i++;
+            array_push($indexes, $value !== null ? ":d$i" : "NULL");
+            if ($value !== null) $data["d$i"] = $value; $i++;
         }
         
         $table = self::GetClassTableName($class);
