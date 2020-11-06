@@ -83,10 +83,12 @@ class ErrorManager extends Singleton
         {
             $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->commit(); 
         }
-        catch (\Throwable $e2) { 
-            if ($logdir !== null) {                
-                $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e2))); 
-                if (!$logged) $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e))); 
+        catch (\Throwable $e2) 
+        { 
+            if ($logdir !== null) 
+            {                
+                $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e2, true))); 
+                if (!$logged) $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e, true))); 
             }
         }
         

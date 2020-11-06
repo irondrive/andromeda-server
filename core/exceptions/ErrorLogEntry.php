@@ -90,15 +90,20 @@ class ErrorLogEntry extends BaseObject
         {
             $data['trace_full'] = $e->getTrace();
             
-            if ($asJson)
+            foreach (array_keys($data['trace_full']) as $key)
             {
-                foreach (array_keys($data['trace_full']) as $key)
-                {
-                    if (!array_key_exists('args', $data['trace_full'][$key])) continue;
-                    try { $data['trace_full'][$key]['args'] = Utilities::JSONEncode($data['trace_full'][$key]['args']); }
-                    catch (JSONEncodingException $e) { $data['trace_full'][$key]['args'] = "ARGS_JSON_ENCODING_FAILURE"; }
+                if (!array_key_exists('args', $data['trace_full'][$key])) continue;
+                try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
+                catch (JSONEncodingException $e)
+                { 
+                    if (function_exists('mb_convert_encoding'))
+                    $data['trace_full'][$key]['args'] = mb_convert_encoding(print_r($data['trace_full'][$key]['args'],true),'UTF-8');
+                    else unset($data['trace_full'][$key]['args']);
                 }
-                
+            }
+            
+            if ($asJson)
+            {               
                 try { $data['trace_full'] = Utilities::JSONEncode($data['trace_full']); }
                 catch (JSONEncodingException $e) { $data['trace_full'] = "TRACE_JSON_ENCODING_FAILURE"; }
             }
