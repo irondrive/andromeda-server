@@ -7,7 +7,7 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php"); 
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
-use Andromeda\Core\IOFormat\{Input,InputAuth,Address,Output,IOInterface,SafeParams};
+use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -64,21 +64,18 @@ class AJAX extends IOInterface
     
     private function GetInput(array $get, array $request) : Input
     {
-        foreach (array('app','action') as $key)
-        {
-            if (empty($get[$key])) throw new NoAppActionException();
-            $$key = $get[$key]; unset($request[$key]);
-        }
+        
+        if (empty($get['app'])) throw new NoAppActionException();
+        $app = $get['app']; unset($request['app']);
+        
+        if (empty($get['action'])) throw new NoAppActionException();
+        $action = $get['action']; unset($request['action']);
 
         $params = new SafeParams();
         
         foreach (array_keys($request) as $key)
         {
-            $param = explode('_',$key,2);
-            
-            if (count($param) != 2) throw new InvalidParamException(implode('_',$param));
-            
-            $params->AddParam($param[0], $param[1], $request[$key]);
+            $params->AddParam($key, $request[$key]);
         }
         
         $files = array(); foreach($_FILES as $file)
@@ -133,12 +130,7 @@ class AJAX extends IOInterface
 
         $output = array(); foreach (array_keys($params) as $key)
         {
-            $param = $params[$key];
-
-            $key = $param->GetTypeString()."_".$key;
-            $value = $param->GetData();
-
-            $output[$key] = $value;
+            $output[$key] = $params[$key]->GetValue(SafeParam::TYPE_RAW);
         }
 
         return $output;

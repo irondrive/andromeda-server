@@ -2,11 +2,11 @@
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+
+require_once(ROOT."/core/exceptions/ErrorManager.php");
 
 use \Throwable; use Andromeda\Core\JSONEncodingException;
 
@@ -90,18 +90,15 @@ class ErrorLogEntry extends BaseObject
         {
             $data['trace_full'] = $e->getTrace();
             
-            foreach (array_keys($data['trace_full']) as $key)
-            {
-                if (!array_key_exists('args', $data['trace_full'][$key])) continue;
-                try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
-                catch (JSONEncodingException $e) {
-                    if (function_exists('mb_convert_encoding'))
-                        $data['trace_full'][$key]['args'] = mb_convert_encoding(print_r($data['trace_full'][$key]['args'],true),'UTF-8');
-                    else unset($data['trace_full'][$key]['args']); }
-            }
-            
             if ($asJson)
             {
+                foreach (array_keys($data['trace_full']) as $key)
+                {
+                    if (!array_key_exists('args', $data['trace_full'][$key])) continue;
+                    try { $data['trace_full'][$key]['args'] = Utilities::JSONEncode($data['trace_full'][$key]['args']); }
+                    catch (JSONEncodingException $e) { $data['trace_full'][$key]['args'] = "ARGS_JSON_ENCODING_FAILURE"; }
+                }
+                
                 try { $data['trace_full'] = Utilities::JSONEncode($data['trace_full']); }
                 catch (JSONEncodingException $e) { $data['trace_full'] = "TRACE_JSON_ENCODING_FAILURE"; }
             }

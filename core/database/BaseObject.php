@@ -331,10 +331,8 @@ abstract class BaseObject
 
         foreach (array('scalars','objects','objectrefs') as $set)
         {
-            foreach(array_keys($this->$set) as $key)
+            foreach ($this->$set as $key => $value)
             {
-                $value = $this->$set[$key];
-
                 if (!$value->GetDelta()) continue;
                 if ($isRollback && !$value->GetAlwaysSave()) continue;
 

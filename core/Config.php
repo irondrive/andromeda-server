@@ -1,9 +1,8 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, BasicEmailer, FullEmailer};
+require_once(ROOT."/core/Emailer.php");
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
-require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class EmailUnavailableException extends Exceptions\ServerException    { public $message = "EMAIL_UNAVAILABLE"; }

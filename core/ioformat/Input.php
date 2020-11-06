@@ -31,7 +31,7 @@ class Input
     {
         $this->time = time(); $this->params = $params; $this->files = $files; $this->auth = $auth;
 
-        $this->app = (new SafeParam("alphanum", strtolower($app)))->GetData();
-        $this->action = (new SafeParam("alphanum", strtolower($action)))->GetData();
+        $this->app = (new SafeParam("app", strtolower($app)))->GetValue(SafeParam::TYPE_ALPHANUM);
+        $this->action = (new SafeParam("action", strtolower($action)))->GetValue(SafeParam::TYPE_ALPHANUM);
     }
 }

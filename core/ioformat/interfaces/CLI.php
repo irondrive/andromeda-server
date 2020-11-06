@@ -13,7 +13,7 @@ use Andromeda\Core\IOFormat\InvalidOutputException;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
-class IncorrectCLIUsageException extends Exceptions\ClientErrorException { public $message = 'usage: php index.php --$flag $app $action [--app_$type_$key $data]'; }
+class IncorrectCLIUsageException extends Exceptions\ClientErrorException { public $message = 'usage: php index.php --$flag $app $action [--$type_$key $data]'; }
 
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
@@ -55,7 +55,7 @@ class CLI extends IOInterface
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $debug = (new SafeParam('int',$argv[$i+1]))->getData();
+                    $debug = (new SafeParam('debug',$argv[$i+1]))->GetValue(SafeParam::TYPE_INT);
                     $this->debug = ($debug !== 0); $i++;
                     $config->SetDebugLogLevel($debug, true);
                     break;   
@@ -106,15 +106,9 @@ class CLI extends IOInterface
         {
             if (substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
             
-            $param = explode('_',substr($argv[$i],2),3);
+            $param = substr($argv[$i],2);
             
-            if ($param[0] == 'app')
-            {
-                if (count($param) != 3 || !isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                $params->AddParam($param[1], $param[2], $argv[$i+1]); $i++;
-            }
-            
-            else if (in_array($param[0], array('file','move-file','copy-file')))
+            if (in_array($param, array('file','move-file','copy-file')))
             {
                 while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
                 {
@@ -123,7 +117,7 @@ class CLI extends IOInterface
                     
                     $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
                     
-                    if ($param[0] === 'move-file') 
+                    if ($param === 'move-file') 
                         rename($infile, $tmpfile); 
                     else copy($infile, $tmpfile);
                     
@@ -131,15 +125,16 @@ class CLI extends IOInterface
                     $files[basename($infile)] = $tmpfile; $i++;
                 }
             }
+            else $params->AddParam($param, $argv[$i+1]); $i++;
         }
 
         foreach (array_keys($_SERVER) as $key)
         {
             $value = $_SERVER[$key];
-            $key = explode('_',$key,3);
+            $key = explode('_',$key,2);
             
-            if ($key[0] == 'andromeda' && count($key) == 3)
-                $params->AddParam($key[1], $key[2], $value);
+            if ($key[0] == 'andromeda' && count($key) == 2)
+                $params->AddParam($key[1], $value);
         }
         
         return new Input($app, $action, $params, $files);

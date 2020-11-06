@@ -5,20 +5,20 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 use Andromeda\Core\JSONDecodingException;
 
-class SafeParamException extends Exceptions\ClientErrorException { }
+abstract class SafeParamException extends Exceptions\ClientErrorException { }
 
 class SafeParamInvalidException extends SafeParamException {
-    public function __construct(string $type) { $this->message = "SAFEPARAM_INVALID_DATA: $type"; } }
+    public function __construct(string $key, int $type) { 
+        $type = SafeParam::GetTypeString($type); 
+        $this->message = "SAFEPARAM_INVALID_DATA: $type $key"; } }
 
 class SafeParamUnknownTypeException extends SafeParamException{ 
-    public function __construct(string $type) { $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
+    public function __construct(string $type) { 
+        $type = SafeParam::GetTypeString($type); 
+        $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
     
 class SafeParamKeyMissingException extends SafeParamException {
-    public function __construct(string $key, string $type) { $this->message = "SAFEPARAM_KEY_MISSING: $type $key"; } }
-    
-class SafeParamKeyTypeException extends SafeParamException {
-    public function __construct(string $key, string $type, string $badtype) { 
-        $this->message = "SAFEPARAM_TYPE_MISMATCH: $type $key was $badtype"; } }
+    public function __construct(string $key) { $this->message = "SAFEPARAM_KEY_MISSING: $key"; } }
 
 class SafeParamNullValueException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_VALUE_NULL: $key"; } }
@@ -32,23 +32,20 @@ class SafeParams
         return array_key_exists($key, $this->params);
     }
     
-    public function AddParam(string $type, string $key, $data) : self
+    public function AddParam(string $key, $data) : self
     { 
-        $key = filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
-        $this->params[$key] = new SafeParam($type, $data); return $this;
+        $param = new SafeParam($key, $data);
+        $this->params[$param->GetKey()] = $param; 
+        return $this;
     }
     
     public function GetParamsArray() : array { return $this->params; }
     
     public function GetParam(string $key, int $type)
     {
-        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key, SafeParam::GetTypeString($type));
+        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
         
-        if ($this->params[$key]->getType() != $type)
-            throw new SafeParamKeyTypeException($key, SafeParam::GetTypeString($type), 
-                SafeParam::GetTypeString($this->params[$key]->getType()));
-        
-        $data = $this->params[$key]->getData();
+        $data = $this->params[$key]->GetValue($type);
         if ($data !== null) return $data;
         else throw new SafeParamNullValueException($key);
     }
@@ -56,25 +53,21 @@ class SafeParams
     public function TryGetParam(string $key, int $type)
     {
         if (!$this->HasParam($key)) return null;
-        if ($this->params[$key]->getType() !== $type) return null;
-        return $this->params[$key]->getData();
+        return $this->params[$key]->GetValue($type);
     }
     
     public function GetClientObject() : array
     {
         return array_map(function($param){
-            return $param->getData();
+            return $param->GetValue(SafeParam::TYPE_TEXT);
         }, $this->params);
     }
 }
 
 class SafeParam
 {
-    private $data; private int $type;
-    
-    public function getData() { return $this->data; }
-    public function getType() : int { return $this->type; }
-    
+    private $key; private $value;
+
     const TYPE_ID       = 1;
     const TYPE_BOOL     = 2;
     const TYPE_INT      = 3;
@@ -90,108 +83,118 @@ class SafeParam
     const TYPE_ARRAY = 16;
 
     const TYPE_STRINGS = array(
-        'id'        => self::TYPE_ID,
-        'bool'      => self::TYPE_BOOL,
-        'int'       => self::TYPE_INT,
-        'float'     => self::TYPE_FLOAT,
-        'alphanum'  => self::TYPE_ALPHANUM,
-        'name'      => self::TYPE_NAME,
-        'email'     => self::TYPE_EMAIL,
-        'text'      => self::TYPE_TEXT,
-        'raw'       => self::TYPE_RAW,
-        'object'    => self::TYPE_OBJECT,
+        self::TYPE_ID => 'id',
+        self::TYPE_BOOL => 'bool',
+        self::TYPE_INT => 'int',
+        self::TYPE_FLOAT => 'float',
+        self::TYPE_ALPHANUM => 'alphanum',
+        self::TYPE_NAME => 'name',
+        self::TYPE_EMAIL => 'email',
+        self::TYPE_TEXT => 'text',
+        self::TYPE_RAW => 'raw',
+        self::TYPE_OBJECT => 'object',
+        self::TYPE_ARRAY => 'array'
     );
 
-    public static function GetTypeString(string $type) : string
+    public static function GetTypeString(int $type) : string
     {
-        $str = ($type >= self::TYPE_ARRAY) ? "+" : "";
-        return $str.array_flip(self::TYPE_STRINGS)[$type % self::TYPE_ARRAY];
+        $array = self::TYPE_STRINGS[self::TYPE_ARRAY];
+        $suffix = ($type & self::TYPE_ARRAY) ? " $array" : "";
+        
+        $type &= self::TYPE_ARRAY;
+        
+        if (!array_key_exists($type, self::TYPE_STRINGS))
+            throw new SafeParamUnknownTypeException($type);
+        
+        return self::TYPE_STRINGS[$type].$suffix;
     }
     
-    public function __construct(string $typestr, $data)
+    public function __construct(string $key, $value)
     {
-        if (strlen($typestr) > 0 && $typestr[0] == '+') {
-            $this->type = self::TYPE_ARRAY; $typestr = substr($typestr,1); }
-        else { $this->type = self::TYPE_SINGLE; }
+        if (is_string($value)) $value = trim($value);
         
-        if (array_key_exists($typestr, self::TYPE_STRINGS))
-        {
-            $this->type |= self::TYPE_STRINGS[$typestr];
-        }
-        else throw new SafeParamUnknownTypeException($typestr);
-            
-        if (is_string($data)) $data = trim($data);
- 
-        if ($data === null || $data === "" || $data === "null") $this->data = null;
+        if ($value === null || $value === "" || $value === "null") $value = null;
         
-        else if ($this->type === self::TYPE_BOOL)
+        $key = filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
+        
+        $this->key = $key; $this->value = $value;
+    }
+    
+    public function GetKey() : string { return $this->key; }
+    
+    public function GetValue(int $type)
+    {
+        $key = $this->key; $value = $this->value;
+        
+        if ($type === self::TYPE_BOOL)
         {
-            if (($this->data = filter_var($data, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type));
+            if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_INT)
+        else if ($type === self::TYPE_INT)
         {
-            if (($this->data = filter_var($data, FILTER_VALIDATE_INT)) === false)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type));
+            if (($value = filter_var($value, FILTER_VALIDATE_INT)) === false)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_FLOAT)
+        else if ($type === self::TYPE_FLOAT)
         {
-            if (($this->data = filter_var($data, FILTER_VALIDATE_FLOAT)) === false)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type));
+            if (($value = filter_var($value, FILTER_VALIDATE_FLOAT)) === false)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_ALPHANUM || $this->type === self::TYPE_ID)
+        else if ($type === self::TYPE_ALPHANUM || $type === self::TYPE_ID)
         {
-            if (!preg_match("%^[a-zA-Z0-9_]+$%",$data) || strlen($data) > 255)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type));
-            $this->data = $data;
+            if (!preg_match("%^[a-zA-Z0-9_]+$%",$value) || strlen($value) > 255)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_NAME)
+        else if ($type === self::TYPE_NAME)
         {
-            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$data) || strlen($data) > 255)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type));
-            $this->data = $data;
+            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_EMAIL)
+        else if ($type === self::TYPE_EMAIL)
         {
-            if (!($this->data = filter_var($data, FILTER_VALIDATE_EMAIL)) || strlen($data) > 255)
-                throw new SafeParamInvalidException(self::GetTypeString($this->type)." ".$data);
+            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255)
+                throw new SafeParamInvalidException($key, $type);
         }
-        else if ($this->type === self::TYPE_TEXT)
+        else if ($type === self::TYPE_TEXT)
         {
-            $this->data = filter_var($data, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);  
+            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);  
         }
-        else if ($this->type === self::TYPE_OBJECT)
-        {
-            if (!is_array($data)) 
-            {
-                try { $data = Utilities::JSONDecode($data); }
-                catch (JSONDecodingException $e) { throw new SafeParamInvalidException(self::GetTypeString($this->type)); }
-            }
-            
-            $output = new SafeParams();
-            
-            foreach (array_keys($data) as $key)
-            {
-                $param = explode('_',$key,2);               
-                
-                if (count($param) != 2) throw new SafeParamInvalidException(self::GetTypeString($this->type)); 
-                
-                $output->AddParam($param[0], $param[1], $data[$key]);
-            }
-            
-            $this->data = $output;
-        }
-        else if ($this->type >= self::TYPE_ARRAY)
-        {
-            if (!is_array($data))
-            {
-                try { $data = Utilities::JSONDecode($data); }
-                catch (JSONDecodingException $e) { throw new SafeParamInvalidException(self::GetTypeString($this->type)); }
-            }
+        else if ($type === self::TYPE_RAW) 
+        { 
 
-            $this->data = array_map(function($value) use ($typestr){ return (new SafeParam($typestr, $value))->getData(); }, $data);
         }
-        else { $this->data = $data; }
+        else if ($type === self::TYPE_OBJECT)
+        {
+            if (!is_array($value)) 
+            {
+                try { $value = Utilities::JSONDecode($value); }
+                catch (JSONDecodingException $e) { throw new SafeParamInvalidException($key, $type); }
+            }
+            
+            $value = new SafeParams();
+            
+            foreach ($value as $key => $val)
+            {
+                $value->AddParam($key, $val);
+            }
+        }
+        else if ($type >= self::TYPE_ARRAY)
+        {
+            if (!is_array($value))
+            {
+                try { $value = Utilities::JSONDecode($value); }
+                catch (JSONDecodingException $e) { throw new SafeParamInvalidException($key, $type); }
+            }
+            
+            $type &= ~self::TYPE_ARRAY;
+
+            $value = array_map(function($value)use($key,$type){ 
+                return (new SafeParam($key, $value))->GetValue($type); }, $value);
+        }
+        else throw new SafeParamUnknownTypeException($type);
+        
+        return $value;
     }   
 }
 

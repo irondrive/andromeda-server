@@ -52,8 +52,8 @@ class QueryBuilder
     
     public function ManyAnd(array $pairs, string $func='Equals') 
     {
-        $retval = array(); foreach(array_keys($pairs) as $key){ 
-            array_push($retval, $this->$func($key, $pairs[$key])); }
+        $retval = array(); foreach($pairs as $key=>$val){ 
+            array_push($retval, $this->$func($key, $val)); }
         return $this->AndArr($retval);
     }
     
