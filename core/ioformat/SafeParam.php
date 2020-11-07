@@ -14,7 +14,6 @@ class SafeParamInvalidException extends SafeParamException {
 
 class SafeParamUnknownTypeException extends SafeParamException{ 
     public function __construct(string $type) { 
-        $type = SafeParam::GetTypeString($type); 
         $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; } }
     
 class SafeParamKeyMissingException extends SafeParamException {
@@ -101,11 +100,11 @@ class SafeParam
         $array = self::TYPE_STRINGS[self::TYPE_ARRAY];
         $suffix = ($type & self::TYPE_ARRAY) ? " $array" : "";
         
-        $type &= self::TYPE_ARRAY;
+        $type &= ~self::TYPE_ARRAY;
         
         if (!array_key_exists($type, self::TYPE_STRINGS))
             throw new SafeParamUnknownTypeException($type);
-        
+            
         return self::TYPE_STRINGS[$type].$suffix;
     }
     

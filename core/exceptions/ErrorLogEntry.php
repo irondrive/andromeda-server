@@ -96,9 +96,7 @@ class ErrorLogEntry extends BaseObject
                 try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
                 catch (JSONEncodingException $e)
                 { 
-                    if (function_exists('mb_convert_encoding'))
-                    $data['trace_full'][$key]['args'] = mb_convert_encoding(print_r($data['trace_full'][$key]['args'],true),'UTF-8');
-                    else unset($data['trace_full'][$key]['args']);
+                    $data['trace_full'][$key]['args'] = base64_encode(print_r($data['trace_full'][$key]['args'],true));
                 }
             }
             
