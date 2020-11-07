@@ -6,7 +6,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/accounts/Account.php");
 
-class KeySource extends AuthObject
+abstract class KeySource extends AuthObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -34,7 +34,7 @@ class KeySource extends AuthObject
         $master_salt = CryptoKey::GenerateSalt();
         $master_nonce = CryptoSecret::GenerateNonce();
         
-        $key = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength()); // TODO make this take less time
+        $key = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength(), true);
         $master_key = $this->GetAccount()->GetEncryptedMasterKey($master_nonce, $key);
         
         return $this
@@ -51,7 +51,7 @@ class KeySource extends AuthObject
         $master_nonce = $this->GetScalar('master_nonce');
         $master_salt = $this->GetScalar('master_salt');
         
-        $cryptokey = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength()); 
+        $cryptokey = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength(), true);
         
         return CryptoSecret::Decrypt($master, $master_nonce, $cryptokey);
     }
