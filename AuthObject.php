@@ -7,7 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 class RawKeyNotAvailableException extends Exceptions\ServerException { public $message = "AUTHOBJECT_KEY_NOT_AVAILABLE"; }
 
-class AuthObject extends StandardObject
+abstract class AuthObject extends StandardObject
 {    
     public static function GetFieldTemplate() : array
     {
