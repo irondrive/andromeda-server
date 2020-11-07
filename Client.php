@@ -7,47 +7,8 @@ require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
+require_once(ROOT."/apps/accounts/AuthObject.php");
 require_once(ROOT."/apps/accounts/Config.php");
-
-class AuthObject extends StandardObject
-{    
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'authkey' => null
-        ));
-    }
-    
-    const KEY_LENGTH = 32;
-    
-    const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
-    
-    public function GetAuthKey(bool $asHash = false) : string {
-        return $this->GetScalar('authkey', !$asHash);
-    }
-    
-    protected function SetAuthKey(string $key) : self {
-        $algo = Utilities::GetHashAlgo();
-        $dohash = password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS);
-        if ($dohash) $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
-        return $this->SetScalar('authkey', $key, true);
-    }
-    
-    public function CreateAuthKey() : self {
-        $algo = Utilities::GetHashAlgo();
-        $key = Utilities::Random(self::KEY_LENGTH);
-        $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
-        return $this->SetScalar('authkey', $key, true);        
-    }
-    
-    public function CheckKeyMatch(string $key) : bool
-    {
-        $hash = $this->GetAuthKey(true);
-        $correct = password_verify($key, $hash);
-        if ($correct) $this->SetAuthKey($key);
-        return $correct;
-    }
-}
 
 class Client extends AuthObject
 {
@@ -76,9 +37,7 @@ class Client extends AuthObject
     
     public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account) : Client
     {
-        $client = parent::BaseCreate($database);
-        
-        return $client->CreateAuthKey()
+        return parent::BaseCreate($database)
             ->SetScalar('lastaddr',$interface->GetAddress())
             ->SetScalar('useragent',$interface->GetUserAgent())
             ->SetObject('account',$account);
@@ -115,16 +74,13 @@ class Client extends AuthObject
     
     public function GetClientObject(int $level = 0) : array
     {
-        $data = array(
+        $data = array_merge(parent::GetClientObject($level), array(
             'id' => $this->ID(),
             'lastaddr' => $this->GetLastAddress(),
             'useragent' => $this->GetUserAgent(),
             'dates' => $this->GetAllDates(),
-        );     
-        
-        if ($level === self::OBJECT_WITHSECRET)
-            $data['authkey'] = $this->GetAuthKey();
-        
+        ));
+
         if (($session = $this->GetSession()) === null) $data['session'] = null;
         else $data['session'] = $session->GetClientObject($level);
 

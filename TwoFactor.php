@@ -4,6 +4,7 @@ require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 require_once(ROOT."/apps/accounts/Account.php");
 
@@ -23,6 +24,13 @@ class UsedToken extends StandardObject
     
     public function GetCode() : string          { return $this->GetScalar('code'); }
     public function GetTwoFactor() : TwoFactor  { return $this->GetObject('twofactor'); }
+    
+    public static  function PruneOldCodes(ObjectDatabase $database) : void
+    {
+        $mintime = time()-(TwoFactor::TIME_TOLERANCE*2*30);
+        $q = new QueryBuilder(); $q->Where($q->LessThan('dates__created', $mintime));
+        static::DeleteByQuery($database, $q);
+    }
     
     public static function Create(ObjectDatabase $database, TwoFactor $twofactor, string $code) : UsedToken 
     {
@@ -57,53 +65,63 @@ class TwoFactor extends StandardObject
     public function GetIsValid() : bool     { return $this->GetScalar('valid'); }
     public function SetIsValid(bool $data = true) : self { return $this->SetScalar('valid',$data); }
     
+    public function hasCrypto() : bool { return $this->TryGetScalar('nonce') !== null; }
+    
     public static function Create(ObjectDatabase $database, Account $account, string $comment = null) : TwoFactor
     {
+        $obj = parent::BaseCreate($database)
+                ->SetScalar('comment',$comment)
+                ->SetObject('account',$account);
+        
         $ga = new PHPGangsta_GoogleAuthenticator();
+        $secret = $ga->createSecret(self::SECRET_LENGTH);
         
-        $secret = $ga->createSecret(self::SECRET_LENGTH); $nonce = null;
+        if ($account->hasCrypto())
+        {        
+            $nonce = CryptoSecret::GenerateNonce();
+            $secret = $account->EncryptSecret($secret, $nonce);            
+            $obj->SetScalar('nonce',$nonce);
+        }
         
-        $nonce = CryptoSecret::GenerateNonce();
-        $secret = $account->EncryptSecret($secret, $nonce);
-        
-        return parent::BaseCreate($database) 
-            ->SetScalar('secret',$secret)
-            ->SetScalar('nonce',$nonce)
-            ->SetScalar('comment',$comment)
-            ->SetObject('account',$account);
+        return $obj->SetScalar('secret',$secret);
     }
-
-    public function GetURL() : string
+    
+    private function GetSecret() : string
     {
-        $ga = new PHPGangsta_GoogleAuthenticator();
-
-        $secret = $this->GetAccount()->DecryptSecret(
-            $this->GetScalar('secret'), $this->GetScalar('nonce'));  
-
-        return $ga->getQRCodeGoogleUrl("Andromeda", $secret);
+        $secret = $this->GetScalar('secret');
+        
+        if ($this->hasCrypto())
+        {
+            $secret = $this->GetAccount()->DecryptSecret(
+                $secret, $this->GetScalar('nonce'));
+        }
+        
+        return $secret;
     }
         
     public function CheckCode(string $code) : bool
     {
-        $ga = new PHPGangsta_GoogleAuthenticator();
+        UsedToken::PruneOldCodes($this->database);        
         
-        $account = $this->GetAccount(); $secret = $this->GetScalar('secret');        
-
-        $secret = $account->DecryptSecret($secret, $this->GetScalar('nonce'));    
-
         foreach ($this->GetUsedTokens() as $usedtoken)
         {
-            if ($usedtoken->GetDateCreated() < time()-(self::TIME_TOLERANCE*2*30)) $usedtoken->Delete();            
-            else if ($usedtoken->GetCode() === $code) return false;
+            if ($usedtoken->GetCode() === $code) return false;
         }
 
-        if (!$ga->verifyCode($secret, $code, self::TIME_TOLERANCE)) return false;
+        $ga = new PHPGangsta_GoogleAuthenticator();
+        
+        if (!$ga->verifyCode($this->GetSecret(), $code, self::TIME_TOLERANCE)) return false;
 
-        UsedToken::Create($this->database, $this, $code);
-
-        $this->SetIsValid();
+        $this->SetIsValid(); UsedToken::Create($this->database, $this, $code);       
         
         return true;
+    }
+    
+    public function GetURL() : string
+    {
+        $ga = new PHPGangsta_GoogleAuthenticator();
+        
+        return $ga->getQRCodeGoogleUrl("Andromeda", $this->GetSecret());
     }
     
     const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
@@ -116,11 +134,15 @@ class TwoFactor extends StandardObject
             'dates' => $this->GetAllDates(),
         );
         
-        if ($level === self::OBJECT_WITHSECRET) $data['qrcodeurl'] = $this->GetURL();
+        if ($level === self::OBJECT_WITHSECRET) 
+        {
+            $data['secret'] = $this->GetSecret();
+            $data['qrcodeurl'] = $this->GetURL();
+        }
 
         return $data;
     }
-    
+
     public function Delete() : void
     {
         if ($this->CountUsedTokens())

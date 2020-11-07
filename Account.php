@@ -1,10 +1,11 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/apps/accounts/AuthEntity.php");
 require_once(ROOT."/apps/accounts/ContactInfo.php");
 require_once(ROOT."/apps/accounts/Client.php"); 
 require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/Group.php");
+require_once(ROOT."/apps/accounts/GroupStuff.php");
+require_once(ROOT."/apps/accounts/KeySource.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 
@@ -19,6 +20,9 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class CryptoUnlockRequiredException extends Exceptions\ServerException { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
+class CryptoNotInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_NOT_INITIALIZED"; }
+class CryptoAlreadyInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_ALREADY_INITIALIZED"; }
+class RecoveryKeyFailedException extends Exceptions\ServerException { public $message = "RECOVERY_KEY_UNLOCK_FAILED"; }
 
 use Andromeda\Core\Database\KeyNotFoundException;
 use Andromeda\Core\Database\NullValueException;
@@ -80,6 +84,8 @@ class Account extends AuthEntity
     
     public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
     public function HasClients() : int          { return $this->CountObjectRefs('clients') > 0; }
+    public function DeleteClients() : self      { $this->DeleteObjects('clients'); return $this; }
+    
     public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
     public function HasSessions() : int         { return $this->CountObjectRefs('sessions') > 0; }
    
@@ -317,14 +323,14 @@ class Account extends AuthEntity
         return false;
     }
     
-    public function CheckRecoveryCode(string $key) : bool
+    public function CheckRecoveryKey(string $key) : bool
     {
-        if (!$this->HasRecoveryKeys()) return false;    
-
-        foreach ($this->GetRecoveryKeys() as $source) {
-            if ($source->CheckCode($key)) return true; }
+        if (!$this->HasRecoveryKeys()) return false; 
         
-        return false;
+        $obj = RecoveryKey::LoadByFullKey($this->database, $this, $key);
+
+        if ($obj === null) return false;
+        else return $obj->CheckFullKey($key);
     }
     
     public function VerifyPassword(string $password) : bool
@@ -345,16 +351,11 @@ class Account extends AuthEntity
     
     private bool $cryptoAvailable = false; public function CryptoAvailable() : bool { return $this->cryptoAvailable; }
     
-    public function ChangePassword(string $new_password, string $old_password = "") : Account
+    public function ChangePassword(string $new_password) : Account
     {
         if ($this->hasCrypto())
         {
-            if (!$this->CryptoAvailable())
-            {
-                if (!$old_password) throw new CryptoUnlockRequiredException();
-                $this->UnlockCryptoFromPassword($old_password); 
-            }
-            $this->CryptoRekey($new_password);
+           $this->InitializeCrypto($new_password, true);
         }
         
         if ($this->GetAuthSource() instanceof Auth\Local)
@@ -387,10 +388,9 @@ class Account extends AuthEntity
     
     public function UnlockCryptoFromPassword(string $password) : self
     {
-        if ($this->cryptoAvailable) return $this; 
-        
-        if (!$this->hasCrypto())
-           $this->InitializeCrypto($password);
+        if ($this->cryptoAvailable) return $this;         
+        else if (!$this->hasCrypto())
+           throw new CryptoNotInitializedException();
 
         $master = $this->GetScalar('master_key');
         $master_nonce = $this->GetScalar('master_nonce');
@@ -404,51 +404,77 @@ class Account extends AuthEntity
         $this->cryptoAvailable = true; return $this;
     }
     
-    public function UnlockCryptoFromRecovery(RecoveryKey $source, string $key) : self
+    public function UnlockCryptoFromKeySource(KeySource $source) : self
     {
         if ($this->cryptoAvailable) return $this;
+        else if (!$this->hasCrypto())
+            throw new CryptoNotInitializedException();
         
-        $master = $source->GetUnlockedKey($key);
+        $master = $source->GetUnlockedKey();
         
         $this->SetScalar('master_key', $master, true);
         
         $this->cryptoAvailable = true; return $this;
     }
     
-    private function InitializeCrypto(string $password) : self
+    public function UnlockCryptoFromRecoveryKey(string $key) : self
     {
-        $master_salt = CryptoKey::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);
+        if ($this->cryptoAvailable) return $this;
+        else if (!$this->hasCrypto())
+            throw new CryptoNotInitializedException();
         
-        $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce',  $master_nonce);   
+        if (!$this->HasRecoveryKeys()) throw new RecoveryKeyFailedException();
+        
+        $obj = RecoveryKey::LoadByFullKey($this->database, $this, $key);
+        if ($obj === null) throw new RecoveryKeyFailedException();
+        
+        return $this->UnlockCryptoFromKeySource($obj, $key);
+    }
+    
+    private static $crypto_init_handlers = array();
+    private static $crypto_delete_handlers = array();
+    
+    public static function RegisterCryptoInitHandler(callable $func){ array_push(static::$crypto_init_handlers,$func); }
+    public static function RegisterCryptoDeleteHandler(callable $func){ array_push(static::$crypto_delete_handlers,$func); }
+
+    public function InitializeCrypto(string $password, bool $rekey = false) : self
+    {
+        if ($rekey && !$this->cryptoAvailable) 
+            throw new CryptoUnlockRequiredException();
+        
+        if (!$rekey && $this->hasCrypto())
+            throw new CryptoAlreadyInitializedException();
+        
+        $master_salt = CryptoKey::GenerateSalt(); 
+        $this->SetScalar('master_salt', $master_salt);
+        
+        $master_nonce = CryptoSecret::GenerateNonce(); 
+        $this->SetScalar('master_nonce',  $master_nonce);   
         
         $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());
         
-        $master = CryptoSecret::GenerateKey();
+        $master = $rekey ? $this->GetScalar('master_key') : CryptoSecret::GenerateKey();
         $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
   
         $this->SetScalar('master_key', $master_encrypted);         
         $this->SetScalar('master_key', $master, true); sodium_memzero($master);      
         
         $this->cryptoAvailable = true; 
-
+        
+        foreach (static::$crypto_init_handlers as $func) $func($this);
+        
         return $this;
     }
     
-    private function CryptoRekey(string $password) : self
+    public function DestroyCrypto() : self
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
+        foreach (static::$crypto_delete_handlers as $func) $func($this);
         
-        $master_salt = CryptoKey::GenerateSalt(); $this->SetScalar('master_salt', $master_salt);        
-        $master_nonce = CryptoSecret::GenerateNonce(); $this->SetScalar('master_nonce', $master_nonce);
+        $this->SetScalar('master_key', null);
+        $this->SetScalar('master_salt', null);
+        $this->SetScalar('master_nonce', null);
         
-        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());
-        
-        $master = $this->GetScalar('master_key');
-        $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
-        
-        $this->SetScalar('master_key', $master_encrypted); 
-        $this->SetScalar('master_key', $master, true); 
-        
+        $this->cryptoAvailable = false;
         return $this;
     }
     
