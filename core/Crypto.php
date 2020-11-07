@@ -14,12 +14,14 @@ class CryptoKey
         return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
     }
     
-    public static function DeriveKey(string $password, string $salt, int $bytes) : string
+    const FAST_OPS = 1; const FAST_MEMORY = 16*1024;
+    
+    public static function DeriveKey(string $password, string $salt, int $bytes, bool $fast = false) : string
     {
         $key = sodium_crypto_pwhash(
             $bytes, $password, $salt,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE);
+            $fast ? static::FAST_OPS : SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
+            $fast ? static::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE);
         sodium_memzero($password); return $key;
     }
 }

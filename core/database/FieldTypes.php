@@ -149,7 +149,8 @@ class ObjectRef extends Scalar
     public function DeleteObject() : void
     {
         $id = $this->GetValue(); if ($id === null) return;        
-        $this->GetRefClass()::DeleteByID($this->database, $id);
+        $this->GetRefClass()::DeleteByID($this->database, $id);        
+        if ($this->object) $this->object->Delete();
     }
 }
 
@@ -244,6 +245,8 @@ class ObjectRefs extends Counter
     public function DeleteObjects() : void
     {
         $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent);
+        
+        foreach (array_merge($this->objects, $this->refs_added) as $obj) $obj->Delete();
     }
     
     protected function MergeWithObjectChanges() : void

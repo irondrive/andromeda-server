@@ -67,37 +67,46 @@ class ErrorLogEntry extends BaseObject
         
         if ($asJson) $data['log'] = Utilities::JSONEncode($data['log']);
         
+        $extended = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_EXTENDED;
         $sensitive = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE;
         
-        if ($sensitive)
+        if ($extended)
         {
-            $data['params'] =  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
             $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
             
             if ($asJson)
             {
-                $data['params'] = Utilities::JSONEncode($data['params']);
                 $data['objects'] = Utilities::JSONEncode($data['objects']);
                 $data['queries'] = Utilities::JSONEncode($data['queries']);
+            }
+        }
+        
+        if ($sensitive)
+        {
+            $data['params'] =  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
+            
+            if ($asJson)
+            {
+                $data['params'] = Utilities::JSONEncode($data['params']);
             }
         }
         
         $data['trace_basic'] = $e->getTraceAsString();
         if (!$asJson) $data['trace_basic'] = explode("\n",$data['trace_basic']);
           
-        if ($sensitive)
+        if ($extended)
         {
             $data['trace_full'] = $e->getTrace();
             
             foreach (array_keys($data['trace_full']) as $key)
             {
                 if (!array_key_exists('args', $data['trace_full'][$key])) continue;
+                if (!$sensitive) { unset($data['trace_full'][$key]['args']); continue; }
+                
                 try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
-                catch (JSONEncodingException $e)
-                { 
-                    $data['trace_full'][$key]['args'] = base64_encode(print_r($data['trace_full'][$key]['args'],true));
-                }
+                catch (JSONEncodingException $e) { 
+                    $data['trace_full'][$key]['args'] = base64_encode(print_r($data['trace_full'][$key]['args'],true)); }
             }
             
             if ($asJson)
