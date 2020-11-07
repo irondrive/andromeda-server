@@ -26,13 +26,19 @@ abstract class Singleton
     }
 }
 
-class Utilities
+abstract class Utilities
 {   
+    private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_";
+    
+    public static function RandomRange() : int { return strlen(static::$chars); }
+    
     public static function Random(?int $length = null) : string
     {
-        if ($length === null) $length = BaseObject::IDLength;
-        $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; $string = ""; $range = strlen($chars)-1;
-        for ($i = 0; $i < $length; $i++) { $string .= $chars[random_int(0, $range)]; }; return $string;        
+        $length ??= BaseObject::IDLength;
+        $string = ""; $range = static::RandomRange() - 1;
+        for ($i = 0; $i < $length; $i++)
+            $string .= static::$chars[random_int(0, $range)];
+        return $string;        
     }
     
     public static function JSONEncode($data) : string
