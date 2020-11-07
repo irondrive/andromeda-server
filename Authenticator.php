@@ -49,7 +49,7 @@ class Authenticator
 
         $session = Session::TryLoadByID($database, $sessionid);
         
-        if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
+        if ($session === null || !$session->CheckKeyMatch($sessionkey)) throw new InvalidSessionException();
             
         $account = $session->GetAccount(); $client = $session->GetClient();
         
@@ -101,62 +101,60 @@ class Authenticator
     public static function StaticTryRequireTwoFactor(Input $input, Account $account, ?Session $session = null) : void
     {
         if (!$account->HasTwoFactor()) return; 
-        self::StaticRequireCrypto($input, $account);
         
-        $twofactor = $input->TryGetParam('auth_twofactor',SafeParam::TYPE_ALPHANUM);
+        static::StaticTryRequireCrypto($input, $account, $session);
+        
+        $twofactor = $input->TryGetParam('auth_twofactor',SafeParam::TYPE_TEXT);
         if ($twofactor === null) throw new TwoFactorRequiredException();
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
     
-    public function RequirePassword(bool $allowRecovery = false) : self
+    public function RequirePassword() : self
     {
-        $password = $this->input->TryGetParam('auth_password',SafeParam::TYPE_RAW);
-        $recoverykey = $this->input->TryGetParam('recoverykey', SafeParam::TYPE_ALPHANUM);
-        
-        $account = $this->realaccount;
-        
-        if ($password !== null)
-        {
-            if (!$account->VerifyPassword($password))
+        $password = $this->input->GetParam('auth_password',SafeParam::TYPE_RAW);
+
+        if (!$this->realaccount->VerifyPassword($password))
                 throw new AuthenticationFailedException();
-        }
-        else if ($recoverykey !== null && $allowRecovery)
-        {
-            if (!$account->CheckRecoveryCode($recoverykey))
-                throw new AuthenticationFailedException();
-        }
-        else throw new PasswordRequiredException();
 
         return $this;
     }
     
-    public function TryRequireCrypto(bool $allowRecovery = true) : self
+    public function TryRequireCrypto() : self
     {
-        if (!$this->account->hasCrypto()) return $this;
-        return $this->RequireCrypto($allowRecovery);
+        return (!$this->account->hasCrypto()) ? $this : $this->RequireCrypto();
     }
     
-    public function RequireCrypto(bool $allowRecovery = true) : self
+    public static function StaticTryRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
     {
-        self::StaticRequireCrypto($this->input, $this->account, $allowRecovery); return $this;    
+        if ($account->hasCrypto()) self::StaticRequireCrypto($input, $account, $session);
     }
     
-    public static function StaticRequireCrypto(Input $input, Account $account, bool $allowRecovery = true) : void
+    public function RequireCrypto() : self
+    {
+        self::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
+    }
+    
+    public static function StaticRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
     {
         if ($account->CryptoAvailable()) return;
         
         $password = $input->TryGetParam('auth_password', SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_ALPHANUM);
+        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
         
-        if ($password !== null)
+        if ($session !== null)
+        {
+            try { $account->UnlockCryptoFromKeySource($session); }
+            catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
+        }        
+        else if ($password !== null)
         {
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
-        }        
-        else if ($recoverykey !== null && $allowRecovery)
+        }       
+        else if ($recoverykey !== null)
         {
-            if (!$account->CheckRecoveryCode($recoverykey))
-                throw new AuthenticationFailedException();
+            try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
+            catch (DecryptionFailedException | RecoveryKeyFailedException $e) { throw new AuthenticationFailedException(); }
         }        
         else throw new CryptoKeyRequiredException();
     }

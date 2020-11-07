@@ -4,17 +4,13 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php");
-require_once(ROOT."/apps/accounts/Client.php");
-require_once(ROOT."/apps/accounts/Config.php");
+require_once(ROOT."/apps/accounts/KeySource.php");
 
-class Session extends AuthObject
+class Session extends KeySource
 {
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'master_key' => null,
-            'master_nonce' => null,
-            'master_salt' => null,    
+        return array_merge(parent::GetFieldTemplate(), array(  
             'dates__active' => new FieldTypes\Scalar(null, true),
             'account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
             'client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
@@ -22,23 +18,16 @@ class Session extends AuthObject
     }
     
     public function GetClient() : Client { return $this->GetObject('client'); }
-    public function GetAccount() : Account  { return $this->GetObject('account'); }
-    
+
     public function getActiveDate() : int     { return $this->GetDate('active'); }
     public function setActiveDate() : Session { return $this->SetDate('active'); }
     
     public static function Create(ObjectDatabase $database, Account $account, Client $client) : Session
     {
-        $session = parent::BaseCreate($database);
-        
-        $session->CreateAuthKey()->SetObject('account',$account)->SetObject('client',$client);
-        
-        $client->SetObject('session',$session);
-        
-        return $session;
+        return parent::CreateKeySource($database, $account)->SetObject('client',$client);
     }
 
-    public function CheckMatch(string $key) : bool
+    public function CheckKeyMatch(string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxSessionAge();
         
@@ -47,22 +36,15 @@ class Session extends AuthObject
             $this->Delete(); return false;
         }
         
-        return $this->CheckKeyMatch($key);
+        return parent::CheckKeyMatch($key);
     }
-    
-    const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
-    
+
     public function GetClientObject(int $level = 0) : array
     {
-        $data = array(
+        return array_merge(parent::GetClientObject($level), array(
             'id' => $this->ID(),
             'client' => $this->GetClient()->ID(),
             'dates' => $this->GetAllDates(),
-        );
-        
-        if ($level === self::OBJECT_WITHSECRET) 
-            $data['authkey'] = $this->GetAuthKey();
-        
-        return $data;
+        ));
     }
 }

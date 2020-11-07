@@ -12,7 +12,8 @@ class Config extends SingletonObject
         return array_merge(parent::GetFieldTemplate(), array(
             'features__createaccount' => null,
             'features__emailasusername' => null,
-            'features__requirecontact' => null,            
+            'features__requirecontact' => null,
+            'features__allowcrypto' => null,
             'default_group' => new FieldTypes\ObjectRef(Group::class)
         ));
     }
@@ -20,10 +21,12 @@ class Config extends SingletonObject
     public function GetDefaultGroup() : ?Group      { return $this->TryGetObject('default_group'); }
     public function GetAllowCreateAccount() : bool  { return $this->TryGetFeature('createaccount') ?? false; }
     public function GetUseEmailAsUsername() : bool  { return $this->TryGetFeature('emailasusername') ?? false; }
+    public function GetAllowCrypto() : bool         { return $this->TryGetFeature('allowcrypto') ?? true; }
     
     public function SetDefaultGroup(?Group $group) : self     { return $this->SetObject('default_group', $group); }
     public function SetAllowCreateAccount(bool $allow) : self { return $this->SetFeature('createaccount', $allow); }
     public function SetUseEmailAsUsername(bool $useem) : self { return $this->SetFeature('emailasusername', $useem); }
+    public function SetAllowCrypto(bool $allow) : self        { return $this->SetFeature('allowcrypto', $allow); }
     
     const CONTACT_NONE = 0; const CONTACT_EXIST = 1; const CONTACT_VALID = 2;
     

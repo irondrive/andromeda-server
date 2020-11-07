@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Oct 11, 2020 at 10:47 PM
+-- Generation Time: Nov 07, 2020 at 03:43 PM
 -- Server version: 10.1.19-MariaDB
--- PHP Version: 7.2.2
+-- PHP Version: 7.4.11
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -46,7 +46,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
-  `password` varchar(255) DEFAULT NULL,
+  `password` text,
   `authsource` varchar(255) DEFAULT NULL,
   `groups` tinyint(4) NOT NULL DEFAULT '0',
   `sessions` tinyint(4) NOT NULL DEFAULT '0',
@@ -112,10 +112,10 @@ CREATE TABLE `a2_objects_apps_accounts_auth_local` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `a2_objects_apps_accounts_auth_sourcepointer`
+-- Table structure for table `a2_objects_apps_accounts_auth_pointer`
 --
 
-CREATE TABLE `a2_objects_apps_accounts_auth_sourcepointer` (
+CREATE TABLE `a2_objects_apps_accounts_auth_pointer` (
   `id` varchar(16) NOT NULL,
   `authsource` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL
@@ -129,7 +129,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_sourcepointer` (
 
 CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` varchar(16) NOT NULL,
-  `authkey` varchar(255) NOT NULL,
+  `authkey` text NOT NULL,
   `lastaddr` varchar(255) NOT NULL,
   `useragent` text NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
@@ -150,7 +150,9 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
   `features__createaccount` tinyint(1) NOT NULL,
   `features__emailasusername` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(1) NOT NULL,
-  `default_group` varchar(16) DEFAULT NULL
+  `features__allowcrypto` tinyint(1) NOT NULL,
+  `default_group` varchar(16) DEFAULT NULL,
+  `dates__created` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -211,6 +213,7 @@ CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
 
 CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` varchar(16) NOT NULL,
+  `authkey` text NOT NULL,
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `master_key` tinyblob,
   `master_nonce` tinyblob,
@@ -226,7 +229,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
 
 CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` varchar(16) NOT NULL,
-  `authkey` varchar(255) NOT NULL,
+  `authkey` text NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `master_key` tinyblob,
@@ -308,9 +311,9 @@ ALTER TABLE `a2_objects_apps_accounts_auth_local`
   ADD UNIQUE KEY `id` (`id`);
 
 --
--- Indexes for table `a2_objects_apps_accounts_auth_sourcepointer`
+-- Indexes for table `a2_objects_apps_accounts_auth_pointer`
 --
-ALTER TABLE `a2_objects_apps_accounts_auth_sourcepointer`
+ALTER TABLE `a2_objects_apps_accounts_auth_pointer`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`),
   ADD KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`);
