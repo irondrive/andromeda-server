@@ -55,5 +55,13 @@ abstract class KeySource extends AuthObject
         
         return CryptoSecret::Decrypt($master, $master_nonce, $cryptokey);
     }
+
+    public function DestroyCrypto() : self
+    {
+        $this->SetScalar('master_key', null);
+        $this->SetScalar('master_salt', null);
+        $this->SetScalar('master_nonce', null);
+        return $this;
+    }
 }
 

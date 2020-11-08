@@ -38,7 +38,7 @@ class Authenticator
     public function GetClient() : Client { return $this->client; }
     
     private bool $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
-    private ?Account $realaccount;    public function GetRealAccount() : Account { return $this->realaccount; }
+    private Account $realaccount;     public function GetRealAccount() : Account { return $this->realaccount; }
     
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {
@@ -88,19 +88,21 @@ class Authenticator
         catch (AuthenticationFailedException | SafeParamException $e) { return null; }
     }
     
+    public function isAdmin() : bool { return $this->realaccount->isAdmin(); }
+    
     public function RequireAdmin() : self
     {
-        if (!$this->account->isAdmin()) throw new AdminRequiredException(); return $this;
+        if (!$this->realaccount->isAdmin()) throw new AdminRequiredException(); return $this;
     }
     
     public function TryRequireTwoFactor() : self
     {
-        self::StaticTryRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
+        static::StaticTryRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
     }
     
     public static function StaticTryRequireTwoFactor(Input $input, Account $account, ?Session $session = null) : void
     {
-        if (!$account->HasTwoFactor()) return; 
+        if (!$account->HasValidTwoFactor()) return; 
         
         static::StaticTryRequireCrypto($input, $account, $session);
         
@@ -111,7 +113,8 @@ class Authenticator
     
     public function RequirePassword() : self
     {
-        $password = $this->input->GetParam('auth_password',SafeParam::TYPE_RAW);
+        $password = $this->input->TryGetParam('auth_password',SafeParam::TYPE_RAW);
+        if ($password === null) throw new PasswordRequiredException();
 
         if (!$this->realaccount->VerifyPassword($password))
                 throw new AuthenticationFailedException();
@@ -126,12 +129,12 @@ class Authenticator
     
     public static function StaticTryRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
     {
-        if ($account->hasCrypto()) self::StaticRequireCrypto($input, $account, $session);
+        if ($account->hasCrypto()) static::StaticRequireCrypto($input, $account, $session);
     }
     
     public function RequireCrypto() : self
     {
-        self::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
+        static::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
     }
     
     public static function StaticRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
@@ -141,21 +144,21 @@ class Authenticator
         $password = $input->TryGetParam('auth_password', SafeParam::TYPE_RAW);
         $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
         
-        if ($session !== null)
+        if ($session !== null && $session->hasCrypto())
         {
             try { $account->UnlockCryptoFromKeySource($session); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
-        }        
-        else if ($password !== null)
+        }
+        else if ($recoverykey !== null && $recoverykey->hasCrypto())
+        {
+            try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
+            catch (DecryptionFailedException | RecoveryKeyFailedException $e) { throw new AuthenticationFailedException(); }
+        }
+        else if ($password !== null && $account->hasCrypto())
         {
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
         }       
-        else if ($recoverykey !== null)
-        {
-            try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
-            catch (DecryptionFailedException | RecoveryKeyFailedException $e) { throw new AuthenticationFailedException(); }
-        }        
         else throw new CryptoKeyRequiredException();
     }
   

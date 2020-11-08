@@ -270,7 +270,7 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
-        $accountid = $input->GetParam("accountid", SafeParam::TYPE_ID);        
+        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);        
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
         
@@ -299,7 +299,7 @@ class AccountsApp extends AppBase
         $database = $this->API->GetDatabase();
         
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
-        if (($authsource = $input->TryGetParam("authsourceid", SafeParam::TYPE_ID)) !== null) 
+        if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_ID)) !== null) 
         {
             $authsource = Auth\Pointer::TryLoadSourceByPointer($database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
@@ -416,6 +416,7 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
+        $database = $this->API->GetDatabase();
         
         $this->authenticator->RequirePassword()->TryRequireCrypto();
         
@@ -425,13 +426,18 @@ class AccountsApp extends AppBase
             
             $account->InitializeCrypto($password);
             $this->authenticator->GetSession()->InitializeCrypto();
+            Session::DeleteByAccountExcept($database, $this->authenticator->GetSession());
         }
         
         $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
         
-        $twofactor = TwoFactor::Create($this->API->GetDatabase(), $account, $comment);
+        $twofactor = TwoFactor::Create($database, $account, $comment);
+        $recoverykeys = RecoveryKey::CreateSet($database, $account);
         
-        $return = array('twofactor' => $twofactor->GetClientObject(TwoFactor::OBJECT_WITHSECRET) );
+        $tfobj = $twofactor->GetClientObject(TwoFactor::OBJECT_WITHSECRET);
+        $keyobjs = array_map(function($key){ return $key->GetClientObject(AuthObject::OBJECT_WITHSECRET); }, $recoverykeys);
+        
+        $return = array('twofactor' => $tfobj, 'recoverykeys' => $keyobjs );
         
         return $this->StandardReturn($input, $return);
     }
@@ -444,9 +450,9 @@ class AccountsApp extends AppBase
         
         $account = $this->authenticator->GetAccount();
         
-        $twofactorid = $input->GetParam("twofactorid", SafeParam::TYPE_ID);
-        $twofactor = TwoFactor::TryLoadByID($this->API->GetDatabase(), $twofactorid);
-        if ($twofactor === null || $twofactor->GetAccount() !== $account) throw new UnknownTwoFactorException();
+        $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_ID);
+        $twofactor = TwoFactor::TryLoadAccountAndID($this->API->GetDatabase(), $account, $twofactorid);
+        if ($twofactor === null) throw new UnknownTwoFactorException();
         
         $code = $input->GetParam("code", SafeParam::TYPE_ALPHANUM);
         if (!$twofactor->CheckCode($code)) throw new AuthenticationFailedException();
@@ -530,16 +536,16 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $session = $this->authenticator->GetSession();
         
-        $sessionid = $input->TryGetParam("sessionid", SafeParam::TYPE_ID);
+        $sessionid = $input->TryGetParam("session", SafeParam::TYPE_ID);
 
         if ($this->authenticator->isSudoUser() || $sessionid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $session = Session::TryLoadByID($this->API->GetDatabase(), $sessionid);
-            if ($session === null || $session->GetAccount() !== $account) throw new UnknownSessionException();
+            $session = Session::TryLoadAccountAndID($this->API->GetDatabase(), $account, $sessionid);
+            if ($session === null) throw new UnknownSessionException();
         }
         
-        if ($session->GetAccount()->HasTwoFactor()) $session->Delete();
+        if ($session->GetAccount()->HasValidTwoFactor()) $session->Delete();
         else $session->GetClient()->Delete();
         
         return $this->StandardReturn($input);
@@ -551,13 +557,13 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $client = $this->authenticator->GetClient();
         
-        $clientid = $input->TryGetParam("clientid", SafeParam::TYPE_ID);
+        $clientid = $input->TryGetParam("client", SafeParam::TYPE_ID);
         
         if ($this->authenticator->isSudoUser() || $clientid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $client = Client::TryLoadByID($this->API->GetDatabase(), $clientid);
-            if ($client === null || $client->GetAccount() !== $account) throw new UnknownClientException();
+            $client = Client::TryLoadAccountAndID($this->API->GetDatabase(), $account, $clientid);
+            if ($client === null) throw new UnknownClientException();
         }
         
         $client->Delete();
@@ -582,13 +588,17 @@ class AccountsApp extends AppBase
         $this->authenticator->RequirePassword();
         $account = $this->authenticator->GetAccount();
         
-        $twofactorid = $input->GetParam("twofactorid", SafeParam::TYPE_ID);
-        $twofactor = TwoFactor::TryLoadByID($this->API->GetDatabase(), $twofactorid);
-        if ($twofactor === null || $twofactor->GetAccount() !== $account) throw new UnknownTwoFactorException();
+        $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_ID);
+        $twofactor = TwoFactor::TryLoadAccountAndID($this->API->GetDatabase(), $account, $twofactorid); 
+        if ($twofactor === null) throw new UnknownTwoFactorException();
 
         $twofactor->Delete();
         
-        if (!$account->HasTwoFactor()) $account->DestroyCrypto();
+        if (!$account->HasTwoFactor() && $account->hasCrypto()) 
+        {
+            $this->authenticator->RequireCrypto();
+            $account->DestroyCrypto();
+        }
         
         return $this->StandardReturn($input);
     }    
@@ -672,21 +682,20 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $groupid = $input->GetParam("groupid", SafeParam::TYPE_ID);
-        $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
-        if ($group === null) throw new UnknownGroupException();
+        $database = $this->API->GetDatabase();
         
-        if ($this->config->GetDefaultGroup() === $group)
-            $this->config->SetDefaultGroup(null);
-        // TODO it could also be the default group for an auth source, maybe just require unsetting it first?
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $group = Group::TryLoadByID($database, $groupid);
+        if ($group === null) throw new UnknownGroupException();        
         
-        $default1 = $this->config->GetDefaultGroup();
-        $default2 = $account->GetAuthSource()->GetAccountGroup();
-        if ($group === $default1 || $group === $default2) throw new MandatoryGroupException();
-    
-        $group->Delete();
+        if ($group === $this->config->GetDefaultGroup()) 
+            throw new MandatoryGroupException();
         
-        return $this->StandardReturn($input);        
+        foreach (Auth\Pointer::LoadAll($database) as $authp)
+            if ($group === $authp->GetSource()->GetAccountGroup()) 
+                throw new MandatoryGroupException();
+            
+        $group->Delete(); return $this->StandardReturn($input);        
     }
     
     protected function AddGroupMember(Input $input)
@@ -694,8 +703,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $accountid = $input->GetParam("accountid", SafeParam::TYPE_ID);
-        $groupid = $input->GetParam("groupid", SafeParam::TYPE_ID);
+        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
         
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
@@ -714,8 +723,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $accountid = $input->GetParam("accountid", SafeParam::TYPE_ID);
-        $groupid = $input->GetParam("groupid", SafeParam::TYPE_ID);
+        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
         
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
@@ -723,9 +732,8 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        $default1 = $this->config->GetDefaultGroup();
-        $default2 = $account->GetAuthSource()->GetAccountGroup();
-        if ($group === $default1 || $group === $default2) throw new MandatoryGroupException();
+        if ($group === $this->config->GetDefaultGroup()) throw new MandatoryGroupException();
+        if ($group === $account->GetAuthSource()->GetAccountGroup()) throw new MandatoryGroupException();
         
         if ($account->HasGroup($group)) $account->RemoveGroup($group);
         else throw new UnknownGroupMembershipException();

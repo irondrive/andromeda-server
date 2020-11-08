@@ -2,8 +2,8 @@
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
-require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/KeySource.php");
 
 class Session extends KeySource
@@ -25,6 +25,12 @@ class Session extends KeySource
     public static function Create(ObjectDatabase $database, Account $account, Client $client) : Session
     {
         return parent::CreateKeySource($database, $account)->SetObject('client',$client);
+    }
+    
+    public static function DeleteByAccountExcept(ObjectDatabase $database, Account $account, Session $session) : void
+    {
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
+        parent::DeleteByQuery($database, $q->Where($w));
     }
 
     public function CheckKeyMatch(string $key) : bool

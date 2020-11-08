@@ -3,6 +3,7 @@
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class RawKeyNotAvailableException extends Exceptions\ServerException { public $message = "AUTHOBJECT_KEY_NOT_AVAILABLE"; }
@@ -19,6 +20,12 @@ abstract class AuthObject extends StandardObject
     const KEY_LENGTH = 32;
     
     const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
+    
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    {
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        $loaded = self::LoadByQuery($database, $q->Where($w)); return count($loaded) ? array_values($loaded)[0] : null;
+    }
 
     public static function BaseCreate(ObjectDatabase $database) : self
     {

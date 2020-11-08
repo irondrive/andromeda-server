@@ -48,12 +48,12 @@ class Group extends AuthEntity
     
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {
-        return self::TryLoadByUniqueKey($database, 'name', $name);
+        return static::TryLoadByUniqueKey($database, 'name', $name);
     }
     
     public static function LoadByName(ObjectDatabase $database, string $name) : self
     {
-        return self::LoadByUniqueKey($database, 'name', $name);
+        return static::LoadByUniqueKey($database, 'name', $name);
     }
     
     public function GetEmailRecipients() : array
