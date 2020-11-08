@@ -4,7 +4,6 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
-require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/KeySource.php");
 
 class RecoveryKey extends KeySource
@@ -21,7 +20,7 @@ class RecoveryKey extends KeySource
     public static function CreateSet(ObjectDatabase $database, Account $account) : array
     {        
         return array_map(function($i) use ($database, $account){ 
-            return self::Create($database, $account); 
+            return static::Create($database, $account); 
         }, range(0, self::SET_SIZE-1));
     }
  

@@ -95,18 +95,19 @@ class Account extends AuthEntity
     private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
     public function HasRecoveryKeys() : bool    { return $this->TryCountObjectRefs('recoverykeys') > 0; }
     
-    public function HasTwoFactor() : bool
-    { 
+    public function HasTwoFactor() : bool { return $this->TryCountObjectRefs('recoverykeys') > 0; }    
+    
+    public function HasValidTwoFactor() : bool
+    {
         if ($this->TryCountObjectRefs('recoverykeys') <= 0) return false;
         
-        $twofactors = $this->GetTwoFactors();
-        foreach ($twofactors as $twofactor) { 
+        foreach ($this->GetTwoFactors() as $twofactor) {
             if ($twofactor->GetIsValid()) return true; }
-        return false;
+            return false;
     }    
     
     private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
-    public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasTwoFactor(); }
+    public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasValidTwoFactor(); }
     
     public function isAdmin() : bool                    { return $this->TryGetFeature('admin') ?? false; }
     public function isEnabled() : bool                  { return $this->TryGetFeature('enabled') ?? true; }
@@ -133,7 +134,7 @@ class Account extends AuthEntity
     
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
     {
-        return self::TryLoadByUniqueKey($database, 'username', $username);
+        return static::TryLoadByUniqueKey($database, 'username', $username);
     }
     
     public static function TryLoadByContactInfo(ObjectDatabase $database, string $info) : ?self
@@ -182,7 +183,7 @@ class Account extends AuthEntity
     
     public function Delete() : void
     {
-        foreach (static::$delete_handlers as $func) $func($this);
+        foreach (static::$delete_handlers as $func) $func($this->database, $this);
         
         if ($this->HasSessions()) $this->DeleteObjectRefs('sessions'); 
         if ($this->HasClients()) $this->DeleteObjectRefs('clients');
@@ -315,7 +316,7 @@ class Account extends AuthEntity
     
     public function CheckTwoFactor(string $code) : bool
     {
-        if (!$this->HasTwoFactor()) return false;  
+        if (!$this->HasValidTwoFactor()) return false;  
         
         foreach ($this->GetTwoFactors() as $twofactor) { 
             if ($twofactor->CheckCode($code)) return true; }
@@ -461,14 +462,17 @@ class Account extends AuthEntity
         
         $this->cryptoAvailable = true; 
         
-        foreach (static::$crypto_init_handlers as $func) $func($this);
+        foreach (static::$crypto_init_handlers as $func) $func($this->database, $this);
         
         return $this;
     }
     
     public function DestroyCrypto() : self
     {
-        foreach (static::$crypto_delete_handlers as $func) $func($this);
+        foreach (static::$crypto_delete_handlers as $func) $func($this->database, $this);
+
+        foreach ($this->GetSessions() as $session) $session->DestroyCrypto();
+        foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
         
         $this->SetScalar('master_key', null);
         $this->SetScalar('master_salt', null);

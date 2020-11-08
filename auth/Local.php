@@ -42,7 +42,7 @@ class Local extends SingletonObject implements ISource
         $correct = password_verify($password, $hash);
         
         if ($correct && password_needs_rehash($hash, Utilities::GetHashAlgo()))
-            $account->SetScalar('password', self::HashPassword($password));
+            $account->SetScalar('password', static::HashPassword($password));
             
         return $correct;
     }

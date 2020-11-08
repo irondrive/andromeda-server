@@ -22,12 +22,12 @@ class ContactInfo extends StandardObject
 
     public static function LoadByInfo(ObjectDatabase $database, string $info) : ContactInfo
     {
-        return self::LoadByUniqueKey($database, 'info', $info);
+        return static::LoadByUniqueKey($database, 'info', $info);
     }
     
     public static function TryLoadByInfo(ObjectDatabase $database, string $info) : ?ContactInfo
     {
-        return self::TryLoadByUniqueKey($database, 'info', $info);
+        return static::TryLoadByUniqueKey($database, 'info', $info);
     }
     
     public function GetType() : int         { return $this->GetScalar('type'); }
