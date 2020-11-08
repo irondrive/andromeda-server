@@ -27,7 +27,7 @@ abstract class JoinUtils extends StandardObject
     
     public static function DeleteJoin(ObjectDatabase $database, FieldTypes\ObjectJoin $joinobj, BaseObject $thisobj, BaseObject $destobj) : void
     {
-        $obj = self::LoadJoinObject($database, $joinobj, $thisobj, $destobj);
+        $obj = static::LoadJoinObject($database, $joinobj, $thisobj, $destobj);
         if ($obj !== null) $obj->Delete();
     }
 }

@@ -33,8 +33,8 @@ class CryptoSecret
     
     public static function OutputOverhead() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; }
     
-    public static function GenerateKey() : string { return random_bytes(self::KeyLength()); }    
-    public static function GenerateNonce() : string { return random_bytes(self::NonceLength()); }
+    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }    
+    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
     
     public static function Encrypt(string $data, string $nonce, string $key, string $extra = null) : string
     {
@@ -58,8 +58,8 @@ class CryptoAuth
     public static function KeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
     public static function NonceLength() : int { return SODIUM_CRYPTO_AUTH_NONCEBYTES; }
     
-    public static function GenerateKey() : string { return random_bytes(self::KeyLength()); }
-    public static function GenerateNonce() : string { return random_bytes(self::NonceLength()); }
+    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
+    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
     
     public static function MakeAuthCode(string $message, string $key)
     {

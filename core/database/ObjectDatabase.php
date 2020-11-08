@@ -101,7 +101,7 @@ class ObjectDatabase extends Database
     
     public function LoadObjectsByQuery(string $class, QueryBuilder $query) : array
     {
-        $table = self::GetClassTableName($class); 
+        $table = static::GetClassTableName($class); 
         
         $querystr = "SELECT $table.* FROM $table ".$query->GetText();
         
@@ -114,7 +114,7 @@ class ObjectDatabase extends Database
     
     public function DeleteObjectsByQuery(string $class, QueryBuilder $query, bool $notify = false) : self
     {
-        $table = self::GetClassTableName($class);
+        $table = static::GetClassTableName($class);
         
         $querystr = "DELETE FROM $table ".$query->GetText().(!$notify ? " RETURNING *":"");
         
@@ -152,7 +152,7 @@ class ObjectDatabase extends Database
         if (!count($criteria)) return $this;
         
         $criteria_string = implode(', ',$criteria);
-        $table = self::GetClassTableName($class);            
+        $table = static::GetClassTableName($class);            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
         $this->query($query, Database::QUERY_WRITE, $data);    
         
@@ -172,7 +172,7 @@ class ObjectDatabase extends Database
             if ($value !== null) $data["d$i"] = $value; $i++;
         }
         
-        $table = self::GetClassTableName($class);
+        $table = static::GetClassTableName($class);
         $columns_string = implode(',',$columns); $indexes_string = implode(',',$indexes);
         $query = "INSERT INTO $table ($columns_string) VALUES ($indexes_string)";
         $this->query($query, Database::QUERY_WRITE, $data);
