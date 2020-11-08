@@ -66,10 +66,10 @@ class CLI extends IOInterface
                 
                 case 'batch':     
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    return self::GetBatch($argv[$i+1]); break;
+                    return static::GetBatch($argv[$i+1]); break;
                     
                 case 'exec': case 'run': $i++; 
-                default: return array(self::GetInput(array_slice($argv, $i))); break;                    
+                default: return array(static::GetInput(array_slice($argv, $i))); break;                    
             }
         }
         
@@ -88,7 +88,7 @@ class CLI extends IOInterface
             try { $args = \Clue\Arguments\split($line); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
             
-            return self::GetInput($args);
+            return static::GetInput($args);
         };
         
         return array_map($line2input, $lines);
@@ -105,27 +105,28 @@ class CLI extends IOInterface
         for ($i = 2; $i < count($argv); $i++)
         {
             if (substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
+            if (!isset($argv[$i+1]) || substr($argv[$i+1],0,2) === "--") throw new IncorrectCLIUsageException();
             
-            $param = substr($argv[$i],2);
+            $param = substr($argv[$i],2); $val = $argv[$i+1];
             
             if (in_array($param, array('file','move-file','copy-file')))
             {
-                while (isset($argv[$i+1]) && substr($argv[$i+1],0,2) !== "--")
-                {
-                    $infile = $argv[$i+1];
-                    if (!is_readable($infile)) throw new InvalidFileException();   
-                    
-                    $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
-                    
-                    if ($param === 'move-file') 
-                        rename($infile, $tmpfile); 
-                    else copy($infile, $tmpfile);
-                    
-                    array_push($this->tmpfiles, $tmpfile);
-                    $files[basename($infile)] = $tmpfile; $i++;
-                }
+                if (!is_readable($val)) throw new InvalidFileException();   
+                
+                $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
+                
+                if ($param === 'move-file') 
+                    rename($val, $tmpfile); 
+                else copy($val, $tmpfile);
+                
+                $filename = basename($val);
+                if (isset($argv[$i+2]) && substr($argv[$i+2],0,2) !== "--")
+                    $filename = basename($argv[$i+2]);
+
+                array_push($this->tmpfiles, $tmpfile);
+                $files[$filename] = $tmpfile; $i++;
             }
-            else $params->AddParam($param, $argv[$i+1]); $i++;
+            else $params->AddParam($param, $val); $i++;
         }
 
         foreach (array_keys($_SERVER) as $key)

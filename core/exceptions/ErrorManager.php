@@ -66,13 +66,13 @@ class ErrorManager extends Singleton
     
     public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
-    private function Log(\Throwable $e) : void
+    public function Log(\Throwable $e) : void
     {
         $logged = false; $logdir = null;
         if ($this->API !== null && $this->API->GetConfig() !== null)
         {
             $logdir = $this->API->GetConfig()->GetDataDir();
-            if ($this->API->GetConfig()->GetDebugLog2File()) 
+            if ($logdir && $this->API->GetConfig()->GetDebugLog2File()) 
             {
                 $data = Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e));
                 $this->Log2File($logdir, $data); $logged = true; 

@@ -54,7 +54,7 @@ class Scalar
 
     public function GetDBValue() { return ($this->realvalue === false) ? 0 : $this->realvalue; }
     
-    public function SetValue(?string $value, bool $temp = false) : bool
+    public function SetValue($value, bool $temp = false) : bool
     {
         $this->tempvalue = $value;
 
@@ -246,50 +246,57 @@ class ObjectRefs extends Counter
     {
         $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent);
         
-        foreach (array_merge($this->objects, $this->refs_added) as $obj) $obj->Delete();
+        foreach ($this->refs_added as $obj) $obj->Delete();
     }
     
     protected function MergeWithObjectChanges() : void
     {
         foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
         foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
-        $this->refs_added = array(); $this->refs_deleted = array();
     }
     
     public function AddObject(BaseObject $object, bool $notification) : bool
     {
-        if (!$this->isLoaded)
+        $modified = false;
+        
+        if (($idx = array_search($object, $this->refs_deleted, true)) !== false)
         {
-            if (!in_array($object, $this->refs_added))
-            {
-                array_push($this->refs_added, $object); 
-                parent::Delta(); return true;
-            }
+            unset($this->refs_deleted[$idx]);
+            parent::Delta(1); $modified = true;
         }
-        else if (!in_array($object, $this->objects))
+        
+        if (!in_array($object, $this->refs_added))
         {
+            array_push($this->refs_added, $object); 
+            parent::Delta(); $modified = true;
+        }
+        
+        if (isset($this->objects))
             $this->objects[$object->ID()] = $object; 
-            parent::Delta(); return true;
-        }
-        return false;
+
+        return $modified;
     }
     
     public function RemoveObject(BaseObject $object, bool $notification) : bool
     {
-        if (!isset($this->objects))
+        $modified = false;
+
+        if (($idx = array_search($object, $this->refs_added, true)) !== false)
         {
-            if (!in_array($object, $this->refs_deleted))
-            {
-                array_push($this->refs_deleted, $object); 
-                parent::Delta(-1); return true;
-            }
+            unset($this->refs_added[$idx]);
+            parent::Delta(-1); $modified = true;
         }
-        else if (in_array($object, $this->objects))
+        
+        if (!in_array($object, $this->refs_deleted))
         {
+            array_push($this->refs_deleted, $object); 
+            parent::Delta(-1); $modified = true;
+        }
+        
+        if (isset($this->objects))
             unset($this->objects[$object->ID()]);
-            parent::Delta(-1); return true;
-        }
-        return false;
+
+        return $modified;
     }
 }
 

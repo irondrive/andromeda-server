@@ -17,7 +17,7 @@ class Input
     private array $files;       public function GetFiles() : array { return $this->files; }
     private ?InputAuth $auth;   public function GetAuth() : ?InputAuth { return $this->auth; }
     
-    public function HasParam(string $key) {
+    public function HasParam(string $key) : bool {
         return $this->params->HasParam($key); }
     
     public function GetParam(string $key, int $type) { 
@@ -25,6 +25,22 @@ class Input
     
     public function TryGetParam(string $key, int $type) {
         return $this->params->TryGetParam($key, $type); }
+        
+    public function HasFile(string $key) : bool {
+        return array_key_exists($key, $this->files); }
+        
+    public function GetFile(string $key) : string
+    {
+        if (!$this->HasFile($key)) 
+            throw new SafeParamKeyMissingException($key);
+        else return $this->files[$key];
+    }
+    
+    public function TryGetFile(string $key) : ?string
+    {
+        if (!$this->HasFile($key)) return null;
+        else return $this->files[$key];
+    }
     
     public function __construct(string $app, string $action, SafeParams $params,
                                 array $files = array(), ?InputAuth $auth = null)

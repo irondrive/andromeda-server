@@ -30,7 +30,7 @@ class Config extends SingletonObject
     public function SetReadOnly(int $data, bool $temp = true) : self { return $this->SetFeature('read_only', $data, $temp); }
     
     public function GetApps() : array { return $this->GetScalar('apps'); }
-    public function GetDataDir() : ?string { return $this->TryGetScalar('datadir').'/'; }
+    public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
     const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_EXTENDED = 2; const LOG_SENSITIVE = 3;    
     public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_BASIC; }

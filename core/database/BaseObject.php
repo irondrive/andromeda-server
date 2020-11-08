@@ -21,22 +21,22 @@ abstract class BaseObject
     
     public static function LoadByID(ObjectDatabase $database, string $id) : self
     {
-        return self::LoadByUniqueKey($database,'id',$id);
+        return static::LoadByUniqueKey($database,'id',$id);
     }
     
     public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
     {
-        return self::TryLoadByUniqueKey($database,'id',$id);
+        return static::TryLoadByUniqueKey($database,'id',$id);
     }
     
     public static function DeleteByID(ObjectDatabase $database, string $id) : void
     {
-        self::DeleteByUniqueKey($database,'id',$id);
+        static::DeleteByUniqueKey($database,'id',$id);
     }
         
     public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array 
     {
-        return self::LoadByQuery($database, (new QueryBuilder())->Limit($limit)->Offset($offset));
+        return static::LoadByQuery($database, (new QueryBuilder())->Limit($limit)->Offset($offset));
     }
     
     public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
@@ -46,7 +46,7 @@ abstract class BaseObject
     
     protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object) : array
     {
-        $q = new QueryBuilder(); return self::LoadByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $object->ID())));
     }
     
     protected static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
@@ -56,7 +56,7 @@ abstract class BaseObject
     
     public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object) : void
     {
-        $q = new QueryBuilder(); self::DeleteByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $object->ID())));
     }
     
     protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
@@ -72,7 +72,7 @@ abstract class BaseObject
     
     protected static function DeleteByUniqueKey(ObjectDatabase $database, string $field, string $key) : void
     {
-        $q = new QueryBuilder(); self::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
+        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
     }
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
@@ -329,19 +329,16 @@ abstract class BaseObject
         
         $class = static::class; $values = array(); $counters = array();
 
-        foreach (array('scalars','objects','objectrefs') as $set)
+        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
         {
-            foreach ($this->$set as $key => $value)
-            {
-                if (!$value->GetDelta()) continue;
-                if ($isRollback && !$value->GetAlwaysSave()) continue;
+            if (!$value->GetDelta()) continue;
+            if ($isRollback && !$value->GetAlwaysSave()) continue;
 
-                if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
-                    $counters[$key] = $value->GetDBValue();
-                else $values[$key] = $value->GetDBValue();
-                
-                $value->ResetDelta();
-            }
+            if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
+                $counters[$key] = $value->GetDBValue();
+            else $values[$key] = $value->GetDBValue();
+            
+            $value->ResetDelta();
         }
 
         $this->database->SaveObject($class, $this, $values, $counters);

@@ -55,11 +55,11 @@ class AJAX extends IOInterface
                 $req = array_merge($global_req, $req);
                 $get = array_merge($global_get, $get);
                 
-                $inputs[$i] = self::GetInput($get, $req);
+                $inputs[$i] = static::GetInput($get, $req);
             }
             return $inputs;
         }
-        else return array(self::GetInput($_GET, $_REQUEST));
+        else return array(static::GetInput($_GET, $_REQUEST));
     }
     
     private function GetInput(array $get, array $request) : Input
@@ -117,7 +117,7 @@ class AJAX extends IOInterface
     {
         $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
 
-        $data = self::HTTPPost($url, $get, self::EncodeParams($input->GetParams()));
+        $data = static::HTTPPost($url, $get, static::EncodeParams($input->GetParams()));
         if ($data === null) throw new RemoteInvalidException();
 
         try { return Utilities::JSONDecode($data); }

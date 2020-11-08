@@ -25,6 +25,7 @@ class MaintenanceException extends Exceptions\ClientDeniedException { public $me
 class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
 class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
+class InvalidDataDirectoryException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
 class Main extends Singleton implements Transactions
 { 
@@ -38,6 +39,7 @@ class Main extends Singleton implements Transactions
     
     private ?Config $config = null; 
     private ?ObjectDatabase $database = null; 
+    private ErrorManager $error_manager;
     private IOInterface $interface;
     
     public function GetApps() : array { return $this->apps; }
@@ -53,6 +55,7 @@ class Main extends Singleton implements Transactions
         
         $this->sum_stats = new DBStats();
         
+        $this->error_manager = $error_manager;
         $error_manager->SetAPI($this); 
         $this->interface = $interface;
         $this->database = new ObjectDatabase();
@@ -126,11 +129,27 @@ class Main extends Singleton implements Transactions
         return Output::ParseArray($data)->GetData();
     }
     
+    private array $writes = array();
+    public function WriteDataFile(string $path, string $data) : self
+    {
+        $datadir = $this->GetConfig()->GetDataDir();
+        if (!$datadir || !is_writeable($datadir))
+            throw new InvalidDataDirectoryException();
+            array_push($this->writes, $path);
+            file_put_contents($path, $data);
+    }
+    
     public function rollBack()
     {
         set_time_limit(0);
-        if (isset($this->database)) $this->database->rollback();        
-        foreach($this->apps as $app) $app->rollback();
+        
+        if (isset($this->database)) $this->database->rollback();   
+        
+        foreach ($this->apps as $app) try { $app->rollback(); } 
+            catch (\Throwable $e) { $this->error_manager->Log($e); }
+        
+        foreach ($this->writes as $path) try { unlink($path); } 
+            catch (\Throwable $e) { $this->error_manager->Log($e); }
     }
     
     public function commit() : ?array

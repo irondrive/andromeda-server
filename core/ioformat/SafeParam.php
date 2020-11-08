@@ -142,7 +142,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_ALPHANUM || $type === self::TYPE_ID)
         {
-            if (!preg_match("%^[a-zA-Z0-9_]+$%",$value) || strlen($value) > 255)
+            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_NAME)

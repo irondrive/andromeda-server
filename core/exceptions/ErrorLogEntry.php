@@ -36,7 +36,7 @@ class ErrorLogEntry extends BaseObject
     {
         $base = parent::BaseCreate($database);
         
-        $data = self::GetDebugData($api, $e, true);
+        $data = static::GetDebugData($api, $e, true);
         
         array_walk($data, function($value, $key) use($base) { 
             $base->SetScalar($key, $value); });
