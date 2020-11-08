@@ -126,31 +126,61 @@ class Folder extends Item
     
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        return self::CreateRoot($database, $parent->GetFilesystem(), $account)
+        return static::CreateRoot($database, $parent->GetFilesystem(), $account)
         ->SetObject('parent',$parent)->SetScalar('name',$name);
     }
     
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = self::NotifyCreate($database, $parent, $account, $name);
+        $folder = static::NotifyCreate($database, $parent, $account, $name);
         $folder->GetFSImpl()->CreateFolder($folder);
             
         return $folder;
     }
     
-    public static function LoadRootByAccount(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
+    public static function LoadRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {
         $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
         
         $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'),
                                                   $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
         
-        $loaded = self::LoadByQuery($database, $q->Where($where));
+        $loaded = static::LoadByQuery($database, $q->Where($where));
         
         if (count($loaded)) return array_values($loaded)[0];
         else {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
             return self::CreateRoot($database, $filesystem, $owner)->Refresh();
+        }
+    }
+
+    public static function LoadRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : array
+    {
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'));
+        
+        return static::LoadByQuery($database, $q->Where($where));
+    }
+    
+    public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',$account->ID()), $q->IsNull('parent'));
+        
+        return static::LoadByQuery($database, $q->Where($where));
+    }
+    
+    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : void
+    {
+        foreach (static::LoadRootsByFSManager($database, $filesystem) as $folder)
+        {
+            if ($filesystem->isShared()) $folder->NotifyDelete(); else $folder->Delete();
+        }
+    }
+    
+    public static function DeleteRootsByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        foreach (static::LoadRootsByAccount($database, $account) as $folder)
+        {
+            if ($folder->GetFilesystem()->isShared()) $folder->NotifyDelete(); else $folder->Delete();
         }
     }
     
@@ -160,8 +190,8 @@ class Folder extends Item
     {
         if (!$isNotify) $this->Refresh(true);
         $this->notifyDeleted = $isNotify;
-        $this->DeleteObjects('files');
-        $this->DeleteObjects('folders');
+        $this->DeleteObjectRefs('files');
+        $this->DeleteObjectRefs('folders');
     }
     
     public function NotifyDelete(bool $isNotify = true) : void
@@ -172,7 +202,7 @@ class Folder extends Item
     }
     
     public function Delete() : void
-    {
+    {        
         $parent = $this->GetParent();
         $isNotify = ($parent !== null && $parent->isNotifyDeleted());
         
@@ -184,9 +214,9 @@ class Folder extends Item
         parent::Delete();
     }
     
-    const ONLYSELF = 1; const WITHCONTENT = 2; const RECURSIVE = 3;
+    const SUBFILES = 1; const SUBFOLDERS = 2; const RECURSIVE = 4;
     
-    public function GetClientObject(int $level = self::ONLYSELF, ?int $limit = null, ?int $offset = null) : ?array
+    public function GetClientObject(int $level = 0, ?int $limit = null, ?int $offset = null) : ?array
     {
         if ($this->isDeleted()) return null;
         
@@ -195,22 +225,30 @@ class Folder extends Item
         $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
-            'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters(),
             'owner' => $this->GetObjectID('owner'),
             'parent' => $this->GetObjectID('parent'),
             'filesystem' => $this->GetObjectID('filesystem')
         );
         
-        if ($level != self::ONLYSELF)
+        if ($level & self::SUBFOLDERS)
         {
-            $subv = ($level === self::RECURSIVE) ? self::RECURSIVE : self::ONLYSELF;
-            $data['folders'] = array_map(function($folder)use($subv){ return $folder->GetClientObject($subv); }, $this->GetFolders($limit,$offset));
+            $subv = $level; if (!($subv & self::RECURSIVE)) $subv = 0;
+            
+            $data['folders'] = array_map(function($folder)use($subv){ 
+                return $folder->GetClientObject($subv); }, $this->GetFolders($limit,$offset));
             
             if ($limit !== null) $limit -= count($data['folders']);           
             if ($offset !== null) $offset -= count($data['folders']);
-            $data['files'] = array_map(function($file){ return $file->GetClientObject(); }, $this->GetFiles($limit,$offset));            
-        }        
+        }
+        
+        if ($level & self::SUBFILES)
+        {
+            $data['files'] = array_map(function($file){ 
+                return $file->GetClientObject(); }, $this->GetFiles($limit,$offset));            
+        }
+        
+        $data['dates'] = $this->GetAllDates();
+        $data['counters'] = $this->GetAllCounters();
 
         return $data;
     }

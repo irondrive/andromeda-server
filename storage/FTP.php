@@ -1,56 +1,83 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/apps/files/storage/Storage.php");
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
-class FTPExtensionException extends Exceptions\ServerException    { public $message = "FTP_EXTENSION_MISSING"; }
-class FTPConnectionFailure extends Exceptions\ServerException     { public $message = "FTP_CONNECTION_FAILURE"; }
-class FTPAuthenticationFailure extends Exceptions\ServerException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
+class FTPExtensionException extends ActivateException    { public $message = "FTP_EXTENSION_MISSING"; }
+class FTPConnectionFailure extends ActivateException     { public $message = "FTP_CONNECTION_FAILURE"; }
+class FTPAuthenticationFailure extends ActivateException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
 
 class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_DOES_NOT_SUPPORT_MODIFY"; }
 
-class FTP extends Storage
+Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ FTP::DecryptAccount($database, $account); });
+
+class FTP extends CredCrypt
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'path' => null,
             'hostname' => null,
             'port' => null,
             'secure' => null,
-            'username' => null,
-            'password' => null
         ));
     }
     
     public function GetClientObject() : array
     {
         return array_merge(parent::GetClientObject(), array(
-            'path' => $this->GetPath(),
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'secure' => $this->GetScalar('secure'),
-            'username' => $this->TryGetScalar('username'),
-            'password' => boolval($this->TryGetScalar('password'))
         ));
     }
     
-    private $ftp = null;
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    {
+        return parent::Create($database, $input, $account, $filesystem)
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT) ?? 21)
+            ->SetScalar('secure', $input->TryGetParam('secure', SafeParam::TYPE_BOOL) ?? false);
+    }
+    
+    public function Edit(Input $input) : self
+    {
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
+        $secure = $input->TryGetParam('secure', SafeParam::TYPE_BOOL);
+        
+        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
+        if ($port !== null) $this->SetScalar('port', $port);
+        if ($secure !== null) $this->SetScalar('secure', $secure);
+        
+        return parent::Edit($input);
+    }
     
     public function SubConstruct() : void
     {
         if (!function_exists('ftp_connect')) throw new FTPExtensionException();
-
+    }
+    
+    public function Activate() : self
+    {
+        if (isset($this->ftp)) return $this;
+        
         $host = $this->GetScalar('hostname'); $port = $this->TryGetScalar('port');
-        $user = $this->TryGetScalar('username') ?? 'anonymous'; 
-        $pass = $this->TryGetScalar('password') ?? "";
+        $user = $this->TryGetUsername('username') ?? 'anonymous';
+        $pass = $this->TryGetPassword('password') ?? "";
         
         if ($this->GetScalar('secure')) $this->ftp = ftp_ssl_connect($host, $port);
         else $this->ftp = $this->ftp = ftp_connect($host, $port);
-        if (!$this->ftp) throw new FTPConnectionFailure();   
+        if (!$this->ftp) throw new FTPConnectionFailure();
         
         if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();
+        
+        return $this;
     }
 
     public function __destruct()
@@ -61,13 +88,11 @@ class FTP extends Storage
        try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
     }
     
-    protected function GetPath($path) : string { return $this->GetScalar('path').'/'.$path; }
-    
-    protected function GetFullURL(string $path) : string
+    protected function GetFullURL(string $path = "") : string
     {
         $port = $this->TryGetScalar('port') ?? "";
-        $username = $this->TryGetScalar('username') ?? "";
-        $password = $this->TryGetScalar('password') ?? "";
+        $username = $this->TryGetUsername() ?? "";
+        $password = $this->TryGetPassword() ?? "";
         
         $proto = $this->GetScalar('secure') ? "ftps" : "ftp";
         $usrstr = $username ? "$username:$password@" : "";

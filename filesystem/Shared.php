@@ -35,7 +35,7 @@ class Shared extends BaseFileFS
         
         $stat = $storage->ItemStat($path);
         $file->SetAccessed($stat->atime)->SetCreated($stat->ctime)
-            ->SetModified($stat->mtime)->SetSize($stat->size,true)->Save();        
+            ->SetModified($stat->mtime)->SetSize($stat->size,true);        
         return $this;
     }
     
@@ -49,8 +49,7 @@ class Shared extends BaseFileFS
         }
         
         $stat = $storage->ItemStat($path);
-        $folder->SetAccessed($stat->atime)->SetCreated($stat->ctime)
-            ->SetModified($stat->mtime)->Save(); 
+        $folder->SetAccessed($stat->atime)->SetCreated($stat->ctime)->SetModified($stat->mtime); 
 
         if ($doContents) 
             $this->RefreshFolderContents($folder, $path);         
@@ -60,41 +59,35 @@ class Shared extends BaseFileFS
     private function RefreshFolderContents(Folder $folder, string $path) : void
     {
         $storage = $this->GetStorage();
-        $fsitems = $storage->ReadFolder($path);
+        $fsitems = $storage->ReadFolder($path); sort($fsitems);
         if ($fsitems === null) { $folder->NotifyDelete(); return; }
 
-        $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());
-        
+        $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());        
+        uasort($dbitems, function($a,$b){ return strcmp($a->GetName(),$b->GetName()); });
+
         foreach ($fsitems as $fsitem)
         {
-            // TODO FUTURE could use SQL order by to make this a lot faster (scandir is already sorted)
-            // not sure how to pass in ORDER BY since loading the objects happens under the hood...
-
             $fspath = $path.$fsitem;
             $isfile = $storage->isFile($fspath);
             if (!$isfile && !$storage->isFolder($fspath)) 
                 throw new InvalidScannedItemException();
             
             $dbitem = null;
-            foreach (array_keys($dbitems) as $id)
+            foreach ($dbitems as $dbitemid => $dbitemtmp)
             {
-                $dbitemtmp = $dbitems[$id];                
                 if ($dbitemtmp->GetName() === $fsitem)
                 {
-                    $dbitem = $dbitemtmp; unset($dbitems[$id]); break;
+                    $dbitem = $dbitemtmp; unset($dbitems[$dbitemid]); break;
                 }
+                else if ($dbitemtmp->GetName() > $fsitem) break;
             }
             
             if ($dbitem === null)
             {
                 $itemclass = $isfile ? File::class : Folder::class;
-                $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem);       
+                $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem)->Refresh()->Save();       
             }
-            
-            $dbitem->Refresh();
         }
-        
-        foreach ($dbitems as $dbitem) $dbitem->NotifyDelete();
     }
     
     public function CreateFolder(Folder $folder) : self

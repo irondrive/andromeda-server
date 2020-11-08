@@ -2,11 +2,12 @@
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 use Andromeda\Core\Exceptions\ClientDeniedException;
@@ -14,6 +15,8 @@ use Andromeda\Core\Exceptions\ClientDeniedException;
 class ReadOnlyException extends ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
 
 class StorageException extends Exceptions\ServerException { }
+class ActivateException extends Exceptions\ServerException { }
+
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
 class FolderDeleteFailedException extends StorageException  { public $message = "FOLDER_DELETE_FAILED"; }
 class FolderMoveFailedException extends StorageException    { public $message = "FOLDER_MOVE_FAILED"; }
@@ -52,8 +55,18 @@ abstract class Storage extends StandardObject implements Transactions
             'filesystem' => $this->GetObjectID('filesystem')
         );
     }
+
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    {
+        return parent::BaseCreate($database, $input)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
+    }
     
-    public function GetOwner() : Account { return $this->GetObject('owner'); }
+    public function Edit(Input $input) : self { return $this; }
+    
+    public abstract function Test() : self;
+    public abstract function Activate() : self;
+
+    public function GetAccount() : ?Account { return $this->TryGetObject('owner'); }
     public function GetFilesystem() : FSManager { return $this->GetObject('filesystem'); }    
     
     protected function CheckReadOnly(){ if ($this->GetFilesystem()->isReadOnly()) throw new ReadOnlyException(); }
