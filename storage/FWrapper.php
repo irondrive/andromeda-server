@@ -1,6 +1,16 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+
 require_once(ROOT."/apps/files/storage/Storage.php");
+
+class InvalidStoragePathException extends ActivateException { public $message = "INVALID_STORAGE_PATH"; }
 
 abstract class FWrapper extends Storage
 {
@@ -18,9 +28,33 @@ abstract class FWrapper extends Storage
         ));
     }
     
-    protected abstract function GetFullURL(string $path) : string;
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    {
+        $path = $input->GetParam('path', SafeParam::TYPE_TEXT);
+        return parent::Create($database, $input, $account, $filesystem)->SetPath($path);
+    }
     
-    protected function GetPath($path) : string { return $this->GetScalar('path').'/'.$path; }  
+    public function Edit(Input $input) : self
+    {
+        $path = $input->TryGetParam('path', SafeParam::TYPE_TEXT);
+        if ($path !== null) $this->SetPath($path);
+        return parent::Edit($input);
+    }
+    
+    public function Test() : self
+    {
+        $this->Activate(); $path = $this->GetFullURL(); 
+        $ro = $this->GetFilesystem()->isReadOnly();
+        
+        if (!is_readable($path) || (!$ro && !is_writeable($path)))
+            throw new InvalidStoragePathException();
+        return $this;
+    }
+    
+    protected abstract function GetFullURL(string $path = "") : string;
+    
+    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').'/'.$path; }  
+    private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
     
     public function ItemStat(string $path) : ItemStat
     {
@@ -42,7 +76,7 @@ abstract class FWrapper extends Storage
     public function ReadFolder(string $path) : ?array
     {
         if (!$this->isFolder($path)) return null;
-        return array_filter(scandir($this->GetFullURL($path)), 
+        return array_filter(scandir($this->GetFullURL($path), SCANDIR_SORT_NONE), 
             function($item){ return $item !== "." && $item !== ".."; });
     }
     

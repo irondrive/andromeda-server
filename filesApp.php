@@ -13,7 +13,9 @@ require_once(ROOT."/apps/files/storage/SFTP.php");
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
@@ -40,10 +42,19 @@ class DuplicateFolderException extends Exceptions\ClientErrorException      { pu
 class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
 class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
+class UserStorageDisabledException extends Exceptions\ClientDeniedException { public $message = "USER_STORAGE_NOT_ALLOWED"; }
+
 class FilesApp extends AppBase
 {
     public static function getVersion() : array { return array(0,0,1); } 
     
+    private Config $config;
+    private ObjectDatabase $database;
+    
+    private static $providesCrypto;
+    private function providesCrypto(callable $func){ static::$providesCrypto = $func; }
+    public static function needsCrypto(){ $func = static::$providesCrypto; $func(); }
+     
     public function __construct(Main $api)
     {
         parent::__construct($api);
@@ -52,17 +63,18 @@ class FilesApp extends AppBase
         try { $this->config = Config::Load($this->database); }
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
         
-        Account::RegisterDeleteHandler(function(Account $account)
+        Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
         { 
-            File::DeleteByAccount($this->database, $account);
-            Folder::DeleteByAccount($this->database, $account);
-            FSManager::DeleteByAccount($this->database, $account); 
-        });
+            FSManager::DeleteByAccount($database, $account);             
+            Folder::DeleteRootsByAccount($database, $account);
+        });        
     }
         
     public function Run(Input $input)
     {        
         $this->authenticator = Authenticator::TryAuthenticate($this->database, $input, $this->API->GetInterface());
+        
+        $this->providesCrypto(function(){ $this->authenticator->RequireCrypto(); });
 
         switch($input->GetAction())
         {
@@ -87,6 +99,9 @@ class FilesApp extends AppBase
             
             case 'getfilesystem':  return $this->GetFilesystem($input); break;
             case 'getfilesystems': return $this->GetFilesystems($input); break;
+            case 'createfilesystem': return $this->CreateFilesystem($input); break;
+            case 'editfilesystem':   return $this->EditFilesystem($input); break;
+            case 'deletefilesystem': return $this->DeleteFilesystem($input); break;
             
             default: throw new UnknownActionException();
         }
@@ -110,7 +125,7 @@ class FilesApp extends AppBase
         
         $return = array(); $files = $input->GetFiles();
         if (!count($files)) throw new InvalidFileWriteException();
-        foreach (array_keys($files) as $name)
+        foreach ($files as $name => $path)
         {
             $file = File::TryLoadByParentAndName($this->database, $parent, $account, $name);
             if ($file !== null)
@@ -119,9 +134,9 @@ class FilesApp extends AppBase
                 else throw new DuplicateFileException();
             }
             
-            $parent->CountBandwidth(filesize($files[$name]));
+            $parent->CountBandwidth(filesize($path));
             
-            $file = File::Import($this->database, $parent, $account, $name, $files[$name]);
+            $file = File::Import($this->database, $parent, $account, $name, $path);
             array_push($return, $file->GetClientObject());
         }        
         return $return;
@@ -182,7 +197,7 @@ class FilesApp extends AppBase
         try { while (@ob_end_flush()); } catch (\Throwable $e) { }        
         
         $fschunksize = $file->GetChunkSize();
-        $chunksize = $this->config->GetChunkSize();     
+        $chunksize = $this->config->GetRWChunkSize();     
         
         $align = ($fschunksize !== null);
         if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;
@@ -238,7 +253,7 @@ class FilesApp extends AppBase
         $file->CountBandwidth($length);        
         
         $fschunksize = $file->GetChunkSize();
-        $chunksize = $this->config->GetChunkSize();  
+        $chunksize = $this->config->GetRWChunkSize();  
         
         $align = ($fschunksize !== null);
         if ($align) $chunksize = ceil(min($length,$chunksize)/$fschunksize)*$fschunksize;
@@ -344,19 +359,19 @@ class FilesApp extends AppBase
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
                 
-            $folder = Folder::LoadRootByAccount($this->database, $account, $filesys);
+            $folder = Folder::LoadRootByAccountAndFS($this->database, $account, $filesys);
         }
 
         if ($folder === null) throw new UnknownFolderException();
 
-        // TODO user param to get only folders or only files
         // TODO only count visit on guest access
+        
+        $level = $input->TryGetParam('level',SafeParam::TYPE_INT) ?? (Folder::SUBFILES | Folder::SUBFOLDERS);
+        // 0 = only self, 1 = subfiles, 2 = subfolders, 3 = subfiles/folders, 6 = recursive folders, 7 = recursive files/folders
         
         $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
         $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
 
-        $recursive = $input->TryGetParam('recursive',SafeParam::TYPE_BOOL) ?? false;
-        $level = $recursive ? Folder::RECURSIVE : Folder::WITHCONTENT;
         $return = $folder->CountVisit()->GetClientObject($level, $limit, $offset);
         if ($return === null) throw new UnknownFolderException(); return $return;
     }
@@ -381,7 +396,7 @@ class FilesApp extends AppBase
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
             
-            $folder = Folder::LoadRootByAccount($this->database, $account, $filesys);
+            $folder = Folder::LoadRootByAccountAndFS($this->database, $account, $filesys);
         }
         
         if ($folder === null) throw new UnknownFolderException();
@@ -406,7 +421,7 @@ class FilesApp extends AppBase
         
         if ($item === null) throw new UnknownItemException();
         
-        if ($isfile === false) $retval = $item->GetClientObject(Folder::WITHCONTENT);
+        if ($isfile === false) $retval = $item->GetClientObject(Folder::SUBFILES | Folder::SUBFOLDERS);
         else $retval = $item->GetClientObject();
         
         $retval['isfile'] = is_a($item, File::class); return $retval;
@@ -439,7 +454,7 @@ class FilesApp extends AppBase
         if ($file !== null)
         {
             $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
-            if ($fileobj === null) throw new UnknownFileException();            
+            if ($fileobj === null) throw new UnknownFileException();
             $fileobj->Delete(); return array();
         }
         else if ($files !== null)
@@ -447,9 +462,11 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($files as $file)
             {
+                $retval[$file] = false;
+                
                 $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
-                try { $fileobj->Delete(); $retval[$file] = true; } 
-                catch (StorageException | ReadOnlyException $e){ $retval[$file] = false; }
+                try { if ($fileobj) { $fileobj->Delete(); $retval[$file] = true; } }
+                catch (StorageException | ReadOnlyException $e){ }
             };
             return $retval;
         }
@@ -475,9 +492,11 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($folders as $folder)
             {
+                $retval[$folder] = false;
+                
                 $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
-                try { $folderobj->Delete(); $retval[$folder] = true; }
-                catch (StorageException | ReadOnlyException $e){ $retval[$folder] = false; }
+                try { if ($folderobj) { $folderobj->Delete(); $retval[$folder] = true; } }
+                catch (StorageException | ReadOnlyException $e){ }
             };
             return $retval;
         }
@@ -546,15 +565,16 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($files as $file)
             {
+                $retval[$file] = false;
                 try {
                     $fileobj = File::TryLoadByAccountAndID($this->database, $account, $file);
-                    if ($fileobj === null) { $retval[$file] = false; continue; }
+                    if ($fileobj === null) continue;
                     
                     $oldfile = File::TryLoadByParentAndName($this->database, $parent, $account, $fileobj->GetName());
-                    if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else { $retval[$file] = false; continue; } }
+                    if ($oldfile !== null) { if ($overwrite) $oldfile->Delete(); else continue; }
                     
                     $retval[$file] = $fileobj->SetParent($parent)->GetClientObject(); 
-                } catch(StorageException | ReadOnlyException $e) { $retval[$file] = false; }
+                } catch(StorageException | ReadOnlyException $e) { }
             };
             return $retval;
         }
@@ -589,19 +609,68 @@ class FilesApp extends AppBase
             $retval = array();
             foreach ($folders as $folder)
             {
+                $retval[$folder] = false;
                 try { 
                     $folderobj = Folder::TryLoadByAccountAndID($this->database, $account, $folder);
-                    if ($folderobj === null) { $retval[$folder] = false; continue; }
+                    if ($folderobj === null) continue;
                     
                     $oldfolder = Folder::TryLoadByParentAndName($this->database, $parent, $account, $folderobj->GetName());
-                    if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else { $retval[$folder] = false; continue; } }
+                    if ($oldfolder !== null) { if ($overwrite) $oldfolder->Delete(); else continue; }
                     
                     $retval[$folder] = $folderobj->SetParent($parent)->GetClientObject(); 
-                } catch(StorageException | ReadOnlyException $e) { $retval[$folder] = false; }
+                } catch(StorageException | ReadOnlyException $e) { }
             };
             return $retval;
         }
         else throw new UnknownFolderException();
+    }
+    
+    protected function CreateFilesystem(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        $isadmin = $this->authenticator->isAdmin();
+        
+        if (!$this->config->GetAllowUserStorage() && !$isadmin)
+            throw new UserStorageDisabledException();
+        
+        $global = ($input->TryGetParam('global', SafeParam::TYPE_BOOL) ?? false) && $isadmin;
+
+        $filesystem = FSManager::Create($this->database, $input, $global ? null : $account);
+        return $filesystem->GetClientObject(true);
+    }
+    
+    protected function EditFilesystem(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        $fsid = $input->GetParam('filesystem', SafeParam::TYPE_ID);
+        
+        if ($this->authenticator->isAdmin())
+            $filesystem = FSManager::TryLoadByID($this->API->GetDatabase(), $fsid);
+        else $filesystem = FSManager::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $fsid);
+        
+        if ($filesystem === null) throw new UnknownFilesystemException();
+
+        return $filesystem->Edit($input)->GetClientObject(true);
+    }
+
+    protected function DeleteFilesystem(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $this->authenticator->RequirePassword();
+        $account = $this->authenticator->GetAccount();
+        
+        $fsid = $input->GetParam('filesystem', SafeParam::TYPE_ID);
+        
+        if ($this->authenticator->isAdmin())
+            $filesystem = FSManager::TryLoadByID($this->API->GetDatabase(), $fsid);
+        else $filesystem = FSManager::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $fsid);
+
+        if ($filesystem === null) throw new UnknownFilesystemException();
+        $filesystem->Delete(); return array();
     }
 }
 

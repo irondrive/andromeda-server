@@ -75,7 +75,7 @@ abstract class Item extends StandardObject
 
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $loaded = self::TryLoadByID($database, $id);
+        $loaded = static::TryLoadByID($database, $id);
         if (!$loaded) return null;
         
         $owner = $loaded->GetObjectID('owner');
@@ -89,15 +89,5 @@ abstract class Item extends StandardObject
                          $q->Or($q->Equals('owner',$account->ID()),$q->IsNull('owner')));
         $loaded = parent::LoadByQuery($database, $q->Where($where));
         return count($loaded) ? array_values($loaded)[0] : null;
-    }
-    
-    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
-    {
-        parent::DeleteByObject($database, 'owner', $account);
-    }
-    
-    public static function DeleteByFSManager(ObjectDatabase $database, FSManager $filesystem) : void
-    {
-        parent::DeleteByObject($database, 'filesystem', $filesystem);
     }
 }

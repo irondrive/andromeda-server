@@ -8,6 +8,8 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/apps/files/Item.php");
 require_once(ROOT."/apps/files/Folder.php");
 
+use Andromeda\Core\Exceptions\ServerException;
+
 class File extends Item
 {
     public static function GetFieldTemplate() : array
@@ -65,7 +67,7 @@ class File extends Item
     
     public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path) : self
     {
-        $file = self::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path),true);        
+        $file = static::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path),true);        
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }
     
@@ -84,7 +86,7 @@ class File extends Item
     public function NotifyDelete() : void { parent::Delete(); }
 
     public function Delete() : void
-    {
+    {        
         $parent = $this->GetParent();
         $isReal = ($parent === null || !$parent->isNotifyDeleted());
         if ($isReal) $this->GetFSImpl()->DeleteFile($this);
