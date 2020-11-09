@@ -96,16 +96,7 @@ class Account extends AuthEntity
     public function HasRecoveryKeys() : bool    { return $this->TryCountObjectRefs('recoverykeys') > 0; }
     
     public function HasTwoFactor() : bool { return $this->TryCountObjectRefs('recoverykeys') > 0; }    
-    
-    public function HasValidTwoFactor() : bool
-    {
-        if ($this->TryCountObjectRefs('recoverykeys') <= 0) return false;
-        
-        foreach ($this->GetTwoFactors() as $twofactor) {
-            if ($twofactor->GetIsValid()) return true; }
-            return false;
-    }    
-    
+
     private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
     public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasValidTwoFactor(); }
     
@@ -312,15 +303,23 @@ class Account extends AuthEntity
         }
         
         return new InheritedProperty($value, $source);
-    }
+    }    
     
-    public function CheckTwoFactor(string $code) : bool
+    public function HasValidTwoFactor() : bool
     {
-        if (!$this->HasValidTwoFactor()) return false;  
+        if ($this->TryCountObjectRefs('recoverykeys') <= 0) return false;
+        
+        foreach ($this->GetTwoFactors() as $twofactor) {
+            if ($twofactor->GetIsValid()) return true; }
+        return false;
+    }    
+    
+    public function CheckTwoFactor(string $code, bool $force = false) : bool
+    {
+        if (!$force && !$this->HasValidTwoFactor()) return false;  
         
         foreach ($this->GetTwoFactors() as $twofactor) { 
-            if ($twofactor->CheckCode($code)) return true; }
-        
+            if ($twofactor->CheckCode($code)) return true; }        
         return false;
     }
     
