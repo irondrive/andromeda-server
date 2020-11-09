@@ -7,13 +7,15 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
-use Andromeda\Core\IOFormat\{Input,Output,Address,IOInterface,SafeParam,SafeParams};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
-class IncorrectCLIUsageException extends Exceptions\ClientErrorException { public $message = 'usage: php index.php --$flag $app $action [--$type_$key $data]'; }
+class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
+    public $message = "general usage:   php index.php --flag app action [--file name] [--param data]\n".
+                      "get all actions: php index.php server getusage"; }
 
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
