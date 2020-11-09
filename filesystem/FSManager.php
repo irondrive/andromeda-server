@@ -21,7 +21,7 @@ require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
-use Andromeda\Apps\Files\{FilesApp, Config, Folder};
+use Andromeda\Apps\Files\{Config, Folder};
 
 class InvalidFSTypeServerException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
 class InvalidFSTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
