@@ -48,6 +48,32 @@ class FilesApp extends AppBase
 {
     public static function getVersion() : array { return array(0,0,1); } 
     
+    public static function getUsage() : array 
+    { 
+        return array(
+            'getconfig',
+            'upload --file file [name] --parent id [--overwrite bool]',
+            'download --fileid id [--fstart int] [--flast int]',
+            'ftruncate --fileid id --size int',
+            'writefile --file file --fileid id [--offset int]',
+            'fileinfo --fileid id',
+            'getfolder [--folder id | --filesystem id] [--level int] [--limit int] [--offset int]',
+            'getitembypath [--rootfolder id | --filesystem id] [--path text] [--isfile bool]',
+            'createfolder --parent id --name text',
+            'deletefile [--fileid id | --files id_array]',
+            'deletefolder [--folder id | --folders id_array]',
+            'renamefile --fileid id --name text [--overwrite bool]',
+            'renamefolder --folder id --name text [--overwrite bool]',
+            'movefile --parent id [--fileid id | --files id_array] [--overwrite bool]',
+            'movefolder --parent id [--folder id | --folders id_array] [--overwrite bool]',
+            'getfilesystem [--filesystem id]',
+            'getfilesystems',
+            'createfilesystem --name name --sttype local|ftp|sftp [--global bool] [--fstype 0|1|2] [--readonly bool]',
+            'deletefilesystem --filesystem id --auth_password raw',
+            'editfilesystem --filesystem id --name name [--readonly bool]'
+        ); 
+    }
+    
     private Config $config;
     private ObjectDatabase $database;
     
@@ -100,8 +126,8 @@ class FilesApp extends AppBase
             case 'getfilesystem':  return $this->GetFilesystem($input); break;
             case 'getfilesystems': return $this->GetFilesystems($input); break;
             case 'createfilesystem': return $this->CreateFilesystem($input); break;
-            case 'editfilesystem':   return $this->EditFilesystem($input); break;
             case 'deletefilesystem': return $this->DeleteFilesystem($input); break;
+            case 'editfilesystem':   return $this->EditFilesystem($input); break;
             
             default: throw new UnknownActionException();
         }
@@ -147,7 +173,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('fileid',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
         // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
@@ -232,7 +258,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('fileid',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
         $files = array_values($input->GetFiles());
@@ -293,7 +319,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('fileid',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
         $size = $input->GetParam('size',SafeParam::TYPE_INT);
@@ -310,7 +336,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('fileid',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
         return $file->GetClientObject();
@@ -448,7 +474,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = $input->TryGetParam('file',SafeParam::TYPE_ID);
+        $file = $input->TryGetParam('fileid',SafeParam::TYPE_ID);
         $files = $input->TryGetParam('files',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
 
         if ($file !== null)
@@ -508,7 +534,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('file',SafeParam::TYPE_ID));
+        $file = File::TryLoadByAccountAndID($this->database, $account, $input->GetParam('fileid',SafeParam::TYPE_ID));
         if ($file === null) throw new UnknownFileException();
         
         $name = basename($input->GetParam('name',SafeParam::TYPE_TEXT));        
@@ -542,7 +568,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $file = $input->TryGetParam('file',SafeParam::TYPE_ID);
+        $file = $input->TryGetParam('fileid',SafeParam::TYPE_ID);
         $files = $input->TryGetParam('files',SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
         
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
