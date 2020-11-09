@@ -61,6 +61,39 @@ class AccountsApp extends AppBase
     
     public static function getVersion() : array { return array(0,0,1); } 
     
+    public static function getUsage() : array 
+    { 
+        return array(
+            'AUTH ALL: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
+            'getconfig',
+            'getauthsources',
+            'getaccount',
+            'setfullname --fullname name',
+            'changepassword --username text --new_password $ (--auth_password $ | --auth_recoverykey $)',
+            'emailrecovery --username $',
+            'createaccount (--email email | --username alphanum) --password raw',
+            'unlockaccount --account id --unlockcode alphanum',
+            'createsession --username text --auth_password raw [--authsource id] [(--auth_clientid id --auth_clientkey alphanum) | --recoverykey text | --auth_twofactor int]',
+            'createrecoverykeys --auth_password raw --auth_twofactor int',
+            'createtwofactor --auth_password raw [--comment text]',
+            'verifytwofactor --auth_twofactor int',
+            'createcontactinfo --type int --info email',
+            'verifycontactinfo --type int --unlockcode alphanum',
+            'deleteaccount --auth_password raw --auth_twofactor int',
+            'deletesession [--session id --auth_password raw]',
+            'deleteclient [--client id --auth_password raw]',
+            'deleteallauth --auth_password raw',
+            'deletetwofactor --auth_password raw --twofactor id',
+            'deletecontactinfo --type int --info email',
+            'listaccounts [--limit int] [--offset int]',
+            'listgroups [--limit int] [--offset int]',
+            'creategroup --name name [--priority int] [--comment text]',
+            'deletegroup --group id',
+            'addgroupmember --account id --group id',
+            'removegroupmember --acount id --group id'
+        );
+    }
+    
     public function __construct(Main $api)
     {
         parent::__construct($api);   
@@ -68,11 +101,11 @@ class AccountsApp extends AppBase
         try { $this->config = Config::Load($api->GetDatabase()); }
         catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }        
     }
-    
+
     public function Run(Input $input)
-    {   
+    {
         $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $input, $this->API->GetInterface());
-        
+
         switch($input->GetAction())
         {       
             case 'getconfig':           return $this->GetConfig($input); break;
@@ -135,6 +168,8 @@ class AccountsApp extends AppBase
         
         return $this->config->GetClientObject(Config::OBJECT_ADMIN);
     }
+    
+    // TODO Get and Set config for the server also
     
     protected function GetAuthSources(Input $input) : array
     {
@@ -209,7 +244,7 @@ class AccountsApp extends AppBase
         $account = Account::TryLoadByUsername($this->API->GetDatabase(), $username);
         if ($account === null) throw new UnknownAccountException();
         
-        if ($account->hasCrypto()) throw new RecoveryKeyCreateException();
+        if ($account->hasCrypto() || $account->HasValidTwoFactor()) throw new RecoveryKeyCreateException();
 
         $key = RecoveryKey::Create($this->API->GetDatabase(), $account)->GetFullKey();   
         
@@ -282,8 +317,7 @@ class AccountsApp extends AppBase
         $account->setUnlockCode(null)->setEnabled(null);
         
         $contacts = $account->GetContactInfos();
-        if (count($contacts) !== 1) throw new NotImplementedException();    
-        // TODO can there ever be > 1 ? maybe if admin were to re-lock, maybe require contact info ID? or keep track of what we sent it out to in the first place
+        if (count($contacts) !== 1) throw new NotImplementedException();
         array_values($contacts)[0]->SetIsValid(true);
         
         return $this->StandardReturn($input, null, $account);
@@ -449,13 +483,8 @@ class AccountsApp extends AppBase
         $this->authenticator->TryRequireCrypto();
         
         $account = $this->authenticator->GetAccount();
-        
-        $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_ID);
-        $twofactor = TwoFactor::TryLoadAccountAndID($this->API->GetDatabase(), $account, $twofactorid);
-        if ($twofactor === null) throw new UnknownTwoFactorException();
-        
-        $code = $input->GetParam("code", SafeParam::TYPE_ALPHANUM);
-        if (!$twofactor->CheckCode($code)) throw new AuthenticationFailedException();
+        $code = $input->GetParam("auth_twofactor", SafeParam::TYPE_INT);
+        if (!$account->CheckTwoFactor($code, true)) throw new AuthenticationFailedException();
         
         return $this->StandardReturn($input);
     }
@@ -741,9 +770,9 @@ class AccountsApp extends AppBase
         return $this->StandardReturn($input);
     }
 
-    public static function Test(Main $api, Input $input)
+    public function Test(Input $input)
     {
-        $config = Config::Load($api->GetDatabase());
+        $config = $this->config;
         
         $old1 = $config->GetAllowCreateAccount(); $config->SetAllowCreateAccount(true);
         $old2 = $config->GetUseEmailAsUsername(); $config->SetUseEmailAsUsername(false);
@@ -755,13 +784,13 @@ class AccountsApp extends AppBase
         $user = Utilities::Random(8); 
         $password = Utilities::Random(16);
         
-        $test = $api->Run(new Input($app,'createaccount', (new SafeParams())
+        $test = $this->API->Run(new Input($app,'createaccount', (new SafeParams())
             ->AddParam('email',$email)
             ->AddParam('username',$user)
             ->AddParam('password',$password)));
         array_push($results, $test);
         
-        $test = $api->Run(new Input($app,'createsession', (new SafeParams())
+        $test = $this->API->Run(new Input($app,'createsession', (new SafeParams())
             ->AddParam('username',$user)
             ->AddParam('auth_password',$password)));
         array_push($results, $test);
@@ -770,7 +799,7 @@ class AccountsApp extends AppBase
         $sessionkey = $test['session']['authkey'];
         
         $password2 = Utilities::Random(16);
-        $test = $api->Run(new Input($app,'changepassword', (new SafeParams())
+        $test = $this->API->Run(new Input($app,'changepassword', (new SafeParams())
             ->AddParam('auth_sessionid',$sessionid)
             ->AddParam('auth_sessionkey',$sessionkey)
             ->AddParam('getaccount',true)
@@ -779,7 +808,7 @@ class AccountsApp extends AppBase
         array_push($results, $test); 
         $password = $password2;
         
-        $test = $api->Run(new Input($app,'deleteaccount', (new SafeParams())
+        $test = $this->API->Run(new Input($app,'deleteaccount', (new SafeParams())
             ->AddParam('auth_sessionid',$sessionid)
             ->AddParam('auth_sessionkey',$sessionkey)
             ->AddParam('auth_password',$password)));
