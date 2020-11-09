@@ -17,9 +17,10 @@ abstract class AppBase implements Transactions
     }
     
     public abstract function Run(Input $input);
-    public static function Test(Main $API, Input $input) { }
+    public function Test(Input $input) { }
     
-    public static function getVersion() : array { return array(0,0,0); }
+    public abstract static function getUsage() : array;
+    public abstract static function getVersion() : array;
     
     public function commit() { }
     public function rollBack() { }

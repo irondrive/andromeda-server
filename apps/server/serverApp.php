@@ -11,12 +11,21 @@ class ServerApp extends AppBase
 {
     public static function getVersion() : array { return array(0,0,1); } 
     
+    public static function getUsage() : array
+    {
+        return array(
+            'random [--length int]',
+            'getapps', 'getusage', 'runtests'
+        );
+    }
+    
     public function Run(Input $input)
     {
         switch($input->GetAction())
         {
             case 'random':  return $this->Random($input); break;
             case 'getapps': return $this->GetApps($input); break;
+            case 'getusage': return $this->GetUsages($input); break;
             case 'runtests': return $this->RunTests($input); break;
             
             default: throw new UnknownActionException();
@@ -35,15 +44,22 @@ class ServerApp extends AppBase
         return array_map(function($app){ return $app::getVersion(); }, $this->API->GetApps());
     }
     
+    protected function GetUsages(Input $input)
+    {
+        $output = array(); foreach ($this->API->GetApps() as $name=>$app)
+        {
+            array_push($output, ...array_map(function($line)use($name){ return "$name $line"; }, $app::getUsage())); 
+        }
+        return implode("\n", $output);
+    }
+
     protected function RunTests(Input $input)
     {
         set_time_limit(0);
         
         if ($this->API->GetDebugState())
         {
-            return array_map(function($app) use ($input){
-                return get_class($app)::Test($this->API, $input);
-            }, $this->API->GetApps());
+            return array_map(function($app)use($input){ return $app->Test($input); }, $this->API->GetApps());
         }
         else throw new UnknownActionException();
     }
