@@ -42,10 +42,7 @@ class RecoveryKey extends KeySource
         if (count($code) !== 3 || $code[0] !== "tf") return null;
         
         $q = new QueryBuilder(); $q->Where($q->And($q->Equals('account',$account->ID()),$q->Equals('id',$code[1])));
-        $recoverykey = static::LoadByQuery($database, $q);
-
-        if (!count($recoverykey)) return null;
-        return array_values($recoverykey)[0];
+        return static::LoadOneByQuery($database, $q);
     }
     
     public function CheckFullKey(string $code) : bool

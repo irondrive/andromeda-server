@@ -24,7 +24,7 @@ abstract class AuthObject extends StandardObject
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
-        $loaded = self::LoadByQuery($database, $q->Where($w)); return count($loaded) ? array_values($loaded)[0] : null;
+        return self::LoadOneByQuery($database, $q->Where($w));
     }
 
     public static function BaseCreate(ObjectDatabase $database) : self
