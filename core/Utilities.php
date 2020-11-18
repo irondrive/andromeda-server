@@ -66,4 +66,16 @@ abstract class Utilities
     {
         $size = count($arr); return $size ? $arr[count($arr)-1] : null;
     }
+    
+    public static function return_bytes($val) 
+    {
+        if (!$val) return 0; if (is_numeric($val)) return $val;
+        $val = trim($val); $num = substr($val, 0, -1);
+        switch (substr($val, -1)) {
+            case 'T': $num *= 1024;
+            case 'G': $num *= 1024;
+            case 'M': $num *= 1024;
+            case 'K': $num *= 1024;
+        }; return $num;
+    } 
 }

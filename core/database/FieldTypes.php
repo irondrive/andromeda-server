@@ -163,6 +163,11 @@ class ObjectPoly extends ObjectRef
         parent::__construct($refclass, $reffield, $refmany);        
     }
     
+    private static function ShortClass(string $class) : string
+    {
+        return implode('\\',array_slice(explode('\\', $class),1)); 
+    }
+    
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
         parent::Initialize($database, $parent, $myfield, $value);
@@ -177,17 +182,16 @@ class ObjectPoly extends ObjectRef
     public function GetBaseClass() : ?string { return $this->refclass; }
     public function GetRefClass() : ?string { return $this->realclass; }
     
-    public static function GetValueFromObject(BaseObject $obj)
+    public static function GetObjectDBValue(BaseObject $obj)
     {
-        return $obj->ID()."*".get_class($obj);
+        return $obj->ID()."*".static::ShortClass(get_class($obj));
     }
     
     public function GetDBValue() : ?string 
     { 
         if ($this->GetValue() === null) return null; 
         
-        $class = implode('\\',array_slice(explode('\\', $this->realclass),1)); 
-        return $this->GetValue().'*'.$class; 
+        return $this->GetValue().'*'.static::ShortClass($this->realclass); 
     }
     
     public function SetObject(?BaseObject $object) : bool
@@ -211,6 +215,7 @@ class ObjectRefs extends Counter
     protected BaseObject $parent; 
     protected string $refclass; 
     protected string $reffield;
+    protected bool $parentPoly;
     
     protected array $refs_added = array();
     protected array $refs_deleted = array();
@@ -218,9 +223,9 @@ class ObjectRefs extends Counter
     public static function GetReturnType(){ return RETURN_OBJECTS; }
     public static function GetRefsType(){ return REFSTYPE_SINGLE; }
     
-    public function __construct(string $refclass, ?string $reffield = null)
+    public function __construct(string $refclass, ?string $reffield = null, bool $parentPoly = false)
     {
-        $this->refclass = $refclass; $this->reffield = $reffield;
+        $this->refclass = $refclass; $this->reffield = $reffield; $this->parentPoly = $parentPoly;
     }
     
     public function GetRefClass() : string { return $this->refclass; }
@@ -235,7 +240,8 @@ class ObjectRefs extends Counter
     
     protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $this->parent->ID()));
+        $myval = $this->parentPoly ? ObjectPoly::GetObjectDBValue($this->parent) : $this->parent->ID();
+        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $myval));
         $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));        
         $this->isLoaded = ($limit === null && $offset === null);
         

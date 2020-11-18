@@ -73,7 +73,7 @@ abstract class StandardObject extends BaseObject
     { 
         $counters = $this->GetAllScalars('counters'); 
         foreach (array_keys($this->objectrefs) as $refskey) 
-            $counters[$refskey] = $this->objectrefs[$refskey]->GetValue();
+            $counters["refs_$refskey"] = $this->objectrefs[$refskey]->GetValue();
         return $counters;
     }
     
