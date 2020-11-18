@@ -50,7 +50,7 @@ class ServerApp extends AppBase
         {
             array_push($output, ...array_map(function($line)use($name){ return "$name $line"; }, $app::getUsage())); 
         }
-        return implode("\n", $output);
+        return $output;
     }
 
     protected function RunTests(Input $input)

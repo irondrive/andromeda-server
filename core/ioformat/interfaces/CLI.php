@@ -14,7 +14,8 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php --flag app action [--file name] [--param data]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug X] [--dryrun] app action [--file name] [--param data]\n".
+                      "batch/version:   php index.php [version | batch myfile.txt]\n".
                       "get all actions: php index.php server getusage"; }
 
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
@@ -123,12 +124,12 @@ class CLI extends IOInterface
                 
                 $filename = basename($val);
                 if (isset($argv[$i+2]) && substr($argv[$i+2],0,2) !== "--")
-                    $filename = basename($argv[$i+2]);
+                    { $filename = basename($argv[$i+2]); $i++; }
 
                 array_push($this->tmpfiles, $tmpfile);
                 $files[$filename] = $tmpfile; $i++;
             }
-            else $params->AddParam($param, $val); $i++;
+            else { $params->AddParam($param, $val); $i++; }
         }
 
         foreach (array_keys($_SERVER) as $key)

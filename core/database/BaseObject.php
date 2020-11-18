@@ -44,6 +44,12 @@ abstract class BaseObject
         return $database->LoadObjectsByQuery(static::class, $query);
     }
     
+    public static function LoadOneByQuery(ObjectDatabase $database, QueryBuilder $query) : ?self
+    {
+        $result = static::LoadByQuery($database, $query);
+        return count($result) ? array_values($result)[0] : null;
+    }
+    
     protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object) : array
     {
         $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $object->ID())));
