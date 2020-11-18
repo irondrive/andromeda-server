@@ -47,16 +47,18 @@ class File extends Item
         return $this;
     }
     
-    public function SetName(string $name) : self 
-    { 
-        $this->GetFSImpl()->RenameFile($this, $name); 
-        return parent::SetName($name); 
+    public function SetName(string $name, bool $overwrite = false, bool $notify = false) : self
+    {
+        parent::SetName($name, $overwrite);
+        if (!$notify) $this->GetFSImpl()->RenameFile($this, $name); 
+        return $this;
     }
     
-    public function SetParent(Folder $folder) : self
+    public function SetParent(Folder $folder, bool $overwrite = false) : self
     {
+        parent::SetParent($folder, $overwrite);
         $this->GetFSImpl()->MoveFile($this, $folder);
-        return parent::SetParent($folder);
+        return $this;
     }
 
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
@@ -65,9 +67,11 @@ class File extends Item
             ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name);
     }
     
-    public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path) : self
+    public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path, bool $overwrite = false) : self
     {
-        $file = static::NotifyCreate($database, $parent, $account, $name)->SetSize(filesize($path),true);        
+        $file = static::NotifyCreate($database, $parent, $account, $name)
+            ->SetName($name,$overwrite,true)->SetSize(filesize($path),true);
+        
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }
     
@@ -94,19 +98,15 @@ class File extends Item
         $this->NotifyDelete();
     }
     
-    public function GetClientObject() : ?array
+    public function GetClientObject(bool $extended = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
-        $data = array(
-            'id' => $this->ID(),
-            'name' => $this->TryGetScalar('name'),
+        $data = array_merge(parent::GetItemClientObject($extended),array(
             'size' => $this->TryGetScalar('size'),
             'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters(),
-            'owner' => $this->GetObjectID('owner'),
-            'parent' => $this->GetObjectID('parent')
-        );
+            'counters' => $this->GetAllCounters()
+        ));
         
         return $data;
     }
