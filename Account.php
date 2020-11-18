@@ -61,7 +61,7 @@ class Account extends AuthEntity
     }
     
     public function GetUsername() : string  { return $this->GetScalar('username'); }
-    public function GetFullName() : ?string { return $this->TryGetScalar('fullname'); }
+    public function GetFullName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
 
     public function GetGroups() : array { return $this->GetObjectRefs('groups'); }
@@ -176,11 +176,11 @@ class Account extends AuthEntity
     {
         foreach (static::$delete_handlers as $func) $func($this->database, $this);
         
-        if ($this->HasSessions()) $this->DeleteObjectRefs('sessions'); 
-        if ($this->HasClients()) $this->DeleteObjectRefs('clients');
-        if ($this->HasTwoFactor()) $this->DeleteObjectRefs('twofactors');
-        if ($this->HasContactInfos()) $this->DeleteObjectRefs('contactinfos');
-        if ($this->HasRecoveryKeys()) $this->DeleteObjectRefs('recoverykeys');
+        $this->DeleteObjectRefs('sessions'); 
+        $this->DeleteObjectRefs('clients');
+        $this->DeleteObjectRefs('twofactors');
+        $this->DeleteObjectRefs('contactinfos');
+        $this->DeleteObjectRefs('recoverykeys');
         
         parent::Delete();
     }

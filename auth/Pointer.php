@@ -17,7 +17,7 @@ class Pointer extends BaseObject
     
     public static function LoadBySource(ObjectDatabase $database, ISource $source) : ?ISource
     {
-        $objval = FieldTypes\ObjectPoly::GetValueFromObject($source);
+        $objval = FieldTypes\ObjectPoly::GetObjectDBValue($source);
         $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals('authsource', $objval)));
     }
     
