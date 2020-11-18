@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
 
@@ -8,8 +9,10 @@ class Config extends SingletonObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'chunksize' => null,
-            'features__userstorage' => null
+            'rwchunksize' => null,
+            'crchunksize' => null,
+            'features__userstorage' => null,
+            'features__randomwrite' => null
         ));
     }
 
@@ -22,10 +25,30 @@ class Config extends SingletonObject
     public function GetAllowUserStorage() : bool { return $this->TryGetFeature('userstorage') ?? false; }
     public function SetAllowUserStorage(bool $allow) : self { return $this->SetFeature('userstorage', $allow); }
     
-    public function GetClientObject() : array
+    public function GetAllowRandomWrite() : bool { return $this->TryGetFeature('randomwrite') ?? true; }
+    public function SetAllowRandomWrite(bool $allow) : self { return $this->SetFeature('randomwrite', $allow); }
+    
+    public function GetClientObject(bool $admin) : array
     {
-        return array(
-            'chunksize' => $this->GetChunkSize()
+        $postmax = Utilities::return_bytes(ini_get('post_max_size'));
+        $uploadmax = Utilities::return_bytes(ini_get('upload_max_size'));
+        if (!$postmax) $postmax = PHP_INT_MAX;
+        if (!$uploadmax) $uploadmax = PHP_INT_MAX;
+        
+        $retval = array(
+            'uploadmax' => min($postmax, $uploadmax),
+            'maxfiles' => ini_get('max_file_uploads'),
+            'features' => $this->GetAllFeatures()
         );
+        
+        if ($admin)
+        {
+            $retval = array_merge($retval,array(
+                'rwchunksize' => $this->GetRWChunkSize(),
+                'crchunksize' => $this->GetCryptoChunkSize()
+            ));
+        }
+        
+        return $retval;
     }
 }

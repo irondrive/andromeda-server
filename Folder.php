@@ -45,13 +45,14 @@ class Folder extends Item
         return $this->DeltaCounter('size',$size); 
     }   
     
-    public function SetName(string $name) : self
+    public function SetName(string $name, bool $overwrite = false, bool $notify = false) : self
     {
-        $this->GetFSImpl()->RenameFolder($this, $name);
-        return parent::SetName($name);
+        parent::SetName($name, $overwrite);
+        if (!$notify) $this->GetFSImpl()->RenameFolder($this, $name);
+        return $this;
     }
     
-    public function SetParent(Folder $folder) : self
+    public function SetParent(Folder $folder, bool $overwrite = false) : self
     {
         if ($folder->ID() === $this->ID())
             throw new MoveLoopException();
@@ -63,9 +64,9 @@ class Folder extends Item
                 throw new MoveLoopException();
         }
         
+        parent::SetParent($folder, $overwrite);
         $this->GetFSImpl()->MoveFolder($this, $folder);
-        
-        return parent::SetParent($folder);
+        return $this;
     }
     
     private function AddItemCounts(BaseObject $object) : void
@@ -127,15 +128,15 @@ class Folder extends Item
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         return static::CreateRoot($database, $parent->GetFilesystem(), $account)
-        ->SetObject('parent',$parent)->SetScalar('name',$name);
+            ->SetObject('parent',$parent)->SetScalar('name',$name);
     }
     
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = static::NotifyCreate($database, $parent, $account, $name);
-        $folder->GetFSImpl()->CreateFolder($folder);
-            
-        return $folder;
+        $folder = static::CreateRoot($database, $parent->GetFilesystem(), $account)
+            ->SetParent($parent)->SetName($name);
+
+        $folder->GetFSImpl()->CreateFolder($folder); return $folder;
     }
     
     public static function LoadRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
@@ -145,9 +146,8 @@ class Folder extends Item
         $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'),
                                                   $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
         
-        $loaded = static::LoadByQuery($database, $q->Where($where));
-        
-        if (count($loaded)) return array_values($loaded)[0];
+        $loaded = static::LoadOneByQuery($database, $q->Where($where));
+        if ($loaded) return $loaded;
         else {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
             return self::CreateRoot($database, $filesystem, $owner)->Refresh();
@@ -222,13 +222,10 @@ class Folder extends Item
         
         $this->SetAccessed();
 
-        $data = array(
-            'id' => $this->ID(),
-            'name' => $this->TryGetScalar('name'),
-            'owner' => $this->GetObjectID('owner'),
-            'parent' => $this->GetObjectID('parent'),
+        $extended = !($level & self::SUBFILES) && !($level & self::SUBFOLDERS);
+        $data = array_merge(parent::GetItemClientObject($extended),array(
             'filesystem' => $this->GetObjectID('filesystem')
-        );
+        ));
         
         if ($level & self::SUBFOLDERS)
         {
