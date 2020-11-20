@@ -216,34 +216,64 @@ class Folder extends Item
     
     const SUBFILES = 1; const SUBFOLDERS = 2; const RECURSIVE = 4;
     
-    public function GetClientObject(int $level = 0, ?int $limit = null, ?int $offset = null) : ?array
+    public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
+                                    ?int $limit = null, ?int $offset = null, bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
         $this->SetAccessed();
 
-        $extended = !($level & self::SUBFILES) && !($level & self::SUBFOLDERS);
-        $data = array_merge(parent::GetItemClientObject($extended),array(
+        $data = array_merge(parent::GetItemClientObject($details),array(
             'filesystem' => $this->GetObjectID('filesystem')
         ));
+
+        $numitems = 0;
         
-        if ($level & self::SUBFOLDERS)
+        // TODO more testing of this needed with recursion+limit+offset
+        
+        if ($files) $data['files'] = array();
+        if ($folders) $data['folders'] = array();
+        
+        if ($folders)
         {
-            $subv = $level; if (!($subv & self::RECURSIVE)) $subv = 0;
-            
-            $data['folders'] = array_map(function($folder)use($subv){ 
-                return $folder->GetClientObject($subv); }, $this->GetFolders($limit,$offset));
-            
-            if ($limit !== null) $limit -= count($data['folders']);           
-            if ($offset !== null) $offset -= count($data['folders']);
+            foreach ($this->GetFolders($limit,($recursive?null:$offset)) as $id=>$folder)
+            {
+                if ($limit !== null && $limit-$numitems <= 0) break;
+                
+                $sublim = $limit !== null ? $limit-$numitems-1 : null;
+                $subfiles = $files && $recursive; $subfolders = $folders && $recursive;
+                $folder = $folder->GetClientObject($subfiles, $subfolders, $recursive, $sublim);
+                
+                if ($recursive)
+                {
+                    if ($files) { $subfiles = $folder['files']; unset($folder['files']); }
+                    if ($folders) { $subfolders = $folder['folders']; unset($folder['folders']); }
+                }                
+                
+                $data['folders'][$id] = $folder; $numitems++;
+                
+                if ($recursive)
+                {
+                    if ($files) { $data['files'] = array_merge($data['files'], $subfiles); $numitems += count($subfiles); }
+                    if ($folders) { $data['folders'] = array_merge($data['folders'], $subfolders); $numitems += count($subfolders); }                    
+                }
+            }
+        }
+
+        if ($offset)
+        {
+            if ($recursive)
+                $data['folders'] = array_slice($data['folders'], $offset);            
+            $offset = max(0, $offset-$numitems);
         }
         
-        if ($level & self::SUBFILES)
-        {
-            $data['files'] = array_map(function($file){ 
-                return $file->GetClientObject(); }, $this->GetFiles($limit,$offset));            
-        }
-        
+        $sublim = $limit !== null ? $limit-$numitems : null;
+        if ($files && ($sublim === null || $sublim > 0)) 
+        { 
+            foreach ($this->GetFiles($sublim,($recursive?null:$offset)) as $id=>$file) 
+                $data['files'][$id] = $file->GetClientObject();
+        }        
+
         $data['dates'] = $this->GetAllDates();
         $data['counters'] = $this->GetAllCounters();
 

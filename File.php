@@ -98,11 +98,11 @@ class File extends Item
         $this->NotifyDelete();
     }
     
-    public function GetClientObject(bool $extended = false) : ?array
+    public function GetClientObject(bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
-        $data = array_merge(parent::GetItemClientObject($extended),array(
+        $data = array_merge(parent::GetItemClientObject($details),array(
             'size' => $this->TryGetScalar('size'),
             'dates' => $this->GetAllDates(),
             'counters' => $this->GetAllCounters()
