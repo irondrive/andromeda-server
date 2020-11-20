@@ -16,6 +16,8 @@ class DuplicateItemException extends Exceptions\ClientErrorException        { pu
 
 abstract class Item extends StandardObject
 {
+    public const IDLength = 16;
+    
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -80,6 +82,7 @@ abstract class Item extends StandardObject
     public function GetLikes() : array { return $this->GetObjectRefs('likes'); }
     public function GetTags() : array { return $this->GetObjectRefs('tags'); }
     public function GetComments() : array { return $this->GetObjectRefs('comments'); }
+    public function GetShares() : array { return $this->GetObjectRefs('shares'); }
     
     public function CountDownload() : self            
     { 
@@ -137,7 +140,7 @@ abstract class Item extends StandardObject
         return parent::LoadOneByQuery($database, $q->Where($where));
     }
     
-    public function GetItemClientObject(bool $extended = false) : ?array
+    public function GetItemClientObject(bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
@@ -150,11 +153,12 @@ abstract class Item extends StandardObject
                 
         $mapobj = function($e) { return $e->GetClientObject(); };
 
-        if ($extended)
+        if ($details)
         {
-            $data['likes'] = array_map($mapobj, array_values($this->GetLikes()));   // TODO limit/offset for these!
+            $data['likes'] = array_map($mapobj, array_values($this->GetLikes())); // TODO limit/offset for these!
             $data['tags'] = array_map($mapobj, $this->GetTags());
-            $data['comments'] = array_map($mapobj, $this->GetComments());
+            $data['comments'] = array_map($mapobj, $this->GetComments()); // TODO limit/offset for these!
+            $data['shares'] = array_map($mapobj, $this->GetShares());
         }
         
         return $data;

@@ -9,6 +9,8 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 
 class Like extends StandardObject
 {
+    public const IDLength = 16;
+    
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -37,10 +39,12 @@ class Like extends StandardObject
         return $likeobj;
     }
     
-    public function GetClientObject() : ?array
+    public function GetClientObject() : array
     {
         return array(
-            'owner' => $this->GetObject('owner')->GetFullName(),
+            'id' => $this->ID(),
+            'owner' => $this->GetObject('owner')->GetDisplayName(),
+            'item' => $this->GetObjectID('item'),
             'value' => $this->GetScalar('value'),
             'dates' => $this->GetAllDates()
         );
