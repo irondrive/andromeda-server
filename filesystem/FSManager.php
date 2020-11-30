@@ -6,7 +6,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-use Andromeda\Core\Exceptions\PHPException;
+use Andromeda\Core\Exceptions\{ServerException, ClientException};
 
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -15,7 +15,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, ActivateException};
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, ActivateException, StorageException};
 
 require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
@@ -31,7 +31,12 @@ class InvalidNameException extends Exceptions\ClientErrorException { public $mes
 class InvalidStorageException extends Exceptions\ClientErrorException 
 { 
     public $message = "STORAGE_ACTIVATION_FAILED"; 
-    public function __construct(\Throwable $e) { $this->message = $e->getMessage()." ".$e->getDetails(); }
+    public function __construct(\Throwable $e) 
+    { 
+        $this->message = $e->getMessage();
+        if (is_a($e, ServerException::class))
+            $this->message .= " ".$e->getDetails(); 
+    }
 }
 
 class FSManager extends StandardObject
@@ -59,7 +64,7 @@ class FSManager extends StandardObject
     
     public function GetName() : ?string          { return $this->TryGetScalar('name'); }
     
-    public function SetName(string $name) : self 
+    public function SetName(?string $name) : self 
     { 
         if ($name === $this->GetName()) return $this;
         
@@ -112,7 +117,7 @@ class FSManager extends StandardObject
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account) : self
     {
-        $name = $input->GetParam('name', SafeParam::TYPE_NAME);
+        $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM);
         $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_INT) ?? self::TYPE_NATIVE;
         $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
@@ -142,7 +147,7 @@ class FSManager extends StandardObject
         
             $filesystem->GetStorage()->Test(); 
         }
-        catch (ActivateException | PHPException $e){ throw new InvalidStorageException($e); }
+        catch (ActivateException | ClientException $e){ throw new InvalidStorageException($e); }
         
         return $filesystem;
     }
@@ -161,32 +166,33 @@ class FSManager extends StandardObject
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
         $q1 = new QueryBuilder(); $q1->Where($q1->And($q1->IsNull('name'), $q1->Equals('owner',$account->ID())));
-        $found = static::LoadByQuery($database, $q1);
+        $found = static::LoadOneByQuery($database, $q1);
         
-        if (!count($found))
+        if ($found === null)
         {
             $q2 = new QueryBuilder(); $q2->Where($q2->And($q2->IsNull('name'), $q2->IsNull('owner')));
-            $found = static::LoadByQuery($database, $q2);
+            $found = static::LoadOneByQuery($database, $q2);
         }
         
-        return count($found) ? array_values($found)[0] : null;
+        return $found;
     }
     
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id));
-        $loaded = self::LoadByQuery($database, $q->Where($w)); return count($loaded) ? array_values($loaded)[0] : null;
+        return self::LoadOneByQuery($database, $q->Where($w));
     }
     
-    public static function TryLoadByAccountAndName(ObjectDatabase $database, Account $account, string $name) : ?self
+    public static function TryLoadByAccountAndName(ObjectDatabase $database, ?Account $account, string $name) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account->ID()),$q->Equals('name',$name));
-        $loaded = self::LoadByQuery($database, $q->Where($w)); return count($loaded) ? array_values($loaded)[0] : null;
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account ? $account->ID() : null),$q->Equals('name',$name));
+        return self::LoadOneByQuery($database, $q->Where($w));
     }
     
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
-        return parent::LoadByObject($database, 'owner', $account);
+        $q = new QueryBuilder(); $w = $q->Or($q->Equals('owner',$account->ID()),$q->IsNull('owner'));
+        return self::LoadByQuery($database, $q->Where($w));
     }
     
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
@@ -194,13 +200,16 @@ class FSManager extends StandardObject
         parent::DeleteByObject($database, 'owner', $account);
     }
     
+    public function ForceDelete() : void
+    {        
+        $this->DeleteObject('storage'); parent::Delete();
+    }
+    
     public function Delete() : void
     {
         Folder::DeleteRootsByFSManager($this->database, $this);
         
-        $this->DeleteObject('storage');
-        
-        parent::Delete();
+        static::ForceDelete();
     }
     
     public function GetClientObject(bool $priv = false) : array

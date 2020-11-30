@@ -17,17 +17,20 @@ class Comment extends StandardObject
             'owner'  => new FieldTypes\ObjectRef(Account::class),
             'item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
             'comment' => null,
-            'private' => null, // TODO not implemented
+            'private' => null,
             'dates__modified' => null
         ));
     }
     
+    public function IsPrivate() : bool { return $this->TryGetScalar('private') ?? false; }
+    public function SetPrivate(bool $priv) : self { return $this->SetScalar('private',$priv); }
+    
     public function SetComment(string $val){ return $this->SetScalar('comment', $val)->SetDate('modified'); }
     
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment, bool $private) : self
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : self
     {
         return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)
-            ->SetComment($comment)->SetScalar('private',$private);
+            ->SetComment($comment)->SetScalar('private');
     }
     
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
