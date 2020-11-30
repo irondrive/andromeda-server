@@ -27,9 +27,11 @@ abstract class AuthObject extends StandardObject
         return self::LoadOneByQuery($database, $q->Where($w));
     }
 
-    public static function BaseCreate(ObjectDatabase $database) : self
+    public static function BaseCreate(ObjectDatabase $database, bool $withKey = true) : self
     {
         $obj = parent::BaseCreate($database);
+        if (!$withKey) return $obj;
+        
         $key = Utilities::Random(self::KEY_LENGTH);
         return $obj->SetAuthKey($key, true);
     }
@@ -63,10 +65,8 @@ abstract class AuthObject extends StandardObject
         return $this->SetScalar('authkey', $key, true);
     }
     
-    const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
-    
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject(bool $secret = false) : array
     {
-        return ($level === self::OBJECT_WITHSECRET) ? array('authkey'=>$this->GetAuthKey()) : array();
+        return $secret ? array('authkey'=>$this->GetAuthKey()) : array();
     }
 }

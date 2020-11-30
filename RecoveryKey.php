@@ -66,9 +66,9 @@ class RecoveryKey extends KeySource
         return implode(":",array("tf",$this->ID(),$this->GetAuthKey()));
     }
     
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject(bool $secret = false) : array
     {
-        return ($level === self::OBJECT_WITHSECRET) ? array('authkey'=>$this->GetFullKey()) : array();
+        return $secret ? array('authkey'=>$this->GetFullKey()) : array();
     }
 }
 

@@ -130,9 +130,7 @@ class TwoFactor extends StandardObject
         return $ga->getQRCodeGoogleUrl("Andromeda", $this->GetSecret());
     }
     
-    const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
-    
-    public function GetClientObject(int $level = self::OBJECT_METADATA) : array
+    public function GetClientObject(bool $secret = false) : array
     {
         $data = array(
             'id' => $this->ID(),
@@ -140,7 +138,7 @@ class TwoFactor extends StandardObject
             'dates' => $this->GetAllDates(),
         );
         
-        if ($level === self::OBJECT_WITHSECRET) 
+        if ($secret) 
         {
             $data['secret'] = $this->GetSecret();
             $data['qrcodeurl'] = $this->GetURL();

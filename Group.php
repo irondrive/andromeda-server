@@ -24,7 +24,7 @@ class Group extends AuthEntity
         ));
     }
     
-    public function GetName() : string { return $this->GetScalar('name'); }
+    public function GetDisplayName() : string { return $this->GetScalar('name'); }
     public function GetComment() : ?string { return $this->TryGetScalar('comment'); }
     
     public function GetMembersScalar(string $field) { return parent::GetScalar("members__$field"); }
@@ -56,7 +56,7 @@ class Group extends AuthEntity
         return static::LoadByUniqueKey($database, 'name', $name);
     }
     
-    public function GetEmailRecipients() : array
+    public function GetMailTo() : array
     {
         $accounts = $this->GetAccounts(); $output = array();
         
@@ -67,11 +67,6 @@ class Group extends AuthEntity
             foreach ($emails as $email) array_push($output, $email);
         }
         return $output;
-    }
-    
-    public function SendMailTo(Emailer $mailer, string $subject, string $message, ?EmailRecipient $from = null)
-    {
-        $mailer->SendMail($subject, $message, $this->GetEmailRecipients(), $from, true);
     }
     
     public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
@@ -88,7 +83,7 @@ class Group extends AuthEntity
     {
         return array(
             'id' => $this->ID(),
-            'name' => $this->GetName(),
+            'name' => $this->GetDisplayName(),
             'priority' => $this->GetPriority(),
             'comment' => $this->GetComment(),
             'dates' => $this->GetAllDates(),

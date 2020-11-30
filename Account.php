@@ -61,7 +61,7 @@ class Account extends AuthEntity
     }
     
     public function GetUsername() : string  { return $this->GetScalar('username'); }
-    public function GetFullName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
+    public function GetDisplayName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
 
     public function GetGroups() : array { return $this->GetObjectRefs('groups'); }
@@ -136,7 +136,7 @@ class Account extends AuthEntity
     
     public function GetEmailRecipients(bool $redacted = false) : array
     {
-        $name = $this->GetFullName();
+        $name = $this->GetDisplayName();
         $emails = ContactInfo::GetEmails($this->GetContactInfos());
         
         return array_map(function($email) use($name,$redacted){
@@ -145,13 +145,19 @@ class Account extends AuthEntity
         }, $emails);
     }
     
-    public function SendMailTo(Emailer $mailer, string $subject, string $message, ?EmailRecipient $from = null)
+    public function GetMailTo() : array
     {
-        $recipients = $this->GetEmailRecipients();
+        $recipients = $this->GetEmailRecipients();        
+        if (!count($recipients)) throw new EmailUnavailableException();
+        return $recipients;
+    }
+    
+    public function GetMailFrom() : ?EmailRecipient
+    {
+        // TODO have a notion of which contact info is preferred rather than just [0]
         
-        if (count($recipients) == 0) throw new EmailUnavailableException();
-        
-        $mailer->SendMail($subject, $message, $recipients, $from);
+        $from = $this->GetEmailRecipients();
+        return count($from) ? $from[0] : null;
     }
     
     public static function Create(ObjectDatabase $database, Auth\ISource $source, string $username, string $password) : self
@@ -195,7 +201,7 @@ class Account extends AuthEntity
         $data = array(
             'id' => $this->ID(),
             'username' => $this->GetUsername(),
-            'fullname' => $this->GetFullName(),
+            'dispname' => $this->GetDisplayName(),
             'dates' => $this->GetAllDates(),
             'counters' => $this->GetAllCounters(),
             'limits' => $this->GetAllCounterLimits(),

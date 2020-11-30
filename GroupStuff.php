@@ -6,8 +6,8 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 
 abstract class AuthEntity extends StandardObject
 {  
-    public abstract function GetEmailRecipients() : array;
-    public abstract function SendMailTo(Emailer $mailer, string $subject, string $message, ?EmailRecipient $from = null);
+    public abstract function GetDisplayName() : string;
+    public abstract function GetMailTo() : array;
 }
 
 class InheritedProperty
