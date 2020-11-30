@@ -12,7 +12,11 @@ class Config extends SingletonObject
             'rwchunksize' => null,
             'crchunksize' => null,
             'features__userstorage' => null,
-            'features__randomwrite' => null
+            'features__randomwrite' => null,
+            'features__publicmodify' => null,
+            'features__publicupload' => null,
+            'features__shareeveryone' => null,
+            'features__emailshare' => null
         ));
     }
 
@@ -27,6 +31,18 @@ class Config extends SingletonObject
     
     public function GetAllowRandomWrite() : bool { return $this->TryGetFeature('randomwrite') ?? true; }
     public function SetAllowRandomWrite(bool $allow) : self { return $this->SetFeature('randomwrite', $allow); }
+    
+    public function GetAllowPublicModify() : bool { return $this->TryGetFeature('publicmodify') ?? false; }
+    public function SetAllowPublicModify(bool $allow) : self { return $this->SetFeature('publicmodify', $allow); } 
+    
+    public function GetAllowPublicUpload() : bool { return $this->TryGetFeature('publicupload') ?? false; }
+    public function SetAllowPublicUpload(bool $allow) : self { return $this->SetFeature('publicupload', $allow); }
+    
+    public function GetAllowShareEveryone() : bool { return $this->TryGetFeature('shareeveryone') ?? false; }
+    public function SetAllowShareEveryone(bool $allow) : self { return $this->SetFeature('shareeveryone', $allow); }
+    
+    public function GetAllowEmailShare() : bool { return $this->TryGetFeature('emailshare') ?? false; }
+    public function SetAllowEmailShare(bool $allow) : self { return $this->SetFeature('emailshare', $allow); }
     
     public function GetClientObject(bool $admin) : array
     {

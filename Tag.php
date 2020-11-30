@@ -19,6 +19,8 @@ class Tag extends StandardObject
             'tag' => null
         ));
     }
+    
+    public function GetItem() : Item { return $this->GetObject('item'); }
 
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $tag) : self
     {
@@ -26,12 +28,6 @@ class Tag extends StandardObject
         if (($ex = static::LoadOneByQuery($database, $q->Where($where))) !== null) return $ex;
         
         return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetScalar('tag',$tag);
-    }
-    
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
-    {        
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',FieldTypes\ObjectPoly::GetObjectDBValue($account)),$q->Equals('id',$id));
-        return static::LoadOneByQuery($database, $q->Where($where));
     }
 
     public function GetClientObject() : array

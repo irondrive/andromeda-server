@@ -42,6 +42,7 @@ abstract class Item extends StandardObject
     public function isDeleted() : bool { $this->Refresh(); return parent::isDeleted(); }
     
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
+    public function GetOwnerID() : ?string { return $this->GetObjectID('owner'); }
     
     public abstract function GetName() : ?string;
     public abstract function GetSize() : int;
@@ -49,7 +50,7 @@ abstract class Item extends StandardObject
     
     public function SetName(string $name, bool $overwrite = false) : self 
     {
-        $olditem = static::TryLoadByParentAndName($this->database, $this->GetParent(), $this->GetOwner(), $name);
+        $olditem = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
         if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
         
         return $this->SetScalar('name', $name); 
@@ -60,7 +61,7 @@ abstract class Item extends StandardObject
         if ($folder->GetFilesystemID() !== $this->GetFilesystemID())
             throw new CrossFilesystemException();
         
-        $olditem = static::TryLoadByParentAndName($this->database, $folder, $this->GetOwner(), $this->GetName());
+        $olditem = static::TryLoadByParentAndName($this->database, $folder, $this->GetName());
         if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
         
         return $this->SetObject('parent', $folder);
@@ -72,6 +73,8 @@ abstract class Item extends StandardObject
     protected function GetFilesystemID() : string { return $this->GetObjectID('filesystem'); }
     protected function GetFSImpl() : FSImpl { return $this->GetFilesystem()->GetFSImpl(); }
     
+    public function isGlobal() : bool { $fs = $this->GetFilesystem(); return $fs->isShared() && $fs->GetOwner() === null; }
+
     public function SetAccessed(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('accessed', $time); }
     public function SetCreated(?int $time = null) : self  { $time ??= microtime(true); return $this->SetDate('created', $time); }
     public function SetModified(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('modified', $time); }
@@ -121,26 +124,17 @@ abstract class Item extends StandardObject
         
         parent::Delete();
     }    
-    
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
-    {
-        $loaded = static::TryLoadByID($database, $id);
-        if (!$loaded) return null;
-        
-        $owner = $loaded->GetObjectID('owner');
-        return ($owner === null || $owner === $account->ID()) ? $loaded : null;
-    }
-    
-    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, Account $account, string $name) : ?self
+
+    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?self
     {
         $q = new QueryBuilder(); 
-        $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name),
-                         $q->Or($q->Equals('owner',$account->ID()),$q->IsNull('owner')));
-        
+        $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name));        
         return parent::LoadOneByQuery($database, $q->Where($where));
     }
     
-    public function GetItemClientObject(bool $details = false) : ?array
+    const DETAILS_NONE = 0; const DETAILS_PUBLIC = 1; const DETAILS_OWNER = 2; 
+    
+    public function GetItemClientObject(int $details = self::DETAILS_NONE) : ?array
     {
         if ($this->isDeleted()) return null;
         
@@ -155,9 +149,13 @@ abstract class Item extends StandardObject
 
         if ($details)
         {
+            $comments = $this->GetComments(); // TODO limit/offset for these!
+            if ($details < self::DETAILS_OWNER)
+                $comments = array_filter($comments, function($c){ return !$c->IsPrivate(); });
+                
             $data['likes'] = array_map($mapobj, array_values($this->GetLikes())); // TODO limit/offset for these!
             $data['tags'] = array_map($mapobj, $this->GetTags());
-            $data['comments'] = array_map($mapobj, $this->GetComments()); // TODO limit/offset for these!
+            $data['comments'] = array_map($mapobj, $comments);
             $data['shares'] = array_map($mapobj, $this->GetShares());
         }
         

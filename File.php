@@ -67,7 +67,7 @@ class File extends Item
             ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name);
     }
     
-    public static function Import(ObjectDatabase $database, Folder $parent, Account $account, string $name, string $path, bool $overwrite = false) : self
+    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
     {
         $file = static::NotifyCreate($database, $parent, $account, $name)
             ->SetName($name,$overwrite,true)->SetSize(filesize($path),true);
@@ -98,7 +98,7 @@ class File extends Item
         $this->NotifyDelete();
     }
     
-    public function GetClientObject(bool $details = false) : ?array
+    public function GetClientObject(int $details = self::DETAILS_NONE) : ?array
     {
         if ($this->isDeleted()) return null;
         

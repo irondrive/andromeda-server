@@ -42,7 +42,6 @@ class Like extends StandardObject
     public function GetClientObject() : array
     {
         return array(
-            'id' => $this->ID(),
             'owner' => $this->GetObject('owner')->GetDisplayName(),
             'item' => $this->GetObjectID('item'),
             'value' => $this->GetScalar('value'),
