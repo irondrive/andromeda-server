@@ -55,9 +55,7 @@ class Authenticator
         
         $this->realaccount = $account; $this->session = $session; $this->client = $client;
         $this->database = $database; $this->input = $input;
-        
-        if (!$client->CheckAgentMatch($interface)) throw new InvalidSessionException();
-        
+
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
         $session->setActiveDate(); $account->setActiveDate(); $client->setActiveDate();

@@ -45,9 +45,9 @@ class Session extends KeySource
         return parent::CheckKeyMatch($key);
     }
 
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject(bool $secret = false) : array
     {
-        return array_merge(parent::GetClientObject($level), array(
+        return array_merge(parent::GetClientObject($secret), array(
             'id' => $this->ID(),
             'client' => $this->GetClient()->ID(),
             'dates' => $this->GetAllDates(),

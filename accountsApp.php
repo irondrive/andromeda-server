@@ -1,10 +1,11 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{FullEmailer, EmailRecipient};
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
 
@@ -25,7 +26,7 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 use Andromeda\Core\DecryptionFailedException;
-use Andromeda\Core\EmailUnavailableException;
+use Andromeda\Core\MailSendException;
 
 use Andromeda\Core\Database\ObjectNotFoundException;
 use Andromeda\Core\Exceptions\NotImplementedException;
@@ -38,12 +39,14 @@ class GroupMembershipExistsException extends Exceptions\ClientErrorException  { 
 
 class ChangeExternalPasswordException extends Exceptions\ClientErrorException { public $message = "CANNOT_CHANGE_EXTERNAL_PASSWORD"; }
 class RecoveryKeyCreateException extends Exceptions\ClientErrorException      { public $message = "CANNOT_GENERATE_RECOVERY_KEY"; }
-class RecoveryKeyDeliveryException extends Exceptions\ClientErrorException    { public $message = "CANNOT_DELIVER_RECOVERY_KEY"; }
 class OldPasswordRequiredException extends Exceptions\ClientErrorException    { public $message = "OLD_PASSWORD_REQUIRED"; }
 class NewPasswordRequiredException extends Exceptions\ClientErrorException    { public $message = "NEW_PASSWORD_REQUIRED"; }
 
 class EmailAddressRequiredException extends Exceptions\ClientDeniedException   { public $message = "EMAIL_ADDRESS_REQUIRED"; }
 class MandatoryGroupException extends Exceptions\ClientDeniedException         { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
+
+class UnknownMailerException extends Exceptions\ClientNotFoundException          { public $message = "UNKNOWN_MAILER"; }
+class MailSendFailException extends Exceptions\ClientErrorException              { public $message = "MAIL_SEND_FAILURE"; }
 
 class UnknownAuthSourceException extends Exceptions\ClientNotFoundException      { public $message = "UNKNOWN_AUTHSOURCE"; }
 class UnknownAccountException extends Exceptions\ClientNotFoundException         { public $message = "UNKNOWN_ACCOUNT"; }
@@ -64,7 +67,9 @@ class AccountsApp extends AppBase
     public static function getUsage() : array 
     { 
         return array(
-            'AUTH ALL: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
+            'phpinfo',
+            'testmail [--mailid id]',
+            '- AUTH ALL: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'getauthsources',
             'getaccount',
@@ -108,6 +113,9 @@ class AccountsApp extends AppBase
 
         switch($input->GetAction())
         {       
+            case 'phpinfo':             return $this->PHPInfo($input); break;
+            case 'testmail':            return $this->TestMail($input); break;
+            
             case 'getconfig':           return $this->GetConfig($input); break;
             case 'getauthsources':      return $this->GetAuthSources($input); break;
             
@@ -151,6 +159,36 @@ class AccountsApp extends AppBase
         if ($fullget && $return !== null) $return['account'] = $account->GetClientObject();
         else if ($fullget) $return = $account->GetClientObject();
         return $return;
+    }
+    
+    protected function PHPInfo(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE); phpinfo();
+    }
+    
+    protected function TestMail(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();        
+        
+        $account = $this->authenticator->GetAccount();
+        $subject = "Andromeda Email Test";
+        $body = "This is a test email from Andromeda";
+        
+        if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_ID)) !== null)
+        {
+            $mailer = FullEmailer::TryLoadByID($this->API->GetDatabase(), $mailer);
+            if ($mailer === null) throw new UnknownMailerException();
+        }
+        else $mailer = $this->API->GetConfig()->GetMailer();        
+        
+        try { $mailer->SendMail($subject, $body, $account->GetMailTo()); }
+        catch (MailSendException $e) { throw new MailSendFailException($e->getDetails()); }
+        
+        return array();
     }
     
     protected function GetConfig(Input $input) : array
@@ -251,8 +289,7 @@ class AccountsApp extends AppBase
         $subject = "Andromeda Account Recovery Key";
         $body = "Your recovery key is: $key";
         
-        try { $account->SendMailTo($this->API->GetConfig()->GetMailer(), $subject, $body); } 
-        catch (EmailUnavailableException $e) { throw new RecoveryKeyDeliveryException(); }
+        $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, $account->GetMailTo());
         
         return $account->GetEmailRecipients(true);
     }
@@ -294,8 +331,7 @@ class AccountsApp extends AppBase
             $subject = "Andromeda Account Validation Code";
             $body = "Your validation code is: $code";
             
-            try { $mailer->SendMail($subject, $body, $to); }
-            catch (EmailUnavailableException $e) { throw new RecoveryKeyDeliveryException(); }
+            $mailer->SendMail($subject, $body, $to);
         }
         
         return $account->GetClientObject();
@@ -424,7 +460,7 @@ class AccountsApp extends AppBase
         $client->setLoggedonDate()->setActiveDate();
         $account->setLoggedonDate()->setActiveDate();
         
-        $return = $client->GetClientObject(Client::OBJECT_WITHSECRET);
+        $return = $client->GetClientObject(true);
 
         return $this->StandardReturn($input, $return, $account);
     }
@@ -439,7 +475,7 @@ class AccountsApp extends AppBase
         $keys = RecoveryKey::CreateSet($this->API->GetDatabase(), $account);
         
         $output = array_map(function($key){
-            return $key->GetClientObject(AuthObject::OBJECT_WITHSECRET); }, $keys);
+            return $key->GetClientObject(true); }, $keys);
         
         $return = array('recoverykeys' => $output);
         
@@ -468,8 +504,8 @@ class AccountsApp extends AppBase
         $twofactor = TwoFactor::Create($database, $account, $comment);
         $recoverykeys = RecoveryKey::CreateSet($database, $account);
         
-        $tfobj = $twofactor->GetClientObject(TwoFactor::OBJECT_WITHSECRET);
-        $keyobjs = array_map(function($key){ return $key->GetClientObject(AuthObject::OBJECT_WITHSECRET); }, $recoverykeys);
+        $tfobj = $twofactor->GetClientObject(true);
+        $keyobjs = array_map(function($key){ return $key->GetClientObject(true); }, $recoverykeys);
         
         $return = array('twofactor' => $tfobj, 'recoverykeys' => $keyobjs );
         
@@ -506,7 +542,7 @@ class AccountsApp extends AppBase
         
         if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && !$this->authenticator->GetRealAccount()->isAdmin())
         { 
-            $code = Utilities::Random(); $contact->SetIsValid(false)->SetUnlockCode($code);
+            $code = Utilities::Random(16); $contact->SetIsValid(false)->SetUnlockCode($code);
             
             switch ($type)
             {
@@ -570,7 +606,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator->isSudoUser() || $sessionid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $session = Session::TryLoadAccountAndID($this->API->GetDatabase(), $account, $sessionid);
+            $session = Session::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $sessionid);
             if ($session === null) throw new UnknownSessionException();
         }
         
@@ -591,7 +627,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator->isSudoUser() || $clientid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $client = Client::TryLoadAccountAndID($this->API->GetDatabase(), $account, $clientid);
+            $client = Client::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $clientid);
             if ($client === null) throw new UnknownClientException();
         }
         
@@ -618,7 +654,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         
         $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_ID);
-        $twofactor = TwoFactor::TryLoadAccountAndID($this->API->GetDatabase(), $account, $twofactorid); 
+        $twofactor = TwoFactor::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $twofactorid); 
         if ($twofactor === null) throw new UnknownTwoFactorException();
 
         $twofactor->Delete();

@@ -43,13 +43,6 @@ class Client extends AuthObject
             ->SetObject('account',$account);
     }
 
-    public function CheckAgentMatch(IOInterface $interface) : bool
-    {
-        $good = $interface->GetUserAgent() === $this->GetUserAgent();        
-        if ($good) $this->SetScalar('lastaddr', $interface->GetAddress());        
-        return $good;
-    }
-    
     public function CheckMatch(IOInterface $interface, string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxClientAge();
@@ -59,7 +52,15 @@ class Client extends AuthObject
             $this->Delete(); return false;
         }
         
-        return $this->CheckAgentMatch($interface) && $this->CheckKeyMatch($key);
+        $good = $this->CheckKeyMatch($key);
+        
+        if ($good)
+        {
+            $this->SetScalar('useragent', $interface->getUserAgent());
+            $this->SetScalar('lastaddr', $interface->GetAddress());  
+        }
+        
+        return $good;
     }
     
     public function Delete() : void
@@ -70,11 +71,9 @@ class Client extends AuthObject
         parent::Delete();
     }
     
-    const OBJECT_METADATA = 0; const OBJECT_WITHSECRET = 1;
-    
-    public function GetClientObject(int $level = 0) : array
+    public function GetClientObject(bool $secret = false) : array
     {
-        $data = array_merge(parent::GetClientObject($level), array(
+        $data = array_merge(parent::GetClientObject($secret), array(
             'id' => $this->ID(),
             'lastaddr' => $this->GetLastAddress(),
             'useragent' => $this->GetUserAgent(),
@@ -82,7 +81,7 @@ class Client extends AuthObject
         ));
 
         if (($session = $this->GetSession()) === null) $data['session'] = null;
-        else $data['session'] = $session->GetClientObject($level);
+        else $data['session'] = $session->GetClientObject($secret);
 
         return $data;        
     }
