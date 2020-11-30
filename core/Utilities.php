@@ -32,9 +32,8 @@ abstract class Utilities
     
     public static function RandomRange() : int { return strlen(static::$chars); }
     
-    public static function Random(?int $length = null) : string
+    public static function Random(?int $length) : string
     {
-        $length ??= BaseObject::IDLength;
         $string = ""; $range = static::RandomRange() - 1;
         for ($i = 0; $i < $length; $i++)
             $string .= static::$chars[random_int(0, $range)];

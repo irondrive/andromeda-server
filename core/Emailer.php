@@ -6,11 +6,11 @@ require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) die("Missing library: PHPMailer - git submodule init/update?\n");
-require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use PHPMailer\PHPMailer\PHPMailer;
-require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php");
-require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php"); 
+require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); 
+require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php");
+require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php"); use \PHPMailer\PHPMailer;
 
-class PHPMailException extends Exceptions\ServerException           { public $message = "PHPMAIL_FAILURE"; }
+class MailSendException extends Exceptions\ServerException          { public $message = "MAIL_SEND_FAILURE"; }
 class EmptyRecipientsException extends Exceptions\ServerException   { public $message = "NO_RECIPIENTS_GIVEN"; }
 
 class EmailRecipient
@@ -50,7 +50,7 @@ class BasicEmailer implements Emailer
         
         $to = !$usebcc ? $recipients : "undisclosed-recipients:;";
         
-        if (!mail($to, $subject, $message, implode("\r\n", $headers))) throw new PHPMailException();
+        if (!mail($to, $subject, $message, implode("\r\n", $headers))) throw new MailSendException();
     }
 }
 
@@ -58,7 +58,7 @@ class FullEmailer extends StandardObject implements Emailer
 {    
     private $mail = null;
     
-    const MODE_SSL = 1; const MODE_TLS = 2;
+    const MODE_SMTPS = 1; const MODE_STARTTLS = 2;
     
     public static function GetFieldTemplate() : array
     {
@@ -77,7 +77,11 @@ class FullEmailer extends StandardObject implements Emailer
     {
         parent::__construct($database, $data);
         
-        $mailer = new PHPMailer(true); $mailer->isSMTP();
+        $mailer = new PHPMailer\PHPMailer(true); $mailer->isSMTP();
+        
+        $api = Main::GetInstance();
+        $mailer->SMTPDebug = $api->GetConfig()->GetDebugLogLevel() ? PHPMailer\SMTP::DEBUG_CONNECTION+1 : 0;        
+        $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: $str"); };
         
         $mailer->Host = $this->GetScalar('hostname');
         $mailer->Port = $this->GetScalar('port');
@@ -90,8 +94,8 @@ class FullEmailer extends StandardObject implements Emailer
         }
         
         $secure = $this->TryGetScalar('secure');
-        if ($secure == self::MODE_SSL) $mailer->SMTPSecure = 'ssl';
-        else if ($secure == self::MODE_TLS) $mailer->SMTPSecure = 'tls';
+        if ($secure === self::MODE_SMTPS) $mailer->SMTPSecure = PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        if ($secure === self::MODE_STARTTLS) $mailer->SMTPSecure = PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->GetScalar('from_name'));
         
@@ -114,6 +118,7 @@ class FullEmailer extends StandardObject implements Emailer
  
         $mailer->Subject = $subject; $mailer->Body = $message;
         
-        $mailer->send(); 
+        try { if (!$mailer->send()) throw new MailSendException($mailer->ErrorInfo); }
+        catch (PHPMailer\Exception $e) { throw new MailSendException($e->getMessage()); }
     }
 }
