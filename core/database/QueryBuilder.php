@@ -32,17 +32,29 @@ class QueryBuilder
     }    
     
     public function Like(string $key, string $val) : string { return $this->BaseCompare($key,"%$val%",'LIKE'); }    
-    public function Equals(string $key, string $val) : string { return $this->BaseCompare($key,$val,'='); }
-    public function NotEquals(string $key, string $val) : string { return $this->BaseCompare($key,$val,'!='); }
     public function LessThan(string $key, string $val) : string { return $this->BaseCompare($key,$val,'<'); }
     public function GreaterThan(string $key, string $val) : string { return $this->BaseCompare($key,$val,'>'); }
+    
+    public function IsTrue(string $key) : string { return $this->GreaterThan($key,0); }
+    
+    public function Equals(string $key, ?string $val) : string 
+    { 
+        if ($val === null) return $this->IsNull($key);
+        return $this->BaseCompare($key,$val,'='); 
+    }
+    
+    public function NotEquals(string $key, ?string $val) : string 
+    { 
+        if ($val === null) return $this->Not($this->IsNull($key));
+        return $this->BaseCompare($key,$val,'!='); 
+    }
     
     public function Not(string $arg) : string { return "(NOT $arg)"; }
     public function OrArr(array $args) : string { return "(".implode(' OR ',$args).")"; }
     public function AndArr(array $args) : string { return "(".implode(' AND ',$args).")"; }
     
-    public function Or(...$args) : string { return $this->OrArr($args); }
-    public function And(...$args) : string { return $this->AndArr($args); }
+    public function Or(string ...$args) : string { return $this->OrArr($args); }
+    public function And(string ...$args) : string { return $this->AndArr($args); }
 
     public function ManyOr(string $key, array $vals, string $func='Equals') 
     { 

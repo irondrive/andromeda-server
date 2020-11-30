@@ -127,7 +127,7 @@ class ObjectRef extends Scalar
     public function GetRefClass() : ?string { return $this->refclass; }
     public function GetRefField() : ?string { return $this->reffield; }
     public function GetRefIsMany() : bool { return $this->refmany; }
-    
+
     public function GetObject() : ?BaseObject
     {
         $id = $this->GetValue(); if ($id === null) return null;        
@@ -182,8 +182,9 @@ class ObjectPoly extends ObjectRef
     public function GetBaseClass() : ?string { return $this->refclass; }
     public function GetRefClass() : ?string { return $this->realclass; }
     
-    public static function GetObjectDBValue(BaseObject $obj)
+    public static function GetObjectDBValue(?BaseObject $obj) : ?string
     {
+        if ($obj === null) return null;
         return $obj->ID()."*".static::ShortClass(get_class($obj));
     }
     
@@ -233,24 +234,42 @@ class ObjectRefs extends Counter
 
     public function GetObjects(?int $limit = null, ?int $offset = null) : array
     {
-        if (!$this->isLoaded) $this->LoadObjects($limit, $offset);
+        if (!$this->isLoaded) { $this->LoadObjects($limit, $offset); return $this->objects; }
         
-        return $this->objects;
+        else return array_slice($this->objects, $offset??0, $limit);
+    }
+    
+    protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
+    {
+        $myval = $this->parentPoly ? ObjectPoly::GetObjectDBValue($this->parent) : $this->parent->ID();
+        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $myval));
+        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
     }
     
     protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $myval = $this->parentPoly ? ObjectPoly::GetObjectDBValue($this->parent) : $this->parent->ID();
-        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $myval));
-        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));        
+        $this->objects = array();
+        if ($limit !== null && $limit <= 0) return;
+        if ($offset !== null && $offset <= 0) $offset = 0;
+
+        $this->InnerLoadObjects($limit, $offset);
         $this->isLoaded = ($limit === null && $offset === null);
         
-        $this->MergeWithObjectChanges();
+        if ($limit === null || count($this->objects) < $limit)
+        {
+            if ($offset !== null) $offset = max(0, $offset-count($this->objects));
+            
+            $this->MergeWithObjectChanges();
+            
+            if ($limit || $offset) $this->objects = array_slice($this->objects, $offset, $limit);            
+        }        
     }
     
     public function DeleteObjects() : void
     {
-        $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent);
+        if (!$this->GetValue()) return;
+        
+        $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent, $this->parentPoly);
         
         foreach ($this->refs_added as $obj) $obj->Delete();
     }
@@ -321,14 +340,11 @@ class ObjectJoin extends ObjectRefs
         $this->joinclass = $joinclass;
     }
     
-    protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
+    protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
     {
         $q = new QueryBuilder(); $key = ObjectDatabase::GetClassTableName($this->joinclass).'.'.$this->reffield;
         $q->Where($q->Equals($key, $this->parent->ID()))->Join($this->joinclass, $this->myfield, $this->refclass, 'id');
         $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
-        $this->isLoaded = ($limit === null && $offset === null);
-        
-        $this->MergeWithObjectChanges();
     }
     
     public function GetJoinObject(BaseObject $joinobj) : ?BaseObject

@@ -15,7 +15,8 @@ class ServerApp extends AppBase
     {
         return array(
             'random [--length int]',
-            'getapps', 'getusage', 'runtests'
+            'getapps', 'runtests',
+            'getusage|usage|help'
         );
     }
     
@@ -25,8 +26,12 @@ class ServerApp extends AppBase
         {
             case 'random':  return $this->Random($input); break;
             case 'getapps': return $this->GetApps($input); break;
-            case 'getusage': return $this->GetUsages($input); break;
             case 'runtests': return $this->RunTests($input); break;
+            
+            case 'getusage':
+            case 'usage':
+            case 'help':
+                return $this->GetUsages($input); break;
             
             default: throw new UnknownActionException();
         }

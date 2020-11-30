@@ -14,7 +14,7 @@ class NullValueException extends Exceptions\ServerException     { public $messag
 
 abstract class BaseObject
 {
-    public const IDLength = 16;
+    public const IDLength = 12;
     protected ObjectDatabase $database; 
     
     public static function GetFieldTemplate() : array { return array(); }
@@ -50,9 +50,10 @@ abstract class BaseObject
         return count($result) ? array_values($result)[0] : null;
     }
     
-    protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object) : array
+    protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : array
     {
-        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+        $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
     protected static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
@@ -60,9 +61,10 @@ abstract class BaseObject
         $database->DeleteObjectsByQuery(static::class, $query);
     }
     
-    public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object) : void
+    public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : void
     {
-        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $object->ID())));
+        $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
+        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
     protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self

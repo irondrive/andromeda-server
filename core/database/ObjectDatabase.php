@@ -182,7 +182,7 @@ class ObjectDatabase extends Database
 
     public function CreateObject(string $class) : BaseObject
     {
-        $data = array('id' => Utilities::Random(BaseObject::IDLength));       
+        $data = array('id' => Utilities::Random($class::IDLength));       
         return array_values($this->Rows2Objects(array($data), $class))[0];
     }
 }
