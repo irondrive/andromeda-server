@@ -55,7 +55,6 @@ class RandomWriteDisabledException extends Exceptions\ClientDeniedException   { 
 
 class EmailShareDisabledException extends Exceptions\ClientDeniedException    { public $message = "EMAIL_SHARES_DISABLED"; }
 class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
-class ShareGlobalItemException extends Exceptions\ClientErrorException        { public $message = "CANNOT_SHARE_GLOBAL_FILE"; }
 
 class FilesApp extends AppBase
 {
@@ -202,9 +201,6 @@ class FilesApp extends AppBase
         
     private function TryAuthenticateItemAccess(Input $input, string $class, string $id) : ?ItemAccess {
         return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $class, $id); }
-        
-    private function AuthenticateAnyItemAccess(Input $input, Item $item) : ItemAccess {
-        return ItemAccess::Authenticate($this->database, $input, $this->authenticator, get_class($item), $item->ID()); }
 
     protected function GetConfig(Input $input) : array
     {
@@ -237,8 +233,6 @@ class FilesApp extends AppBase
         
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
-        // TODO allow posting a comment here (for public uploads e.g. to say who it's from)
-        
         $return = array(); $files = $input->GetFiles();
         if (!count($files)) throw new InvalidFileWriteException();
         foreach ($files as $name => $path)
@@ -261,7 +255,7 @@ class FilesApp extends AppBase
         // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
         // TODO if no page is configured, configure outmode as PLAIN and just show "404 - not found" with MIME type text/plain (do this at the beginning of this function)
 
-        $fsize = $file->GetSize();        
+        $fsize = $file->GetSize();
         $fstart = $input->TryGetParam('fstart',SafeParam::TYPE_INT) ?? 0;
         $flast  = $input->TryGetParam('flast',SafeParam::TYPE_INT) ?? $fsize-1;
         
@@ -764,7 +758,8 @@ class FilesApp extends AppBase
         $tag = Tag::TryLoadByID($this->database, $id);
         if ($tag === null) throw new UnknownItemException();
 
-        $access = static::AuthenticateAnyItemAccess($input, $tag->GetItem());
+        $item = $tag->GetItem(); $access = ItemAccess::Authenticate(
+            $this->database, $input, $this->authenticator, get_class($item), $item->ID());
         
         $share = $access->GetShare();
         
@@ -862,7 +857,8 @@ class FilesApp extends AppBase
             if ($dest === null && !$everyone) throw new UnknownDestinationException();
         }
         
-        if ($dest === null && !$this->config->GetAllowShareEveryone())
+        $isadmin = $this->authenticator->isAdmin();
+        if ($dest === null && !$this->config->GetAllowShareEveryone() && !$isadmin)
             throw new ShareEveryoneDisabledException();
         
         if ($item !== null)
@@ -908,12 +904,7 @@ class FilesApp extends AppBase
         if ($oldshare !== null && !$oldshare->CanReshare()) return null;
         
         if ($islink) $newshare = Share::CreateLink($this->database, $account, $access->GetItem());
-        else 
-        {
-            $item = $access->GetItem();
-            if ($item->isGlobal()) throw new ShareGlobalItemException();
-            $newshare = Share::Create($this->database, $account, $item, $dest);
-        }
+        else $newshare = Share::Create($this->database, $account, $item, $dest);
         
         return $newshare->SetShareOptions($input, $oldshare);
     }
@@ -953,7 +944,7 @@ class FilesApp extends AppBase
     protected function ShareInfo(Input $input) : array
     {
         $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator);
-        return $access->GetShare()->GetClientObject(true); // TODO test again!
+        return $access->GetShare()->GetClientObject(true);
     }
     
     protected function ListShares(Input $input) : array
@@ -963,7 +954,8 @@ class FilesApp extends AppBase
         
         $mine = $input->TryGetParam('mine',SafeParam::TYPE_BOOL) ?? false;
         
-        $shares = Share::LoadByAccount($this->database, $account, $mine);
+        if ($mine) $shares = Share::LoadByAccountOwner($this->database, $account);
+        else $shares = Share::LoadByAccountDest($this->database, $account);
         
         return array_map(function($share){ return $share->GetClientObject(true); }, $shares);
     }    

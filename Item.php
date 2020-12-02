@@ -73,8 +73,6 @@ abstract class Item extends StandardObject
     protected function GetFilesystemID() : string { return $this->GetObjectID('filesystem'); }
     protected function GetFSImpl() : FSImpl { return $this->GetFilesystem()->GetFSImpl(); }
     
-    public function isGlobal() : bool { $fs = $this->GetFilesystem(); return $fs->isShared() && $fs->GetOwner() === null; }
-
     public function SetAccessed(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('accessed', $time); }
     public function SetCreated(?int $time = null) : self  { $time ??= microtime(true); return $this->SetDate('created', $time); }
     public function SetModified(?int $time = null) : self { $time ??= microtime(true); return $this->SetDate('modified', $time); }
