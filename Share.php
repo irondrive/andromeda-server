@@ -126,13 +126,16 @@ class Share extends AuthObject
     
     private static function GetDestsQuery(array $dests, QueryBuilder $q) : string
     {
-        return $q->Or($q->OrArr(array_values($dests)),$q->And($q->IsNull('authkey'),$q->IsNull('dest')));
+        return $q->Or($q->OrArr(array_values($dests)),$q->And($q->IsNull('authkey'),$q->IsNull('dest'))); // TODO can we do this by join...?
     }
     
-    public static function LoadByAccount(ObjectDatabase $database, Account $account, bool $mine = false) : array // TODO limit/offset
+    public static function LoadByAccountOwner(ObjectDatabase $database, Account $account) : array // TODO limit/offset
     {
-        if ($mine) return static::LoadByObject($database, 'owner', $account);
-        
+        return static::LoadByObject($database, 'owner', $account);
+    }
+    
+    public static function LoadByAccountDest(ObjectDatabase $database, Account $account) : array // TODO limit/offset
+    {        
         $dests = array_merge(array($account), $account->GetGroups());
         $q = new QueryBuilder(); $dests = array_map(function($dest)use($q){ 
             return $q->Equals('dest', FieldTypes\ObjectPoly::GetObjectDBValue($dest)); },$dests);
@@ -152,7 +155,7 @@ class Share extends AuthObject
         
         return ($ok1 || $ok2 || $ok3) ? $found : null;
     }
-
+    
     public static function TryAuthenticate(ObjectDatabase $database, Item $item, Account $account) : ?self
     {
         do {
