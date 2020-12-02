@@ -112,7 +112,22 @@ abstract class FWrapper extends Storage
         return $this;
     }
     
-    public abstract function ImportFile(string $src, string $dest) : self;
+    public function ImportFile(string $src, string $dest) : self
+    {
+        $chunksize = 128*1024; // TODO config!
+        
+        $this->CreateFile($dest);
+        $handle = fopen($src,'rb');
+
+        for ($byte = 0; $byte < filesize($src); $byte+=$chunksize)
+        {
+            fseek($handle, $byte);
+            $data = fread($handle, $chunksize);
+            $this->WriteBytes($dest, $byte, $data);
+        }        
+        fclose($handle);
+        return $this;
+    }
     
     public function ReadBytes(string $path, int $start, int $length) : string
     {
@@ -178,8 +193,12 @@ abstract class FWrapper extends Storage
     }
     
     private $reading = array(); private $writing = array();
+
+    protected function GetReadHandle(string $path) { return fopen($path,'rb'); }
+    protected function GetWriteHandle(string $path) { return fopen($path,'rb+'); }
+    protected function CloseHandle($handle) : bool { return fclose($handle); }
     
-    private function GetHandle(string $path, bool $isWrite)
+    protected function GetHandle(string $path, bool $isWrite)
     {
         $writing = array_key_exists($path, $this->writing);
         $reading = array_key_exists($path, $this->reading);
@@ -189,11 +208,11 @@ abstract class FWrapper extends Storage
 
         if ($isWrite)
         {
-            if ($reading) fclose($this->reading[$path]);
-            $this->writing[$path] = fopen($path,'rb+');
+            if ($reading) $this->CloseHandle($this->reading[$path]);
+            $this->writing[$path] = $this->GetWriteHandle($path);
             if ($reading) $this->reading[$path] = $this->writing[$path];
         }
-        else $this->reading[$path] = fopen($path,'rb');
+        else $this->reading[$path] = $this->GetReadHandle($path);
         
         if ($isWrite && $this->writing[$path] === false) throw new FileWriteFailedException();
         else if (!$isWrite && $this->reading[$path] === false) throw new FileReadFailedException();
@@ -204,7 +223,7 @@ abstract class FWrapper extends Storage
     public function __destruct()
     {
         foreach ($this->reading as $handle) 
-            try { fclose($handle); } catch (\Throwable $e) { }        
+            try { $this->CloseHandle($handle); } catch (\Throwable $e) { }        
     }
 }
 

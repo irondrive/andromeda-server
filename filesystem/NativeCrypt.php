@@ -20,7 +20,7 @@ class NativeCrypt extends Native
     public function GetChunkSize() : ?int { return $this->chunksize; }
     
     private function GetAuthString(File $file, int $index) { return $file->ID().":$index"; }
-    
+
     public function GetChunkIndex(int $byte) : int { return intdiv($byte, $this->chunksize); }
     public function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
     

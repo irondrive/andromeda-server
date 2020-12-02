@@ -116,7 +116,7 @@ abstract class CredCrypt extends FWrapper
       
     public static function DecryptAccount(ObjectDatabase $database, Account $account) : void 
     { 
-        $storages = self::LoadByObject($database, 'owner', $account);
+        $storages = static::LoadByObject($database, 'owner', $account);
         foreach ($storages as $storage) $storage->SetEncrypted(false);
     }
 }

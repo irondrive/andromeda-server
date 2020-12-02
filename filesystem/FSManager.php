@@ -15,7 +15,12 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, ActivateException, StorageException};
+require_once(ROOT."/apps/files/storage/Storage.php"); 
+require_once(ROOT."/apps/files/storage/Local.php");
+require_once(ROOT."/apps/files/storage/FTP.php");
+require_once(ROOT."/apps/files/storage/SFTP.php");
+require_once(ROOT."/apps/files/storage/SMB.php");
+use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, SMB, ActivateException, StorageException};
 
 require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
@@ -119,7 +124,7 @@ class FSManager extends StandardObject
     {
         $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM);
-        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_INT) ?? self::TYPE_NATIVE;
+        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_INT) ?? self::TYPE_NATIVE; // TODO change to text
         $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
 
         if (!in_array($fstype,array(self::TYPE_NATIVE,self::TYPE_NATIVE_CRYPT,self::TYPE_SHARED)))
@@ -142,6 +147,7 @@ class FSManager extends StandardObject
                 case 'local': $filesystem->SetStorage(Local::Create($database, $input, $account, $filesystem)); break;
                 case 'ftp':   $filesystem->SetStorage(FTP::Create($database, $input, $account, $filesystem));  break;
                 case 'sftp':  $filesystem->SetStorage(SFTP::Create($database, $input, $account, $filesystem)); break;
+                case 'smb':   $filesystem->SetStorage(SMB::Create($database, $input, $account, $filesystem)); break;
                 default: throw new InvalidSTTypeClientException();
             }
         

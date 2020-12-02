@@ -47,18 +47,18 @@ class File extends Item
         return $this;
     }
     
-    public function SetName(string $name, bool $overwrite = false, bool $notify = false) : self
+    public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::SetName($name, $overwrite);
-        if (!$notify) $this->GetFSImpl()->RenameFile($this, $name); 
-        return $this;
+        parent::CheckName($name, $overwrite);
+        $this->GetFSImpl()->RenameFile($this, $name); 
+        return $this->SetScalar('name', $name);
     }
     
     public function SetParent(Folder $folder, bool $overwrite = false) : self
     {
-        parent::SetParent($folder, $overwrite);
+        parent::CheckParent($folder, $overwrite);
         $this->GetFSImpl()->MoveFile($this, $folder);
-        return $this;
+        return $this->SetObject('parent', $folder);
     }
 
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
@@ -70,7 +70,7 @@ class File extends Item
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
     {
         $file = static::NotifyCreate($database, $parent, $account, $name)
-            ->SetName($name,$overwrite,true)->SetSize(filesize($path),true);
+            ->CheckName($name,$overwrite)->SetSize(filesize($path),true);
         
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }

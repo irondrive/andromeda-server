@@ -70,7 +70,7 @@ class Shared extends BaseFileFS
             $fspath = $path.$fsitem;
             $isfile = $storage->isFile($fspath);
             if (!$isfile && !$storage->isFolder($fspath)) 
-                throw new InvalidScannedItemException();
+                throw new InvalidScannedItemException($fspath);
             
             $dbitem = null;
             foreach ($dbitems as $dbitemid => $dbitemtmp)
@@ -108,7 +108,7 @@ class Shared extends BaseFileFS
     { 
         $oldpath = $this->GetFilePath($file);
         $newpath = $this->GetFolderPath($file->GetParent()).$name;
-        $this->GetStorage()->RenameFolder($oldpath, $newpath);
+        $this->GetStorage()->RenameFile($oldpath, $newpath);
         return $this;
     }
     

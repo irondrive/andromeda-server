@@ -41,7 +41,7 @@ class FTP extends CredCrypt
     {
         return parent::Create($database, $input, $account, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
-            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT) ?? 21)
+            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetScalar('secure', $input->TryGetParam('secure', SafeParam::TYPE_BOOL) ?? false);
     }
     
@@ -67,9 +67,10 @@ class FTP extends CredCrypt
     {
         if (isset($this->ftp)) return $this;
         
-        $host = $this->GetScalar('hostname'); $port = $this->TryGetScalar('port');
-        $user = $this->TryGetUsername('username') ?? 'anonymous';
-        $pass = $this->TryGetPassword('password') ?? "";
+        $host = $this->GetScalar('hostname'); 
+        $port = $this->TryGetScalar('port') ?? 21;
+        $user = $this->TryGetUsername() ?? 'anonymous';
+        $pass = $this->TryGetPassword() ?? "";
         
         if ($this->GetScalar('secure')) $this->ftp = ftp_ssl_connect($host, $port);
         else $this->ftp = $this->ftp = ftp_connect($host, $port);
@@ -98,7 +99,7 @@ class FTP extends CredCrypt
         $usrstr = $username ? "$username:$password@" : "";
         $hostname = $this->GetScalar('hostname');
         $portstr = $port ? ":$port" : "";
-        return "$proto://$usrstr$hostname$portstr/".$this->GetPath($path);
+        return "$proto://$usrstr$hostname$portstr/".$this->GetPath($path); // TODO rawurlencode() plus other places?
     }
 
     public function ItemStat(string $path) : ItemStat

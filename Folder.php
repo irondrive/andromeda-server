@@ -45,11 +45,11 @@ class Folder extends Item
         return $this->DeltaCounter('size',$size); 
     }   
     
-    public function SetName(string $name, bool $overwrite = false, bool $notify = false) : self
+    public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::SetName($name, $overwrite);
-        if (!$notify) $this->GetFSImpl()->RenameFolder($this, $name);
-        return $this;
+        parent::CheckName($name, $overwrite);
+        $this->GetFSImpl()->RenameFolder($this, $name);
+        return $this->SetScalar('name', $name);
     }
     
     public function SetParent(Folder $folder, bool $overwrite = false) : self
@@ -64,9 +64,9 @@ class Folder extends Item
                 throw new MoveLoopException();
         }
         
-        parent::SetParent($folder, $overwrite);
+        parent::CheckParent($folder, $overwrite);
         $this->GetFSImpl()->MoveFolder($this, $folder);
-        return $this;
+        return $this->SetObject('parent', $folder);
     }
     
     private function AddItemCounts(BaseObject $object) : void
@@ -133,8 +133,7 @@ class Folder extends Item
     
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = static::NotifyCreate($database, $parent, $account, $name)
-            ->SetParent($parent)->SetName($name);
+        $folder = static::NotifyCreate($database, $parent, $account, $name)->CheckName($name);
 
         $folder->GetFSImpl()->CreateFolder($folder); return $folder;
     }
