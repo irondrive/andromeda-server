@@ -42,6 +42,8 @@ class SFTP extends CredCrypt
         ));
     }
 
+    // TODO get free space?
+
     protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }    
     protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }    
     protected function SetKeypass(?string $keypass, bool $credcrypt) : self { return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); }
@@ -53,7 +55,7 @@ class SFTP extends CredCrypt
         
         $obj = parent::Create($database, $input, $account, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
-            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT) ?? 22)
+            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetKeypass($keypass, $credcrypt);
 
         if (($keyfile = $input->TryGetFile('keyfile')) !== null) 

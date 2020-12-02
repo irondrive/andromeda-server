@@ -11,9 +11,6 @@ require_once(ROOT."/apps/files/Like.php");
 require_once(ROOT."/apps/files/Share.php");
 
 require_once(ROOT."/apps/files/storage/Storage.php");
-require_once(ROOT."/apps/files/storage/Local.php");
-require_once(ROOT."/apps/files/storage/FTP.php");
-require_once(ROOT."/apps/files/storage/SFTP.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 

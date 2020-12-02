@@ -15,7 +15,7 @@ use Andromeda\Core\Exceptions\ClientDeniedException;
 class ReadOnlyException extends ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
 
 class StorageException extends Exceptions\ServerException { }
-class ActivateException extends Exceptions\ServerException { }
+class ActivateException extends Exceptions\ServerException { } // TODO why does this not extend StorageException?
 
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
 class FolderDeleteFailedException extends StorageException  { public $message = "FOLDER_DELETE_FAILED"; }

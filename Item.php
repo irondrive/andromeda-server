@@ -47,24 +47,25 @@ abstract class Item extends StandardObject
     public abstract function GetName() : ?string;
     public abstract function GetSize() : int;
     public abstract function GetParent() : ?Folder;
-    
-    public function SetName(string $name, bool $overwrite = false) : self 
+
+    public abstract function SetName(string $name, bool $overwrite = false) : self;
+    public abstract function SetParent(Folder $folder, bool $overwrite = false) : self;
+
+    protected function CheckName(string $name, bool $overwrite = false) : self
     {
         $olditem = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
         if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
-        
-        return $this->SetScalar('name', $name); 
+        return $this;
     }
     
-    public function SetParent(Folder $folder, bool $overwrite = false) : self
+    protected function CheckParent(Folder $folder, bool $overwrite = false) : self
     {
         if ($folder->GetFilesystemID() !== $this->GetFilesystemID())
             throw new CrossFilesystemException();
         
         $olditem = static::TryLoadByParentAndName($this->database, $folder, $this->GetName());
         if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
-        
-        return $this->SetObject('parent', $folder);
+        return $this;
     }
     
     public abstract static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self;
