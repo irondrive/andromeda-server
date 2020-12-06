@@ -44,13 +44,20 @@ abstract class StandardObject extends BaseObject
     
     protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self  { return $this->SetScalar("counters_limits__$name", $value, $temp); }
     
-    protected function DeltaCounter(string $name, int $delta = 1) : self
-    { 
-        if (($limit = $this->TryGetCounterLimit($name)) !== null) 
+    protected function IsCounterOverLimit(string $name, int $delta = 0) : bool
+    {
+        if (($limit = $this->TryGetCounterLimit($name)) !== null)
         {
             $value = $this->GetCounter($name) + $delta;
-            if ($value > $limit) throw new CounterOverLimitException($name); 
+            if ($value > $limit) return true;
         } 
+        return false;
+    }
+    
+    protected function DeltaCounter(string $name, int $delta = 1) : self
+    { 
+        if ($this->IsCounterOverLimit($name, $delta))
+            throw new CounterOverLimitException($name); 
             
         return $this->DeltaScalar("counters__$name",$delta); 
     }

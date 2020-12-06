@@ -1,7 +1,9 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+
+class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
+class MissingSingletonException extends Exceptions\ServerException { public $message = "SINGLETON_NOT_CONSTRUCTED"; }
 
 class JSONException extends Exceptions\ServerException {
     public function __construct() {
@@ -14,15 +16,21 @@ class JSONDecodingException extends JSONException { public $message = "JSON_DECO
 abstract class Singleton
 {
     private static $instances = array();
+    
     public static function GetInstance() : self
     {
-        return self::$instances[static::class];
+        $class = static::class;
+        if (!array_key_exists($class, self::$instances))
+            throw new MissingSingletonException($class);
+        return self::$instances[$class];
     }
+    
     public function __construct()
     {
-        if (array_key_exists(static::class, self::$instances))
-            throw new DuplicateSingletonException();
-            else self::$instances[static::class] = $this;
+        $class = static::class;
+        if (array_key_exists($class, self::$instances))
+            throw new DuplicateSingletonException($class);
+        else self::$instances[$class] = $this;
     }
 }
 

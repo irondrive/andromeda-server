@@ -22,10 +22,10 @@ use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
 class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
-class UnknownConfigException extends Exceptions\ServerException     { public $message = "MISSING_CONFIG_OBJECT"; }
-class FailedAppLoadException extends Exceptions\ServerException     { public $message = "FAILED_LOAD_APP"; }
-class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
-class InvalidDataDirectoryException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
+
+class UnknownConfigException extends Exceptions\ServerException  { public $message = "MISSING_CONFIG_OBJECT"; }
+class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
+class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
 class Main extends Singleton
 { 
@@ -134,19 +134,20 @@ class Main extends Singleton
     {
         $datadir = $this->GetConfig()->GetDataDir();
         if (!$datadir || !is_writeable($datadir))
-            throw new InvalidDataDirectoryException();
-            array_push($this->writes, $path);
-            file_put_contents($path, $data);
+            throw new InvalidDataDirException();
+        
+        array_push($this->writes, $path);
+        file_put_contents($path, $data);
     }
     
     public function rollBack(bool $serverError)
     {
         set_time_limit(0);
         
-        if (isset($this->database)) $this->database->rollback(!$serverError);   
+        foreach ($this->apps as $app) try { $app->rollback(); }
+        catch (\Throwable $e) { $this->error_manager->Log($e); }
         
-        foreach ($this->apps as $app) try { $app->rollback(); } 
-            catch (\Throwable $e) { $this->error_manager->Log($e); }
+        if (isset($this->database)) $this->database->rollback(!$serverError);   
         
         foreach ($this->writes as $path) try { unlink($path); } 
             catch (\Throwable $e) { $this->error_manager->Log($e); }
@@ -158,10 +159,12 @@ class Main extends Singleton
         
         $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
         
-        $this->database->commit($dryrun);        
+        $this->database->saveObjects();
         
-        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();        
+        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
         
+        if ($dryrun) $this->database->rollback(); else $this->database->commit();
+                
         if ($this->GetDebugState()) 
         {
             $commit_stats = $this->database->popStatsContext();
