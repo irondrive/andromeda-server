@@ -1,13 +1,14 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/apps/accounts/auth/Local.php");
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class FTPExtensionException extends Exceptions\ServerException   { public $message = "FTP_EXTENSION_MISSING"; }
 class FTPConnectionFailure extends Exceptions\ServerException    { public $message = "FTP_CONNECTION_FAILURE"; }
 
-class FTP extends External implements ISource
+class FTP extends External
 {
     public static function GetFieldTemplate() : array
     {
@@ -34,9 +35,11 @@ class FTP extends External implements ISource
         if ($this->ftp === false) throw new FTPConnectionFailure();
     }
     
-    public function VerifyPassword(string $username, string $password) : bool
+    public function VerifyPassword(Account $account, string $password) : bool
     {
-        if (strlen($username) == 0 || strlen($password) == 0) return false;
+        if (strlen($password) == 0) return false;
+        
+        $username = $account->GetUsername();
         
         try { return ftp_login($this->ftp, $username, $password); }
         catch (Exceptions\PHPException $e) { return false; }       

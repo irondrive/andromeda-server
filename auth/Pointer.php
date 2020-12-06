@@ -5,29 +5,33 @@ require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
+require_once(ROOT."/apps/accounts/auth/LDAP.php");
+require_once(ROOT."/apps/accounts/auth/IMAP.php");
+require_once(ROOT."/apps/accounts/auth/FTP.php");
+
 class Pointer extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'description' => null,
-            'authsource' => new FieldTypes\ObjectPoly(ISource::class)
+            'authsource' => new FieldTypes\ObjectPoly(External::class)
         ));
     }
     
-    public static function LoadBySource(ObjectDatabase $database, ISource $source) : ?ISource
+    public static function LoadBySource(ObjectDatabase $database, External $source) : ?External
     {
         $objval = FieldTypes\ObjectPoly::GetObjectDBValue($source);
         $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals('authsource', $objval)));
     }
     
-    public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?ISource
+    public static function TryLoadSourceByPointer(ObjectDatabase $database, string $pointer) : ?External
     {
         $authsource = static::TryLoadByID($database, $pointer);
         if ($authsource === null) return null; else return $authsource->GetSource();
     }
     
-    public function GetSource() : ISource { return $this->GetObject('authsource'); }
+    public function GetSource() : External { return $this->GetObject('authsource'); }
     
     public function GetDescription()
     {

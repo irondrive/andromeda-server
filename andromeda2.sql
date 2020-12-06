@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Nov 07, 2020 at 03:43 PM
+-- Generation Time: Dec 06, 2020 at 02:03 PM
 -- Server version: 10.1.19-MariaDB
 -- PHP Version: 7.4.11
 
@@ -97,16 +97,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
   `account_group` varchar(16) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_accounts_auth_local`
---
-
-CREATE TABLE `a2_objects_apps_accounts_auth_local` (
-  `id` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -300,13 +290,6 @@ ALTER TABLE `a2_objects_apps_accounts_auth_imap`
 -- Indexes for table `a2_objects_apps_accounts_auth_ldap`
 --
 ALTER TABLE `a2_objects_apps_accounts_auth_ldap`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`);
-
---
--- Indexes for table `a2_objects_apps_accounts_auth_local`
---
-ALTER TABLE `a2_objects_apps_accounts_auth_local`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id` (`id`);
 

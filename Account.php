@@ -50,7 +50,7 @@ class Account extends AuthEntity
             'features__admin__inherits' => null,
             'features__enabled__inherits' => null,
             'features__forcetwofactor__inherits' => null,
-            'authsource'    => new FieldTypes\ObjectPoly(Auth\ISource::class),
+            'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
             'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
             'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
             'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
@@ -79,7 +79,7 @@ class Account extends AuthEntity
     { 
         $authsource = $this->TryGetObject('authsource');
         if ($authsource !== null) return $authsource;
-        else return Auth\Local::Load($this->database);
+        else return Auth\Local::GetInstance();
     }
     
     public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
@@ -166,7 +166,7 @@ class Account extends AuthEntity
         
         $account->SetScalar('username',$username)->ChangePassword($password);
         
-        if (!($source instanceof Auth\Local)) $account->SetObject('authsource',$source);
+        if ($source instanceof Auth\External) $account->SetObject('authsource',$source);
 
         $defaults = array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup()));
         foreach ($defaults as $group) $account->AddGroup($group);
@@ -341,7 +341,7 @@ class Account extends AuthEntity
     
     public function VerifyPassword(string $password) : bool
     {
-        return $this->GetAuthSource()->VerifyPassword($this->GetUsername(), $password);
+        return $this->GetAuthSource()->VerifyPassword($this, $password);
     }    
     
     public function CheckPasswordAge() : bool
@@ -369,6 +369,9 @@ class Account extends AuthEntity
 
         return $this->setPasswordDate();
     }
+    
+    public function GetPasswordHash() : string { return $this->GetScalar('password'); }
+    public function SetPasswordHash(string $hash) : self { return $this->SetScalar('password',$hash); }
     
     public function EncryptSecret(string $data, string $nonce) : string
     {

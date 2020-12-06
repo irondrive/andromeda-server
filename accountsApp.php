@@ -22,6 +22,7 @@ require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
 require_once(ROOT."/apps/accounts/auth/Local.php");
+require_once(ROOT."/apps/accounts/auth/Pointer.php");
 
 use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
@@ -104,7 +105,9 @@ class AccountsApp extends AppBase
         parent::__construct($api);   
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }        
+        catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
+        
+        new Auth\Local(); // construct the singleton
     }
 
     public function Run(Input $input)
@@ -312,7 +315,7 @@ class AccountsApp extends AppBase
         if (Account::TryLoadByUsername($database, $username) !== null) throw new AccountExistsException();
         if ($emailaddr !== null && ContactInfo::TryLoadByInfo($database, $emailaddr) !== null) throw new AccountExistsException();
 
-        $account = Account::Create($database, Auth\Local::Load($database), $username, $password);
+        $account = Account::Create($database, Auth\Local::GetInstance(), $username, $password);
         
         if ($emailaddr !== null) $contact = ContactInfo::Create($database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
 
@@ -374,7 +377,7 @@ class AccountsApp extends AppBase
             $authsource = Auth\Pointer::TryLoadSourceByPointer($database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
         }
-        else $authsource = Auth\Local::Load($database);     
+        else $authsource = Auth\Local::GetInstance();
         
         /* try loading by username, or even by an email address */
         $account = Account::TryLoadByUsername($database, $username);
@@ -382,7 +385,7 @@ class AccountsApp extends AppBase
         
         /* if we found an account, verify the password and correct authsource */
         if ($account !== null)
-        {
+        {            
             if ($account->GetAuthSource() === null && !($authsource instanceof Auth\Local)) throw new AuthenticationFailedException();
             else if ($account->GetAuthSource() !== null && $account->GetAuthSource() !== $authsource) throw new AuthenticationFailedException();
             
