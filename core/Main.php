@@ -3,12 +3,9 @@
 require_once(ROOT."/core/Config.php");
 require_once(ROOT."/core/Utilities.php");
 
-if (!file_exists(ROOT."/core/database/Config.php")) die("Missing core/database/Config.php\n");
-require_once(ROOT."/core/database/Config.php");
-
 require_once(ROOT."/core/database/DBStats.php");
-require_once(ROOT."/core/database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Transactions, ObjectDatabase, ObjectNotFoundException, DBStats};
+require_once(ROOT."/core/database/ObjectDatabase.php"); use \PDOException;
+use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
@@ -23,7 +20,6 @@ use Andromeda\Core\IOFormat\Interfaces\AJAX;
 class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
 class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
 
-class UnknownConfigException extends Exceptions\ServerException  { public $message = "MISSING_CONFIG_OBJECT"; }
 class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
 class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
@@ -53,22 +49,29 @@ class Main extends Singleton
     { 
         parent::__construct();
         
+        $this->interface = $interface;
         $this->sum_stats = new DBStats();
         
         $this->error_manager = $error_manager;
-        $error_manager->SetAPI($this); 
-        $this->interface = $interface;
-        $this->database = new ObjectDatabase();
+        $error_manager->SetAPI($this);
         
-        $this->database->pushStatsContext();
+        try 
+        {
+            $this->database = new ObjectDatabase();        
+            $this->database->pushStatsContext();
 
-        try { $this->config = Config::Load($this->database); } 
-        catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
+            $this->config = Config::Load($this->database);
 
-        if (!$this->config->isEnabled()) throw new MaintenanceException();
-        if ($this->config->isReadOnly() == Config::RUN_READONLY) $this->database->setReadOnly();    
+            if (!$this->isEnabled()) throw new MaintenanceException();
+            
+            if ($this->config->isReadOnly() == Config::RUN_READONLY) 
+                $this->database->setReadOnly();    
+
+            $apps = $this->config->GetApps();
+        }
+        catch (PDOException | DatabaseException $e) { $apps = array('server'); }
         
-        foreach($this->config->GetApps() as $app)
+        foreach ($apps as $app)
         {
             $path = ROOT."/apps/$app/$app"."App.php";
             $app_class = "Andromeda\\Apps\\$app\\$app".'App';
@@ -79,9 +82,12 @@ class Main extends Singleton
             $this->apps[$app] = new $app_class($this);
         }
 
-        $construct_stats = $this->database->popStatsContext();
-        $this->sum_stats->Add($construct_stats);
-        $this->construct_stats = $construct_stats->getStats();
+        if ($this->database)
+        {
+            $construct_stats = $this->database->popStatsContext();
+            $this->sum_stats->Add($construct_stats);
+            $this->construct_stats = $construct_stats->getStats();
+        }
     }
     
     public function Run(Input $input)
@@ -89,7 +95,7 @@ class Main extends Singleton
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        if ($this->GetDebugState())
+        if ($this->GetDebugState() && $this->database)
         { 
             $this->database->pushStatsContext();
             $oldstats = &$this->run_stats; 
@@ -99,10 +105,10 @@ class Main extends Singleton
 
         array_push($this->contexts, $input);
         $data = $this->apps[$app]->Run($input);
-        $this->database->saveObjects();
+        if ($this->database) $this->database->saveObjects();
         array_pop($this->contexts);        
              
-        if ($this->GetDebugState())
+        if ($this->GetDebugState() && $this->database)
         {
             $newstats = $this->database->popStatsContext();
             $this->sum_stats->add($newstats);
@@ -147,38 +153,62 @@ class Main extends Singleton
         foreach ($this->apps as $app) try { $app->rollback(); }
         catch (\Throwable $e) { $this->error_manager->Log($e); }
         
-        if (isset($this->database)) $this->database->rollback(!$serverError);   
+        if ($this->database) $this->database->rollback(!$serverError);   
         
         foreach ($this->writes as $path) try { unlink($path); } 
-            catch (\Throwable $e) { $this->error_manager->Log($e); }
+        catch (\Throwable $e) { $this->error_manager->Log($e); }
     }
     
     public function commit() : ?array
     {
-        set_time_limit(0); if ($this->GetDebugState()) $this->database->pushStatsContext();
+        set_time_limit(0); 
         
-        $dryrun = ($this->config->isReadOnly() == Config::RUN_DRYRUN);
-        
-        $this->database->saveObjects();
-        
-        foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
-        
-        if ($dryrun) $this->database->rollback(); else $this->database->commit();
-                
-        if ($this->GetDebugState()) 
-        {
-            $commit_stats = $this->database->popStatsContext();
-            $this->sum_stats->Add($commit_stats);
-            $this->commit_stats = $commit_stats->getStats();
-            return $this->GetMetrics(); 
+        if ($this->database)
+        {          
+            if ($this->GetDebugState()) 
+                $this->database->pushStatsContext();
+            
+            $dryrun = $this->config && ($this->config->isReadOnly() == Config::RUN_DRYRUN);
+            
+            $this->database->saveObjects();
+            
+            foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
+            
+            if ($dryrun) $this->database->rollback(); else $this->database->commit();
+                    
+            if ($this->GetDebugState()) 
+            {
+                $commit_stats = $this->database->popStatsContext();
+                $this->sum_stats->Add($commit_stats);
+                $this->commit_stats = $commit_stats->getStats();
+                return $this->GetMetrics(); 
+            }
         }
-        else return null;
+        else foreach ($this->apps as $app) $app->commit();
+        
+        return null;
+    }
+    
+    public function isLocalCLI() : bool
+    {
+        return $this->interface->getMode() === IOInterface::MODE_CLI;
+    }
+    
+    public function isEnabled() : bool
+    {
+        if ($this->config === null) return true;
+        
+        return $this->config->isEnabled() || $this->isLocalCLI();
     }
     
     public function GetDebugState() : bool
     {
-        return ($this->config->GetDebugOverHTTP() || $this->interface->getMode() == IOInterface::MODE_CLI) 
-                && $this->config->GetDebugLogLevel() >= Config::LOG_BASIC;
+        if ($this->config === null) return true;
+        
+        $iok = $this->config->GetDebugOverHTTP() || $this->isLocalCLI();
+        $enable = $this->config->GetDebugLogLevel() >= Config::LOG_BASIC || !isset($this->construct_stats);
+        
+        return $iok && $enable;
     }
     
     private static array $debuglog = array();    

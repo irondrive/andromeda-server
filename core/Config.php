@@ -3,7 +3,8 @@
 require_once(ROOT."/core/Emailer.php");
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 class EmailUnavailableException extends Exceptions\ClientErrorException { public $message = "EMAIL_UNAVAILABLE"; }
 
@@ -23,13 +24,32 @@ class Config extends SingletonObject
         ));
     }
     
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
+    
+    public function GetApps() : array { return $this->GetScalar('apps'); }
+    private function TryGetApps() : ?array { return $this->TryGetScalar('apps'); }
+    
+    public function enableApp(string $app) : self
+    {
+        $apps = $this->TryGetScalar('apps') ?? array();
+        if (!in_array($app, $apps)) array_push($apps, $app);
+        return $this->SetScalar('apps', $apps);
+    }
+    
+    public function disableApp(string $app) : self
+    {
+        $apps = $this->GetScalar('apps');
+        if (($key = array_search($app, $apps)) !== false) unset($apps[$key]);
+        return $this->SetScalar('apps', $apps);
+    }
+    
     public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
+    public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
     
     const RUN_NORMAL = 0; const RUN_READONLY = 1; const RUN_DRYRUN = 2;
     public function isReadOnly() : int { return $this->TryGetFeature('read_only') ?? self::RUN_NORMAL; }
     public function SetReadOnly(int $data, bool $temp = true) : self { return $this->SetFeature('read_only', $data, $temp); }
     
-    public function GetApps() : array { return $this->GetScalar('apps'); }
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
     const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_EXTENDED = 2; const LOG_SENSITIVE = 3;    

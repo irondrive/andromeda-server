@@ -108,7 +108,7 @@ class JSON extends Scalar
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value) 
     {
         parent::Initialize($database, $parent, $myfield, $value);
-        $value = Utilities::JSONDecode($value);
+        if ($value) $value = Utilities::JSONDecode($value);
         $this->realvalue = $value; $this->tempvalue = $value;
     }
     
