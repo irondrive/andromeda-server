@@ -337,7 +337,7 @@ abstract class BaseObject
     }
     
     protected function SubConstruct() : void { }
-    
+
     public function Save(bool $isRollback = false) : self
     {
         if ($isRollback && ($this->created || $this->deleted)) return $this;

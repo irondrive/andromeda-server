@@ -41,11 +41,15 @@ class ObjectDatabase extends Database
         else parent::rollBack();
     }
     
-    public function rollback() : void
+    public function rollback(bool $canSave = false) : void
     {
         parent::rollBack();
-        $this->SaveObjects(true);
-        parent::commit();
+        
+        if ($canSave)
+        {
+            $this->SaveObjects(true);
+            parent::commit();
+        }
     }
 
     public static function GetClassTableName(string $class) : string

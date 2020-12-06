@@ -8,7 +8,7 @@ use Andromeda\Core\JSONDecodingException;
 abstract class SafeParamException extends Exceptions\ClientErrorException { }
 
 class SafeParamInvalidException extends SafeParamException {
-    public function __construct(string $key, int $type) { 
+    public function __construct(string $key, ?int $type) { 
         $type = SafeParam::GetTypeString($type); 
         $this->message = "SAFEPARAM_INVALID_DATA: $type $key"; } }
 
@@ -40,19 +40,19 @@ class SafeParams
     
     public function GetParamsArray() : array { return $this->params; }
     
-    public function GetParam(string $key, int $type)
+    public function GetParam(string $key, int $type, ?callable $usrfunc = null)
     {
         if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
         
-        $data = $this->params[$key]->GetValue($type);
+        $data = $this->params[$key]->GetValue($type, $usrfunc);
         if ($data !== null) return $data;
         else throw new SafeParamNullValueException($key);
     }
 
-    public function TryGetParam(string $key, int $type)
+    public function TryGetParam(string $key, int $type, ?callable $usrfunc = null)
     {
         if (!$this->HasParam($key)) return null;
-        return $this->params[$key]->GetValue($type);
+        return $this->params[$key]->GetValue($type, $usrfunc);
     }
     
     public function GetClientObject() : array
@@ -79,10 +79,10 @@ class SafeParam
     const TYPE_RAW      = 10;
     const TYPE_OBJECT   = 11;
 
-    const TYPE_SINGLE = 0;
     const TYPE_ARRAY = 16;
 
     const TYPE_STRINGS = array(
+        null => 'custom',
         self::TYPE_ID => 'id',
         self::TYPE_BOOL => 'bool',
         self::TYPE_INT => 'int',
@@ -97,12 +97,12 @@ class SafeParam
         self::TYPE_ARRAY => 'array'
     );
 
-    public static function GetTypeString(int $type) : string
+    public static function GetTypeString(?int $type) : string
     {
         $array = self::TYPE_STRINGS[self::TYPE_ARRAY];
         $suffix = ($type & self::TYPE_ARRAY) ? " $array" : "";
         
-        $type &= ~self::TYPE_ARRAY;
+        if ($type !== null) $type &= ~self::TYPE_ARRAY;
         
         if (!array_key_exists($type, self::TYPE_STRINGS))
             throw new SafeParamUnknownTypeException($type);
@@ -123,7 +123,7 @@ class SafeParam
     
     public function GetKey() : string { return $this->key; }
     
-    public function GetValue(int $type)
+    public function GetValue(int $type, ?callable $usrfunc = null)
     {
         $key = $this->key; $value = $this->value;
         
@@ -201,8 +201,10 @@ class SafeParam
         }
         else throw new SafeParamUnknownTypeException($type);
         
+        if ($usrfunc !== null && !$usrfunc($value)) throw new SafeParamInvalidException($key, null);
+        
         return $value;
-    }   
+    }
 }
 
 
