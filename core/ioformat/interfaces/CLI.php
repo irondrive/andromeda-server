@@ -122,9 +122,11 @@ class CLI extends IOInterface
                     rename($val, $tmpfile); 
                 else copy($val, $tmpfile);
                 
-                $filename = basename($val);
+                $filename = $val;
                 if (isset($argv[$i+2]) && substr($argv[$i+2],0,2) !== "--")
-                    { $filename = basename($argv[$i+2]); $i++; }
+                    { $filename = $argv[$i+2]; $i++; }
+                
+                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME);
 
                 array_push($this->tmpfiles, $tmpfile);
                 $files[$filename] = $tmpfile; $i++;
