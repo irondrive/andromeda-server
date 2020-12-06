@@ -30,7 +30,7 @@ require_once(ROOT."/apps/accounts/Authenticator.php"); use Andromeda\Apps\Accoun
 use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 
-use Andromeda\Core\Database\ObjectNotFoundException;
+use Andromeda\Core\Database\DatabaseException; use \PDOException;
 use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException};
 
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
@@ -60,9 +60,10 @@ class FilesApp extends AppBase
     public static function getUsage() : array 
     { 
         return array(
-            '- FOR shared files/folders: [--sid id --skey alphanum] [--spassword raw]',
+            'install',
             'getconfig',
             'setconfig',
+            '- FOR shared files/folders: [--sid id --skey alphanum] [--spassword raw]',
             'upload --file file [name] --parent id [--overwrite bool]',
             'download --fileid id [--fstart int] [--flast int]',
             'ftruncate --fileid id --size int',
@@ -112,8 +113,8 @@ class FilesApp extends AppBase
         parent::__construct($api);
         $this->database = $api->GetDatabase();
         
-        try { $this->config = Config::Load($this->database); }
-        catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
+        try { $this->config = Config::Load($api->GetDatabase()); }
+        catch (PDOException | DatabaseException $e) { }
         
         Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
         { 
@@ -123,13 +124,18 @@ class FilesApp extends AppBase
     }
         
     public function Run(Input $input)
-    {        
+    {
+        if (!isset($this->config) && $input->GetAction() !== 'install')
+            throw new UnknownConfigException(static::class);
+        
         $this->authenticator = Authenticator::TryAuthenticate($this->database, $input, $this->API->GetInterface());
+        // TODO accounts may not be configured yet...
         
         $this->providesCrypto(function(){ $this->authenticator->RequireCrypto(); });
 
         switch($input->GetAction())
         {
+            case 'install':  return $this->Install($input); break;
             case 'getconfig': return $this->GetConfig($input); break;
             case 'setconfig': return $this->SetConfig($input); break;
             
@@ -199,6 +205,16 @@ class FilesApp extends AppBase
     private function TryAuthenticateItemAccess(Input $input, string $class, string $id) : ?ItemAccess {
         return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $class, $id); }
 
+    protected function Install(Input $input)
+    {
+        if (isset($this->config)) throw new UnknownActionException();
+        
+        $database = $this->API->GetDatabase();
+        $database->importFile(ROOT."/apps/files/andromeda2.sql");
+        
+        Config::Create($database)->Save();
+    }        
+        
     protected function GetConfig(Input $input) : array
     {
         $account = $this->authenticator->GetAccount();
