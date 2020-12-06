@@ -2,13 +2,12 @@
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/Item.php");
 require_once(ROOT."/apps/files/Folder.php");
-
-use Andromeda\Core\Exceptions\ServerException;
 
 class File extends Item
 {
@@ -22,6 +21,7 @@ class File extends Item
     
     public function GetName() : string   { return $this->GetScalar('name'); }
     public function GetParent() : Folder { return $this->GetObject('parent'); }
+    public function GetParentID() : string { return $this->GetObjectID('parent'); }
     
     public function GetSize() : int { return $this->TryGetScalar('size') ?? 0; }
     
@@ -55,10 +55,26 @@ class File extends Item
     }
     
     public function SetParent(Folder $folder, bool $overwrite = false) : self
-    {
+    {        
         parent::CheckParent($folder, $overwrite);
         $this->GetFSImpl()->MoveFile($this, $folder);
         return $this->SetObject('parent', $folder);
+    }
+    
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
+    {
+        parent::CheckName($name, $overwrite);
+        $newfile = static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        
+        $this->GetFSImpl()->CopyFile($this, $newfile); return $newfile;
+    }
+    
+    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self
+    {        
+        parent::CheckParent($folder, $overwrite);
+        $newfile = static::NotifyCreate($this->database, $folder, $owner, $this->GetName());
+        
+        $this->GetFSImpl()->CopyFile($this, $newfile); return $newfile;
     }
 
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self

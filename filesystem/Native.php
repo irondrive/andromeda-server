@@ -34,6 +34,19 @@ abstract class BaseFileFS extends FSImpl
     {
         $this->GetStorage()->Truncate($this->GetFilePath($file), $length); return $this;
     }
+    
+    public function CopyFile(File $file, File $dest) : self 
+    {
+        $this->GetStorage()->CopyFile($this->GetFilePath($file), $this->GetFilePath($dest)); return $this; 
+    }
+    
+    protected function ManualCopyFolder(Folder $folder, Folder $dest) : self
+    {
+        $this->CreateFolder($dest);        
+        foreach ($folder->GetFiles() as $item) $item->CopyToParent($dest);
+        foreach ($folder->GetFolders() as $item) $item->CopyToParent($dest);        
+        return $this;
+    }
 }
 
 class Native extends BaseFileFS
@@ -43,9 +56,14 @@ class Native extends BaseFileFS
     public function CreateFolder(Folder $folder) : self { return $this; }
     public function DeleteFolder(Folder $folder) : self { return $this; }    
     public function RenameFile(File $file, string $name) : self { return $this; }
-    public function RenameFolder(Folder $folder, string $name) : self { return $this; }
+    public function RenameFolder(Folder $folder, string $name) : self { return $this; }    
     public function MoveFile(File $file, Folder $parent) : self { return $this; }
     public function MoveFolder(Folder $folder, Folder $parent) : self { return $this; }
- 
+    
+    public function CopyFolder(Folder $folder, Folder $dest) : self
+    {
+        return $this->ManualCopyFolder($folder, $dest);
+    }
+
     protected function GetFilePath(File $file) : string { return $file->ID(); }
 }

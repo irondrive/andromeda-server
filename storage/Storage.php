@@ -15,7 +15,8 @@ use Andromeda\Core\Exceptions\ClientDeniedException;
 class ReadOnlyException extends ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
 
 class StorageException extends Exceptions\ServerException { }
-class ActivateException extends Exceptions\ServerException { } // TODO why does this not extend StorageException?
+class ActivateException extends StorageException { }
+class TestFailedException extends ActivateException { public $message = "STORAGE_TEST_FAILED"; }
 
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
 class FolderDeleteFailedException extends StorageException  { public $message = "FOLDER_DELETE_FAILED"; }
@@ -27,6 +28,7 @@ class FileMoveFailedException extends StorageException      { public $message = 
 class FileRenameFailedException extends StorageException    { public $message = "FILE_RENAME_FAILED"; }
 class FileReadFailedException extends StorageException      { public $message = "FILE_READ_FAILED"; }
 class FileWriteFailedException extends StorageException     { public $message = "FILE_WRITE_FAILED"; }
+class FileCopyFailedException extends StorageException      { public $message = "FILE_COPY_FAILED"; }
 class ItemStatFailedException extends StorageException      { public $message = "ITEM_STAT_FAILED"; }
 class FreeSpaceFailedException extends StorageException     { public $message = "FREE_SPACE_FAILED"; }
 
@@ -51,7 +53,7 @@ abstract class Storage extends StandardObject implements Transactions
     {
         return array(
             'id' => $this->ID(),
-            'owner' => $this->GetObjectID('owner'),
+            'owner' => $this->TryGetObjectID('owner'),
             'filesystem' => $this->GetObjectID('filesystem')
         );
     }
@@ -93,7 +95,9 @@ abstract class Storage extends StandardObject implements Transactions
     public abstract function RenameFile(string $old, string $new) : self;    
     public abstract function RenameFolder(string $old, string $new) : self;    
     public abstract function MoveFile(string $old, string $new) : self;    
-    public abstract function MoveFolder(string $old, string $new) : self;
+    public abstract function MoveFolder(string $old, string $new) : self;    
+    public abstract function CopyFile(string $old, string $new) : self; 
+    public function canCopyFolders() : bool { return false; }
 
     public function commit() { }
     public function rollback() { }

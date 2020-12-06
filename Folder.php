@@ -12,7 +12,7 @@ require_once(ROOT."/apps/files/Item.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
-class MoveLoopException extends Exceptions\ClientErrorException { public $message = "CANNOT_MOVE_FOLDER_INTO_ITSELF"; }
+class InvalidDestinationException extends Exceptions\ClientErrorException { public $message = "INVALID_FOLDER_DESTINATION"; }
 
 class Folder extends Item
 {
@@ -32,6 +32,7 @@ class Folder extends Item
     public function GetName() : ?string   { return $this->TryGetScalar('name'); }
     public function GetSize() : int       { return $this->TryGetCounter('size') ?? 0; }
     public function GetParent() : ?Folder { return $this->TryGetObject('parent'); }
+    public function GetParentID() : ?string { return $this->TryGetObjectID('parent'); }
     
     public function GetFiles(?int $limit = null, ?int $offset = null) : array    { $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
     public function GetFolders(?int $limit = null, ?int $offset = null) : array  { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
@@ -51,22 +52,47 @@ class Folder extends Item
         $this->GetFSImpl()->RenameFolder($this, $name);
         return $this->SetScalar('name', $name);
     }
-    
+
     public function SetParent(Folder $folder, bool $overwrite = false) : self
     {
-        if ($folder->ID() === $this->ID())
-            throw new MoveLoopException();
-        
-        $tmpparent = $folder;
-        while (($tmpparent = $tmpparent->GetParent()) !== null)
-        {
-            if ($tmpparent->ID() === $this->ID())
-                throw new MoveLoopException();
-        }
-        
+        $this->CheckIsNotChildOrSelf($folder);        
         parent::CheckParent($folder, $overwrite);
+        
         $this->GetFSImpl()->MoveFolder($this, $folder);
         return $this->SetObject('parent', $folder);
+    }
+    
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self 
+    {
+        parent::CheckName($name, $overwrite);
+        
+        if (!$this->GetParentID()) throw new InvalidDestinationException();
+        
+        $newfolder = static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        
+        $this->GetFSImpl()->CopyFolder($this, $newfolder); return $newfolder;
+    }
+    
+    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self
+    {
+        parent::CheckParent($folder, $overwrite);
+        $this->CheckIsNotChildOrSelf($folder);
+        
+        $newfolder = static::NotifyCreate($this->database, $folder, $owner, $this->GetName());
+        
+        $this->GetFSImpl()->CopyFolder($this, $newfolder); return $newfolder;
+    }    
+    
+    private function CheckIsNotChildOrSelf(Folder $folder) : void
+    {
+        if ($folder->ID() === $this->ID())
+            throw new InvalidDestinationException();
+        
+        while (($folder = $folder->GetParent()) !== null)
+        {
+            if ($folder->ID() === $this->ID())
+                throw new InvalidDestinationException();
+        }
     }
     
     private function AddItemCounts(BaseObject $object) : void

@@ -75,7 +75,7 @@ class SFTP extends CredCrypt
         
         $pubkey = openssl_pkey_get_details($keyrsrc)['key'];
         
-        $fpath = implode('/',array('sftp_keys', $this->GetObjectID('account'), $this->GetObjectID('filesystem')));
+        $fpath = implode('/',array('sftp_keys', $this->GetObjectID('filesystem')));
         $privfile = "$fpath/privkey"; $pubfile = "$fpath/pubkey";
         
         $datadir = Main::GetInstance()->GetConfig()->GetDataDir();
