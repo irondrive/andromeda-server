@@ -41,11 +41,17 @@ class Authenticator
     private Account $realaccount;     public function GetRealAccount() : Account { return $this->realaccount; }
     
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
-    {
-        $auth = $input->GetAuth();
-
-        $sessionid = ($auth !== null) ? $auth->GetUsername() : $input->GetParam('auth_sessionid',SafeParam::TYPE_ID);
-        $sessionkey = ($auth !== null) ? $auth->GetPassword() : $input->GetParam('auth_sessionkey',SafeParam::TYPE_ALPHANUM);
+    {        
+        $sessionid = $input->TryGetParam('auth_sessionid',SafeParam::TYPE_ID);
+        $sessionkey = $input->TryGetParam('auth_sessionkey',SafeParam::TYPE_ALPHANUM);
+        
+        if (($auth = $input->GetAuth()) !== null)
+        {
+            $sessionid ??= $auth->GetUsername();
+            $sessionkey ??= $auth->GetPassword();
+        }
+        
+        if (!$sessionid || !$sessionkey) throw new InvalidSessionException();
 
         $session = Session::TryLoadByID($database, $sessionid);
         
