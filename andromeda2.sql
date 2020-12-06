@@ -1,67 +1,42 @@
--- phpMyAdmin SQL Dump
--- version 5.0.2
--- https://www.phpmyadmin.net/
---
--- Host: localhost
--- Generation Time: Dec 06, 2020 at 01:24 AM
--- Server version: 10.1.19-MariaDB
--- PHP Version: 7.4.11
-
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
---
--- Database: `andromeda2`
---
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_comment`
---
-
-CREATE TABLE `a2_objects_apps_files_comment` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
   `id` varchar(16) NOT NULL,
   `owner` varchar(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `comment` text NOT NULL,
   `private` tinyint(1) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `dates__modified` bigint(20) NOT NULL
+  `dates__modified` bigint(20) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `owner_2` (`owner`,`item`),
+  KEY `owner` (`owner`),
+  KEY `item` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_config`
---
-
-CREATE TABLE `a2_objects_apps_files_config` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
   `id` varchar(16) NOT NULL,
+  `dates__created` bigint(20) NOT NULL,
   `rwchunksize` int(11) DEFAULT NULL,
   `crchunksize` int(11) DEFAULT NULL,
   `features__userstorage` tinyint(1) DEFAULT NULL,
-  `features__randomwrite` tinyint(1) NOT NULL,
+  `features__randomwrite` tinyint(1) DEFAULT NULL,
   `features__publicmodify` tinyint(1) DEFAULT NULL,
   `features__publicupload` tinyint(1) DEFAULT NULL,
   `features__shareeveryone` tinyint(1) DEFAULT NULL,
-  `features__emailshare` tinyint(1) DEFAULT NULL
+  `features__emailshare` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_file`
---
-
-CREATE TABLE `a2_objects_apps_files_file` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
   `id` varchar(16) NOT NULL,
   `name` varchar(255) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -78,16 +53,15 @@ CREATE TABLE `a2_objects_apps_files_file` (
   `counters__dislikes` int(11) NOT NULL DEFAULT '0',
   `tags` int(11) NOT NULL DEFAULT '0',
   `comments` int(11) NOT NULL DEFAULT '0',
-  `shares` int(11) NOT NULL DEFAULT '0'
+  `shares` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `id` (`id`),
+  KEY `owner` (`owner`),
+  KEY `parent` (`parent`),
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_filesystem_fsmanager`
---
-
-CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `type` tinyint(1) NOT NULL,
@@ -96,16 +70,14 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `owner` varchar(16) DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `crypto_masterkey` tinyblob,
-  `crypto_chunksize` int(11) DEFAULT NULL
+  `crypto_chunksize` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `owner_2` (`owner`,`name`),
+  KEY `owner` (`owner`),
+  KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_folder`
---
-
-CREATE TABLE `a2_objects_apps_files_folder` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
   `id` varchar(16) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -127,30 +99,25 @@ CREATE TABLE `a2_objects_apps_files_folder` (
   `counters__dislikes` int(11) NOT NULL DEFAULT '0',
   `tags` int(11) NOT NULL DEFAULT '0',
   `comments` int(11) NOT NULL DEFAULT '0',
-  `shares` int(11) NOT NULL DEFAULT '0'
+  `shares` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `parent` (`parent`),
+  KEY `owner` (`owner`),
+  KEY `id` (`id`),
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_like`
---
-
-CREATE TABLE `a2_objects_apps_files_like` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
   `id` varchar(16) NOT NULL,
   `owner` varchar(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `value` tinyint(1) NOT NULL
+  `value` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `owner` (`owner`,`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_share`
---
-
-CREATE TABLE `a2_objects_apps_files_share` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
   `id` varchar(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `owner` varchar(16) NOT NULL,
@@ -166,16 +133,13 @@ CREATE TABLE `a2_objects_apps_files_share` (
   `features__upload` tinyint(4) NOT NULL DEFAULT '0',
   `features__modify` tinyint(4) NOT NULL DEFAULT '0',
   `features__social` tinyint(4) NOT NULL DEFAULT '1',
-  `features__reshare` tinyint(4) NOT NULL DEFAULT '0'
+  `features__reshare` tinyint(4) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `item` (`item`,`dest`),
+  KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_storage_ftp`
---
-
-CREATE TABLE `a2_objects_apps_files_storage_ftp` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` varchar(16) NOT NULL,
@@ -187,30 +151,23 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `username` varchar(255) DEFAULT NULL,
   `password` text,
   `username_nonce` tinyblob,
-  `password_nonce` tinyblob
+  `password_nonce` tinyblob,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_storage_local`
---
-
-CREATE TABLE `a2_objects_apps_files_storage_local` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_local` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` varchar(16) NOT NULL,
   `owner` varchar(16) DEFAULT NULL,
-  `path` varchar(255) NOT NULL
+  `path` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_storage_sftp`
---
-
-CREATE TABLE `a2_objects_apps_files_storage_sftp` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` varchar(16) NOT NULL,
@@ -226,16 +183,12 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `hostauth` tinyint(1) DEFAULT NULL,
   `username_nonce` tinyblob,
   `password_nonce` tinyblob,
-  `keypass_nonce` tinyblob
+  `keypass_nonce` tinyblob,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_storage_smb`
---
-
-CREATE TABLE `a2_objects_apps_files_storage_smb` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
   `id` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` varchar(16) NOT NULL,
@@ -246,123 +199,22 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `workgroup` varchar(255) DEFAULT NULL,
   `password` text,
   `username_nonce` tinyblob,
-  `password_nonce` tinyblob
+  `password_nonce` tinyblob,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `a2_objects_apps_files_tag`
---
-
-CREATE TABLE `a2_objects_apps_files_tag` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_tag` (
   `id` varchar(16) NOT NULL,
   `owner` varchar(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `tag` varchar(255) NOT NULL,
-  `dates__created` bigint(20) NOT NULL
+  `dates__created` bigint(20) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `item` (`item`,`tag`),
+  KEY `owner` (`owner`),
+  KEY `item_2` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `a2_objects_apps_files_comment`
---
-ALTER TABLE `a2_objects_apps_files_comment`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `owner_2` (`owner`,`item`),
-  ADD KEY `owner` (`owner`),
-  ADD KEY `item` (`item`);
-
---
--- Indexes for table `a2_objects_apps_files_config`
---
-ALTER TABLE `a2_objects_apps_files_config`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `a2_objects_apps_files_file`
---
-ALTER TABLE `a2_objects_apps_files_file`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id` (`id`),
-  ADD KEY `owner` (`owner`),
-  ADD KEY `parent` (`parent`),
-  ADD KEY `filesystem` (`filesystem`);
-
---
--- Indexes for table `a2_objects_apps_files_filesystem_fsmanager`
---
-ALTER TABLE `a2_objects_apps_files_filesystem_fsmanager`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `owner_2` (`owner`,`name`),
-  ADD KEY `owner` (`owner`),
-  ADD KEY `name` (`name`);
-
---
--- Indexes for table `a2_objects_apps_files_folder`
---
-ALTER TABLE `a2_objects_apps_files_folder`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `parent` (`parent`),
-  ADD KEY `owner` (`owner`),
-  ADD KEY `id` (`id`),
-  ADD KEY `filesystem` (`filesystem`);
-
---
--- Indexes for table `a2_objects_apps_files_like`
---
-ALTER TABLE `a2_objects_apps_files_like`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `owner` (`owner`,`item`);
-
---
--- Indexes for table `a2_objects_apps_files_share`
---
-ALTER TABLE `a2_objects_apps_files_share`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `item` (`item`,`dest`),
-  ADD KEY `owner` (`owner`);
-
---
--- Indexes for table `a2_objects_apps_files_storage_ftp`
---
-ALTER TABLE `a2_objects_apps_files_storage_ftp`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`),
-  ADD KEY `owner` (`owner`);
-
---
--- Indexes for table `a2_objects_apps_files_storage_local`
---
-ALTER TABLE `a2_objects_apps_files_storage_local`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `owner` (`owner`);
-
---
--- Indexes for table `a2_objects_apps_files_storage_sftp`
---
-ALTER TABLE `a2_objects_apps_files_storage_sftp`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`);
-
---
--- Indexes for table `a2_objects_apps_files_storage_smb`
---
-ALTER TABLE `a2_objects_apps_files_storage_smb`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`);
-
---
--- Indexes for table `a2_objects_apps_files_tag`
---
-ALTER TABLE `a2_objects_apps_files_tag`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `item` (`item`,`tag`),
-  ADD KEY `owner` (`owner`),
-  ADD KEY `item_2` (`item`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

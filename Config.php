@@ -1,8 +1,8 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 class Config extends SingletonObject
 {
@@ -19,6 +19,8 @@ class Config extends SingletonObject
             'features__emailshare' => null
         ));
     }
+    
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
 
     public function GetRWChunkSize() : int { return $this->TryGetScalar('rwchunksize') ?? 1024*1024; }
     public function SetRWChunkSize(int $size) : self { return $this->SetScalar('rwchunksize', $size); }
