@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Oct 11, 2020 at 10:41 PM
+-- Generation Time: Dec 06, 2020 at 01:22 AM
 -- Server version: 10.1.19-MariaDB
--- PHP Version: 7.2.2
+-- PHP Version: 7.4.11
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -60,7 +60,8 @@ CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `trace_full` text,
   `objects` text,
   `queries` text,
-  `params` text NOT NULL
+  `params` text,
+  `log` text
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
