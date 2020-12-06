@@ -39,7 +39,7 @@ class InvalidStorageException extends Exceptions\ClientErrorException
     public function __construct(\Throwable $e) 
     { 
         $this->message = $e->getMessage();
-        if (is_a($e, ServerException::class))
+        if ($e instanceof ServerException)
             $this->message .= " ".$e->getDetails(); 
     }
 }

@@ -515,14 +515,14 @@ class FilesApp extends AppBase
         
         if ($item === null) throw new UnknownItemException();
 
-        if (is_a($item, File::class)) $retval = $item->GetClientObject();
-        else if (is_a($item, Folder::class))
+        if ($item instanceof File) $retval = $item->GetClientObject();
+        else if ($item instanceof Folder)
         {
             if (isset($share) && $share !== null) $item->CountVisit();
             $retval = $item->GetClientObject(true,true);
         }
         
-        $retval['isfile'] = is_a($item, File::class); return $retval;
+        $retval['isfile'] = ($item instanceof File); return $retval;
     }
     
     protected function CreateFolder(Input $input) : array
@@ -922,7 +922,7 @@ class FilesApp extends AppBase
             
             $body = implode("<br />",array_map(function($share){
                 return "<a href=''>".$share->GetItem()->GetName()."</a>"; // TODO HTML
-            }, $shares)); // TODO how to get URL? from client?
+            }, $shares)); // TODO how to get real URL? from config? from client?
             
             $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, 
                 array(new EmailRecipient($email)), $account->GetMailFrom());
