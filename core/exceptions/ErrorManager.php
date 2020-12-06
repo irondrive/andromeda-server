@@ -81,7 +81,7 @@ class ErrorManager extends Singleton
         
         try 
         {
-            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->commit(); 
+            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->saveObjects()->commit(); 
         }
         catch (\Throwable $e2) 
         { 
@@ -92,7 +92,7 @@ class ErrorManager extends Singleton
             }
         }
         
-        if (is_a($e = $e->getPrevious(), \Throwable::class)) $this->Log($e);
+        if (($e = $e->getPrevious()) instanceof \Throwable) $this->Log($e);
     }   
     
     private bool $logfileok = true;

@@ -34,13 +34,6 @@ class ObjectDatabase extends Database
         foreach ($this->modified as $object) $object->Save($isRollback);
     }
     
-    public function commit(bool $dryrun = false) : void
-    {
-        $this->SaveObjects();        
-        if (!$dryrun) parent::commit(); 
-        else parent::rollBack();
-    }
-    
     public function rollback(bool $canSave = false) : void
     {
         parent::rollBack();
@@ -133,13 +126,18 @@ class ObjectDatabase extends Database
         return $this;
     }
     
+    protected function DeleteObjectByID(string $class, BaseObject $object) : self
+    {
+        $q = new QueryBuilder(); return $this->DeleteObjectsByQuery($class, $q->Where($q->Equals('id',$object->ID())), true);
+    }
+    
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
     {
         unset($this->modified[$object->ID()]);
 
         if ($object->isCreated() && $object->isDeleted()) return $this;        
         if ($object->isCreated()) return $this->SaveNewObject($class, $object, $values, $counters);
-        if ($object->isDeleted()) { $q = new QueryBuilder(); return $this->DeleteObjectsByQuery($class, $q->Where($q->Equals('id',$object->ID())), true); }
+        if ($object->isDeleted()) return $this->DeleteObjectByID($class, $object);
         
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
