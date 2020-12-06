@@ -1,26 +1,21 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Singleton, Utilities};
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, SingletonObject};
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
-require_once(ROOT."/apps/accounts/auth/LDAP.php");
-require_once(ROOT."/apps/accounts/auth/IMAP.php");
-require_once(ROOT."/apps/accounts/auth/FTP.php");
-require_once(ROOT."/apps/accounts/auth/Pointer.php");
-
 interface ISource
 {
-    public function ID() : string;
     public function GetAccountGroup() : ?Group;
     
-    public function VerifyPassword(string $username, string $password) : bool;    
+    public function VerifyPassword(Account $account, string $password) : bool;    
 }
 
-abstract class External extends BaseObject
+abstract class External extends BaseObject implements ISource
 {
     public static function GetFieldTemplate() : array
     {
@@ -30,19 +25,16 @@ abstract class External extends BaseObject
     }
 }
 
-class Local extends SingletonObject implements ISource
+class Local extends Singleton implements ISource
 {
-    public function VerifyPassword(string $username, string $password) : bool
+    public function VerifyPassword(Account $account, string $password) : bool
     {
-        $account = Account::TryLoadByUsername($this->database, $username);
-        if ($account === null) return false;
-        
-        $hash = $account->GetScalar('password');
+        $hash = $account->GetPasswordHash();
         
         $correct = password_verify($password, $hash);
         
         if ($correct && password_needs_rehash($hash, Utilities::GetHashAlgo()))
-            $account->SetScalar('password', static::HashPassword($password));
+            $account->SetPasswordHash(static::HashPassword($password));
             
         return $correct;
     }
