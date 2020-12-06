@@ -42,19 +42,23 @@ abstract class Item extends StandardObject
     public function isDeleted() : bool { $this->Refresh(); return parent::isDeleted(); }
     
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
-    public function GetOwnerID() : ?string { return $this->GetObjectID('owner'); }
+    public function GetOwnerID() : ?string { return $this->TryGetObjectID('owner'); }
     
     public abstract function GetName() : ?string;
     public abstract function GetSize() : int;
+    
     public abstract function GetParent() : ?Folder;
+    public abstract function GetParentID() : ?string;
 
     public abstract function SetName(string $name, bool $overwrite = false) : self;
     public abstract function SetParent(Folder $folder, bool $overwrite = false) : self;
-
+    public abstract function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self;
+    public abstract function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self;
+    
     protected function CheckName(string $name, bool $overwrite = false) : self
     {
         $olditem = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
-        if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
+        if ($olditem !== null) { if ($overwrite && $olditem !== $this) $olditem->Delete(); else throw new DuplicateItemException(); }
         return $this;
     }
     
@@ -64,7 +68,7 @@ abstract class Item extends StandardObject
             throw new CrossFilesystemException();
         
         $olditem = static::TryLoadByParentAndName($this->database, $folder, $this->GetName());
-        if ($olditem !== null) { if ($overwrite) $olditem->Delete(); else throw new DuplicateItemException(); }
+        if ($olditem !== null) { if ($overwrite && $olditem !== $this) $olditem->Delete(); else throw new DuplicateItemException(); }
         return $this;
     }
     
@@ -140,8 +144,8 @@ abstract class Item extends StandardObject
         $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
-            'owner' => $this->GetObjectID('owner'),
-            'parent' => $this->GetObjectID('parent'),
+            'owner' => $this->GetOwnerID(),
+            'parent' => $this->GetParentID()
         );
                 
         $mapobj = function($e) { return $e->GetClientObject(); };

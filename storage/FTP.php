@@ -92,15 +92,20 @@ class FTP extends CredCrypt
     protected function GetFullURL(string $path = "") : string
     {
         $port = $this->TryGetScalar('port') ?? "";
-        $username = $this->TryGetUsername() ?? "";
-        $password = $this->TryGetPassword() ?? "";
+        $username = rawurlencode($this->TryGetUsername() ?? "");
+        $password = rawurlencode($this->TryGetPassword() ?? "");
         
         $proto = $this->GetScalar('secure') ? "ftps" : "ftp";
         $usrstr = $username ? "$username:$password@" : "";
         $hostname = $this->GetScalar('hostname');
         $portstr = $port ? ":$port" : "";
-        return "$proto://$usrstr$hostname$portstr/".$this->GetPath($path); // TODO rawurlencode() plus other places?
+        $connectstr = "$proto://$usrstr$hostname$portstr/";
+        
+        return $connectstr.$this->GetPath($path);
     }
+    
+    // even though FTP can uses PHP's fwrapper, we'll override most of the
+    // required methods anyway because it's faster to reuse one connection
 
     public function ItemStat(string $path) : ItemStat
     {

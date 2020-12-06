@@ -10,8 +10,6 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 
 require_once(ROOT."/apps/files/storage/Storage.php");
 
-class InvalidStoragePathException extends ActivateException { public $message = "INVALID_STORAGE_PATH"; }
-
 abstract class FWrapper extends Storage
 {
     public static function GetFieldTemplate() : array
@@ -47,7 +45,7 @@ abstract class FWrapper extends Storage
         $ro = $this->GetFilesystem()->isReadOnly();
         
         if (!is_readable($path) || (!$ro && !is_writeable($path)))
-            throw new InvalidStoragePathException();
+            throw new TestFailedException();
         return $this;
     }
     
@@ -114,18 +112,9 @@ abstract class FWrapper extends Storage
     
     public function ImportFile(string $src, string $dest) : self
     {
-        $chunksize = 128*1024; // TODO config!
-        
-        $this->CreateFile($dest);
-        $handle = fopen($src,'rb');
-
-        for ($byte = 0; $byte < filesize($src); $byte+=$chunksize)
-        {
-            fseek($handle, $byte);
-            $data = fread($handle, $chunksize);
-            $this->WriteBytes($dest, $byte, $data);
-        }        
-        fclose($handle);
+        $this->CheckReadOnly();
+        if (!copy($src, $this->GetFullURL($dest)))
+            throw new FileCopyFailedException();
         return $this;
     }
     
@@ -189,6 +178,14 @@ abstract class FWrapper extends Storage
         $this->CheckReadOnly();
         if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
             throw new FolderMoveFailedException();
+        return $this;
+    }
+    
+    public function CopyFile(string $old, string $new) : self
+    {
+        $this->CheckReadOnly();
+        if (!copy($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FileCopyFailedException();
         return $this;
     }
     

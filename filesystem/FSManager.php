@@ -20,7 +20,7 @@ require_once(ROOT."/apps/files/storage/Local.php");
 require_once(ROOT."/apps/files/storage/FTP.php");
 require_once(ROOT."/apps/files/storage/SFTP.php");
 require_once(ROOT."/apps/files/storage/SMB.php");
-use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, SMB, ActivateException, StorageException};
+use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, SMB, ActivateException};
 
 require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
@@ -70,9 +70,7 @@ class FSManager extends StandardObject
     public function GetName() : ?string          { return $this->TryGetScalar('name'); }
     
     public function SetName(?string $name) : self 
-    { 
-        if ($name === $this->GetName()) return $this;
-        
+    {
         $dupfs = static::TryLoadByAccountAndName($this->database, $this->GetOwner(), $name);
         if ($dupfs !== null || $name === "default")
             throw new InvalidNameException();
@@ -124,15 +122,20 @@ class FSManager extends StandardObject
     {
         $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM);
-        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_INT) ?? self::TYPE_NATIVE; // TODO change to text
+        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_ALPHANUM);
         $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
-
-        if (!in_array($fstype,array(self::TYPE_NATIVE,self::TYPE_NATIVE_CRYPT,self::TYPE_SHARED)))
-            throw new InvalidFSTypeClientException();
+        
+        switch ($fstype ?? 'native')
+        {
+            case 'native': $fstype = self::TYPE_NATIVE; break;
+            case 'crypt':  $fstype = self::TYPE_NATIVE_CRYPT; break;
+            case 'shared': $fstype = self::TYPE_SHARED; break;
+            default: throw new InvalidFSTypeClientException();
+        }
         
         $filesystem = parent::BaseCreate($database)
-            ->SetName($name)->setReadOnly($readonly)
-            ->SetType($fstype)->SetOwner($account);
+            ->SetOwner($account)->SetName($name)
+            ->SetType($fstype)->setReadOnly($readonly);
         
         if ($filesystem->isSecure())
         {
@@ -141,7 +144,7 @@ class FSManager extends StandardObject
         }
 
         try
-        { 
+        {           
             switch ($sttype)
             {
                 case 'local': $filesystem->SetStorage(Local::Create($database, $input, $account, $filesystem)); break;
@@ -189,7 +192,7 @@ class FSManager extends StandardObject
         return self::LoadOneByQuery($database, $q->Where($w));
     }
     
-    public static function TryLoadByAccountAndName(ObjectDatabase $database, ?Account $account, string $name) : ?self
+    public static function TryLoadByAccountAndName(ObjectDatabase $database, ?Account $account, ?string $name) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account ? $account->ID() : null),$q->Equals('name',$name));
         return self::LoadOneByQuery($database, $q->Where($w));
@@ -223,7 +226,7 @@ class FSManager extends StandardObject
         $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
-            'owner' => $this->GetObjectID('owner'),
+            'owner' => $this->TryGetObjectID('owner'),
             'shared' => $this->isShared(),
             'secure' => $this->isSecure(),
             'readonly' => $this->isReadOnly(),

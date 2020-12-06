@@ -70,13 +70,13 @@ class FilesApp extends AppBase
             'fileinfo --fileid id',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
             'getitembypath [--rootfolder id | --filesystem id] [--path text] [--isfile bool]',
-            'createfolder --parent id --name text',
+            'createfolder --parent id --name fsname',
             'deletefile [--fileid id | --files id_array]',
             'deletefolder [--folder id | --folders id_array]',
-            'renamefile --fileid id --name text [--overwrite bool]',
-            'renamefolder --folder id --name text [--overwrite bool]',
-            'movefile --parent id [--fileid id | --files id_array] [--overwrite bool]',
-            'movefolder --parent id [--folder id | --folders id_array] [--overwrite bool]',
+            'renamefile --fileid id --name fsname [--overwrite bool] [--copy bool]',
+            'renamefolder --folder id --name fsname [--overwrite bool] [--copy bool]',
+            'movefile --parent id [--fileid id | --files id_array] [--overwrite bool] [--copy bool]',
+            'movefolder --parent id [--folder id | --folders id_array] [--overwrite bool] [--copy bool]',
             'likefile --fileid id --value -1|0|1',
             'likefolder --folder id --value -1|0|1',
             'tagfile [--fileid id | --files id_array] --tag alphanum',
@@ -94,7 +94,7 @@ class FilesApp extends AppBase
             'listshares [--mine bool]',
             'getfilesystem [--filesystem id]',
             'getfilesystems',
-            'createfilesystem --name name --sttype local|ftp|sftp [--global bool] [--fstype 0|1|2] [--readonly bool]',
+            'createfilesystem --name name --sttype local|ftp|sftp|smb [--fstype native|crypt|shared] [--global bool] [--readonly bool]',
             'deletefilesystem --filesystem id --auth_password raw',
             'editfilesystem --filesystem id --name name [--readonly bool]'
         ); 
@@ -536,7 +536,7 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
 
-        $name = $input->GetParam('name',SafeParam::TYPE_TEXT);
+        $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
 
         return Folder::Create($this->database, $parent, $account, $name)->GetClientObject();
     }
@@ -601,19 +601,44 @@ class FilesApp extends AppBase
     
     private function RenameItem(string $class, string $key, Input $input)
     {
-        if (!$this->config->GetAllowPublicModify() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
+        $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
+        
+        if ($this->authenticator === null)
+        {
+            $ok = !$copy && !$this->config->GetAllowPublicModify();
+            $ok &= $copy && !$this->config->GetAllowPublicUpload();
+            if (!$ok) throw new AuthenticationFailedException();
+        }
         
         $id = $input->GetParam($key, SafeParam::TYPE_ID);
         $access = static::AuthenticateItemAccess($input, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
         
-        if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+        if (!$item->GetParentID()) throw new ItemAccessDeniedException();
         
-        $name = basename($input->GetParam('name',SafeParam::TYPE_TEXT));
+        $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
-        return $item->SetName($name, $overwrite)->GetClientObject();
+        if ($copy)
+        {
+            $paccess = ItemAccess::Authenticate(
+                $this->database, $input, $this->authenticator, Folder::class, $item->GetParentID());            
+            $pshare = $paccess->GetShare();
+            
+            if ($pshare !== null && !$pshare->CanUpload()) throw new ItemAccessDeniedException();           
+            
+            $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
+            
+            $retval = $item->CopyToName($account, $name, $overwrite);
+        }
+        else
+        {
+            if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+            
+            $retval = $item->SetName($name, $overwrite);
+        }
+        
+        return $retval->GetClientObject();
     }
     
     protected function MoveFile(Input $input) : array
@@ -628,8 +653,14 @@ class FilesApp extends AppBase
     
     private function MoveItem(string $class, string $key, string $keys, Input $input) : array
     {
-        if (!$this->config->GetAllowPublicModify() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
+        $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
+        
+        if ($this->authenticator === null)
+        {
+            $bad = !$copy && !$this->config->GetAllowPublicModify();
+            $bad |= $copy && !$this->config->GetAllowPublicUpload();
+            if ($bad) throw new AuthenticationFailedException();
+        }
         
         $item = $input->TryGetParam($key,SafeParam::TYPE_ID);
         $items = $input->TryGetParam($keys,SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
@@ -639,16 +670,19 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
         
-        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
+        $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;        
+        $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
         
         if ($item !== null)
         {
             $access = static::AuthenticateItemAccess($input, $class, $item);
             $itemobj = $access->GetItem(); $share = $access->GetShare();
             
-            if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+            if (!$itemobj->GetParentID()) throw new ItemAccessDeniedException();
+            if (!$copy && $share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
             
-            return $itemobj->SetParent($parent, $overwrite)->GetClientObject();
+            return ($copy ? $itemobj->CopyToParent($account, $parent, $overwrite)
+                          : $itemobj->SetParent($parent, $overwrite))->GetClientObject();
         }
         else if ($items !== null)
         {
@@ -657,14 +691,17 @@ class FilesApp extends AppBase
             {
                 $retval[$item] = false;
                 
-                $access = static::TryAuthenticateItemAccess($input, $class, $item);
-                if ($access === null) continue;
+                $access = static::TryAuthenticateItemAccess($input, $class, $item); 
+                if ($access === null) continue;                
                 
-                $itemobj = $access->GetItem(); $share = $access->GetShare();
-                if ($share !== null && !$share->CanModify()) continue;  
+                $itemobj = $access->GetItem(); $share = $access->GetShare();        
                 
-                try { $retval[$item] = $itemobj->SetParent($parent, $overwrite)->GetClientObject(); }
-                catch(StorageException | ReadOnlyException | DuplicateItemException $e) { }
+                if (!$itemobj->GetParentID()) continue;
+                if (!$copy && $share !== null && !$share->CanModify()) continue;        
+                
+                try { $retval[$item] = ($copy ? $itemobj->CopyToParent($account, $parent, $overwrite)
+                                              : $itemobj->SetParent($parent, $overwrite))->GetClientObject(); }
+                catch(StorageException | Exceptions\ClientException $e) { }
             };
             return $retval;
         }

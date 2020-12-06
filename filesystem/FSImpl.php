@@ -38,6 +38,8 @@ abstract class FSImpl implements Transactions
     public abstract function RenameFolder(Folder $folder, string $name) : self;
     public abstract function MoveFile(File $file, Folder $parent) : self;
     public abstract function MoveFolder(Folder $folder, Folder $parent) : self;
+    public abstract function CopyFile(File $file, File $dest) : self;
+    public abstract function CopyFolder(Folder $folder, Folder $dest) : self;
     
     public function commit() { return $this->GetStorage()->commit(); }
     public function rollback() { return $this->GetStorage()->rollback(); }
