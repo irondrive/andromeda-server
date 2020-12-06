@@ -29,7 +29,7 @@ use Andromeda\Core\UnknownConfigException;
 use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\MailSendException;
 
-use Andromeda\Core\Database\ObjectNotFoundException;
+use Andromeda\Core\Database\DatabaseException; use \PDOException;
 use Andromeda\Core\Exceptions\NotImplementedException;
 use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
@@ -70,6 +70,7 @@ class AccountsApp extends AppBase
         return array(
             'phpinfo',
             'testmail [--mailid id]',
+            'install --username name --password raw',
             '- AUTH ALL: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'getauthsources',
@@ -105,19 +106,26 @@ class AccountsApp extends AppBase
         parent::__construct($api);   
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (ObjectNotFoundException $e) { throw new UnknownConfigException(); }
+        catch (PDOException | DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
     }
 
     public function Run(Input $input)
     {
-        $this->authenticator = Authenticator::TryAuthenticate($this->API->GetDatabase(), $input, $this->API->GetInterface());
+        if ($input->GetAction() !== 'install')
+        {
+            if (!isset($this->config)) throw new UnknownConfigException(static::class);
+            
+            $this->authenticator = Authenticator::TryAuthenticate(
+                $this->API->GetDatabase(), $input, $this->API->GetInterface());
+        }
 
         switch($input->GetAction())
         {       
             case 'phpinfo':             return $this->PHPInfo($input); break;
             case 'testmail':            return $this->TestMail($input); break;
+            case 'install':             return $this->Install($input); break;
             
             case 'getconfig':           return $this->GetConfig($input); break;
             case 'getauthsources':      return $this->GetAuthSources($input); break;
@@ -164,7 +172,7 @@ class AccountsApp extends AppBase
         return $return;
     }
     
-    protected function PHPInfo(Input $input) : array
+    protected function PHPInfo(Input $input) : array // TODO maybe make a separate server-admin app for these things...
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
@@ -193,6 +201,27 @@ class AccountsApp extends AppBase
         
         return array();
     }
+    
+    protected function Install(Input $input)
+    {
+        if (isset($this->config)) throw new UnknownActionException();
+        
+        $database = $this->API->GetDatabase();
+        $database->importFile(ROOT."/apps/accounts/andromeda2.sql");
+        
+        Config::Create($database)->Save();        
+        
+        $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM);
+        $password = $input->GetParam("password", SafeParam::TYPE_RAW);
+
+        $account = Account::Create($database, Auth\Local::GetInstance(), $username, $password);
+
+        $account->setAdmin(true);
+        
+        return array('account'=>$account->GetClientObject());
+    }
+    
+    // TODO function to enable/disable apps (new server-admin app)
     
     protected function GetConfig(Input $input) : array
     {
@@ -299,7 +328,7 @@ class AccountsApp extends AppBase
     
     protected function CreateAccount(Input $input) : array
     {
-        if ($this->authenticator !== null) $this->authenticator->RequireAdmin();        
+        if ($this->authenticator !== null) $this->authenticator->RequireAdmin();
         else if (!$this->config->GetAllowCreateAccount()) throw new Exceptions\ClientDeniedException();
         $admin = $this->authenticator !== null;
 

@@ -101,6 +101,8 @@ class Account extends AuthEntity
     public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasValidTwoFactor(); }
     
     public function isAdmin() : bool                    { return $this->TryGetFeature('admin') ?? false; }
+    public function setAdmin(?bool $val) : self         { return $this->SetFeature('admin', $val); }
+    
     public function isEnabled() : bool                  { return $this->TryGetFeature('enabled') ?? true; }
     public function setEnabled(?bool $val) : self       { return $this->SetFeature('enabled', $val); }
     

@@ -4,6 +4,7 @@ require_once(ROOT."/apps/accounts/Group.php");
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\SingletonObject;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 class Config extends SingletonObject
 {
@@ -17,6 +18,8 @@ class Config extends SingletonObject
             'default_group' => new FieldTypes\ObjectRef(Group::class)
         ));
     }
+    
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
     
     public function GetDefaultGroup() : ?Group      { return $this->TryGetObject('default_group'); }
     public function GetAllowCreateAccount() : bool  { return $this->TryGetFeature('createaccount') ?? false; }
