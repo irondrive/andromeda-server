@@ -20,11 +20,11 @@ class Input
     public function HasParam(string $key) : bool {
         return $this->params->HasParam($key); }
     
-    public function GetParam(string $key, int $type) { 
-        return $this->params->GetParam($key, $type); }
+    public function GetParam(string $key, int $type, ?callable $usrfunc = null) { 
+        return $this->params->GetParam($key, $type, $usrfunc); }
     
-    public function TryGetParam(string $key, int $type) {
-        return $this->params->TryGetParam($key, $type); }
+    public function TryGetParam(string $key, int $type, ?callable $usrfunc = null) {
+        return $this->params->TryGetParam($key, $type, $usrfunc); }
         
     public function HasFile(string $key) : bool {
         return array_key_exists($key, $this->files); }

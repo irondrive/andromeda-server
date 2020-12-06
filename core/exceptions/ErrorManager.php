@@ -27,7 +27,7 @@ class ErrorManager extends Singleton
     
     private function HandleClientException(ClientException $e) : Output
     {
-        if ($this->API !== null) $this->API->rollBack();
+        if ($this->API !== null) $this->API->rollBack(false);
             
         $debug = null; if ($this->GetDebugState()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
             
@@ -36,7 +36,7 @@ class ErrorManager extends Singleton
     
     private function HandleThrowable(\Throwable $e) : Output
     {
-        if ($this->API !== null) $this->API->rollBack();
+        if ($this->API !== null) $this->API->rollBack(true);
         
         if ($this->API !== null && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
 

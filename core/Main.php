@@ -27,7 +27,7 @@ class FailedAppLoadException extends Exceptions\ServerException     { public $me
 class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
 class InvalidDataDirectoryException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
-class Main extends Singleton implements Transactions
+class Main extends Singleton
 { 
     private array $construct_stats; 
     private array $commit_stats; 
@@ -139,11 +139,11 @@ class Main extends Singleton implements Transactions
             file_put_contents($path, $data);
     }
     
-    public function rollBack()
+    public function rollBack(bool $serverError)
     {
         set_time_limit(0);
         
-        if (isset($this->database)) $this->database->rollback();   
+        if (isset($this->database)) $this->database->rollback(!$serverError);   
         
         foreach ($this->apps as $app) try { $app->rollback(); } 
             catch (\Throwable $e) { $this->error_manager->Log($e); }
