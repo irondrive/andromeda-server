@@ -74,9 +74,10 @@ class SafeParam
     const TYPE_ALPHANUM = 5; 
     const TYPE_NAME     = 6;
     const TYPE_EMAIL    = 7;
-    const TYPE_TEXT     = 8;
-    const TYPE_RAW      = 9;
-    const TYPE_OBJECT   = 10;
+    const TYPE_FSNAME   = 8;
+    const TYPE_TEXT     = 9;
+    const TYPE_RAW      = 10;
+    const TYPE_OBJECT   = 11;
 
     const TYPE_SINGLE = 0;
     const TYPE_ARRAY = 16;
@@ -89,6 +90,7 @@ class SafeParam
         self::TYPE_ALPHANUM => 'alphanum',
         self::TYPE_NAME => 'name',
         self::TYPE_EMAIL => 'email',
+        self::TYPE_FSNAME => 'fsname',
         self::TYPE_TEXT => 'text',
         self::TYPE_RAW => 'raw',
         self::TYPE_OBJECT => 'object',
@@ -142,17 +144,23 @@ class SafeParam
         }
         else if ($type === self::TYPE_ALPHANUM || $type === self::TYPE_ID)
         {
-            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255)
+            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255 || !strlen($value))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_NAME)
         {
-            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255)
+            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255 || !strlen($value))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_EMAIL)
         {
-            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255)
+            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255 || !strlen($value))
+                throw new SafeParamInvalidException($key, $type);
+        }
+        else if ($type === self::TYPE_FSNAME)
+        {
+            $value = $this->GetValue(self::TYPE_TEXT);
+            if (!strlen($value) || basename($value) !== $value || in_array($value, array('.','..'))) 
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_TEXT)

@@ -81,7 +81,8 @@ class AJAX extends IOInterface
         $files = array(); foreach($_FILES as $file)
         {
             if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
-            $files[basename($file['name'])] = $file['tmp_name']; 
+            $fname = (new SafeParam('name',$file['name']))->GetValue(SafeParam::TYPE_FSNAME);
+            $files[$fname] = $file['tmp_name']; 
         }
         
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;

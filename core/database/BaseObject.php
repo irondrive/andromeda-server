@@ -125,9 +125,16 @@ abstract class BaseObject
         return boolval($this->objects[$field]->GetValue());
     }
     
-    protected function GetObjectID(string $field) : ?string
+    protected function GetObjectID(string $field) : string
     {
         if (!$this->ExistsObject($field)) throw new KeyNotFoundException($field);
+        $value = $this->objects[$field]->GetValue();
+        if ($value !== null) return $value; else throw new NullValueException($field);
+    }
+    
+    protected function TryGetObjectID(string $field) : ?string
+    {
+        if (!$this->ExistsObject($field)) return null;
         return $this->objects[$field]->GetValue();
     }
     

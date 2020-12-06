@@ -63,26 +63,24 @@ class Database implements Transactions {
 
     public function rollBack() : void
     { 
-        array_push($this->queries, "rollBack()");
         if ($this->connection->inTransaction())
         {
+            array_push($this->queries, "rollBack()");
             $this->startTimingQuery();            
             $this->connection->rollback();
             $this->stopTimingCommit();
         }
-        $this->inTransaction = false;
     }
     
     public function commit() : void
     {
-        array_push($this->queries, "commit()");
         if ($this->connection->inTransaction()) 
         {
+            array_push($this->queries, "commit()");
             $this->startTimingQuery();            
             $this->connection->commit();             
             $this->stopTimingCommit();
-        }            
-        $this->inTransaction = false;
+        }
     }
     
     private function startTimingQuery() : void

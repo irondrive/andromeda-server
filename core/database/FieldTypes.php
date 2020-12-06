@@ -17,8 +17,8 @@ const RETURN_SCALAR = 0; const RETURN_OBJECT = 1; const RETURN_OBJECTS = 2;
 class Scalar
 {
     protected string $myfield; 
-    protected $tempvalue;
-    protected $realvalue; 
+    protected $tempvalue = null;
+    protected $realvalue = null; 
     protected int $delta = 0; 
     protected bool $alwaysSave = false;
     
@@ -28,20 +28,18 @@ class Scalar
     public function __construct($defvalue = null, bool $alwaysSave = false)
     {
         $this->alwaysSave = $alwaysSave;
-        if ($defvalue != null)
-        {
-            $this->tempvalue = $defvalue;
-            $this->realvalue = $defvalue;
-        }
+        $this->tempvalue = $defvalue;
+        $this->realvalue = $defvalue;
     }
 
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
     {
         $this->database = $database; 
         $this->parent = $parent; 
-        $this->myfield = $myfield; 
-        $this->tempvalue ??= $value; 
-        $this->realvalue ??= $value;
+        $this->myfield = $myfield;
+
+        $this->tempvalue = $value; 
+        $this->realvalue = $value;
     }
     
     public function GetMyField() : string { return $this->myfield; }
@@ -52,13 +50,22 @@ class Scalar
     public function GetDelta() : int { return $this->delta; }
     public function ResetDelta() : self { $this->delta = 0; return $this; }
 
-    public function GetDBValue() { return ($this->realvalue === false) ? 0 : $this->realvalue; }
+    public function GetDBValue() 
+    { 
+        if (is_bool($this->realvalue)) 
+            return intval($this->realvalue);
+        
+        return $this->realvalue; 
+    }
     
     public function SetValue($value, bool $temp = false) : bool
     {
         $this->tempvalue = $value;
-
-        if (!$temp && $value !== $this->realvalue)
+        
+        // only update the realvalue if the value has changed - use loose comparison (!=)
+        // so strings/numbers match, but we don't want 0/false to == null (which they do)
+        $nulls = (($value === null) xor ($this->realvalue === null)); 
+        if (!$temp && ($value != $this->realvalue || $nulls))
         {
             $this->realvalue = $value; $this->delta++; return true;
         }
