@@ -6,6 +6,8 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 
+if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
+
 abstract class IOInterface
 {
     public static function TryGet() : ?IOInterface
@@ -30,6 +32,6 @@ abstract class IOInterface
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
-    abstract public function GetInputs(Config $config) : array;
+    abstract public function GetInputs(?Config $config) : array;
     abstract public function WriteOutput(Output $output);
 }

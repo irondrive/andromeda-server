@@ -1,13 +1,11 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
 require_once(ROOT."/core/database/Database.php");
 require_once(ROOT."/core/database/QueryBuilder.php");
 
-class ObjectTypeException extends Exceptions\ServerException            { public $message = "DBOBJECT_TYPE_MISMATCH"; }
-class DuplicateUniqueKeyException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBOBJECT_UNIQUE_VALUES"; }
+class ObjectTypeException extends DatabaseException         { public $message = "DBOBJECT_TYPE_MISMATCH"; }
+class DuplicateUniqueKeyException extends DatabaseException { public $message = "DUPLICATE_DBOBJECT_UNIQUE_VALUES"; }
 
 class ObjectDatabase extends Database
 {

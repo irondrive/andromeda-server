@@ -45,7 +45,7 @@ class CLI extends IOInterface
     
     public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
-    public function GetInputs(Config $config) : array
+    public function GetInputs(?Config $config) : array
     {
         global $argv;
         
@@ -60,10 +60,10 @@ class CLI extends IOInterface
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     $debug = (new SafeParam('debug',$argv[$i+1]))->GetValue(SafeParam::TYPE_INT);
                     $this->debug = ($debug !== 0); $i++;
-                    $config->SetDebugLogLevel($debug, true);
+                    if ($config) $config->SetDebugLogLevel($debug, true);
                     break;   
                     
-                case '--dryrun': $config->SetReadOnly(Config::RUN_DRYRUN); break;
+                case '--dryrun': if ($config) $config->SetReadOnly(Config::RUN_DRYRUN); break;
                 
                 case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
                 

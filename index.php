@@ -2,9 +2,8 @@
 
 define("ROOT",__DIR__.'/');
 
-if (!version_compare(phpversion(),'7.4.0','>=')) { die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n"); }
-
-if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
+if (!version_compare(phpversion(),'7.4.0','>='))
+    die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n");
 
 ignore_user_abort();
 

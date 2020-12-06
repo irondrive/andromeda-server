@@ -1,16 +1,14 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/database/JoinUtils.php");
 require_once(ROOT."/core/database/FieldTypes.php");
 require_once(ROOT."/core/database/QueryBuilder.php");
-require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
-class KeyNotFoundException extends Exceptions\ServerException   { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
-class NotCounterException extends Exceptions\ServerException    { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
-class ChangeNullRefException extends Exceptions\ServerException { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
-class ObjectNotFoundException extends Exceptions\ServerException { public $message = "OBJECT_NOT_FOUND"; }
-class NullValueException extends Exceptions\ServerException     { public $message = "VALUE_IS_NULL"; }
+class KeyNotFoundException extends DatabaseException    { public $message = "DB_OBJECT_KEY_NOT_FOUND"; }
+class NotCounterException extends DatabaseException     { public $message = "DB_OBJECT_DELTA_NON_COUNTER"; }
+class ChangeNullRefException extends DatabaseException  { public $message = "ADD_OR_REMOVE_NULL_REFERENCE"; }
+class ObjectNotFoundException extends DatabaseException { public $message = "OBJECT_NOT_FOUND"; }
+class NullValueException extends DatabaseException      { public $message = "VALUE_IS_NULL"; }
 
 abstract class BaseObject
 {

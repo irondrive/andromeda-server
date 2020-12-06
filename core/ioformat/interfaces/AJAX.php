@@ -40,7 +40,7 @@ class AJAX extends IOInterface
   
     public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
     
-    public function GetInputs(Config $config) : array
+    public function GetInputs(?Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {
