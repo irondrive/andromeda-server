@@ -10,7 +10,7 @@ require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 
-class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_INVALID"; }
+class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_UNREADABLE"; }
 
 class Shared extends BaseFileFS
 {
@@ -84,13 +84,15 @@ class Shared extends BaseFileFS
                 {
                     $dbitem = $dbitemtmp; unset($dbitems[$dbitemid]); break;
                 }
+                // dbitems are sorted so if we're past fsitem, it's not there
                 else if ($dbitemtmp->GetName() > $fsitem) break;
             }
             
             if ($dbitem === null)
             {
                 $itemclass = $isfile ? File::class : Folder::class;
-                $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem)->Refresh()->Save();       
+                $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem);
+                $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
             }
         }
     }

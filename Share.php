@@ -15,7 +15,7 @@ require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\
 
 use Andromeda\Core\Database\CounterOverLimitException;
 
-class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; } // TODO need framework support to delete this object anyway...
+class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; }
 
 class Share extends AuthObject
 {
@@ -51,15 +51,18 @@ class Share extends AuthObject
     public function CanSocial() : bool { return $this->GetFeature('social'); }
     public function CanReshare() : bool { return $this->GetFeature('reshare'); }
 
-    private function DoExpire() : void { $this->Delete(); throw new ShareExpiredException(); }
+    public function IsExpired() : bool
+    {
+        $expires = $this->TryGetDate('expires');
+        if ($expires !== null && microtime(true) > $expires) return true;
+        
+        return $this->IsCounterOverLimit('accessed', 1);
+    }
     
     public function SetAccessed() : self 
     {
-        $expires = $this->TryGetDate('expires');
-        if ($expires !== null && microtime(true) > $expires) $this->DoExpire();
-
-        try { return $this->SetDate('accessed')->DeltaCounter('accessed'); }
-        catch (CounterOverLimitException $e) { $this->DoExpire(); }
+        if ($this->IsExpired()) throw new ShareExpiredException();
+        return $this->SetDate('accessed')->DeltaCounter('accessed');
     }
     
     private static function GetItemDestQuery(Item $item, ?AuthEntity $dest, QueryBuilder $q) : string
@@ -200,8 +203,10 @@ class Share extends AuthObject
             'islink' => $this->IsLink(),
             'password' => $this->NeedsPassword(),
             'dest' => $this->GetObjectID('dest'),
+            'expired' => $this->IsExpired(),
             'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters(), // TODO is the counter limit printed?
+            'counters' => $this->GetAllCounters(),
+            'limits' => $this->GetAllCounterLimits(),
             'features' => $this->GetAllFeatures()
         ));
     }

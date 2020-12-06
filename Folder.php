@@ -101,8 +101,8 @@ class Folder extends Item
         $this->DeltaCounter('size', $object->GetSize());
         $this->DeltaCounter('bandwidth', $object->GetBandwidth());
         $this->DeltaCounter('downloads', $object->GetDownloads());
-        if (is_a($object, File::class)) $this->DeltaCounter('subfiles');
-        if (is_a($object, Folder::class)) $this->DeltaCounter('subfolders');
+        if ($object instanceof File) $this->DeltaCounter('subfiles');
+        if ($object instanceof Folder) $this->DeltaCounter('subfolders');
         
         $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($object);
     }
@@ -113,8 +113,8 @@ class Folder extends Item
         $this->DeltaCounter('size', $object->GetSize() * -1);
         $this->DeltaCounter('bandwidth', $object->GetBandwidth() * -1);
         $this->DeltaCounter('downloads', $object->GetDownloads() * -1);
-        if (is_a($object, File::class)) $this->DeltaCounter('subfiles', -1);
-        if (is_a($object, Folder::class)) $this->DeltaCounter('subfolders', -1);
+        if ($object instanceof File) $this->DeltaCounter('subfiles', -1);
+        if ($object instanceof Folder) $this->DeltaCounter('subfolders', -1);
         
         $parent = $this->GetParent(); if ($parent !== null) $parent->SubItemCounts($object);
     }
@@ -278,13 +278,13 @@ class Folder extends Item
             
             if ($folders)
             {
-                $subfolders = array_filter($items, function($item){ return is_a($item, Folder::class); });
+                $subfolders = array_filter($items, function($item){ return ($item instanceof Folder); });
                 $data['folders'] = array_map(function($folder){ return $folder->GetClientObject(); },$subfolders);
             }
             
             if ($files)
             {
-                $subfiles = array_filter($items, function($item){ return is_a($item, File::class); });
+                $subfiles = array_filter($items, function($item){ return ($item instanceof File); });
                 $data['files'] = array_map(function($file){ return $file->GetClientObject(); },$subfiles);
             }            
         }
