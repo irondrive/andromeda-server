@@ -13,6 +13,8 @@ class JSONException extends Exceptions\ServerException {
 class JSONEncodingException extends JSONException { public $message = "JSON_ENCODE_FAIL"; }
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
 
+interface Transactions { public function rollBack(); public function commit(); }
+
 abstract class Singleton
 {
     private static $instances = array();

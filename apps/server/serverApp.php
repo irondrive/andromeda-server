@@ -17,9 +17,11 @@ class ServerApp extends AppBase
     {
         return array(
             'random [--length int]',
-            'getapps', 'runtests',
-            'getusage|usage|help', 'install',
-            'initdb --connect text [--dbuser name] [--dbpass raw] [--prefix alphanum] [--persistent bool]'            
+            'getconfig', 
+            'getusage|usage|help', 
+            'runtests',
+            'install [--enable bool]',
+            'initdb --connect text [--dbuser name] [--dbpass raw] [--persistent bool]'            
         );
     }
     
@@ -35,17 +37,17 @@ class ServerApp extends AppBase
         
         switch($input->GetAction())
         {
-            case 'random':  return $this->Random($input); break;
-            case 'getapps': return $this->GetApps($input); break;
-            case 'runtests': return $this->RunTests($input); break;
+            case 'random':  return $this->Random($input);
+            case 'getconfig': return $this->GetConfig($input);
+            case 'runtests': return $this->RunTests($input);
             
-            case 'initdb':  return $this->InitDB($input); break;
-            case 'install': return $this->Install($input); break;
+            case 'initdb':  return $this->InitDB($input);
+            case 'install': return $this->Install($input);
             
             case 'getusage':
             case 'usage':
             case 'help':
-                return $this->GetUsages($input); break;
+                return $this->GetUsages($input);
             
             default: throw new UnknownActionException();
         }
@@ -58,9 +60,9 @@ class ServerApp extends AppBase
         return Utilities::Random($length ?? 16);
     }
     
-    protected function GetApps(Input $input) 
+    protected function GetConfig(Input $input) 
     {
-        return array_map(function($app){ return $app::getVersion(); }, $this->API->GetApps());
+        return $this->API->GetConfig()->GetClientObject();
     }
     
     protected function GetUsages(Input $input)
@@ -90,21 +92,20 @@ class ServerApp extends AppBase
         Database::Install($input);
     }
     
-    // TODO set enabled (from CLI only?)
-    
     protected function Install(Input $input)
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
         $database = $this->API->GetDatabase();
-        $database->importFile(ROOT."/andromeda2.sql");
-        
-        $config = Config::Create($database);
+        $database->importFile(ROOT."/andromeda2.sql");        
         
         $apps = array_filter(scandir(ROOT."/apps"),function($e){ return !in_array($e,array('.','..')); });
+        
+        $config = Config::Create($database);
         foreach ($apps as $app) $config->enableApp($app);
         
-        $config->setEnabled(!$this->API->isLocalCLI());
+        $enable = $input->TryGetParam('enable', SafeParam::TYPE_BOOL);        
+        $config->setEnabled($enable ?? !$this->API->isLocalCLI());
         
         return array('apps'=>array_filter($apps,function($e){ return $e !== 'server'; }));
     }

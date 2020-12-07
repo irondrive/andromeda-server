@@ -22,7 +22,7 @@ class Input
     
     public function GetParam(string $key, int $type, ?callable $usrfunc = null) { 
         return $this->params->GetParam($key, $type, $usrfunc); }
-    
+
     public function TryGetParam(string $key, int $type, ?callable $usrfunc = null) {
         return $this->params->TryGetParam($key, $type, $usrfunc); }
         

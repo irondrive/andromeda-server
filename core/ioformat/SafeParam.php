@@ -48,7 +48,7 @@ class SafeParams
         if ($data !== null) return $data;
         else throw new SafeParamNullValueException($key);
     }
-
+    
     public function TryGetParam(string $key, int $type, ?callable $usrfunc = null)
     {
         if (!$this->HasParam($key)) return null;

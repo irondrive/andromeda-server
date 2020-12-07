@@ -8,6 +8,16 @@ class ClientErrorException extends ClientException { public $code = 400; public 
 class ClientDeniedException extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }
 class ClientNotFoundException extends ClientException { public $code = 404; public $message = "NOT_FOUND"; }
 
+class ClientErrorCopyException extends ClientErrorException
+{
+    public function __construct(\Throwable $e)
+    {
+        parent::__construct($e->getMessage());
+        if ($e instanceof ServerException)
+            $this->message .= " ".$e->getDetails();
+    }
+}
+
 class ServerException extends \Exception { 
     public $code = 500; public $message = "GENERIC_SERVER_ERROR";
     public function __construct(string $details = "") { $this->details = $details; } 
