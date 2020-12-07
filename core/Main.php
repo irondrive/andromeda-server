@@ -4,7 +4,7 @@ require_once(ROOT."/core/Config.php");
 require_once(ROOT."/core/Utilities.php");
 
 require_once(ROOT."/core/database/DBStats.php");
-require_once(ROOT."/core/database/ObjectDatabase.php"); use \PDOException;
+require_once(ROOT."/core/database/ObjectDatabase.php");
 use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
@@ -69,7 +69,7 @@ class Main extends Singleton
 
             $apps = $this->config->GetApps();
         }
-        catch (PDOException | DatabaseException $e) { $apps = array('server'); }
+        catch (\PDOException | DatabaseException $e) { $apps = array('server'); }
         
         foreach ($apps as $app)
         {

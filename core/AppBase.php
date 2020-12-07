@@ -1,12 +1,11 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
-class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
+class UnknownConfigException extends Exceptions\ClientErrorException { public $message = "MISSING_CONFIG"; }
 
 abstract class AppBase implements Transactions
 {

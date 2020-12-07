@@ -63,7 +63,7 @@ class CLI extends IOInterface
                     if ($config) $config->SetDebugLogLevel($debug, true);
                     break;   
                     
-                case '--dryrun': if ($config) $config->SetReadOnly(Config::RUN_DRYRUN); break;
+                case '--dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
                 
                 case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
                 

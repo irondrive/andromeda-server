@@ -46,7 +46,7 @@ class ObjectDatabase extends Database
     public static function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class); unset($class[0]);
-        return Config::PREFIX."objects_".strtolower(implode('_', $class));
+        return "a2_objects_".strtolower(implode('_', $class));
     }
     
     private function Rows2Objects(array $rows, string $class) : array
