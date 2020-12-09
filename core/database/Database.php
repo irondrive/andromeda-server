@@ -7,11 +7,9 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
-class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
-
 abstract class DatabaseException extends Exceptions\ServerException { }
-
 class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_NOT_CONFIGURED"; }
+class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
 
 class Database implements Transactions {
 
@@ -28,36 +26,33 @@ class Database implements Transactions {
     {
         $config ??= self::CONFIG_FILE;
         
-        if (file_exists(self::CONFIG_FILE)) $config = require($config);
+        if (file_exists($config)) $config = require($config);
         else throw new DatabaseConfigException();        
         
         $this->config = $config;
         
         $this->connection = new PDO($config['CONNECT'], $config['USERNAME'], $config['PASSWORD'],
-            array(PDO::ATTR_PERSISTENT => $config['PERSISTENT'], PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+            array(
+                PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_AUTOCOMMIT => false
+            ));
     }
+    
+    public static function GetInstallUsage() : string { return "--connect text [--dbuser name] [--dbpass raw] [--persistent bool]"; }
     
     public static function Install(Input $input)
     {
-        $connect = $input->GetParam('connect',SafeParam::TYPE_TEXT);
-        $username = $input->TryGetParam('dbuser',SafeParam::TYPE_NAME);
-        $password = $input->TryGetParam('dbpass',SafeParam::TYPE_RAW);
-        $persist = $input->TryGetParam('persistent',SafeParam::TYPE_BOOL) ?? false;
+        $params = var_export(array(
+            'CONNECT' => $input->GetParam('connect',SafeParam::TYPE_TEXT),
+            'USERNAME' => $input->TryGetParam('dbuser',SafeParam::TYPE_NAME),
+            'PASSWORD' => $input->TryGetParam('dbpass',SafeParam::TYPE_RAW),
+            'PERSISTENT' => $input->TryGetParam('persistent',SafeParam::TYPE_BOOL)
+        ),true);
         
-        $output = "<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }\n\n";
+        $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $output .= "return array(\n";
-        
-        $params = array(
-            "\t'CONNECT' => ".var_export($connect,true),
-            "\t'USERNAME' => ".var_export($username,true),
-            "\t'PASSWORD' => ".var_export($password,true),
-            "\t'PERSISTENT' => ".var_export($persist,true)
-        );
-        
-        $output .= implode(",\n",$params)."\n);";
-        
-        $tmpnam = self::CONFIG_FILE.".tmp";
+        $tmpnam = self::CONFIG_FILE.".tmp.php";
         file_put_contents($tmpnam, $output);
         
         try { new Database($tmpnam); } catch (\Throwable $e) { 
@@ -96,6 +91,8 @@ class Database implements Transactions {
     public function query(string $sql, int $type, ?array $data = null) 
     {
         if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
+        
+        // TODO perhaps we should catch \PDOExceptions and convert them to DatabaseExceptions
         
         $this->startTimingQuery();
         

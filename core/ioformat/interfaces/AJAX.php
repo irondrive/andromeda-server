@@ -98,7 +98,8 @@ class AJAX extends IOInterface
         
         if ($this->outmode == self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString(); } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
+            try { echo $output->GetAsString(); } 
+            catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
         }        
         
         if ($this->outmode == self::OUTPUT_PRINTR) 

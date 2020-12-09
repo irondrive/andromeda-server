@@ -22,12 +22,14 @@ class Config extends SingletonObject
             'features__debug_file' => null,
             'features__read_only' => null,
             'features__enabled' => null,
-            'features__email' => null, // TODO where is this used??? add to client object
+            'features__email' => null,
             'apps' => new FieldTypes\JSON()
         ));
     }
     
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
+    
+    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug_log int] [--debug_http bool] [--debug_file bool] [--read_only int] [--enabled bool] [--email bool]"; }
     
     public function SetConfig(Input $input) : self
     {
@@ -44,6 +46,7 @@ class Config extends SingletonObject
         
         if ($input->HasParam('read_only')) $this->SetFeature('read_only',$input->TryGetParam('read_only',SafeParam::TYPE_INT));
         if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->TryGetParam('enabled',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('email')) $this->SetFeature('email',$input->TryGetParam('email',SafeParam::TYPE_BOOL));
         
         return $this;
     }
@@ -68,44 +71,36 @@ class Config extends SingletonObject
     public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
     public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
     
-    const RUN_NORMAL = 0; const RUN_READONLY = 1; const RUN_DRYRUN = 2;
-    public function isReadOnly() : int { return $this->TryGetFeature('read_only') ?? self::RUN_NORMAL; }
+    const RUN_READONLY = 1; const RUN_DRYRUN = 2;
+    public function isReadOnly() : int { return $this->TryGetFeature('read_only') ?? 0; }
     public function overrideReadOnly(int $data) : self { return $this->SetFeature('read_only', $data, true); }
     
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
-    const LOG_NONE = 0; const LOG_BASIC = 1; const LOG_EXTENDED = 2; const LOG_SENSITIVE = 3;    
-    public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_BASIC; }
+    const LOG_ERRORS = 1; const LOG_DEVELOPMENT = 2; const LOG_SENSITIVE = 3;    
+    public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_ERRORS; }
     public function SetDebugLogLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug_log', $data, $temp); }
     
     public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
-    public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }        
+    public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }       
     
-    const EMAIL_MODE_OFF = 0; const EMAIL_MODE_PHP = 1; const EMAIL_MODE_LIB = 2;
-    
+    public function GetEnableEmail() : bool { return $this->TryGetFeature('email') ?? false; }
+
     public function GetMailer() : Emailer
     {
-        $feature = $this->TryGetFeature("email") ?? self::EMAIL_MODE_OFF;
+        if (!$this->GetEnableEmail()) throw new EmailUnavailableException();
         
-        if ($feature === self::EMAIL_MODE_OFF) throw new EmailUnavailableException();
-        if ($feature === self::EMAIL_MODE_PHP) return new BasicEmailer();
-        
-        else if ($feature === self::EMAIL_MODE_LIB)
-        {
-            $emailers = array_values(FullEmailer::LoadAll($this->database));
-            if (count($emailers) == 0) throw new EmailUnavailableException();
-            return $emailers[array_rand($emailers)];
-        }
-        else throw new EmailUnavailableException();
+        $mailers = Emailer::LoadAll($this->database);
+        if (count($mailers) == 0) throw new EmailUnavailableException();
+        return $mailers[array_rand($mailers)]->Activate();
     }
     
-    public function GetClientObject(bool $admin) : array
+    public function GetClientObject(bool $admin = false) : array
     { 
         $data = array(
             'features' => array(
                 'read_only' => $this->isReadOnly(),
-                'enabled' => $this->isEnabled(),
-                'debug_http' => $this->GetDebugOverHTTP()
+                'enabled' => $this->isEnabled()
             )
         );
         
@@ -115,6 +110,8 @@ class Config extends SingletonObject
         if ($admin)
         {
             $data['datadir'] = $this->GetDataDir();
+            $data['features']['email'] = $this->GetEnableEmail();
+            $data['features']['debug_http'] = $this->GetDebugOverHTTP();
             $data['features']['debug_log'] = $this->GetDebugLogLevel();
             $data['features']['debug_file'] = $this->GetDebugLog2File();
         }

@@ -179,12 +179,14 @@ class SafeParam
                 catch (JSONDecodingException $e) { throw new SafeParamInvalidException($key, $type); }
             }
             
-            $value = new SafeParams();
+            $params = new SafeParams();
             
             foreach ($value as $key => $val)
             {
-                $value->AddParam($key, $val);
+                $params->AddParam($key, $val);
             }
+            
+            $value = $params;
         }
         else if ($type >= self::TYPE_ARRAY)
         {

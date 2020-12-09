@@ -67,7 +67,7 @@ class ErrorLogEntry extends BaseObject
         
         if ($asJson) $data['log'] = Utilities::JSONEncode($data['log']);
         
-        $extended = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_EXTENDED;
+        $extended = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT;
         $sensitive = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE;
         
         if ($extended)

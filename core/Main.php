@@ -95,7 +95,7 @@ class Main extends Singleton
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
 
-        if ($this->GetDebugState() && $this->database)
+        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT && $this->database)
         { 
             $this->database->pushStatsContext();
             $oldstats = &$this->run_stats; 
@@ -108,7 +108,7 @@ class Main extends Singleton
         if ($this->database) $this->database->saveObjects();
         array_pop($this->contexts);        
              
-        if ($this->GetDebugState() && $this->database)
+        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT && $this->database)
         {
             $newstats = $this->database->popStatsContext();
             $this->sum_stats->add($newstats);
@@ -125,7 +125,7 @@ class Main extends Singleton
 
         $data = AJAX::RemoteRequest($url, $input);
 
-        if ($this->GetDebugState())
+        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT)
         {
             array_push($this->run_stats, array(
                 'remote_time' => microtime(true) - $start,
@@ -165,18 +165,18 @@ class Main extends Singleton
         
         if ($this->database)
         {          
-            if ($this->GetDebugState()) 
+            if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT) 
                 $this->database->pushStatsContext();
             
-            $dryrun = $this->config && ($this->config->isReadOnly() == Config::RUN_DRYRUN);
+            $rollback = $this->config && $this->config->isReadOnly();
             
             $this->database->saveObjects();
             
-            foreach ($this->apps as $app) $dryrun ? $app->rollback() : $app->commit();
+            foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
             
-            if ($dryrun) $this->database->rollback(); else $this->database->commit();
+            if ($rollback) $this->database->rollback(); else $this->database->commit();
                     
-            if ($this->GetDebugState()) 
+            if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
                 $this->sum_stats->Add($commit_stats);
@@ -201,19 +201,25 @@ class Main extends Singleton
         return $this->config->isEnabled() || $this->isLocalCLI();
     }
     
-    public function GetDebugState() : bool
+    public function GetDebugState() : int
     {
-        if ($this->config === null) return true;
+        if ($this->config === null || !isset($this->construct_stats)) return Config::LOG_ERRORS;
+
+        $debug = $this->config->GetDebugLogLevel();
         
-        $iok = $this->config->GetDebugOverHTTP() || $this->isLocalCLI();
-        $enable = $this->config->GetDebugLogLevel() >= Config::LOG_BASIC || !isset($this->construct_stats);
-        
-        return $iok && $enable;
+        if (!$this->config->GetDebugOverHTTP() && !$this->isLocalCLI()) $debug = 0;
+
+        return $debug;
     }
     
     private static array $debuglog = array();    
     public static function PrintDebug(string $data){ array_push(self::$debuglog, $data); }
-    public function GetDebugLog() : ?array { return $this->GetDebugState() && count(self::$debuglog) ? self::$debuglog : null; }
+    
+    public function GetDebugLog() : ?array 
+    { 
+        return $this->GetDebugState() >= Config::LOG_DEVELOPMENT && 
+            count(self::$debuglog) ? self::$debuglog : null; 
+    }
     
     private function GetMetrics() : array
     {
