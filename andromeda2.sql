@@ -17,8 +17,23 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
   `features__debug_http` tinyint(1) DEFAULT NULL,
   `features__debug_file` tinyint(1) DEFAULT NULL,
   `features__read_only` tinyint(1) DEFAULT NULL,
+  `features__enabled` tinyint(1) DEFAULT NULL,
   `features__email` tinyint(1) DEFAULT NULL,
-  `features__enabled` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `id_2` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE IF NOT EXISTS `a2_objects_core_emailer` (
+  `id` varchar(16) NOT NULL,
+  `type` tinyint(4) NOT NULL,
+  `hosts` text,
+  `username` varchar(255) DEFAULT NULL,
+  `password` text,
+  `from_address` varchar(255) NOT NULL,
+  `from_name` varchar(255) DEFAULT NULL,
+  `features__reply` tinyint(1) DEFAULT NULL,
+  `dates__created` bigint(20) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `id_2` (`id`)
@@ -47,20 +62,6 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_exceptions_errorlogentry` (
   KEY `app` (`app`),
   KEY `action` (`action`),
   KEY `addr` (`addr`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_core_fullemailer` (
-  `id` varchar(16) NOT NULL,
-  `hostname` varchar(255) NOT NULL,
-  `port` smallint(6) NOT NULL,
-  `username` varchar(255) DEFAULT NULL,
-  `password` text,
-  `secure` tinyint(1) NOT NULL,
-  `from_address` varchar(255) NOT NULL,
-  `from_name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `id_2` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 COMMIT;
 

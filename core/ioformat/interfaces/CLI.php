@@ -14,9 +14,9 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug X] [--dryrun] app action [--file name] [--param data]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] app action [--file name] [--\$param data]\n".
                       "batch/version:   php index.php [version | batch myfile.txt]\n".
-                      "get all actions: php index.php server getusage"; }
+                      "get all actions: php index.php server usage"; }
 
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
 class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
@@ -157,7 +157,8 @@ class CLI extends IOInterface
     {
         if ($this->outmode == self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString($this->debug)."\n"; } catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
+            try { echo $output->GetAsString($this->debug)."\n"; } 
+            catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
 
         if ($this->outmode == self::OUTPUT_PRINTR)

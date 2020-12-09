@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Singleton,Utilities};
 require_once(ROOT."/core/exceptions/ErrorLogEntry.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -21,7 +22,7 @@ class ErrorManager extends Singleton
     private function GetDebugState() : bool
     {
         if ($this->API !== null && $this->API->GetConfig() !== null) 
-            return $this->API->GetDebugState();
+            return $this->API->GetDebugState() >= Config::LOG_ERRORS;
         else return CLI::isApplicable();
     }
     

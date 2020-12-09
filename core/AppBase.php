@@ -5,7 +5,7 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
-class UnknownConfigException extends Exceptions\ClientErrorException { public $message = "MISSING_CONFIG"; }
+class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
 
 abstract class AppBase implements Transactions
 {
