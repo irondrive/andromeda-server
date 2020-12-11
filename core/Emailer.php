@@ -60,8 +60,8 @@ class Emailer extends StandardObject
         ));
     }    
     
-    public static function GetCreateUsages() : array { return array("--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]",
-                                                                     "--type smtp ((--host alphanum [--port int] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
+    public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
+    public static function GetCreateUsages() : array { return array("--type smtp ((--host alphanum [--port int] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {

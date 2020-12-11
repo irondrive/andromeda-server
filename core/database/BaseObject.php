@@ -37,6 +37,11 @@ abstract class BaseObject
         return static::LoadByQuery($database, (new QueryBuilder())->Limit($limit)->Offset($offset));
     }
     
+    public static function DeleteAll(ObjectDatabase $database) : void
+    {
+        static::DeleteByQuery($database, (new QueryBuilder()));
+    }
+    
     public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
     {
         return $database->LoadObjectsByQuery(static::class, $query);
@@ -48,15 +53,15 @@ abstract class BaseObject
         return count($result) ? array_values($result)[0] : null;
     }
     
-    protected static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : array
+    public static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
+    {
+        $database->DeleteObjectsByQuery(static::class, $query);
+    }
+    
+    public static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : array
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
         $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $v)));
-    }
-    
-    protected static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
-    {
-        $database->DeleteObjectsByQuery(static::class, $query);
     }
     
     public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : void
