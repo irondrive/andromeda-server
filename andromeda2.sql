@@ -17,12 +17,16 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `dates__passwordset` bigint(20) NOT NULL DEFAULT '0',
   `dates__loggedon` bigint(20) NOT NULL DEFAULT '0',
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
-  `max_client_age__inherits` bigint(20) DEFAULT NULL,
+  `dates__modified` bigint(20) NOT NULL,
   `max_session_age__inherits` bigint(20) DEFAULT NULL,
   `max_password_age__inherits` bigint(20) DEFAULT NULL,
   `features__admin__inherits` tinyint(1) DEFAULT NULL,
   `features__enabled__inherits` tinyint(1) DEFAULT NULL,
-  `features__forcetwofactor__inherits` tinyint(1) DEFAULT NULL,
+  `features__forcetf__inherits` tinyint(1) DEFAULT NULL,
+  `features__allowcrypto__inherits` tinyint(1) DEFAULT NULL,
+  `counters_limits__sessions__inherits` tinyint(4) DEFAULT NULL,
+  `counters_limits__contactinfos__inherits` tinyint(4) DEFAULT NULL,
+  `counters_limits__recoverykeys__inherits` tinyint(4) DEFAULT NULL,
   `comment` text,
   `master_key` tinyblob,
   `master_nonce` tinyblob,
@@ -87,7 +91,6 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
   `features__createaccount` tinyint(1) NOT NULL,
   `features__emailasusername` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(1) NOT NULL,
-  `features__allowcrypto` tinyint(1) NOT NULL,
   `default_group` varchar(16) DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -108,12 +111,17 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `comment` text,
   `priority` tinyint(4) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `members__features__admin` tinyint(1) DEFAULT NULL,
-  `members__features__enabled` tinyint(1) DEFAULT NULL,
-  `members__features__forcetwofactor` tinyint(1) DEFAULT NULL,
-  `members__max_client_age` bigint(20) DEFAULT NULL,
-  `members__max_session_age` bigint(20) DEFAULT NULL,
-  `members__max_password_age` bigint(20) DEFAULT NULL,
+  `dates__modified` bigint(20) DEFAULT NULL,
+  `features__admin` tinyint(1) DEFAULT NULL,
+  `features__enabled` tinyint(1) DEFAULT NULL,
+  `features__forcetf` tinyint(1) DEFAULT NULL,
+  `features__allowcrypto` tinyint(1) DEFAULT NULL,
+  `counters_limits__sessions` tinyint(4) DEFAULT NULL,
+  `counters_limits__contactinfos` tinyint(4) DEFAULT NULL,
+  `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
+  `max_client_age` bigint(20) DEFAULT NULL,
+  `max_session_age` bigint(20) DEFAULT NULL,
+  `max_password_age` bigint(20) DEFAULT NULL,
   `accounts` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -167,9 +175,7 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 
 ALTER TABLE `a2_objects_apps_accounts_account`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id` (`id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD KEY `username_2` (`username`);
+  ADD UNIQUE KEY `username` (`username`);
 
 ALTER TABLE `a2_objects_apps_accounts_auth_ftp`
   ADD PRIMARY KEY (`id`),

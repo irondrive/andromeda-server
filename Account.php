@@ -13,8 +13,8 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -44,12 +44,16 @@ class Account extends AuthEntity
             'dates__passwordset' => null,
             'dates__loggedon' => null,
             'dates__active' => new FieldTypes\Scalar(null, true),
-            'max_client_age__inherits' => null,
+            'dates__modified' => null,
             'max_session_age__inherits' => null,
             'max_password_age__inherits' => null,
             'features__admin__inherits' => null,
             'features__enabled__inherits' => null,
-            'features__forcetwofactor__inherits' => null,
+            'features__forcetf__inherits' => null,
+            'features__allowcrypto__inherits' => null,
+            'counters_limits__sessions__inherits' => null,
+            'counters_limits__contactinfos__inherits' => null,
+            'counters_limits__recoverykeys__inherits' => null,
             'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
             'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
             'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
@@ -58,6 +62,18 @@ class Account extends AuthEntity
             'recoverykeys'  => new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'),
             'groups'        => new FieldTypes\ObjectJoin(Group::class, 'accounts', GroupJoin::class)
         ));
+    }
+    
+    public function GetInheritableDefault(string $field)
+    {
+        switch ($field)
+        {
+            case 'features__admin':       return false;
+            case 'features__enabled':     return true;
+            case 'features__forcetf':     return false;
+            case 'features__allowcrypto': return true;
+        }
+        return null;
     }
     
     public function GetUsername() : string  { return $this->GetScalar('username'); }
@@ -72,7 +88,7 @@ class Account extends AuthEntity
         if ($authman instanceof Auth\External) 
             array_push($retval, $authman->GetManager()->GetDefaultGroup());
         
-        return $retval;
+        return array_filter($retval);
     }
     
     public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetMyGroups()); }
@@ -94,31 +110,33 @@ class Account extends AuthEntity
     }
     
     public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
-    public function HasClients() : int          { return $this->CountObjectRefs('clients') > 0; }
+    public function CountClients() : int          { return $this->CountObjectRefs('clients'); }
     public function DeleteClients() : self      { $this->DeleteObjects('clients'); return $this; }
     
     public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
-    public function HasSessions() : int         { return $this->CountObjectRefs('sessions') > 0; }
+    public function CountSessions() : int         { return $this->CountObjectRefs('sessions'); }
    
     public function GetContactInfos() : array   { return $this->GetObjectRefs('contactinfos'); }    
-    public function HasContactInfos() : int     { return $this->CountObjectRefs('contactinfos'); }
+    public function CountContactInfos() : int     { return $this->CountObjectRefs('contactinfos'); }
     
     private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
     public function HasRecoveryKeys() : bool    { return $this->CountObjectRefs('recoverykeys') > 0; }
     
-    public function HasTwoFactor() : bool { return $this->CountObjectRefs('recoverykeys') > 0; }    
-
+    public function HasTwoFactor() : bool { return $this->CountObjectRefs('recoverykeys') > 0; }
     private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
-    public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasValidTwoFactor(); }
     
-    public function isAdmin() : bool                    { return $this->TryGetFeature('admin') ?? false; }
+    public function ForceTwoFactor() : bool     { return $this->HasValidTwoFactor() && ($this->TryGetFeature('forcetf') ?? $this->GetInheritableDefault('features__forcetf')); }
+    
+    public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? $this->GetInheritableDefault('features__allowcrypto'); }
+    
+    public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? $this->GetInheritableDefault('features__admin'); }
+    public function isEnabled() : bool          { return $this->TryGetFeature('enabled') ?? $this->GetInheritableDefault('features__enabled'); }
+    
     public function setAdmin(?bool $val) : self         { return $this->SetFeature('admin', $val); }
-    
-    public function isEnabled() : bool                  { return $this->TryGetFeature('enabled') ?? true; }
     public function setEnabled(?bool $val) : self       { return $this->SetFeature('enabled', $val); }
     
-    public function getUnlockCode() : ?string               { return $this->TryGetScalar('unlockcode'); }
-    public function setUnlockCode(?string $code) : self     { return $this->SetScalar('unlockcode', $code); }
+    public function getUnlockCode() : ?string           { return $this->TryGetScalar('unlockcode'); }
+    public function setUnlockCode(?string $code) : self { return $this->SetScalar('unlockcode', $code); }
     
     public function getActiveDate() : int       { return $this->GetDate('active'); }
     public function setActiveDate() : self      { return $this->SetDate('active'); }
@@ -127,9 +145,8 @@ class Account extends AuthEntity
     public function getPasswordDate() : int     { return $this->GetDate('passwordset'); }
     private function setPasswordDate() : self   { return $this->SetDate('passwordset'); }
     
-    public function GetMaxClientAge() : ?int    { return $this->TryGetScalar('max_client_age'); }
-    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age'); }
-    public function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age'); }
+    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age') ?? $this->GetInheritableDefault('max_session_age'); }
+    public function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age') ?? $this->GetInheritableDefault('max_password_age'); }
     
     public static function SearchByFullName(ObjectDatabase $database, string $fullname) : array
     {
@@ -214,10 +231,9 @@ class Account extends AuthEntity
         parent::Delete();
     }
     
-    const OBJECT_SIMPLE = 0; const OBJECT_FULL = 1;     
-    const OBJECT_USER = 0; const OBJECT_ADMIN = 2;
+    const OBJECT_SIMPLE = 0; const OBJECT_USER = 1; const OBJECT_ADMIN = 2;
     
-    public function GetClientObject(int $level = self::OBJECT_FULL | self::OBJECT_USER) : array
+    public function GetClientObject(int $level = self::OBJECT_USER) : array
     {
         $mapobj = function($e) { return $e->GetClientObject(); };
         
@@ -225,24 +241,37 @@ class Account extends AuthEntity
             'id' => $this->ID(),
             'username' => $this->GetUsername(),
             'dispname' => $this->GetDisplayName(),
-            'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters(),
-            'limits' => $this->GetAllCounterLimits(),
-            'features' => $this->GetAllFeatures(),
-            'timeout' => $this->GetMaxSessionAge(),
         );   
         
-        if ($level & self::OBJECT_FULL)
+        if ($level & self::OBJECT_USER || $level & self::OBJECT_ADMIN)
         {
-            $data['clients'] = array_map($mapobj, $this->GetClients());
-            $data['twofactors'] = array_map($mapobj, $this->GetTwoFactors());
-            $data['contactinfos'] = array_map($mapobj, $this->GetContactInfos());
+            $data = array_merge($data, array(
+
+                'features' => $this->GetAllFeatures(),
+                'dates' => $this->GetAllDates(),
+                'counters' => $this->GetAllCounters(),
+                'limits' => $this->GetAllCounterLimits(),
+                'max_session_age' => $this->GetMaxSessionAge(),
+                'max_password_age' => $this->GetMaxPasswordAge()
+            ));
+        }
+        
+        if ($level & self::OBJECT_USER)
+        {
+            $data = array_merge($data, array(
+                'contactinfos' => array_map($mapobj, $this->GetContactInfos()),
+                'clients' => array_map($mapobj, $this->GetClients()),
+                'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
+            ));
         }
         
         if ($level & self::OBJECT_ADMIN)
         {
-            $data['comment'] = $this->TryGetScalar('comment');            
-            $data['groups'] = array_map(function($e){ return $e->ID(); }, $this->GetMyGroups());
+            $data = array_merge($data, array(
+                'twofactor' => $this->HasValidTwoFactor(),
+                'comment' => $this->TryGetScalar('comment'),
+                'groups' => array_map(function($e){ return $e->ID(); }, $this->GetGroups())
+            ));
         }
         else
         {
@@ -251,11 +280,11 @@ class Account extends AuthEntity
 
         return $data;
     }
-
+    
     protected function GetScalar(string $field, bool $allowTemp = true)
     {
         if ($this->ExistsScalar($field)) $value = parent::GetScalar($field, $allowTemp);
-        else if ($this->ExistsScalar($field."__inherits")) $value = $this->InheritableSearch($field)->GetValue();
+        else if ($this->ExistsScalar($field.'__inherits')) $value = $this->TryGetInheritable($field)->GetValue();
         else throw new KeyNotFoundException($field);
         
         if ($value !== null) return $value; else throw new NullValueException();
@@ -264,54 +293,52 @@ class Account extends AuthEntity
     protected function TryGetScalar(string $field, bool $allowTemp = true)
     {
         if ($this->ExistsScalar($field)) return parent::TryGetScalar($field, $allowTemp);
-        else if ($this->ExistsScalar($field."__inherits")) return $this->InheritableSearch($field)->GetValue();
+        else if ($this->ExistsScalar($field.'__inherits')) return $this->TryGetInheritable($field)->GetValue();
         else return null;
     }
     
     protected function SetScalar(string $field, $value, bool $temp = false) : self
-    {  
-        if ($this->ExistsScalar($field."__inherits"))
-            $field .= "__inherits";
+    {
+        if ($this->ExistsScalar($field.'__inherits')) $field .= "__inherits";
         return parent::SetScalar($field, $value, $temp);
     }
     
     protected function GetObject(string $field) : BaseObject
     {
         if ($this->ExistsObject($field)) $value = parent::GetObject($field);
-        else if ($this->ExistsObject($field."__inherits")) $value = $this->InheritableSearch($field, true)->GetValue();
+        else if ($this->ExistsObject($field.'__inherits')) $value = $this->TryGetInheritable($field, true)->GetValue();
         else throw new KeyNotFoundException($field);
-
+        
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
     protected function TryGetObject(string $field) : ?BaseObject
     {
         if ($this->ExistsObject($field)) return parent::TryGetObject($field);
-        else if ($this->ExistsObject($field."__inherits")) return $this->InheritableSearch($field, true)->GetValue();
+        else if ($this->ExistsObject($field.'__inherits')) return $this->TryGetInheritable($field, true)->GetValue();
         else return null;
     }
     
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
-        if ($this->ExistsObject($field."__inherits"))
-            $field .= "__inherits";
+        if ($this->ExistsObject($field.'__inherits')) $field .= "__inherits";
         return parent::SetObject($field, $object, $notification);
     }
     
     protected function TryGetInheritsScalarFrom(string $field) : ?AuthEntity
     {
-        return $this->InheritableSearch($field)->GetSource();
+        return $this->TryGetInheritable($field)->GetSource();
     }
     
     protected function TryGetInheritsObjectFrom(string $field) : ?AuthEntity
     {
-        return $this->InheritableSearch($field, true)->GetSource();
+        return $this->TryGetInheritable($field, true)->GetSource();
     }
-    
-    private function InheritableSearch(string $field, bool $useobj = false) : InheritedProperty
+
+    protected function TryGetInheritable(string $field, bool $useobj = false) : InheritedProperty
     {
-        if ($useobj) $value = parent::TryGetObject($field."__inherits");
-        else $value = parent::TryGetScalar($field."__inherits");
+        if ($useobj) $value = parent::TryGetObject($field.'__inherits');
+        else $value = parent::TryGetScalar($field.'__inherits');
         
         if ($value !== null) return new InheritedProperty($value, $this);
         
@@ -319,20 +346,22 @@ class Account extends AuthEntity
         
         foreach ($this->GetGroups() as $group)
         {
-            if ($useobj) $temp_value = $group->TryGetMembersObject($field);
-            else $temp_value = $group->TryGetMembersScalar($field);
+            if ($useobj) $temp_value = $group->TryGetObject($field);
+            else $temp_value = $group->TryGetScalar($field);
             
             $temp_priority = $group->GetPriority();
             
             if ($temp_value !== null && ($temp_priority > $priority || $priority == null))
             {
-                $value = $temp_value; $source = $group; 
+                $value = $temp_value; $source = $group;
                 $priority = $temp_priority;
             }
         }
         
+        $value ??= $this->GetInheritableDefault($field);
+        
         return new InheritedProperty($value, $source);
-    }    
+    }
     
     public function HasValidTwoFactor() : bool
     {

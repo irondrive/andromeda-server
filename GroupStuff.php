@@ -1,14 +1,9 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-
-abstract class AuthEntity extends StandardObject
-{  
-    public abstract function GetDisplayName() : string;
-    public abstract function GetMailTo() : array;
-}
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 class InheritedProperty
 {
@@ -27,5 +22,30 @@ class GroupJoin extends StandardObject
             'accounts' => new FieldTypes\ObjectRef(Account::class, 'groups'),
             'groups' => new FieldTypes\ObjectRef(Group::class, 'accounts')
         ));
+    }
+}
+
+abstract class AuthEntity extends StandardObject
+{
+    public abstract function GetDisplayName() : string;
+    public abstract function GetMailTo() : array;
+    
+    public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] [--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
+                                                            "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool]"; }
+    
+    public function SetModified() : self { return $this->SetDate('modified'); }
+    
+    public function SetProperties(Input $input) : self
+    {
+        foreach (array('max_session_age','max_password_age') as $prop)
+            if ($input->HasParam($prop)) $this->SetScalar($prop, $input->TryGetParam($prop, SafeParam::TYPE_INT));
+        
+        foreach (array('max_sessions','max_contactinfos','max_recoverykeys') as $prop)
+            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->TryGetParam($prop, SafeParam::TYPE_INT));
+        
+        foreach (array('admin','enabled','forcetf','allowcrypto') as $prop)
+            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_BOOL));
+        
+        return $this->SetModified();
     }
 }
