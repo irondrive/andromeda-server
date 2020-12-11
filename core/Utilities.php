@@ -76,6 +76,8 @@ abstract class Utilities
         $size = count($arr); return $size ? $arr[count($arr)-1] : null;
     }
     
+    public static function ShortClassName(string $class) : string { return self::array_last(explode("\\",$class)); }
+    
     public static function return_bytes($val) 
     {
         if (!$val) return 0; if (is_numeric($val)) return $val;

@@ -17,19 +17,20 @@ class Config extends SingletonObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
-            'features__debug_log' => null,
-            'features__debug_http' => null,
-            'features__debug_file' => null,
-            'features__read_only' => null,
-            'features__enabled' => null,
-            'features__email' => null,
+            'apiurl' => null,
+            'features__debug_log' => new FieldTypes\Scalar(self::LOG_ERRORS),
+            'features__debug_http' => new FieldTypes\Scalar(false),
+            'features__debug_file' => new FieldTypes\Scalar(false),
+            'features__read_only' => new FieldTypes\Scalar(0),
+            'features__enabled' => new FieldTypes\Scalar(true),
+            'features__email' => new FieldTypes\Scalar(true),
             'apps' => new FieldTypes\JSON()
         ));
     }
     
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
-    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug_log int] [--debug_http bool] [--debug_file bool] [--read_only int] [--enabled bool] [--email bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug_log int] [--debug_http bool] [--debug_file bool] [--read_only int] [--enabled bool] [--email bool] [--apiurl string]"; }
     
     public function SetConfig(Input $input) : self
     {
@@ -40,51 +41,54 @@ class Config extends SingletonObject
             $this->SetScalar('datadir', $datadir);
         }
         
-        if ($input->HasParam('debug_log')) $this->SetFeature('debug_log',$input->TryGetParam('debug_log',SafeParam::TYPE_INT));
-        if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->TryGetParam('debug_http',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_file')) $this->SetFeature('debug_file',$input->TryGetParam('debug_file',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->TryGetParam('apiurl',SafeParam::TYPE_TEXT));
         
-        if ($input->HasParam('read_only')) $this->SetFeature('read_only',$input->TryGetParam('read_only',SafeParam::TYPE_INT));
-        if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->TryGetParam('enabled',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('email')) $this->SetFeature('email',$input->TryGetParam('email',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_log')) $this->SetFeature('debug_log',$input->GetParam('debug_log',SafeParam::TYPE_INT));
+        if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_file')) $this->SetFeature('debug_file',$input->GetParam('debug_file',SafeParam::TYPE_BOOL));
         
+        if ($input->HasParam('read_only')) $this->SetFeature('read_only',$input->GetParam('read_only',SafeParam::TYPE_INT));
+        if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('email')) $this->SetFeature('email',$input->GetParam('email',SafeParam::TYPE_BOOL));        
+       
         return $this;
     }
     
     public function GetApps() : array { return $this->GetScalar('apps'); }
-    private function TryGetApps() : ?array { return $this->TryGetScalar('apps'); }
     
     public function enableApp(string $app) : self
     {
-        $apps = $this->TryGetScalar('apps') ?? array();
+        $apps = $this->GetApps();
         if (!in_array($app, $apps)) array_push($apps, $app);
         return $this->SetScalar('apps', $apps);
     }
     
     public function disableApp(string $app) : self
     {
-        $apps = $this->GetScalar('apps');
+        $apps = $this->GetApps();
         if (($key = array_search($app, $apps)) !== false) unset($apps[$key]);
         return $this->SetScalar('apps', array_values($apps));
     }
     
-    public function isEnabled() : bool { return $this->TryGetFeature('enabled') ?? true; }
+    public function isEnabled() : bool { return $this->GetFeature('enabled'); }
     public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
     
     const RUN_READONLY = 1; const RUN_DRYRUN = 2;
-    public function isReadOnly() : int { return $this->TryGetFeature('read_only') ?? 0; }
+    public function isReadOnly() : int { return $this->GetFeature('read_only'); }
     public function overrideReadOnly(int $data) : self { return $this->SetFeature('read_only', $data, true); }
     
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
+    public function GetAPIUrl() : ?string { return $this->TryGetScalar('apiurl'); }
+    
     const LOG_ERRORS = 1; const LOG_DEVELOPMENT = 2; const LOG_SENSITIVE = 3;    
-    public function GetDebugLogLevel() : int { return $this->TryGetFeature('debug_log') ?? self::LOG_ERRORS; }
+    public function GetDebugLogLevel() : int { return $this->GetFeature('debug_log'); }
     public function SetDebugLogLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug_log', $data, $temp); }
     
-    public function GetDebugLog2File() : bool { return $this->TryGetFeature('debug_file') ?? false; }
-    public function GetDebugOverHTTP() : bool { return $this->TryGetFeature('debug_http') ?? false; }       
+    public function GetDebugLog2File() : bool { return $this->GetFeature('debug_file'); }
+    public function GetDebugOverHTTP() : bool { return $this->GetFeature('debug_http'); }       
     
-    public function GetEnableEmail() : bool { return $this->TryGetFeature('email') ?? false; }
+    public function GetEnableEmail() : bool { return $this->GetFeature('email'); }
 
     public function GetMailer() : Emailer
     {
@@ -110,10 +114,8 @@ class Config extends SingletonObject
         if ($admin)
         {
             $data['datadir'] = $this->GetDataDir();
-            $data['features']['email'] = $this->GetEnableEmail();
-            $data['features']['debug_http'] = $this->GetDebugOverHTTP();
-            $data['features']['debug_log'] = $this->GetDebugLogLevel();
-            $data['features']['debug_file'] = $this->GetDebugLog2File();
+            $data['apiurl'] = $this->GetAPIUrl();
+            $data['features'] = $this->GetAllFeatures();
         }
         
         return $data;

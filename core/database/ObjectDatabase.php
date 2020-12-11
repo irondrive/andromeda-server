@@ -57,7 +57,7 @@ class ObjectDatabase extends Database
         {
             $id = $row['id'];
             
-            if (in_array($id, array_keys($this->objects)))
+            if (in_array($id, array_keys($this->objects), true))
                 $output[$id] = $this->objects[$id];                
             else 
             { 
