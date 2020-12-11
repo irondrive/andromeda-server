@@ -12,7 +12,7 @@ require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/auth/Local.php");
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{Emailer, EmailRecipient};
+require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -63,10 +63,21 @@ class Account extends AuthEntity
     public function GetUsername() : string  { return $this->GetScalar('username'); }
     public function GetDisplayName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
-
-    public function GetGroups() : array { return $this->GetObjectRefs('groups'); }
-    public function CountGroups() : int { return $this->CountObjectRefs('groups'); }
     
+    public function GetDefaultGroups() : array
+    {
+        $retval = array(Config::Load($this->database)->GetDefaultGroup());
+        
+        $authman = $this->GetAuthSource();
+        if ($authman instanceof Auth\External) 
+            array_push($retval, $authman->GetManager()->GetDefaultGroup());
+        
+        return $retval;
+    }
+    
+    public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetMyGroups()); }
+    
+    public function GetMyGroups() : array { return $this->GetObjectRefs('groups'); }
     public function AddGroup(Group $group) : self { return $this->AddObjectRef('groups', $group); }
     public function RemoveGroup(Group $group) : self { return $this->RemoveObjectRef('groups', $group); }
     
@@ -90,12 +101,12 @@ class Account extends AuthEntity
     public function HasSessions() : int         { return $this->CountObjectRefs('sessions') > 0; }
    
     public function GetContactInfos() : array   { return $this->GetObjectRefs('contactinfos'); }    
-    public function HasContactInfos() : int     { return $this->TryCountObjectRefs('contactinfos'); }
+    public function HasContactInfos() : int     { return $this->CountObjectRefs('contactinfos'); }
     
     private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
-    public function HasRecoveryKeys() : bool    { return $this->TryCountObjectRefs('recoverykeys') > 0; }
+    public function HasRecoveryKeys() : bool    { return $this->CountObjectRefs('recoverykeys') > 0; }
     
-    public function HasTwoFactor() : bool { return $this->TryCountObjectRefs('recoverykeys') > 0; }    
+    public function HasTwoFactor() : bool { return $this->CountObjectRefs('recoverykeys') > 0; }    
 
     private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
     public function ForceTwoFactor() : bool     { return ($this->TryGetFeature('forcetwofactor') ?? false) && $this->HasValidTwoFactor(); }
@@ -136,6 +147,16 @@ class Account extends AuthEntity
         if ($info === null) return null; else return $info->GetAccount();
     }
     
+    public static function LoadByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : array
+    {
+        return parent::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
+    }
+    
+    public static function DeleteByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : void
+    {
+        parent::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
+    }
+    
     public function GetEmailRecipients(bool $redacted = false) : array
     {
         $name = $this->GetDisplayName();
@@ -164,14 +185,11 @@ class Account extends AuthEntity
     
     public static function Create(ObjectDatabase $database, Auth\ISource $source, string $username, string $password) : self
     {        
-        $account = parent::BaseCreate($database); $config = Config::Load($database);
+        $account = parent::BaseCreate($database)->SetScalar('username',$username);
         
-        $account->SetScalar('username',$username)->ChangePassword($password);
-        
-        if ($source instanceof Auth\External) $account->SetObject('authsource',$source);
-
-        $defaults = array_filter(array($config->GetDefaultGroup(), $source->GetAccountGroup()));
-        foreach ($defaults as $group) $account->AddGroup($group);
+        if ($source instanceof Auth\External) 
+            $account->SetObject('authsource',$source);
+        else $account->ChangePassword($password);
 
         return $account;
     }
@@ -184,7 +202,10 @@ class Account extends AuthEntity
     {
         foreach (static::$delete_handlers as $func) $func($this->database, $this);
         
-        $this->DeleteObjectRefs('sessions'); 
+        // preload these in one query (optimization)
+        $this->GetSessions(); $this->GetClients();
+        
+        $this->DeleteObjectRefs('sessions');
         $this->DeleteObjectRefs('clients');
         $this->DeleteObjectRefs('twofactors');
         $this->DeleteObjectRefs('contactinfos');
@@ -221,7 +242,7 @@ class Account extends AuthEntity
         if ($level & self::OBJECT_ADMIN)
         {
             $data['comment'] = $this->TryGetScalar('comment');            
-            $data['groups'] = array_map(function($e){ return $e->ID(); }, $this->GetGroups());
+            $data['groups'] = array_map(function($e){ return $e->ID(); }, $this->GetMyGroups());
         }
         else
         {
@@ -254,7 +275,7 @@ class Account extends AuthEntity
         return parent::SetScalar($field, $value, $temp);
     }
     
-    protected function GetObject(string $field) : self
+    protected function GetObject(string $field) : BaseObject
     {
         if ($this->ExistsObject($field)) $value = parent::GetObject($field);
         else if ($this->ExistsObject($field."__inherits")) $value = $this->InheritableSearch($field, true)->GetValue();
@@ -263,7 +284,7 @@ class Account extends AuthEntity
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
-    protected function TryGetObject(string $field) : ?self
+    protected function TryGetObject(string $field) : ?BaseObject
     {
         if ($this->ExistsObject($field)) return parent::TryGetObject($field);
         else if ($this->ExistsObject($field."__inherits")) return $this->InheritableSearch($field, true)->GetValue();
@@ -315,7 +336,7 @@ class Account extends AuthEntity
     
     public function HasValidTwoFactor() : bool
     {
-        if ($this->TryCountObjectRefs('recoverykeys') <= 0) return false;
+        if ($this->CountObjectRefs('recoverykeys') <= 0) return false;
         
         foreach ($this->GetTwoFactors() as $twofactor) {
             if ($twofactor->GetIsValid()) return true; }
@@ -343,7 +364,7 @@ class Account extends AuthEntity
     
     public function VerifyPassword(string $password) : bool
     {
-        return $this->GetAuthSource()->VerifyPassword($this, $password);
+        return $this->GetAuthSource()->VerifyAccountPassword($this, $password);
     }    
     
     public function CheckPasswordAge() : bool
@@ -367,7 +388,7 @@ class Account extends AuthEntity
         }
         
         if ($this->GetAuthSource() instanceof Auth\Local)
-            $this->SetScalar('password', Auth\Local::HashPassword($new_password));
+            $this->SetPasswordHash(Auth\Local::HashPassword($new_password));
 
         return $this->setPasswordDate();
     }

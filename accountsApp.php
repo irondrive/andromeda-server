@@ -1,11 +1,10 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{FullEmailer, EmailRecipient};
+require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
 
@@ -21,15 +20,13 @@ require_once(ROOT."/apps/accounts/KeySource.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
-require_once(ROOT."/apps/accounts/auth/Local.php");
-require_once(ROOT."/apps/accounts/auth/Pointer.php");
+require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 use Andromeda\Core\DecryptionFailedException;
-use Andromeda\Core\MailSendException;
 
-use Andromeda\Core\Database\DatabaseException; use \PDOException;
+use Andromeda\Core\Database\DatabaseException;
 use Andromeda\Core\Exceptions\NotImplementedException;
 use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
@@ -37,6 +34,7 @@ class AccountExistsException extends Exceptions\ClientErrorException          { 
 class GroupExistsException extends Exceptions\ClientErrorException            { public $message = "GROUP_ALREADY_EXISTS"; }
 class ContactInfoExistsException extends Exceptions\ClientErrorException      { public $message = "CONTACTINFO_ALREADY_EXISTS"; }
 class GroupMembershipExistsException extends Exceptions\ClientErrorException  { public $message = "GROUPMEMBERSHIP_ALREADY_EXISTS"; }
+class ImmutableGroupException extends Exceptions\ClientDeniedException        { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
 
 class ChangeExternalPasswordException extends Exceptions\ClientErrorException { public $message = "CANNOT_CHANGE_EXTERNAL_PASSWORD"; }
 class RecoveryKeyCreateException extends Exceptions\ClientErrorException      { public $message = "CANNOT_GENERATE_RECOVERY_KEY"; }
@@ -44,10 +42,9 @@ class OldPasswordRequiredException extends Exceptions\ClientErrorException    { 
 class NewPasswordRequiredException extends Exceptions\ClientErrorException    { public $message = "NEW_PASSWORD_REQUIRED"; }
 
 class EmailAddressRequiredException extends Exceptions\ClientDeniedException   { public $message = "EMAIL_ADDRESS_REQUIRED"; }
-class MandatoryGroupException extends Exceptions\ClientDeniedException         { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
-
-class UnknownMailerException extends Exceptions\ClientNotFoundException          { public $message = "UNKNOWN_MAILER"; }
-class MailSendFailException extends Exceptions\ClientErrorException              { public $message = "MAIL_SEND_FAILURE"; }
+class UnknownMailerException extends Exceptions\ClientNotFoundException        { public $message = "UNKNOWN_MAILER"; }
+class MailSendFailException extends Exceptions\ClientErrorException            { public $message = "MAIL_SEND_FAILURE"; }
+class AuthSourceTestFailException extends Exceptions\ClientErrorException      { public $message = "AUTH_SOURCE_TEST_FAIL"; }
 
 class UnknownAuthSourceException extends Exceptions\ClientNotFoundException      { public $message = "UNKNOWN_AUTHSOURCE"; }
 class UnknownAccountException extends Exceptions\ClientNotFoundException         { public $message = "UNKNOWN_ACCOUNT"; }
@@ -68,12 +65,10 @@ class AccountsApp extends AppBase
     public static function getUsage() : array 
     { 
         return array(
-            'phpinfo',
-            'testmail [--mailid id]',
             'install --username name --password raw',
-            '- AUTH ALL: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
+            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
-            'getauthsources',
+            'setconfig '.Config::GetSetConfigUsage(),
             'getaccount',
             'setfullname --fullname name',
             'changepassword --username text --new_password raw (--auth_password raw | --auth_recoverykey text)',
@@ -95,9 +90,16 @@ class AccountsApp extends AppBase
             'listaccounts [--limit int] [--offset int]',
             'listgroups [--limit int] [--offset int]',
             'creategroup --name name [--priority int] [--comment text]',
+            'editgroup [--name name] [--priority int] [--comment text]',
             'deletegroup --group id',
             'addgroupmember --account id --group id',
-            'removegroupmember --acount id --group id'
+            'removegroupmember --account id --group id',
+            'getauthsources',
+            'createauthsource '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
+            ...Auth\Manager::GetPropUsages(),
+            'testauthsource --manager id [--test_username text --test_password raw]',
+            'editauthsource --manager id '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
+            'deleteauthsource --manager id --auth_password raw'
         );
     }
     
@@ -106,7 +108,7 @@ class AccountsApp extends AppBase
         parent::__construct($api);   
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (PDOException | DatabaseException $e) { }
+        catch (\PDOException | DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
     }
@@ -122,42 +124,46 @@ class AccountsApp extends AppBase
         }
 
         switch($input->GetAction())
-        {       
-            case 'phpinfo':             return $this->PHPInfo($input); break;
-            case 'testmail':            return $this->TestMail($input); break;
-            case 'install':             return $this->Install($input); break;
+        {
+            case 'install':             return $this->Install($input);            
+            case 'getconfig':           return $this->GetConfig($input);
+            case 'setconfig':           return $this->SetConfig($input);
             
-            case 'getconfig':           return $this->GetConfig($input); break;
-            case 'getauthsources':      return $this->GetAuthSources($input); break;
+            case 'getauthsources':      return $this->GetAuthSources($input);
+            case 'createauthsource':    return $this->CreateAuthSource($input);
+            case 'testauthsource':      return $this->TestAuthSource($input);
+            case 'editauthsource':      return $this->EditAuthSource($input);
+            case 'deleteauthsource':    return $this->DeleteAuthSource($input);
             
-            case 'getaccount':          return $this->GetAccount($input); break;
-            case 'setfullname':         return $this->SetFullName($input); break;
-            case 'changepassword':      return $this->ChangePassword($input); break;
-            case 'emailrecovery':       return $this->EmailRecovery($input); break;
+            case 'getaccount':          return $this->GetAccount($input);
+            case 'setfullname':         return $this->SetFullName($input);
+            case 'changepassword':      return $this->ChangePassword($input);
+            case 'emailrecovery':       return $this->EmailRecovery($input);
             
-            case 'createaccount':       return $this->CreateAccount($input); break;
-            case 'unlockaccount':       return $this->UnlockAccount($input); break;            
-            case 'createsession':       return $this->CreateSession($input); break;
+            case 'createaccount':       return $this->CreateAccount($input);
+            case 'unlockaccount':       return $this->UnlockAccount($input);            
+            case 'createsession':       return $this->CreateSession($input);
             
-            case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input); break;
-            case 'createtwofactor':     return $this->CreateTwoFactor($input); break;
-            case 'verifytwofactor':     return $this->VerifyTwoFactor($input); break;
-            case 'createcontactinfo':   return $this->CreateContactInfo($input); break;
-            case 'verifycontactinfo':   return $this->VerifyContactInfo($input); break;
+            case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input);
+            case 'createtwofactor':     return $this->CreateTwoFactor($input);
+            case 'verifytwofactor':     return $this->VerifyTwoFactor($input);
+            case 'createcontactinfo':   return $this->CreateContactInfo($input);
+            case 'verifycontactinfo':   return $this->VerifyContactInfo($input);
             
-            case 'deleteaccount':       return $this->DeleteAccount($input); break;
-            case 'deletesession':       return $this->DeleteSession($input); break;
-            case 'deleteclient':        return $this->DeleteClient($input); break;
-            case 'deleteallauth':       return $this->DeleteAllAuth($input); break;
-            case 'deletetwofactor':     return $this->DeleteTwoFactor($input); break;
-            case 'deletecontactinfo':   return $this->DeleteContactInfo($input); break; 
+            case 'deleteaccount':       return $this->DeleteAccount($input);
+            case 'deletesession':       return $this->DeleteSession($input);
+            case 'deleteclient':        return $this->DeleteClient($input);
+            case 'deleteallauth':       return $this->DeleteAllAuth($input);
+            case 'deletetwofactor':     return $this->DeleteTwoFactor($input);
+            case 'deletecontactinfo':   return $this->DeleteContactInfo($input); 
             
-            case 'listaccounts':        return $this->ListAccounts($input); break;
-            case 'listgroups':          return $this->ListGroups($input); break;
-            case 'creategroup':         return $this->CreateGroup($input); break;
-            case 'deletegroup':         return $this->DeleteGroup($input); break;
-            case 'addgroupmember':      return $this->AddGroupMember($input); break;
-            case 'removegroupmember':   return $this->RemoveGroupmember($input); break;
+            case 'listaccounts':        return $this->ListAccounts($input);
+            case 'listgroups':          return $this->ListGroups($input);
+            case 'creategroup':         return $this->CreateGroup($input);
+            case 'editgroup':           return $this->EditGroup($input); 
+            case 'deletegroup':         return $this->DeleteGroup($input);
+            case 'addgroupmember':      return $this->AddGroupMember($input);
+            case 'removegroupmember':   return $this->RemoveGroupmember($input);
             
             default: throw new UnknownActionException();
         }
@@ -172,36 +178,6 @@ class AccountsApp extends AppBase
         return $return;
     }
     
-    protected function PHPInfo(Input $input) : array // TODO maybe make a separate server-admin app for these things...
-    {
-        if ($this->authenticator === null) throw new AuthenticationFailedException();
-        $this->authenticator->RequireAdmin();
-        
-        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE); phpinfo();
-    }
-    
-    protected function TestMail(Input $input) : array
-    {
-        if ($this->authenticator === null) throw new AuthenticationFailedException();
-        $this->authenticator->RequireAdmin();        
-        
-        $account = $this->authenticator->GetAccount();
-        $subject = "Andromeda Email Test";
-        $body = "This is a test email from Andromeda";
-        
-        if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_ID)) !== null)
-        {
-            $mailer = FullEmailer::TryLoadByID($this->API->GetDatabase(), $mailer);
-            if ($mailer === null) throw new UnknownMailerException();
-        }
-        else $mailer = $this->API->GetConfig()->GetMailer();        
-        
-        try { $mailer->SendMail($subject, $body, $account->GetMailTo()); }
-        catch (MailSendException $e) { throw new MailSendFailException($e->getDetails()); }
-        
-        return array();
-    }
-    
     protected function Install(Input $input)
     {
         if (isset($this->config)) throw new UnknownActionException();
@@ -209,7 +185,7 @@ class AccountsApp extends AppBase
         $database = $this->API->GetDatabase();
         $database->importFile(ROOT."/apps/accounts/andromeda2.sql");
         
-        Config::Create($database)->Save();        
+        Config::Create($database)->Save();
         
         $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM);
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
@@ -221,14 +197,12 @@ class AccountsApp extends AppBase
         return array('account'=>$account->GetClientObject());
     }
     
-    // TODO function to enable/disable apps (new server-admin app)
-    
     protected function GetConfig(Input $input) : array
     {
         $account = $this->authenticator->GetAccount();
         $admin = $account !== null && $account->isAdmin();
 
-        return $this->config->GetClientObject($admin ? Config::OBJECT_ADMIN : Config::OBJECT_SIMPLE);
+        return $this->config->GetClientObject($admin);
     }
     
     protected function SetConfig(Input $input) : array
@@ -236,18 +210,16 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        return $this->config->GetClientObject(Config::OBJECT_ADMIN);
-    }
-    
-    // TODO Get and Set config for the server also
+        return $this->config->SetConfig($input)->GetClientObject(true);
+    }    
     
     protected function GetAuthSources(Input $input) : array
     {
-        $data = array(); $pointers = Auth\Pointer::LoadAll($this->API->GetDatabase());        
-        foreach ($pointers as $pointer) array_push($data, $pointer->GetClientObject());        
-        return $data;
+        $admin = $this->authenticator !== null && $this->authenticator->isAdmin();
+        return array_map(function(Auth\Manager $m)use($admin){ return $m->GetClientObject($admin); },
+        Auth\Manager::LoadAll($this->API->GetDatabase()));
     }
-    
+ 
     protected function GetAccount(Input $input) : ?array
     {
         if ($this->authenticator === null) return null;
@@ -321,6 +293,7 @@ class AccountsApp extends AppBase
         $subject = "Andromeda Account Recovery Key";
         $body = "Your recovery key is: $key";
         
+        // TODO HTML - configure a directory where client templates reside
         $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, $account->GetMailTo());
         
         return $account->GetEmailRecipients(true);
@@ -363,6 +336,7 @@ class AccountsApp extends AppBase
             $subject = "Andromeda Account Validation Code";
             $body = "Your validation code is: $code";
             
+            // TODO HTML - configure a directory where client templates reside
             $mailer->SendMail($subject, $body, $to);
         }
         
@@ -403,8 +377,9 @@ class AccountsApp extends AppBase
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_ID)) !== null) 
         {
-            $authsource = Auth\Pointer::TryLoadSourceByPointer($database, $authsource);
+            $authsource = Auth\Manager::TryLoadByID($database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
+            else $authsource = $authsource->GetAuthSource();
         }
         else $authsource = Auth\Local::GetInstance();
         
@@ -421,7 +396,7 @@ class AccountsApp extends AppBase
             if (!$account->VerifyPassword($password)) throw new AuthenticationFailedException();
         }
         /* if no account and using external auth, try the password, and if success, create a new account on the fly */
-        else if (!($authsource instanceof Auth\Local))
+        else if ($authsource instanceof Auth\External)
         {            
             if (!$authsource->VerifyPassword($username, $password))
                 throw new AuthenticationFailedException();
@@ -528,7 +503,7 @@ class AccountsApp extends AppBase
             
             $account->InitializeCrypto($password);
             $this->authenticator->GetSession()->InitializeCrypto();
-            Session::DeleteByAccountExcept($database, $this->authenticator->GetSession());
+            Session::DeleteByAccountExcept($database, $account, $this->authenticator->GetSession());
         }
         
         $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
@@ -578,6 +553,7 @@ class AccountsApp extends AppBase
             
             switch ($type)
             {
+                // TODO HTML - configure a directory where client templates reside
                 case ContactInfo::TYPE_EMAIL:                    
                     $mailer = $this->API->GetConfig()->GetMailer();
                     $to = array(new EmailRecipient($info, $account->GetUsername()));                    
@@ -766,12 +742,26 @@ class AccountsApp extends AppBase
         
         $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
         if ($duplicate !== null) throw new GroupExistsException();
+
+        return Group::Create($this->API->GetDatabase(), $name, $priority, $comment)->GetClientObject();
+    }    
+    
+    protected function EditGroup(Input $input)
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
         
-        $group = Group::Create($this->API->GetDatabase(), $name, $priority, $comment);
+        $database = $this->API->GetDatabase();
         
-        $return = array('group' => $group->GetClientObject());  
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $group = Group::TryLoadByID($database, $groupid);
+        if ($group === null) throw new UnknownGroupException();
         
-        return $this->StandardReturn($input, $return); 
+        if ($input->HasParam('name')) $group->SetName($input->GetParam("name", SafeParam::TYPE_NAME));
+        if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT));
+        if ($input->HasParam('comment')) $group->SetComment($input->TryGetParam("comment", SafeParam::TYPE_TEXT));
+        
+        return $group->GetClientObject();
     }
     
     protected function DeleteGroup(Input $input)
@@ -783,16 +773,9 @@ class AccountsApp extends AppBase
         
         $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
         $group = Group::TryLoadByID($database, $groupid);
-        if ($group === null) throw new UnknownGroupException();        
-        
-        if ($group === $this->config->GetDefaultGroup()) 
-            throw new MandatoryGroupException();
-        
-        foreach (Auth\Pointer::LoadAll($database) as $authp)
-            if ($group === $authp->GetSource()->GetAccountGroup()) 
-                throw new MandatoryGroupException();
+        if ($group === null) throw new UnknownGroupException();
             
-        $group->Delete(); return $this->StandardReturn($input);        
+        $group->Delete(); return array();      
     }
     
     protected function AddGroupMember(Input $input)
@@ -809,10 +792,13 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        if (!$account->HasGroup($group)) $account->AddGroup($group);
+        if (in_array($group, $account->GetDefaultGroups(), true))
+            throw new ImmutableGroupException();
+        
+        if (!in_array($group, $account->GetMyGroups(), true)) $account->AddGroup($group);
         else throw new GroupMembershipExistsException();
 
-        return $this->StandardReturn($input);
+        return array();
     }
     
     protected function RemoveGroupMember(Input $input)
@@ -829,13 +815,73 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        if ($group === $this->config->GetDefaultGroup()) throw new MandatoryGroupException();
-        if ($group === $account->GetAuthSource()->GetAccountGroup()) throw new MandatoryGroupException();
+        if (in_array($group, $account->GetDefaultGroups(), true))
+            throw new ImmutableGroupException();
         
-        if ($account->HasGroup($group)) $account->RemoveGroup($group);
+        if (in_array($group, $account->GetMyGroups(), true)) $account->RemoveGroup($group);
         else throw new UnknownGroupMembershipException();
         
-        return $this->StandardReturn($input);
+        return array();
+    }
+    
+    protected function CreateAuthSource(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin()->RequirePassword();
+
+        $manager = Auth\Manager::Create($this->API->GetDatabase(), $input);
+        
+        if ($input->HasParam('test_username'))
+        {
+            $input->GetParams()->AddParam('manager',$manager->ID());
+            $this->TestAuthSource($input);
+        }
+        
+        return $manager->GetClientObject(true);
+    }
+    
+    protected function TestAuthSource(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        if ($manager === null) throw new UnknownAuthSourceException();        
+        
+        $testuser = $input->GetParam('test_username',SafeParam::TYPE_TEXT);
+        $testpass = $input->GetParam('test_password',SafeParam::TYPE_RAW);
+        
+        if (!$manager->GetAuthSource()->VerifyPassword($testuser, $testpass))
+            throw new AuthSourceTestFailException();        
+           
+        return $manager->GetClientObject(true);
+    }
+    
+    protected function EditAuthSource(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin()->RequirePassword();
+        
+        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        if ($manager === null) throw new UnknownAuthSourceException();
+        
+        if ($input->HasParam('test_username')) $this->TestAuthSource($input);
+        
+        return $manager->Edit($input)->GetClientObject(true);
+    }
+    
+    protected function DeleteAuthSource(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin()->RequirePassword();
+        
+        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        if ($manager === null) throw new UnknownAuthSourceException();
+        
+        $manager->Delete(); return array();
     }
 
     public function Test(Input $input)
