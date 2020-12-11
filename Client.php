@@ -44,14 +44,7 @@ class Client extends AuthObject
     }
 
     public function CheckMatch(IOInterface $interface, string $key) : bool
-    {
-        $max = $this->GetAccount()->GetMaxClientAge();
-        
-        if ($max !== null && time()-$this->getActiveDate() > $max)
-        {
-            $this->Delete(); return false;
-        }
-        
+    {        
         $good = $this->CheckKeyMatch($key);
         
         if ($good)

@@ -84,7 +84,7 @@ class AccountsApp extends AppBase
             'deleteaccount --auth_password raw --auth_twofactor int',
             'deletesession [--session id --auth_password raw]',
             'deleteclient [--client id --auth_password raw]',
-            'deleteallauth --auth_password raw',
+            'deleteallauth --auth_password raw [--everyone bool]',
             'deletetwofactor --auth_password raw --twofactor id',
             'deletecontactinfo --type int --info email',
             'listaccounts [--limit int] [--offset int]',
@@ -95,11 +95,13 @@ class AccountsApp extends AppBase
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
             'getauthsources',
-            'createauthsource '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
+            'createauthsource --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             ...Auth\Manager::GetPropUsages(),
             'testauthsource --manager id [--test_username text --test_password raw]',
-            'editauthsource --manager id '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
-            'deleteauthsource --manager id --auth_password raw'
+            'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
+            'deleteauthsource --manager id --auth_password raw',
+            'setaccountprops --account id '.AuthEntity::GetPropUsage(),
+            'setgroupprops --group id '.AuthEntity::GetPropUsage()
         );
     }
     
@@ -164,6 +166,9 @@ class AccountsApp extends AppBase
             case 'deletegroup':         return $this->DeleteGroup($input);
             case 'addgroupmember':      return $this->AddGroupMember($input);
             case 'removegroupmember':   return $this->RemoveGroupmember($input);
+            
+            case 'setaccountprops':     return $this->SetAccountProps($input);
+            case 'setgroupprops':       return $this->SetGroupProps($input);
             
             default: throw new UnknownActionException();
         }
@@ -481,7 +486,7 @@ class AccountsApp extends AppBase
         
         $keys = RecoveryKey::CreateSet($this->API->GetDatabase(), $account);
         
-        $output = array_map(function($key){
+        $output = array_map(function(RecoveryKey $key){
             return $key->GetClientObject(true); }, $keys);
         
         $return = array('recoverykeys' => $output);
@@ -497,7 +502,7 @@ class AccountsApp extends AppBase
         
         $this->authenticator->RequirePassword()->TryRequireCrypto();
         
-        if ($this->config->GetAllowCrypto() && !$account->hasCrypto())
+        if ($account->GetAllowCrypto() && !$account->hasCrypto())
         {
             $password = $input->GetParam('auth_password',SafeParam::TYPE_RAW);
             
@@ -512,7 +517,7 @@ class AccountsApp extends AppBase
         $recoverykeys = RecoveryKey::CreateSet($database, $account);
         
         $tfobj = $twofactor->GetClientObject(true);
-        $keyobjs = array_map(function($key){ return $key->GetClientObject(true); }, $recoverykeys);
+        $keyobjs = array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); }, $recoverykeys);
         
         $return = array('twofactor' => $tfobj, 'recoverykeys' => $keyobjs );
         
@@ -650,7 +655,12 @@ class AccountsApp extends AppBase
         
         if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
         
-        $this->authenticator->GetAccount()->DeleteClients();
+        if ($input->TryGetParam('everyone',SafeParam::TYPE_BOOL) ?? false)
+        {
+            $this->authenticator->RequireAdmin();
+            Client::DeleteAll($this->API->GetDatabase());
+        }
+        else $this->authenticator->GetAccount()->DeleteClients();
         
         return $this->StandardReturn($input);
     }
@@ -695,7 +705,7 @@ class AccountsApp extends AppBase
         if ($type == ContactInfo::TYPE_EMAIL)
         {
             $require = $this->config->GetRequireEmails();
-            if ($require >= Config::CONTACT_EXIST && !$account->HasContactInfos())
+            if ($require >= Config::CONTACT_EXIST && !$account->CountContactInfos())
                 throw new EmailAddressRequiredException();  
         }
 
@@ -713,10 +723,10 @@ class AccountsApp extends AppBase
         $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
         
         $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ?? false;
-        $type = ($full ? Account::OBJECT_FULL : Account::OBJECT_SIMPLE) | Account::OBJECT_ADMIN;
+        $type = $full ? Account::OBJECT_ADMIN : Account::OBJECT_SIMPLE;
         
         $accounts = Account::LoadAll($this->API->GetDatabase(), $limit, $offset);        
-        return array_map(function($account)use($type){ return $account->GetClientObject($type); }, $accounts);
+        return array_map(function(Account $account)use($type){ return $account->GetClientObject($type); }, $accounts);
     }
     
     protected function ListGroups(Input $input)
@@ -728,7 +738,7 @@ class AccountsApp extends AppBase
         $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
         
         $groups = Group::LoadAll($this->API->GetDatabase(), $limit, $offset);
-        return array_map(function($group){ return $group->GetClientObject(); }, $groups);
+        return array_map(function(Group $group){ return $group->GetClientObject(); }, $groups);
     }
     
     protected function CreateGroup(Input $input)
@@ -743,7 +753,7 @@ class AccountsApp extends AppBase
         $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
         if ($duplicate !== null) throw new GroupExistsException();
 
-        return Group::Create($this->API->GetDatabase(), $name, $priority, $comment)->GetClientObject();
+        return Group::Create($this->API->GetDatabase(), $name, $priority, $comment)->GetClientObject(true);
     }    
     
     protected function EditGroup(Input $input)
@@ -798,7 +808,7 @@ class AccountsApp extends AppBase
         if (!in_array($group, $account->GetMyGroups(), true)) $account->AddGroup($group);
         else throw new GroupMembershipExistsException();
 
-        return array();
+        return $group->GetClientObject(true);
     }
     
     protected function RemoveGroupMember(Input $input)
@@ -821,7 +831,7 @@ class AccountsApp extends AppBase
         if (in_array($group, $account->GetMyGroups(), true)) $account->RemoveGroup($group);
         else throw new UnknownGroupMembershipException();
         
-        return array();
+        return $group->GetClientObject(true);
     }
     
     protected function CreateAuthSource(Input $input) : array
@@ -882,6 +892,34 @@ class AccountsApp extends AppBase
         if ($manager === null) throw new UnknownAuthSourceException();
         
         $manager->Delete(); return array();
+    }
+    
+    protected function SetAccountProps(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $database = $this->API->GetDatabase();
+        
+        $acctid = $input->GetParam("account", SafeParam::TYPE_ID);
+        $account = Account::TryLoadByID($database, $acctid);
+        if ($account === null) throw new UnknownAccountException();
+        
+        return $account->SetProperties($input)->GetClientObject(Account::OBJECT_ADMIN);
+    }
+    
+    protected function SetGroupProps(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $database = $this->API->GetDatabase();
+        
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $group = Group::TryLoadByID($database, $groupid);
+        if ($group === null) throw new UnknownGroupException();
+
+        return $group->SetProperties($input)->GetClientObject(true);
     }
 
     public function Test(Input $input)

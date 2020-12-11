@@ -54,7 +54,7 @@ class TwoFactor extends StandardObject
         ));
     }
     
-    const SECRET_LENGTH = 32; const TIME_TOLERANCE = 2;
+    const SECRET_LENGTH = 32; const TIME_TOLERANCE = 1;
     
     public function GetAccount() : Account { return $this->GetObject('account'); }
     public function GetComment() : ?string { return $this->TryGetScalar("comment"); }

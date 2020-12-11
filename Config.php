@@ -16,21 +16,19 @@ class Config extends SingletonObject
             'features__createaccount' => new FieldTypes\Scalar(false),
             'features__emailasusername' => new FieldTypes\Scalar(false),
             'features__requirecontact' => new FieldTypes\Scalar(0),
-            'features__allowcrypto' => new FieldTypes\Scalar(true),
             'default_group' => new FieldTypes\ObjectRef(Group::class)
         ));
     }
     
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->CreateDefaultGroup(); }
 
-    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--emailasusername bool] [--requirecontact bool] [--allowcrypto bool] [--createdefgroup bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--emailasusername bool] [--requirecontact bool] [--createdefgroup bool]"; }
     
     public function SetConfig(Input $input) : self
     {
         if ($input->HasParam('createaccount')) $this->SetFeature('createaccount',$input->GetParam('createaccount',SafeParam::TYPE_BOOL));
         if ($input->HasParam('emailasusername')) $this->SetFeature('randomwrite',$input->GetParam('emailasusername',SafeParam::TYPE_BOOL));
         if ($input->HasParam('requirecontact')) $this->SetFeature('requirecontact',$input->GetParam('requirecontact',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('allowcrypto')) $this->SetFeature('allowcrypto',$input->GetParam('allowcrypto',SafeParam::TYPE_BOOL));
         
         if ($input->TryGetParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
         
@@ -50,11 +48,9 @@ class Config extends SingletonObject
     
     public function GetAllowCreateAccount() : bool  { return $this->GetFeature('createaccount'); }
     public function GetUseEmailAsUsername() : bool  { return $this->GetFeature('emailasusername'); }
-    public function GetAllowCrypto() : bool         { return $this->GetFeature('allowcrypto'); }
     
     public function SetAllowCreateAccount(bool $allow) : self { return $this->SetFeature('createaccount', $allow); }
     public function SetUseEmailAsUsername(bool $useem) : self { return $this->SetFeature('emailasusername', $useem); }
-    public function SetAllowCrypto(bool $allow) : self        { return $this->SetFeature('allowcrypto', $allow); }
     
     const CONTACT_EXIST = 1; const CONTACT_VALID = 2;
     
