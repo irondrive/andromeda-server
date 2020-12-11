@@ -17,10 +17,12 @@ const RETURN_SCALAR = 0; const RETURN_OBJECT = 1; const RETURN_OBJECTS = 2;
 class Scalar
 {
     protected string $myfield; 
-    protected $tempvalue = null;
-    protected $realvalue = null; 
+    protected $tempvalue;
+    protected $realvalue; 
     protected int $delta = 0; 
     protected bool $alwaysSave = false;
+    
+    protected ObjectDatabase $database;
     
     public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
     public static function GetReturnType(){ return RETURN_SCALAR; }
@@ -30,16 +32,21 @@ class Scalar
         $this->alwaysSave = $alwaysSave;
         $this->tempvalue = $defvalue;
         $this->realvalue = $defvalue;
+        $this->delta = ($defvalue !== null);
     }
 
-    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
+    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield) : void
     {
         $this->database = $database; 
         $this->parent = $parent; 
         $this->myfield = $myfield;
-
-        $this->tempvalue = $value; 
+    }
+    
+    public function InitValue(?string $value) : void
+    {
+        $this->tempvalue = $value;
         $this->realvalue = $value;
+        $this->delta = 0;
     }
     
     public function GetMyField() : string { return $this->myfield; }
@@ -87,9 +94,9 @@ class Counter extends Scalar
 {
     public static function GetOperatorType(){ return OPERATOR_INCREMENT; }
     
-    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
+    public function InitValue(?string $value) : void
     {
-        parent::Initialize($database, $parent, $myfield, $value ?? 0);
+        parent::InitValue($value ?? 0);
     }        
     
     public function Delta(int $delta = 1) : bool 
@@ -105,9 +112,9 @@ class Counter extends Scalar
 
 class JSON extends Scalar
 {
-    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value) 
+    public function InitValue(?string $value) : void
     {
-        parent::Initialize($database, $parent, $myfield, $value);
+        parent::InitValue($value);
         if ($value) $value = Utilities::JSONDecode($value);
         $this->realvalue = $value; $this->tempvalue = $value;
     }
@@ -117,8 +124,7 @@ class JSON extends Scalar
 
 class ObjectRef extends Scalar
 {
-    protected ObjectDatabase $database; 
-    protected ?BaseObject $object = null;
+    protected ?BaseObject $object;
     
     protected string $refclass; 
     protected ?string $reffield;   
@@ -137,17 +143,20 @@ class ObjectRef extends Scalar
 
     public function GetObject() : ?BaseObject
     {
-        $id = $this->GetValue(); if ($id === null) return null;        
-        return $this->object ?? $this->GetRefClass()::LoadByID($this->database, $id);
+        $id = $this->GetValue(); if ($id === null) return null;
+        
+        if (!isset($this->object)) $this->object = $this->GetRefClass()::LoadByID($this->database, $id);
+        
+        return $this->object;
     }
     
     public function SetObject(?BaseObject $object) : bool
     { 
-        if ($object === $this->object) return false;
+        if (isset($this->object) && $object === $this->object) return false;
         
         if ($object !== null && !is_a($object, $this->GetBaseClass())) 
             throw new ObjectTypeException();
-        
+
         $this->SetValue( ($object !== null) ? $object->ID() : null );
         
         $this->object = $object; $this->delta++; return true;
@@ -157,7 +166,7 @@ class ObjectRef extends Scalar
     {
         $id = $this->GetValue(); if ($id === null) return;        
         $this->GetRefClass()::DeleteByID($this->database, $id);        
-        if ($this->object) $this->object->Delete();
+        if (isset($this->object) && $this->object) $this->object->Delete();
     }
 }
 
@@ -175,10 +184,9 @@ class ObjectPoly extends ObjectRef
         return implode('\\',array_slice(explode('\\', $class),1)); 
     }
     
-    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield, ?string $value)
+    public function InitValue(?string $value) : void
     {
-        parent::Initialize($database, $parent, $myfield, $value);
-
+        parent::InitValue($value);
         if ($value === null) return;
         
         $value = explode('*',$value);
@@ -216,7 +224,6 @@ const REFSTYPE_SINGLE = 0; const REFSTYPE_MANY = 1;
 
 class ObjectRefs extends Counter
 {
-    protected ObjectDatabase $database; 
     protected array $objects; 
     protected bool $isLoaded = false;
     
@@ -296,13 +303,13 @@ class ObjectRefs extends Counter
             unset($this->refs_deleted[$idx]);
             parent::Delta(1); $modified = true;
         }
-        
-        if (!in_array($object, $this->refs_added))
+
+        if (!in_array($object, $this->refs_added, true))
         {
             array_push($this->refs_added, $object); 
             parent::Delta(); $modified = true;
         }
-        
+                
         if (isset($this->objects))
             $this->objects[$object->ID()] = $object; 
 
@@ -319,7 +326,7 @@ class ObjectRefs extends Counter
             parent::Delta(-1); $modified = true;
         }
         
-        if (!in_array($object, $this->refs_deleted))
+        if (!in_array($object, $this->refs_deleted, true))
         {
             array_push($this->refs_deleted, $object); 
             parent::Delta(-1); $modified = true;

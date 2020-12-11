@@ -61,17 +61,15 @@ class ErrorLogEntry extends BaseObject
             
             'app'=>     (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetApp() : "",
             'action'=>  (isset($api) && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
-            
-            'log' =>    isset($api) ? $api->GetDebugLog() : ""
         );
-        
-        if ($asJson) $data['log'] = Utilities::JSONEncode($data['log']);
-        
+
         $extended = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT;
         $sensitive = isset($api) && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE;
         
         if ($extended)
         {
+            
+            $data['log'] = isset($api) ? $api->GetDebugLog() : "";
             $data['objects'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
             $data['queries'] = (isset($api) && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
             
@@ -79,6 +77,7 @@ class ErrorLogEntry extends BaseObject
             {
                 $data['objects'] = Utilities::JSONEncode($data['objects']);
                 $data['queries'] = Utilities::JSONEncode($data['queries']);
+                $data['log'] = Utilities::JSONEncode($data['log']);
             }
         }
         

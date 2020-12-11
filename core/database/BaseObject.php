@@ -163,13 +163,7 @@ abstract class BaseObject
     protected function CountObjectRefs(string $field) : int
     {
         if (!$this->ExistsObjectRefs($field)) throw new KeyNotFoundException($field);
-        return $this->objectrefs[$field]->GetValue();
-    }
-    
-    protected function TryCountObjectRefs(string $field) : int
-    {
-        if (!$this->ExistsObjectRefs($field)) return 0;
-        return $this->objectrefs[$field]->GetValue();
+        return $this->objectrefs[$field]->GetValue() ?? 0;
     }
     
     protected function GetJoinObject(string $field, BaseObject $obj) : StandardObject
@@ -237,7 +231,7 @@ abstract class BaseObject
         }
         
         if ($object === $this->objects[$field]) return $this;
-        
+
         if (!$notification)
         {
             $oldref = $this->objects[$field]->GetObject();
@@ -313,25 +307,32 @@ abstract class BaseObject
         $this->database = $database;
 
         $fields = static::GetFieldTemplate();
-
-        foreach (array_keys($fields) as $field)
-            if (!array_key_exists($field, $data))
-                $data[$field] = null;
-
-        foreach (array_keys($data) as $column) 
+        $fields['id'] = new FieldTypes\Scalar();
+        
+        foreach ($fields as $key=>$field)
         {
-            $field = $fields[$column] ?? new FieldTypes\Scalar();
-            $field->Initialize($this->database, $this, $column, $data[$column]);
-
-            $key = $field->GetMyField();
-            switch ($field->GetReturnType())
-            {
-                case FieldTypes\RETURN_SCALAR: $this->scalars[$key] = $field; break;
-                case FieldTypes\RETURN_OBJECT: $this->objects[$key] = $field; break;
-                case FieldTypes\RETURN_OBJECTS: $this->objectrefs[$key] = $field; break;
-            }
+            $field ??= new FieldTypes\Scalar();
+            $field->Initialize($this->database, $this, $key);
+            $fields[$key] = $field; $this->AddField($key, $field);            
+        }
+        
+        foreach ($data as $column=>$value)
+        {
+            $fields[$column]->InitValue($value);
         }        
+
         $this->SubConstruct();
+    }
+    
+    protected function AddField(string $key, $field)
+    {
+        $key = $field->GetMyField();
+        switch ($field->GetReturnType())
+        {
+            case FieldTypes\RETURN_SCALAR: $this->scalars[$key] = $field; break;
+            case FieldTypes\RETURN_OBJECT: $this->objects[$key] = $field; break;
+            case FieldTypes\RETURN_OBJECTS: $this->objectrefs[$key] = $field; break;
+        }
     }
     
     protected function SubConstruct() : void { }
@@ -366,13 +367,13 @@ abstract class BaseObject
 
         foreach ($this->objects as $field)
         {
-            $object = $field->GetObject(); $myfield = $field->GetMyField();
-            if ($object !== null) $this->UnsetObject($myfield);
+            $myfield = $field->GetMyField();
+            if ($field->GetValue()) $this->UnsetObject($myfield);
         }
         
         foreach ($this->objectrefs as $refs)
         {
-            if (!$refs->GetValue() > 0) continue;
+            if (!$refs->GetValue()) continue;
             $objects = $refs->GetObjects(); $myfield = $refs->GetMyField();
             foreach ($objects as $object) $this->RemoveObjectRef($myfield, $object);
         }

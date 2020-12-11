@@ -114,12 +114,19 @@ class AJAX extends IOInterface
             echo Utilities::JSONEncode($outdata);
         }
     }
+    
+    public static function GetRemoteURL(string $url, Input $input, bool $params = true)
+    {
+        $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
+        if ($params) $get = array_merge($get, static::EncodeParams($input->GetParams()));
+        return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
+    }
 
     public static function RemoteRequest(string $url, Input $input) : array
     {
-        $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
+        $url = static::GetRemoteURL($url, $input, false);
 
-        $data = static::HTTPPost($url, $get, static::EncodeParams($input->GetParams()));
+        $data = static::HTTPPost($url, static::EncodeParams($input->GetParams()));
         if ($data === null) throw new RemoteInvalidException();
 
         try { return Utilities::JSONDecode($data); }
@@ -138,10 +145,8 @@ class AJAX extends IOInterface
         return $output;
     }
 
-    public static function HTTPPost(string $url, array $get, array $post) : ?string
+    public static function HTTPPost(string $url, array $post) : ?string
     {
-        $url .= ((strpos($url,'?')<0)?'?':'&').http_build_query($get);
-
         $options = array('http'=>array(
             'header' => 'Content-type: application/x-www-form-urlencoded\r\n',
             'method' => 'POST', 'content' => http_build_query($post)

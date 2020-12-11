@@ -38,6 +38,13 @@ class SafeParams
         return $this;
     }
     
+    public function AddParamsArray(array $params) : self
+    {
+        foreach ($params as $key=>$val)
+            $this->AddParam($key, $val);
+        return $this;
+    }
+    
     public function GetParamsArray() : array { return $this->params; }
     
     public function GetParam(string $key, int $type, ?callable $usrfunc = null)
