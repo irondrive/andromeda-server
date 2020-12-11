@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 

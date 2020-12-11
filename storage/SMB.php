@@ -8,9 +8,11 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
-class SMBExtensionException extends ActivateException    { public $message = "SMB_EXTENSION_MISSING"; }
+class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
 
 Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ SMB::DecryptAccount($database, $account); });
+
+FSManager::RegisterStorageType(SMB::class);
 
 class SMB extends CredCrypt
 {
@@ -30,6 +32,8 @@ class SMB extends CredCrypt
         ));
     }
     
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $account, $filesystem)
@@ -39,12 +43,8 @@ class SMB extends CredCrypt
     
     public function Edit(Input $input) : self
     {
-        $workgroup = $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM);
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
-        
-        if ($workgroup !== null) $this->SetScalar('workgroup', $workgroup);
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        // TODO what if the user actually wants to set it to null...?
+        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM));
         
         return parent::Edit($input);
     }

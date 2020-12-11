@@ -18,6 +18,8 @@ class InvalidKeyfileException extends ActivateException  { public $message = "SS
 
 Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ SFTP::DecryptAccount($database, $account); });
 
+FSManager::RegisterStorageType(SFTP::class);
+
 class SFTP extends CredCrypt
 {
     public static function GetFieldTemplate() : array
@@ -47,6 +49,8 @@ class SFTP extends CredCrypt
     protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }    
     protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }    
     protected function SetKeypass(?string $keypass, bool $credcrypt) : self { return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); }
+    
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
@@ -142,7 +146,7 @@ class SFTP extends CredCrypt
     
     public function __destruct()
     {
-        try { ssh2_disconnect($this->ssh); } catch (Exceptions\PHPException $e) { }
+        if (isset($this->ssh)) try { ssh2_disconnect($this->ssh); } catch (Exceptions\PHPException $e) { }
     }
 
     protected function GetFullURL(string $path = "") : string

@@ -17,6 +17,8 @@ class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { pub
 
 Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ FTP::DecryptAccount($database, $account); });
 
+FSManager::RegisterStorageType(FTP::class);
+
 class FTP extends CredCrypt
 {
     public static function GetFieldTemplate() : array
@@ -24,7 +26,7 @@ class FTP extends CredCrypt
         return array_merge(parent::GetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
-            'secure' => null,
+            'implssl' => null,
         ));
     }
     
@@ -33,27 +35,29 @@ class FTP extends CredCrypt
         return array_merge(parent::GetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
-            'secure' => $this->GetScalar('secure'),
+            'implssl' => $this->GetScalar('implssl'),
         ));
     }
+    
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $account, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
-            ->SetScalar('secure', $input->TryGetParam('secure', SafeParam::TYPE_BOOL) ?? false);
+            ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
     public function Edit(Input $input) : self
     {
         $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
         $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
-        $secure = $input->TryGetParam('secure', SafeParam::TYPE_BOOL);
+        $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
         
         if ($hostname !== null) $this->SetScalar('hostname', $hostname);
         if ($port !== null) $this->SetScalar('port', $port);
-        if ($secure !== null) $this->SetScalar('secure', $secure);
+        if ($implssl !== null) $this->SetScalar('implssl', $implssl);
         
         return parent::Edit($input);
     }
@@ -63,16 +67,18 @@ class FTP extends CredCrypt
         if (!function_exists('ftp_connect')) throw new FTPExtensionException();
     }
     
+    private $ftp;
+    
     public function Activate() : self
     {
         if (isset($this->ftp)) return $this;
         
         $host = $this->GetScalar('hostname'); 
         $port = $this->TryGetScalar('port') ?? 21;
-        $user = $this->TryGetUsername() ?? 'anonymous';
+        $user = $this->TryGetUsername() ?? 'anonymous'; // TODO check this
         $pass = $this->TryGetPassword() ?? "";
         
-        if ($this->GetScalar('secure')) $this->ftp = ftp_ssl_connect($host, $port);
+        if ($this->GetScalar('implssl')) $this->ftp = ftp_ssl_connect($host, $port);
         else $this->ftp = $this->ftp = ftp_connect($host, $port);
         if (!$this->ftp) throw new FTPConnectionFailure();
         
@@ -84,9 +90,8 @@ class FTP extends CredCrypt
     public function __destruct()
     {
       foreach ($this->appending_handles as $handle) fclose($handle);
-           try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
-       
-       try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
+
+      if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
     }
     
     protected function GetFullURL(string $path = "") : string
@@ -95,7 +100,7 @@ class FTP extends CredCrypt
         $username = rawurlencode($this->TryGetUsername() ?? "");
         $password = rawurlencode($this->TryGetPassword() ?? "");
         
-        $proto = $this->GetScalar('secure') ? "ftps" : "ftp";
+        $proto = $this->GetScalar('implssl') ? "ftps" : "ftp";
         $usrstr = $username ? "$username:$password@" : "";
         $hostname = $this->GetScalar('hostname');
         $portstr = $port ? ":$port" : "";

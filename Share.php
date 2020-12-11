@@ -101,6 +101,8 @@ class Share extends AuthObject
         return $this;
     }
     
+    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword raw] [--expires int] [--maxaccess int]"; }
+    
     public function SetShareOptions(Input $input, ?Share $access = null) : self
     {
         $f_read =    $input->TryGetParam('read',SafeParam::TYPE_BOOL);
@@ -202,7 +204,7 @@ class Share extends AuthObject
             'itemtype' => $itype,
             'islink' => $this->IsLink(),
             'password' => $this->NeedsPassword(),
-            'dest' => $this->GetObjectID('dest'),
+            'dest' => $this->TryGetObjectID('dest'),
             'expired' => $this->IsExpired(),
             'dates' => $this->GetAllDates(),
             'counters' => $this->GetAllCounters(),

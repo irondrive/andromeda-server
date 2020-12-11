@@ -20,7 +20,8 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
+require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\AuthEntity;
@@ -30,7 +31,7 @@ require_once(ROOT."/apps/accounts/Authenticator.php"); use Andromeda\Apps\Accoun
 use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 
-use Andromeda\Core\Database\DatabaseException; use \PDOException;
+use Andromeda\Core\Database\DatabaseException;
 use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException};
 
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
@@ -52,6 +53,7 @@ class RandomWriteDisabledException extends Exceptions\ClientDeniedException   { 
 
 class EmailShareDisabledException extends Exceptions\ClientDeniedException    { public $message = "EMAIL_SHARES_DISABLED"; }
 class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
+class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_REQUEST_URI"; }
 
 class FilesApp extends AppBase
 {
@@ -62,8 +64,8 @@ class FilesApp extends AppBase
         return array(
             'install',
             'getconfig',
-            'setconfig',
-            '- FOR shared files/folders: [--sid id --skey alphanum] [--spassword raw]',
+            'setconfig '.Config::GetSetConfigUsage(),
+            '- AUTH for shared items: [--sid id --skey alphanum] [--spassword raw]',
             'upload --file file [name] --parent id [--overwrite bool]',
             'download --fileid id [--fstart int] [--flast int]',
             'ftruncate --fileid id --size int',
@@ -87,17 +89,18 @@ class FilesApp extends AppBase
             'commentfolder --folder id --comment text [--private bool]',
             'editcomment --commentid id --comment text',
             'deletecomment --commentid id',
-            'sharefile [--fileid id | --files id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) [--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword raw]',
-            'sharefolder [--folder id | --folders id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) [--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword raw]',
-            'editshare --share id [--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool]',
+            'sharefile [--fileid id | --files id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
+            'sharefolder [--folder id | --folders id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
+            'editshare --share id '.Share::GetSetShareOptionsUsage(),
             'deleteshare --share id',
             'shareinfo --sid id --skey alphanum [--spassword raw]',
             'listshares [--mine bool]',
             'getfilesystem [--filesystem id]',
             'getfilesystems',
-            'createfilesystem --name name --sttype local|ftp|sftp|smb [--fstype native|crypt|shared] [--global bool] [--readonly bool]',
+            'createfilesystem '.FSManager::GetCreateUsage(),
+            ...FSManager::GetCreateUsages(),
             'deletefilesystem --filesystem id --auth_password raw',
-            'editfilesystem --filesystem id --name name [--readonly bool]'
+            'editfilesystem --filesystem id '.FSManager::GetEditUsage()
         ); 
     }
     
@@ -114,7 +117,7 @@ class FilesApp extends AppBase
         $this->database = $api->GetDatabase();
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (PDOException | DatabaseException $e) { }
+        catch (\PDOException | DatabaseException $e) { }
         
         Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
         { 
@@ -128,56 +131,56 @@ class FilesApp extends AppBase
         if (!isset($this->config) && $input->GetAction() !== 'install')
             throw new UnknownConfigException(static::class);
         
-        $this->authenticator = Authenticator::TryAuthenticate($this->database, $input, $this->API->GetInterface());
-        // TODO accounts may not be configured yet...
+        $this->authenticator = Authenticator::TryAuthenticate(
+            $this->database, $input, $this->API->GetInterface());
         
         $this->providesCrypto(function(){ $this->authenticator->RequireCrypto(); });
 
         switch($input->GetAction())
         {
-            case 'install':  return $this->Install($input); break;
-            case 'getconfig': return $this->GetConfig($input); break;
-            case 'setconfig': return $this->SetConfig($input); break;
+            case 'install':  return $this->Install($input);
+            case 'getconfig': return $this->GetConfig($input);
+            case 'setconfig': return $this->SetConfig($input);
             
-            case 'upload':     return $this->UploadFiles($input); break;  
-            case 'download':   return $this->DownloadFile($input); break;
-            case 'ftruncate':  return $this->TruncateFile($input); break;
-            case 'writefile':  return $this->WriteToFile($input); break;
+            case 'upload':     return $this->UploadFiles($input);  
+            case 'download':   return $this->DownloadFile($input);
+            case 'ftruncate':  return $this->TruncateFile($input);
+            case 'writefile':  return $this->WriteToFile($input);
             
-            case 'fileinfo':      return $this->GetFileInfo($input); break;
-            case 'getfolder':     return $this->GetFolder($input); break;
-            case 'getitembypath': return $this->GetItemByPath($input); break;
-            case 'createfolder':  return $this->CreateFolder($input); break;
+            case 'fileinfo':      return $this->GetFileInfo($input);
+            case 'getfolder':     return $this->GetFolder($input);
+            case 'getitembypath': return $this->GetItemByPath($input);
+            case 'createfolder':  return $this->CreateFolder($input);
             
-            case 'deletefile':   return $this->DeleteFile($input); break;
-            case 'deletefolder': return $this->DeleteFolder($input); break;            
-            case 'renamefile':   return $this->RenameFile($input); break;
-            case 'renamefolder': return $this->RenameFolder($input); break;
-            case 'movefile':     return $this->MoveFile($input); break;
-            case 'movefolder':   return $this->MoveFolder($input); break;
+            case 'deletefile':   return $this->DeleteFile($input);
+            case 'deletefolder': return $this->DeleteFolder($input);            
+            case 'renamefile':   return $this->RenameFile($input);
+            case 'renamefolder': return $this->RenameFolder($input);
+            case 'movefile':     return $this->MoveFile($input);
+            case 'movefolder':   return $this->MoveFolder($input);
             
-            case 'likefile':      return $this->LikeFile($input); break;
-            case 'likefolder':    return $this->LikeFolder($input); break;
-            case 'tagfile':       return $this->TagFile($input); break;
-            case 'tagfolder':     return $this->TagFolder($input); break;
-            case 'deletetag':     return $this->DeleteTag($input); break;
-            case 'commentfile':   return $this->CommentFile($input); break;
-            case 'commentfolder': return $this->CommentFolder($input); break;
-            case 'editcomment':   return $this->EditComment($input); break;
-            case 'deletecomment': return $this->DeleteComment($input); break;
+            case 'likefile':      return $this->LikeFile($input);
+            case 'likefolder':    return $this->LikeFolder($input);
+            case 'tagfile':       return $this->TagFile($input);
+            case 'tagfolder':     return $this->TagFolder($input);
+            case 'deletetag':     return $this->DeleteTag($input);
+            case 'commentfile':   return $this->CommentFile($input);
+            case 'commentfolder': return $this->CommentFolder($input);
+            case 'editcomment':   return $this->EditComment($input);
+            case 'deletecomment': return $this->DeleteComment($input);
             
-            case 'sharefile':    return $this->ShareFile($input); break;
-            case 'sharefolder':  return $this->ShareFolder($input); break;
-            case 'editshare':    return $this->EditShare($input); break;
-            case 'deleteshare':  return $this->DeleteShare($input); break;
-            case 'shareinfo':    return $this->ShareInfo($input); break;
-            case 'listshares':   return $this->ListShares($input); break;
+            case 'sharefile':    return $this->ShareFile($input);
+            case 'sharefolder':  return $this->ShareFolder($input);
+            case 'editshare':    return $this->EditShare($input);
+            case 'deleteshare':  return $this->DeleteShare($input);
+            case 'shareinfo':    return $this->ShareInfo($input);
+            case 'listshares':   return $this->ListShares($input);
             
-            case 'getfilesystem':  return $this->GetFilesystem($input); break;
-            case 'getfilesystems': return $this->GetFilesystems($input); break;
-            case 'createfilesystem': return $this->CreateFilesystem($input); break;
-            case 'deletefilesystem': return $this->DeleteFilesystem($input); break;
-            case 'editfilesystem':   return $this->EditFilesystem($input); break;
+            case 'getfilesystem':  return $this->GetFilesystem($input);
+            case 'getfilesystems': return $this->GetFilesystems($input);
+            case 'createfilesystem': return $this->CreateFilesystem($input);
+            case 'deletefilesystem': return $this->DeleteFilesystem($input);
+            case 'editfilesystem':   return $this->EditFilesystem($input);
             
             default: throw new UnknownActionException();
         }
@@ -228,9 +231,7 @@ class FilesApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $admin = $account !== null && $account->isAdmin();
         
-        // not sure if there will be user-level config - very likely yes
-        
-        return $this->config->GetClientObject($admin);
+        return $this->config->SetConfig($input)->GetClientObject($admin);
     }
     
     protected function UploadFiles(Input $input) : array
@@ -924,7 +925,7 @@ class FilesApp extends AppBase
             {
                 $shares[$item] = static::InnerShareItem($class, $input, $item, $account, $dest, $islink) ?? false;
             };
-            $retval = array_map(function($share)use($islink){ return $share->GetClientObject(false, $islink); }, $shares);
+            $retval = array_map(function(Share $share)use($islink){ return $share->GetClientObject(false, $islink); }, $shares);
         }
         else throw new UnknownItemException();
         
@@ -936,12 +937,21 @@ class FilesApp extends AppBase
             $account = $this->authenticator->GetAccount();
             $subject = $account->GetDisplayName()." shared files with you"; 
             
-            $body = implode("<br />",array_map(function($share){
-                return "<a href=''>".$share->GetItem()->GetName()."</a>"; // TODO HTML
-            }, $shares)); // TODO how to get real URL? from config? from client?
+            $body = implode("<br />",array_map(function(Share $share){
+                
+                $url = $this->API->GetConfig()->GetAPIUrl();
+                if (!$url) throw new ShareURLGenerateException();
+                
+                $params = (new SafeParams())->AddParamsArray(array('sid'=>$share->ID(),'skey'=>$share->GetAuthKey()));
+                $link = AJAX::GetRemoteURL($url, new Input('files','download',$params));
+                return "<a href='$link'>".$share->GetItem()->GetName()."</a>";
+            }, $shares)); 
+            
+            // TODO param for the client to have the URL point at the client
+            // TODO HTML - configure a directory where client templates reside
             
             $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, 
-                array(new EmailRecipient($email)), $account->GetMailFrom());
+                array(new EmailRecipient($email)), $account->GetMailFrom(), true);
         }
         
         return $retval;
@@ -1029,7 +1039,7 @@ class FilesApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        // TODO admin function to get everything
+        // TODO admin function to get all filesystems with offset/limit
         
         $filesystems = FSManager::LoadByAccount($this->database, $account);
         return array_map(function($filesystem){ return $filesystem->GetClientObject(); }, $filesystems);
