@@ -38,7 +38,8 @@ class ServerApp extends AppBase
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'getmailers',
-            ...array_map(function($t){ return "createmailer [--test email] $t"; }, Emailer::GetCreateUsages()),
+            'createmailer [--test email] '.Emailer::GetCreateUsage(),
+            ...array_map(function($s){ return "\t $s"; },Emailer::GetCreateUsages()),
             'deletemailer --mailid id'
         );
     }

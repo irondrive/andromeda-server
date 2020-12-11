@@ -1,9 +1,10 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/BaseObject.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class CounterOverLimitException extends Exceptions\ServerException    { public $message = "COUNTER_EXCEEDS_LIMIT"; }
+class CounterOverLimitException extends Exceptions\ClientDeniedException { 
+    public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } }
 
 abstract class StandardObject extends BaseObject
 {
@@ -67,7 +68,7 @@ abstract class StandardObject extends BaseObject
         if (($limit = $this->TryGetCounterLimit($field)) !== null)
         {
             $value = $this->CountObjectRefs($field);
-            if ($value === $limit) throw new CounterOverLimitException($field);
+            if ($value >= $limit) throw new CounterOverLimitException($field);
         }
 
         return parent::AddObjectRef($field, $object, $notification);
@@ -85,7 +86,7 @@ abstract class StandardObject extends BaseObject
     }
     
     protected function GetAllCounterLimits() : array { return $this->GetAllScalars('counters_limits'); }
-    
+
     private function GetAllScalars(string $prefix) : array
     {
         $output = array(); 
@@ -96,10 +97,10 @@ abstract class StandardObject extends BaseObject
             {
                 $realkey = implode('__',array_slice($keyarr, 0, 2));
                 $output[$keyarr[1]] = $this->TryGetScalar($realkey);
-            }                
+            }
         }
         return $output;
-    } 
+    }
     
 }
 
