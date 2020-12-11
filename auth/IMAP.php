@@ -1,11 +1,18 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/apps/accounts/auth/Local.php");
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class IMAPExtensionException extends Exceptions\ServerException   { public $message = "IMAP_EXTENSION_MISSING"; }
+require_once(ROOT."/apps/accounts/auth/Manager.php");
+
+class IMAPExtensionException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_MISSING"; }
+class InvalidProtocolServerException extends Exceptions\ServerException { public $message = "INVALID_PROTOCOL"; }
+class InvalidProtocolClientException extends Exceptions\ClientErrorException { public $message = "INVALID_PROTOCOL"; }
+
+Manager::RegisterAuthType(IMAP::class);
 
 class IMAP extends External
 {
@@ -13,55 +20,90 @@ class IMAP extends External
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'protocol' => null,
-            'secure' => null,
             'hostname' => null,
-            'port' => null
+            'port' => null,
+            'implssl' => null,
+            'secauth' => null
         ));
     }
     
-    const PROTOCOL_IMAP = 1; const PROTOCOL_POP3 = 2;
+    const PROTOCOL_IMAP = 1; const PROTOCOL_POP3 = 2; const PROTOCOL_NNTP = 3;
     
-    public function GetProtocolString() : string 
-    { 
-        switch ($this->GetScalar('protocol'))
-        {
-            case self::PROTOCOL_IMAP: return 'imap'; break;
-            case self::PROTOCOL_POP3: return 'pop3'; break;
-            default: return 'imap';
-        }
+    private const PROTOCOLS = array('imap'=>self::PROTOCOL_IMAP,'pop3'=>self::PROTOCOL_POP3,'nntp'=>self::PROTOCOL_NNTP);
+    
+    public static function GetPropUsage() : string { return "--protocol imap|pop3|nntp --hostname alphanum [--port int] [--implssl bool] [--secauth bool]"; }
+    
+    public static function Create(ObjectDatabase $database, Input $input) : self
+    {
+        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM);
+        if (!array_key_exists($protocol, self::PROTOCOLS)) throw new InvalidProtocolClientException();
+
+        return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
+            ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false)
+            ->SetScalar('secauth', $input->TryGetParam('secauth', SafeParam::TYPE_BOOL) ?? false);
     }
     
-    public function GetHostname() : string { return $this->GetScalar('hostname'); }
-    public function GetPort() : int { return $this->GetScalar('port'); }
-    public function GetUseSSL() : bool { return $this->GetScalar('secure'); }
+    public function Edit(Input $input) : self
+    {
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
+        $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
+        $secauth = $input->TryGetParam('secauth', SafeParam::TYPE_BOOL);
+        
+        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
+        if ($port !== null) $this->SetScalar('port', $port);
+        if ($implssl !== null) $this->SetScalar('implssl', $implssl);
+        if ($secauth !== null) $this->SetScalar('secauth', $secauth);
+        
+        return $this;
+    }
     
-    public function GetAccountGroup() : ?Group { return $this->TryGetObject('default_group'); }
+    private function GetProtocol() : string { return array_flip(self::PROTOCOLS)[$this->GetScalar('protocol')]; }
+    
+    public function GetClientObject() : array
+    {
+        return array(
+            'protocol' => $this->GetProtocol(),
+            'hostname' => $this->GetScalar('hostname'),
+            'port' => $this->TryGetScalar('port'),
+            'implssl' => $this->GetScalar('implssl'),
+            'secauth' => $this->GetScalar('secauth')
+        );
+    }
     
     public function SubConstruct() : void
     {
         if (!function_exists('imap_open')) throw new IMAPExtensionException();
     }
     
-    public function VerifyPassword(Account $account, string $password) : bool
+    public function Activate() : self { return $this; }
+    
+    public function VerifyPassword(string $username, string $password) : bool
     {
         if (strlen($password) == 0) return false;
-        
-        $username = $account->GetUsername();
 
-        $hostname = $this->GetHostname(); $port = $this->GetPort(); $proto = $this->GetProtocolString();
+        $hostname = $this->GetScalar('hostname'); 
         
-        $secure = null; if ($this->GetUseSSL()) $secure = "ssl";
+        if (($port = $this->TryGetScalar('port')) !== null) $hostname .= ":$port";
         
-        $connectstr = implode("/",array_filter(array("$hostname:$port", $proto, $secure)));
+        $implssl = null; if ($this->GetScalar('implssl')) $implssl = 'ssl';
+        $secauth = null; if ($this->GetScalar('secauth')) $secauth = 'secure';
+        
+        $connectstr = implode("/",array_filter(array($hostname, $this->GetProtocol(), $implssl, $secauth)));
 
-        $imap = null; $good = false; try 
+        try { $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); }
+        catch (Exceptions\PHPException $e) 
         { 
-            $good = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN) !== false;
-        }
-        catch (Exceptions\PHPException $e) { return false; } 
+            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err); 
+            Main::GetInstance()->PrintDebug($e->GetDetails()); return false;
+        } 
         
+        $success = boolval($imap);
+            
         try { imap_close($imap); } catch (Exceptions\PHPException $e) { return false; } 
         
-        return $good;
+        return $success;
     }
 }

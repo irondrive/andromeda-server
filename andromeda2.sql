@@ -8,7 +8,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
+CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` varchar(16) NOT NULL,
   `username` varchar(255) NOT NULL,
   `fullname` varchar(255) DEFAULT NULL,
@@ -34,54 +34,43 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
   `contactinfos` tinyint(4) NOT NULL DEFAULT '0',
   `clients` tinyint(4) NOT NULL DEFAULT '0',
   `twofactors` tinyint(4) NOT NULL DEFAULT '0',
-  `recoverykeys` tinyint(4) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `username` (`username`),
-  KEY `username_2` (`username`)
+  `recoverykeys` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ftp` (
+CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
   `id` varchar(16) NOT NULL,
   `hostname` varchar(255) NOT NULL,
-  `port` smallint(6) NOT NULL,
-  `secure` tinyint(1) NOT NULL,
-  `account_group` varchar(16) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  `port` smallint(6) DEFAULT NULL,
+  `implssl` tinyint(1) NOT NULL,
+  `manager` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_imap` (
+CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `id` varchar(16) NOT NULL,
   `protocol` tinyint(1) NOT NULL,
   `hostname` varchar(255) NOT NULL,
-  `port` smallint(6) NOT NULL,
-  `secure` tinyint(1) NOT NULL,
-  `account_group` varchar(16) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  `port` smallint(6) DEFAULT NULL,
+  `implssl` tinyint(1) NOT NULL,
+  `secauth` tinyint(1) NOT NULL,
+  `manager` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ldap` (
+CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `id` varchar(16) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
-  `account_group` varchar(16) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  `manager` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_pointer` (
+CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `id` varchar(16) NOT NULL,
   `authsource` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`)
+  `default_group` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
+CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` varchar(16) NOT NULL,
   `authkey` text NOT NULL,
   `lastaddr` varchar(255) NOT NULL,
@@ -90,45 +79,34 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `dates__loggedon` bigint(20) NOT NULL DEFAULT '0',
   `account` varchar(16) NOT NULL,
-  `session` varchar(16) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `account*object*Apps\Accounts\Account*clients` (`account`),
-  KEY `session*object*Apps\Accounts\Session` (`session`)
+  `session` varchar(16) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_config` (
+CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` varchar(16) NOT NULL,
-  `features__createaccount` tinyint(1) DEFAULT NULL,
-  `features__emailasusername` tinyint(1) DEFAULT NULL,
-  `features__requirecontact` tinyint(1) DEFAULT NULL,
-  `features__allowcrypto` tinyint(1) DEFAULT NULL,
+  `features__createaccount` tinyint(1) NOT NULL,
+  `features__emailasusername` tinyint(1) NOT NULL,
+  `features__requirecontact` tinyint(1) NOT NULL,
+  `features__allowcrypto` tinyint(1) NOT NULL,
   `default_group` varchar(16) DEFAULT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  `dates__created` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_contactinfo` (
+CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
   `id` varchar(16) CHARACTER SET latin1 NOT NULL,
   `type` tinyint(4) NOT NULL,
   `info` varchar(255) CHARACTER SET latin1 NOT NULL,
   `valid` tinyint(1) NOT NULL DEFAULT '1',
   `unlockcode` varchar(16) DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `account` varchar(16) CHARACTER SET latin1 NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `alias` (`info`),
-  KEY `type` (`type`),
-  KEY `account*object*Apps\Accounts\Account*aliases` (`account`)
+  `account` varchar(16) CHARACTER SET latin1 NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
+CREATE TABLE `a2_objects_apps_accounts_group` (
   `id` varchar(16) NOT NULL,
   `name` varchar(255) NOT NULL,
   `comment` text,
-  `priority` tinyint(4) NOT NULL DEFAULT '0',
+  `priority` tinyint(4) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `members__features__admin` tinyint(1) DEFAULT NULL,
   `members__features__enabled` tinyint(1) DEFAULT NULL,
@@ -136,37 +114,27 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
   `members__max_client_age` bigint(20) DEFAULT NULL,
   `members__max_session_age` bigint(20) DEFAULT NULL,
   `members__max_password_age` bigint(20) DEFAULT NULL,
-  `accounts` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `name` (`name`)
+  `accounts` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
+CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` varchar(16) NOT NULL,
   `dates__created` int(11) NOT NULL,
   `accounts` varchar(16) NOT NULL,
-  `groups` varchar(16) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts`),
-  KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
-  KEY `id` (`id`)
+  `groups` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
+CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` varchar(16) NOT NULL,
   `authkey` text NOT NULL,
   `dates__created` bigint(20) NOT NULL DEFAULT '0',
   `master_key` tinyblob,
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
-  `account` varchar(16) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `id` (`id`),
-  KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account`)
+  `account` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
+CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` varchar(16) NOT NULL,
   `authkey` text NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT '0',
@@ -175,13 +143,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
   `master_nonce` tinyblob,
   `master_salt` tinyblob,
   `account` varchar(16) NOT NULL,
-  `client` varchar(16) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `aid` (`account`),
-  KEY `cid` (`client`)
+  `client` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
+CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `id` varchar(16) NOT NULL,
   `comment` text,
   `secret` tinyblob NOT NULL,
@@ -189,20 +154,86 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
   `valid` tinyint(1) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL,
   `account` varchar(16) NOT NULL,
-  `usedtokens` tinyint(4) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  KEY `account*object*Apps\Accounts\Account` (`account`)
+  `usedtokens` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_usedtoken` (
+CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `id` varchar(16) NOT NULL,
   `code` varchar(16) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `twofactor` varchar(16) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  `twofactor` varchar(16) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-COMMIT; 
+
+
+ALTER TABLE `a2_objects_apps_accounts_account`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD KEY `username_2` (`username`);
+
+ALTER TABLE `a2_objects_apps_accounts_auth_ftp`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `a2_objects_apps_accounts_auth_imap`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `a2_objects_apps_accounts_auth_ldap`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `a2_objects_apps_accounts_auth_manager`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`);
+
+ALTER TABLE `a2_objects_apps_accounts_client`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD KEY `account*object*Apps\Accounts\Account*clients` (`account`),
+  ADD KEY `session*object*Apps\Accounts\Session` (`session`);
+
+ALTER TABLE `a2_objects_apps_accounts_config`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `a2_objects_apps_accounts_contactinfo`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD UNIQUE KEY `alias` (`info`),
+  ADD KEY `type` (`type`),
+  ADD KEY `account*object*Apps\Accounts\Account*aliases` (`account`);
+
+ALTER TABLE `a2_objects_apps_accounts_group`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+ALTER TABLE `a2_objects_apps_accounts_groupjoin`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts`),
+  ADD KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
+  ADD KEY `id` (`id`);
+
+ALTER TABLE `a2_objects_apps_accounts_recoverykey`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id` (`id`),
+  ADD KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account`);
+
+ALTER TABLE `a2_objects_apps_accounts_session`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `aid` (`account`),
+  ADD KEY `cid` (`client`);
+
+ALTER TABLE `a2_objects_apps_accounts_twofactor`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `account*object*Apps\Accounts\Account` (`account`);
+
+ALTER TABLE `a2_objects_apps_accounts_usedtoken`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id` (`id`);
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

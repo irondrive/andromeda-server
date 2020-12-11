@@ -44,7 +44,7 @@ abstract class AuthObject extends StandardObject
         return $correct;
     }
     
-    protected function GetAuthKey(bool $asHash = false) : string
+    public function GetAuthKey(bool $asHash = false) : string
     {
         if (!$asHash && !$this->haveKey) 
             throw new RawKeyNotAvailableException();

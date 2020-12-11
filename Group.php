@@ -13,7 +13,7 @@ class Group extends AuthEntity
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
             'comment' => null,
-            'priority' => null,
+            'priority' => new FieldTypes\Scalar(0),
             'members__features__admin' => null,
             'members__features__enabled' => null,
             'members__features__forcetwofactor' => null,
@@ -25,7 +25,10 @@ class Group extends AuthEntity
     }
     
     public function GetDisplayName() : string { return $this->GetScalar('name'); }
+    public function SetDisplayName(string $name) : self { return $this->SetScalar('name',$name); }
+    
     public function GetComment() : ?string { return $this->TryGetScalar('comment'); }
+    public function SetComment(?string $comment) : self { return $this->SetScalar('comment',$comment); }
     
     public function GetMembersScalar(string $field) { return parent::GetScalar("members__$field"); }
     public function TryGetMembersScalar(string $field) { return parent::TryGetScalar("members__$field"); }
@@ -33,10 +36,24 @@ class Group extends AuthEntity
     public function GetMembersObject(string $field) { return parent::GetObject("members__$field"); }
     public function TryGetMembersObject(string $field) { return parent::TryGetObject("members__$field"); }
     
-    public function GetPriority() : int { return $this->TryGetScalar('priority') ?? 0; }
+    public function GetPriority() : int { return $this->GetScalar('priority'); }
+    public function SetPriority(int $priority) { return $this->SetScalar('priority', $priority); }
     
-    public function GetAccounts() : array { return $this->GetObjectRefs('accounts'); }
-    public function CountAccounts() : int { return $this->CountObjectRefs('accounts'); }
+    private function GetMyAccounts() : array { return $this->GetObjectRefs('accounts'); }
+    
+    public function GetAccounts() : array
+    {
+        if (Config::Load($this->database)->GetDefaultGroupID() === $this->ID())
+            return Account::LoadAll($this->database);        
+
+        foreach (Auth\Manager::LoadAll($this->database) as $authman)
+        {
+            if ($authman->GetGroupID() === $this->ID())
+                return Account::LoadByAuthSource($this->database, $authman);
+        }
+        
+        return $this->GetMyAccounts();
+    }
     
     public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
     public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
@@ -88,7 +105,7 @@ class Group extends AuthEntity
             'comment' => $this->GetComment(),
             'dates' => $this->GetAllDates(),
             
-            'accounts' => array_map(function($e){ return $e->ID(); }, $this->GetAccounts()),
+            'accounts' => array_map(function($e){ return $e->ID(); }, $this->GetMyAccounts()),
         );        
     }
 }

@@ -62,7 +62,7 @@ class Client extends AuthObject
         
         return $good;
     }
-    
+
     public function Delete() : void
     {
         if ($this->HasObject('session'))

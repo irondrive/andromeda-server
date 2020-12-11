@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamException};
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
@@ -19,7 +19,7 @@ class InvalidSessionException extends AuthenticationFailedException       { publ
 
 class AdminRequiredException extends AuthenticationFailedException        { public $message = "ADMIN_REQUIRED"; }
 class TwoFactorRequiredException extends AuthenticationFailedException    { public $message = "TWOFACTOR_REQUIRED"; }
-class PasswordRequiredException extends AuthenticationFailedException     { public $message = "PASSWORD_REQUIRED"; }
+class PasswordRequiredException extends AuthenticationFailedException     { public $message = "AUTH_PASSWORD_REQUIRED"; }
 class CryptoKeyRequiredException extends AuthenticationFailedException    { public $message = "CRYPTOKEY_REQUIRED"; }
 
 use Andromeda\Core\DecryptionFailedException;
@@ -89,7 +89,7 @@ class Authenticator
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
         try { return new self($database, $input, $interface); }
-        catch (AuthenticationFailedException | SafeParamException $e) { return null; }
+        catch (AuthenticationFailedException | SafeParamException | DatabaseException | \PDOException $e) { return null; }
     }
     
     public function isAdmin() : bool { return $this->realaccount->isAdmin(); }
