@@ -6,8 +6,6 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-use Andromeda\Core\Exceptions\{ServerException, ClientException};
-
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
@@ -16,11 +14,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/storage/Storage.php"); 
-require_once(ROOT."/apps/files/storage/Local.php");
-require_once(ROOT."/apps/files/storage/FTP.php");
-require_once(ROOT."/apps/files/storage/SFTP.php");
-require_once(ROOT."/apps/files/storage/SMB.php");
-use Andromeda\Apps\Files\Storage\{Storage, Local, FTP, SFTP, SMB, ActivateException};
+use Andromeda\Apps\Files\Storage\{Storage, ActivateException};
 
 require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
@@ -33,16 +27,7 @@ class InvalidFSTypeClientException extends Exceptions\ClientErrorException { pub
 class InvalidSTTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_STORAGE_TYPE"; }
 class InvalidNameException extends Exceptions\ClientErrorException { public $message = "INVALID_FILESYSTEM_NAME"; }
 
-class InvalidStorageException extends Exceptions\ClientErrorException 
-{ 
-    public $message = "STORAGE_ACTIVATION_FAILED"; 
-    public function __construct(\Throwable $e) 
-    { 
-        $this->message = $e->getMessage();
-        if ($e instanceof ServerException)
-            $this->message .= " ".$e->getDetails(); 
-    }
-}
+class InvalidStorageException extends Exceptions\ClientErrorCopyException { public $message = "STORAGE_ACTIVATION_FAILED"; }
 
 class FSManager extends StandardObject
 {
@@ -118,6 +103,23 @@ class FSManager extends StandardObject
         return $this->interface; 
     }
     
+    private static $storage_types = array();
+
+    public static function RegisterStorageType(string $class) : void
+    {
+        self::$storage_types[strtolower(Utilities::ShortClassName($class))] = $class;
+    }
+    
+    public static function GetCreateUsage() : string { return "--name name --sttype ".implode('|',array_keys(self::$storage_types))." [--fstype native|crypt|shared] [--global bool] [--readonly bool]"; }
+    
+    public static function GetCreateUsages() : array 
+    { 
+        $retval = array();
+        foreach (self::$storage_types as $name=>$class)
+            array_push($retval, "\t --sttype $name ".$class::GetCreateUsage());
+        return $retval;
+    }
+    
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account) : self
     {
         $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
@@ -144,22 +146,19 @@ class FSManager extends StandardObject
         }
 
         try
-        {           
-            switch ($sttype)
-            {
-                case 'local': $filesystem->SetStorage(Local::Create($database, $input, $account, $filesystem)); break;
-                case 'ftp':   $filesystem->SetStorage(FTP::Create($database, $input, $account, $filesystem));  break;
-                case 'sftp':  $filesystem->SetStorage(SFTP::Create($database, $input, $account, $filesystem)); break;
-                case 'smb':   $filesystem->SetStorage(SMB::Create($database, $input, $account, $filesystem)); break;
-                default: throw new InvalidSTTypeClientException();
-            }
+        {
+            if (!array_key_exists($sttype, self::$storage_types)) throw new InvalidSTTypeClientException();
+            
+            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $account, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
         }
-        catch (ActivateException | ClientException $e){ throw new InvalidStorageException($e); }
+        catch (ActivateException | Exceptions\ClientException $e){ throw new InvalidStorageException($e); }
         
         return $filesystem;
     }
+    
+    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; }
     
     public function Edit(Input $input) : self
     {
@@ -221,7 +220,7 @@ class FSManager extends StandardObject
         static::ForceDelete();
     }
     
-    public function GetClientObject(bool $priv = false) : array
+    public function GetClientObject(bool $admin = false) : array
     {
         $data = array(
             'id' => $this->ID(),
@@ -230,10 +229,10 @@ class FSManager extends StandardObject
             'shared' => $this->isShared(),
             'secure' => $this->isSecure(),
             'readonly' => $this->isReadOnly(),
-            'storagetype' => Utilities::array_last(explode('\\',$this->GetStorageType()))
+            'storagetype' => Utilities::ShortClassName($this->GetStorageType())
         );
         
-        if ($priv) 
+        if ($admin) 
         {
             $data['storage'] = $this->GetStorage()->GetClientObject();
             $data['chunksize'] = $this->TryGetScalar('crypto_chunksize');
@@ -242,3 +241,8 @@ class FSManager extends StandardObject
         return $data;
     }
 }
+
+require_once(ROOT."/apps/files/storage/Local.php");
+require_once(ROOT."/apps/files/storage/FTP.php");
+require_once(ROOT."/apps/files/storage/SFTP.php");
+require_once(ROOT."/apps/files/storage/SMB.php");

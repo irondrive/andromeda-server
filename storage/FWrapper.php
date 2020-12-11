@@ -26,6 +26,8 @@ abstract class FWrapper extends Storage
         ));
     }
     
+    public static function GetCreateUsage() : string { return "--path text"; }
+    
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
         $path = $input->GetParam('path', SafeParam::TYPE_TEXT);

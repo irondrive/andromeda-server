@@ -3,7 +3,7 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Transactions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
@@ -58,9 +58,11 @@ abstract class Storage extends StandardObject implements Transactions
         );
     }
 
+    public abstract static function GetCreateUsage() : string;
+    
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
-        return parent::BaseCreate($database, $input)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
+        return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
     }
     
     public function Edit(Input $input) : self { return $this; }

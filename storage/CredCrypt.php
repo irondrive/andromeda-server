@@ -35,6 +35,8 @@ abstract class CredCrypt extends FWrapper
             'password' => boolval($this->TryGetPassword()),
         ));
     }
+    
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--username alphanum] [--password raw] [--credcrypt bool]"; }
 
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
