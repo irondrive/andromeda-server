@@ -69,7 +69,7 @@ class AccountsApp extends AppBase
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
-            'getaccount',
+            'getaccount [--account id]',
             'setfullname --fullname name',
             'changepassword --username text --new_password raw (--auth_password raw | --auth_recoverykey text)',
             'emailrecovery --username text',
@@ -90,7 +90,8 @@ class AccountsApp extends AppBase
             'listaccounts [--limit int] [--offset int]',
             'listgroups [--limit int] [--offset int]',
             'creategroup --name name [--priority int] [--comment text]',
-            'editgroup [--name name] [--priority int] [--comment text]',
+            'editgroup --group id [--name name] [--priority int] [--comment text]',
+            'getgroup --group id',
             'deletegroup --group id',
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
@@ -100,7 +101,7 @@ class AccountsApp extends AppBase
             'testauthsource --manager id [--test_username text --test_password raw]',
             'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',
-            'setaccountprops --account id '.AuthEntity::GetPropUsage(),
+            'setaccountprops --account id [--expirepw bool] '.AuthEntity::GetPropUsage(),
             'setgroupprops --group id '.AuthEntity::GetPropUsage()
         );
     }
@@ -137,7 +138,7 @@ class AccountsApp extends AppBase
             case 'editauthsource':      return $this->EditAuthSource($input);
             case 'deleteauthsource':    return $this->DeleteAuthSource($input);
             
-            case 'getaccount':          return $this->GetAccount($input);
+            case 'getaccount':          return $this->GetAccount($input);            
             case 'setfullname':         return $this->SetFullName($input);
             case 'changepassword':      return $this->ChangePassword($input);
             case 'emailrecovery':       return $this->EmailRecovery($input);
@@ -163,6 +164,7 @@ class AccountsApp extends AppBase
             case 'listgroups':          return $this->ListGroups($input);
             case 'creategroup':         return $this->CreateGroup($input);
             case 'editgroup':           return $this->EditGroup($input); 
+            case 'getgroup':            return $this->GetGroup($input);
             case 'deletegroup':         return $this->DeleteGroup($input);
             case 'addgroupmember':      return $this->AddGroupMember($input);
             case 'removegroupmember':   return $this->RemoveGroupmember($input);
@@ -228,9 +230,19 @@ class AccountsApp extends AppBase
     protected function GetAccount(Input $input) : ?array
     {
         if ($this->authenticator === null) return null;
-        else return $this->authenticator->GetAccount()->GetClientObject();
+        
+        if (($account = $input->TryGetParam("account", SafeParam::TYPE_ID)) !== null)
+        {
+            $this->authenticator->RequireAdmin();
+            
+            $account = Account::TryLoadByID($this->API->GetDatabase(), $account);
+            if ($account === null) throw new UnknownAccountException();
+            return $account->GetClientObject(Account::OBJECT_ADMIN);
+        }
+        
+        return $this->authenticator->GetAccount()->GetClientObject();
     }
-    
+
     protected function ChangePassword(Input $input) : ?array
     {
         $new_password = $input->GetParam('new_password',SafeParam::TYPE_RAW);
@@ -420,7 +432,7 @@ class AccountsApp extends AppBase
         /* if a clientid is provided, check that it and the clientkey are correct */
         if ($clientid !== null && $clientkey !== null)
         {
-            if ($account->ForceTwoFactor()) 
+            if ($account->GetForceTwoFactor() && $account->HasValidTwoFactor()) 
                 Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::TryLoadByID($database, $clientid);
@@ -774,6 +786,20 @@ class AccountsApp extends AppBase
         return $group->GetClientObject();
     }
     
+    protected function GetGroup(Input $input)
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $database = $this->API->GetDatabase();
+        
+        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $group = Group::TryLoadByID($database, $groupid);
+        if ($group === null) throw new UnknownGroupException();
+        
+        return $group->GetClientObject(true);
+    }
+
     protected function DeleteGroup(Input $input)
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -904,6 +930,8 @@ class AccountsApp extends AppBase
         $acctid = $input->GetParam("account", SafeParam::TYPE_ID);
         $account = Account::TryLoadByID($database, $acctid);
         if ($account === null) throw new UnknownAccountException();
+        
+        if ($input->TryGetParam("expirepw", SafeParam::TYPE_BOOL) ?? false) $account->resetPasswordDate();
         
         return $account->SetProperties($input)->GetClientObject(Account::OBJECT_ADMIN);
     }

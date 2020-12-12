@@ -13,6 +13,7 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -45,15 +46,15 @@ class Account extends AuthEntity
             'dates__loggedon' => null,
             'dates__active' => new FieldTypes\Scalar(null, true),
             'dates__modified' => null,
-            'max_session_age__inherits' => null,
-            'max_password_age__inherits' => null,
-            'features__admin__inherits' => null,
-            'features__enabled__inherits' => null,
-            'features__forcetf__inherits' => null,
-            'features__allowcrypto__inherits' => null,
-            'counters_limits__sessions__inherits' => null,
-            'counters_limits__contactinfos__inherits' => null,
-            'counters_limits__recoverykeys__inherits' => null,
+            'max_session_age' => null,
+            'max_password_age' => null,
+            'features__admin' => null,
+            'features__enabled' => null,
+            'features__forcetf' => null,
+            'features__allowcrypto' => null,
+            'counters_limits__sessions' => null,
+            'counters_limits__contactinfos' => null,
+            'counters_limits__recoverykeys' => null,
             'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
             'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
             'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
@@ -64,17 +65,17 @@ class Account extends AuthEntity
         ));
     }
     
-    public function GetInheritableDefault(string $field)
-    {
-        switch ($field)
-        {
-            case 'features__admin':       return false;
-            case 'features__enabled':     return true;
-            case 'features__forcetf':     return false;
-            case 'features__allowcrypto': return true;
-        }
-        return null;
-    }
+    const INHERITED_FIELDS = array(
+        'max_session_age' => null,
+        'max_password_age' => null,
+        'features__admin' => false,
+        'features__enabled' => true,
+        'features__forcetf' => false,
+        'features__allowcrypto' => true,
+        'counters_limits__sessions' => null,
+        'counters_limits__contactinfos' => null,
+        'counters_limits__recoverykeys' => null
+    );
     
     public function GetUsername() : string  { return $this->GetScalar('username'); }
     public function GetDisplayName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
@@ -82,22 +83,27 @@ class Account extends AuthEntity
     
     public function GetDefaultGroups() : array
     {
-        $retval = array(Config::Load($this->database)->GetDefaultGroup());
+        $default = Config::Load($this->database)->GetDefaultGroup();
+        $retval[$default->ID()] = $default;
         
         $authman = $this->GetAuthSource();
         if ($authman instanceof Auth\External) 
-            array_push($retval, $authman->GetManager()->GetDefaultGroup());
+        {
+            $default = $authman->GetManager()->GetDefaultGroup();
+            $retval[$default->ID()] = $default;
+        }
         
         return array_filter($retval);
     }
     
     public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetMyGroups()); }
     
-    public function GetMyGroups() : array { return $this->GetObjectRefs('groups'); }
-    public function AddGroup(Group $group) : self { return $this->AddObjectRef('groups', $group); }
+    public function GetMyGroups() : array            { return $this->GetObjectRefs('groups'); }
+    public function AddGroup(Group $group) : self    { return $this->AddObjectRef('groups', $group); }
     public function RemoveGroup(Group $group) : self { return $this->RemoveObjectRef('groups', $group); }
     
-    public function GetGroupAddedDate(Group $group) : ?int {
+    public function GetGroupAddedDate(Group $group) : ?int 
+    {
         $joinobj = $this->TryGetJoinObject('groups', $group);
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
@@ -110,27 +116,26 @@ class Account extends AuthEntity
     }
     
     public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
-    public function CountClients() : int          { return $this->CountObjectRefs('clients'); }
+    public function CountClients() : int        { return $this->CountObjectRefs('clients'); }
     public function DeleteClients() : self      { $this->DeleteObjects('clients'); return $this; }
     
     public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
-    public function CountSessions() : int         { return $this->CountObjectRefs('sessions'); }
-   
+    public function CountSessions() : int       { return $this->CountObjectRefs('sessions'); }
+
     public function GetContactInfos() : array   { return $this->GetObjectRefs('contactinfos'); }    
-    public function CountContactInfos() : int     { return $this->CountObjectRefs('contactinfos'); }
+    public function CountContactInfos() : int   { return $this->CountObjectRefs('contactinfos'); }
     
     private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
     public function HasRecoveryKeys() : bool    { return $this->CountObjectRefs('recoverykeys') > 0; }
     
-    public function HasTwoFactor() : bool { return $this->CountObjectRefs('recoverykeys') > 0; }
     private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
+    public function HasTwoFactor() : bool       { return $this->CountObjectRefs('recoverykeys') > 0; }
     
-    public function ForceTwoFactor() : bool     { return $this->HasValidTwoFactor() && ($this->TryGetFeature('forcetf') ?? $this->GetInheritableDefault('features__forcetf')); }
+    public function GetForceTwoFactor() : bool  { return $this->TryGetFeature('forcetf') ?? self::INHERITED_FIELDS['features__forcetf']; }    
+    public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? self::INHERITED_FIELDS['features__allowcrypto']; }
     
-    public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? $this->GetInheritableDefault('features__allowcrypto'); }
-    
-    public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? $this->GetInheritableDefault('features__admin'); }
-    public function isEnabled() : bool          { return $this->TryGetFeature('enabled') ?? $this->GetInheritableDefault('features__enabled'); }
+    public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? self::INHERITED_FIELDS['features__admin']; }
+    public function isEnabled() : bool          { return $this->TryGetFeature('enabled') ?? self::INHERITED_FIELDS['features__enabled']; }
     
     public function setAdmin(?bool $val) : self         { return $this->SetFeature('admin', $val); }
     public function setEnabled(?bool $val) : self       { return $this->SetFeature('enabled', $val); }
@@ -142,11 +147,13 @@ class Account extends AuthEntity
     public function setActiveDate() : self      { return $this->SetDate('active'); }
     public function getLoggedonDate() : int     { return $this->GetDate('loggedon'); }
     public function setLoggedonDate() : self    { return $this->SetDate('loggedon'); }
+    
     public function getPasswordDate() : int     { return $this->GetDate('passwordset'); }
     private function setPasswordDate() : self   { return $this->SetDate('passwordset'); }
+    public function resetPasswordDate() : self  { return $this->SetDate('passwordset', 0); }
     
-    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age') ?? $this->GetInheritableDefault('max_session_age'); }
-    public function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age') ?? $this->GetInheritableDefault('max_password_age'); }
+    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age') ?? self::INHERITED_FIELDS['max_session_age']; }
+    public function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age') ?? self::INHERITED_FIELDS['max_password_age']; }
     
     public static function SearchByFullName(ObjectDatabase $database, string $fullname) : array
     {
@@ -246,11 +253,10 @@ class Account extends AuthEntity
         if ($level & self::OBJECT_USER || $level & self::OBJECT_ADMIN)
         {
             $data = array_merge($data, array(
-
-                'features' => $this->GetAllFeatures(),
                 'dates' => $this->GetAllDates(),
                 'counters' => $this->GetAllCounters(),
                 'limits' => $this->GetAllCounterLimits(),
+                'features' => $this->GetAllFeatures(),
                 'max_session_age' => $this->GetMaxSessionAge(),
                 'max_password_age' => $this->GetMaxPasswordAge()
             ));
@@ -267,15 +273,24 @@ class Account extends AuthEntity
         
         if ($level & self::OBJECT_ADMIN)
         {
+            $getAuth = function($k){ return $this->TryGetInheritsScalarFrom($k); };
+            
+            $showAuth = function (?AuthEntity $e){ return $e ? array($e->ID() => Utilities::ShortClassName(get_class($e))) : null; };
+            
             $data = array_merge($data, array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
-                'groups' => array_map(function($e){ return $e->ID(); }, $this->GetGroups())
+                'groups' => array_keys($this->GetGroups()),
+                'limits_from' => array_map($showAuth, $this->GetAllCounterLimits($getAuth)),
+                'features_from' => array_map($showAuth, $this->GetAllFeatures($getAuth)),
+                'max_session_age_from' => $showAuth($this->TryGetInheritsScalarFrom('max_session_age')),
+                'max_password_age_from' => $showAuth($this->TryGetInheritsScalarFrom('max_password_age'))
             ));
         }
         else
         {
-            unset($data['counters']['groups']);
+            unset($data['dates']['modified']);
+            unset($data['counters']['refs_groups']);
         }
 
         return $data;
@@ -283,46 +298,32 @@ class Account extends AuthEntity
     
     protected function GetScalar(string $field, bool $allowTemp = true)
     {
-        if ($this->ExistsScalar($field)) $value = parent::GetScalar($field, $allowTemp);
-        else if ($this->ExistsScalar($field.'__inherits')) $value = $this->TryGetInheritable($field)->GetValue();
-        else throw new KeyNotFoundException($field);
-        
+        if (array_key_exists($field, self::INHERITED_FIELDS)) 
+            $value = $this->TryGetInheritable($field)->GetValue();
+        else $value = parent::GetScalar($field, $allowTemp);        
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
     protected function TryGetScalar(string $field, bool $allowTemp = true)
     {
-        if ($this->ExistsScalar($field)) return parent::TryGetScalar($field, $allowTemp);
-        else if ($this->ExistsScalar($field.'__inherits')) return $this->TryGetInheritable($field)->GetValue();
-        else return null;
-    }
-    
-    protected function SetScalar(string $field, $value, bool $temp = false) : self
-    {
-        if ($this->ExistsScalar($field.'__inherits')) $field .= "__inherits";
-        return parent::SetScalar($field, $value, $temp);
+        if (array_key_exists($field, self::INHERITED_FIELDS))
+            return $this->TryGetInheritable($field)->GetValue();
+        else return parent::TryGetScalar($field, $allowTemp);
     }
     
     protected function GetObject(string $field) : BaseObject
     {
-        if ($this->ExistsObject($field)) $value = parent::GetObject($field);
-        else if ($this->ExistsObject($field.'__inherits')) $value = $this->TryGetInheritable($field, true)->GetValue();
-        else throw new KeyNotFoundException($field);
-        
+        if (array_key_exists($field, self::INHERITED_FIELDS))
+            $value = $this->TryGetInheritable($field, true)->GetValue();
+        else $value = parent::GetObject($field);
         if ($value !== null) return $value; else throw new NullValueException();
     }
     
     protected function TryGetObject(string $field) : ?BaseObject
     {
-        if ($this->ExistsObject($field)) return parent::TryGetObject($field);
-        else if ($this->ExistsObject($field.'__inherits')) return $this->TryGetInheritable($field, true)->GetValue();
-        else return null;
-    }
-    
-    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
-    {
-        if ($this->ExistsObject($field.'__inherits')) $field .= "__inherits";
-        return parent::SetObject($field, $object, $notification);
+        if (array_key_exists($field, self::INHERITED_FIELDS))
+            return $this->TryGetInheritable($field, true)->GetValue();
+        else return parent::TryGetObject($field);
     }
     
     protected function TryGetInheritsScalarFrom(string $field) : ?AuthEntity
@@ -337,8 +338,8 @@ class Account extends AuthEntity
 
     protected function TryGetInheritable(string $field, bool $useobj = false) : InheritedProperty
     {
-        if ($useobj) $value = parent::TryGetObject($field.'__inherits');
-        else $value = parent::TryGetScalar($field.'__inherits');
+        if ($useobj) $value = parent::TryGetObject($field);
+        else $value = parent::TryGetScalar($field);
         
         if ($value !== null) return new InheritedProperty($value, $this);
         
@@ -358,7 +359,7 @@ class Account extends AuthEntity
             }
         }
         
-        $value ??= $this->GetInheritableDefault($field);
+        $value ??= self::INHERITED_FIELDS[$field];
         
         return new InheritedProperty($value, $source);
     }
