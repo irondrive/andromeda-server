@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -84,8 +84,9 @@ class FTP extends External
         if (strlen($password) == 0) return false;
 
         try { return ftp_login($this->ftp, $username, $password); }
-        catch (Exceptions\PHPException $e) { 
-            Main::GetInstance()->PrintDebug($e->GetDetails()); return false; } 
+        catch (Exceptions\PHPException $e) {
+            Main::GetInstance()->PrintDebug($e->GetDetails()); return false; }
+            
     }
     
     public function __destruct()

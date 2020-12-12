@@ -30,11 +30,10 @@ abstract class AuthEntity extends StandardObject
     public abstract function GetDisplayName() : string;
     public abstract function GetMailTo() : array;
     
-    public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] [--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
+    public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] ".
+                                                            "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
                                                             "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool]"; }
-    
-    public function SetModified() : self { return $this->SetDate('modified'); }
-    
+
     public function SetProperties(Input $input) : self
     {
         foreach (array('max_session_age','max_password_age') as $prop)
@@ -46,6 +45,6 @@ abstract class AuthEntity extends StandardObject
         foreach (array('admin','enabled','forcetf','allowcrypto') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_BOOL));
         
-        return $this->SetModified();
+        return $this->SetDate('modified');
     }
 }

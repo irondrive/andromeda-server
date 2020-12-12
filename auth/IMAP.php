@@ -94,11 +94,11 @@ class IMAP extends External
         $connectstr = implode("/",array_filter(array($hostname, $this->GetProtocol(), $implssl, $secauth)));
 
         try { $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); }
-        catch (Exceptions\PHPException $e) 
-        { 
-            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err); 
+        catch (Exceptions\PHPException $e)
+        {
+            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err);
             Main::GetInstance()->PrintDebug($e->GetDetails()); return false;
-        } 
+        }            
         
         $success = boolval($imap);
             
