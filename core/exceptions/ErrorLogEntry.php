@@ -8,7 +8,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 
-use \Throwable; use Andromeda\Core\JSONEncodingException;
+use Andromeda\Core\JSONEncodingException;
 
 class ErrorLogEntry extends BaseObject
 {    
@@ -32,7 +32,7 @@ class ErrorLogEntry extends BaseObject
          ));
     }
     
-    public static function Create(?Main $api, ObjectDatabase $database, Throwable $e) : ErrorLogEntry
+    public static function Create(?Main $api, ObjectDatabase $database, \Throwable $e) : ErrorLogEntry
     {
         $base = parent::BaseCreate($database);
         
@@ -44,7 +44,7 @@ class ErrorLogEntry extends BaseObject
         return $base;
     }
 
-    public static function GetDebugData(?Main $api, Throwable $e, bool $asJson = false) : array
+    public static function GetDebugData(?Main $api, \Throwable $e, bool $asJson = false) : array
     {
         $details = ($e instanceof ServerException) ? $e->getDetails() : false; 
         

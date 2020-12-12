@@ -18,10 +18,9 @@ abstract class StandardObject extends BaseObject
     protected function GetDate(string $name) : ?int                { return $this->GetScalar("dates__$name"); }
     protected function TryGetDate(string $name) : ?int             { return $this->TryGetScalar("dates__$name"); } 
     
-    protected function SetDate(string $name, int $value = null) : self
+    protected function SetDate(string $name, ?int $value = null) : self
     { 
-        if ($value === null) $value = time(); 
-        return $this->SetScalar("dates__$name", $value); 
+        return $this->SetScalar("dates__$name", $value ?? time()); 
     }
     
     public function GetDateCreated() : int { return $this->GetDate('created'); }    
@@ -74,29 +73,28 @@ abstract class StandardObject extends BaseObject
         return parent::AddObjectRef($field, $object, $notification);
     }
     
-    protected function GetAllDates() : array        { return $this->GetAllScalars('dates'); }
-    protected function GetAllFeatures() : array     { return $this->GetAllScalars('features'); }
+    protected function GetAllDates(callable $vfunc = null) : array    { return $this->GetAllScalars('dates',$vfunc); }
+    protected function GetAllFeatures(callable $vfunc = null) : array { return $this->GetAllScalars('features',$vfunc); }
     
-    protected function GetAllCounters() : array
+    protected function GetAllCounters(callable $vfunc = null) : array
     { 
-        $counters = $this->GetAllScalars('counters'); 
+        $counters = $this->GetAllScalars('counters',$vfunc); 
         foreach (array_keys($this->objectrefs) as $refskey) 
             $counters["refs_$refskey"] = $this->objectrefs[$refskey]->GetValue();
         return $counters;
     }
     
-    protected function GetAllCounterLimits() : array { return $this->GetAllScalars('counters_limits'); }
+    protected function GetAllCounterLimits(callable $vfunc = null) : array { return $this->GetAllScalars('counters_limits',$vfunc); }
 
-    private function GetAllScalars(string $prefix) : array
+    private function GetAllScalars(string $prefix, callable $vfunc = null) : array
     {
         $output = array(); 
         foreach (array_keys($this->scalars) as $key)
         {
-            $keyarr = explode("__",$key); 
+            $keyarr = explode("__",$key,2); 
             if ($keyarr[0] === $prefix)
             {
-                $realkey = implode('__',array_slice($keyarr, 0, 2));
-                $output[$keyarr[1]] = $this->TryGetScalar($realkey);
+                $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $this->TryGetScalar($key);
             }
         }
         return $output;

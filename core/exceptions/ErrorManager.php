@@ -19,10 +19,10 @@ class ErrorManager extends Singleton
 
     public function SetAPI(Main $api) : void { $this->API = $api; }
     
-    private function GetDebugState() : bool
+    private function GetDebugState(int $minlevel) : bool
     {
         if ($this->API !== null && $this->API->GetConfig() !== null) 
-            return $this->API->GetDebugState() >= Config::LOG_ERRORS;
+            return $this->API->GetDebugState() >= $minlevel;
         else return CLI::isApplicable();
     }
     
@@ -30,7 +30,8 @@ class ErrorManager extends Singleton
     {
         if ($this->API !== null) $this->API->rollBack(false);
             
-        $debug = null; if ($this->GetDebugState()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+        $debug = null; if ($this->GetDebugState(Config::LOG_DEVELOPMENT)) 
+            $debug = ErrorLogEntry::GetDebugData($this->API, $e);
             
         return Output::ClientException($e, $debug);
     }
@@ -38,10 +39,9 @@ class ErrorManager extends Singleton
     private function HandleThrowable(\Throwable $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(true);
-        
-        if ($this->API !== null && $this->API->GetConfig() !== null && $this->API->GetConfig()->GetDebugLogLevel()) $this->Log($e);
 
-        $debug = null; if ($this->GetDebugState()) $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+        $debug = null; if ($this->GetDebugState(Config::LOG_ERRORS)) 
+            { $this->Log($e); $debug = ErrorLogEntry::GetDebugData($this->API, $e); }
 
         return Output::ServerException($debug);
     }
@@ -56,7 +56,7 @@ class ErrorManager extends Singleton
            throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
 
         set_exception_handler(function(\Throwable $e)
-        {
+        {            
             if ($e instanceof Exceptions\ClientException)
                 $output = $this->HandleClientException($e);
             else $output = $this->HandleThrowable($e);
