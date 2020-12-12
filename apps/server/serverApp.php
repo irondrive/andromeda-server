@@ -14,9 +14,9 @@ require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat
 use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
 
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
-class MailSendFailException extends Exceptions\ClientErrorException     { public $message = "MAIL_SEND_FAILURE"; }
-class AuthFailedException extends Exceptions\ClientDeniedException      { public $message = "ACCESS_DENIED"; }
+class MailSendFailException extends Exceptions\ClientErrorCopyException { public $message = "MAIL_SEND_FAILURE"; }
 class DatabaseFailException extends Exceptions\ClientErrorCopyException { public $message = "INVALID_DATABASE"; }
+class AuthFailedException extends Exceptions\ClientDeniedException      { public $message = "ACCESS_DENIED"; }
 
 class ServerApp extends AppBase
 {
@@ -201,7 +201,7 @@ class ServerApp extends AppBase
         else $mailer = $this->API->GetConfig()->GetMailer();
         
         try { $mailer->SendMail($subject, $body, $dests); }
-        catch (MailSendException $e) { throw new MailSendFailException($e->getDetails()); }
+        catch (MailSendException $e) { throw new MailSendFailException($e); }
         
         return array();
     }

@@ -134,7 +134,9 @@ class SafeParam
     {
         $key = $this->key; $value = $this->value;
         
-        if ($type === self::TYPE_BOOL)
+        if ($value === 'null' || !strlen($value)) $value = null; 
+        
+        else if ($type === self::TYPE_BOOL)
         {
             if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($key, $type);
@@ -151,17 +153,17 @@ class SafeParam
         }
         else if ($type === self::TYPE_ALPHANUM || $type === self::TYPE_ID)
         {
-            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255 || !strlen($value))
+            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_NAME)
         {
-            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255 || !strlen($value))
+            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_EMAIL)
         {
-            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255 || !strlen($value))
+            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSNAME)
