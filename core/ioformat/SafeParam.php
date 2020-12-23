@@ -174,7 +174,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_TEXT)
         {
-            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);  
+            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
         }
         else if ($type === self::TYPE_RAW) 
         { 

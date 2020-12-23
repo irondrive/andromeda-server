@@ -5,9 +5,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
-require_once(ROOT."/core/exceptions/Exceptions.php"); 
-
-use Andromeda\Core\Exceptions\PHPException;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) die("Missing library: PHPMailer - git submodule init/update?\n");
 require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use \PHPMailer\PHPMailer;
@@ -137,8 +135,8 @@ class Emailer extends StandardObject
         }
         
         $api = Main::GetInstance();
-        $mailer->SMTPDebug = $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_LOWLEVEL : 0;        
-        $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: $str"); };
+        $mailer->SMTPDebug = $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
+        $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');
         
@@ -177,8 +175,7 @@ class Emailer extends StandardObject
         else $mailer->Body = $message;
         
         try { if (!$mailer->send()) throw new MailSendException($mailer->ErrorInfo); }
-        catch (PHPMailer\Exception $e) { throw new MailSendException($e->getMessage()); }
-        catch (PHPException $e) { throw new MailSendException($e->getDetails()); }
+        catch (\Throwable $e) { throw MailSendException::Copy($e); }
         
         $mailer->clearAddresses(); $mailer->clearAttachments();
     }

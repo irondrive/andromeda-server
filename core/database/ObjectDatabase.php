@@ -11,7 +11,7 @@ class ObjectDatabase extends Database
 {
     private array $objects = array();     /* array[id => BaseObject] */
     private array $modified = array();    /* array[id => BaseObject] */
-
+    
     public function isModified(BaseObject $obj) : bool 
     { 
         return array_key_exists($obj->ID(), $this->modified); 
@@ -27,11 +27,13 @@ class ObjectDatabase extends Database
         return array_map(function($e){ return get_class($e); }, $this->objects);
     }
     
-    public function saveObjects(bool $isRollback = false) : void
+    public function saveObjects(bool $isRollback = false) : self
     {
-        foreach ($this->modified as $object) $object->Save($isRollback);
+        foreach ($this->modified as $object) 
+            $object->Save($isRollback);
+        return $this;
     }
-    
+
     public function rollback(bool $canSave = false) : void
     {
         parent::rollBack();
@@ -45,7 +47,7 @@ class ObjectDatabase extends Database
 
     public static function GetClassTableName(string $class) : string
     {
-        $class = explode('\\',$class); unset($class[0]);
+        $class = explode('\\',$class::GetDBClass()); unset($class[0]);
         return "a2_objects_".strtolower(implode('_', $class));
     }
     

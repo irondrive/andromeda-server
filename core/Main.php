@@ -26,10 +26,11 @@ class InvalidDataDirException extends Exceptions\ServerException { public $messa
 class Main extends Singleton
 { 
     private array $construct_stats; 
-    private array $commit_stats; 
     private array $run_stats = array(); 
+    private array $commit_stats = array();
     private DBStats $sum_stats;
     
+    private int $time;
     private array $apps = array(); 
     private array $contexts = array(); 
     
@@ -38,6 +39,9 @@ class Main extends Singleton
     private ErrorManager $error_manager;
     private IOInterface $interface;
     
+    private bool $dirty = false;
+    
+    public function GetTime() : int { return $this->time; }
     public function GetApps() : array { return $this->apps; }
     public function GetConfig() : ?Config { return $this->config; }
     public function GetDatabase() : ?ObjectDatabase { return $this->database; }
@@ -49,6 +53,7 @@ class Main extends Singleton
     { 
         parent::__construct();
         
+        $this->time = time();
         $this->interface = $interface;
         $this->sum_stats = new DBStats();
         
@@ -69,14 +74,16 @@ class Main extends Singleton
 
             $apps = $this->config->GetApps();
         }
-        catch (\PDOException | DatabaseException $e) { $apps = array('server'); }
+        catch (DatabaseException $e) { $apps = array('server'); }
         
         foreach ($apps as $app)
         {
             $path = ROOT."/apps/$app/$app"."App.php";
             $app_class = "Andromeda\\Apps\\$app\\$app".'App';
             
-            if (is_file($path)) require_once($path); else throw new FailedAppLoadException();
+            if (is_file($path)) require_once($path); 
+                else throw new FailedAppLoadException();
+                
             if (!class_exists($app_class)) throw new FailedAppLoadException();
             
             $this->apps[$app] = new $app_class($this);
@@ -88,12 +95,17 @@ class Main extends Singleton
             $this->sum_stats->Add($construct_stats);
             $this->construct_stats = $construct_stats->getStats();
         }
+        
+        register_shutdown_function(function(){
+            if ($this->dirty) $this->rollBack(false); });        
     }
     
     public function Run(Input $input)
     {        
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
+        
+        $this->dirty = true;
 
         if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT && $this->database)
         { 
@@ -146,22 +158,23 @@ class Main extends Singleton
         file_put_contents($path, $data);
     }
     
-    public function rollBack(bool $serverError)
+    public function rollBack(bool $serverError) : void
     {
-        set_time_limit(0);
-        
         foreach ($this->apps as $app) try { $app->rollback(); }
         catch (\Throwable $e) { $this->error_manager->Log($e); }
         
-        if ($this->database) $this->database->rollback(!$serverError);   
-        
         foreach ($this->writes as $path) try { unlink($path); } 
         catch (\Throwable $e) { $this->error_manager->Log($e); }
+        
+        if ($this->database) $this->database->rollback(!$serverError);
+        
+        $this->dirty = false;
     }
     
-    public function commit() : ?array
+    public function commit() : void
     {
-        set_time_limit(0); 
+        $tl = ini_get('max_execution_time'); set_time_limit(0);
+        $ua = ignore_user_abort(); ignore_user_abort(true);
         
         if ($this->database)
         {          
@@ -170,7 +183,7 @@ class Main extends Singleton
             
             $rollback = $this->config && $this->config->isReadOnly();
             
-            $this->database->saveObjects();
+            $this->database->saveObjects(false);
             
             foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
             
@@ -179,14 +192,15 @@ class Main extends Singleton
             if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
+                array_push($this->commit_stats, $commit_stats->getStats());
                 $this->sum_stats->Add($commit_stats);
-                $this->commit_stats = $commit_stats->getStats();
-                return $this->GetMetrics(); 
             }
         }
         else foreach ($this->apps as $app) $app->commit();
         
-        return null;
+        set_time_limit($tl); ignore_user_abort($ua);
+        
+        $this->dirty = false;
     }
     
     public function isLocalCLI() : bool
@@ -194,7 +208,7 @@ class Main extends Singleton
         return $this->interface->getMode() === IOInterface::MODE_CLI;
     }
     
-    public function isEnabled() : bool
+    protected function isEnabled() : bool
     {
         if ($this->config === null) return true;
         
@@ -203,7 +217,7 @@ class Main extends Singleton
     
     public function GetDebugState() : int
     {
-        if ($this->config === null || !isset($this->construct_stats)) return Config::LOG_ERRORS;
+        if ($this->config === null) return Config::LOG_ERRORS;
 
         $debug = $this->config->GetDebugLogLevel();
         
@@ -213,17 +227,19 @@ class Main extends Singleton
     }
     
     private static array $debuglog = array();    
-    public static function PrintDebug(string $data){ array_push(self::$debuglog, $data); }
+    public static function PrintDebug($data){ array_push(self::$debuglog, $data); }
     
     public function GetDebugLog() : ?array 
-    { 
+    {
         return $this->GetDebugState() >= Config::LOG_DEVELOPMENT && 
             count(self::$debuglog) ? self::$debuglog : null; 
     }
     
-    private function GetMetrics() : array
+    public function GetMetrics() : ?array
     {
-        $ret = array(
+        if ($this->GetDebugState() < Config::LOG_DEVELOPMENT) return null;
+            
+        $retval = array(
             'construct_stats' => $this->construct_stats,
             'run_stats' => $this->run_stats,
             'commit_stats' => $this->commit_stats,
@@ -232,7 +248,11 @@ class Main extends Singleton
             'objects' => $this->database->getLoadedObjects(),
             'queries' => $this->database->getAllQueries()
         );
-        return $ret;
+        
+        $log = $this->GetDebugLog();
+        if ($log !== null) $retval['log'] = $log;
+        
+        return $retval;
     }
     
 }

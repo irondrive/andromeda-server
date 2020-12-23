@@ -10,7 +10,6 @@ class InputAuth
 
 class Input
 {
-    private int $time;          public function GetTime() : int { return $this->time; }
     private string $app;        public function GetApp() : string { return $this->app; }
     private string $action;     public function GetAction() : string { return $this->action; }
     private SafeParams $params; public function GetParams() : SafeParams { return $this->params; }
@@ -45,7 +44,7 @@ class Input
     public function __construct(string $app, string $action, SafeParams $params,
                                 array $files = array(), ?InputAuth $auth = null)
     {
-        $this->time = time(); $this->params = $params; $this->files = $files; $this->auth = $auth;
+        $this->params = $params; $this->files = $files; $this->auth = $auth;
 
         $this->app = (new SafeParam("app", strtolower($app)))->GetValue(SafeParam::TYPE_ALPHANUM);
         $this->action = (new SafeParam("action", strtolower($action)))->GetValue(SafeParam::TYPE_ALPHANUM);

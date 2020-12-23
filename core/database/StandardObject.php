@@ -2,9 +2,11 @@
 
 require_once(ROOT."/core/database/BaseObject.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 
 class CounterOverLimitException extends Exceptions\ClientDeniedException { 
-    public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } }
+    public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } } 
+    // TODO go back to making this a server exception so we can have better error messages
 
 abstract class StandardObject extends BaseObject
 {
@@ -20,11 +22,11 @@ abstract class StandardObject extends BaseObject
     
     protected function SetDate(string $name, ?int $value = null) : self
     { 
-        return $this->SetScalar("dates__$name", $value ?? time()); 
+        return $this->SetScalar("dates__$name", $value ?? Main::GetInstance()->GetTime()); 
     }
     
     public function GetDateCreated() : int { return $this->GetDate('created'); }    
-    protected static function BaseCreate(ObjectDatabase $database) {
+    protected static function BaseCreate(ObjectDatabase $database) : self {
         return parent::BaseCreate($database)->SetDate('created'); }
     
     protected function GetFeature(string $name) : ?int             { return $this->GetScalar("features__$name"); }
@@ -54,9 +56,9 @@ abstract class StandardObject extends BaseObject
         return false;
     }
     
-    protected function DeltaCounter(string $name, int $delta = 1) : self
-    { 
-        if ($this->IsCounterOverLimit($name, $delta))
+    protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
+    {
+        if (!$ignoreLimit && $delta > 0 && $this->IsCounterOverLimit($name, $delta))
             throw new CounterOverLimitException($name); 
             
         return $this->DeltaScalar("counters__$name",$delta); 

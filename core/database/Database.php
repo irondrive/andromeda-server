@@ -9,6 +9,8 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 abstract class DatabaseException extends Exceptions\ServerException { }
 class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_NOT_CONFIGURED"; }
+class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
+
 class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
 
 class Database implements Transactions {
@@ -27,18 +29,20 @@ class Database implements Transactions {
         $config ??= self::CONFIG_FILE;
         
         if (file_exists($config)) $config = require($config);
-        else throw new DatabaseConfigException();        
+        else throw new DatabaseConfigException();
         
         $this->config = $config;
         
-        $this->connection = new PDO($config['CONNECT'], $config['USERNAME'], $config['PASSWORD'],
-            array(
-                PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_AUTOCOMMIT => false
-            ));
+        $this->connection = new PDO($config['CONNECT'], $config['USERNAME'], $config['PASSWORD'], array(
+            PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_AUTOCOMMIT => false
+        ));
+        
+        if ($this->connection->inTransaction())
+            $this->connection->rollBack();
     }
-    
+
     public static function GetInstallUsage() : string { return "--connect text [--dbuser name] [--dbpass raw] [--persistent bool]"; }
     
     public static function Install(Input $input)
@@ -91,42 +95,60 @@ class Database implements Transactions {
     public function query(string $sql, int $type, ?array $data = null) 
     {
         if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
-        
-        // TODO perhaps we should catch \PDOExceptions and convert them to DatabaseExceptions
+
+        if (!$this->connection->inTransaction()) 
+            $this->beginTransaction();
         
         $this->startTimingQuery();
-        
-        if (!$this->connection->inTransaction()) 
-        {
-            array_push($this->queries, "beginTransaction()");
-            $this->connection->beginTransaction();
-        }
-        
+
         array_push($this->queries, $sql); 
         
-        $query = $this->connection->prepare($sql); 
-        $query->execute($data ?? array());
-        
-        if ($type & self::QUERY_READ) 
-            $result = $query->fetchAll(PDO::FETCH_ASSOC);
-        else $result = $query->rowCount();
-        
-        if ($sql === 'COMMIT') { $this->commit(); $this->connection->beginTransaction(); }
-        if ($sql === 'ROLLBACK') { $this->rollback(); $this->connection->beginTransaction(); }
+        try 
+        {    
+            if      ($sql === 'COMMIT') { $this->commit(); $result = null; }
+            else if ($sql === 'ROLLBACK') { $this->rollback(); $result = null; }
+            else
+            {
+                $query = $this->connection->prepare($sql); 
+                $query->execute($data ?? array());
+                
+                if ($type & self::QUERY_READ) 
+                    $result = $query->fetchAll(PDO::FETCH_ASSOC);
+                else $result = $query->rowCount();
+            }
+        }
+        catch (\PDOException $e)
+        { 
+            array_push($this->queries, $e->getMessage());
+            throw DatabaseErrorException::Copy($e); 
+        }
         
         $this->stopTimingQuery($sql, $type);
 
-        unset($query); return $result;    
-    }       
+        return $result;    
+    }
+    
+    public function beginTransaction() : void
+    {
+        if (!$this->connection->inTransaction())
+        {
+            $sql = "PDO->beginTransaction()";
+            array_push($this->queries, $sql);
+            $this->startTimingQuery();
+            $this->connection->beginTransaction();
+            $this->stopTimingQuery($sql, Database::QUERY_READ, false);
+        }
+    }
 
     public function rollBack() : void
     { 
         if ($this->connection->inTransaction())
         {
-            array_push($this->queries, "rollBack()");
+            $sql = "PDO->rollback()";
+            array_push($this->queries, $sql);
             $this->startTimingQuery();            
             $this->connection->rollback();
-            $this->stopTimingCommit();
+            $this->stopTimingQuery($sql, Database::QUERY_WRITE, false);
         }
     }
     
@@ -134,10 +156,11 @@ class Database implements Transactions {
     {
         if ($this->connection->inTransaction()) 
         {
-            array_push($this->queries, "commit()");
+            $sql = "PDO->commit()";
+            array_push($this->queries, $sql);
             $this->startTimingQuery();            
             $this->connection->commit();             
-            $this->stopTimingCommit();
+            $this->stopTimingQuery($sql, Database::QUERY_WRITE, false);
         }
     }
     
@@ -147,16 +170,10 @@ class Database implements Transactions {
         if ($s !== null) $s->startQuery();
     }
     
-    private function stopTimingQuery(string $sql, int $type) : void
+    private function stopTimingQuery(string $sql, int $type, bool $count = true) : void
     {
         $s = Utilities::array_last($this->stats_stack);
-        if ($s !== null) $s->endQuery($sql, $type);
-    }
-    
-    private function stopTimingCommit() : void
-    {
-        $s = Utilities::array_last($this->stats_stack);
-        if ($s !== null) $s->endCommit();
+        if ($s !== null) $s->endQuery($sql, $type, $count);
     }
     
     public function pushStatsContext() : self

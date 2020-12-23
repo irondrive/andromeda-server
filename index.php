@@ -5,8 +5,6 @@ define("ROOT",__DIR__.'/');
 if (!version_compare(phpversion(),'7.4.0','>='))
     die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n");
 
-ignore_user_abort();
-
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -25,11 +23,11 @@ $data = array_map(function($input)use($main){
     return $main->Run($input); }, $inputs);
 
 $output = Output::Success($data);
-$metrics = $main->commit(); 
 
-$debuglog = $main->GetDebugLog();
-if ($debuglog !== null) $output->SetDebug(array('log'=>$debuglog));
+$main->commit(); 
 
-if ($metrics !== null) $output->SetMetrics($metrics);
+$interface->UserOutput($output);
 
-$interface->WriteOutput($output); die();
+$output->SetMetrics($main->GetMetrics());
+
+$interface->FinalOutput($output);

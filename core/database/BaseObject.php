@@ -17,14 +17,42 @@ abstract class BaseObject
     
     public static function GetFieldTemplate() : array { return array(); }
     
-    public static function LoadByID(ObjectDatabase $database, string $id) : self
+    public static function GetDBClass() : string { return static::class; }
+    
+    public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
     {
-        return static::LoadByUniqueKey($database,'id',$id);
+        return $database->LoadObjectsByQuery(static::class, $query);
+    }
+    
+    public static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
+    {
+        $database->DeleteObjectsByQuery(static::class, $query);
+    }
+    
+    public static function NotNull(?self $obj) : self 
+    { 
+        if ($obj === null) throw new ObjectNotFoundException(static::class); return $obj; 
+    }
+    
+    protected static function TryLoadUniqueByKey(ObjectDatabase $database, string $field, string $key) : ?self
+    {
+        return $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
+    }
+    
+    protected static function DeleteByUniqueKey(ObjectDatabase $database, string $field, string $key) : void
+    {
+        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
+    }
+    
+    public static function TryLoadUniqueByQuery(ObjectDatabase $database, QueryBuilder $query) : ?self
+    {
+        $result = static::LoadByQuery($database, $query);
+        return count($result) ? array_values($result)[0] : null;
     }
     
     public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
     {
-        return static::TryLoadByUniqueKey($database,'id',$id);
+        return static::TryLoadUniqueByKey($database,'id',$id);
     }
     
     public static function DeleteByID(ObjectDatabase $database, string $id) : void
@@ -42,20 +70,16 @@ abstract class BaseObject
         static::DeleteByQuery($database, (new QueryBuilder()));
     }
     
-    public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
+    public static function LoadByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : array
     {
-        return $database->LoadObjectsByQuery(static::class, $query);
+        $v = $class ? FieldTypes\ObjectPoly::GetIDTypeDBValue($id, $class) : $id;
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
-    public static function LoadOneByQuery(ObjectDatabase $database, QueryBuilder $query) : ?self
+    public static function DeleteByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : void
     {
-        $result = static::LoadByQuery($database, $query);
-        return count($result) ? array_values($result)[0] : null;
-    }
-    
-    public static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
-    {
-        $database->DeleteObjectsByQuery(static::class, $query);
+        $v = $class ? FieldTypes\ObjectPoly::GetIDTypeDBValue($id, $class) : $id;
+        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
     public static function LoadByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : array
@@ -70,23 +94,20 @@ abstract class BaseObject
         $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
-    protected static function LoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : self
+    public static function TryLoadUniqueByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : ?self
     {
-        $obj = $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
-        if ($obj !== null) return $obj; else throw new ObjectNotFoundException(static::class);
+        $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
+        return static::TryLoadUniqueByKey($database, $field, $v);
     }
     
-    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : ?self
+    public static function DeleteByUniqueObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : void
     {
-        return $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
-    }
-    
-    protected static function DeleteByUniqueKey(ObjectDatabase $database, string $field, string $key) : void
-    {
-        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
+        $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
+        static::DeleteByUniqueKey($database, $field, $v);
     }
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
+    public function __toString() : string { return get_class($this)." ".$this->ID(); }
     
     protected array $scalars = array();
     protected array $objects = array();
@@ -94,7 +115,7 @@ abstract class BaseObject
 
     protected function ExistsScalar(string $field) : bool { return array_key_exists($field, $this->scalars); }
     protected function ExistsObject(string $field) : bool { return array_key_exists($field, $this->objects); }
-    protected function ExistsObjectRefs(string $field) : bool  { return array_key_exists($field, $this->objectrefs); }
+    protected function ExistsObjectRefs(string $field) : bool { return array_key_exists($field, $this->objectrefs); }
 
     protected function GetScalar(string $field, bool $allowTemp = true)
     {
@@ -260,7 +281,7 @@ abstract class BaseObject
                 }
             }
         }
-        
+
         if ($this->objects[$field]->SetObject($object))
             $this->database->setModified($this);            
 
@@ -348,18 +369,21 @@ abstract class BaseObject
         
         $class = static::class; $values = array(); $counters = array();
 
-        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
+        if (!$this->deleted)
         {
-            if (!$value->GetDelta()) continue;
-            if ($isRollback && !$value->GetAlwaysSave()) continue;
-
-            if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
-                $counters[$key] = $value->GetDBValue();
-            else $values[$key] = $value->GetDBValue();
-            
-            $value->ResetDelta();
+            foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
+            {
+                if (!$value->GetDelta()) continue;
+                if ($isRollback && !$value->GetAlwaysSave()) continue;
+    
+                if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
+                    $counters[$key] = $value->GetDBValue();
+                else $values[$key] = $value->GetDBValue();
+                
+                $value->ResetDelta();
+            }
         }
-
+        
         $this->database->SaveObject($class, $this, $values, $counters);
         $this->created = false; return $this;
     } 
@@ -384,12 +408,12 @@ abstract class BaseObject
         }
 
         $this->database->setModified($this);
-        $this->deleted = true;
+        $this->deleted = true; $this->Save();
     }
     
     protected bool $created = false; public function isCreated() : bool { return $this->created; }
     
-    protected static function BaseCreate(ObjectDatabase $database)
+    protected static function BaseCreate(ObjectDatabase $database) : self
     {
         $obj = $database->CreateObject(static::class);         
         $database->setModified($obj);

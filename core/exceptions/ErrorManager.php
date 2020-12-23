@@ -40,8 +40,8 @@ class ErrorManager extends Singleton
     {
         if ($this->API !== null) $this->API->rollBack(true);
 
-        $debug = null; if ($this->GetDebugState(Config::LOG_ERRORS)) 
-            { $this->Log($e); $debug = ErrorLogEntry::GetDebugData($this->API, $e); }
+        try { $debug = $this->Log($e, false); }
+        catch (\Throwable $e) { $debug = null; }
 
         return Output::ServerException($debug);
     }
@@ -53,55 +53,58 @@ class ErrorManager extends Singleton
         $this->interface = $interface;
         
         set_error_handler( function($code,$string,$file,$line){
-           throw new Exceptions\PHPException($code,$string,$file,$line); }, E_ALL); 
+           throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
 
         set_exception_handler(function(\Throwable $e)
         {            
-            if ($e instanceof Exceptions\ClientException)
+            if ($e instanceof Exceptions\ClientException) 
                 $output = $this->HandleClientException($e);
             else $output = $this->HandleThrowable($e);
             
-            $this->interface->WriteOutput($output); die();  
+            $this->interface->FinalOutput($output); die();  
         });
     }
     
     public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
-    public function Log(\Throwable $e) : void
+    private bool $filelogok = true;
+    private bool $dblogok = true;
+    
+    public function Log(\Throwable $e, bool $mainlog = true) : ?array
     {
-        $logged = false; $logdir = null;
-        if ($this->API !== null && $this->API->GetConfig() !== null)
-        {
-            $logdir = $this->API->GetConfig()->GetDataDir();
-            if ($logdir && $this->API->GetConfig()->GetDebugLog2File()) 
-            {
-                $data = Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e));
-                $this->Log2File($logdir, $data); $logged = true; 
-            }
-        }
+        if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;         
         
-        try 
+        $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+        
+        if ($this->API !== null && $mainlog) $this->API->PrintDebug($debug);
+        
+        try
         {
-            $db = new ObjectDatabase(false); ErrorLogEntry::Create($this->API, $db, $e); $db->saveObjects()->commit(); 
-        }
-        catch (\Throwable $e2) 
-        { 
-            if ($logdir !== null) 
+            if ($this->filelogok && $this->API !== null && $this->API->GetConfig() !== null)
             {                
-                $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e2, true))); 
-                if (!$logged) $this->Log2File($logdir, Utilities::JSONEncode(ErrorLogEntry::GetDebugData($this->API, $e, true))); 
+                $logdir = $this->API->GetConfig()->GetDataDir();
+                if ($logdir && $this->API->GetConfig()->GetDebugLog2File())
+                {
+                    $data = Utilities::JSONEncode($debug);
+                    file_put_contents("$logdir/error.log", $data."\r\n", FILE_APPEND); 
+                }
             }
         }
+        catch (\Throwable $e2) { $this->filelogok = false; $this->Log($e2); }
         
+        try
+        {
+            if ($this->dblogok) 
+            {                 
+                $db = new ObjectDatabase(); 
+                ErrorLogEntry::Create($this->API, $db, $e); 
+                $db->saveObjects()->commit();
+            }
+        }
+        catch (\Throwable $e2) { $this->dblogok = false; $this->Log($e2); }
+
         if (($e = $e->getPrevious()) instanceof \Throwable) $this->Log($e);
+        
+        return $debug;
     }   
-    
-    private bool $logfileok = true;
-    
-    private function Log2File(string $datadir, string $data) : void
-    {
-        if (!$this->logfileok) return;
-        try { file_put_contents("$datadir/error.log", $data."\r\n", FILE_APPEND); }
-        catch (\Throwable $e) { $this->logfileok = false; $this->HandleThrowable($e); }
-    }
 }

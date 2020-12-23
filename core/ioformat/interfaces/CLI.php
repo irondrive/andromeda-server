@@ -1,7 +1,8 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, MissingSingletonException};
 
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
@@ -11,6 +12,7 @@ use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
@@ -29,6 +31,20 @@ class CLI extends IOInterface
     public static function isApplicable() : bool
     {
         global $argv; return php_sapi_name() === "cli" && isset($argv);
+    }
+    
+    public function __construct()
+    {
+        parent::__construct();
+        
+        if (function_exists('pcntl_signal'))
+        {
+            pcntl_signal(SIGTERM, function()
+            {
+                try { Main::GetInstance()->rollback(false); }
+                catch (MissingSingletonException $e) { }
+            });
+        }        
     }
     
     public function getAddress() : string
@@ -82,7 +98,7 @@ class CLI extends IOInterface
     private function GetBatch(string $file) : array
     {       
         try { $lines = explode("\n", file_get_contents($file)); }
-        catch (Exceptions\PHPException $e) { throw new UnknownBatchFileException(); }
+        catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
         
         require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
         
@@ -148,31 +164,31 @@ class CLI extends IOInterface
     
     public function __destruct()
     {
-        foreach ($this->tmpfiles as $file) try { unlink($file); } catch (\Throwable $e) { }
+        foreach ($this->tmpfiles as $file) try { unlink($file); } 
+            catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
     }
     
     private $output_json = false;
     
-    public function WriteOutput(Output $output)
-    {
-        if ($this->outmode == self::OUTPUT_PLAIN)
+    public function FinalOutput(Output $output)
+    {        
+        if ($this->outmode === self::OUTPUT_PLAIN)
         {
             try { echo $output->GetAsString($this->debug)."\n"; } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
 
-        if ($this->outmode == self::OUTPUT_PRINTR)
+        if ($this->outmode === self::OUTPUT_PRINTR)
         {
             $outdata = $output->GetAsArray($this->debug);
             echo print_r($outdata, true)."\n";
         }        
-        else if ($this->outmode == self::OUTPUT_JSON)
+        else if ($this->outmode === self::OUTPUT_JSON)
         {
             $outdata = $output->GetAsArray($this->debug);
             echo Utilities::JSONEncode($outdata)."\n";
         }
 
-        $response = $output->GetHTTPCode();
-        if ($response != 200) exit(1); else exit(0);
+        exit($output->GetOK() ? 0 : 1);
     }
 }
