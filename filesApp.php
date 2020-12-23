@@ -10,15 +10,19 @@ require_once(ROOT."/apps/files/Tag.php");
 require_once(ROOT."/apps/files/Like.php");
 require_once(ROOT."/apps/files/Share.php");
 
+require_once(ROOT."/apps/files/limits/Filesystem.php");
+require_once(ROOT."/apps/files/limits/Account.php");
+
 require_once(ROOT."/apps/files/storage/Storage.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\Database;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
@@ -41,19 +45,20 @@ class UnknownParentException  extends Exceptions\ClientNotFoundException    { pu
 class UnknownDestinationException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_DESTINATION"; }
 class UnknownFilesystemException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_FILESYSTEM"; }
 
-class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; }
+class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; public $message = "INVALID_BYTE_RANGE"; }
 
 class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
 class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
-class ItemAccessDeniedException extends Exceptions\ClientDeniedException { public $message = "ITEM_ACCESS_DENIED"; }
+class ItemAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "ITEM_ACCESS_DENIED"; }
 
 class UserStorageDisabledException extends Exceptions\ClientDeniedException   { public $message = "USER_STORAGE_NOT_ALLOWED"; }
 class RandomWriteDisabledException extends Exceptions\ClientDeniedException   { public $message = "RANDOM_WRITE_NOT_ALLOWED"; }
 
+class ItemSharingDisabledException extends Exceptions\ClientDeniedException   { public $message = "SHARING_DISABLED"; }
 class EmailShareDisabledException extends Exceptions\ClientDeniedException    { public $message = "EMAIL_SHARES_DISABLED"; }
-class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
 class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_REQUEST_URI"; }
+class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
 
 class FilesApp extends AppBase
 {
@@ -117,7 +122,7 @@ class FilesApp extends AppBase
         $this->database = $api->GetDatabase();
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (\PDOException | DatabaseException $e) { }
+        catch (DatabaseException $e) { }
         
         Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
         { 
@@ -236,12 +241,13 @@ class FilesApp extends AppBase
     
     protected function UploadFiles(Input $input) : array
     {
-        if (!$this->config->GetAllowPublicUpload() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
         
         $access = $this->AuthenticateFolderAccess($input, $input->TryGetParam('parent',SafeParam::TYPE_ID));
         $parent = $access->GetItem(); $share = $access->GetShare();
+        
+        if (!$this->authenticator && !$parent->GetAllowPublicUpload())
+            throw new AuthenticationFailedException();
         
         if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
         
@@ -249,17 +255,19 @@ class FilesApp extends AppBase
         
         $return = array(); $files = $input->GetFiles();
         if (!count($files)) throw new InvalidFileWriteException();
+        
         foreach ($files as $name => $path)
-        {            
             $parent->CountBandwidth(filesize($path));
-            
+        
+        foreach ($files as $name => $path)
+        { 
             $file = File::Import($this->database, $parent, $account, $name, $path, $overwrite);
             array_push($return, $file->GetClientObject());
         }        
         return $return;
     }
     
-    protected function DownloadFile(Input $input) : array
+    protected function DownloadFile(Input $input) : void
     {
         $access = $this->AuthenticateFileAccess($input); 
         $file = $access->GetItem(); $share = $access->GetShare();
@@ -290,70 +298,83 @@ class FilesApp extends AppBase
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
         
-        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false))
-            $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE);
-        
         if ($fstart != 0 || $flast != $fsize-1)
         {
             http_response_code(206);
             header("Content-Range: bytes $fstart-$flast/$fsize");     
         }
-        else if (isset($share) && $share !== null) $file->CountDownload();
+        else $file->CountDownload((isset($share) && $share !== null));
         
-        header("Content-Length: ".($flast-$fstart+1));       
-
+        $length = $flast-$fstart+1;
+        
+        // check required bandwidth ahead of time and prepare stats objects
+        $file->CountBandwidth($length); $file->CountBandwidth($length*-1);
+        
+        $fschunksize = $file->GetChunkSize();
+        $chunksize = $this->config->GetRWChunkSize();
+        
+        $align = ($fschunksize !== null);
+        // transfer chunk size must be an integer multiple of the FS chunk size
+        if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;        
+        
+        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false))
+            $this->API->GetInterface()->DisableOutput();
+        
+        header("Content-Length: $length");        
         header("Accept-Ranges: bytes");
         header("Cache-Control: max-age=0");
         header("Content-type: application/octet-stream");
         header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
-        header('Content-Transfer-Encoding: binary');       
+        header('Content-Transfer-Encoding: binary');
         
-        set_time_limit(0);
-
-        try { while (@ob_end_flush()); } catch (\Throwable $e) { }        
-        
-        $fschunksize = $file->GetChunkSize();
-        $chunksize = $this->config->GetRWChunkSize();     
-        
-        $align = ($fschunksize !== null);
-        /* transfer chunk size must be an integer multiple of the FS chunk size */
-        if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;
-
-        for ($byte = $fstart; $byte <= $flast; $byte += $chunksize)
+        // register the data output to happen after the main commit so that we don't get to the
+        // end of the download and then fail to insert a stats row and miss counting bandwidth
+        $this->API->GetInterface()->RegisterOutputHandler(function(Output $output) 
+            use($file,$fstart,$flast,$fsize,$chunksize,$align)
         {
-            $maxlen = min($chunksize, $flast - $byte + 1);
+            set_time_limit(0); ignore_user_abort(true);
             
-            if ($align)
+            for ($byte = $fstart; $byte <= $flast; $byte += $chunksize)
             {
-                $rstart = intdiv($byte, $chunksize) * $chunksize;                
-                $roffset = $byte - $rstart;
+                if (connection_aborted()) break;
                 
-                $data = $file->ReadBytes($rstart, $chunksize);
+                $maxlen = min($chunksize, $flast - $byte + 1);
                 
-                if ($roffset || $maxlen != strlen($data))
-                    $data = substr($data, $roffset, $maxlen);
+                if ($align)
+                {
+                    $rstart = intdiv($byte, $chunksize) * $chunksize;
+                    $roffset = $byte - $rstart;
+                    
+                    $data = $file->ReadBytes($rstart, $chunksize);
+                    
+                    if ($roffset || $maxlen != strlen($data))
+                        $data = substr($data, $roffset, $maxlen);
+                        
+                        $byte = $rstart;
+                }
+                else $data = $file->ReadBytes($byte, $maxlen);
+
+                $file->CountBandwidth(strlen($data));
                 
-                $byte = $rstart;
+                //echo $data; flush();
             }
-            else $data = $file->ReadBytes($byte, $maxlen);
-
-            $file->CountBandwidth(strlen($data)); 
-            if (connection_aborted()) break; else echo $data;
-        }
-
-        return array();
+            
+            $this->API->commit();
+        });
     }
     
     protected function WriteToFile(Input $input) : array
     {
-        if (!$this->config->GetAllowPublicModify() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
-        
-        if (!$this->config->GetAllowRandomWrite() && (!$this->authenticator || !$this->authenticator->isAdmin()))
-            throw new RandomWriteDisabledException();
-            
         $access = $this->AuthenticateFileAccess($input);
         $file = $access->GetItem(); $share = $access->GetShare();
+        
+        $account = $this->authenticator ? $this->authenticator->GetAccount() : null;
+        
+        if (!$account && !$file->GetAllowPublicModify())
+            throw new AuthenticationFailedException();
+            
+        if (!$file->GetAllowRandomWrite($account))
+            throw new RandomWriteDisabledException();
         
         if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();        
 
@@ -411,18 +432,20 @@ class FilesApp extends AppBase
     }
     
     protected function TruncateFile(Input $input) : array
-    {
-        if (!$this->config->GetAllowPublicModify() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
-        
-        if (!$this->config->GetAllowRandomWrite() && (!$this->authenticator || !$this->authenticator->isAdmin()))
-            throw new RandomWriteDisabledException();
-            
+    {   
         $access = $this->AuthenticateFileAccess($input);
         $file = $access->GetItem(); $share = $access->GetShare();
+
+        $account = $this->authenticator ? $this->authenticator->GetAccount() : null;
         
-        if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();      
-    
+        if (!$account && !$file->GetAllowPublicModify())
+            throw new AuthenticationFailedException();
+        
+        if (!$file->GetAllowRandomWrite($account))
+            throw new RandomWriteDisabledException();
+            
+        if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+
         $size = $input->GetParam('size',SafeParam::TYPE_INT);
         
         if ($size < 0) throw new InvalidFileRangeException();
@@ -544,12 +567,13 @@ class FilesApp extends AppBase
     
     protected function CreateFolder(Input $input) : array
     {
-        if (!$this->config->GetAllowPublicUpload() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
         
         $access = $this->AuthenticateFolderAccess($input, $input->TryGetParam('parent',SafeParam::TYPE_ID));
         $parent = $access->GetItem(); $share = $access->GetShare();
+        
+        if (!$this->authenticator && !$parent->GetAllowPublicUpload())
+            throw new AuthenticationFailedException();
         
         if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
 
@@ -569,10 +593,7 @@ class FilesApp extends AppBase
     }
     
     private function DeleteItem(string $class, string $key, string $keys, Input $input) : array
-    {
-        if (!$this->config->GetAllowPublicModify() && $this->authenticator === null)
-            throw new AuthenticationFailedException();
-        
+    {       
         $item = $input->TryGetParam($key,SafeParam::TYPE_ID);
         $items = $input->TryGetParam($keys,SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
         
@@ -580,6 +601,9 @@ class FilesApp extends AppBase
         {
             $access = static::AuthenticateItemAccess($input, $class, $item);
             $itemobj = $access->GetItem(); $share = $access->GetShare();
+            
+            if (!$this->authenticator && !$itemobj->GetAllowPublicModify())
+                throw new AuthenticationFailedException();
             
             if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
 
@@ -595,7 +619,10 @@ class FilesApp extends AppBase
                 $access = static::TryAuthenticateItemAccess($input, $class, $item); 
                 if ($access === null) continue;                
                 
-                $itemobj = $access->GetItem(); $share = $access->GetShare();               
+                $itemobj = $access->GetItem(); $share = $access->GetShare();
+                
+                if (!$this->authenticator && !$itemobj->GetAllowPublicModify()) continue;
+                
                 if ($share !== null && !$share->CanModify()) continue;  
                 
                 try { $itemobj->Delete(); $retval[$item] = true; }
@@ -619,14 +646,7 @@ class FilesApp extends AppBase
     private function RenameItem(string $class, string $key, Input $input)
     {
         $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
-        
-        if ($this->authenticator === null)
-        {
-            $ok = !$copy && !$this->config->GetAllowPublicModify();
-            $ok &= $copy && !$this->config->GetAllowPublicUpload();
-            if (!$ok) throw new AuthenticationFailedException();
-        }
-        
+
         $id = $input->GetParam($key, SafeParam::TYPE_ID);
         $access = static::AuthenticateItemAccess($input, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
@@ -640,7 +660,10 @@ class FilesApp extends AppBase
         {
             $paccess = ItemAccess::Authenticate(
                 $this->database, $input, $this->authenticator, Folder::class, $item->GetParentID());            
-            $pshare = $paccess->GetShare();
+            $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
+            
+            if (!$this->authenticator && !$parent->GetAllowPublicUpload())
+                throw new AuthenticationFailedException();
             
             if ($pshare !== null && !$pshare->CanUpload()) throw new ItemAccessDeniedException();           
             
@@ -650,6 +673,9 @@ class FilesApp extends AppBase
         }
         else
         {
+            if (!$this->authenticator && !$parent->GetAllowPublicModify())
+                throw new AuthenticationFailedException();
+            
             if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
             
             $retval = $item->SetName($name, $overwrite);
@@ -672,20 +698,16 @@ class FilesApp extends AppBase
     {
         $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
         
-        if ($this->authenticator === null)
-        {
-            $bad = !$copy && !$this->config->GetAllowPublicModify();
-            $bad |= $copy && !$this->config->GetAllowPublicUpload();
-            if ($bad) throw new AuthenticationFailedException();
-        }
-        
         $item = $input->TryGetParam($key,SafeParam::TYPE_ID);
         $items = $input->TryGetParam($keys,SafeParam::TYPE_ARRAY | SafeParam::TYPE_ID);
         
-        $access = $this->AuthenticateFolderAccess($input, $input->TryGetParam('parent',SafeParam::TYPE_ID));
-        $parent = $access->GetItem(); $share = $access->GetShare();
+        $paccess = $this->AuthenticateFolderAccess($input, $input->TryGetParam('parent',SafeParam::TYPE_ID));
+        $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
         
-        if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
+        if (!$this->authenticator && !$parent->GetAllowPublicUpload())
+            throw new AuthenticationFailedException();
+            
+        if ($pshare !== null && !$pshare->CanUpload()) throw new ItemAccessDeniedException();
         
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;        
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
@@ -694,6 +716,9 @@ class FilesApp extends AppBase
         {
             $access = static::AuthenticateItemAccess($input, $class, $item);
             $itemobj = $access->GetItem(); $share = $access->GetShare();
+            
+            if (!$copy && !$this->authenticator && !$itemobj->GetAllowPublicModify())
+                throw new AuthenticationFailedException();
             
             if (!$itemobj->GetParentID()) throw new ItemAccessDeniedException();
             if (!$copy && $share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
@@ -711,7 +736,9 @@ class FilesApp extends AppBase
                 $access = static::TryAuthenticateItemAccess($input, $class, $item); 
                 if ($access === null) continue;                
                 
-                $itemobj = $access->GetItem(); $share = $access->GetShare();        
+                $itemobj = $access->GetItem(); $share = $access->GetShare();
+                
+                if (!$copy && !$this->authenticator && !$itemobj->GetAllowPublicModify()) continue;
                 
                 if (!$itemobj->GetParentID()) continue;
                 if (!$copy && $share !== null && !$share->CanModify()) continue;        
@@ -907,15 +934,10 @@ class FilesApp extends AppBase
             else if ($destgroup !== null) $dest = Group::TryLoadByID($this->database, $destgroup);
             if ($dest === null && !$everyone) throw new UnknownDestinationException();
         }
-        
-        $isadmin = $this->authenticator->isAdmin();
-        if ($dest === null && !$this->config->GetAllowShareEveryone() && !$isadmin)
-            throw new ShareEveryoneDisabledException();
-        
+
         if ($item !== null)
         {
             $share = static::InnerShareItem($class, $input, $item, $account, $dest, $islink);
-            if ($share === null) throw new UnknownItemException();
             $shares = array($share); $retval = $share->GetClientObject(false, $islink); 
         }
         else if ($items !== null)
@@ -923,7 +945,8 @@ class FilesApp extends AppBase
             $shares = array();
             foreach ($items as $item)
             {
-                $shares[$item] = static::InnerShareItem($class, $input, $item, $account, $dest, $islink) ?? false;
+                try { $shares[$item] = static::InnerShareItem($class, $input, $item, $account, $dest, $islink); }
+                catch (Exceptions\ClientException $e) { $shares[$item] = null; continue; }
             };
             $retval = array_map(function(Share $share)use($islink){ return $share->GetClientObject(false, $islink); }, $shares);
         }
@@ -931,7 +954,7 @@ class FilesApp extends AppBase
         
         if ($islink && ($email = $input->TryGetParam('email',SafeParam::TYPE_EMAIL)) !== null)
         {
-            if (!$this->config->GetAllowEmailShare())
+            if (!Limits\AccountTotal::LoadByAccount($this->database, $account)->GetAllowEmailShare())
                 throw new EmailShareDisabledException();
             
             $account = $this->authenticator->GetAccount();
@@ -942,7 +965,7 @@ class FilesApp extends AppBase
                 $url = $this->API->GetConfig()->GetAPIUrl();
                 if (!$url) throw new ShareURLGenerateException();
                 
-                $params = (new SafeParams())->AddParamsArray(array('sid'=>$share->ID(),'skey'=>$share->GetAuthKey()));
+                $params = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
                 $link = AJAX::GetRemoteURL($url, new Input('files','download',$params));
                 return "<a href='$link'>".$share->GetItem()->GetName()."</a>";
             }, $shares)); 
@@ -957,13 +980,22 @@ class FilesApp extends AppBase
         return $retval;
     }    
     
-    private function InnerShareItem(string $class, Input $input, string $item, Account $account, ?AuthEntity $dest, bool $islink) : ?Share
+    private function InnerShareItem(string $class, Input $input, string $item, Account $account, ?AuthEntity $dest, bool $islink) : Share
     {
         $access = static::TryAuthenticateItemAccess($input, $class, $item);
-        if ($access === null) return null; $oldshare = $access->GetShare();
-        if ($oldshare !== null && !$oldshare->CanReshare()) return null;
+        if ($access === null) throw new UnknownItemException();
         
-        if ($islink) $newshare = Share::CreateLink($this->database, $account, $access->GetItem());
+        $oldshare = $access->GetShare(); $item = $access->GetItem();
+        if ($oldshare !== null && !$oldshare->CanReshare())
+            throw new UnknownItemException();
+        
+        if (!$item->GetAllowItemSharing($account))
+            throw new ItemSharingDisabledException();
+
+        if ($dest === null && !$item->GetAllowShareEveryone($account))
+            throw new ShareEveryoneDisabledException();
+
+        if ($islink) $newshare = Share::CreateLink($this->database, $account, $item);
         else $newshare = Share::Create($this->database, $account, $item, $dest);
         
         return $newshare->SetShareOptions($input, $oldshare);
@@ -1051,11 +1083,11 @@ class FilesApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $isadmin = $this->authenticator->isAdmin();
         
-        if (!$this->config->GetAllowUserStorage() && !$isadmin)
-            throw new UserStorageDisabledException();
-        
         $global = ($input->TryGetParam('global', SafeParam::TYPE_BOOL) ?? false) && $isadmin;
 
+        if (!Limits\AccountTotal::LoadByAccount($this->database, $account)->GetAllowUserStorage() && !$global)
+            throw new UserStorageDisabledException();
+            
         $filesystem = FSManager::Create($this->database, $input, $global ? null : $account);
         return $filesystem->GetClientObject(true);
     }

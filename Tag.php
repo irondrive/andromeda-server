@@ -25,7 +25,7 @@ class Tag extends StandardObject
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $tag) : self
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),$q->Equals('tag',$tag));
-        if (($ex = static::LoadOneByQuery($database, $q->Where($where))) !== null) return $ex;
+        if (($ex = static::TryLoadUniqueByQuery($database, $q->Where($where))) !== null) return $ex;
         
         return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetScalar('tag',$tag);
     }

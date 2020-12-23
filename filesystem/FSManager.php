@@ -26,8 +26,7 @@ class InvalidFSTypeServerException extends Exceptions\ServerException { public $
 class InvalidFSTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
 class InvalidSTTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_STORAGE_TYPE"; }
 class InvalidNameException extends Exceptions\ClientErrorException { public $message = "INVALID_FILESYSTEM_NAME"; }
-
-class InvalidStorageException extends Exceptions\ClientErrorCopyException { public $message = "STORAGE_ACTIVATION_FAILED"; }
+class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; }
 
 class FSManager extends StandardObject
 {
@@ -46,6 +45,7 @@ class FSManager extends StandardObject
         ));
     }
 
+    public function isGlobal() : bool { return !$this->HasObject('owner'); }
     public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
     public function isSecure() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
     
@@ -64,6 +64,7 @@ class FSManager extends StandardObject
     }
     
     public function GetOwner() : ?Account            { return $this->TryGetObject('owner'); }
+    public function GetOwnerID() : ?string           { return $this->TryGetObjectID('owner'); }
     private function SetOwner(?Account $owner) : self { return $this->SetObject('owner',$owner); }
     
     private function GetType() : int { return $this->GetScalar('type'); }
@@ -153,7 +154,7 @@ class FSManager extends StandardObject
         
             $filesystem->GetStorage()->Test(); 
         }
-        catch (ActivateException | Exceptions\ClientException $e){ throw new InvalidStorageException($e); }
+        catch (ActivateException | Exceptions\ClientException $e){ throw InvalidStorageException::Copy($e); }
         
         return $filesystem;
     }
@@ -174,12 +175,12 @@ class FSManager extends StandardObject
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
         $q1 = new QueryBuilder(); $q1->Where($q1->And($q1->IsNull('name'), $q1->Equals('owner',$account->ID())));
-        $found = static::LoadOneByQuery($database, $q1);
+        $found = static::TryLoadUniqueByQuery($database, $q1);
         
         if ($found === null)
         {
             $q2 = new QueryBuilder(); $q2->Where($q2->And($q2->IsNull('name'), $q2->IsNull('owner')));
-            $found = static::LoadOneByQuery($database, $q2);
+            $found = static::TryLoadUniqueByQuery($database, $q2);
         }
         
         return $found;
@@ -188,13 +189,13 @@ class FSManager extends StandardObject
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id));
-        return self::LoadOneByQuery($database, $q->Where($w));
+        return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
     public static function TryLoadByAccountAndName(ObjectDatabase $database, ?Account $account, ?string $name) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account ? $account->ID() : null),$q->Equals('name',$name));
-        return self::LoadOneByQuery($database, $q->Where($w));
+        return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array

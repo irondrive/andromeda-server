@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -12,8 +13,6 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/AuthObject.php"); use Andromeda\Apps\Accounts\AuthObject;
 require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\AuthEntity;
-
-use Andromeda\Core\Database\CounterOverLimitException;
 
 class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; }
 
@@ -54,7 +53,7 @@ class Share extends AuthObject
     public function IsExpired() : bool
     {
         $expires = $this->TryGetDate('expires');
-        if ($expires !== null && microtime(true) > $expires) return true;
+        if ($expires !== null && Main::GetInstance()->GetTime() > $expires) return true;
         
         return $this->IsCounterOverLimit('accessed', 1);
     }
@@ -74,10 +73,11 @@ class Share extends AuthObject
     
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
     {
-        $q = new QueryBuilder(); if (($ex = static::LoadOneByQuery($database, $q->Where(static::GetItemDestQuery($item, $dest, $q)))) !== null) return $ex;      
+        $q = new QueryBuilder(); if (($ex = static::TryLoadUniqueByQuery($database, $q->Where(static::GetItemDestQuery($item, $dest, $q)))) !== null) return $ex;    
+        
         return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item)->SetObject('dest',$dest);
     }
-    
+
     public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
     {
         return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item);
@@ -168,7 +168,7 @@ class Share extends AuthObject
             $q = new QueryBuilder(); $dests = array_map(function($dest)use($q,$item){ 
                 return static::GetItemDestQuery($item, $dest, $q); },$dests);
             
-            $found = static::LoadOneByQuery($database, $q->Where(static::GetDestsQuery($dests,$q)));  // TODO integrate with group priority if > 1 found
+            $found = static::TryLoadUniqueByQuery($database, $q->Where(static::GetDestsQuery($dests,$q)));  // TODO integrate with group priority if > 1 found
             if ($found) return $found;
         }
         while (($item = $item->GetParent()) !== null);

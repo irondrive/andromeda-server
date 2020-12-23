@@ -2,7 +2,7 @@
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -30,9 +30,30 @@ class File extends Item
         if (!$notify)
             $this->GetFSImpl()->Truncate($this, $size);
         
-        $oldsize = $this->TryGetScalar('size') ?? 0;
-        $this->GetParent()->DeltaSize($size-$oldsize);
+        $delta = $size - ($this->TryGetScalar('size') ?? 0);
+        
+        $this->GetParent()->DeltaSize($delta);
+        
+        // TODO this assumes the FS never changes - will not work for cross-FS move!
+        $this->MapToLimits(function(Limits\Base $lim)use($delta){ 
+            $lim->CountSize($delta, $this->isGlobalFS()); });
+        
         return $this->SetScalar('size', $size); 
+    }
+    
+    public function CountDownload(bool $public = true) : self
+    {
+        $this->MapToLimits(function(Limits\Base $lim){ $lim->CountDownload(); })
+             ->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetDownloadDate(); });
+        
+        return parent::CountDownload($public);
+    }
+    
+    public function CountBandwidth(int $bytes) : self
+    {
+        $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });
+        
+        return parent::CountBandwidth($bytes);
     }
         
     private bool $refreshed = false;
@@ -80,18 +101,19 @@ class File extends Item
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         return parent::BaseCreate($database)->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name);
+            ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name)->CountCreate();
     }
     
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
     {
         $file = static::NotifyCreate($database, $parent, $account, $name)
-            ->CheckName($name,$overwrite)->SetSize(filesize($path),true);
+            ->CheckName($name,$overwrite)->SetSize(filesize($path),true); // TODO maybe reuse the same object for overwrite? may not want to clear all comments/shares, etc.
         
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }
     
     public function GetChunkSize() : ?int { return $this->GetFSImpl()->GetChunkSize(); }
+    public function isGlobalFS() : bool { return $this->GetFilesystem()->isGlobal(); }
     
     public function ReadBytes(int $start, int $length) : string
     {
@@ -103,7 +125,13 @@ class File extends Item
         $this->SetModified(); $this->GetFSImpl()->WriteBytes($this, $start, $data); return $this;
     }    
     
-    public function NotifyDelete() : void { parent::Delete(); }
+    public function NotifyDelete() : void 
+    { 
+        $this->MapToLimits(function(Limits\Base $lim){
+            $lim->CountSize($this->GetSize()*-1, $this->isGlobalFS()); });
+        
+        parent::Delete(); 
+    }
 
     public function Delete() : void
     {        

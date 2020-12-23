@@ -28,9 +28,10 @@ class Like extends StandardObject
     public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, int $value) : self
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',$owner->ID()),$q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
-        $likeobj = static::LoadOneByQuery($database, $q->Where($where)) ?? static::Create($database, $owner, $item);
+        $likeobj = static::TryLoadUniqueByQuery($database, $q->Where($where)) ?? static::Create($database, $owner, $item);
                 
-        $item->DiscountLike($likeobj->TryGetScalar('value')??0)->CountLike($value);
+        // "un-count" the old like, count the new one
+        $item->CountLike($likeobj->TryGetScalar('value') ?? 0, true)->CountLike($value);
 
         $likeobj->SetScalar('value',$value)->SetDate('created');
         
