@@ -14,8 +14,8 @@ require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat
 use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
 
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
-class MailSendFailException extends Exceptions\ClientErrorCopyException { public $message = "MAIL_SEND_FAILURE"; }
-class DatabaseFailException extends Exceptions\ClientErrorCopyException { public $message = "INVALID_DATABASE"; }
+class MailSendFailException extends Exceptions\ClientErrorException     { public $message = "MAIL_SEND_FAILURE"; }
+class DatabaseFailException extends Exceptions\ClientErrorException     { public $message = "INVALID_DATABASE"; }
 class AuthFailedException extends Exceptions\ClientDeniedException      { public $message = "ACCESS_DENIED"; }
 
 class ServerApp extends AppBase
@@ -133,7 +133,7 @@ class ServerApp extends AppBase
         if ($this->API->GetDatabase()) throw new UnknownActionException();
         
         try { Database::Install($input); }
-        catch (\PDOException | DatabaseException $e) { throw new DatabaseFailException($e); }
+        catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
     
     protected function Install(Input $input)
@@ -158,7 +158,7 @@ class ServerApp extends AppBase
     {
         if (!$this->isAdmin) throw new AuthFailedException();
         
-        $this->API->GetInterface()->SetOutmode(IOInterface::OUTPUT_NONE); phpinfo();
+        $this->API->GetInterface()->DisableOutput(); phpinfo();
     }
     
     protected function ServerInfo(Input $input) : array
@@ -201,7 +201,7 @@ class ServerApp extends AppBase
         else $mailer = $this->API->GetConfig()->GetMailer();
         
         try { $mailer->SendMail($subject, $body, $dests); }
-        catch (MailSendException $e) { throw new MailSendFailException($e); }
+        catch (MailSendException $e) { throw MailSendFailException::Copy($e); }
         
         return array();
     }

@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
 class MissingSingletonException extends Exceptions\ServerException { public $message = "SINGLETON_NOT_CONSTRUCTED"; }
@@ -8,7 +8,7 @@ class MissingSingletonException extends Exceptions\ServerException { public $mes
 class JSONException extends Exceptions\ServerException {
     public function __construct() {
         $this->code = json_last_error();
-        $this->details = json_last_error_msg(); } }
+        $this->message = json_last_error_msg(); } }
         
 class JSONEncodingException extends JSONException { public $message = "JSON_ENCODE_FAIL"; }
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
@@ -62,6 +62,11 @@ abstract class Utilities
         if (!($data = json_decode($data, true))) {
             throw new JSONDecodingException(); };
         return $data;
+    }
+    
+    public static function MakePrintable(string $str)
+    {
+        return preg_replace('/[\x00-\x1F\x7F]/u', '', $str); 
     }
     
     public static function GetHashAlgo()

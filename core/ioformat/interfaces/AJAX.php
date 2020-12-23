@@ -92,22 +92,27 @@ class AJAX extends IOInterface
         return new Input($app, $action, $params, $files, $auth);
     }
     
-    public function WriteOutput(Output $output)
+    public function UserOutput(Output $output)
     {
         if (!headers_sent()) http_response_code($output->GetHTTPCode());
         
-        if ($this->outmode == self::OUTPUT_PLAIN)
+        parent::UserOutput($output);
+    }
+    
+    public function FinalOutput(Output $output)
+    {
+        if ($this->outmode === self::OUTPUT_PLAIN)
         {
             try { echo $output->GetAsString(); } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
         }        
         
-        if ($this->outmode == self::OUTPUT_PRINTR) 
+        if ($this->outmode === self::OUTPUT_PRINTR) 
         {
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true);
         }        
-        else if ($this->outmode == self::OUTPUT_JSON)
+        else if ($this->outmode === self::OUTPUT_JSON)
         {
             if (!headers_sent()) header("Content-type: application/json");
             $outdata = $output->GetAsArray();

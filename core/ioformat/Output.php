@@ -19,8 +19,8 @@ class Output
     
     public function GetData() { return $this->data; }
 
-    public function SetMetrics(array $metrics) { $this->metrics = $metrics; }
-    public function SetDebug(array $debug) { $this->debug = $debug; }
+    public function SetMetrics(?array $metrics) { $this->metrics = $metrics; }
+    public function SetDebug(?array $debug) { $this->debug = $debug; }
     
     public function GetAsArray(bool $debug = true) : array 
     {
@@ -85,13 +85,9 @@ class Output
         }
         else
         {
-            if (!array_key_exists('message',$data)) throw new InvalidParseException();
-
-            if ($code >= 500)       throw new Exceptions\ServerException($data['message']);
-            else if ($code == 404)  throw new Exceptions\ClientNotFoundException($data['message']);
-            else if ($code == 403)  throw new Exceptions\ClientDeniedException($data['message']);
-            else if ($code == 400)  throw new Exceptions\ClientErrorException($data['message']);
-            else throw new InvalidParseException();
+            if (!array_key_exists('code',$data) || !array_key_exists('message',$data)) throw new InvalidParseException();
+            
+            throw Exceptions\ClientException::Create($data['code'], $data['message']);
         }
     }
     

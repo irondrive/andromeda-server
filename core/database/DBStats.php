@@ -11,7 +11,7 @@ class DBStats
     public function __construct(){ $this->start_time = microtime(true); }
 
     public function startQuery() : void { $this->temp = microtime(true); }
-    public function endQuery(string $sql, int $type) : void
+    public function endQuery(string $sql, int $type, bool $count = true) : void
     { 
         $el = microtime(true) - $this->temp;
         
@@ -20,16 +20,10 @@ class DBStats
         
         if ($isRead && $isWrite) $el /= 2;
         
-        if ($isRead) { $this->read_time += $el; $this->reads++; }
-        if ($isWrite) { $this->write_time += $el; $this->writes++; }
+        if ($isRead) { $this->read_time += $el; if ($count) $this->reads++; }
+        if ($isWrite) { $this->write_time += $el; if ($count) $this->writes++; }
      
         array_push($this->queries, array('query'=>$sql, 'time'=>$el));
-    }
-    
-    public function endCommit() : void
-    {
-        $el = microtime(true) - $this->temp;
-        $this->write_time += $el;
     }
     
     public function getQueries() : array { return $this->queries; }

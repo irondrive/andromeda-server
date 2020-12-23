@@ -68,7 +68,7 @@ class Scalar
     public function SetValue($value, bool $temp = false) : bool
     {
         $this->tempvalue = $value;
-        
+
         // only update the realvalue if the value has changed - use loose comparison (!=)
         // so strings/numbers match, but we don't want 0/false to == null (which they do)
         $nulls = (($value === null) xor ($this->realvalue === null)); 
@@ -93,6 +93,12 @@ class Scalar
 class Counter extends Scalar
 {
     public static function GetOperatorType(){ return OPERATOR_INCREMENT; }
+    
+    public function __construct(bool $alwaysSave = false)
+    {
+        parent::__construct(0, $alwaysSave);
+        $this->ResetDelta();
+    }
     
     public function InitValue(?string $value) : void
     {
@@ -145,7 +151,7 @@ class ObjectRef extends Scalar
     {
         $id = $this->GetValue(); if ($id === null) return null;
         
-        if (!isset($this->object)) $this->object = $this->GetRefClass()::LoadByID($this->database, $id);
+        if (!isset($this->object)) $this->object = $this->GetRefClass()::TryLoadByID($this->database, $id);
         
         return $this->object;
     }
@@ -190,17 +196,18 @@ class ObjectPoly extends ObjectRef
         if ($value === null) return;
         
         $value = explode('*',$value);
-        $this->SetValue($value[0]);
+        parent::InitValue($value[0]);
         $this->realclass = "Andromeda\\".$value[1];
     }
     
     public function GetBaseClass() : ?string { return $this->refclass; }
     public function GetRefClass() : ?string { return $this->realclass; }
     
+    public static function GetIDTypeDBValue(string $id, string $type) : string { return $id.'*'.$type; }
+    
     public static function GetObjectDBValue(?BaseObject $obj) : ?string
     {
-        if ($obj === null) return null;
-        return $obj->ID()."*".static::ShortClass(get_class($obj));
+        return ($obj === null) ? null : $obj->ID().'*'.static::ShortClass(get_class($obj));
     }
     
     public function GetDBValue() : ?string 
