@@ -356,7 +356,7 @@ class FilesApp extends AppBase
 
                 $file->CountBandwidth(strlen($data));
                 
-                //echo $data; flush();
+                echo $data; flush();
             }
             
             $this->API->commit();
