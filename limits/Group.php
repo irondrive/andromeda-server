@@ -14,6 +14,11 @@ trait GroupT
     public function GetGroup() : Group  { return $this->GetObject('object'); }
     public function GetPriority() : int { return $this->GetGroup()->GetPriority(); }
     
+    private static int $TRACK_ACCOUNTS = 1; private static int $TRACK_WHOLE_GROUP = 2;
+    
+    protected function canTrackItems() : bool { return ($this->TryGetFeature('track_items') ?? 0) >= self::$TRACK_WHOLE_GROUP; }
+    protected function canTrackDLStats() : bool { return ($this->TryGetFeature('track_dlstats') ?? 0) >= self::$TRACK_WHOLE_GROUP; }
+    
     // the group's limits apply only to its component accounts
     protected function IsCounterOverLimit(string $name, int $delta = 0) : bool { return false; }
     
