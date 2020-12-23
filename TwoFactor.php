@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -27,7 +28,7 @@ class UsedToken extends StandardObject
     
     public static  function PruneOldCodes(ObjectDatabase $database) : void
     {
-        $mintime = time()-(TwoFactor::TIME_TOLERANCE*2*30);
+        $mintime = Main::GetInstance()->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
         $q = new QueryBuilder(); $q->Where($q->LessThan('dates__created', $mintime));
         static::DeleteByQuery($database, $q);
     }
@@ -70,7 +71,7 @@ class TwoFactor extends StandardObject
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
-        return self::LoadOneByQuery($database, $q->Where($w));
+        return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
     public static function Create(ObjectDatabase $database, Account $account, string $comment = null) : TwoFactor

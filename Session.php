@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -37,7 +38,7 @@ class Session extends KeySource
     {
         $max = $this->GetAccount()->GetMaxSessionAge();
         
-        if ($max !== null && time()-$this->getActiveDate() > $max)
+        if ($max !== null && Main::GetInstance()->GetTime() - $this->getActiveDate() > $max)
         {
             $this->Delete(); return false;
         }

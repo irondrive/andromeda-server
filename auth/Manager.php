@@ -12,7 +12,7 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
 class InvalidTypeException extends Exceptions\ClientErrorException { public $message = "INVALID_AUTHSOURCE_TYPE"; }
-class InvalidAuthSourceException extends Exceptions\ClientErrorCopyException { public $message = "AUTHSOURCE_FAILED"; }
+class InvalidAuthSourceException extends Exceptions\ClientErrorException { public $message = "AUTHSOURCE_FAILED"; }
 
 interface ISource
 {
@@ -85,7 +85,7 @@ class Manager extends BaseObject
         if (!array_key_exists($type, self::$auth_types)) throw new InvalidTypeException(); 
         
         try { $authsource = self::$auth_types[$type]::Create($database, $input)->Activate(); }
-        catch (Exceptions\ServerException $e){ throw new InvalidAuthSourceException($e); }
+        catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }
         
         $manager = parent::BaseCreate($database);
         

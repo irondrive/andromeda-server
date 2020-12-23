@@ -5,6 +5,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
@@ -94,15 +95,12 @@ class IMAP extends External
         $connectstr = implode("/",array_filter(array($hostname, $this->GetProtocol(), $implssl, $secauth)));
 
         try { $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); }
-        catch (Exceptions\PHPException $e)
-        {
-            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err);
-            Main::GetInstance()->PrintDebug($e->GetDetails()); return false;
-        }            
+        catch (Exceptions\PHPError $e) { 
+            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err); return false; }            
         
         $success = boolval($imap);
             
-        try { imap_close($imap); } catch (Exceptions\PHPException $e) { return false; } 
+        try { imap_close($imap); } catch (Exceptions\PHPError $e) { return false; } 
         
         return $success;
     }

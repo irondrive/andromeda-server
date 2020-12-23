@@ -89,7 +89,7 @@ class Authenticator
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
         try { return new self($database, $input, $interface); }
-        catch (AuthenticationFailedException | SafeParamException | DatabaseException | \PDOException $e) { return null; }
+        catch (AuthenticationFailedException | SafeParamException | DatabaseException $e) { return null; }
     }
     
     public function isAdmin() : bool { return $this->realaccount->isAdmin(); }
