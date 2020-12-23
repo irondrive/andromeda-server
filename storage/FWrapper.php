@@ -3,7 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -222,7 +222,9 @@ abstract class FWrapper extends Storage
     public function __destruct()
     {
         foreach ($this->reading as $handle) 
-            try { $this->CloseHandle($handle); } catch (\Throwable $e) { }        
+            try { $this->CloseHandle($handle); } catch (\Throwable $e) {
+                ErrorManager::GetInstance()->Log($e);
+        }        
     }
 }
 

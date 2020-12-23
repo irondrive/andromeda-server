@@ -36,7 +36,7 @@ class Comment extends StandardObject
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',FieldTypes\ObjectPoly::GetObjectDBValue($account)),$q->Equals('id',$id));
-        return static::LoadOneByQuery($database, $q->Where($where));
+        return static::TryLoadUniqueByQuery($database, $q->Where($where));
     }
     
     public function GetClientObject() : array

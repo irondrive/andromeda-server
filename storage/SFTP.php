@@ -7,7 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\{Main, 
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/storage/FWrapper.php");
+require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 class SSHExtensionException extends ActivateException    { public $message = "SSH_EXTENSION_MISSING"; }
 class OpenSSLExtensionException extends ActivateException { public $message = "OPENSSL_EXTENSION_MISSING"; }
@@ -16,12 +16,12 @@ class SSHConnectionFailure extends ActivateException     { public $message = "SS
 class SSHAuthenticationFailure extends ActivateException { public $message = "SSH_AUTHENTICATION_FAILURE"; }
 class InvalidKeyfileException extends ActivateException  { public $message = "SSH_INVALID_KEYFILE"; }
 
-Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ SFTP::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SFTP::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(SFTP::class);
 
 class SFTP extends CredCrypt
-{
+{    
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -146,7 +146,7 @@ class SFTP extends CredCrypt
     
     public function __destruct()
     {
-        if (isset($this->ssh)) try { ssh2_disconnect($this->ssh); } catch (Exceptions\PHPException $e) { }
+        if (isset($this->ssh)) try { ssh2_disconnect($this->ssh); } catch (Exceptions\PHPError $e) { }
     }
 
     protected function GetFullURL(string $path = "") : string

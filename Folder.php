@@ -37,6 +37,8 @@ class Folder extends Item
     public function GetFiles(?int $limit = null, ?int $offset = null) : array    { $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
     public function GetFolders(?int $limit = null, ?int $offset = null) : array  { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
     
+    public function GetNumItems() : int { return $this->GetCounter('subfiles') + $this->GetCounter('subfolders'); }
+    
     public function CountVisit() : self   { return $this->DeltaCounter('visits'); }
     
     public function DeltaSize(int $size) : self 
@@ -95,40 +97,28 @@ class Folder extends Item
         }
     }
     
-    private function AddItemCounts(BaseObject $object) : void
+    private function AddItemCounts(Item $item, bool $sub = false) : void
     {
-        $this->SetModified();
-        $this->DeltaCounter('size', $object->GetSize());
-        $this->DeltaCounter('bandwidth', $object->GetBandwidth());
-        $this->DeltaCounter('downloads', $object->GetDownloads());
-        if ($object instanceof File) $this->DeltaCounter('subfiles');
-        if ($object instanceof Folder) $this->DeltaCounter('subfolders');
+        $this->SetModified(); $val = $sub ? -1 : 1;
+        $this->DeltaCounter('size', $item->GetSize() * $val);
+        $this->DeltaCounter('bandwidth', $item->GetBandwidth() * $val);
+        $this->DeltaCounter('downloads', $item->GetDownloads() * $val);
+        if ($item instanceof File) $this->DeltaCounter('subfiles', $val);
+        if ($item instanceof Folder) $this->DeltaCounter('subfolders', $val);
         
-        $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($object);
-    }
-    
-    private function SubItemCounts(BaseObject $object) : void
-    {
-        $this->SetModified();
-        $this->DeltaCounter('size', $object->GetSize() * -1);
-        $this->DeltaCounter('bandwidth', $object->GetBandwidth() * -1);
-        $this->DeltaCounter('downloads', $object->GetDownloads() * -1);
-        if ($object instanceof File) $this->DeltaCounter('subfiles', -1);
-        if ($object instanceof Folder) $this->DeltaCounter('subfolders', -1);
-        
-        $parent = $this->GetParent(); if ($parent !== null) $parent->SubItemCounts($object);
+        $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($item, $sub);
     }
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
-        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object);
+        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, false);
         
         return parent::AddObjectRef($field, $object, $notification);
     }
     
     protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {        
-        if ($field === 'files' || $field === 'folders') $this->SubItemCounts($object);
+        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, true);
         
         return parent::RemoveObjectRef($field, $object, $notification);
     }
@@ -154,7 +144,7 @@ class Folder extends Item
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         return static::CreateRoot($database, $parent->GetFilesystem(), $account)
-            ->SetObject('parent',$parent)->SetScalar('name',$name);
+            ->SetObject('parent',$parent)->SetScalar('name',$name)->CountCreate();
     }
     
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
@@ -171,7 +161,7 @@ class Folder extends Item
         $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'),
                                                   $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
         
-        $loaded = static::LoadOneByQuery($database, $q->Where($where));
+        $loaded = static::TryLoadUniqueByQuery($database, $q->Where($where));
         if ($loaded) return $loaded;
         else {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;

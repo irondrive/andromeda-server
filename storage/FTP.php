@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -15,12 +16,12 @@ class FTPAuthenticationFailure extends ActivateException { public $message = "FT
 
 class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_DOES_NOT_SUPPORT_MODIFY"; }
 
-Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ FTP::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(FTP::class);
 
 class FTP extends CredCrypt
-{
+{    
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -91,7 +92,7 @@ class FTP extends CredCrypt
     {
       foreach ($this->appending_handles as $handle) fclose($handle);
 
-      if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
+      if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
     }
     
     protected function GetFullURL(string $path = "") : string
@@ -145,7 +146,8 @@ class FTP extends CredCrypt
         $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
         
         $data = fread($handle, $length);
-        try { fclose($handle); } catch (\Throwable $e) { }
+        try { fclose($handle); } catch (\Throwable $e) { 
+            ErrorManager::GetInstance()->Log($e); }
         
         if ($data === false) throw new FileReadFailedException();
         else return $data;

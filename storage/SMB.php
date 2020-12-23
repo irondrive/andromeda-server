@@ -10,7 +10,7 @@ require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
 
-Account::RegisterCryptoDeleteHandler(function(ObjectDatabase $database, Account $account){ SMB::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(SMB::class);
 
