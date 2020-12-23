@@ -92,15 +92,12 @@ class LDAP extends External
         if ($prefix !== null) $username = "$prefix\\$username";
         
         try { return ldap_bind($this->ldap, $username, $password); }
-        catch (Exceptions\PHPException $e)
-        {
-            Main::GetInstance()->PrintDebug(ldap_error());
-            Main::GetInstance()->PrintDebug($e->GetDetails()); return false;
-        } 
+        catch (Exceptions\PHPError $e) {
+            Main::GetInstance()->PrintDebug(ldap_error()); return false; } 
     }
     
     public function __destruct()
     {
-        if (isset($this->ldap)) try { ldap_close($this->ldap); } catch (Exceptions\PHPException $e) { }
+        if (isset($this->ldap)) try { ldap_close($this->ldap); } catch (Exceptions\PHPError $e) { }
     }
 }

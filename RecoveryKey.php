@@ -42,7 +42,7 @@ class RecoveryKey extends KeySource
         if (count($code) !== 3 || $code[0] !== "tf") return null;
         
         $q = new QueryBuilder(); $q->Where($q->And($q->Equals('account',$account->ID()),$q->Equals('id',$code[1])));
-        return static::LoadOneByQuery($database, $q);
+        return static::TryLoadUniqueByQuery($database, $q);
     }
     
     public function CheckFullKey(string $code) : bool
@@ -56,6 +56,7 @@ class RecoveryKey extends KeySource
         {
             $this->codeused = true;
             $this->database->setModified($this);
+            // schedule the delete for later
         }
         
         return $retval;

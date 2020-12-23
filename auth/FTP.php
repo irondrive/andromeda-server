@@ -84,13 +84,11 @@ class FTP extends External
         if (strlen($password) == 0) return false;
 
         try { return ftp_login($this->ftp, $username, $password); }
-        catch (Exceptions\PHPException $e) {
-            Main::GetInstance()->PrintDebug($e->GetDetails()); return false; }
-            
+        catch (Exceptions\PHPError $e) { return false; }
     }
     
     public function __destruct()
     {
-        if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPException $e) { }
+        if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
     }
 }

@@ -19,15 +19,10 @@ class ContactInfo extends StandardObject
     }
     
     const TYPE_EMAIL = 1;
-
-    public static function LoadByInfo(ObjectDatabase $database, string $info) : ContactInfo
-    {
-        return static::LoadByUniqueKey($database, 'info', $info);
-    }
     
     public static function TryLoadByInfo(ObjectDatabase $database, string $info) : ?ContactInfo
     {
-        return static::TryLoadByUniqueKey($database, 'info', $info);
+        return static::TryLoadUniqueByKey($database, 'info', $info);
     }
     
     public function GetType() : int         { return $this->GetScalar('type'); }

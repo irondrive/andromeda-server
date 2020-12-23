@@ -111,7 +111,7 @@ class AccountsApp extends AppBase
         parent::__construct($api);   
         
         try { $this->config = Config::Load($api->GetDatabase()); }
-        catch (\PDOException | DatabaseException $e) { }
+        catch (DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
     }

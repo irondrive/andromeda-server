@@ -12,18 +12,7 @@ class Group extends AuthEntity
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
             'comment' => null,
-            'priority' => new FieldTypes\Scalar(0),
-            'dates__modified' => null,
-            'features__admin' => null,
-            'features__enabled' => null,
-            'features__forcetf' => null,
-            'features__allowcrypto' => null,
-            'counters_limits__sessions' => null,
-            'counters_limits__contactinfos' => null,
-            'counters_limits__recoverykeys' => null,
-            'max_client_age' => null,
-            'max_session_age' => null,
-            'max_password_age' => null,            
+            'priority' => new FieldTypes\Scalar(0),       
             'accounts' => new FieldTypes\ObjectJoin(Account::class, 'groups', GroupJoin::class)
         ));
     }
@@ -36,9 +25,6 @@ class Group extends AuthEntity
     
     public function GetPriority() : int { return $this->GetScalar('priority'); }
     public function SetPriority(int $priority) { return $this->SetScalar('priority', $priority); }
-    
-    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age'); }
-    public function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age'); }
     
     public function GetAccounts() : array
     {
@@ -64,14 +50,9 @@ class Group extends AuthEntity
     
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {
-        return static::TryLoadByUniqueKey($database, 'name', $name);
+        return static::TryLoadUniqueByKey($database, 'name', $name);
     }
-    
-    public static function LoadByName(ObjectDatabase $database, string $name) : self
-    {
-        return static::LoadByUniqueKey($database, 'name', $name);
-    }
-    
+
     public function GetMailTo() : array
     {
         $accounts = $this->GetAccounts(); $output = array();

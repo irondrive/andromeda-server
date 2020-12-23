@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -7,10 +8,10 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 class InheritedProperty
 {
-    private $value; private ?AuthEntity $source;
+    private $value; private ?BaseObject $source;
     public function GetValue() { return $this->value; }
-    public function GetSource() : ?AuthEntity { return $this->source; }
-    public function __construct($value, ?AuthEntity $source){
+    public function GetSource() : ?BaseObject { return $this->source; }
+    public function __construct($value, ?BaseObject $source){
         $this->value = $value; $this->source = $source; }
 }
 
@@ -29,6 +30,22 @@ abstract class AuthEntity extends StandardObject
 {
     public abstract function GetDisplayName() : string;
     public abstract function GetMailTo() : array;
+    
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array(
+            'features__admin' => null,
+            'features__enabled' => null,
+            'features__forcetf' => null,
+            'features__allowcrypto' => null,
+            'counters_limits__sessions' => null,
+            'counters_limits__contactinfos' => null,
+            'counters_limits__recoverykeys' => null,
+            'max_session_age' => null,
+            'max_password_age' => null,
+            'dates__modified' => null
+        ));
+    }
     
     public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] ".
                                                             "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
