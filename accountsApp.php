@@ -190,7 +190,7 @@ class AccountsApp extends AppBase
         if (isset($this->config)) throw new UnknownActionException();
         
         $database = $this->API->GetDatabase();
-        $database->importFile(ROOT."/apps/accounts/andromeda2.sql");
+        $database->importTemplate(ROOT."/apps/accounts");
         
         Config::Create($database)->Save();
         
