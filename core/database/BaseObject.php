@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/JoinUtils.php");
 require_once(ROOT."/core/database/FieldTypes.php");
 require_once(ROOT."/core/database/QueryBuilder.php");
 

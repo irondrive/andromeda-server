@@ -9,7 +9,6 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException, DatabaseConfigException};
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 
 use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
 
@@ -29,7 +28,8 @@ class ServerApp extends AppBase
             'usage|help', 
             'runtests',
             'install [--enable bool]',
-            'initdb '.Database::GetInstallUsage(),
+            'dbconf '.Database::GetInstallUsage(),
+            ...Database::GetInstallUsages(),
             'phpinfo',
             'serverinfo',
             'testmail [--mailid id] [--dest email]',
@@ -58,7 +58,7 @@ class ServerApp extends AppBase
     {
         if (!$this->API->GetDatabase())
         {
-            if ($input->GetAction() !== 'initdb')
+            if ($input->GetAction() !== 'dbconf')
                 throw new DatabaseConfigException();
         }
         else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
@@ -77,7 +77,7 @@ class ServerApp extends AppBase
             case 'random':  return $this->Random($input);
             case 'runtests': return $this->RunTests($input);
             
-            case 'initdb':  return $this->InitDB($input);
+            case 'dbconf':  return $this->ConfigDB($input);
             case 'install': return $this->Install($input);
             
             case 'phpinfo':    return $this->PHPInfo($input);
@@ -119,19 +119,16 @@ class ServerApp extends AppBase
 
     protected function RunTests(Input $input)
     {
-        set_time_limit(0);
+        if ($this->API->GetDebugState() < Config::LOG_DEVELOPMENT) 
+            throw new UnknownActionException();
         
-        if ($this->API->GetDebugState() >= Config::LOG_DEVELOPMENT)
-        {
-            return array_map(function($app)use($input){ return $app->Test($input); }, $this->API->GetApps());
-        }
-        else throw new UnknownActionException();
+        set_time_limit(0);
+            
+        return array_map(function($app)use($input){ return $app->Test($input); }, $this->API->GetApps());
     }
     
-    protected function InitDB(Input $input)
+    protected function ConfigDB(Input $input)
     {
-        if ($this->API->GetDatabase()) throw new UnknownActionException();
-        
         try { Database::Install($input); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
@@ -141,7 +138,7 @@ class ServerApp extends AppBase
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
         $database = $this->API->GetDatabase();
-        $database->importFile(ROOT."/andromeda2.sql");        
+        $database->importTemplate(ROOT."/core");        
         
         $apps = array_filter(scandir(ROOT."/apps"),function($e){ return !in_array($e,array('.','..')); });
         

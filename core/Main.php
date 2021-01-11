@@ -60,9 +60,12 @@ class Main extends Singleton
         $this->error_manager = $error_manager;
         $error_manager->SetAPI($this);
         
+        $interface->Initialize();
+        
         try 
         {
-            $this->database = new ObjectDatabase();        
+            $dbconf = $interface->GetDBConfigFile();
+            $this->database = new ObjectDatabase($dbconf);        
             $this->database->pushStatsContext();
 
             $this->config = Config::Load($this->database);
@@ -105,9 +108,9 @@ class Main extends Singleton
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $this->dirty = true;
+        $this->dirty = true; $dbstats = $this->GetDebugState() >= Config::LOG_DEVELOPMENT;
 
-        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT && $this->database)
+        if ($dbstats && $this->database)
         { 
             $this->database->pushStatsContext();
             $oldstats = &$this->run_stats; 
@@ -120,7 +123,7 @@ class Main extends Singleton
         if ($this->database) $this->database->saveObjects();
         array_pop($this->contexts);        
              
-        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT && $this->database)
+        if ($dbstats && $this->database)
         {
             $newstats = $this->database->popStatsContext();
             $this->sum_stats->add($newstats);
@@ -217,13 +220,13 @@ class Main extends Singleton
     
     public function GetDebugState() : int
     {
-        if ($this->config === null) return Config::LOG_ERRORS;
-
-        $debug = $this->config->GetDebugLogLevel();
-        
-        if (!$this->config->GetDebugOverHTTP() && !$this->isLocalCLI()) $debug = 0;
-
-        return $debug;
+        try
+        {
+            $debug = $this->config->GetDebugLogLevel();        
+            if (!$this->config->GetDebugOverHTTP() && !$this->isLocalCLI()) $debug = 0;
+            return $debug;
+        }
+        catch (\Throwable $e) { return $this->interface->GetDebugLevel(); }
     }
     
     private static array $debuglog = array();    
@@ -248,7 +251,7 @@ class Main extends Singleton
             'objects' => $this->database->getLoadedObjects(),
             'queries' => $this->database->getAllQueries()
         );
-        
+
         $log = $this->GetDebugLog();
         if ($log !== null) $retval['log'] = $log;
         

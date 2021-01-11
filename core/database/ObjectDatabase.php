@@ -45,10 +45,12 @@ class ObjectDatabase extends Database
         }
     }
 
-    public static function GetClassTableName(string $class) : string
+    public function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class::GetDBClass()); unset($class[0]);
-        return "a2_objects_".strtolower(implode('_', $class));
+        $retval = "a2_objects_".strtolower(implode('_', $class));
+        if ($this->UsePublicSchema()) $retval = "public.$retval";
+        return $retval;
     }
     
     private function Rows2Objects(array $rows, string $class) : array
@@ -98,7 +100,7 @@ class ObjectDatabase extends Database
     
     public function LoadObjectsByQuery(string $class, QueryBuilder $query) : array
     {
-        $table = static::GetClassTableName($class); 
+        $table = $this->GetClassTableName($class); 
         
         $querystr = "SELECT $table.* FROM $table ".$query->GetText();
         
@@ -111,10 +113,16 @@ class ObjectDatabase extends Database
     
     public function DeleteObjectsByQuery(string $class, QueryBuilder $query, bool $notify = false) : self
     {
-        $table = static::GetClassTableName($class);
+        if (!$notify && !$this->SupportsRETURNING())
+        {
+            foreach ($this->LoadObjectsByQuery($class, $query) as $obj) $obj->Delete();            
+            return $this; // if we can't use RETURNING, just load the objects and delete individually
+        }
         
-        $querystr = "DELETE FROM $table ".$query->GetText().(!$notify ? " RETURNING *":"");
+        $table = $this->GetClassTableName($class);
         
+        $querystr = "DELETE FROM $table ".$query->GetText().(!$notify?" RETURNING *":"");
+
         $qtype = Database::QUERY_WRITE | (!$notify ? Database::QUERY_READ : 0);
         $result = $this->query($querystr, $qtype, $query->GetData());
         
@@ -154,7 +162,7 @@ class ObjectDatabase extends Database
         if (!count($criteria)) return $this;
         
         $criteria_string = implode(', ',$criteria);
-        $table = static::GetClassTableName($class);            
+        $table = $this->GetClassTableName($class);            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
         $this->query($query, Database::QUERY_WRITE, $data);    
         
@@ -174,7 +182,7 @@ class ObjectDatabase extends Database
             if ($value !== null) $data["d$i"] = $value; $i++;
         }
         
-        $table = static::GetClassTableName($class);
+        $table = $this->GetClassTableName($class);
         $columns_string = implode(',',$columns); $indexes_string = implode(',',$indexes);
         $query = "INSERT INTO $table ($columns_string) VALUES ($indexes_string)";
         $this->query($query, Database::QUERY_WRITE, $data);

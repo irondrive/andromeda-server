@@ -36,7 +36,8 @@ class Output
     
     public function GetAsString(bool $debug = true) : string
     {
-        if (!is_string($this->data) || ($debug && $this->debug !== null))
+        $extra = $this->debug !== null || $this->metrics !== null;
+        if (!is_string($this->data) || ($debug && $extra))
             throw new InvalidOutputException();
         return $this->data;
     }

@@ -1,8 +1,8 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/BaseObject.php");
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/BaseObject.php");
 
 class CounterOverLimitException extends Exceptions\ClientDeniedException { 
     public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } } 
@@ -17,8 +17,8 @@ abstract class StandardObject extends BaseObject
         ));
     }
     
-    protected function GetDate(string $name) : ?int                { return $this->GetScalar("dates__$name"); }
-    protected function TryGetDate(string $name) : ?int             { return $this->TryGetScalar("dates__$name"); } 
+    protected function GetDate(string $name) : ?int            { return $this->GetScalar("dates__$name"); }
+    protected function TryGetDate(string $name) : ?int         { return $this->TryGetScalar("dates__$name"); } 
     
     protected function SetDate(string $name, ?int $value = null) : self
     { 
@@ -29,20 +29,20 @@ abstract class StandardObject extends BaseObject
     protected static function BaseCreate(ObjectDatabase $database) : self {
         return parent::BaseCreate($database)->SetDate('created'); }
     
-    protected function GetFeature(string $name) : ?int             { return $this->GetScalar("features__$name"); }
-    protected function TryGetFeature(string $name) : ?int          { return $this->TryGetScalar("features__$name"); }
-    protected function ExistsFeature(string $name) : ?int          { return $this->ExistsScalar("features__$name"); }
+    protected function GetFeature(string $name) : int          { return intval($this->GetScalar("features__$name")); }
+    protected function TryGetFeature(string $name) : ?int      { $val = $this->TryGetScalar("features__$name"); return ($val === null) ? null : intval($val); }
+    protected function ExistsFeature(string $name) : bool      { return $this->ExistsScalar("features__$name"); }
     
-    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self   { return $this->SetScalar("features__$name", $value, $temp); }
-    protected function EnableFeature(string $name, bool $temp = false) : self             { return $this->SetScalar("features__$name", 1, $temp); }
-    protected function DisableFeature(string $name, bool $temp = false) : self            { return $this->SetScalar("features__$name", 0, $temp); }
+    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { return $this->SetScalar("features__$name", $value, $temp); }
+    protected function EnableFeature(string $name, bool $temp = false) : self           { return $this->SetScalar("features__$name", 1, $temp); }
+    protected function DisableFeature(string $name, bool $temp = false) : self          { return $this->SetScalar("features__$name", 0, $temp); }
     
-    protected function GetCounter(string $name) : ?int             { return $this->GetScalar("counters__$name"); }
-    protected function TryGetCounter(string $name) : ?int          { return $this->TryGetScalar("counters__$name"); }
-    protected function ExistsCounter(string $name) : ?int          { return $this->ExistsScalar("counters__$name"); }
-    protected function GetCounterLimit(string $name) : ?int        { return $this->GetScalar("counters_limits__$name"); }
-    protected function TryGetCounterLimit(string $name) : ?int     { return $this->TryGetScalar("counters_limits__$name"); }
-    protected function ExistsCounterLimit(string $name) : ?int     { return $this->ExistsScalar("counters_limits__$name"); }
+    protected function GetCounter(string $name) : int          { return $this->GetScalar("counters__$name"); }
+    protected function TryGetCounter(string $name) : ?int      { return $this->TryGetScalar("counters__$name"); }
+    protected function ExistsCounter(string $name) : bool      { return $this->ExistsScalar("counters__$name"); }
+    protected function GetCounterLimit(string $name) : int     { return $this->GetScalar("counters_limits__$name"); }
+    protected function TryGetCounterLimit(string $name) : ?int { return $this->TryGetScalar("counters_limits__$name"); }
+    protected function ExistsCounterLimit(string $name) : bool { return $this->ExistsScalar("counters_limits__$name"); }
     
     protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self  { return $this->SetScalar("counters_limits__$name", $value, $temp); }
     

@@ -10,8 +10,7 @@ require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 
-$interface = IOInterface::TryGet();
-if ($interface === null) die('Unknown Interface');
+$interface = IOInterface::TryGet() or die('Unknown Interface');
 
 $error_manager = new ErrorManager($interface);
 

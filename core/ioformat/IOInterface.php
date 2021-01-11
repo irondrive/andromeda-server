@@ -22,10 +22,15 @@ abstract class IOInterface
     abstract public static function getMode() : int;
     abstract public static function isApplicable() : bool;
     
+    public function Initialize() : void { }
+    
     abstract public function GetInputs(?Config $config) : array;
     
     abstract public function getAddress() : string;    
     abstract public function getUserAgent() : string;
+    
+    public function GetDebugLevel() : int { return 0; }
+    public function GetDBConfigFile() : ?string { return null; }
     
     const OUTPUT_PLAIN = 1; const OUTPUT_JSON = 2; const OUTPUT_PRINTR = 3;
 

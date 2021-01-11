@@ -65,8 +65,8 @@ class ErrorLogEntry extends BaseObject
                 'action'=>  ($api && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
             );
     
-            $extended = $api && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT;
-            $sensitive = $api && $api->GetConfig() !== null && $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_SENSITIVE;
+            $extended = $api && $api->GetDebugState() >= Config::LOG_DEVELOPMENT;
+            $sensitive = $api && $api->GetDebugState() >= Config::LOG_SENSITIVE;
             
             if ($extended)
             {
