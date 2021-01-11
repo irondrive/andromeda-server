@@ -135,7 +135,7 @@ class Emailer extends StandardObject
         }
         
         $api = Main::GetInstance();
-        $mailer->SMTPDebug = $api->GetConfig()->GetDebugLogLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
+        $mailer->SMTPDebug = $api->GetDebugState() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
         $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');

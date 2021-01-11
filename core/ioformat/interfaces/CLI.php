@@ -16,7 +16,7 @@ require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Excep
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] app action [--file name] [--\$param data]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file name] [--\$param data]\n".
                       "batch/version:   php index.php [version | batch myfile.txt]\n".
                       "get all actions: php index.php server usage"; }
 
@@ -44,7 +44,38 @@ class CLI extends IOInterface
                 try { Main::GetInstance()->rollback(false); }
                 catch (MissingSingletonException $e) { }
             });
-        }        
+        }
+    }
+    
+    public function Initialize() : void
+    {        
+        global $argv;
+        
+        // pre-process params that may be needed before $config is available        
+        for ($i = 1; $i < count($argv); $i++)
+        {
+            if (substr($argv[$i],0,2) !== "--") break;
+
+            switch ($argv[$i])
+            {
+                case '--dryrun': break;
+                
+                case '--json': $this->outmode = static::OUTPUT_JSON; break;
+                case '--printr': $this->outmode = static::OUTPUT_PRINTR; break;
+                
+                case '--debug':
+                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
+                    $this->debug = (new SafeParam('debug',$argv[++$i]))->GetValue(SafeParam::TYPE_INT);
+                    break;
+                    
+                case '--dbconf':
+                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
+                    $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_TEXT);
+                    break;
+
+                default: throw new IncorrectCLIUsageException();
+            }
+        }
     }
     
     public function getAddress() : string
@@ -57,38 +88,51 @@ class CLI extends IOInterface
         return "CLI ".($_SERVER['OS']??'');
     }
     
-    private $debug = true;
+    private ?int $debug = null;
+    public function GetDebugLevel() : int { return $this->debug ?? Config::LOG_ERRORS; }
+    
+    private ?string $dbconf = null;
+    public function GetDBConfigFile() : ?string { return $this->dbconf; }
     
     public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
     public function GetInputs(?Config $config) : array
     {
+        if ($config && $this->debug !== null)
+            $config->SetDebugLogLevel($this->debug, true);
+        
         global $argv;
         
-        for ($i = 1; $i < count($argv); $i++)
+        // process flags that are relevant for $config
+        $i = 1; for (; $i < count($argv); $i++)
         {
+            if (substr($argv[$i],0,2) !== "--") break;
+
             switch($argv[$i])
             {
-                case '--json': $this->outmode = static::OUTPUT_JSON; break;
-                case '--printr': $this->outmode = static::OUTPUT_PRINTR; break;
-                
-                case '--debug':
-                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $debug = (new SafeParam('debug',$argv[$i+1]))->GetValue(SafeParam::TYPE_INT);
-                    $this->debug = ($debug !== 0); $i++;
-                    if ($config) $config->SetDebugLogLevel($debug, true);
-                    break;   
+                case '--json': break;
+                case '--printr': break;           
+                case '--debug': $i++; break;        
+                case '--dbconf': $i++; break;
                     
                 case '--dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
-                
+
+                default: throw new IncorrectCLIUsageException();
+            }
+        }
+        
+        // build an Input command from the rest of the command line
+        for (; $i < count($argv); $i++)
+        {
+            switch($argv[$i])
+            {                
                 case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
                 
-                case 'batch':     
+                case 'batch':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     return static::GetBatch($argv[$i+1]); break;
                     
-                case 'exec': case 'run': $i++; 
-                default: return array(static::GetInput(array_slice($argv, $i))); break;                    
+                default: return array(static::GetInput(array_slice($argv, $i))); break;
             }
         }
         
@@ -174,18 +218,18 @@ class CLI extends IOInterface
     {        
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString($this->debug)."\n"; } 
+            try { echo $output->GetAsString(boolval($this->debug))."\n"; } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
 
         if ($this->outmode === self::OUTPUT_PRINTR)
         {
-            $outdata = $output->GetAsArray($this->debug);
+            $outdata = $output->GetAsArray(boolval($this->debug));
             echo print_r($outdata, true)."\n";
         }        
         else if ($this->outmode === self::OUTPUT_JSON)
         {
-            $outdata = $output->GetAsArray($this->debug);
+            $outdata = $output->GetAsArray(boolval($this->debug));
             echo Utilities::JSONEncode($outdata)."\n";
         }
 

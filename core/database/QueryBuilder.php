@@ -75,9 +75,9 @@ class QueryBuilder
     public function Limit(?int $limit) : self { if ($limit < 0) $limit = 0; $this->limit = $limit; return $this; }
     public function Offset(?int $offset) : self { if ($offset < 0) $offset = 0; $this->offset = $offset; return $this; }
     
-    public function Join(string $myclass, string $myprop, string $destclass, string $destprop) : self
+    public function Join(ObjectDatabase $database, string $myclass, string $myprop, string $destclass, string $destprop) : self
     {
-        $myclass = ObjectDatabase::GetClassTableName($myclass); $destclass = ObjectDatabase::GetClassTableName($destclass);
+        $myclass = $database->GetClassTableName($myclass); $destclass = $database->GetClassTableName($destclass);
         $this->joinstr = " JOIN $myclass ON $myclass.$myprop = $destclass.$destprop "; return $this;
     }
 }

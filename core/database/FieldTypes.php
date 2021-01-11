@@ -363,8 +363,8 @@ class ObjectJoin extends ObjectRefs
     
     protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $q = new QueryBuilder(); $key = ObjectDatabase::GetClassTableName($this->joinclass).'.'.$this->reffield;
-        $q->Where($q->Equals($key, $this->parent->ID()))->Join($this->joinclass, $this->myfield, $this->refclass, 'id');
+        $q = new QueryBuilder(); $key = $this->database->GetClassTableName($this->joinclass).'.'.$this->reffield;
+        $q->Where($q->Equals($key, $this->parent->ID()))->Join($this->database, $this->joinclass, $this->myfield, $this->refclass, 'id');
         $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
     }
     

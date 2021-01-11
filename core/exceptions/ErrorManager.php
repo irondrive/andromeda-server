@@ -21,7 +21,7 @@ class ErrorManager extends Singleton
     
     private function GetDebugState(int $minlevel) : bool
     {
-        if ($this->API !== null && $this->API->GetConfig() !== null) 
+        if ($this->API !== null) 
             return $this->API->GetDebugState() >= $minlevel;
         else return CLI::isApplicable();
     }
@@ -56,7 +56,7 @@ class ErrorManager extends Singleton
            throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
 
         set_exception_handler(function(\Throwable $e)
-        {            
+        {
             if ($e instanceof Exceptions\ClientException) 
                 $output = $this->HandleClientException($e);
             else $output = $this->HandleThrowable($e);
@@ -72,7 +72,7 @@ class ErrorManager extends Singleton
     
     public function Log(\Throwable $e, bool $mainlog = true) : ?array
     {
-        if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;         
+        if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;
         
         $debug = ErrorLogEntry::GetDebugData($this->API, $e);
         
@@ -81,7 +81,7 @@ class ErrorManager extends Singleton
         try
         {
             if ($this->filelogok && $this->API !== null && $this->API->GetConfig() !== null)
-            {                
+            {
                 $logdir = $this->API->GetConfig()->GetDataDir();
                 if ($logdir && $this->API->GetConfig()->GetDebugLog2File())
                 {
@@ -95,7 +95,7 @@ class ErrorManager extends Singleton
         try
         {
             if ($this->dblogok) 
-            {                 
+            {
                 $db = new ObjectDatabase(); 
                 ErrorLogEntry::Create($this->API, $db, $e); 
                 $db->saveObjects()->commit();

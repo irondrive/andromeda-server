@@ -12,6 +12,7 @@ class DatabaseConfigException extends DatabaseException { public $message = "DAT
 class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
 
 class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
+class InvalidDriverException extends Exceptions\ClientErrorException { public $message = "PDO_UNKNOWN_DRIVER"; }
 
 class Database implements Transactions {
 
@@ -33,42 +34,86 @@ class Database implements Transactions {
         
         $this->config = $config;
         
-        $this->connection = new PDO($config['CONNECT'], $config['USERNAME'], $config['PASSWORD'], array(
-            PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_AUTOCOMMIT => false
+        $connect = $config['DRIVER'].':'.$config['CONNECT'];
+        
+        $this->connection = new PDO($connect, 
+            $config['USERNAME'] ?? null, 
+            $config['PASSWORD'] ?? null, 
+            array(
+                PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ));
         
         if ($this->connection->inTransaction())
             $this->connection->rollBack();
     }
 
-    public static function GetInstallUsage() : string { return "--connect text [--dbuser name] [--dbpass raw] [--persistent bool]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile text]"; }
+    
+    public static function GetInstallUsages() : array
+    {
+        return array(
+            "\t --driver mysql --dbname alphanum (--unix_socket text | (--host text [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "\t --driver pgsql --dbname alphanum --host text [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "\t --driver sqlite --dbpath text"
+        );
+    }
     
     public static function Install(Input $input)
     {
-        $params = var_export(array(
-            'CONNECT' => $input->GetParam('connect',SafeParam::TYPE_TEXT),
-            'USERNAME' => $input->TryGetParam('dbuser',SafeParam::TYPE_NAME),
-            'PASSWORD' => $input->TryGetParam('dbpass',SafeParam::TYPE_RAW),
-            'PERSISTENT' => $input->TryGetParam('persistent',SafeParam::TYPE_BOOL)
-        ),true);
+        $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM,
+            function($arg){ return in_array($arg, array('mysql','pgsql','sqlite')); });
+        
+        $params = array('DRIVER'=>$driver);
+        
+        if ($driver === 'mysql' || $driver === 'pgsql')
+        {
+            $connect = "dbname=".$input->GetParam('dbname',SafeParam::TYPE_ALPHANUM);
+            
+            if ($driver === 'mysql' && $input->HasParam('unix_socket'))
+            {
+                $connect .= ";unix_socket=".$input->GetParam('unix_socket',SafeParam::TYPE_TEXT);
+            }
+            else 
+            {
+                $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_TEXT);
+                
+                $port = $input->TryGetParam('port',SafeParam::TYPE_INT);
+                if ($port !== null) $connect .= ";port=$port";
+            }
+            
+            $params['CONNECT'] = $connect;
+            
+            $params['USERNAME'] = $input->TryGetParam('dbuser',SafeParam::TYPE_NAME);
+            $params['PASSWORD'] = $input->TryGetParam('dbpass',SafeParam::TYPE_RAW);
+            $params['PERSISTENT'] = $input->TryGetParam('persistent',SafeParam::TYPE_BOOL);
+        }
+        else if ($driver === 'sqlite')
+        {
+            $params['CONNECT'] = $input->GetParam('dbpath',SafeParam::TYPE_TEXT);    
+        }
+        
+        $params = var_export($params,true);
         
         $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $tmpnam = self::CONFIG_FILE.".tmp.php";
+        $outnam = $input->TryGetParam('outfile',SafeParam::TYPE_TEXT) ?? self::CONFIG_FILE;
+        
+        $tmpnam = "$outnam.tmp.php";
         file_put_contents($tmpnam, $output);
         
-        try { new Database($tmpnam); } catch (\Throwable $e) { 
+        try { new Database($tmpnam); } catch (\Throwable $e) {
             unlink($tmpnam); throw $e; }
         
-        rename($tmpnam, self::CONFIG_FILE);
+        rename($tmpnam, $outnam);
     }
     
     public function getConfig() : array
     {
         $config = $this->config;
-        $config['PASSWORD'] = boolval($config['PASSWORD']);
+        
+        if ($config['PASSWORD'] ?? null) $config['PASSWORD'] = true;
+        
         return $config;
     }
     
@@ -83,12 +128,21 @@ class Database implements Transactions {
     
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
     
+    public function importTemplate(string $path) : void { $this->importFile("$path/andromeda2.".$this->config['DRIVER'].".sql"); }
+    
     public function importFile(string $path) : void
     {
         $lines = array_filter(file($path),function($line){ return substr($line,0,2) != "--"; });
         $queries = array_filter(explode(";",preg_replace( "/\r|\n/", "", implode("", $lines))));
         foreach ($queries as $query) $this->query(trim($query), 0);
     }
+    
+    // some drivers require tweaked behavior
+    protected function SupportsRETURNING() : bool { return in_array($this->config['DRIVER'], array('mysql','pgsql')); }
+    protected function RequiresSAVEPOINT() : bool { return $this->config['DRIVER'] === 'pgsql'; }
+    protected function BinaryAsStreams() : bool   { return $this->config['DRIVER'] === 'pgsql'; }
+    protected function BinaryEscapeInput() : bool { return $this->config['DRIVER'] === 'pgsql'; }
+    protected function UsePublicSchema() : bool   { return $this->config['DRIVER'] === 'pgsql'; }
     
     const QUERY_READ = 1; const QUERY_WRITE = 2;
 
@@ -101,31 +155,73 @@ class Database implements Transactions {
         
         $this->startTimingQuery();
 
-        array_push($this->queries, $sql); 
+        array_push($this->queries, $sql);
+        
+        $doSavepoint = false;
         
         try 
-        {    
+        {           
             if      ($sql === 'COMMIT') { $this->commit(); $result = null; }
             else if ($sql === 'ROLLBACK') { $this->rollback(); $result = null; }
             else
             {
-                $query = $this->connection->prepare($sql); 
+                if ($this->RequiresSAVEPOINT())
+                {
+                    $doSavepoint = true;
+                    $this->connection->query("SAVEPOINT mysave");
+                }
+                
+                $query = $this->connection->prepare($sql);
+                
+                if ($this->BinaryEscapeInput())
+                {
+                    foreach ($data as &$value)
+                    {
+                        if (!mb_check_encoding($value,'UTF-8'))
+                            $value = pg_escape_bytea($value);
+                    }
+                }
+                
                 $query->execute($data ?? array());
                 
-                if ($type & self::QUERY_READ) 
+                if ($type & self::QUERY_READ)
+                {
                     $result = $query->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    if ($this->BinaryAsStreams()) $this->fetchStreams($result);
+                }                    
                 else $result = $query->rowCount();
+                
+                if ($doSavepoint)
+                    $this->connection->query("RELEASE SAVEPOINT mysave");
             }
         }
         catch (\PDOException $e)
-        { 
-            array_push($this->queries, $e->getMessage());
+        {
+            if ($doSavepoint)
+                $this->connection->query("ROLLBACK TO SAVEPOINT mysave");
+                
+            $idx = count($this->queries)-1;
+            $this->queries[$idx] = array($this->queries[$idx], $e->getMessage());
             throw DatabaseErrorException::Copy($e); 
         }
         
         $this->stopTimingQuery($sql, $type);
 
         return $result;    
+    }
+    
+    private function fetchStreams(array &$rows) : array
+    {
+        foreach ($rows as &$row)
+        {
+            foreach ($row as &$value)
+            {
+                if (is_resource($value))
+                    $value = stream_get_contents($value);
+            }
+        }
+        return $rows;
     }
     
     public function beginTransaction() : void
