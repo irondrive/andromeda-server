@@ -119,7 +119,7 @@ class ServerApp extends AppBase
 
     protected function RunTests(Input $input)
     {
-        if ($this->API->GetDebugState() < Config::LOG_DEVELOPMENT) 
+        if ($this->API->GetDebugLevel() < Config::LOG_DEVELOPMENT) 
             throw new UnknownActionException();
         
         set_time_limit(0);
@@ -189,7 +189,7 @@ class ServerApp extends AppBase
         $subject = "Andromeda Email Test";
         $body = "This is a test email from Andromeda";
         
-        if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_ID)) !== null)
+        if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_RANDSTR)) !== null)
         {
             $mailer = Emailer::TryLoadByID($this->API->GetDatabase(), $mailer);
             if ($mailer === null) throw new UnknownMailerException();
@@ -270,7 +270,8 @@ class ServerApp extends AppBase
     {
         if (!$this->isAdmin) throw new AuthFailedException();
         
-        $mailer = Emailer::TryLoadByID($this->API->GetDatabase(), $input->GetParam('mailid',SafeParam::TYPE_ID));
+        $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR);
+        $mailer = Emailer::TryLoadByID($this->API->GetDatabase(), $mailid);
         if ($mailer === null) throw new UnknownMailerException();
         
         $mailer->Delete(); return array();

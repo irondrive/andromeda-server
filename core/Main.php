@@ -49,16 +49,15 @@ class Main extends Singleton
     
     public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
 
-    public function __construct(ErrorManager $error_manager, IOInterface $interface)
-    { 
+    public function __construct(IOInterface $interface)
+    {
+        $this->error_manager = (new ErrorManager($interface))->SetAPI($this);
+        
         parent::__construct();
         
         $this->time = time();
         $this->interface = $interface;
         $this->sum_stats = new DBStats();
-        
-        $this->error_manager = $error_manager;
-        $error_manager->SetAPI($this);
         
         $interface->Initialize();
         
@@ -108,7 +107,7 @@ class Main extends Singleton
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $this->dirty = true; $dbstats = $this->GetDebugState() >= Config::LOG_DEVELOPMENT;
+        $this->dirty = true; $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
 
         if ($dbstats && $this->database)
         { 
@@ -140,7 +139,7 @@ class Main extends Singleton
 
         $data = AJAX::RemoteRequest($url, $input);
 
-        if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT)
+        if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT)
         {
             array_push($this->run_stats, array(
                 'remote_time' => microtime(true) - $start,
@@ -181,7 +180,7 @@ class Main extends Singleton
         
         if ($this->database)
         {          
-            if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
                 $this->database->pushStatsContext();
             
             $rollback = $this->config && $this->config->isReadOnly();
@@ -192,7 +191,7 @@ class Main extends Singleton
             
             if ($rollback) $this->database->rollback(); else $this->database->commit();
                     
-            if ($this->GetDebugState() >= Config::LOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
                 array_push($this->commit_stats, $commit_stats->getStats());
@@ -218,11 +217,11 @@ class Main extends Singleton
         return $this->config->isEnabled() || $this->isLocalCLI();
     }
     
-    public function GetDebugState() : int
+    public function GetDebugLevel() : int
     {
         try
         {
-            $debug = $this->config->GetDebugLogLevel();        
+            $debug = $this->config->GetDebugLevel();
             if (!$this->config->GetDebugOverHTTP() && !$this->isLocalCLI()) $debug = 0;
             return $debug;
         }
@@ -234,14 +233,14 @@ class Main extends Singleton
     
     public function GetDebugLog() : ?array 
     {
-        return $this->GetDebugState() >= Config::LOG_DEVELOPMENT && 
+        return $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT && 
             count(self::$debuglog) ? self::$debuglog : null; 
     }
-    
+
     public function GetMetrics() : ?array
     {
-        if ($this->GetDebugState() < Config::LOG_DEVELOPMENT) return null;
-            
+        if ($this->GetDebugLevel() < Config::LOG_DEVELOPMENT) return null;
+        
         $retval = array(
             'construct_stats' => $this->construct_stats,
             'run_stats' => $this->run_stats,

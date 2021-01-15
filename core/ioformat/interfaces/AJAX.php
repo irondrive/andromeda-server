@@ -103,18 +103,27 @@ class AJAX extends IOInterface
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
+            if (!headers_sent()) mb_http_output('UTF-8');
+            
             try { echo $output->GetAsString(); } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
         }        
         
         if ($this->outmode === self::OUTPUT_PRINTR) 
         {
+            if (!headers_sent()) mb_http_output('UTF-8');
+            
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true);
         }        
         else if ($this->outmode === self::OUTPUT_JSON)
         {
-            if (!headers_sent()) header("Content-type: application/json");
+            if (!headers_sent()) 
+            {
+                mb_http_output('UTF-8');
+                header("Content-Type: application/json");
+            }
+            
             $outdata = $output->GetAsArray();
             echo Utilities::JSONEncode($outdata);
         }
@@ -144,7 +153,7 @@ class AJAX extends IOInterface
 
         $output = array(); foreach (array_keys($params) as $key)
         {
-            $output[$key] = $params[$key]->GetValue(SafeParam::TYPE_RAW);
+            $output[$key] = $params[$key]->GetRawValue();
         }
 
         return $output;

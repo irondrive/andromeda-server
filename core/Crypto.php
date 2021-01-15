@@ -2,7 +2,7 @@
 
 if (!function_exists('sodium_memzero')) die("PHP Sodium Extension Required\n");
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/Exceptions.php");
 
 class EncryptionFailedException extends Exceptions\ServerException { public $message = "ENCRYPTION_FAILED"; }
 class DecryptionFailedException extends Exceptions\ServerException { public $message = "DECRYPTION_FAILED"; }

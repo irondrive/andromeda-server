@@ -5,16 +5,17 @@ define("ROOT",__DIR__.'/');
 if (!version_compare(phpversion(),'7.4.0','>='))
     die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n");
 
+if (!function_exists('mb_internal_encoding')) 
+    die("PHP mbstring Extension Required\n");
+else mb_internal_encoding("UTF-8");
+
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 
 $interface = IOInterface::TryGet() or die('Unknown Interface');
 
-$error_manager = new ErrorManager($interface);
-
-$main = new Main($error_manager, $interface); 
+$main = new Main($interface); 
 
 $inputs = $interface->GetInputs($main->GetConfig());
 

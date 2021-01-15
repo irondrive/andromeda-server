@@ -54,7 +54,7 @@ class CLI extends IOInterface
         // pre-process params that may be needed before $config is available        
         for ($i = 1; $i < count($argv); $i++)
         {
-            if (substr($argv[$i],0,2) !== "--") break;
+            if (mb_substr($argv[$i],0,2) !== "--") break;
 
             switch ($argv[$i])
             {
@@ -70,7 +70,7 @@ class CLI extends IOInterface
                     
                 case '--dbconf':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_TEXT);
+                    $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
 
                 default: throw new IncorrectCLIUsageException();
@@ -98,15 +98,19 @@ class CLI extends IOInterface
     
     public function GetInputs(?Config $config) : array
     {
-        if ($config && $this->debug !== null)
-            $config->SetDebugLogLevel($this->debug, true);
+        if ($config)
+        {
+            if ($this->debug !== null)
+                $config->SetDebugLevel($this->debug, true);
+            else $this->debug = $config->GetDebugLevel();
+        }
         
         global $argv;
         
         // process flags that are relevant for $config
         $i = 1; for (; $i < count($argv); $i++)
         {
-            if (substr($argv[$i],0,2) !== "--") break;
+            if (mb_substr($argv[$i],0,2) !== "--") break;
 
             switch($argv[$i])
             {
@@ -167,10 +171,12 @@ class CLI extends IOInterface
         
         for ($i = 2; $i < count($argv); $i++)
         {
-            if (substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
-            if (!isset($argv[$i+1]) || substr($argv[$i+1],0,2) === "--") throw new IncorrectCLIUsageException();
+            if (mb_substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
             
-            $param = substr($argv[$i],2); $val = $argv[$i+1];
+            if (!isset($argv[$i+1]) || mb_substr($argv[$i+1],0,2) === "--") 
+                throw new IncorrectCLIUsageException();
+            
+            $param = mb_substr($argv[$i],2); $val = $argv[$i+1];
             
             if (in_array($param, array('file','move-file','copy-file')))
             {
@@ -183,10 +189,10 @@ class CLI extends IOInterface
                 else copy($val, $tmpfile);
                 
                 $filename = $val;
-                if (isset($argv[$i+2]) && substr($argv[$i+2],0,2) !== "--")
+                if (isset($argv[$i+2]) && mb_substr($argv[$i+2],0,2) !== "--")
                     { $filename = $argv[$i+2]; $i++; }
                 
-                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME);
+                $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
 
                 array_push($this->tmpfiles, $tmpfile);
                 $files[$filename] = $tmpfile; $i++;

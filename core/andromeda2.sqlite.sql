@@ -1,9 +1,9 @@
 PRAGMA journal_mode = MEMORY;
 CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
-  `id` char(16) NOT NULL
-,  `datadir` varchar(255) DEFAULT NULL
+  `id` char(12) NOT NULL
+,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
-,  `apiurl` varchar(255) DEFAULT NULL
+,  `apiurl` text DEFAULT NULL
 ,  `dates__created` integer NOT NULL
 ,  `features__debug_log` integer NOT NULL
 ,  `features__debug_http` integer NOT NULL
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
 ,  UNIQUE (`id`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_core_emailer` (
-  `id` char(16) NOT NULL
+  `id` char(12) NOT NULL
 ,  `type` integer NOT NULL
 ,  `hosts` text
 ,  `username` varchar(255) DEFAULT NULL
@@ -28,10 +28,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_emailer` (
 ,  UNIQUE (`id`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_core_exceptions_errorlogentry` (
-  `id` char(16) NOT NULL
+  `id` char(12) NOT NULL
 ,  `time` integer NOT NULL
 ,  `addr` varchar(255) NOT NULL
-,  `agent` varchar(255) NOT NULL
+,  `agent` text NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
 ,  `code` varchar(255) NOT NULL

@@ -8,24 +8,25 @@ SET time_zone = "+00:00";
 
 
 CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
-  `id` char(16) NOT NULL,
-  `datadir` varchar(255) DEFAULT NULL,
+  `id` char(12) NOT NULL,
+  `datadir` text DEFAULT NULL,
   `apps` text NOT NULL,
-  `apiurl` varchar(255) DEFAULT NULL,
+  `apiurl` text DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL,
-  `features__debug_log` tinyint(2) NOT NULL,
+  `features__debug` tinyint(2) NOT NULL,
   `features__debug_http` tinyint(1) NOT NULL,
-  `features__debug_file` tinyint(1) NOT NULL,
+  `features__debug_dblog` tinyint(1) NOT NULL,
+  `features__debug_filelog` tinyint(1) NOT NULL,
   `features__read_only` tinyint(2) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
   `features__email` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `id_2` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `a2_objects_core_emailer` (
-  `id` char(16) NOT NULL,
+  `id` char(12) NOT NULL,
   `type` tinyint(4) NOT NULL,
   `hosts` text,
   `username` varchar(255) DEFAULT NULL,
@@ -37,13 +38,13 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_emailer` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `id_2` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `a2_objects_core_exceptions_errorlogentry` (
-  `id` char(16) NOT NULL,
+  `id` char(12) NOT NULL,
   `time` bigint(20) NOT NULL,
   `addr` varchar(255) NOT NULL,
-  `agent` varchar(255) NOT NULL,
+  `agent` text NOT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
   `code` varchar(255) NOT NULL,
@@ -61,8 +62,8 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_exceptions_errorlogentry` (
   KEY `code` (`code`),
   KEY `app` (`app`),
   KEY `action` (`action`),
-  KEY `addr` (`addr`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  KEY `addr` (`addr`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

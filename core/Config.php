@@ -18,9 +18,10 @@ class Config extends SingletonObject
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
             'apiurl' => null,
-            'features__debug_log' => new FieldTypes\Scalar(self::LOG_ERRORS),
+            'features__debug' => new FieldTypes\Scalar(self::LOG_ERRORS),
             'features__debug_http' => new FieldTypes\Scalar(false),
-            'features__debug_file' => new FieldTypes\Scalar(false),
+            'features__debug_dblog' => new FieldTypes\Scalar(true),
+            'features__debug_filelog' => new FieldTypes\Scalar(false),
             'features__read_only' => new FieldTypes\Scalar(0),
             'features__enabled' => new FieldTypes\Scalar(true),
             'features__email' => new FieldTypes\Scalar(true),
@@ -30,22 +31,23 @@ class Config extends SingletonObject
     
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
-    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug_log int] [--debug_http bool] [--debug_file bool] [--read_only int] [--enabled bool] [--email bool] [--apiurl string]"; }
+    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool] [--apiurl string]"; }
     
     public function SetConfig(Input $input) : self
     {
         if ($input->HasParam('datadir')) 
         {
-            $datadir = $input->TryGetParam('datadir',SafeParam::TYPE_TEXT);
+            $datadir = $input->TryGetParam('datadir',SafeParam::TYPE_FSPATH);
             if (!is_readable($datadir) || !is_writeable($datadir)) throw new UnwriteableDatadirException();
             $this->SetScalar('datadir', $datadir);
         }
         
-        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->TryGetParam('apiurl',SafeParam::TYPE_TEXT));
+        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->TryGetParam('apiurl',SafeParam::TYPE_RAW));
         
-        if ($input->HasParam('debug_log')) $this->SetFeature('debug_log',$input->GetParam('debug_log',SafeParam::TYPE_INT));
+        if ($input->HasParam('debug')) $this->SetFeature('debug',$input->GetParam('debug',SafeParam::TYPE_INT));
         if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_file')) $this->SetFeature('debug_file',$input->GetParam('debug_file',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_dblog')) $this->SetFeature('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_filelog')) $this->SetFeature('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('read_only')) $this->SetFeature('read_only',$input->GetParam('read_only',SafeParam::TYPE_INT));
         if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
@@ -82,10 +84,11 @@ class Config extends SingletonObject
     public function GetAPIUrl() : ?string { return $this->TryGetScalar('apiurl'); }
     
     const LOG_ERRORS = 1; const LOG_DEVELOPMENT = 2; const LOG_SENSITIVE = 3;    
-    public function GetDebugLogLevel() : int { return $this->GetFeature('debug_log'); }
-    public function SetDebugLogLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug_log', $data, $temp); }
+    public function GetDebugLevel() : int { return $this->GetFeature('debug'); }
+    public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug', $data, $temp); }
     
-    public function GetDebugLog2File() : bool { return $this->GetFeature('debug_file'); }
+    public function GetDebugLog2DB()   : bool { return $this->GetFeature('debug_dblog'); }
+    public function GetDebugLog2File() : bool { return $this->GetFeature('debug_filelog'); }    
     public function GetDebugOverHTTP() : bool { return $this->GetFeature('debug_http'); }       
     
     public function GetEnableEmail() : bool { return $this->GetFeature('email'); }
