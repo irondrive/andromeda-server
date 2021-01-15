@@ -17,7 +17,7 @@ class ErrorManager extends Singleton
     private ?Main $API = null; 
     private IOInterface $interface;
 
-    public function SetAPI(Main $api) : void { $this->API = $api; }
+    public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
     private function GetDebugState(int $minlevel) : bool
     {
@@ -96,9 +96,15 @@ class ErrorManager extends Singleton
         {
             if ($this->dblogok) 
             {
-                $db = new ObjectDatabase(); 
-                ErrorLogEntry::Create($this->API, $db, $e); 
-                $db->saveObjects()->commit();
+                $dblog = $this->API === null || $this->API->GetConfig() === null ||
+                    $this->API->GetConfig()->GetDebugLog2DB();
+                
+                if ($dblog)
+                {
+                    $db = new ObjectDatabase();
+                    ErrorLogEntry::Create($this->API, $db, $e);
+                    $db->saveObjects()->commit();
+                }
             }
         }
         catch (\Throwable $e2) { $this->dblogok = false; $this->Log($e2); }

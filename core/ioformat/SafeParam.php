@@ -64,9 +64,7 @@ class SafeParams
     
     public function GetClientObject() : array
     {
-        return array_map(function($param){
-            return $param->GetValue(SafeParam::TYPE_TEXT);
-        }, $this->params);
+        return array_map(function($param){ return $param->GetRawValue(); }, $this->params);
     }
 }
 
@@ -74,30 +72,34 @@ class SafeParam
 {
     private $key; private $value;
 
-    const TYPE_ID       = 1;
-    const TYPE_BOOL     = 2;
-    const TYPE_INT      = 3;
-    const TYPE_FLOAT    = 4;    
+    const TYPE_BOOL     = 1;
+    const TYPE_INT      = 2;
+    const TYPE_FLOAT    = 3;
+    const TYPE_RANDSTR  = 4;
     const TYPE_ALPHANUM = 5; 
     const TYPE_NAME     = 6;
     const TYPE_EMAIL    = 7;
     const TYPE_FSNAME   = 8;
-    const TYPE_TEXT     = 9;
-    const TYPE_RAW      = 10;
-    const TYPE_OBJECT   = 11;
+    const TYPE_FSPATH   = 9;
+    const TYPE_HOSTNAME = 10;
+    const TYPE_TEXT     = 11;
+    const TYPE_RAW      = 12;
+    const TYPE_OBJECT   = 13;
 
     const TYPE_ARRAY = 16;
 
     const TYPE_STRINGS = array(
         null => 'custom',
-        self::TYPE_ID => 'id',
         self::TYPE_BOOL => 'bool',
         self::TYPE_INT => 'int',
         self::TYPE_FLOAT => 'float',
+        self::TYPE_RANDSTR => 'randstr',
         self::TYPE_ALPHANUM => 'alphanum',
         self::TYPE_NAME => 'name',
         self::TYPE_EMAIL => 'email',
         self::TYPE_FSNAME => 'fsname',
+        self::TYPE_FSPATH => 'fspath',
+        self::TYPE_HOSTNAME => 'hostname',
         self::TYPE_TEXT => 'text',
         self::TYPE_RAW => 'raw',
         self::TYPE_OBJECT => 'object',
@@ -130,6 +132,11 @@ class SafeParam
     
     public function GetKey() : string { return $this->key; }
     
+    public static function MaxLength(int $len) : callable { 
+        return function($val)use($len){ return mb_strlen($val) <= $len; }; }
+        
+    public function GetRawValue() { return $this->value; }
+    
     public function GetValue(int $type, ?callable $usrfunc = null)
     {
         $key = $this->key; $value = $this->value;
@@ -151,30 +158,52 @@ class SafeParam
             if (($value = filter_var($value, FILTER_VALIDATE_FLOAT)) === false)
                 throw new SafeParamInvalidException($key, $type);
         }
-        else if ($type === self::TYPE_ALPHANUM || $type === self::TYPE_ID)
+        else if ($type === self::TYPE_RANDSTR)
         {
-            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value) || strlen($value) > 255)
+            if (!preg_match("%^[a-zA-Z0-9_]+$%",$value))
+                throw new SafeParamInvalidException($key, $type);
+        }
+        else if ($type === self::TYPE_ALPHANUM)
+        {
+            if (!preg_match("%^[a-zA-Z0-9_.]+$%",$value))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_NAME)
         {
-            if (!preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value) || strlen($value) > 255)
+            if (mb_strlen($value) >= 256 || !preg_match("%^[a-zA-Z0-9_'(). ]+$%",$value))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_EMAIL)
         {
-            if (!($value = filter_var($value, FILTER_VALIDATE_EMAIL)) || strlen($value) > 255)
+            if (mb_strlen($value) >= 256 || !($value = filter_var($value, FILTER_VALIDATE_EMAIL)))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSNAME)
         {
             $value = $this->GetValue(self::TYPE_TEXT);
-            if (!strlen($value) || basename($value) !== $value || in_array($value, array('.','..'))) 
+            if (mb_strlen($value) >= 256 || preg_match("%[\\/?*:;{}]+%") ||
+                basename($value) !== $value || in_array($value, array('.','..'))) 
+                    throw new SafeParamInvalidException($key, $type);
+        }
+        else if ($type === self::TYPE_FSPATH)
+        {
+            $value = $this->GetValue(self::TYPE_TEXT);
+            if (strlen($value) >= 65536 || preg_match("%[?*:;{}]+%"))
+                throw new SafeParamInvalidException($key, $type);
+        }
+        else if ($type === self::TYPE_HOSTNAME)
+        {
+            $value = $this->GetValue(self::TYPE_TEXT);
+            if (mb_strlen($value) >= 256 || 
+                !($value = filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_TEXT)
         {
-            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
+            if (strlen($value) >= 65536) 
+                throw new SafeParamInvalidException($key, $type);
+            
+            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS);
         }
         else if ($type === self::TYPE_RAW) 
         { 

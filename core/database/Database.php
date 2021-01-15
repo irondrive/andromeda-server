@@ -9,21 +9,28 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 abstract class DatabaseException extends Exceptions\ServerException { }
 class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_NOT_CONFIGURED"; }
+class InvalidDriverException extends DatabaseException { public $message = "PDO_UNKNOWN_DRIVER"; }
 class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
 
 class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
-class InvalidDriverException extends Exceptions\ClientErrorException { public $message = "PDO_UNKNOWN_DRIVER"; }
 
 class Database implements Transactions {
 
     private $connection; 
     protected array $config;
+    protected int $driver;
     private bool $read_only = false;
     
     private array $stats_stack = array();
     private array $queries = array();
     
-    private const CONFIG_FILE = ROOT."/core/database/Config.php";
+    private const CONFIG_FILE = ROOT."/core/database/Config.php";    
+    
+    public const DRIVER_MYSQL = 1; public const DRIVER_SQLITE = 2; public const DRIVER_POSTGRESQL = 3;
+    
+    private const DRIVERS = array('mysql'=>self::DRIVER_MYSQL,'sqlite'=>self::DRIVER_SQLITE,'pgsql'=>self::DRIVER_POSTGRESQL);
+    
+    public function getDriver() : int { return $this->driver; }
     
     public function __construct(?string $config = null)
     {
@@ -33,6 +40,11 @@ class Database implements Transactions {
         else throw new DatabaseConfigException();
         
         $this->config = $config;
+        
+        if (!array_key_exists($config['DRIVER'], self::DRIVERS))
+            throw new InvalidDriverException();
+        
+        $this->driver = self::DRIVERS[$config['DRIVER']];
         
         $connect = $config['DRIVER'].':'.$config['CONNECT'];
         
@@ -62,7 +74,7 @@ class Database implements Transactions {
     public static function Install(Input $input)
     {
         $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM,
-            function($arg){ return in_array($arg, array('mysql','pgsql','sqlite')); });
+            function($arg){ return array_key_exists($arg, self::DRIVERS); });
         
         $params = array('DRIVER'=>$driver);
         
@@ -72,15 +84,17 @@ class Database implements Transactions {
             
             if ($driver === 'mysql' && $input->HasParam('unix_socket'))
             {
-                $connect .= ";unix_socket=".$input->GetParam('unix_socket',SafeParam::TYPE_TEXT);
+                $connect .= ";unix_socket=".$input->GetParam('unix_socket',SafeParam::TYPE_FSPATH);
             }
             else 
             {
-                $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_TEXT);
+                $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
                 
                 $port = $input->TryGetParam('port',SafeParam::TYPE_INT);
                 if ($port !== null) $connect .= ";port=$port";
             }
+            
+            if ($driver === 'mysql') $connect .= ";charset=utf8mb4";
             
             $params['CONNECT'] = $connect;
             
@@ -90,7 +104,7 @@ class Database implements Transactions {
         }
         else if ($driver === 'sqlite')
         {
-            $params['CONNECT'] = $input->GetParam('dbpath',SafeParam::TYPE_TEXT);    
+            $params['CONNECT'] = $input->GetParam('dbpath',SafeParam::TYPE_FSPATH);    
         }
         
         $params = var_export($params,true);
@@ -132,17 +146,17 @@ class Database implements Transactions {
     
     public function importFile(string $path) : void
     {
-        $lines = array_filter(file($path),function($line){ return substr($line,0,2) != "--"; });
+        $lines = array_filter(file($path),function($line){ return mb_substr($line,0,2) != "--"; });
         $queries = array_filter(explode(";",preg_replace( "/\r|\n/", "", implode("", $lines))));
         foreach ($queries as $query) $this->query(trim($query), 0);
     }
     
     // some drivers require tweaked behavior
-    protected function SupportsRETURNING() : bool { return in_array($this->config['DRIVER'], array('mysql','pgsql')); }
-    protected function RequiresSAVEPOINT() : bool { return $this->config['DRIVER'] === 'pgsql'; }
-    protected function BinaryAsStreams() : bool   { return $this->config['DRIVER'] === 'pgsql'; }
-    protected function BinaryEscapeInput() : bool { return $this->config['DRIVER'] === 'pgsql'; }
-    protected function UsePublicSchema() : bool   { return $this->config['DRIVER'] === 'pgsql'; }
+    protected function SupportsRETURNING() : bool { return in_array($this->getDriver(), array(self::DRIVER_MYSQL, self::DRIVER_POSTGRESQL)); }
+    protected function RequiresSAVEPOINT() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
+    protected function BinaryAsStreams() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
+    protected function BinaryEscapeInput() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
+    protected function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
     
     const QUERY_READ = 1; const QUERY_WRITE = 2;
 
@@ -171,16 +185,18 @@ class Database implements Transactions {
                     $this->connection->query("SAVEPOINT mysave");
                 }
                 
-                $query = $this->connection->prepare($sql);
-                
-                if ($this->BinaryEscapeInput())
+                if ($this->BinaryEscapeInput() && $data !== null)
                 {
                     foreach ($data as &$value)
                     {
                         if (!mb_check_encoding($value,'UTF-8'))
+                        {
                             $value = pg_escape_bytea($value);
+                        }
                     }
                 }
+                
+                $query = $this->connection->prepare($sql);
                 
                 $query->execute($data ?? array());
                 

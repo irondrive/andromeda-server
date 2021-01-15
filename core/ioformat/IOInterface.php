@@ -39,7 +39,7 @@ abstract class IOInterface
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
     public function DisableOutput() : self 
-    { 
+    {
         $this->outmode = false; return $this; 
     }
     

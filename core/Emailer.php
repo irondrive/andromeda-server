@@ -12,10 +12,9 @@ require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use \PHPMailer
 require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php");
 require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php");
 
-class MailSendException extends Exceptions\ServerException          { public $message = "MAIL_SEND_FAILURE"; }
-class EmptyRecipientsException extends Exceptions\ServerException   { public $message = "NO_RECIPIENTS_GIVEN"; }
-class InvalidMailTypeServerException extends Exceptions\ServerException { public $message = "INVALID_MAILER_TYPE"; }
-class InvalidMailTypeClientException extends Exceptions\ClientErrorException { public $message = "INVALID_MAILER_TYPE"; }
+class MailSendException extends Exceptions\ServerException        { public $message = "MAIL_SEND_FAILURE"; }
+class EmptyRecipientsException extends Exceptions\ServerException { public $message = "NO_RECIPIENTS_GIVEN"; }
+class InvalidMailTypeException extends Exceptions\ServerException { public $message = "INVALID_MAILER_TYPE"; }
 
 class EmailRecipient
 {
@@ -65,8 +64,9 @@ class Emailer extends StandardObject
     {
         $mailer = parent::BaseCreate($database);
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM);
-        if (!array_key_exists($type, self::MAIL_TYPES)) throw new InvalidMailTypeClientException();
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
+            function($type){ return array_key_exists($type, self::MAIL_TYPES); });
+        
         $type = self::MAIL_TYPES[$type];
         
         $mailer->SetScalar('type',$type)
@@ -94,7 +94,7 @@ class Emailer extends StandardObject
     
     private static function BuildHostFromParams(SafeParams $input) : string
     {
-        $host = $input->GetParam('host',SafeParam::TYPE_ALPHANUM);
+        $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
         $port = $input->TryGetParam('port',SafeParam::TYPE_INT);
         $proto = $input->TryGetParam('proto',SafeParam::TYPE_ALPHANUM,
             function($d){ return in_array($d,array('tls','ssl')); });
@@ -131,11 +131,11 @@ class Emailer extends StandardObject
             case self::TYPE_SENDMAIL: $mailer->isSendmail(); break;
             case self::TYPE_QMAIL: $mailer->isQmail(); break;
             case self::TYPE_SMTP: $mailer->isSMTP(); break;
-            default: throw new InvalidMailTypeServerException();
+            default: throw new InvalidMailTypeException();
         }
         
         $api = Main::GetInstance();
-        $mailer->SMTPDebug = $api->GetDebugState() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
+        $mailer->SMTPDebug = $api->GetDebugLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
         $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');
