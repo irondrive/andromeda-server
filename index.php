@@ -24,9 +24,9 @@ $data = array_map(function($input)use($main){
 
 $output = Output::Success($data);
 
-$main->commit(); 
+$main->commit();
 
-$interface->UserOutput($output);
+if ($interface->UserOutput($output)) $main->commit();
 
 $output->SetMetrics($main->GetMetrics());
 

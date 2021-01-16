@@ -22,7 +22,7 @@ class ErrorManager extends Singleton
     private function GetDebugState(int $minlevel) : bool
     {
         if ($this->API !== null) 
-            return $this->API->GetDebugState() >= $minlevel;
+            return $this->API->GetDebugLevel() >= $minlevel;
         else return CLI::isApplicable();
     }
     

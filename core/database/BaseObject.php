@@ -364,26 +364,24 @@ abstract class BaseObject
 
     public function Save(bool $isRollback = false) : self
     {
-        if ($isRollback && ($this->created || $this->deleted)) return $this;
+        if ($this->deleted || ($isRollback && $this->created)) return $this;
         
         $class = static::class; $values = array(); $counters = array();
 
-        if (!$this->deleted)
+        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
         {
-            foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
-            {
-                if (!$value->GetDelta()) continue;
-                if ($isRollback && !$value->GetAlwaysSave()) continue;
-    
-                if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
-                    $counters[$key] = $value->GetDBValue();
-                else $values[$key] = $value->GetDBValue();
-                
-                $value->ResetDelta();
-            }
+            if (!$value->GetDelta()) continue;
+            if ($isRollback && !$value->GetAlwaysSave()) continue;
+
+            if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
+                $counters[$key] = $value->GetDBValue();
+            else $values[$key] = $value->GetDBValue();
+            
+            $value->ResetDelta();
         }
         
         $this->database->SaveObject($class, $this, $values, $counters);
+        
         $this->created = false; return $this;
     } 
     
@@ -391,8 +389,6 @@ abstract class BaseObject
     
     public function Delete() : void
     {
-        if ($this->deleted) return;
-
         foreach ($this->objects as $field)
         {
             $myfield = $field->GetMyField();
@@ -406,16 +402,19 @@ abstract class BaseObject
             foreach ($objects as $object) $this->RemoveObjectRef($myfield, $object);
         }
 
-        $this->database->setModified($this);
-        $this->deleted = true; $this->Save();
+        $this->deleted = true; 
+        
+        $this->database->DeleteObject(static::class, $this);
     }
     
     protected bool $created = false; public function isCreated() : bool { return $this->created; }
     
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
-        $obj = $database->CreateObject(static::class);         
+        $obj = $database->CreateObject(static::class); 
+        
         $database->setModified($obj);
+        
         $obj->created = true; return $obj;
     }
 }

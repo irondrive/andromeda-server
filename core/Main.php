@@ -67,7 +67,7 @@ class Main extends Singleton
             $this->database = new ObjectDatabase($dbconf);        
             $this->database->pushStatsContext();
 
-            $this->config = Config::Load($this->database);
+            $this->config = Config::GetInstance($this->database);
 
             if (!$this->isEnabled()) throw new MaintenanceException();
             
@@ -107,7 +107,7 @@ class Main extends Singleton
         $app = $input->GetApp();         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $this->dirty = true; $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
+        $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
 
         if ($dbstats && $this->database)
         { 
@@ -117,6 +117,8 @@ class Main extends Singleton
             $this->run_stats = &$oldstats[$idx-1];
         }
 
+        $this->dirty = true;
+        
         array_push($this->contexts, $input);
         $data = $this->apps[$app]->Run($input);
         if ($this->database) $this->database->saveObjects();

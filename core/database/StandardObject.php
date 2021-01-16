@@ -5,8 +5,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/database/BaseObject.php");
 
 class CounterOverLimitException extends Exceptions\ClientDeniedException { 
-    public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } } 
-    // TODO go back to making this a server exception so we can have better error messages
+    public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } }
 
 abstract class StandardObject extends BaseObject
 {
@@ -110,7 +109,7 @@ abstract class SingletonObject extends StandardObject
 {
     private static $instances = array();
 
-    public static function Load(ObjectDatabase $database) : self
+    public static function GetInstance(ObjectDatabase $database) : self
     {
         if (array_key_exists(static::class, self::$instances)) 
             return self::$instances[static::class];

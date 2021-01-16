@@ -49,9 +49,11 @@ abstract class IOInterface
         array_push(self::$retfuncs, $f); return $this; 
     }
     
-    public function UserOutput(Output $output)
+    public function UserOutput(Output $output) : bool
     {
         foreach (self::$retfuncs as $f) $f($output);
+        
+        return count(self::$retfuncs) > 0;
     }
     
     public abstract function FinalOutput(Output $output);

@@ -92,11 +92,11 @@ class AJAX extends IOInterface
         return new Input($app, $action, $params, $files, $auth);
     }
     
-    public function UserOutput(Output $output)
+    public function UserOutput(Output $output) : bool
     {
         if (!headers_sent()) http_response_code($output->GetHTTPCode());
         
-        parent::UserOutput($output);
+        return parent::UserOutput($output);
     }
     
     public function FinalOutput(Output $output)
