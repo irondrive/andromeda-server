@@ -29,14 +29,14 @@ class LDAP extends External
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
         return parent::Create($database, $input)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('secure', $input->TryGetParam('secure', SafeParam::TYPE_BOOL) ?? false)
             ->SetScalar('userprefix', $input->TryGetParam('userprefix', SafeParam::TYPE_TEXT));
     }
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
         $secure = $input->TryGetParam('secure', SafeParam::TYPE_BOOL);
         $userprefix = $input->TryGetParam('userprefix', SafeParam::TYPE_TEXT);
         
@@ -84,9 +84,7 @@ class LDAP extends External
     
     public function VerifyPassword(string $username, string $password) : bool
     {
-        $this->Activate();
-        
-        if (strlen($password) == 0) return false;      
+        $this->Activate();  
         
         $prefix = $this->GetUserPrefix(); 
         if ($prefix !== null) $username = "$prefix\\$username";

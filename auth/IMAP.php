@@ -5,13 +5,10 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 class IMAPExtensionException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_MISSING"; }
-class InvalidProtocolServerException extends Exceptions\ServerException { public $message = "INVALID_PROTOCOL"; }
-class InvalidProtocolClientException extends Exceptions\ClientErrorException { public $message = "INVALID_PROTOCOL"; }
 
 Manager::RegisterAuthType(IMAP::class);
 
@@ -36,11 +33,11 @@ class IMAP extends External
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
-        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM);
-        if (!array_key_exists($protocol, self::PROTOCOLS)) throw new InvalidProtocolClientException();
+        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM,
+            function($val){ return array_key_exists($val, self::PROTOCOLS); });
 
         return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false)
             ->SetScalar('secauth', $input->TryGetParam('secauth', SafeParam::TYPE_BOOL) ?? false);
@@ -48,7 +45,7 @@ class IMAP extends External
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
         $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
         $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
         $secauth = $input->TryGetParam('secauth', SafeParam::TYPE_BOOL);
@@ -83,8 +80,6 @@ class IMAP extends External
     
     public function VerifyPassword(string $username, string $password) : bool
     {
-        if (strlen($password) == 0) return false;
-
         $hostname = $this->GetScalar('hostname'); 
         
         if (($port = $this->TryGetScalar('port')) !== null) $hostname .= ":$port";

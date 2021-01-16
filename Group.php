@@ -28,7 +28,7 @@ class Group extends AuthEntity
     
     public function GetAccounts() : array
     {
-        if (Config::Load($this->database)->GetDefaultGroupID() === $this->ID())
+        if (Config::GetInstance($this->database)->GetDefaultGroupID() === $this->ID())
             return Account::LoadAll($this->database);        
 
         foreach (Auth\Manager::LoadAll($this->database) as $authman)
