@@ -30,13 +30,13 @@ abstract class FWrapper extends Storage
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
-        $path = $input->GetParam('path', SafeParam::TYPE_TEXT);
+        $path = $input->GetParam('path', SafeParam::TYPE_FSPATH);
         return parent::Create($database, $input, $account, $filesystem)->SetPath($path);
     }
     
     public function Edit(Input $input) : self
     {
-        $path = $input->TryGetParam('path', SafeParam::TYPE_TEXT);
+        $path = $input->TryGetParam('path', SafeParam::TYPE_FSPATH);
         if ($path !== null) $this->SetPath($path);
         return parent::Edit($input);
     }
@@ -53,7 +53,7 @@ abstract class FWrapper extends Storage
     
     protected abstract function GetFullURL(string $path = "") : string;
     
-    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').'/'.$path; }  
+    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').'/'.$path; }  // TODO rawurlencode?? I think I tried that before and it didn't work but SMB says to use it... use for filenames only?
     private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
     
     public function ItemStat(string $path) : ItemStat
@@ -123,11 +123,14 @@ abstract class FWrapper extends Storage
     public function ReadBytes(string $path, int $start, int $length) : string
     {
         $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, false);        
+        $handle = $this->GetHandle($path, false);   
+        
         if (fseek($handle, $start) !== 0)
             throw new FileReadFailedException();
+        
         $data = fread($handle, $length);
-        if ($data === false) throw new FileReadFailedException();
+        if ($data === false || strlen($data) !== $length)
+            throw new FileReadFailedException();        
         else return $data;
     }
     
@@ -135,9 +138,12 @@ abstract class FWrapper extends Storage
     {
         $this->CheckReadOnly();
         $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, true);        
-        if (fseek($handle, $start) !== 0 || !fwrite($handle, $data))
+        $handle = $this->GetHandle($path, true);    
+        
+        if (fseek($handle, $start) !== 0 || 
+            fwrite($handle, $data) !== strlen($data))
             throw new FileWriteFailedException();
+            
         return $this;
     }
     
@@ -191,40 +197,69 @@ abstract class FWrapper extends Storage
         return $this;
     }
     
-    private $reading = array(); private $writing = array();
+    // path=>resource map for all file handles
+    private $handles = array(); 
+    
+    // path array listing files being written to
+    private $writing = array();
 
     protected function GetReadHandle(string $path) { return fopen($path,'rb'); }
     protected function GetWriteHandle(string $path) { return fopen($path,'rb+'); }
+    
     protected function CloseHandle($handle) : bool { return fclose($handle); }
     
-    protected function GetHandle(string $path, bool $isWrite)
+    protected function ClosePath(string $path) : void
     {
-        $writing = array_key_exists($path, $this->writing);
-        $reading = array_key_exists($path, $this->reading);
-
-        if ($isWrite && $writing)  return $this->writing[$path];
-        if (!$isWrite && $reading) return $this->reading[$path];
-
-        if ($isWrite)
+        if (array_key_exists($path, $this->handles))
         {
-            if ($reading) $this->CloseHandle($this->reading[$path]);
-            $this->writing[$path] = $this->GetWriteHandle($path);
-            if ($reading) $this->reading[$path] = $this->writing[$path];
+            $this->CloseHandle($this->handles[$path]);
+            unset($this->handles[$path]);
+            
+            if (in_array($path, $this->writing))
+                unset($this->writing[$path]);
         }
-        else $this->reading[$path] = $this->GetReadHandle($path);
+    }
+    
+    protected function GetHandle(string $path, bool $isWrite)
+    {        
+        $isOpen = array_key_exists($path, $this->handles);
+
+        if ($isWrite && $isOpen && !in_array($path, $this->writing))
+        {
+            $this->ClosePath($path); $isOpen = false;    
+        }
         
-        if ($isWrite && $this->writing[$path] === false) throw new FileWriteFailedException();
-        else if (!$isWrite && $this->reading[$path] === false) throw new FileReadFailedException();
-        
-        return $isWrite ? $this->writing[$path] : $this->reading[$path];
+        if (!$isOpen)
+        {
+            if ($isWrite)
+            {
+                $this->handles[$path] = $this->GetWriteHandle($path);
+                
+                if (!($this->handles[$path] ?? false)) 
+                    throw new FileWriteFailedException();
+                
+                array_push($this->writing, $path);
+            }
+            else 
+            {
+                $this->handles[$path] = $this->GetReadHandle($path);
+                
+                if (!($this->handles[$path] ?? false)) 
+                    throw new FileReadFailedException();
+            }
+        }
+
+        return $this->handles[$path];
     }
     
     public function __destruct()
-    {
-        foreach ($this->reading as $handle) 
-            try { $this->CloseHandle($handle); } catch (\Throwable $e) {
-                ErrorManager::GetInstance()->Log($e);
-        }        
+    {        
+        foreach ($this->handles as $handle)
+        {
+            try { $this->CloseHandle($handle); } 
+            catch (\Throwable $e) {
+                ErrorManager::GetInstance()->Log($e); }       
+        }
     }
 }
 

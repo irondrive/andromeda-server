@@ -58,7 +58,7 @@ class SFTP extends CredCrypt
         $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);
         
         $obj = parent::Create($database, $input, $account, $filesystem)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetKeypass($keypass, $credcrypt);
 
@@ -91,7 +91,7 @@ class SFTP extends CredCrypt
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
         $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
         
         if ($hostname !== null) $this->SetScalar('hostname', $hostname);

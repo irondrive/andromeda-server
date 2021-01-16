@@ -25,7 +25,8 @@ class Folder extends Item
             'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
             'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
             'counters__subfiles' => new FieldTypes\Counter(),
-            'counters__subfolders' => new FieldTypes\Counter()
+            'counters__subfolders' => new FieldTypes\Counter(),
+            'counters__subshares' => new FieldTypes\Counter()
         ));
     }
 
@@ -37,7 +38,11 @@ class Folder extends Item
     public function GetFiles(?int $limit = null, ?int $offset = null) : array    { $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
     public function GetFolders(?int $limit = null, ?int $offset = null) : array  { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
     
-    public function GetNumItems() : int { return $this->GetCounter('subfiles') + $this->GetCounter('subfolders'); }
+    public function GetNumFiles() : int { return $this->GetCounter('subfiles'); }
+    public function GetNumFolders() : int { return $this->GetCounter('subfolders'); }
+    
+    public function GetNumItems() : int { return $this->GetNumFiles() + $this->GetNumFolders(); }
+    public function GetNumSubShares() : int { return $this->CountObjectRefs('shares') + $this->GetCounter('subshares'); }
     
     public function CountVisit() : self   { return $this->DeltaCounter('visits'); }
     
@@ -103,10 +108,28 @@ class Folder extends Item
         $this->DeltaCounter('size', $item->GetSize() * $val);
         $this->DeltaCounter('bandwidth', $item->GetBandwidth() * $val);
         $this->DeltaCounter('downloads', $item->GetDownloads() * $val);
-        if ($item instanceof File) $this->DeltaCounter('subfiles', $val);
-        if ($item instanceof Folder) $this->DeltaCounter('subfolders', $val);
+        $this->DeltaCounter('subshares', $item->GetNumShares() * $val);
+        
+        if ($item instanceof File) 
+        {
+            $this->DeltaCounter('subfiles', $val);
+        }
+        
+        if ($item instanceof Folder) 
+        {
+            $this->DeltaCounter('subfolders', $val);
+            
+            $this->DeltaCounter('subfiles', $item->GetNumFiles() * $val);
+            $this->DeltaCounter('subfolders', $item->GetNumFolders() * $val);
+            $this->DeltaCounter('subshares', $item->GetNumSubShares() * $val);
+        }
         
         $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($item, $sub);
+    }
+    
+    protected function CountSubShare(bool $count = true) : self
+    {
+        $this->DeltaCounter('subshares', $count ? 1 : -1);
     }
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self

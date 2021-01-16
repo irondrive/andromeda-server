@@ -60,9 +60,9 @@ class NativeCrypt extends Native
         $fchunks = $this->GetNumChunks($file->GetSize());
         $chunks = min($chunks, $fchunks-$chunk0);
 
-        $data = ""; for ($chunk = $chunk0; $chunk < $chunk0+$chunks; $chunk++)
-            $data .= $this->ReadChunk($file, $chunk);
-        return $data;
+        $data = array(); for ($chunk = $chunk0; $chunk < $chunk0+$chunks; $chunk++)
+            array_push($data, $this->ReadChunk($file, $chunk));
+        return implode('', $data);
     }
     
     public function WriteBytes(File $file, int $start, string $data) : self

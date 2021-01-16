@@ -13,27 +13,27 @@ class Config extends SingletonObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'rwchunksize' => new FieldTypes\Scalar(4*1024*1024),
-            'crchunksize' => new FieldTypes\Scalar(128*1024)
+            'crchunksize' => new FieldTypes\Scalar(128*1024),
+            'features__timedstats' => new FieldTypes\Scalar(false)
         ));
     }
     
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
     
-    public static function GetSetConfigUsage() : string { return "[--rwchunksize int] [--crchunksize int]"; }
+    public static function GetSetConfigUsage() : string { return "[--rwchunksize int] [--crchunksize int] [--timedstats bool]"; }
     
     public function SetConfig(Input $input) : self
     {
         if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_INT));
         if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_INT));
+        if ($input->HasParam('timedstats')) $this->SetFeature('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
                     
         return $this;
     }
 
-    public function GetRWChunkSize() : int { return $this->GetScalar('rwchunksize'); }
-    public function SetRWChunkSize(int $size) : self { return $this->SetScalar('rwchunksize', $size); }
-    
+    public function GetRWChunkSize() : int { return $this->GetScalar('rwchunksize'); }    
     public function GetCryptoChunkSize() : int { return $this->GetScalar('crchunksize'); }
-    public function SetCryptoChunkSize(int $size) : self { return $this->SetScalar('crchunksize', $size); }
+    public function GetAllowTimedStats() : bool { return $this->GetFeature('timedstats'); }    
 
     public function GetClientObject(bool $admin) : array
     {

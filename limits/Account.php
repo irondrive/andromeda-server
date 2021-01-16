@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\{Account, GroupInherit};
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -74,7 +75,7 @@ class AccountTotal extends Total
         }
         
         // optionally return a fake object so the caller can get default limits/features
-        if ($obj === null && $require) $obj = new self($database, array());
+        if ($obj === null && $require) $obj = new AccountTotalDefault($database);
         
         return $obj;
     }
@@ -104,6 +105,18 @@ class AccountTotal extends Total
         return $this;
         // TODO CountShares() + add this to things tracked by folders...
     }
+    
+    public static function SetLimits(ObjectDatabase $database, Account $account, Input $input) : self // TODO
+    {
+        
+    }
+}
+
+class AccountTotalDefault extends AccountTotal
+{
+    public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
+    
+    protected function GetGroups() : array { return array(); }
 }
 
 class AccountTimed extends Timed 

@@ -75,12 +75,17 @@ class Share extends AuthObject
     {
         $q = new QueryBuilder(); if (($ex = static::TryLoadUniqueByQuery($database, $q->Where(static::GetItemDestQuery($item, $dest, $q)))) !== null) return $ex;    
         
-        return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item)->SetObject('dest',$dest);
+        return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
     }
 
     public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
     {
-        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item);
+        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item->CountShare());
+    }
+    
+    public function Delete() : void
+    {
+        $this->GetItem()->CountShare(false);
     }
     
     public function NeedsPassword() : bool { return boolval($this->TryGetScalar('password')); }
