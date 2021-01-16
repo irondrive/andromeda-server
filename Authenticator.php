@@ -42,8 +42,8 @@ class Authenticator
     
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {        
-        $sessionid = $input->TryGetParam('auth_sessionid',SafeParam::TYPE_ID);
-        $sessionkey = $input->TryGetParam('auth_sessionkey',SafeParam::TYPE_ALPHANUM);
+        $sessionid = $input->TryGetParam('auth_sessionid',SafeParam::TYPE_RANDSTR);
+        $sessionkey = $input->TryGetParam('auth_sessionkey',SafeParam::TYPE_RANDSTR);
         
         if (($auth = $input->GetAuth()) !== null)
         {
@@ -68,7 +68,7 @@ class Authenticator
         
         if ($input->HasParam('auth_sudouser') && $account->isAdmin())
         {
-            $sudouser = $input->TryGetParam('auth_sudouser', SafeParam::TYPE_ID);
+            $sudouser = $input->TryGetParam('auth_sudouser', SafeParam::TYPE_RANDSTR);
             if ($sudouser === null) throw new AuthenticationFailedException();
             else
             {
@@ -146,7 +146,7 @@ class Authenticator
         if ($account->CryptoAvailable()) return;
         
         $password = $input->TryGetParam('auth_password', SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
+        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_RAW);
         
         if ($session !== null && $session->hasCrypto())
         {

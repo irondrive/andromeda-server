@@ -11,7 +11,6 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
-class InvalidTypeException extends Exceptions\ClientErrorException { public $message = "INVALID_AUTHSOURCE_TYPE"; }
 class InvalidAuthSourceException extends Exceptions\ClientErrorException { public $message = "AUTHSOURCE_FAILED"; }
 
 interface ISource
@@ -79,10 +78,10 @@ class Manager extends BaseObject
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM);
-        $descr = $input->TryGetParam('description', SafeParam::TYPE_TEXT);
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
+            function($val){ return array_key_exists($val, self::$auth_types); });
         
-        if (!array_key_exists($type, self::$auth_types)) throw new InvalidTypeException(); 
+        $descr = $input->TryGetParam('description', SafeParam::TYPE_TEXT);
         
         try { $authsource = self::$auth_types[$type]::Create($database, $input)->Activate(); }
         catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }

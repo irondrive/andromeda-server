@@ -110,7 +110,7 @@ class AccountsApp extends AppBase
     {
         parent::__construct($api);   
         
-        try { $this->config = Config::Load($api->GetDatabase()); }
+        try { $this->config = Config::GetInstance($api->GetDatabase()); }
         catch (DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
@@ -194,7 +194,7 @@ class AccountsApp extends AppBase
         
         Config::Create($database)->Save();
         
-        $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM);
+        $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
 
         $account = Account::Create($database, Auth\Local::GetInstance(), $username, $password);
@@ -231,7 +231,7 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) return null;
         
-        if (($account = $input->TryGetParam("account", SafeParam::TYPE_ID)) !== null)
+        if (($account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR)) !== null)
         {
             $this->authenticator->RequireAdmin();
             
@@ -246,7 +246,7 @@ class AccountsApp extends AppBase
     protected function ChangePassword(Input $input) : ?array
     {
         $new_password = $input->GetParam('new_password',SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
+        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_RAW);
         
         if ($recoverykey !== null)
         {
@@ -282,7 +282,7 @@ class AccountsApp extends AppBase
     
     private function capitalizeWords($str){ 
         return implode(" ",array_map(function($p){ 
-            return strtoupper(substr($p,0,1)).substr($p,1); 
+            return mb_strtoupper(mb_substr($p,0,1)).mb_substr($p,1); 
         }, explode(" ", trim($str)))); }
     
     protected function SetFullName(Input $input) : ?array
@@ -326,8 +326,12 @@ class AccountsApp extends AppBase
         $requireemail = $this->config->GetRequireContact();
         $username = null; $emailaddr = null;
         
-        if ($emailasuser || $requireemail >= Config::CONTACT_EXIST) $emailaddr = $input->GetParam("email", SafeParam::TYPE_EMAIL);        
-        $username = $emailasuser ? $emailaddr : $input->GetParam("username", SafeParam::TYPE_ALPHANUM);
+        if ($emailasuser || $requireemail >= Config::CONTACT_EXIST) 
+            $emailaddr = $input->GetParam("email", SafeParam::TYPE_EMAIL, SafeParam::MaxLength(127));   
+        
+        if ($emailasuser) $username = $emailaddr;
+        else $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
+        
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
         
         $database = $this->API->GetDatabase();        
@@ -364,13 +368,13 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
-        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);        
+        $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);        
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
         
         if (!$this->authenticator->GetRealAccount()->isAdmin())
         {
-            $code = $input->GetParam("unlockcode", SafeParam::TYPE_ALPHANUM);
+            $code = $input->GetParam("unlockcode", SafeParam::TYPE_RANDSTR);
             if ($account->getUnlockCode() !== $code) throw new AuthenticationFailedException();           
         }
         $account->setUnlockCode(null)->setEnabled(null);
@@ -392,7 +396,7 @@ class AccountsApp extends AppBase
         $database = $this->API->GetDatabase();
         
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
-        if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_ID)) !== null) 
+        if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
         {
             $authsource = Auth\Manager::TryLoadByID($database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
@@ -424,8 +428,8 @@ class AccountsApp extends AppBase
         
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
-        $clientid = $input->TryGetParam("auth_clientid", SafeParam::TYPE_ID);
-        $clientkey = $input->TryGetParam("auth_clientkey", SafeParam::TYPE_ALPHANUM);
+        $clientid = $input->TryGetParam("auth_clientid", SafeParam::TYPE_RANDSTR);
+        $clientkey = $input->TryGetParam("auth_clientkey", SafeParam::TYPE_RANDSTR);
         
         $interface = $this->API->GetInterface();
         
@@ -556,7 +560,7 @@ class AccountsApp extends AppBase
         
         $type = $input->GetParam('type', SafeParam::TYPE_INT); switch ($type)
         {
-            case ContactInfo::TYPE_EMAIL: $info = $input->GetParam('info', SafeParam::TYPE_EMAIL); break;                
+            case ContactInfo::TYPE_EMAIL: $info = $input->GetParam('info', SafeParam::TYPE_EMAIL, SafeParam::MaxLength(127)); break;                
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
         }        
         
@@ -566,7 +570,7 @@ class AccountsApp extends AppBase
         
         if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && !$this->authenticator->GetRealAccount()->isAdmin())
         { 
-            $code = Utilities::Random(16); $contact->SetIsValid(false)->SetUnlockCode($code);
+            $code = Utilities::Random(8); $contact->SetIsValid(false)->SetUnlockCode($code);
             
             switch ($type)
             {
@@ -600,7 +604,7 @@ class AccountsApp extends AppBase
         
         if (!$this->authenticator->GetRealAccount()->isAdmin())
         {
-            $code = $input->GetParam("unlockcode", SafeParam::TYPE_ALPHANUM);
+            $code = $input->GetParam("unlockcode", SafeParam::TYPE_RANDSTR);
             if ($contact->GetUnlockCode() !== $code) throw new AuthenticationFailedException();
         }
 
@@ -626,7 +630,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $session = $this->authenticator->GetSession();
         
-        $sessionid = $input->TryGetParam("session", SafeParam::TYPE_ID);
+        $sessionid = $input->TryGetParam("session", SafeParam::TYPE_RANDSTR);
 
         if ($this->authenticator->isSudoUser() || $sessionid !== null)
         {
@@ -647,7 +651,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $client = $this->authenticator->GetClient();
         
-        $clientid = $input->TryGetParam("client", SafeParam::TYPE_ID);
+        $clientid = $input->TryGetParam("client", SafeParam::TYPE_RANDSTR);
         
         if ($this->authenticator->isSudoUser() || $clientid !== null)
         {
@@ -683,7 +687,7 @@ class AccountsApp extends AppBase
         $this->authenticator->RequirePassword();
         $account = $this->authenticator->GetAccount();
         
-        $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_ID);
+        $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_RANDSTR);
         $twofactor = TwoFactor::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $twofactorid); 
         if ($twofactor === null) throw new UnknownTwoFactorException();
 
@@ -758,7 +762,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $name = $input->GetParam("name", SafeParam::TYPE_NAME);
+        $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
         $priority = $input->TryGetParam("priority", SafeParam::TYPE_INT);
         $comment = $input->TryGetParam("comment", SafeParam::TYPE_TEXT);
         
@@ -775,7 +779,7 @@ class AccountsApp extends AppBase
         
         $database = $this->API->GetDatabase();
         
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         $group = Group::TryLoadByID($database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
@@ -793,7 +797,7 @@ class AccountsApp extends AppBase
         
         $database = $this->API->GetDatabase();
         
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         $group = Group::TryLoadByID($database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
@@ -807,7 +811,7 @@ class AccountsApp extends AppBase
         
         $database = $this->API->GetDatabase();
         
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         $group = Group::TryLoadByID($database, $groupid);
         if ($group === null) throw new UnknownGroupException();
             
@@ -819,8 +823,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
@@ -842,8 +846,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $accountid = $input->GetParam("account", SafeParam::TYPE_ID);
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         
         $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
         if ($account === null) throw new UnknownAccountException();
@@ -881,7 +885,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
         $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
         if ($manager === null) throw new UnknownAuthSourceException();        
         
@@ -899,7 +903,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin()->RequirePassword();
         
-        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
         $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
@@ -913,7 +917,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin()->RequirePassword();
         
-        $manager = $input->GetParam('manager', SafeParam::TYPE_ID);
+        $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
         $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
@@ -927,7 +931,7 @@ class AccountsApp extends AppBase
         
         $database = $this->API->GetDatabase();
         
-        $acctid = $input->GetParam("account", SafeParam::TYPE_ID);
+        $acctid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
         $account = Account::TryLoadByID($database, $acctid);
         if ($account === null) throw new UnknownAccountException();
         
@@ -943,7 +947,7 @@ class AccountsApp extends AppBase
         
         $database = $this->API->GetDatabase();
         
-        $groupid = $input->GetParam("group", SafeParam::TYPE_ID);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         $group = Group::TryLoadByID($database, $groupid);
         if ($group === null) throw new UnknownGroupException();
 

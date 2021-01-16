@@ -75,7 +75,7 @@ class Account extends AuthEntity
     
     public function GetDefaultGroups() : array
     {
-        $default = Config::Load($this->database)->GetDefaultGroup();
+        $default = Config::GetInstance($this->database)->GetDefaultGroup();
         $retval[$default->ID()] = $default;
         
         $authman = $this->GetAuthSource();
