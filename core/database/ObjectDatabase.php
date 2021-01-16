@@ -11,6 +11,7 @@ class ObjectDatabase extends Database
 {
     private array $objects = array();     /* array[id => BaseObject] */
     private array $modified = array();    /* array[id => BaseObject] */
+    private array $deleted = array();     /* array[id => BaseObject] */
     
     public function isModified(BaseObject $obj) : bool 
     { 
@@ -29,8 +30,9 @@ class ObjectDatabase extends Database
     
     public function saveObjects(bool $isRollback = false) : self
     {
-        foreach ($this->modified as $object) 
+        foreach ($this->modified as $object)
             $object->Save($isRollback);
+            
         return $this;
     }
 
@@ -43,6 +45,8 @@ class ObjectDatabase extends Database
             $this->SaveObjects(true);
             parent::commit();
         }
+        
+        $this->deleted = array();
     }
 
     public function GetClassTableName(string $class) : string
@@ -111,6 +115,13 @@ class ObjectDatabase extends Database
         return array_filter($objects, function($obj){ return !$obj->isDeleted(); });
     }
     
+    private function AddDeletedObject(BaseObject $object) : void
+    {
+        unset($this->modified[$object->ID()]); 
+        unset($this->objects[$object->ID()]); 
+        $this->deleted[$object->ID()] = $object;
+    }
+    
     public function DeleteObjectsByQuery(string $class, QueryBuilder $query, bool $notify = false) : self
     {
         if (!$notify && !$this->SupportsRETURNING())
@@ -126,26 +137,31 @@ class ObjectDatabase extends Database
         $qtype = Database::QUERY_WRITE | (!$notify ? Database::QUERY_READ : 0);
         $result = $this->query($querystr, $qtype, $query->GetData());
         
-        if (!$notify) foreach ($this->Rows2Objects($result, $class) as $obj)
+        if (!$notify) 
         {
-            $obj->Delete(); unset($this->modified[$obj->ID()]);
+            foreach ($this->Rows2Objects($result, $class) as $obj) 
+            {
+                $this->AddDeletedObject($obj); $obj->Delete(); // notify object of deletion
+            }
         }
         
         return $this;
     }
     
-    protected function DeleteObjectByID(string $class, BaseObject $object) : self
+    public function DeleteObject(string $class, BaseObject $object) : self
     {
-        $q = new QueryBuilder(); return $this->DeleteObjectsByQuery($class, $q->Where($q->Equals('id',$object->ID())), true);
+        if (array_key_exists($object->ID(), $this->deleted)) return $this;
+        
+        $this->AddDeletedObject($object); $q = new QueryBuilder(); 
+        
+        return $this->DeleteObjectsByQuery($class, $q->Where($q->Equals('id',$object->ID())), true);
     }
     
     public function SaveObject(string $class, BaseObject $object, array $values, array $counters) : self
     {
         unset($this->modified[$object->ID()]);
-
-        if ($object->isCreated() && $object->isDeleted()) return $this;        
+    
         if ($object->isCreated()) return $this->SaveNewObject($class, $object, $values, $counters);
-        if ($object->isDeleted()) return $this->DeleteObjectByID($class, $object);
         
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
