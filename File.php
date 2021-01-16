@@ -25,6 +25,8 @@ class File extends Item
     
     public function GetSize() : int { return $this->TryGetScalar('size') ?? 0; }
     
+    public function GetNumShares() : int { return $this->CountObjectRefs('shares'); }
+    
     public function SetSize(int $size, bool $notify = false) : self 
     {
         if (!$notify)

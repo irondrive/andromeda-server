@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\DatabaseException;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -64,9 +65,9 @@ abstract class Timed extends Base
     protected function GetStats() : TimedStats { return TimedStats::LoadByLimit($this->database, $this); }
     
     // pull counters from the current stats object
-    protected function GetCounter(string $name) : ?int    { return $this->GetStats()->GetCounter($name); }
+    protected function GetCounter(string $name) : int     { return $this->GetStats()->GetCounter($name); }
     protected function TryGetCounter(string $name) : ?int { return $this->GetStats()->TryGetCounter($name); }
-    protected function ExistsCounter(string $name) : ?int { return $this->GetStats()->ExistsCounter($name); }
+    protected function ExistsCounter(string $name) : bool { return $this->GetStats()->ExistsCounter($name); }
     
     protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
     {
@@ -100,14 +101,21 @@ class TimedStats extends StandardObject
 
     private static $cache = array();
     
+    private static function GetCurrent(ObjectDatabase $database, Timed $limit) : ?self
+    {
+        $q = new QueryBuilder(); 
+        
+        $w = $q->And($q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit)),$q->IsTrue('iscurrent'));
+        
+        return static::TryLoadUniqueByQuery($database, $q->Where($w));
+    }
+    
     public static function LoadByLimit(ObjectDatabase $database, Timed $limit) : self
     {
         if (array_key_exists($limit->ID(), static::$cache))
             return static::$cache[$limit->ID()];
 
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit)),$q->IsTrue('iscurrent'));
-        
-        $obj = static::TryLoadUniqueByQuery($database, $q->Where($w));
+        $obj = static::GetCurrent($database, $limit);
         
         $time = Main::GetInstance()->GetTime(); 
         
@@ -121,7 +129,7 @@ class TimedStats extends StandardObject
             if ($offset !== 0)
             {
                 if (!$limit->GetKeepHistory()) $obj->Delete();
-                else $obj->SetScalar('iscurrent',false);
+                else $obj->SetScalar('iscurrent',null);
                 
                 $start += $offset; $obj = null;
             }
@@ -130,15 +138,23 @@ class TimedStats extends StandardObject
         
         if ($obj === null)
         {
-            $obj = parent::BaseCreate($database)->SetObject('limitobj',$limit)->SetScalar('iscurrent',true)
-                ->SetDate('timestart',$start)->SetScalar('timeperiod',$limit->GetTimePeriod());
+            try 
+            { 
+                $obj = parent::BaseCreate($database)->SetObject('limitobj',$limit)->SetScalar('iscurrent',true)
+                    ->SetDate('timestart',$start)->SetScalar('timeperiod',$limit->GetTimePeriod());
+            }
+            catch (DatabaseException $e) // someone may have already inserted a new time period, try loading again
+            {
+                if (($obj = static::GetCurrent($database, $limit)) === null) throw $e;
+            }
+                
         }
             
         static::$cache[$limit->ID()] = $obj; return $obj;
     }
     
     // pull limits from the master Limits\Timed object
-    protected function GetCounterLimit(string $name) : ?int    { return $this->GetLimiter()->GetCounterLimit($name); }
+    protected function GetCounterLimit(string $name) : int     { return $this->GetLimiter()->GetCounterLimit($name); }
     protected function TryGetCounterLimit(string $name) : ?int { return $this->GetLimiter()->TryGetCounterLimit($name); }
-    protected function ExistsCounterLimit(string $name) : ?int { return $this->GetLimiter()->ExistsCounterLimit($name); }
+    protected function ExistsCounterLimit(string $name) : bool { return $this->GetLimiter()->ExistsCounterLimit($name); }
 }

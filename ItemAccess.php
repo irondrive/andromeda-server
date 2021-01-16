@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -17,7 +18,7 @@ class ItemAccess
     public function GetItem() : Item { return $this->item; }
     public function GetShare() : ?Share { return $this->share; }
     
-    public static function ItemException(?string $class)
+    public static function UnknownItemException(?string $class)
     {
         switch ($class)
         {
@@ -27,20 +28,30 @@ class ItemAccess
         }
     }
     
-    public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : ?self
+    public static function ItemDeniedException(?string $class)
+    {
+        switch ($class)
+        {
+            case File::class: throw new FileAccessDeniedException();
+            case Folder::class: throw new FolderAccessDeniedException();
+            default: throw new ItemAccessDeniedException();
+        }
+    }
+    
+    public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : self
     {
         $item = null; if ($itemid !== null)
         {
             $item = $class::TryLoadByID($database, $itemid);
-            if ($item === null) return null;
+            if ($item === null) return static::UnknownItemException($class);
         }
-        
-        if (($shareid = $input->TryGetParam('sid',SafeParam::TYPE_ID)) !== null)
+
+        if (($shareid = $input->TryGetParam('sid',SafeParam::TYPE_RANDSTR)) !== null)
         {
-            $sharekey = $input->GetParam('skey',SafeParam::TYPE_ALPHANUM);
+            $sharekey = $input->GetParam('skey',SafeParam::TYPE_RANDSTR);
 
             $share = Share::TryAuthenticateByLink($database, $shareid, $sharekey, $item);            
-            if ($share === null) static::ItemException($class);
+            if ($share === null) return static::UnknownItemException($class);
 
             $item ??= $share->GetItem();
             
@@ -60,16 +71,18 @@ class ItemAccess
                 if ($share === null)
                 {
                     // third, check if we are elsewhere in the owner chain
-                    if (!static::AccountInChain($item, $account)) return null;
+                    if (!static::AccountInChain($item, $account))
+                        return static::ItemDeniedException($class);
                 }
             }
             else $share = null;
         }
-        else return null;
+        else return static::UnknownItemException($class);
         
         if ($share) $share->SetAccessed();
         
-        if ($item && $class && !is_a($item, $class)) static::ItemException($class);
+        if ($item && $class && !is_a($item, $class)) 
+            return static::UnknownItemException($class);
 
         return new self($item, $share);
     }
@@ -86,9 +99,9 @@ class ItemAccess
         return (!$haveOwner || $amOwner);
     }
     
-    public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : self
+    public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : ?self
     {
-        $retval = self::TryAuthenticate($database, $input, $authenticator, $class, $itemid);
-        if ($retval === null) static::ItemException($class); else return $retval;
+        try { static::Authenticate($database, $input, $authenticator, $class, $itemid); }
+        catch (Exceptions\ClientException $e) { return null; }
     }
 }

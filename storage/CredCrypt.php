@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -15,6 +14,8 @@ require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 class CredentialsEncryptedException extends Exceptions\ClientErrorException { public $message = "STORAGE_CREDENTIALS_ENCRYPTED"; }
 class CryptoNotAvailableException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_CRYPTO_NOT_AVAILABLE"; }
+
+// TODO this should be a trait...
 
 abstract class CredCrypt extends FWrapper
 {
@@ -44,7 +45,7 @@ abstract class CredCrypt extends FWrapper
         if ($account === null && $credcrypt) throw new CryptoNotAvailableException();
         
         return parent::Create($database, $input, $account, $filesystem)
-            ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM), $credcrypt)
+            ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt)
             ->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt);
     }
     
@@ -110,7 +111,7 @@ abstract class CredCrypt extends FWrapper
         return $this->SetScalar($field,$value);
     }
     
-    public function SetEncrypted(bool $crypt) : self
+    protected function SetEncrypted(bool $crypt) : self
     {
         $this->SetUsername($this->TryGetUsername(), $crypt);
         $this->SetPassword($this->TryGetPassword(), $crypt);

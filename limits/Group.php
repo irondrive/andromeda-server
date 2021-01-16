@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -59,6 +60,11 @@ class GroupTotal extends Total
         if (!$this->canTrackItems()) return $this;
         $this->AddAccountCounts($this->GetAccounts());
         return $this;
+    }
+    
+    public static function SetLimits(ObjectDatabase $database, Group $group, Input $input) : self // TODO
+    {
+        
     }
 }
 

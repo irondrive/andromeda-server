@@ -22,9 +22,7 @@ require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
 use Andromeda\Apps\Files\{Config, Folder};
 
-class InvalidFSTypeServerException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
-class InvalidFSTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
-class InvalidSTTypeClientException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_STORAGE_TYPE"; }
+class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
 class InvalidNameException extends Exceptions\ClientErrorException { public $message = "INVALID_FILESYSTEM_NAME"; }
 class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; }
 
@@ -98,7 +96,7 @@ class FSManager extends StandardObject
             {
                 $this->interface = new Shared($this);
             }
-            else throw new InvalidFSTypeServerException();
+            else throw new InvalidFSTypeException();
         }
         
         return $this->interface; 
@@ -111,7 +109,7 @@ class FSManager extends StandardObject
         self::$storage_types[strtolower(Utilities::ShortClassName($class))] = $class;
     }
     
-    public static function GetCreateUsage() : string { return "--name name --sttype ".implode('|',array_keys(self::$storage_types))." [--fstype native|crypt|shared] [--global bool] [--readonly bool]"; }
+    public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types))." [--fstype native|crypt|shared] [--name name] [--global bool] [--readonly bool]"; }
     
     public static function GetCreateUsages() : array 
     { 
@@ -123,17 +121,20 @@ class FSManager extends StandardObject
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account) : self
     {
-        $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
-        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM);
-        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_ALPHANUM);
+        $name = $input->TryGetParam('name', SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
         $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
+        
+        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM,
+            function($sttype){ return array_key_exists($sttype, self::$storage_types); });
+        
+        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_ALPHANUM,
+            function($fstype){ return in_array($fstype, array('native','crypt','shared')); });        
         
         switch ($fstype ?? 'native')
         {
             case 'native': $fstype = self::TYPE_NATIVE; break;
             case 'crypt':  $fstype = self::TYPE_NATIVE_CRYPT; break;
             case 'shared': $fstype = self::TYPE_SHARED; break;
-            default: throw new InvalidFSTypeClientException();
         }
         
         $filesystem = parent::BaseCreate($database)
@@ -142,14 +143,12 @@ class FSManager extends StandardObject
         
         if ($filesystem->isSecure())
         {
-            $filesystem->SetScalar('crypto_chunksize', Config::Load($database)->GetCryptoChunkSize());
+            $filesystem->SetScalar('crypto_chunksize', Config::GetInstance($database)->GetCryptoChunkSize());
             $filesystem->SetScalar('crypto_masterkey', CryptoSecret::GenerateKey());
         }
 
         try
-        {
-            if (!array_key_exists($sttype, self::$storage_types)) throw new InvalidSTTypeClientException();
-            
+        {            
             $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $account, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
@@ -159,7 +158,7 @@ class FSManager extends StandardObject
         return $filesystem;
     }
     
-    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; }
+    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; } // TODO GetEditUsages
     
     public function Edit(Input $input) : self
     {

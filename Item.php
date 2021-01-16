@@ -9,9 +9,10 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
+require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/filesystem/FSImpl.php"); use Andromeda\Apps\Files\Filesystem\FSImpl;
-require_once(ROOT."/apps/files/limits/Filesystem.php"); use Andromeda\Apps\Files\Limits;
+require_once(ROOT."/apps/files/limits/Filesystem.php");
 require_once(ROOT."/apps/files/limits/Account.php");
 
 class CrossFilesystemException extends Exceptions\ClientErrorException      { public $message = "FILESYSTEM_MISMATCH"; }
@@ -93,6 +94,8 @@ abstract class Item extends StandardObject
     public function GetComments() : array { return $this->GetObjectRefs('comments'); }
     public function GetShares() : array { return $this->GetObjectRefs('shares'); }
     
+    public function GetNumShares() : int { return $this->CountObjectRefs('shares'); }
+    
     protected function CountCreate() : self 
     {
         return $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(); })
@@ -114,32 +117,21 @@ abstract class Item extends StandardObject
         return $this->DeltaCounter('bandwidth', $bytes); 
     }
     
-    public function CountLike(int $value, bool $uncount = false) : self
+    public function CountLike(int $value, bool $count = true) : self
     { 
-        if ($value > 0) $this->DeltaCounter('likes', $uncount ? -1 : 1);
-        else if ($value < 0) $this->DeltaCounter('dislikes', $uncount ? -1 : 1);
+        if ($value > 0) $this->DeltaCounter('likes', $count ? 1 : -1);
+        else if ($value < 0) $this->DeltaCounter('dislikes', $count ? 1 : -1);
         return $this;
-    }
+    }    
     
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    public function CountShare(bool $count = true) : self
     {
-        if ($field === 'shares') $this->CountShare();
+        $parent = $this->GetParent();
+        if ($parent !== null) $parent->CountSubShare($count);
         
-        return parent::AddObjectRef($field, $object, $notification);
-    }
-    
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
-    {
-        if ($field === 'shares') $this->CountShare(false);
-        
-        return parent::RemoveObjectRef($field, $object, $notification);
-    }
-    
-    protected function CountShare(bool $count = true) : self
-    {
         return $this->MapToLimits(function(Limits\Base $lim)use($count){ $lim->CountShare($count); });
     }
-    
+
     protected function MapToLimits(callable $func) : self
     {
         return $this->MapToTotalLimits($func)->MapToTimedLimits($func);
@@ -154,6 +146,7 @@ abstract class Item extends StandardObject
     
     protected function MapToTimedLimits(callable $func) : self
     {
+        if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
         foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $lim) $func($lim);        
         if ($this->GetOwnerID()) foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $lim) $func($lim);        
         return $this;

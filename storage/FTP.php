@@ -45,14 +45,14 @@ class FTP extends CredCrypt
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $account, $filesystem)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_ALPHANUM))
+            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_ALPHANUM);
+        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
         $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
         $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
         
