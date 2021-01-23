@@ -2,7 +2,8 @@
 
 if (!class_exists('PDO')) die("PHP PDO Extension Required\n"); use \PDO;
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions};
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities, Transactions};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -158,6 +159,15 @@ class Database implements Transactions {
     protected function BinaryEscapeInput() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
     protected function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
     
+    public function SQLConcat(string ...$args) : string
+    {
+        if ($this->getDriver() === self::DRIVER_MYSQL)
+        {
+            return "CONCAT(".implode(',',$args).")";
+        }
+        else return implode(' || ',$args);
+    }
+    
     const QUERY_READ = 1; const QUERY_WRITE = 2;
 
     public function query(string $sql, int $type, ?array $data = null) 
@@ -167,9 +177,8 @@ class Database implements Transactions {
         if (!$this->connection->inTransaction()) 
             $this->beginTransaction();
         
-        $this->startTimingQuery();
-
-        array_push($this->queries, $sql);
+        $this->startTimingQuery();        
+        $this->logQuery($sql, $data);
         
         $doSavepoint = false;
         
@@ -225,6 +234,19 @@ class Database implements Transactions {
         $this->stopTimingQuery($sql, $type);
 
         return $result;    
+    }
+    
+    private function logQuery(string $sql, ?array $data) : void
+    {
+        if ($data !== null && Main::GetInstance()->GetDebugLevel() >= Config::LOG_SENSITIVE)
+        {            
+            foreach ($data as $key=>$val)
+            {
+                $sql = str_replace(":$key", ($val===null)?'NULL':"'$val'", $sql);
+            }
+        }
+        
+        array_push($this->queries, $sql);
     }
     
     private function fetchStreams(array &$rows) : array
