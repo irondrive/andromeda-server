@@ -13,7 +13,7 @@ class Group extends AuthEntity
             'name' => null,
             'comment' => null,
             'priority' => new FieldTypes\Scalar(0),       
-            'accounts' => new FieldTypes\ObjectJoin(Account::class, 'groups', GroupJoin::class)
+            'accounts' => new FieldTypes\ObjectJoin(Account::class, GroupJoin::class, 'groups')
         ));
     }
     
@@ -26,19 +26,24 @@ class Group extends AuthEntity
     public function GetPriority() : int { return $this->GetScalar('priority'); }
     public function SetPriority(int $priority) { return $this->SetScalar('priority', $priority); }
     
-    public function GetAccounts() : array
+    public function GetDefaultAccounts() : array
     {
-        if (Config::GetInstance($this->database)->GetDefaultGroupID() === $this->ID())
-            return Account::LoadAll($this->database);        
-
-        foreach (Auth\Manager::LoadAll($this->database) as $authman)
+        $default = Config::GetInstance($this->database)->GetDefaultGroup();
+        $retval[$default->ID()] = $default;
+        
+        $authman = $this->GetAuthSource();
+        if ($authman instanceof Auth\External)
         {
-            if ($authman->GetDefaultGroupID() === $this->ID())
-                return Account::LoadByAuthSource($this->database, $authman);
+            $default = $authman->GetManager()->GetDefaultGroup();
+            $retval[$default->ID()] = $default;
         }
         
-        return $this->GetObjectRefs('accounts');
+        return array_filter($retval);
     }
+
+    public function GetAccounts() : array { return array_merge($this->GetDefaultAccounts(), $this->GetMyAccounts()); }
+    
+    public function GetMyAccounts() : array { return $this->GetObjectRefs('accounts'); }
     
     public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
     public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
@@ -74,6 +79,14 @@ class Group extends AuthEntity
         if ($comment !== null) $group->SetScalar('comment', $comment);
         
         return $group;
+    }
+
+    public function Delete() : void
+    {
+        foreach ($this->GetDefaultAccounts() as $account)
+            Account::RunGroupChangeHandlers($this->database, $account, $this, false);
+        
+        parent::Delete();
     }
     
     public function GetClientObject(bool $full = false) : array
