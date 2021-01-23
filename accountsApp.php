@@ -101,7 +101,7 @@ class AccountsApp extends AppBase
             'testauthsource --manager id [--test_username text --test_password raw]',
             'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',
-            'setaccountprops --account id [--expirepw bool] '.AuthEntity::GetPropUsage(),
+            'setaccountprops --account id '.AuthEntity::GetPropUsage().' [--expirepw bool]',
             'setgroupprops --group id '.AuthEntity::GetPropUsage()
         );
     }

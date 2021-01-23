@@ -14,7 +14,6 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -51,7 +50,7 @@ class Account extends AuthEntity
             'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
             'twofactors'    => new FieldTypes\ObjectRefs(TwoFactor::class, 'account'),
             'recoverykeys'  => new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'),
-            'groups'        => new FieldTypes\ObjectJoin(Group::class, 'accounts', GroupJoin::class)
+            'groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
         ));
     }
     
@@ -97,17 +96,19 @@ class Account extends AuthEntity
     private static $group_handlers = array();
     
     public static function RegisterGroupChangeHandler(callable $func){ array_push(static::$group_handlers,$func); }
+    public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
+        { foreach (static::$group_handlers as $func) $func($database, $account, $group, $added); }
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
-        if ($field === 'groups') foreach (static::$group_handlers as $func) $func($this->database, $this, $object, true);
+        if ($field === 'groups') static::RunGroupChangeHandlers($this->database, $this, $object, true);
         
         return parent::AddObjectRef($field, $object, $notification);
     }
     
     protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
-        if ($field === 'groups') foreach (static::$group_handlers as $func) $func($this->database, $this, $object, false);
+        if ($field === 'groups') static::RunGroupChangeHandlers($this->database, $this, $object, false);
         
         return parent::RemoveObjectRef($field, $object, $notification);
     }
@@ -224,6 +225,9 @@ class Account extends AuthEntity
         if ($source instanceof Auth\External) 
             $account->SetObject('authsource',$source);
         else $account->ChangePassword($password);
+        
+        foreach ($account->GetDefaultGroups() as $group)
+            static::RunGroupChangeHandlers($database, $account, $group, true);
 
         return $account;
     }
@@ -244,6 +248,9 @@ class Account extends AuthEntity
         $this->DeleteObjectRefs('twofactors');
         $this->DeleteObjectRefs('contactinfos');
         $this->DeleteObjectRefs('recoverykeys');
+        
+        foreach ($this->GetDefaultGroups() as $group)
+            static::RunGroupChangeHandlers($this->database, $this, $group, false);
         
         parent::Delete();
     }
@@ -283,18 +290,14 @@ class Account extends AuthEntity
         
         if ($level & self::OBJECT_ADMIN)
         {
-            $getAuth = function($k){ return $this->TryGetInheritsScalarFrom($k); };
-            
-            $showAuth = function (?AuthEntity $e){ return $e ? array($e->ID() => Utilities::ShortClassName(get_class($e))) : null; };
-            
             $data = array_merge($data, array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
                 'groups' => array_keys($this->GetGroups()),
-                'limits_from' => array_map($showAuth, $this->GetAllCounterLimits($getAuth)),
-                'features_from' => array_map($showAuth, $this->GetAllFeatures($getAuth)),
-                'max_session_age_from' => $showAuth($this->TryGetInheritsScalarFrom('max_session_age')),
-                'max_password_age_from' => $showAuth($this->TryGetInheritsScalarFrom('max_password_age'))
+                'limits_from' => $this->ToInheritsFromClient([$this,'GetAllCounterLimits']),
+                'features_from' => $this->ToInheritsFromClient([$this,'GetAllFeatures']),
+                'max_session_age_from' => self::toIDType($this->TryGetInheritsScalarFrom('max_session_age')),
+                'max_password_age_from' => self::toIDType($this->TryGetInheritsScalarFrom('max_password_age'))
             ));
         }
         else
@@ -558,6 +561,16 @@ trait GroupInherit
         $value ??= self::GetInheritedFields()[$field];
         
         return new InheritedProperty($value, $source);
+    }
+
+    protected function ToInheritsFrom(callable $getdata) : array
+    {
+        return $getdata(function($k){ return $this->TryGetInheritsScalarFrom($k); });
+    }
+    
+    protected function ToInheritsFromClient(callable $getdata) : array
+    {
+        return array_map(['self','toIDType'], $this->ToInheritsFrom($getdata));
     }
 }
 
