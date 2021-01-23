@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
 ,  `dates__created` integer NOT NULL
 ,  `rwchunksize` integer NOT NULL
 ,  `crchunksize` integer NOT NULL
+,  `features__timedstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
 ,  `folders` integer NOT NULL DEFAULT '0'
 ,  `counters__subfiles` integer NOT NULL DEFAULT '0'
 ,  `counters__subfolders` integer NOT NULL DEFAULT '0'
+,  `counters__subshares` integer NOT NULL DEFAULT '0'
 ,  `likes` integer NOT NULL DEFAULT '0'
 ,  `counters__likes` integer NOT NULL DEFAULT '0'
 ,  `counters__dislikes` integer NOT NULL DEFAULT '0'
@@ -83,36 +85,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`owner`,`item`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
-  `id` char(12) NOT NULL
-,  `object` varchar(64) NOT NULL
-,  `stats` integer NOT NULL DEFAULT '0'
-,  `dates__created` integer NOT NULL
-,  `timeperiod` integer NOT NULL
-,  `features__history` integer DEFAULT NULL
-,  `features__track_items` integer DEFAULT NULL
-,  `features__track_dlstats` integer DEFAULT NULL
-,  `counters_limits__downloads` integer DEFAULT NULL
-,  `counters_limits__bandwidth` integer DEFAULT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`object`,`timeperiod`)
-);
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
-  `id` char(12) NOT NULL
-,  `limitobj` varchar(64) NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__timestart` integer NOT NULL
-,  `timeperiod` integer NOT NULL
-,  `iscurrent` integer NOT NULL
-,  `counters__size` integer NOT NULL DEFAULT '0'
-,  `counters__items` integer NOT NULL DEFAULT '0'
-,  `counters__shares` integer NOT NULL DEFAULT '0'
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`limitobj`,`dates__timestart`)
-);
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_total` (
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
 ,  `dates__created` integer NOT NULL
@@ -137,6 +110,60 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_total` (
 ,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
+);
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
+  `id` char(12) NOT NULL
+,  `object` varchar(64) NOT NULL
+,  `dates__created` integer NOT NULL
+,  `dates__download` integer DEFAULT NULL
+,  `dates__upload` integer DEFAULT NULL
+,  `features__itemsharing` integer DEFAULT NULL
+,  `features__shareeveryone` integer DEFAULT NULL
+,  `features__publicupload` integer DEFAULT NULL
+,  `features__publicmodify` integer DEFAULT NULL
+,  `features__randomwrite` integer DEFAULT NULL
+,  `features__track_items` integer DEFAULT NULL
+,  `features__track_dlstats` integer DEFAULT NULL
+,  `counters__size` integer NOT NULL DEFAULT '0'
+,  `counters__items` integer NOT NULL DEFAULT '0'
+,  `counters__shares` integer NOT NULL DEFAULT '0'
+,  `counters_limits__size` integer DEFAULT NULL
+,  `counters_limits__items` integer DEFAULT NULL
+,  `counters_limits__shares` integer DEFAULT NULL
+,  `counters__downloads` integer NOT NULL DEFAULT '0'
+,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`object`)
+);
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
+  `id` char(12) NOT NULL
+,  `object` varchar(64) NOT NULL
+,  `stats` integer NOT NULL DEFAULT '0'
+,  `dates__created` integer NOT NULL
+,  `timeperiod` integer NOT NULL
+,  `max_stats_age` integer DEFAULT NULL
+,  `features__track_items` integer DEFAULT NULL
+,  `features__track_dlstats` integer DEFAULT NULL
+,  `counters_limits__downloads` integer DEFAULT NULL
+,  `counters_limits__bandwidth` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`object`,`timeperiod`)
+);
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
+  `id` char(12) NOT NULL
+,  `limitobj` varchar(64) NOT NULL
+,  `dates__created` integer NOT NULL
+,  `dates__timestart` integer NOT NULL
+,  `timeperiod` integer NOT NULL
+,  `iscurrent` integer DEFAULT NULL
+,  `counters__size` integer NOT NULL DEFAULT '0'
+,  `counters__items` integer NOT NULL DEFAULT '0'
+,  `counters__shares` integer NOT NULL DEFAULT '0'
+,  `counters__downloads` integer NOT NULL DEFAULT '0'
+,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`limitobj`,`dates__timestart`)
+,  UNIQUE (`limitobj`,`iscurrent`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
   `id` char(16) NOT NULL
@@ -229,7 +256,6 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_tag` (
 CREATE INDEX "idx_a2_objects_apps_files_share_owner" ON "a2_objects_apps_files_share" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_owner" ON "a2_objects_apps_files_filesystem_fsmanager" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_name" ON "a2_objects_apps_files_filesystem_fsmanager" (`name`);
-CREATE INDEX "idx_a2_objects_apps_files_limits_timedstats_limitobj_2" ON "a2_objects_apps_files_limits_timedstats" (`limitobj`,`iscurrent`);
 CREATE INDEX "idx_a2_objects_apps_files_tag_owner" ON "a2_objects_apps_files_tag" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_tag_item_2" ON "a2_objects_apps_files_tag" (`item`);
 CREATE INDEX "idx_a2_objects_apps_files_storage_ftp_owner" ON "a2_objects_apps_files_storage_ftp" (`owner`);
