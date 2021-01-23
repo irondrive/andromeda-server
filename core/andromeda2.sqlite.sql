@@ -1,13 +1,14 @@
 PRAGMA journal_mode = MEMORY;
 CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
   `id` char(12) NOT NULL
-,  `datadir` text DEFAULT NULL
+,  `datadir` text
 ,  `apps` text NOT NULL
-,  `apiurl` text DEFAULT NULL
+,  `apiurl` text
 ,  `dates__created` integer NOT NULL
-,  `features__debug_log` integer NOT NULL
+,  `features__debug` integer NOT NULL
 ,  `features__debug_http` integer NOT NULL
-,  `features__debug_file` integer NOT NULL
+,  `features__debug_dblog` integer NOT NULL
+,  `features__debug_filelog` integer NOT NULL
 ,  `features__read_only` integer NOT NULL
 ,  `features__enabled` integer NOT NULL
 ,  `features__email` integer NOT NULL

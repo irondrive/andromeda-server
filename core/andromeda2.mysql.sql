@@ -9,9 +9,9 @@ SET time_zone = "+00:00";
 
 CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
   `id` char(12) NOT NULL,
-  `datadir` text DEFAULT NULL,
+  `datadir` text,
   `apps` text NOT NULL,
-  `apiurl` text DEFAULT NULL,
+  `apiurl` text,
   `dates__created` bigint(20) NOT NULL,
   `features__debug` tinyint(2) NOT NULL,
   `features__debug_http` tinyint(1) NOT NULL,
@@ -59,10 +59,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_exceptions_errorlogentry` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `time` (`time`),
-  KEY `code` (`code`),
-  KEY `app` (`app`),
-  KEY `action` (`action`),
-  KEY `addr` (`addr`)
+  KEY `code` (`code`(191)),
+  KEY `app` (`app`(191)),
+  KEY `action` (`action`(191)),
+  KEY `addr` (`addr`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
