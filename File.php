@@ -38,7 +38,7 @@ class File extends Item
         
         // TODO this assumes the FS never changes - will not work for cross-FS move!
         $this->MapToLimits(function(Limits\Base $lim)use($delta){ 
-            $lim->CountSize($delta, $this->isGlobalFS()); });
+            if (!$this->onOwnerFS()) $lim->CountSize($delta); });
         
         return $this->SetScalar('size', $size); 
     }
@@ -115,7 +115,7 @@ class File extends Item
     }
     
     public function GetChunkSize() : ?int { return $this->GetFSImpl()->GetChunkSize(); }
-    public function isGlobalFS() : bool { return $this->GetFilesystem()->isGlobal(); }
+    public function onOwnerFS() : bool { return $this->GetFilesystem()->isUserOwned(); }
     
     public function ReadBytes(int $start, int $length) : string
     {
@@ -130,7 +130,7 @@ class File extends Item
     public function NotifyDelete() : void 
     { 
         $this->MapToLimits(function(Limits\Base $lim){
-            $lim->CountSize($this->GetSize()*-1, $this->isGlobalFS()); });
+            if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
         
         parent::Delete(); 
     }

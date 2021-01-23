@@ -8,6 +8,7 @@ require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Excep
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 class FTPExtensionException extends ActivateException    { public $message = "FTP_EXTENSION_MISSING"; }
@@ -20,11 +21,13 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(FTP::class);
 
-class FTP extends CredCrypt
+class FTP extends FWrapper
 {    
+    use CredCrypt;
+    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
             'implssl' => null,
@@ -33,18 +36,18 @@ class FTP extends CredCrypt
     
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'implssl' => $this->GetScalar('implssl'),
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $account, $filesystem)
+        return parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false);
@@ -60,7 +63,7 @@ class FTP extends CredCrypt
         if ($port !== null) $this->SetScalar('port', $port);
         if ($implssl !== null) $this->SetScalar('implssl', $implssl);
         
-        return parent::Edit($input);
+        return parent::Edit($input)->CredCryptEdit($input);
     }
     
     public function SubConstruct() : void

@@ -130,7 +130,7 @@ abstract class FWrapper extends Storage
         
         $data = fread($handle, $length);
         if ($data === false || strlen($data) !== $length)
-            throw new FileReadFailedException();        
+            throw new FileReadFailedException();
         else return $data;
     }
     

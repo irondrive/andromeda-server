@@ -17,8 +17,9 @@ require_once(ROOT."/apps/files/storage/Storage.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main, Config};
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
@@ -111,8 +112,20 @@ class FilesApp extends AppBase
             ...FSManager::GetCreateUsages(),
             'deletefilesystem --filesystem id --auth_password raw',
             'editfilesystem --filesystem id '.FSManager::GetEditUsage(),
-            'setlimits (--account id | --group id | --filesystem id)', // TODO
-            'settimedlimits (--account id | --group id | --filesystem id)' // TODO
+            'getlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
+            'gettimedlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
+            'gettimedstatsfor [--account id | --group id | --filesystem id] --timeperiod int [--limit int] [--offset int]',
+            'gettimedstatsat (--account ?id | --group ?id | --filesystem ?id) --timeperiod int --matchtime int [--limit int] [--offset int]',
+            'configlimits (--account id | --group id | --filesystem id) '.Limits\Total::BaseConfigUsage(),
+            "\t --account id ".Limits\AccountTotal::GetConfigUsage(),
+            "\t --group id ".Limits\GroupTotal::GetConfigUsage(),
+            "\t --filesystem id ".Limits\FilesystemTotal::GetConfigUsage(),
+            'configtimedlimits (--account id | --group id | --filesystem id) '.Limits\Timed::BaseConfigUsage(),
+            "\t --account id ".Limits\AccountTimed::GetConfigUsage(),
+            "\t --group id ".Limits\GroupTimed::GetConfigUsage(),
+            "\t --filesystem id ".Limits\FilesystemTimed::GetConfigUsage(),
+            'purgelimits (--account id | --group id | --filesystem id)',
+            'purgetimedlimits (--account id | --group id | --filesystem id) --period int',
         ); 
     }
     
@@ -194,8 +207,14 @@ class FilesApp extends AppBase
             case 'deletefilesystem': return $this->DeleteFilesystem($input);
             case 'editfilesystem':   return $this->EditFilesystem($input);
             
-            case 'setlimits':      return $this->SetLimits($input);
-            case 'settimedlimits': return $this->SetTimedLimits($input);
+            case 'getlimits':      return $this->GetLimits($input);
+            case 'gettimedlimits': return $this->GetTimedLimits($input);
+            case 'gettimedstatsfor': return $this->GetTimedStatsFor($input);
+            case 'gettimedstatsat':  return $this->GetTimedStatsAt($input);
+            case 'configlimits':      return $this->ConfigLimits($input);
+            case 'configtimedlimits': return $this->ConfigTimedLimits($input);
+            case 'purgelimits':      return $this->PurgeLimits($input);
+            case 'purgetimedlimits': return $this->PurgeTimedLimits($input);
             
             default: throw new UnknownActionException();
         }
@@ -328,7 +347,7 @@ class FilesApp extends AppBase
         if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;        
         
         if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
-            $this->API->GetDebugLevel() >= Config::LOG_DEVELOPMENT)
+            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::LOG_DEVELOPMENT)
         {
             $this->API->GetInterface()->DisableOutput();
             
@@ -963,7 +982,7 @@ class FilesApp extends AppBase
         
         if ($islink && ($email = $input->TryGetParam('email',SafeParam::TYPE_EMAIL)) !== null)
         {
-            if (!Limits\AccountTotal::LoadByAccount($this->database, $account)->GetAllowEmailShare())
+            if (!Limits\AccountTotal::LoadByAccount($this->database, $account, true)->GetAllowEmailShare())
                 throw new EmailShareDisabledException();
             
             $account = $this->authenticator->GetAccount();
@@ -1096,7 +1115,7 @@ class FilesApp extends AppBase
         
         $global = ($input->TryGetParam('global', SafeParam::TYPE_BOOL) ?? false) && $isadmin;
 
-        if (!Limits\AccountTotal::LoadByAccount($this->database, $account)->GetAllowUserStorage() && !$global)
+        if (!Limits\AccountTotal::LoadByAccount($this->database, $account, true)->GetAllowUserStorage() && !$global)
             throw new UserStorageDisabledException();
             
         $filesystem = FSManager::Create($this->database, $input, $global ? null : $account);
@@ -1137,43 +1156,211 @@ class FilesApp extends AppBase
         if ($filesystem === null) throw new UnknownFilesystemException();
         if ($force) $filesystem->ForceDelete(); else $filesystem->Delete(); return array();
     }
-
-    protected function SetLimits(Input $input) : array
+    
+    private function GetLimitObject(Input $input, bool $allowAuto, bool $allowMany, bool $timed) : array
     {
-        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $obj = null;
         
-        $this->authenticator->RequireAdmin();
-        
-        if (($account = $input->TryGetParam('account',SafeParam::TYPE_RANDSTR)) !== null)
+        $admin = $this->authenticator->isAdmin();
+        $account = $this->authenticator->GetAccount();
+
+        if ($input->HasParam('group'))
         {
-            $account = Account::TryLoadByID($this->database, $account);
-            if ($account === null) throw new UnknownAccountException();
+            if (($group = $input->TryGetParam('group',SafeParam::TYPE_RANDSTR)) !== null)
+            {
+                $obj = Group::TryLoadByID($this->database, $group);
+                if ($obj === null) throw new UnknownGroupException();
+            }
             
-            return Limits\AccountTotal::SetLimits($this->database, $account, $input)->GetClientObject();
+            $class = $timed ? Limits\GroupTimed::class : Limits\GroupTotal::class;
+            
+            if (!$admin) throw new UnknownGroupException();            
         }
-        else if (($group = $input->TryGetParam('group',SafeParam::TYPE_RANDSTR)) !== null)
+        else if ($input->HasParam('account'))
         {
-            $group = Group::TryLoadByID($this->database, $group);
-            if ($group === null) throw new UnknownGroupException();
+            if (($account = $input->TryGetParam('account',SafeParam::TYPE_RANDSTR)) !== null)
+            {
+                $obj = Account::TryLoadByID($this->database, $account);
+                if ($obj === null) throw new UnknownAccountException();
+            }
             
-            return Limits\GroupTotal::SetLimits($this->database, $group, $input)->GetClientObject();
+            $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
+            
+            if (!$admin && ($obj === null || $obj !== $account)) throw new UnknownAccountException();
         }
-        else if (($filesystem = $input->TryGetParam('filesystem',SafeParam::TYPE_RANDSTR)) !== null)
+        else if ($input->HasParam('filesystem'))
         {
-            $filesystem = FSManager::TryLoadByID($this->database, $filesystem);
-            if ($filesystem === null) throw new UnknownFilesystemException();
+            if (($filesystem = $input->TryGetParam('filesystem',SafeParam::TYPE_RANDSTR)) !== null)
+            {
+                $obj = FSManager::TryLoadByID($this->database, $filesystem);
+                if ($obj === null) throw new UnknownFilesystemException();
+            }
             
-            return Limits\FilesystemTotal::SetLimits($this->database, $filesystem, $input)->GetClientObject();
+            $class = $timed ? Limits\FilesystemTimed::class : Limits\FilesystemTotal::class;
+            
+            if (!$admin && ($obj === null || ($obj->GetOwnerID() !== null && $obj->GetOwnerID() !== $account->ID()))) throw new UnknownFilesystemException();
+        }
+        else if ($allowAuto) 
+        {
+            $obj = $this->authenticator->GetAccount(); 
+            $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
         }
         else throw new UnknownObjectException();
+        
+        if (!$allowMany && $obj === null) throw new UnknownObjectException();
+        
+        return array('obj' => $obj, 'class' => $class);
     }
     
-    protected function SetTimedLimits(Input $input) : array
+    protected function GetLimits(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $isadmin = $this->authenticator->isAdmin();
+        
+        $obj = $this->GetLimitObject($input, true, true, false);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        if ($obj !== null)
+        {
+            $lim = $class::LoadByClient($this->database, $obj);
+            return ($lim !== null) ? $lim->GetClientObject($isadmin) : array();
+        }
+        else
+        {
+            $count = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+            $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+            $lims = $class::LoadAll($this->database, $count, $offset);
+            return array_map(function(Limits\Total $obj)use($isadmin){ 
+                return $obj->GetClientObject($isadmin); },$lims);
+        }
+    }
 
+    protected function GetTimedLimits(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $isadmin = $this->authenticator->isAdmin();
+        
+        $obj = $this->GetLimitObject($input, true, true, true);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        if ($obj !== null)
+        {
+            $lims = $class::LoadAllForClient($this->database, $obj);
+        }
+        else
+        {
+            $count = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+            $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+            $lims = $class::LoadAll($this->database, $count, $offset);
+        }
+
+        return array_map(function(Limits\Timed $lim)use($isadmin){ 
+            return $lim->GetClientObject($isadmin); }, array_values($lims));
+    }
+    
+    protected function GetTimedStatsFor(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $obj = $this->GetLimitObject($input, true, false, true);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        $period = $input->GetParam('timeperiod',SafeParam::TYPE_INT);
+        $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
+        
+        if ($lim === null) return array();
+
+        $count = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+        $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+        
+        return array_map(function(Limits\TimedStats $stats){ return $stats->GetClientObject(); },
+            Limits\TimedStats::LoadAllByLimit($this->database, $lim, $count, $offset));        
+    }
+    
+    protected function GetTimedStatsAt(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $period = $input->GetParam('timeperiod',SafeParam::TYPE_INT);
+        $attime = $input->GetParam('matchtime',SafeParam::TYPE_INT);
+        
+        $obj = $this->GetLimitObject($input, false, true, true);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        if ($obj !== null)
+        {
+            $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
+            if ($lim === null) return array();
+            
+            $stats = Limits\TimedStats::LoadByLimitAtTime($this->database, $lim, $attime);
+            return ($stats !== null) ? $stats->GetClientObject() : array();
+        }
+        else
+        {
+            $count = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+            $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+            
+            $retval = array(); 
+            
+            foreach ($class::LoadAllForPeriod($this->database, $period, $count, $offset) as $lim)
+            {
+                $stats = Limits\TimedStats::LoadByLimitAtTime($this->database, $lim, $attime);
+                if ($stats !== null) $retval[$lim->GetLimitedObject()->ID()] = $stats->GetClientObject();
+            }
+            
+            return $retval;
+        }   
+    }
+
+    protected function ConfigLimits(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
         $this->authenticator->RequireAdmin();
-                
+        
+        $obj = $this->GetLimitObject($input, false, false, false);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
+    }    
+
+    protected function ConfigTimedLimits(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $this->authenticator->RequireAdmin();
+        
+        $obj = $this->GetLimitObject($input, false, false, true);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
+    }
+    
+    protected function PurgeLimits(Input $input) : bool
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $this->authenticator->RequireAdmin();
+        
+        $obj = $this->GetLimitObject($input, false, false, false);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        $lim = $class::LoadByClient($this->database, $obj);
+        if ($lim !== null) $lim->Delete(); return $lim !== null;
+    }    
+    
+    protected function PurgeTimedLimits(Input $input) : bool
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        $this->authenticator->RequireAdmin();
+        
+        $obj = $this->GetLimitObject($input, false, false, true);
+        $class = $obj['class']; $obj = $obj['obj'];
+        
+        $period = $input->GetParam('period', SafeParam::TYPE_INT);
+        $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
+        if ($lim !== null) $lim->Delete(); return $lim !== null;
     }
 }
 

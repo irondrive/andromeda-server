@@ -43,7 +43,6 @@ class FSManager extends StandardObject
         ));
     }
 
-    public function isGlobal() : bool { return !$this->HasObject('owner'); }
     public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
     public function isSecure() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
     
@@ -61,10 +60,12 @@ class FSManager extends StandardObject
         return $this->SetScalar('name',$name); 
     }
     
-    public function GetOwner() : ?Account            { return $this->TryGetObject('owner'); }
-    public function GetOwnerID() : ?string           { return $this->TryGetObjectID('owner'); }
-    private function SetOwner(?Account $owner) : self { return $this->SetObject('owner',$owner); }
+    public function isUserOwned() : bool { return $this->HasObject('owner'); }
+    public function GetOwner() : ?Account  { return $this->TryGetObject('owner'); }
+    public function GetOwnerID() : ?string { return $this->TryGetObjectID('owner'); }
     
+    private function SetOwner(?Account $owner) : self { return $this->SetObject('owner',$owner); }
+        
     private function GetType() : int { return $this->GetScalar('type'); }
     private function SetType(int $type) { unset($this->interface); return $this->SetScalar('type',$type); }
     

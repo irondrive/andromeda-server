@@ -9,51 +9,46 @@ require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 use Andromeda\Apps\Files\FilesApp;
-require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 class CredentialsEncryptedException extends Exceptions\ClientErrorException { public $message = "STORAGE_CREDENTIALS_ENCRYPTED"; }
 class CryptoNotAvailableException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_CRYPTO_NOT_AVAILABLE"; }
 
-// TODO this should be a trait...
-
-abstract class CredCrypt extends FWrapper
+trait CredCrypt
 {
-    public static function GetFieldTemplate() : array
+    public static function CredCryptGetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array(
             'username' => null,
             'password' => null,
             'username_nonce' => null,
             'password_nonce' => null,
-        ));
+        );
     }
     
-    public function GetClientObject() : array
+    public function CredCryptGetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array(
             'username' => $this->TryGetUsername(),
             'password' => boolval($this->TryGetPassword()),
-        ));
+        );
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--username alphanum] [--password raw] [--credcrypt bool]"; }
+    public static function CredCryptGetCreateUsage() : string { return "[--username alphanum] [--password raw] [--credcrypt bool]"; }
 
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public function CredCryptCreate(Input $input, ?Account $account) : self
     {
         $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;
         if ($account === null && $credcrypt) throw new CryptoNotAvailableException();
         
-        return parent::Create($database, $input, $account, $filesystem)
-            ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt)
-            ->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt);
+        return $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt)
+            ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
     }
     
-    public function Edit(Input $input) : self 
+    public function CredCryptEdit(Input $input) : self 
     { 
         $crypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL);
         if ($crypt !== null) $this->SetEncrypted($crypt);
-        return parent::Edit($input);
+        return $this;
     }
     
     protected function TryGetUsername() : ?string { return $this->TryGetEncryptedScalar('username'); }
