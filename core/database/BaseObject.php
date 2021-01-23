@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+
 require_once(ROOT."/core/database/FieldTypes.php");
 require_once(ROOT."/core/database/QueryBuilder.php");
 
@@ -106,7 +108,12 @@ abstract class BaseObject
     }
     
     public function ID() : string { return $this->scalars['id']->GetValue(); }
-    public function __toString() : string { return get_class($this)." ".$this->ID(); }
+    
+    public function getIDType() : array { return array($this->ID(), Utilities::ShortClassName(static::class)); }
+    
+    public function __toString() : string { return implode(' => ', $this->getIDType()); }
+    
+    public static function toIDType(?self $obj) : ?array { return $obj ? $obj->getIDType() : null; }
     
     protected array $scalars = array();
     protected array $objects = array();
@@ -394,7 +401,7 @@ abstract class BaseObject
             $myfield = $field->GetMyField();
             if ($field->GetValue()) $this->UnsetObject($myfield);
         }
-        
+
         foreach ($this->objectrefs as $refs)
         {
             if (!$refs->GetValue()) continue;

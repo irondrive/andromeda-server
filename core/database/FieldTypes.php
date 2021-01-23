@@ -171,7 +171,7 @@ class ObjectRef extends Scalar
     public function DeleteObject() : void
     {
         $id = $this->GetValue(); if ($id === null) return;        
-        $this->GetRefClass()::DeleteByID($this->database, $id);        
+        $this->GetRefClass()::DeleteByID($this->database, $id);
         if (isset($this->object) && $this->object) $this->object->Delete();
     }
 }
@@ -195,7 +195,7 @@ class ObjectPoly extends ObjectRef
         parent::InitValue($value);
         if ($value === null) return;
         
-        $value = explode('*',$value);
+        $value = explode(':',$value);
         parent::InitValue($value[0]);
         $this->realclass = "Andromeda\\".$value[1];
     }
@@ -203,18 +203,21 @@ class ObjectPoly extends ObjectRef
     public function GetBaseClass() : ?string { return $this->refclass; }
     public function GetRefClass() : ?string { return $this->realclass; }
     
-    public static function GetIDTypeDBValue(string $id, string $type) : string { return $id.'*'.$type; }
+    public static function GetIDTypeDBValue(string $id, string $type) : string 
+    { 
+        return $id.':'.static::ShortClass($type); 
+    }
     
     public static function GetObjectDBValue(?BaseObject $obj) : ?string
     {
-        return ($obj === null) ? null : $obj->ID().'*'.static::ShortClass(get_class($obj));
+        return ($obj === null) ? null : $obj->ID().':'.static::ShortClass(get_class($obj));
     }
     
     public function GetDBValue() : ?string 
     { 
         if ($this->GetValue() === null) return null; 
         
-        return $this->GetValue().'*'.static::ShortClass($this->realclass); 
+        return $this->GetValue().':'.static::ShortClass($this->realclass); 
     }
     
     public function SetObject(?BaseObject $object) : bool
@@ -292,7 +295,9 @@ class ObjectRefs extends Counter
         
         $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent, $this->parentPoly);
         
-        foreach ($this->refs_added as $obj) $obj->Delete();
+        foreach ($this->refs_added as $obj) $obj->Delete(); 
+        
+        $this->isLoaded = true; $this->objects = array();
     }
     
     protected function MergeWithObjectChanges() : void
@@ -348,23 +353,26 @@ class ObjectRefs extends Counter
 
 class ObjectJoin extends ObjectRefs
 {
-    protected BaseObject $parent; 
+    protected BaseObject $parent;
     protected string $joinclass;
     
     public static function GetRefsType(){ return REFSTYPE_MANY; }
     
     public function GetJoinClass() : string { return $this->joinclass; }
     
-    public function __construct(string $refclass, ?string $reffield, string $joinclass)
+    public function __construct(string $refclass, string $joinclass, string $reffield)
     {
-        parent::__construct($refclass, $reffield);
+        parent::__construct($refclass, $reffield);    
         $this->joinclass = $joinclass;
     }
     
     protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
     {
         $q = new QueryBuilder(); $key = $this->database->GetClassTableName($this->joinclass).'.'.$this->reffield;
-        $q->Where($q->Equals($key, $this->parent->ID()))->Join($this->database, $this->joinclass, $this->myfield, $this->refclass, 'id');
+
+        $q->Where($q->Equals($key, $this->parent->ID()))
+            ->Join($this->database, $this->joinclass, $this->myfield, $this->refclass, $this->reffield);
+        
         $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
     }
     
