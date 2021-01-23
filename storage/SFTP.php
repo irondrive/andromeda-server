@@ -7,6 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\{Main, 
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 class SSHExtensionException extends ActivateException    { public $message = "SSH_EXTENSION_MISSING"; }
@@ -20,11 +21,13 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(SFTP::class);
 
-class SFTP extends CredCrypt
-{    
+class SFTP extends FWrapper
+{
+    use CredCrypt;
+    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
             'privkey' => null,
@@ -36,7 +39,7 @@ class SFTP extends CredCrypt
     
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'pubkey' => boolval($this->TryGetScalar('pubkey')),
@@ -50,14 +53,14 @@ class SFTP extends CredCrypt
     protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }    
     protected function SetKeypass(?string $keypass, bool $credcrypt) : self { return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
         $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;   
         $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);
         
-        $obj = parent::Create($database, $input, $account, $filesystem)
+        $obj = parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetKeypass($keypass, $credcrypt);
@@ -103,7 +106,7 @@ class SFTP extends CredCrypt
         if (($keyfile = $input->TryGetFile('keyfile')) !== null)
             $this->ProcessKeyfile($keyfile, $keypass);
         
-        return parent::Edit($input);
+        return parent::Edit($input)->CredCryptEdit($input);
     }
 
     private $ssh; private $sftp;

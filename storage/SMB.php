@@ -6,6 +6,7 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
@@ -14,11 +15,13 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(SMB::class);
 
-class SMB extends CredCrypt
+class SMB extends FWrapper
 {
+    use CredCrypt;
+    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'workgroup' => null,
             'hostname' => null
         ));
@@ -26,17 +29,17 @@ class SMB extends CredCrypt
     
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
             'workgroup' => $this->TryGetScalar('workgroup'),
             'hostname' => $this->GetScalar('hostname')
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $account, $filesystem)
+        return parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
             ->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
@@ -46,7 +49,7 @@ class SMB extends CredCrypt
         if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
         if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         
-        return parent::Edit($input);
+        return parent::Edit($input)->CredCryptEdit($input);
     }
     
     public function TryGetWorkgroup() : ?string { return $this->TryGetScalar('workgroup'); }
