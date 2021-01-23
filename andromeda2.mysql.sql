@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
   `dates__created` bigint(20) NOT NULL,
   `rwchunksize` int(11) NOT NULL,
   `crchunksize` int(11) NOT NULL,
+  `features__timedstats` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
   `folders` int(11) NOT NULL DEFAULT '0',
   `counters__subfiles` int(11) NOT NULL DEFAULT '0',
   `counters__subfolders` int(11) NOT NULL DEFAULT '0',
+  `counters__subshares` int(11) NOT NULL DEFAULT '0',
   `likes` int(11) NOT NULL DEFAULT '0',
   `counters__likes` int(11) NOT NULL DEFAULT '0',
   `counters__dislikes` int(11) NOT NULL DEFAULT '0',
@@ -109,13 +111,65 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
   UNIQUE KEY `owner` (`owner`,`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
+  `id` char(12) NOT NULL,
+  `object` varchar(64) NOT NULL,
+  `dates__created` bigint(20) NOT NULL,
+  `dates__download` bigint(20) DEFAULT NULL,
+  `dates__upload` bigint(20) DEFAULT NULL,
+  `features__itemsharing` tinyint(1) DEFAULT NULL,
+  `features__shareeveryone` tinyint(1) DEFAULT NULL,
+  `features__emailshare` tinyint(1) DEFAULT NULL,
+  `features__publicupload` tinyint(1) DEFAULT NULL,
+  `features__publicmodify` tinyint(1) DEFAULT NULL,
+  `features__randomwrite` tinyint(1) DEFAULT NULL,
+  `features__userstorage` tinyint(1) DEFAULT NULL,
+  `features__track_items` tinyint(2) DEFAULT NULL,
+  `features__track_dlstats` tinyint(2) DEFAULT NULL,
+  `counters__size` bigint(20) NOT NULL DEFAULT '0',
+  `counters__items` int(11) NOT NULL DEFAULT '0',
+  `counters__shares` int(11) NOT NULL DEFAULT '0',
+  `counters_limits__size` bigint(20) DEFAULT NULL,
+  `counters_limits__items` int(11) DEFAULT NULL,
+  `counters_limits__shares` int(11) DEFAULT NULL,
+  `counters__downloads` int(11) NOT NULL DEFAULT '0',
+  `counters__bandwidth` bigint(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `object` (`object`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
+  `id` char(12) NOT NULL,
+  `object` varchar(64) NOT NULL,
+  `dates__created` bigint(20) NOT NULL,
+  `dates__download` bigint(20) DEFAULT NULL,
+  `dates__upload` bigint(20) DEFAULT NULL,
+  `features__itemsharing` tinyint(1) DEFAULT NULL,
+  `features__shareeveryone` tinyint(1) DEFAULT NULL,
+  `features__publicupload` tinyint(1) DEFAULT NULL,
+  `features__publicmodify` tinyint(1) DEFAULT NULL,
+  `features__randomwrite` tinyint(1) DEFAULT NULL,
+  `features__track_items` tinyint(1) DEFAULT NULL,
+  `features__track_dlstats` tinyint(1) DEFAULT NULL,
+  `counters__size` bigint(20) NOT NULL DEFAULT '0',
+  `counters__items` int(11) NOT NULL DEFAULT '0',
+  `counters__shares` int(11) NOT NULL DEFAULT '0',
+  `counters_limits__size` bigint(20) DEFAULT NULL,
+  `counters_limits__items` int(11) DEFAULT NULL,
+  `counters_limits__shares` int(11) DEFAULT NULL,
+  `counters__downloads` int(11) NOT NULL DEFAULT '0',
+  `counters__bandwidth` bigint(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `object` (`object`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `stats` int(11) NOT NULL DEFAULT '0',
   `dates__created` bigint(20) NOT NULL,
   `timeperiod` int(11) NOT NULL,
-  `features__history` tinyint(1) DEFAULT NULL,
+  `max_stats_age` bigint(20) DEFAULT NULL,
   `features__track_items` tinyint(1) DEFAULT NULL,
   `features__track_dlstats` tinyint(1) DEFAULT NULL,
   `counters_limits__downloads` int(11) DEFAULT NULL,
@@ -131,7 +185,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
   `dates__created` bigint(20) NOT NULL,
   `dates__timestart` bigint(20) NOT NULL,
   `timeperiod` int(11) NOT NULL,
-  `iscurrent` tinyint(1) NOT NULL,
+  `iscurrent` tinyint(1) DEFAULT NULL,
   `counters__size` bigint(20) NOT NULL DEFAULT '0',
   `counters__items` int(11) NOT NULL DEFAULT '0',
   `counters__shares` int(11) NOT NULL DEFAULT '0',
@@ -139,34 +193,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
   `counters__bandwidth` bigint(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `limitobj` (`limitobj`,`dates__timestart`),
-  KEY `limitobj_2` (`limitobj`,`iscurrent`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_total` (
-  `id` char(12) NOT NULL,
-  `object` varchar(64) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__download` bigint(20) DEFAULT NULL,
-  `dates__upload` bigint(20) DEFAULT NULL,
-  `features__itemsharing` tinyint(1) DEFAULT NULL,
-  `features__shareeveryone` tinyint(1) DEFAULT NULL,
-  `features__emailshare` tinyint(1) DEFAULT NULL,
-  `features__publicupload` tinyint(1) DEFAULT NULL,
-  `features__publicmodify` tinyint(1) DEFAULT NULL,
-  `features__randomwrite` tinyint(1) DEFAULT NULL,
-  `features__userstorage` tinyint(1) DEFAULT NULL,
-  `features__track_items` tinyint(1) DEFAULT NULL,
-  `features__track_dlstats` tinyint(1) DEFAULT NULL,
-  `counters__size` bigint(20) NOT NULL DEFAULT '0',
-  `counters__items` int(11) NOT NULL DEFAULT '0',
-  `counters__shares` int(11) NOT NULL DEFAULT '0',
-  `counters_limits__size` bigint(20) DEFAULT NULL,
-  `counters_limits__items` int(11) DEFAULT NULL,
-  `counters_limits__shares` int(11) DEFAULT NULL,
-  `counters__downloads` int(11) NOT NULL DEFAULT '0',
-  `counters__bandwidth` bigint(20) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `object` (`object`)
+  UNIQUE KEY `limitobj_2` (`limitobj`,`iscurrent`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
