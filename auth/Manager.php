@@ -123,7 +123,7 @@ class Manager extends BaseObject
         
         $name = $this->GetShortSourceType();
         $group = Group::Create($this->database, "$name Accounts (".$this->ID().")");
-        return $this->SetObject('default_group', $group);
+        $this->SetObject('default_group', $group); $group->Initialize(); return $this;
     }
     
     public function GetAuthSource() : External { return $this->GetObject('authsource'); }    

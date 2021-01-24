@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
   `accounts` char(12) NOT NULL,
   `groups` char(12) NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `account` (`accounts`,`groups`),
   KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts`),
   KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
   KEY `id` (`id`)

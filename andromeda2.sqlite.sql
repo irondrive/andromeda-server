@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
 ,  `accounts` char(12) NOT NULL
 ,  `groups` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
+,  UNIQUE (`accounts`,`groups`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL

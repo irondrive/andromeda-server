@@ -28,17 +28,22 @@ class Group extends AuthEntity
     
     public function GetDefaultAccounts() : array
     {
-        $default = Config::GetInstance($this->database)->GetDefaultGroup();
-        $retval[$default->ID()] = $default;
+        $retval = array();
         
-        $authman = $this->GetAuthSource();
-        if ($authman instanceof Auth\External)
+        if (Config::GetInstance($this->database)->GetDefaultGroup() === $this)
         {
-            $default = $authman->GetManager()->GetDefaultGroup();
-            $retval[$default->ID()] = $default;
+            $retval = Account::LoadAll($this->database);
         }
         
-        return array_filter($retval);
+        foreach (Auth\Manager::LoadAll($this->database) as $authman)
+        {
+            if ($authman->GetDefaultGroup() === $this)
+            {
+                $retval = Account::LoadByAuthSource($this->database, $authman);
+            }
+        }
+        
+        return $retval;
     }
 
     public function GetAccounts() : array { return array_merge($this->GetDefaultAccounts(), $this->GetMyAccounts()); }
@@ -48,7 +53,8 @@ class Group extends AuthEntity
     public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
     public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
     
-    public function GetAccountAddedDate(Account $account) : ?int {
+    public function GetAccountAddedDate(Account $account) : ?int 
+    {
         $joinobj = $this->TryGetJoinObject('accounts', $account);
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
@@ -71,14 +77,23 @@ class Group extends AuthEntity
         return $output;
     }
     
-    public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
+    public static function Create(ObjectDatabase $database, string $name, int $priority = 0, ?string $comment = null) : self
     {
-        $group = parent::BaseCreate($database)->SetScalar('name', $name);
+        $group = parent::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority);
         
-        if ($priority !== null) $group->SetScalar('priority', $priority);
         if ($comment !== null) $group->SetScalar('comment', $comment);
         
         return $group;
+    }
+    
+    public function Initialize() : self
+    {
+        if (!$this->isCreated()) return $this;        
+        
+        foreach ($this->GetDefaultAccounts() as $account)
+            Account::RunGroupChangeHandlers($this->database, $account, $this, true);
+        
+        return $this;
     }
 
     public function Delete() : void

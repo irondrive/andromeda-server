@@ -769,7 +769,9 @@ class AccountsApp extends AppBase
         $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
         if ($duplicate !== null) throw new GroupExistsException();
 
-        return Group::Create($this->API->GetDatabase(), $name, $priority, $comment)->GetClientObject(true);
+        $group = Group::Create($this->API->GetDatabase(), $name, $priority, $comment);
+        
+        return $group->Initialize()->GetClientObject(true);
     }    
     
     protected function EditGroup(Input $input)

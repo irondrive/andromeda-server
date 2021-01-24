@@ -20,9 +20,16 @@ class Config extends SingletonObject
         ));
     }
     
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->CreateDefaultGroup(); }
+    public static function Create(ObjectDatabase $database) : self 
+    { 
+        $conf = parent::BaseCreate($database);
 
-    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--emailasusername bool] [--requirecontact bool] [--createdefgroup bool]"; }
+        $group = Group::Create($database, "Global Group");
+        $conf->SetObject('default_group', $group);
+        $group->Initialize(); return $conf;
+    }
+
+    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--emailasusername bool] [--requirecontact bool]"; }
     
     public function SetConfig(Input $input) : self
     {
@@ -30,22 +37,12 @@ class Config extends SingletonObject
         if ($input->HasParam('emailasusername')) $this->SetFeature('randomwrite',$input->GetParam('emailasusername',SafeParam::TYPE_BOOL));
         if ($input->HasParam('requirecontact')) $this->SetFeature('requirecontact',$input->GetParam('requirecontact',SafeParam::TYPE_BOOL));
         
-        if ($input->TryGetParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
-        
         return $this;
     }
     
-    public function GetDefaultGroup() : ?Group      { return $this->TryGetObject('default_group'); }
-    public function GetDefaultGroupID() : ?string   { return $this->TryGetObjectID('default_group'); }
-    
-    public function CreateDefaultGroup() : self
-    {
-        if ($this->HasObject('default_group')) return $this;
-        
-        $group = Group::Create($this->database, "Global Group");
-        return $this->SetObject('default_group', $group);
-    }
-    
+    public function GetDefaultGroup() : Group      { return $this->TryGetObject('default_group'); }
+    public function GetDefaultGroupID() : string   { return $this->TryGetObjectID('default_group'); }
+
     public function GetAllowCreateAccount() : bool  { return $this->GetFeature('createaccount'); }
     public function GetUseEmailAsUsername() : bool  { return $this->GetFeature('emailasusername'); }
     
