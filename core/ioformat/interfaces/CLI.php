@@ -104,6 +104,7 @@ class CLI extends IOInterface
                 $config->SetDebugLevel($this->debug, true);
             else $this->debug = $config->GetDebugLevel();
         }
+        else $this->debug = $this->GetDebugLevel();
         
         global $argv;
         
