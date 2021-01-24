@@ -120,5 +120,10 @@ abstract class SingletonObject extends StandardObject
         
         else return (self::$instances[static::class] = array_values($objects)[0]);
     }
+    
+    protected static function BaseCreate(ObjectDatabase $database) : self
+    {
+        return (self::$instances[static::class] = parent::BaseCreate($database));
+    }
 }
 
