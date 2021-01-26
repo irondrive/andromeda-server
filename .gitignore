@@ -1,11 +1,11 @@
 .project
 .buildpath
 .settings
+.phpdoc
 
 data
 apps
-docs
 tools
-metrics
+core/docs
 
 core/database/Config.php

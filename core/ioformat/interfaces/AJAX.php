@@ -7,6 +7,7 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php"); 
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
+require_once(ROOT."/core/ioformat/SafeParams.php"); 
 use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\InvalidOutputException;
 
@@ -18,15 +19,14 @@ class InvalidParamException extends Exceptions\ClientErrorException { public $me
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
 class AJAX extends IOInterface
-{    
-    public static function GetMode() : int { return IOInterface::MODE_AJAX; }
-    
-    public const DEBUG_ALLOW_GET = true;
-
+{
     public static function isApplicable() : bool
     {
         return isset($_SERVER['HTTP_USER_AGENT']);
     }
+    
+    /** @return false */
+    public static function isPrivileged() : bool { return false; }
     
     public function getAddress() : string
     {
@@ -38,8 +38,15 @@ class AJAX extends IOInterface
         return $_SERVER['HTTP_USER_AGENT'];
     }
   
+    /** @return int JSON output by default */
     public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
     
+    /** 
+     * Retrieves an array of input objects from the request to run 
+     * 
+     * Requests can put multiple requests to be run in a single 
+     * transaction by using the batch paramter as an array
+     */
     public function GetInputs(?Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
@@ -62,6 +69,12 @@ class AJAX extends IOInterface
         else return array(static::GetInput($_GET, $_REQUEST));
     }
     
+    /** 
+     * Fetches an input object from the HTTP request 
+     * 
+     * App and Action must be part of $_GET, everything else
+     * can be interchangeably in $_GET or $_POST
+     */
     private function GetInput(array $get, array $request) : Input
     {
         
@@ -94,6 +107,7 @@ class AJAX extends IOInterface
     
     public function UserOutput(Output $output) : bool
     {
+        // need to send the HTTP response code before any output
         if (!headers_sent()) http_response_code($output->GetHTTPCode());
         
         return parent::UserOutput($output);
@@ -105,6 +119,7 @@ class AJAX extends IOInterface
         {
             if (!headers_sent()) mb_http_output('UTF-8');
             
+            // try echoing as a string, switch to json if it fails
             try { echo $output->GetAsString(); } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
         }        
@@ -129,6 +144,13 @@ class AJAX extends IOInterface
         }
     }
     
+    /** 
+     * Build a remote Andromeda request URL
+     * @param string $url the base URL of the API
+     * @param Input $input the input object describing the request
+     * @param bool $params if true, add all params from the $input to the URL
+     * @return string the compiled URL string
+     */
     public static function GetRemoteURL(string $url, Input $input, bool $params = true)
     {
         $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
@@ -136,29 +158,30 @@ class AJAX extends IOInterface
         return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
     }
 
+    /**
+     * Send a request to a remote Andromeda API
+     * @param string $url the base URL of the API
+     * @param Input $input the input describing the request
+     * @throws RemoteInvalidException if decoding the response fails
+     * @return array the decoded remote response
+     */
     public static function RemoteRequest(string $url, Input $input) : array
     {
         $url = static::GetRemoteURL($url, $input, false);
 
-        $data = static::HTTPPost($url, static::EncodeParams($input->GetParams()));
+        $data = static::HTTPPost($url, $input->GetParams()->GetClientObject());
         if ($data === null) throw new RemoteInvalidException();
 
         try { return Utilities::JSONDecode($data); }
         catch (JSONDecodingException $e) { throw new RemoteInvalidException(); }
     }
 
-    public static function EncodeParams(SafeParams $params) : array
-    {
-        $params = $params->GetParamsArray();
-
-        $output = array(); foreach (array_keys($params) as $key)
-        {
-            $output[$key] = $params[$key]->GetRawValue();
-        }
-
-        return $output;
-    }
-
+    /**
+     * Helper function to send an HTTP post request
+     * @param string $url the URL of the request
+     * @param array $post array of data to place in the POST body
+     * @return string|NULL the remote response
+     */
     public static function HTTPPost(string $url, array $post) : ?string
     {
         $options = array('http'=>array(

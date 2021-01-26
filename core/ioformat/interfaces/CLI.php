@@ -8,6 +8,7 @@ require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
+require_once(ROOT."/core/ioformat/SafeParams.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\InvalidOutputException;
 
@@ -26,12 +27,13 @@ class InvalidFileException extends Exceptions\ClientErrorException { public $mes
 
 class CLI extends IOInterface
 {
-    public static function GetMode() : int { return IOInterface::MODE_CLI; }
-    
     public static function isApplicable() : bool
     {
         global $argv; return php_sapi_name() === "cli" && isset($argv);
     }
+    
+    /** @return true */
+    public static function isPrivileged() : bool { return true; }
     
     public function __construct()
     {
@@ -47,6 +49,13 @@ class CLI extends IOInterface
         }
     }
     
+    /** 
+     * Initializes CLI by fetching some global params from $argv
+     * 
+     * Options such as output mode, debug level and DB config file should be
+     * fetched here before the actual GetInputs() is run later. These options
+     * are global, not specific to a single Input instance
+     */
     public function Initialize() : void
     {        
         global $argv;
@@ -80,12 +89,12 @@ class CLI extends IOInterface
     
     public function getAddress() : string
     {
-        return "CLI ".($_SERVER['COMPUTERNAME']??'').':'.($_SERVER['USERNAME']??'');
+        return implode(" ",array_filter(array("CLI", $_SERVER['COMPUTERNAME']??null, $_SERVER['USERNAME']??null)));
     }
     
     public function getUserAgent() : string
     {
-        return "CLI ".($_SERVER['OS']??'');
+        return implode(" ",array_filter(array("CLI", $_SERVER['OS']??null)));
     }
     
     private ?int $debug = null;
@@ -94,6 +103,7 @@ class CLI extends IOInterface
     private ?string $dbconf = null;
     public function GetDBConfigFile() : ?string { return $this->dbconf; }
     
+    /** @return int plain text output by default */
     public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
     public function GetInputs(?Config $config) : array
@@ -144,26 +154,26 @@ class CLI extends IOInterface
         throw new IncorrectCLIUsageException();
     }
     
+    /** Reads an array of Input objects from a batch file */
     private function GetBatch(string $file) : array
     {       
-        try { $lines = explode("\n", file_get_contents($file)); }
+        try { $lines = array_filter(explode("\n", file_get_contents($file))); }
         catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
         
         require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
         
-        global $argv; $line2input = function($line) use ($argv)
+        global $argv; return array_map(function($line)use($argv)
         {
             try { $args = \Clue\Arguments\split($line); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
             
             return static::GetInput($args);
-        };
-        
-        return array_map($line2input, $lines);
+        }, $lines);
     }
     
     private $tmpfiles = array();
     
+    /** Fetches an Input object by reading it from the command line */
     private function GetInput(array $argv) : Input
     {
         if (count($argv) < 2) throw new IncorrectCLIUsageException();
@@ -222,21 +232,22 @@ class CLI extends IOInterface
     private $output_json = false;
     
     public function FinalOutput(Output $output)
-    {        
+    {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            try { echo $output->GetAsString(boolval($this->debug))."\n"; } 
+            // try echoing as a string, switch to printr if it fails
+            try { echo $output->GetAsString()."\n"; } 
             catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
         }
 
         if ($this->outmode === self::OUTPUT_PRINTR)
         {
-            $outdata = $output->GetAsArray(boolval($this->debug));
+            $outdata = $output->GetAsArray();
             echo print_r($outdata, true)."\n";
         }        
         else if ($this->outmode === self::OUTPUT_JSON)
         {
-            $outdata = $output->GetAsArray(boolval($this->debug));
+            $outdata = $output->GetAsArray();
             echo Utilities::JSONEncode($outdata)."\n";
         }
 

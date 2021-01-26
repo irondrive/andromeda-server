@@ -4,47 +4,118 @@ require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/database/BaseObject.php");
 
+/** Exception indicating that the counter exceeded its limit */
 class CounterOverLimitException extends Exceptions\ClientDeniedException { 
     public function __construct(string $message){ $this->message = "COUNTER_EXCEEDS_LIMIT: $message"; } }
 
+/** Extends BaseObject with helpers for some commonly-used interfaces */
 abstract class StandardObject extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array(
             'dates__created' => null
-        ));
+        );
     }
     
-    protected function GetDate(string $name) : ?int            { return $this->GetScalar("dates__$name"); }
-    protected function TryGetDate(string $name) : ?int         { return $this->TryGetScalar("dates__$name"); } 
+    /** 
+     * Returns the timestamp value stored in the given date field 
+     * @see BaseObject::GetScalar()
+     */
+    protected function GetDate(string $name) : int { return $this->GetScalar("dates__$name"); }
     
+    /**
+     * Returns the timestamp value stored in the given date field
+     * @see BaseObject::TryGetScalar()
+     */
+    protected function TryGetDate(string $name) : ?int { return $this->TryGetScalar("dates__$name"); } 
+    
+    /**
+     * Sets the value of the given date field to the given value
+     * @param string $name the name of the date field to set
+     * @param ?int $value the value of the timestamp, or null to use the current time
+     * @see BaseObject::SetScalar()
+     */
     protected function SetDate(string $name, ?int $value = null) : self
     { 
         return $this->SetScalar("dates__$name", $value ?? Main::GetInstance()->GetTime()); 
     }
     
-    public function GetDateCreated() : int { return $this->GetDate('created'); }    
+    /** Returns the timestamp when this object was created */
+    public function GetDateCreated() : int { return $this->GetDate('created'); }
+    
+    /**
+     * Create the object by setting its created date
+     * @see BaseObject::BaseCreate()
+     */
     protected static function BaseCreate(ObjectDatabase $database) : self {
         return parent::BaseCreate($database)->SetDate('created'); }
     
-    protected function GetFeature(string $name) : int          { return intval($this->GetScalar("features__$name")); }
-    protected function TryGetFeature(string $name) : ?int      { $val = $this->TryGetScalar("features__$name"); return ($val === null) ? null : intval($val); }
-    protected function ExistsFeature(string $name) : bool      { return $this->ExistsScalar("features__$name"); }
+    /**
+     * Gets the value of the given feature field (used for config)
+     * @see BaseObject::GetScalar()
+     */
+    protected function GetFeature(string $name) : int { 
+        return intval($this->GetScalar("features__$name")); }
     
-    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { return $this->SetScalar("features__$name", $value, $temp); }
-    protected function EnableFeature(string $name, bool $temp = false) : self           { return $this->SetScalar("features__$name", 1, $temp); }
-    protected function DisableFeature(string $name, bool $temp = false) : self          { return $this->SetScalar("features__$name", 0, $temp); }
+    /**
+     * Gets the value of the given feature field (used for config)
+     * @see BaseObject::GetScalar()
+     */
+    protected function TryGetFeature(string $name) : ?int 
+    { 
+        $val = $this->TryGetScalar("features__$name"); 
+        return ($val === null) ? null : intval($val); 
+    }
     
-    protected function GetCounter(string $name) : int          { return $this->GetScalar("counters__$name"); }
-    protected function TryGetCounter(string $name) : ?int      { return $this->TryGetScalar("counters__$name"); }
-    protected function ExistsCounter(string $name) : bool      { return $this->ExistsScalar("counters__$name"); }
-    protected function GetCounterLimit(string $name) : int     { return $this->GetScalar("counters_limits__$name"); }
-    protected function TryGetCounterLimit(string $name) : ?int { return $this->TryGetScalar("counters_limits__$name"); }
-    protected function ExistsCounterLimit(string $name) : bool { return $this->ExistsScalar("counters_limits__$name"); }
+    /**
+     * Sets the value of the given feature field to the given value
+     * @see BaseObject::SetScalar()
+     */
+    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { 
+        return $this->SetScalar("features__$name", $value, $temp); }
     
-    protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self  { return $this->SetScalar("counters_limits__$name", $value, $temp); }
+    /**
+     * Gets the value of the given counter field
+     * @see BaseObject::GetScalar()
+     */
+    protected function GetCounter(string $name) : int { 
+        return $this->GetScalar("counters__$name"); }
     
+    /**
+     * Gets the value of the given counter field
+     * @see BaseObject::TryGetScalar()
+     */
+    protected function TryGetCounter(string $name) : ?int { 
+        return $this->TryGetScalar("counters__$name"); }
+    
+    /**
+     * Gets the value of the given counter limit field
+     * @see BaseObject::GetScalar()
+     */
+    protected function GetCounterLimit(string $name) : int { 
+        return $this->GetScalar("counters_limits__$name"); }
+    
+    /**
+     * Gets the value of the given counter limit field
+     * @see BaseObject::TryGetScalar()
+     */
+    protected function TryGetCounterLimit(string $name) : ?int { 
+        return $this->TryGetScalar("counters_limits__$name"); }
+    
+    /**
+     * Sets the value of the given counter limit field
+     * @see BaseObject::SetScalar()
+     */
+    protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self { 
+        return $this->SetScalar("counters_limits__$name", $value, $temp); }
+    
+    /**
+     * Checks whether the given counter plus a delta would exceed the limit
+     * @param string $name the name of the counter and counter limit field to check
+     * @param int $delta the value to try incrementing the counter by
+     * @return bool if true, the limit exists and is exceeded
+     */
     protected function IsCounterOverLimit(string $name, int $delta = 0) : bool
     {
         if (($limit = $this->TryGetCounterLimit($name)) !== null)
@@ -55,14 +126,28 @@ abstract class StandardObject extends BaseObject
         return false;
     }
     
+    /**
+     * Increment a counter by the given value
+     * @param string $name the name of the counter field to increment
+     * @param int $delta the value to increment by
+     * @param bool $ignoreLimit if true, ignore the counter's limit
+     * @throws CounterOverLimitException if the counter's limit exists and is exceeded
+     * @see BaseObject::DeltaScalar()
+     * @return $this
+     */
     protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
     {
         if (!$ignoreLimit && $delta > 0 && $this->IsCounterOverLimit($name, $delta))
             throw new CounterOverLimitException($name); 
             
-        return $this->DeltaScalar("counters__$name",$delta); 
+        return parent::DeltaCounter("counters__$name",$delta); 
     }
     
+    /**
+     * Adds an object reference, checking for a limit on the number of references
+     * @throws CounterOverLimitException if the limit exists and is exceeded
+     * @see BaseObject::AddObjectRef()
+     */
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
     {        
         if (($limit = $this->TryGetCounterLimit($field)) !== null)
@@ -74,9 +159,24 @@ abstract class StandardObject extends BaseObject
         return parent::AddObjectRef($field, $object, $notification);
     }
     
-    protected function GetAllDates(callable $vfunc = null) : array    { return $this->GetAllScalars('dates',$vfunc); }
-    protected function GetAllFeatures(callable $vfunc = null) : array { return $this->GetAllScalars('features',$vfunc); }
+    /**
+     * Gets an array of all date field values
+     * @see StandardObject::GetAllScalars
+     */
+    protected function GetAllDates(callable $vfunc = null) : array { 
+        return $this->GetAllScalars('dates',$vfunc); }
     
+    /**
+     * Gets an array of all feature field values
+     * @see StandardObject::GetAllScalars
+     */
+    protected function GetAllFeatures(callable $vfunc = null) : array {
+        return $this->GetAllScalars('features',$vfunc); }
+    
+    /**
+     * Gets an array of all counter and objectrefs field values
+     * @see StandardObject::GetAllScalars
+     */
     protected function GetAllCounters(callable $vfunc = null) : array
     { 
         $counters = $this->GetAllScalars('counters',$vfunc); 
@@ -85,8 +185,20 @@ abstract class StandardObject extends BaseObject
         return $counters;
     }
     
-    protected function GetAllCounterLimits(callable $vfunc = null) : array { return $this->GetAllScalars('counters_limits',$vfunc); }
+    /**
+     * Gets an array of all counter limit field values
+     * @see StandardObject::GetAllScalars
+     */
+    protected function GetAllCounterLimits(callable $vfunc = null) : array { 
+        return $this->GetAllScalars('counters_limits',$vfunc); }
 
+    /**
+     * Gets an array of the values of all fields matching a prefix
+     * @param string $prefix the prefix to match fields against
+     * @param callable $vfunc the function to map to each field, or TryGetScalar if null
+     * @return array mapping field names (stripped of their prefix) to their values
+     * @see BaseObject::TryGetScalar
+     */
     private function GetAllScalars(string $prefix, callable $vfunc = null) : array
     {
         $output = array(); 
@@ -102,28 +214,3 @@ abstract class StandardObject extends BaseObject
     }
     
 }
-
-class DuplicateSingletonException extends Exceptions\ServerException    { public $message = "DUPLICATE_DBSINGLETON"; }
-
-abstract class SingletonObject extends StandardObject
-{
-    private static $instances = array();
-
-    public static function GetInstance(ObjectDatabase $database) : self
-    {
-        if (array_key_exists(static::class, self::$instances)) 
-            return self::$instances[static::class];
-        
-        $objects = static::LoadAll($database);
-        if (count($objects) > 1) throw new DuplicateSingletonException();
-        else if (count($objects) == 0) throw new ObjectNotFoundException();
-        
-        else return (self::$instances[static::class] = array_values($objects)[0]);
-    }
-    
-    protected static function BaseCreate(ObjectDatabase $database) : self
-    {
-        return (self::$instances[static::class] = parent::BaseCreate($database));
-    }
-}
-
