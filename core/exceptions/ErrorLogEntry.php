@@ -10,8 +10,9 @@ require_once(ROOT."/core/exceptions/ErrorManager.php");
 
 use Andromeda\Core\JSONEncodingException;
 
+/** Represents an error log entry in the database */
 class ErrorLogEntry extends BaseObject
-{    
+{
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -32,6 +33,13 @@ class ErrorLogEntry extends BaseObject
          ));
     }
     
+    /**
+     * Creates a new error log entry object
+     * @param Main $api reference to the main API to get debug data
+     * @param ObjectDatabase $database referene to the database
+     * @param \Throwable $e reference to the exception this is created for
+     * @return ErrorLogEntry
+     */
     public static function Create(?Main $api, ObjectDatabase $database, \Throwable $e) : ErrorLogEntry
     {
         $base = parent::BaseCreate($database);
@@ -43,9 +51,16 @@ class ErrorLogEntry extends BaseObject
         
         return $base;
     }
-    
-    private bool $debugok = true;
 
+    /**
+     * Builds an array of debug data from the given exception
+     * 
+     * What is logged depends on the configured debug level
+     * @param Main $api reference to the main API
+     * @param \Throwable $e the exception being debugged
+     * @param bool $asStrings if true, make sure all values are strings (JSON)
+     * @return array<string, string|mixed> array of debug data
+     */
     public static function GetDebugData(?Main $api, \Throwable $e, bool $asStrings = false) : array
     {
         try
@@ -88,7 +103,7 @@ class ErrorLogEntry extends BaseObject
             
             if ($sensitive)
             {
-                $data['params'] =  ($api && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
+                $data['params'] = ($api && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";
                 
                 if ($asStrings)
                 {

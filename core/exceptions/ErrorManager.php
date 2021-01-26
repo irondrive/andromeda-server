@@ -10,8 +10,12 @@ require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
-class DuplicateHandlerException extends Exceptions\ServerException  { public $message = "DUPLICATE_ERROR_HANDLER_NAME"; }
-
+/** 
+ * The main error handler/manager 
+ * 
+ * This class handles uncaught exceptions, logging them and converting to a client Output object.
+ * This class should only be used internally by the framework.
+ */
 class ErrorManager extends Singleton
 {
     private ?Main $API = null; 
@@ -19,13 +23,15 @@ class ErrorManager extends Singleton
 
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
+    /** Returns true if the configured debug state is >= the requested level */
     private function GetDebugState(int $minlevel) : bool
     {
         if ($this->API !== null) 
             return $this->API->GetDebugLevel() >= $minlevel;
-        else return CLI::isApplicable();
+        else return $this->interface->isPrivileged();
     }
     
+    /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
     private function HandleClientException(ClientException $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(false);
@@ -36,6 +42,7 @@ class ErrorManager extends Singleton
         return Output::ClientException($e, $debug);
     }
     
+    /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
     private function HandleThrowable(\Throwable $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(true);
@@ -46,6 +53,7 @@ class ErrorManager extends Singleton
         return Output::ServerException($debug);
     }
     
+    /** Registers PHP error and exception handlers */
     public function __construct(IOInterface $interface)
     {
         parent::__construct();        
@@ -67,9 +75,20 @@ class ErrorManager extends Singleton
     
     public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
     
+    /** if false, the file-based log encountered an error on the last entry */
     private bool $filelogok = true;
+    
+    /** if false, the DB-based log encountered an error on the last entry */
     private bool $dblogok = true;
     
+    /**
+     * Log an exception to file (json) and database
+     * 
+     * A new database connection is used for the log entry
+     * @param \Throwable $e the exception to log
+     * @param bool $mainlog if true, display this in the API's message log
+     * @return array<string, mixed>|NULL array of debug data or null if not logged
+     */
     public function Log(\Throwable $e, bool $mainlog = true) : ?array
     {
         if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;

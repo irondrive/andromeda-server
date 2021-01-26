@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.1
--- Dumped by pg_dump version 13.1
+-- Dumped from database version 12.5 (Ubuntu 12.5-0ubuntu0.20.10.1)
+-- Dumped by pg_dump version 12.5 (Ubuntu 12.5-0ubuntu0.20.10.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -48,10 +48,10 @@ CREATE TABLE public.a2_objects_core_emailer (
     id character(12) NOT NULL,
     type smallint NOT NULL,
     hosts text,
-    username character varying(255),
+    username character varying(255) DEFAULT NULL::character varying,
     password text,
     from_address character varying(255) NOT NULL,
-    from_name character varying(255),
+    from_name character varying(255) DEFAULT NULL::character varying,
     features__reply boolean,
     dates__created bigint NOT NULL
 );
@@ -81,97 +81,97 @@ CREATE TABLE public.a2_objects_core_exceptions_errorlogentry (
 
 
 --
--- Name: a2_objects_core_config idx_41842_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_config idx_29548_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_config
-    ADD CONSTRAINT idx_41842_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_29548_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_emailer idx_41848_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_emailer idx_29554_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_emailer
-    ADD CONSTRAINT idx_41848_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_29554_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_exceptions_errorlogentry idx_41854_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_exceptions_errorlogentry idx_29562_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlogentry
-    ADD CONSTRAINT idx_41854_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_29562_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_41842_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29548_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_41842_id ON public.a2_objects_core_config USING btree (id);
-
-
---
--- Name: idx_41842_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_41842_id_2 ON public.a2_objects_core_config USING btree (id);
+CREATE UNIQUE INDEX idx_29548_id ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_41848_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29548_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_41848_id ON public.a2_objects_core_emailer USING btree (id);
-
-
---
--- Name: idx_41848_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_41848_id_2 ON public.a2_objects_core_emailer USING btree (id);
+CREATE INDEX idx_29548_id_2 ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_41854_action; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29554_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_41854_action ON public.a2_objects_core_exceptions_errorlogentry USING btree (action);
-
-
---
--- Name: idx_41854_addr; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_41854_addr ON public.a2_objects_core_exceptions_errorlogentry USING btree (addr);
+CREATE UNIQUE INDEX idx_29554_id ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_41854_app; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29554_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_41854_app ON public.a2_objects_core_exceptions_errorlogentry USING btree (app);
-
-
---
--- Name: idx_41854_code; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_41854_code ON public.a2_objects_core_exceptions_errorlogentry USING btree (code);
+CREATE INDEX idx_29554_id_2 ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_41854_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29562_action; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_41854_id ON public.a2_objects_core_exceptions_errorlogentry USING btree (id);
+CREATE INDEX idx_29562_action ON public.a2_objects_core_exceptions_errorlogentry USING btree (action);
 
 
 --
--- Name: idx_41854_time; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_29562_addr; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_41854_time ON public.a2_objects_core_exceptions_errorlogentry USING btree ("time");
+CREATE INDEX idx_29562_addr ON public.a2_objects_core_exceptions_errorlogentry USING btree (addr);
+
+
+--
+-- Name: idx_29562_app; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_29562_app ON public.a2_objects_core_exceptions_errorlogentry USING btree (app);
+
+
+--
+-- Name: idx_29562_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_29562_code ON public.a2_objects_core_exceptions_errorlogentry USING btree (code);
+
+
+--
+-- Name: idx_29562_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_29562_id ON public.a2_objects_core_exceptions_errorlogentry USING btree (id);
+
+
+--
+-- Name: idx_29562_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_29562_time ON public.a2_objects_core_exceptions_errorlogentry USING btree ("time");
 
 
 --

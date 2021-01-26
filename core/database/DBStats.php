@@ -1,5 +1,10 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+/**
+ * This class keeps track of performance metrics for the database.
+ * 
+ * Such metrics include read/write query count, and read/write time.
+ */
 class DBStats
 {
     private int $reads = 0; 
@@ -8,9 +13,18 @@ class DBStats
     private float $write_time = 0; 
     private array $queries = array();
     
+    /** Constructs a new stats context and logs the current time */
     public function __construct(){ $this->start_time = microtime(true); }
 
+    /** Begins tracking a query by logging the current time */
     public function startQuery() : void { $this->temp = microtime(true); }
+
+    /**
+     * Ends tracking a query and updates the relevant stats
+     * @param string $sql the query sent to the DB for history
+     * @param int $type whether the query was a read or write (or both - bitset)
+     * @param bool $count if false, log only the time spent and don't increment the query counters
+     */
     public function endQuery(string $sql, int $type, bool $count = true) : void
     { 
         $el = microtime(true) - $this->temp;
@@ -26,8 +40,13 @@ class DBStats
         array_push($this->queries, array('query'=>$sql, 'time'=>$el));
     }
     
+    /** 
+     * Returns the array of queries issued to the database 
+     * @return string[]
+     */
     public function getQueries() : array { return $this->queries; }
     
+    /** Returns an array of statistics collected */
     public function getStats() : array
     {
         $totaltime = microtime(true) - $this->start_time;
@@ -43,6 +62,7 @@ class DBStats
         );
     }
     
+    /** Adds another DBStats' stats to this one */
     public function Add(self $stats) : void
     {
         $this->reads += $stats->reads;

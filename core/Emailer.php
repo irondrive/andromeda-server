@@ -4,18 +4,27 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
-if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) die("Missing library: PHPMailer - git submodule init/update?\n");
+if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) 
+    die("Missing library: PHPMailer - git submodule init/update?\n");
+
 require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use \PHPMailer\PHPMailer;
 require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php");
 require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php");
 
+/** Exception indicating that sending mail failed */
 class MailSendException extends Exceptions\ServerException        { public $message = "MAIL_SEND_FAILURE"; }
+
+/** Exception indicating that no recipients were given */
 class EmptyRecipientsException extends Exceptions\ServerException { public $message = "NO_RECIPIENTS_GIVEN"; }
+
+/** Exception indicating that the configured mailer driver is invalid */
 class InvalidMailTypeException extends Exceptions\ServerException { public $message = "INVALID_MAILER_TYPE"; }
 
+/** A name and address pair email recipient */
 class EmailRecipient
 {
     private ?string $name; 
@@ -34,15 +43,27 @@ class EmailRecipient
     }
 }
 
+/** 
+ * A configured email service stored in the database 
+ * 
+ * Manages PHPMailer configuration and wraps its usage
+ */
 class Emailer extends StandardObject
 {    
     private PHPMailer\PHPMailer $mailer;
     
-    const SMTP_TIMEOUT = 15;
+    private const SMTP_TIMEOUT = 15; // TODO configure?
     
-    const TYPE_PHPMAIL = 0; const TYPE_SENDMAIL = 1; const TYPE_QMAIL = 2; const TYPE_SMTP = 3;
+    public const TYPE_PHPMAIL = 0; 
+    public const TYPE_SENDMAIL = 1; 
+    public const TYPE_QMAIL = 2; 
+    public const TYPE_SMTP = 3;
     
-    private const MAIL_TYPES = array('phpmail'=>self::TYPE_PHPMAIL, 'sendmail'=>self::TYPE_SENDMAIL, 'qmail'=>self::TYPE_QMAIL, 'smtp'=>self::TYPE_SMTP);
+    private const MAIL_TYPES = array(
+        'phpmail'=>self::TYPE_PHPMAIL, 
+        'sendmail'=>self::TYPE_SENDMAIL, 
+        'qmail'=>self::TYPE_QMAIL, 
+        'smtp'=>self::TYPE_SMTP);
     
     public static function GetFieldTemplate() : array
     {
@@ -57,9 +78,13 @@ class Emailer extends StandardObject
         ));
     }    
     
+    /** Returns a string with the CLI usage for creating an emailer */
     public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
+    
+    /** Returns a array of strings with the CLI usage for each specific driver */
     public static function GetCreateUsages() : array { return array("--type smtp ((--host alphanum [--port int] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
     
+    /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
         $mailer = parent::BaseCreate($database);
@@ -92,6 +117,7 @@ class Emailer extends StandardObject
         return $mailer;
     }
     
+    /** Build a PHPMailer-formatted host string from an input */
     private static function BuildHostFromParams(SafeParams $input) : string
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
@@ -104,6 +130,11 @@ class Emailer extends StandardObject
         return $host;
     }    
     
+    /**
+     * Gets the config as a printable client object
+     * @return array `{type:string, hosts:?string, username:?string, password:bool,
+         from_address:string, from_name:?string, features:{reply:bool}, dates:{created:int}}`
+     */
     public function GetClientObject() : array
     {
         return array(
@@ -118,6 +149,7 @@ class Emailer extends StandardObject
         );        
     }
     
+    /** Initializes the PHPMailer instance */
     public function Activate() : self
     {        
         $mailer = new PHPMailer\PHPMailer(true);
@@ -153,6 +185,17 @@ class Emailer extends StandardObject
         return $this;
     }
     
+    /**
+     * Send an email
+     * @param string $subject the subject line of the message
+     * @param string $message the body of the message
+     * @param array<EmailRecipient> $recipients name/address pairs to mail to
+     * @param EmailRecipient $from a different from to send as
+     * @param bool $isHtml true if the body is HTML
+     * @param bool $usebcc true if the recipients should use BCC
+     * @throws EmptyRecipientsException if no recipients were given
+     * @throws MailSendException if sending the message fails
+     */
     public function SendMail(string $subject, string $message, array $recipients, ?EmailRecipient $from = null, bool $isHtml = false, bool $usebcc = false) : void
     {
         if (count($recipients) == 0) throw new EmptyRecipientsException();
