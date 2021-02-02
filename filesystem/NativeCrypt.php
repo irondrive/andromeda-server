@@ -6,8 +6,19 @@ require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 
+/** Exception indicating that the read-write was not aligned to a chunk multiple */
 class UnalignedAccessException extends Exceptions\ServerException { public $message = "FS_ACCESS_NOT_ALIGNED"; }
 
+/**
+ * Implements an encryption layer on top of the native filesystem.
+ * 
+ * Files are divided into chunks, the size of which can be configured.
+ * Import and Truncate are not as fast since new data must actually be written.
+ * 
+ * The crypto key for the filesystem is stored plainly in the database,
+ * so this is only useful for off-server untrusted external storages.
+ * Client-side crypto should be used for any case where the API is not trusted.
+ */
 class NativeCrypt extends Native
 {
     public function __construct(FSManager $filesystem, string $masterkey, int $chunksize)
@@ -19,9 +30,13 @@ class NativeCrypt extends Native
     
     public function GetChunkSize() : ?int { return $this->chunksize; }
     
+    /** Chunk swapping is prevented by signing each with the file ID and chunk index */
     private function GetAuthString(File $file, int $index) { return $file->ID().":$index"; }
 
+    /** Returns the chunk index storing the given byte offset */
     public function GetChunkIndex(int $byte) : int { return intdiv($byte, $this->chunksize); }
+    
+    /** Returns the number of chunks required to store the given number of bytes */
     public function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
     
     public function ImportFile(File $file, string $oldpath) : self
@@ -62,7 +77,7 @@ class NativeCrypt extends Native
 
         $data = array(); for ($chunk = $chunk0; $chunk < $chunk0+$chunks; $chunk++)
             array_push($data, $this->ReadChunk($file, $chunk));
-        return implode('', $data);
+        return implode($data);
     }
     
     public function WriteBytes(File $file, int $start, string $data) : self
@@ -86,7 +101,7 @@ class NativeCrypt extends Native
         return $this;
     }
     
-    public function Truncate(File $file, int $length, bool $init = true) : self
+    public function Truncate(File $file, int $length) : self
     {
         $length = max($length, 0);
         
@@ -97,7 +112,7 @@ class NativeCrypt extends Native
         $rlength = $chunks * $extrasize + $length;
         $length0 = $file->GetSize();
 
-        if ($init && $length != $length0)
+        if ($length != $length0)
         {            
             $chunks0 = $this->GetNumChunks($length0);
             $remain = ($length-1) % $this->chunksize + 1;    
@@ -140,6 +155,12 @@ class NativeCrypt extends Native
         return $this;
     }
     
+    /**
+     * Reads and decrypts the given chunk from the file
+     * @param File $file file to read from
+     * @param int $index chunk number
+     * @return string decrypted chunk
+     */
     protected function ReadChunk(File $file, int $index) : string
     {
         $noncesize = CryptoSecret::NonceLength();
@@ -155,6 +176,7 @@ class NativeCrypt extends Native
         $foverhead = $overhead * ($this->GetNumChunks($file->GetSize()-1));
         $datasize = min($datasize, $file->GetSize() + $foverhead - $dataoffset);
 
+        // a chunk is stored as [nonce,data]
         $nonce = parent::ReadBytes($file, $nonceoffset, $noncesize);
         $data = parent::ReadBytes($file, $dataoffset, $datasize);
         $auth = $this->GetAuthString($file, $index);
@@ -162,6 +184,13 @@ class NativeCrypt extends Native
         return CryptoSecret::Decrypt($data, $nonce, $this->masterkey, $auth);
     }
 
+    /**
+     * Encrypts and writes the given data to the given chunk
+     * @param File $file file to write to
+     * @param int $index chunk index to write
+     * @param string $data plaintext data to write
+     * @return $this
+     */
     protected function WriteChunk(File $file, int $index, string $data) : self
     {
         $noncesize = CryptoSecret::NonceLength();

@@ -12,46 +12,86 @@ require_once(ROOT."/apps/files/Item.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
+/** Exception indicating that the folder destination is invalid */
 class InvalidDestinationException extends Exceptions\ClientErrorException { public $message = "INVALID_FOLDER_DESTINATION"; }
 
+/** 
+ * Defines a user-stored folder which groups other items 
+ *
+ * Folders keep recursive running counts of most statistics like number 
+ * of subfiles, total folder size, etc., so retrieving these values is fast.
+ * 
+ * Every folder must have a name and exactly one parent, other than roots which have neither.
+ */
 class Folder extends Item
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'counters__visits' => new FieldTypes\Counter(),
-            'counters__size' => new FieldTypes\Counter(),   
+            'counters__visits' => new FieldTypes\Counter(), // number of public visits to this folder
+            'counters__size' => new FieldTypes\Counter(),   // total size of the folder and all contents
             'parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
             'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
             'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
-            'counters__subfiles' => new FieldTypes\Counter(),
-            'counters__subfolders' => new FieldTypes\Counter(),
-            'counters__subshares' => new FieldTypes\Counter()
+            'counters__subfiles' => new FieldTypes\Counter(),   // total number of subfiles (recursive)
+            'counters__subfolders' => new FieldTypes\Counter(), // total number of subfolders (recursive)
+            'counters__subshares' => new FieldTypes\Counter()   // total number of shares (recursive)
         ));
     }
 
-    public function GetName() : ?string   { return $this->TryGetScalar('name'); }
-    public function GetSize() : int       { return $this->TryGetCounter('size') ?? 0; }
+    /** Returns the name of the folder, or null iff it is a root folder */
+    public function GetName() : ?string { return $this->TryGetScalar('name'); }
+    
+    /** Returns the total size of the folder and its content in bytes */
+    public function GetSize() : int { return $this->TryGetCounter('size') ?? 0; }
+    
+    /** Returns the parent of the folder, or null iff it is a root folder */
     public function GetParent() : ?Folder { return $this->TryGetObject('parent'); }
+    
+    /** Returns the ID of the parent of this folder */
     public function GetParentID() : ?string { return $this->TryGetObjectID('parent'); }
     
-    public function GetFiles(?int $limit = null, ?int $offset = null) : array    { $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
-    public function GetFolders(?int $limit = null, ?int $offset = null) : array  { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
+    /**
+     * Returns an array of the files in this folder (not recursive)
+     * @param int $limit the max number of files to load`
+     * @param int $offset the offset to start loading from
+     * @return array<string, File> files indexed by ID
+     */
+    public function GetFiles(?int $limit = null, ?int $offset = null) : array { 
+        $this->Refresh(true); return $this->GetObjectRefs('files',$limit,$offset); }
+        
+    /**
+     * Returns an array of the folders in this folder (not recursive)
+     * @param int $limit the max number of folders to load
+     * @param int $offset the offset to start loading from
+     * @return array<string, Folder> folders indexed by ID
+     */
+    public function GetFolders(?int $limit = null, ?int $offset = null) : array { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
     
+    /** Returns the number of files in this folder (not recursive) (fast) */
     public function GetNumFiles() : int { return $this->GetCounter('subfiles'); }
+    
+    /** Returns the number of folders in this folder (not recursive) (fast) */
     public function GetNumFolders() : int { return $this->GetCounter('subfolders'); }
     
+    /** Returns the number of items in this folder (not recursive) (fast) */
     public function GetNumItems() : int { return $this->GetNumFiles() + $this->GetNumFolders(); }
+    
+    /** Returns the total number of shares on this folder or its contents (recursive) */
     public function GetTotalShares() : int { return $this->GetNumShares() + $this->GetCounter('subshares'); }
     
-    public function CountVisit() : self   { return $this->DeltaCounter('visits'); }
+    /** Increments the folder's visit counter */
+    public function CountVisit() : self { return $this->DeltaCounter('visits'); }
     
+    /** Increments the size of this folder and parents by the given #bytes */
     public function DeltaSize(int $size) : self 
     { 
         if (($parent = $this->GetParent()) !== null)
             $parent->DeltaSize($size);
         return $this->DeltaCounter('size',$size); 
     }   
+    
+    // TODO check for root folder SetName and root folder SetParent here, not in filesApp
     
     public function SetName(string $name, bool $overwrite = false) : self
     {
@@ -68,7 +108,7 @@ class Folder extends Item
         $this->GetFSImpl()->MoveFolder($this, $folder);
         return $this->SetObject('parent', $folder);
     }
-    
+
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self 
     {
         parent::CheckName($name, $overwrite);
@@ -90,18 +130,21 @@ class Folder extends Item
         $this->GetFSImpl()->CopyFolder($this, $newfolder); return $newfolder;
     }    
     
+    /** Asserts that this folder is not the given folder, or any of its parents */
     private function CheckIsNotChildOrSelf(Folder $folder) : void
     {
-        if ($folder->ID() === $this->ID())
-            throw new InvalidDestinationException();
-        
-        while (($folder = $folder->GetParent()) !== null)
-        {
-            if ($folder->ID() === $this->ID())
+        do {
+            if ($folder === $this)
                 throw new InvalidDestinationException();
         }
+        while (($folder = $folder->GetParent()) !== null);
     }
     
+    /**
+     * Adds the statistics from the given item to this folder
+     * @param Item $item the item to add stats from
+     * @param bool $sub if true, subtract instead of add
+     */
     private function AddItemCounts(Item $item, bool $sub = false) : void
     {
         $this->SetModified(); $val = $sub ? -1 : 1;
@@ -128,6 +171,7 @@ class Folder extends Item
         $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($item, $sub);
     }
     
+    /** Counts a share on a subitem of this folder */
     protected function CountSubShare(bool $count = true) : self
     {
         $this->DeltaCounter('subshares', $count ? 1 : -1);
@@ -149,6 +193,11 @@ class Folder extends Item
     
     private bool $refreshed = false;
     private bool $subrefreshed = false;
+    
+    /**
+     * Refreshes the folder's metadata from disk
+     * @param bool $doContents if true, refresh all contents of the folder
+     */
     public function Refresh(bool $doContents = false) : self
     {
         if ($this->deleted) return $this;
@@ -160,17 +209,30 @@ class Folder extends Item
         return $this;
     }
 
+    /** Creates a folder with the given FS and owner but no name or parent */
     private static function CreateRoot(ObjectDatabase $database, FSManager $filesystem, ?Account $account) : self
     {
         return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
     }
     
+    /**
+     * Creates a new non-root folder in DB only
+     * @param ObjectDatabase $database database reference
+     * @param Folder $parent the parent folder of this folder
+     * @param Account $account the owner of this folder (or null)
+     * @param string $name the name of this folder
+     * @return $this
+     */
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         return static::CreateRoot($database, $parent->GetFilesystem(), $account)
             ->SetObject('parent',$parent)->SetScalar('name',$name)->CountCreate();
     }
     
+    /**
+     * Creates a new non-root folder both in DB and on disk
+     * @see Folder::NotifyCreate()
+     */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
         $folder = static::NotifyCreate($database, $parent, $account, $name)->CheckName($name);
@@ -178,6 +240,13 @@ class Folder extends Item
         $folder->GetFSImpl()->CreateFolder($folder); return $folder;
     }
     
+    /**
+     * Loads the root folder for given account and FS, creating it if it doesn't exist
+     * @param ObjectDatabase $database database reference
+     * @param Account $account the owner of the root folder
+     * @param FSManager $filesystem the filesystem of the root, or null to get the default
+     * @return self|NULL loaded folder or null if creating it fails
+     */
     public static function LoadRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {
         $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
@@ -193,6 +262,12 @@ class Folder extends Item
         }
     }
 
+    /**
+     * Loads all root folders on the given filesystem
+     * @param ObjectDatabase $database database reference
+     * @param FSManager $filesystem the filesystem
+     * @return array<string, FSManager> folders indexed by ID
+     */
     public static function LoadRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : array
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'));
@@ -200,6 +275,12 @@ class Folder extends Item
         return static::LoadByQuery($database, $q->Where($where));
     }
     
+    /**
+     * Load all root folders for the given owner
+     * @param ObjectDatabase $database database reference
+     * @param Account $account folder owner
+     * @return array<string, FSManager> folders indexed by ID
+     */
     public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',$account->ID()), $q->IsNull('parent'));
@@ -207,14 +288,16 @@ class Folder extends Item
         return static::LoadByQuery($database, $q->Where($where));
     }
     
-    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : void
+    /** Deletes all root folders on the given filesystem - if the FS is shared or $force, only remove DB objects */
+    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $notify = false) : void
     {
         foreach (static::LoadRootsByFSManager($database, $filesystem) as $folder)
         {
-            if ($filesystem->isShared()) $folder->NotifyDelete(); else $folder->Delete();
+            if ($filesystem->isShared() || $notify) $folder->NotifyDelete(); else $folder->Delete();
         }
     }
     
+    /** Deletes all root folders for the given owner - if the FS is shared, only remove DB objects */
     public static function DeleteRootsByAccount(ObjectDatabase $database, Account $account) : void
     {
         foreach (static::LoadRootsByAccount($database, $account) as $folder)
@@ -225,6 +308,7 @@ class Folder extends Item
     
     private bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
     
+    /** Deletes all subfiles and subfolders, refresh if not isNotify */
     public function DeleteChildren(bool $isNotify = true) : void
     {
         if (!$isNotify) $this->Refresh(true);
@@ -233,6 +317,7 @@ class Folder extends Item
         $this->DeleteObjectRefs('folders');
     }
     
+    /** Deletes this folder and its contents from the DB only */
     public function NotifyDelete(bool $isNotify = true) : void
     {        
         $this->DeleteChildren($isNotify);
@@ -240,6 +325,7 @@ class Folder extends Item
         parent::Delete();
     }
     
+    /** Deletes the folder and its contents from DB and disk */
     public function Delete() : void
     {        
         $parent = $this->GetParent();
@@ -253,6 +339,14 @@ class Folder extends Item
         parent::Delete();
     }    
     
+    /**
+     * Recursively lists subitems in this folder
+     * @param bool $files if true, load files
+     * @param bool $folders if true, load folders
+     * @param int $limit max number of items to load
+     * @param int $offset offset of items to load
+     * @return array<string, Item> items indexed by ID
+     */
     private function RecursiveItems(?bool $files = true, ?bool $folders = true, ?int $limit = null, ?int $offset = null) : array
     {
         $items = array();
@@ -274,6 +368,19 @@ class Folder extends Item
         return $items;
     }
 
+    /**
+     * Returns a printable client object of this folder
+     * @param bool $files if true, show subfiles
+     * @param bool $folders if true, show subfolders
+     * @param bool $recursive if true, show recursive contents
+     * @param int $limit max number of items to show
+     * @param int $offset offset of items to show
+     * @param int $details detail level of output
+     * @return array|NULL null if deleted, else `{filesystem:id, files:[id:File], folders:[id:Folder],
+         dates:{created:int, modified:?int, accessed:?int}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
+            subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
+     * @see Item::SubGetClientObject()
+     */
     public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
         ?int $limit = null, ?int $offset = null, int $details = self::DETAILS_NONE) : ?array
     {
@@ -281,7 +388,7 @@ class Folder extends Item
         
         $this->SetAccessed();
 
-        $data = array_merge(parent::GetItemClientObject($details),array(
+        $data = array_merge(parent::SubGetClientObject($details),array(
             'filesystem' => $this->GetObjectID('filesystem')
         ));
         

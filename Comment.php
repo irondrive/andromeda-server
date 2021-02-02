@@ -7,6 +7,7 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
+/** A user comment on an item */
 class Comment extends StandardObject
 {
     public const IDLength = 16;
@@ -22,9 +23,13 @@ class Comment extends StandardObject
         ));
     }
     
+    /** Returns true if the comment should only be viewable by its owner */
     public function IsPrivate() : bool { return $this->TryGetScalar('private') ?? false; }
+    
+    /** Sets whether a comment should only be viewable by its owner */
     public function SetPrivate(bool $priv) : self { return $this->SetScalar('private',$priv); }
     
+    /** Sets the value of this comment and updates the modified date */
     public function SetComment(string $val){ return $this->SetScalar('comment', $val)->SetDate('modified'); }
     
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : self
@@ -33,6 +38,7 @@ class Comment extends StandardObject
             ->SetComment($comment)->SetScalar('private');
     }
     
+    /** Tries to load a comment object by the given account and comment ID */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',FieldTypes\ObjectPoly::GetObjectDBValue($account)),$q->Equals('id',$id));

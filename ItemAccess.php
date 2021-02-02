@@ -8,17 +8,23 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 use Andromeda\Apps\Accounts\{Account, Authenticator, AuthenticationFailedException};
 
+/** Exception indicating that the given share password is invalid */
 class InvalidSharePasswordException extends Exceptions\ClientDeniedException { public $message = "INVALID_SHARE_PASSWORD"; }
 
+/** Authenticator class that implements item access rules */
 class ItemAccess
 {
     private function __construct(Item $item, ?Share $share){ 
         $this->item = $item; $this->share = $share; }
     
+    /** Returns the item that is being accessed */
     public function GetItem() : Item { return $this->item; }
+    
+    /** Returns the share object that grants access, or null if the item is owned */
     public function GetShare() : ?Share { return $this->share; }
     
-    public static function UnknownItemException(?string $class)
+    /** Throws an unknown item exception for the given item class */
+    protected static function UnknownItemException(?string $class)
     {
         switch ($class)
         {
@@ -28,7 +34,8 @@ class ItemAccess
         }
     }
     
-    public static function ItemDeniedException(?string $class)
+    /** Throws an item access denied exception for the given item class */
+    protected static function ItemDeniedException(?string $class)
     {
         switch ($class)
         {
@@ -38,6 +45,23 @@ class ItemAccess
         }
     }
     
+    /**
+     * Primary authentication routine for granting access to an item
+     * 
+     * First option is a share ID/key are given and authenticates them, which also loads the item.
+     * Second option is auth is given and a specific item is requested (class and itemid).
+     * The second option has 3 suboptions: direct ownership, OwnerInChain() and Share::TryAuthenticate()
+     * @see ItemAccess::OwnerInChain() possible method of access
+     * @see Share::TryAuthenticate() possible method of access
+     * @param ObjectDatabase $database database reference
+     * @param Input $input user input possibly containing share info
+     * @param Authenticator $authenticator current account auth
+     * @param string $class class of item being accessed if known or ID given
+     * @param string $itemid item ID being accessed (null if a share URL is given)
+     * @throws InvalidSharePasswordException if the input share password is invalid
+     * @throws AuthenticationFailedException if a specific item is requested and auth is null
+     * @return self new ItemAccess object
+     */
     public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : self
     {
         $item = null; if ($itemid !== null)
@@ -87,6 +111,15 @@ class ItemAccess
         return new self($item, $share);
     }
     
+    /**
+     * Returns whether the given account can access the given item without a share.
+     * 
+     * The account must either own the item or one of its parents, or the 
+     * item and all of its parents must have no owner (shared FS).
+     * @param Item $item item to access
+     * @param Account $account account accessing
+     * @return bool true if access is allowed
+     */
     public static function AccountInChain(Item $item, Account $account) : bool
     {
         $haveOwner = false; $amOwner = false;
@@ -99,6 +132,10 @@ class ItemAccess
         return (!$haveOwner || $amOwner);
     }
     
+    /**
+     * Same as ItemAccess::Authenticate() but returns null rather than client exceptions
+     * @see ItemAccess::Authenticate()
+     */
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : ?self
     {
         try { static::Authenticate($database, $input, $authenticator, $class, $itemid); }

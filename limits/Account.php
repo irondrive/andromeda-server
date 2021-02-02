@@ -19,12 +19,26 @@ require_once(ROOT."/apps/files/limits/Timed.php");
 require_once(ROOT."/apps/files/limits/AuthObj.php");
 require_once(ROOT."/apps/files/limits/Group.php");
 
+/**
+ * Account limits common between total and timed
+ * 
+ * Most of the extra complexity with accounts comes from the fact that accounts can 
+ * inherit properties from groups. Also, functions are provided that load both an 
+ * account's limits and the limits of all groups that apply to it.
+ * 
+ * Account limit objects are automatically created if a group 
+ * that the account is part of has a limit object.
+ */
 trait AccountCommon
 {
     use GroupInherit;
     
     protected static function GetObjectClass() : string { return Account::class; }
+    
+    /** Returns the ID of the limited account */
     protected function GetAccountID() : string { return $this->GetObjectID('object'); }
+    
+    /** Returns the limited account */
     protected function GetAccount() : Account { return $this->GetObject('object'); }
 
     // want to show the actual limited object to the client, not the limiters
@@ -34,19 +48,27 @@ trait AccountCommon
         return ($obj !== null) ? $obj->GetLimitedObject() : null;
     }
     
+    /** Returns the object from which this account limit inherits its max stats age */
     public function GetsMaxStatsAgeFrom() : ?BaseObject
     {
         return $this->TryGetInheritable('max_stats_age')->GetSource();
     }
-        
+    
+    /**
+     * Returns a printable client object that includes property inherit sources
+     * @param bool $isadmin if true, show property inherit sources
+     * @return array `{features_from:[id:class], limits_from:[id:class]}`
+     * @see Total::GetClientObject()
+     * @see Timed::GetClientObject()
+     */
     public function GetClientObject(bool $isadmin = false) : array
     {
         $data = parent::GetClientObject();
         
         if ($isadmin)
         {
-            $data['features_from'] = $this->ToInheritsFromClient([$this,'GetAllFeatures']);
-            $data['limits_from'] = $this->ToInheritsFromClient([$this,'GetAllCounterLimits']);            
+            $data['features_from'] = $this->ToInheritsScalarFromClient([$this,'GetAllFeatures']);
+            $data['limits_from'] = $this->ToInheritsScalarFromClient([$this,'GetAllCounterLimits']);            
         }
         
         return $data;
@@ -60,12 +82,20 @@ trait AccountCommon
         if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->TryGetParam('track_dlstats', SafeParam::TYPE_BOOL));
     }    
     
+    /** Configures limits for the given account with the given input */
     public static function ConfigLimits(ObjectDatabase $database, Account $account, Input $input) : self
     {
         return static::BaseConfigLimits($database, $account, $input);
     }    
 
-    public function ProcessGroupRemove(GroupTotal $grlim) : void
+    /**
+     * Processes a group membership removal, possibly deleting this account limit
+     * 
+     * The account limit will be deleted if it does not have any properties that
+     * were set specifically for it, and no other group limits applicable to it exist
+     * @param GroupTotal $grlim
+     */
+    public function ProcessGroupRemove(GroupCommon $grlim) : void
     {
         // see if the account has any properties specific to it
         foreach (array_keys($this->GetInheritedProperties()) as $field)
@@ -81,14 +111,18 @@ trait AccountCommon
     }
 }
 
-
+/** Concrete class providing account config and total stats */
 class AccountTotal extends AuthTotal  
 { 
     use AccountCommon;
     
+    /** cache of group limits that apply to this account */
     protected array $grouplims;
 
-    // load group limits via join and cache
+    /** 
+     * loads group limits via a JOIN, caches, and returns them
+     * @return array<string, GroupTotal> group limits indexed by ID
+     */
     protected function GetGroups() : array
     {
         if (!isset($this->grouplims))
@@ -110,6 +144,7 @@ class AccountTotal extends AuthTotal
         return $this->grouplims;
     }
     
+    /** register a group change handler that updates this specific object's grouplim cache */
     protected function SubConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
@@ -143,9 +178,20 @@ class AccountTotal extends AuthTotal
     public function GetAllowItemSharing() : bool { return $this->GetFeature('itemsharing'); }
     public function GetAllowShareEveryone() : bool { return $this->GetFeature('shareeveryone'); }
     
+    /** Returns true if this account is allowed to email share links */
     public function GetAllowEmailShare() : bool { return $this->GetFeature('emailshare'); }
+    
+    /** Returns true if this account is allowed to add new filesystems */
     public function GetAllowUserStorage() : bool { return $this->GetFeature('userstorage'); }
     
+    /**
+     * Returns the total limits object for this account
+     * @param ObjectDatabase $database database reference
+     * @param Account $account account of interest
+     * @param bool $require if true and no limit exists, a fake object will be returned to retrieve defaults
+     * @see AccountTotalDefault
+     * @return self|NULL limit object or null
+     */
     public static function LoadByAccount(ObjectDatabase $database, ?Account $account, bool $require = true) : ?self
     {
         $obj = ($account !== null) ? $obj = static::LoadByClient($database, $account) : null;
@@ -156,11 +202,18 @@ class AccountTotal extends AuthTotal
         return $obj;
     }
     
+    /** Loads a limit object for the given account, creating it if it does not exist */
     public static function ForceLoadByAccount(ObjectDatabase $database, Account $account) : self
     {
         return static::LoadByClient($database, $account) ?? static::Create($database, $account)->Initialize();
     }
     
+    /**
+     * Loads all limit objects for the given account, including its groups
+     * @param ObjectDatabase $database database reference
+     * @param Account $account account of interest
+     * @return array<string, AuthTotal> limits indexed by ID
+     */
     public static function LoadByAccountAll(ObjectDatabase $database, Account $account) : array
     {
         $retval = array();
@@ -175,6 +228,7 @@ class AccountTotal extends AuthTotal
         return $retval;
     }
   
+    /** Initializes the account limit by adding stats from all FS items that it owns */
     protected function Initialize() : self
     {
         if (!$this->canTrackItems()) return $this;
@@ -192,6 +246,7 @@ class AccountTotal extends AuthTotal
     }
 }
 
+/** A fake empty account limits that returns default property values */
 class AccountTotalDefault extends AccountTotal
 {
     public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
@@ -199,23 +254,18 @@ class AccountTotalDefault extends AccountTotal
     protected function GetGroups() : array { return array(); }
 }
 
-Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
-{
-    $grlim = GroupTotal::LoadByGroup($database, $group); if ($grlim === null) return;
-    
-    $aclim = AccountTotal::ForceLoadByAccount($database, $account);
-    
-    if (!$added) $aclim->ProcessGroupRemove($grlim);
-});
-
-
+/** Concrete class providing timed account limits */
 class AccountTimed extends AuthTimed 
 {
     use AccountCommon;
     
+    /** cache of group limits that apply to this account */
     protected array $grouplims;
-    
-    // load group limits via join and cache
+        
+    /**
+     * loads group limits via a JOIN, caches, and returns them
+     * @return array<string, GroupTimed> group limits indexed by ID
+     */
     protected function GetGroups() : array
     {
         if (!isset($this->grouplims))
@@ -236,7 +286,8 @@ class AccountTimed extends AuthTimed
         
         return $this->grouplims;
     }
-    
+        
+    /** register a group change handler that updates this specific object's grouplim cache */
     protected function SubConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
@@ -257,6 +308,13 @@ class AccountTimed extends AuthTimed
         'counters_limits__bandwidth' => null
     ); }
     
+    /** Returns the Timed limits for the given account and time period */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account, int $period) : ?self
+    {
+        return static::LoadByClientAndPeriod($database, $account, $period);
+    }    
+    
+    /** Returns the Timed limits for the given account and time period, creating if it does not exist */
     public static function ForceLoadByAccount(ObjectDatabase $database, Account $account, int $period) : self
     {
         $obj = static::LoadByClientAndPeriod($database, $account, $period);        
@@ -264,6 +322,12 @@ class AccountTimed extends AuthTimed
         return $obj;
     }
 
+    /**
+     * Returns all timed limits for the given account and its groups
+     * @param ObjectDatabase $database database reference
+     * @param Account $account account of interest
+     * @return array<string, AuthTimed> limits indexed by ID
+     */
     public static function LoadAllForAccountAll(ObjectDatabase $database, Account $account) : array
     {
         $retval = static::LoadAllForClient($database, $account);
@@ -277,12 +341,34 @@ class AccountTimed extends AuthTimed
     }
 }
 
+// handle auto creating/deleting account limits and updating group stats when a group membership changes
 Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
 {
+    if (($grlim = GroupTotal::LoadByGroup($database, $group)) !== null)
+    {    
+        if ($added) 
+        {
+            $aclim = AccountTotal::ForceLoadByAccount($database, $account);
+            $grlim->ProcessAccountChange($aclim, true);
+        }
+        else if (($aclim = AccountTotal::LoadByAccount($database, $account)) !== null) 
+        {
+            $grlim->ProcessAccountChange($aclim, false);
+            $aclim->ProcessGroupRemove($grlim);
+        }
+    }
+    
     foreach (GroupTimed::LoadAllForGroup($database, $group) as $grlim)
     {
-        $aclim = AccountTimed::ForceLoadByAccount($database, $account, $grlim->GetTimePeriod());
-        
-        if (!$added) $aclim->ProcessGroupRemove($grlim);
+        if ($added) 
+        {
+            $aclim = AccountTimed::ForceLoadByAccount($database, $account, $grlim->GetTimePeriod());
+            $grlim->ProcessAccountChange($aclim, true);
+        }
+        else if (($aclim = AccountTimed::LoadByAccount($database, $account, $grlim->GetTimePeriod())) !== null)
+        {
+            $grlim->ProcessAccountChange($aclim, false);
+            $aclim->ProcessGroupRemove($grlim);
+        }
     }
 });

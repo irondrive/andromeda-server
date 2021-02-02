@@ -11,16 +11,30 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
+/** Exception indicating that the FTP extension is not installed */
 class FTPExtensionException extends ActivateException    { public $message = "FTP_EXTENSION_MISSING"; }
+
+/** Exception indicating that the FTP server connection failed */
 class FTPConnectionFailure extends ActivateException     { public $message = "FTP_CONNECTION_FAILURE"; }
+
+/** Exception indicating that authentication on the FTP server failed */
 class FTPAuthenticationFailure extends ActivateException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
 
+/** Exception indicating that a random write was requested (FTP does not support it) */
 class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_DOES_NOT_SUPPORT_MODIFY"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(FTP::class);
 
+/**
+ * Allows FTP to be used as a backend storage
+ * 
+ * The FTP extension's methods are mostly used rather than the fwrapper
+ * functions, since the fwrapper functions create a new connection for
+ * every call.  fwrapper functions are still used as fallbacks where needed.
+ * Uses the credcrypt trait for optionally encrypting server credentials.
+ */
 class FTP extends FWrapper
 {    
     use CredCrypt;
@@ -30,10 +44,15 @@ class FTP extends FWrapper
         return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
-            'implssl' => null,
+            'implssl' => null, // if true, use implicit SSL, else explicit/none
         ));
     }
     
+    /**
+     * Returns a printable client object of this FTP storage
+     * @return array `{hostname:string, port:?int, implssl:bool}`
+     * @see FWrapper::GetClientObject()
+     */
     public function GetClientObject() : array
     {
         return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
@@ -66,12 +85,13 @@ class FTP extends FWrapper
         return parent::Edit($input)->CredCryptEdit($input);
     }
     
+    /** Check for the FTP extension */
     public function SubConstruct() : void
     {
         if (!function_exists('ftp_connect')) throw new FTPExtensionException();
     }
     
-    private $ftp;
+    /** The FTP connection resource */ private $ftp;
     
     public function Activate() : self
     {
@@ -120,6 +140,7 @@ class FTP extends FWrapper
     {
         $size = max(ftp_size($this->ftp, $this->GetPath($path)),0);
         $mtime = max(ftp_mdtm($this->ftp, $this->GetPath($path)),0);
+        // FTP does not support atime or ctime!
         return new ItemStat(0, 0, $mtime, $size);
     }
     
@@ -152,13 +173,21 @@ class FTP extends FWrapper
         try { fclose($handle); } catch (\Throwable $e) { 
             ErrorManager::GetInstance()->Log($e); }
         
-        if ($data === false) throw new FileReadFailedException();
+        if ($data === false || strlen($data) !== $length) 
+            throw new FileReadFailedException();
         else return $data;
     }
     
+    // FTP does not support writing to random offsets but it does allow
+    // the special case of writing to the end of the file (appending)
+    
+    /** path=>resource array of handles */
     private $appending_handles = array(); 
+    
+    /** path=>byte array of current byte offsets */
     private $appending_offsets = array();
     
+    /** Closes the appending handle for the given path */
     private function RemoveAppending(string $path) : void
     {
         if (array_key_exists($path, $this->appending_handles))
@@ -169,6 +198,7 @@ class FTP extends FWrapper
         }
     }
     
+    /** Creates, tracks and returns an appending context for the given path at the given offset */
     private function TrackAppending(string $path, int $bytes)
     {
         if (!array_key_exists($path, $this->appending_handles))
@@ -180,6 +210,7 @@ class FTP extends FWrapper
         return $this->appending_handles[$path];
     }
     
+    /** Returns true if the given path can be appended at the given offset */
     private function CheckAppending(string $path, int $offset) : bool
     {
         if (array_key_exists($path, $this->appending_offsets))
@@ -187,6 +218,11 @@ class FTP extends FWrapper
         else return ftp_size($this->ftp, $this->GetPath($path)) === $offset;
     }
 
+    /**
+     * FTP can only append ($start must equal the length of the file)
+     * @throws FTPWriteUnsupportedException if not appending
+     * @see FWrapper::WriteBytes()
+     */
     public function WriteBytes(string $path, int $start, string $data) : self
     {
         $this->CheckReadOnly();
@@ -198,6 +234,7 @@ class FTP extends FWrapper
         fwrite($handle, $data); return $this;
     }
     
+    /** @throws FTPWriteUnsupportedException */
     public function Truncate(string $path, int $length) : self
     {
         throw new FTPWriteUnsupportedException();

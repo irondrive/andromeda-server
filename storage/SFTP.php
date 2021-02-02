@@ -10,17 +10,31 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
+/** Exception indicating that the SSH extension is not installed */
 class SSHExtensionException extends ActivateException    { public $message = "SSH_EXTENSION_MISSING"; }
+
+/** Exception indicating that the OpenSSL extension is not installed */
 class OpenSSLExtensionException extends ActivateException { public $message = "OPENSSL_EXTENSION_MISSING"; }
 
+/** Exception indicating that the SSH connection failed */
 class SSHConnectionFailure extends ActivateException     { public $message = "SSH_CONNECTION_FAILURE"; }
+
+/** Exception indicating that SSH authentication failed */
 class SSHAuthenticationFailure extends ActivateException { public $message = "SSH_AUTHENTICATION_FAILURE"; }
+
+/** Exception indicating that parsing the given keyfile failed */
 class InvalidKeyfileException extends ActivateException  { public $message = "SSH_INVALID_KEYFILE"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SFTP::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(SFTP::class);
 
+/**
+ * Allows using an SFTP server for backend storage using PHP fwrapper
+ * 
+ * Uses PHP's SSH2 extension for SFTP, and OpenSSL for parsing keys.
+ * Uses credcrypt to allow encrypting the username/password.
+ */
 class SFTP extends FWrapper
 {
     use CredCrypt;
@@ -30,13 +44,18 @@ class SFTP extends FWrapper
         return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
-            'privkey' => null,
-            'pubkey' => null,
-            'keypass' => null,
+            'privkey' => null, // path to private key
+            'pubkey' => null,  // path to public key
+            'keypass' => null, // key for unlocking the private key
             'keypass_nonce' => null,
         ));
     }
     
+    /**
+     * Returns a printable client object of this SFTP storage
+     * @return array `{hostname:string, port:?int, pubkey:bool, keypass:bool}`
+     * @see FWrapper::GetClientObject()
+     */
     public function GetClientObject() : array
     {
         return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
@@ -49,8 +68,13 @@ class SFTP extends FWrapper
 
     // TODO get free space?
 
-    protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }    
-    protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }    
+    /** Returns the configured username (mandatory) */
+    protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }
+    
+    /** Returns the password for the private key */
+    protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }
+    
+    /** Sets the password for the private key, encrypted if $credcrypt */
     protected function SetKeypass(?string $keypass, bool $credcrypt) : self { return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
@@ -71,6 +95,13 @@ class SFTP extends FWrapper
         return $obj;
     }
     
+    /**
+     * Processes an uploaded keyfile into its private/public components and stores it
+     * @param string $keyfile the uploaded key file path
+     * @param string $keypass private key password if required
+     * @throws OpenSSLExtensionException if OpenSSL is not installed
+     * @throws InvalidKeyfileException if parsing fails
+     */
     private function ProcessKeyfile(string $keyfile, ?string $keypass) : void
     {
         if (!function_exists('openssl_pkey_get_private'))
@@ -109,8 +140,10 @@ class SFTP extends FWrapper
         return parent::Edit($input)->CredCryptEdit($input);
     }
 
-    private $ssh; private $sftp;
+    /** ssh2 connection resource */ private $ssh; 
+    /** sftp connection resource */ private $sftp;
     
+    /** Checks for the SSH2 extension */
     public function SubConstruct() : void
     {
         if (!function_exists('ssh2_connect')) throw new SSHExtensionException();

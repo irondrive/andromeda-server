@@ -10,9 +10,12 @@ require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
 
+/** Filesystem limits common between total and timed */
 trait FilesystemCommon
 {
     protected static function GetObjectClass() : string { return FSManager::class; }
+    
+    /** Returns the limited filesystem */
     protected function GetFilesystem() : FSManager { return $this->GetObject('object'); }    
     
     public static function GetBaseUsage() : string { return "[--track_items bool] [--track_dlstats bool]"; }
@@ -29,16 +32,18 @@ trait FilesystemCommon
     }
 }
 
-
-class FilesystemTotal extends Total           
+/** Concrete class providing filesystem config and total stats */
+class FilesystemTotal extends Total
 { 
     use FilesystemCommon; 
 
+    /** Loads the total limit object for the given filesystem (or null if none exists) */
     public static function LoadByFilesystem(ObjectDatabase $database, FSManager $filesystem) : ?self
     {
         return static::LoadByClient($database, $filesystem);
     }
     
+    /** Initializes the FS total stats by adding stats from all root folders */
     protected function Initialize() : self
     {
         if (!$this->canTrackItems()) return $this;
@@ -52,11 +57,17 @@ class FilesystemTotal extends Total
     }
 }
 
-
+/** Concrete class providing timed filesystem limits */
 class FilesystemTimed extends Timed 
 { 
     use FilesystemCommon; 
 
+    /**
+     * Loads all timed limits for the given filesystem
+     * @param ObjectDatabase $database database reference
+     * @param FSManager $filesystem filesystem of interest
+     * @return array<string, FilesystemTimed> timed limits
+     */
     public static function LoadAllForFilesystem(ObjectDatabase $database, FSManager $filesystem) : array
     {
         return static::LoadAllForClient($database, $filesystem);

@@ -9,12 +9,20 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
+/** Exception indicating that the libsmbclient extension is missing */
 class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(SMB::class);
 
+/**
+ * Allows using an SMB/CIFS server for backend storage
+ * 
+ * Uses PHP libsmbclient.  Mostly uses the PHP fwrapper
+ * functions but some manual workarounds are needed.
+ * Uses credcrypt to allow encrypting the username/password.
+ */
 class SMB extends FWrapper
 {
     use CredCrypt;
@@ -27,6 +35,11 @@ class SMB extends FWrapper
         ));
     }
     
+    /**
+     * Returns a printable client object of this SMB storage
+     * @return array `{workgroup:?string, hostname:string}`
+     * FWrapper::GetClientObject()
+     */
     public function GetClientObject() : array
     {
         return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
@@ -52,8 +65,10 @@ class SMB extends FWrapper
         return parent::Edit($input)->CredCryptEdit($input);
     }
     
+    /** Returns the SMB workgroup to use (or null) */
     public function TryGetWorkgroup() : ?string { return $this->TryGetScalar('workgroup'); }
 
+    /** Checks for the SMB client extension */
     public function SubConstruct() : void
     {
         if (!function_exists('smbclient_version')) throw new SMBExtensionException();
@@ -127,7 +142,7 @@ class SMB extends FWrapper
             array_push($data, $temp); $byte += $delta;          
         }
         
-        return implode('', $data);
+        return implode($data);
     }
     
     // TODO can do a get free space here
