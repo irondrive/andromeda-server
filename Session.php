@@ -7,6 +7,12 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/apps/accounts/KeySource.php");
 
+/**
+ * Implements an account session, the primary implementor of authentication
+ *
+ * Also stores a copy of the account's master key, encrypted by the session key.
+ * This allowed account crypto to generally be unlocked for any user command.
+ */
 class Session extends KeySource
 {
     public static function GetFieldTemplate() : array
@@ -18,22 +24,29 @@ class Session extends KeySource
         ));
     }
     
+    /** Returns the client that owns this session */
     public function GetClient() : Client { return $this->GetObject('client'); }
 
-    public function getActiveDate() : int     { return $this->GetDate('active'); }
+    /** Returns the last timestamp this session was active */
+    public function getActiveDate() : int { return $this->GetDate('active'); }
+    
+    /** Sets the timestamp the session was active to now */
     public function setActiveDate() : Session { return $this->SetDate('active'); }
     
+    /** Create a new session for the given account and client */
     public static function Create(ObjectDatabase $database, Account $account, Client $client) : Session
     {
         return parent::CreateKeySource($database, $account)->SetObject('client',$client);
     }
     
+    /** Deletes all sessions for the given account except the given session */
     public static function DeleteByAccountExcept(ObjectDatabase $database, Account $account, Session $session) : void
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
         parent::DeleteByQuery($database, $q->Where($w));
     }
 
+    /** Authenticates the given key against the session, returning the result */
     public function CheckKeyMatch(string $key) : bool
     {
         $max = $this->GetAccount()->GetMaxSessionAge();
@@ -46,6 +59,11 @@ class Session extends KeySource
         return parent::CheckKeyMatch($key);
     }
     
+    /**
+     * Returns a printable client object for this session
+     * @return array `{id:string,client:id,dates:{created:int,active:int]}`
+     * @see AuthObject::GetClientObject()
+     */
     public function GetClientObject(bool $secret = false) : array
     {
         return array_merge(parent::GetClientObject($secret), array(

@@ -11,43 +11,16 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 
+/** Exception indicating that the created auth source is invalid */
 class InvalidAuthSourceException extends Exceptions\ClientErrorException { public $message = "AUTHSOURCE_FAILED"; }
 
-interface ISource
-{
-    public function VerifyAccountPassword(Account $account, string $password) : bool;
-}
-
-abstract class External extends BaseObject implements ISource 
-{ 
-    public abstract function VerifyPassword(string $username, string $password) : bool;
-    
-    public function VerifyAccountPassword(Account $account, string $password) : bool
-    {
-        return $this->VerifyPassword($account->GetUsername(), $password);
-    }
-    
-    public static function GetFieldTemplate() : array
-    {
-        return array(
-            'manager' => new FieldTypes\ObjectRef(Manager::class, 'authsource', false)
-        );
-    }
-    
-    public function GetManager() : Manager { return $this->GetObject('manager'); }
-
-    public static function Create(ObjectDatabase $database, Input $input)
-    {
-        return parent::BaseCreate($database)->Edit($input);
-    }
-    
-    public abstract static function GetPropUsage() : string;
-    
-    public abstract function Edit(Input $input);
-    
-    public abstract function GetClientObject() : array;
-}
-
+/** 
+ * Manages configured external authentication sources 
+ * 
+ * External auth sources are stored in their own database tables and are
+ * their own classes but all belong to a common Manager class (this one) 
+ * that manages them and provides a way to enumerate them efficiently.
+ */
 class Manager extends BaseObject
 {
     public static function GetFieldTemplate() : array
@@ -59,15 +32,18 @@ class Manager extends BaseObject
         ));
     }
     
-    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types))." [--description text] [--createdefgroup bool]"; }
-    
     private static $auth_types = array();
     
+    /** Registers a class that provides external authentication */
     public static function RegisterAuthType(string $class) : void
     {
         self::$auth_types[strtolower(Utilities::ShortClassName($class))] = $class;
     }
     
+    /** Returns basic command usage for Create() and Edit() */
+    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types))." [--description text] [--createdefgroup bool]"; }
+    
+    /** Gets command usage specific to external authentication backends */
     public static function GetPropUsages() : array
     {
         $retval = array();
@@ -76,6 +52,7 @@ class Manager extends BaseObject
         return $retval;
     }
     
+    /** Creates and tests a new external authentication backend, creating a manager and optionally, a default group for it */
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
         $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
@@ -95,6 +72,7 @@ class Manager extends BaseObject
         return $manager;
     }
     
+    /** Edits properties of an existing external auth backend */
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('description')) $this->SetScalar('description',$this->TryGetParam('description',SafeParam::TYPE_TEXT));
@@ -104,6 +82,7 @@ class Manager extends BaseObject
         $this->GetAuthSource()->Edit($input); return $this;
     }
     
+    /** Deletes the external authentication source and all accounts created by it */
     public function Delete() : void
     {
         Account::DeleteByAuthSource($this->database, $this);
@@ -114,9 +93,13 @@ class Manager extends BaseObject
         parent::Delete();
     }
     
+    /** Returns the group that all accounts from this auth source are implicitly part of */
     public function GetDefaultGroup() : ?Group { return $this->TryGetObject('default_group'); }
+    
+    /** Returns the ID of the default group for this auth source */
     public function GetDefaultGroupID() : ?string { return $this->TryGetObjectID('default_group'); }
     
+    /** Creates a new default group whose implicit members are all accounts of this auth source */
     public function CreateDefaultGroup() : self
     {
         if ($this->HasObject('default_group')) return $this;
@@ -126,16 +109,29 @@ class Manager extends BaseObject
         $this->SetObject('default_group', $group); $group->Initialize(); return $this;
     }
     
-    public function GetAuthSource() : External { return $this->GetObject('authsource'); }    
+    /** Returns the actual auth source interface for this manager */
+    public function GetAuthSource() : External { return $this->GetObject('authsource'); }  
+    
+    /** Returns the type of auth source for this manager, without actually loading it */
     public function GetAuthSourceType() : string { return $this->GetObjectType('authsource'); }
     
+    /** Returns the class-only (no namespace) of the auth source */
     private function GetShortSourceType() : string { return Utilities::ShortClassName($this->GetAuthSourceType()); }
     
+    /** Returns the description set for this auth source, or the class name if none is set */
     public function GetDescription() : string
     {
         return $this->TryGetScalar("description") ?? $this->GetShortSourceType();
     }
     
+    /**
+     * Returns a printable client object for this manager and auth source
+     * 
+     * See the GetClientObject() for each specific auth source type.
+     * @param bool $admin if true, show admin-level details
+     * @return array {id:string, description:string} \
+        if $admin, add {type:string, authsource:(Authsource), default_group:id}
+     */
     public function GetClientObject(bool $admin) : array
     {
         $retval = array(
@@ -153,8 +149,3 @@ class Manager extends BaseObject
         return $retval;
     }
 }
-
-require_once(ROOT."/apps/accounts/auth/Local.php");
-require_once(ROOT."/apps/accounts/auth/LDAP.php");
-require_once(ROOT."/apps/accounts/auth/IMAP.php");
-require_once(ROOT."/apps/accounts/auth/FTP.php");

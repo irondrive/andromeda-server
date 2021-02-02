@@ -5,6 +5,12 @@ require_once(ROOT."/apps/accounts/GroupStuff.php");
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
+/**
+ * A group of user accounts
+ * 
+ * Used primarily to manage config for multiple accounts at once, in a many-to-many relationship.
+ * Groups use a priority number to resolve conflicting properties.
+ */
 class Group extends AuthEntity
 {
     public static function GetFieldTemplate() : array
@@ -17,53 +23,78 @@ class Group extends AuthEntity
         ));
     }
     
+    /** Gets the short name of the group */
     public function GetDisplayName() : string { return $this->GetScalar('name'); }
+    
+    /** Sets the short name of the group */
     public function SetDisplayName(string $name) : self { return $this->SetScalar('name',$name); }
     
+    /** Gets the comment for the group (or null) */
     public function GetComment() : ?string { return $this->TryGetScalar('comment'); }
+    
+    /** Sets the comment for the group (or null) */
     public function SetComment(?string $comment) : self { return $this->SetScalar('comment',$comment); }
     
+    /** Gets the priority assigned to the group. Higher number means conflicting config takes precedent */
     public function GetPriority() : int { return $this->GetScalar('priority'); }
+    
+    /** Sets the priority assigned to the group */
     public function SetPriority(int $priority) { return $this->SetScalar('priority', $priority); }
     
+    /**
+     * Gets the list of accounts that are implicitly part of this group
+     * @return array<string, Account> Accounts indexed by ID
+     */
     public function GetDefaultAccounts() : array
     {
-        $retval = array();
-        
         if (Config::GetInstance($this->database)->GetDefaultGroup() === $this)
         {
-            $retval = Account::LoadAll($this->database);
+            return Account::LoadAll($this->database);
         }
         
         foreach (Auth\Manager::LoadAll($this->database) as $authman)
         {
             if ($authman->GetDefaultGroup() === $this)
             {
-                $retval = Account::LoadByAuthSource($this->database, $authman);
+                return Account::LoadByAuthSource($this->database, $authman);
             }
         }
         
-        return $retval;
+        return array();
     }
 
+    /**
+     * Gets the list of all accounts in this group
+     * @return array<string, Account> Accounts indexed by ID
+     */
     public function GetAccounts() : array { return array_merge($this->GetDefaultAccounts(), $this->GetMyAccounts()); }
     
+    /**
+     * Gets the list of accounts that are explicitly part of this group
+     * @return array<string, Account> Accounts indexed by ID
+     */
     public function GetMyAccounts() : array { return $this->GetObjectRefs('accounts'); }
     
+    /** Adds a new account to this group */
     public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
+    
+    /** Removes an account from this group */
     public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
     
+    /** Gets the date that an account became a member of this group (or null) */
     public function GetAccountAddedDate(Account $account) : ?int 
     {
         $joinobj = $this->TryGetJoinObject('accounts', $account);
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
     
+    /** Tries to load a group by name, returning null if not found */
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {
         return static::TryLoadUniqueByKey($database, 'name', $name);
     }
 
+    // TODO clean this up (see account)
     public function GetMailTo() : array
     {
         $accounts = $this->GetAccounts(); $output = array();
@@ -77,6 +108,7 @@ class Group extends AuthEntity
         return $output;
     }
     
+    /** Creates and returns a new group with the given name, priority, and comment */
     public static function Create(ObjectDatabase $database, string $name, int $priority = 0, ?string $comment = null) : self
     {
         $group = parent::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority);
@@ -86,6 +118,7 @@ class Group extends AuthEntity
         return $group;
     }
     
+    /** Initializes a newly created group by running group change handlers on its implicit accounts */
     public function Initialize() : self
     {
         if (!$this->isCreated()) return $this;        
@@ -104,6 +137,14 @@ class Group extends AuthEntity
         parent::Delete();
     }
     
+    /**
+     * Gets this group as a printable object
+     * @param bool $full if true, show the list of account IDs
+     * @return array `{id:string,name:string,priority:int,comment:?string,dates:{created:int}}` \
+        if full, add `{accounts:[id]}` \
+        also returns all inheritable account properties
+     * @see Account::GetClientObject()
+     */
     public function GetClientObject(bool $full = false) : array
     {
         $retval = array(
@@ -119,7 +160,7 @@ class Group extends AuthEntity
             'max_password_age' => $this->TryGetScalar('max_password_age')
         );
         
-        if ($full) $retval['accounts'] = array_map(function($e){ return $e->ID(); }, $this->GetAccounts());
+        if ($full) $retval['accounts'] = array_map(function($e){ return $e->ID(); }, array_values($this->GetAccounts()));
         
         return $retval;
     }

@@ -6,12 +6,15 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 class IMAPExtensionException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_MISSING"; }
 
 Manager::RegisterAuthType(IMAP::class);
 
+/** Uses an IMAP server for authentication */
 class IMAP extends External
 {
     public static function GetFieldTemplate() : array
@@ -20,8 +23,8 @@ class IMAP extends External
             'protocol' => null,
             'hostname' => null,
             'port' => null,
-            'implssl' => null,
-            'secauth' => null
+            'implssl' => null, // true to use implicit SSL, false for explicit or none
+            'secauth' => null // true to use secure authentication
         ));
     }
     
@@ -60,6 +63,10 @@ class IMAP extends External
     
     private function GetProtocol() : string { return array_flip(self::PROTOCOLS)[$this->GetScalar('protocol')]; }
     
+    /**
+     * Returns a printable client object for this IMAP
+     * @return array `{protocol:string, hostname:stsring, port:int, implssl:bool, secauth:bool}`
+     */
     public function GetClientObject() : array
     {
         return array(
@@ -71,15 +78,15 @@ class IMAP extends External
         );
     }
     
+    /** Checks for the existence of the IMAP extension */
     public function SubConstruct() : void
     {
         if (!function_exists('imap_open')) throw new IMAPExtensionException();
     }
     
-    public function Activate() : self { return $this; }
-    
-    public function VerifyPassword(string $username, string $password) : bool
+    public function VerifyPassword(Account $account, string $password) : bool
     {
+        $username = $account->GetUsername();
         $hostname = $this->GetScalar('hostname'); 
         
         if (($port = $this->TryGetScalar('port')) !== null) $hostname .= ":$port";

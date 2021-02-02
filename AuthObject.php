@@ -6,8 +6,14 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+/** Exception indicating that the raw (non-hashed) key does not exist in memory */
 class RawKeyNotAvailableException extends Exceptions\ServerException { public $message = "AUTHOBJECT_KEY_NOT_AVAILABLE"; }
 
+/** 
+ * Represents an object that holds an authentication code that can be checked 
+ * 
+ * The key is stored as a hash and cannot be retrieved unless provided
+ */
 abstract class AuthObject extends StandardObject
 {    
     public static function GetFieldTemplate() : array
@@ -17,16 +23,30 @@ abstract class AuthObject extends StandardObject
         ));
     }
     
-    const KEY_LENGTH = 32;
+    private const KEY_LENGTH = 32;
     
-    const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
+    /** a long random string doesn't need purposefully-slow hashing */
+    private const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
     
+    /**
+     * Attemps to load the object with the given account and ID
+     * @param ObjectDatabase $database database reference
+     * @param Account $account account that owns this object
+     * @param string $id the ID of this object
+     * @return self|NULL loaded object or null if not found
+     */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
         return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
 
+    /**
+     * Creates a new auth object
+     * @param ObjectDatabase $database database reference
+     * @param bool $withKey if true, create an auth key
+     * @return $this
+     */
     public static function BaseCreate(ObjectDatabase $database, bool $withKey = true) : self
     {
         $obj = parent::BaseCreate($database);
@@ -36,6 +56,7 @@ abstract class AuthObject extends StandardObject
         return $obj->SetAuthKey($key, true);
     }
     
+    /** Returns true if the given key is valid, and stores it in memory for GetAuthKey() */
     public function CheckKeyMatch(string $key) : bool
     {
         $hash = $this->GetAuthKey(true);
@@ -44,6 +65,11 @@ abstract class AuthObject extends StandardObject
         return $correct;
     }
     
+    /**
+     * Returns the auth key or auth key hash
+     * @param bool $asHash if false, get the real key not the hash
+     * @throws RawKeyNotAvailableException if the real key is not in memory
+     */
     public function GetAuthKey(bool $asHash = false) : string
     {
         if (!$asHash && !$this->haveKey) 
@@ -53,6 +79,12 @@ abstract class AuthObject extends StandardObject
     
     private $haveKey = false;
     
+    /**
+     * Sets the auth key to the given value (places it in memory)
+     * @param string $key new auth key
+     * @param bool $forceHash if true, update the stored hash
+     * @return $this
+     */
     protected function SetAuthKey(string $key, bool $forceHash = false) : self 
     {
         $this->haveKey = true; $algo = Utilities::GetHashAlgo(); 
@@ -65,6 +97,11 @@ abstract class AuthObject extends StandardObject
         return $this->SetScalar('authkey', $key, true);
     }
     
+    /**
+     * Returns a printable client object
+     * @param bool $secret if true, show the real key
+     * @return array|NULL `{authkey:string}` if $secret, else null
+     */
     public function GetClientObject(bool $secret = false) : array
     {
         return $secret ? array('authkey'=>$this->GetAuthKey()) : array();

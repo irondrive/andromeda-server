@@ -12,18 +12,35 @@ require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
 
+/** Exception indicating that the request is not allowed with the given authentication */
 class AuthenticationFailedException extends Exceptions\ClientDeniedException { public $message = "AUTHENTICATION_FAILED"; }
 
-class AccountDisabledException extends AuthenticationFailedException      { public $message = "ACCOUNT_DISABLED"; }
-class InvalidSessionException extends AuthenticationFailedException       { public $message = "INVALID_SESSION"; }
+/** Exception indicating that the authenticated account is disabled */
+class AccountDisabledException extends AuthenticationFailedException { public $message = "ACCOUNT_DISABLED"; }
 
-class AdminRequiredException extends AuthenticationFailedException        { public $message = "ADMIN_REQUIRED"; }
-class TwoFactorRequiredException extends AuthenticationFailedException    { public $message = "TWOFACTOR_REQUIRED"; }
-class PasswordRequiredException extends AuthenticationFailedException     { public $message = "AUTH_PASSWORD_REQUIRED"; }
-class CryptoKeyRequiredException extends AuthenticationFailedException    { public $message = "CRYPTOKEY_REQUIRED"; }
+/** Exception indicating that the specified session is invalid */
+class InvalidSessionException extends AuthenticationFailedException { public $message = "INVALID_SESSION"; }
+
+/** Exception indicating that admin-level access is required */
+class AdminRequiredException extends AuthenticationFailedException { public $message = "ADMIN_REQUIRED"; }
+
+/** Exception indicating that a two factor code was required but not given */
+class TwoFactorRequiredException extends AuthenticationFailedException { public $message = "TWOFACTOR_REQUIRED"; }
+
+/** Exception indicating that a password for authentication was required but not given */
+class PasswordRequiredException extends AuthenticationFailedException { public $message = "AUTH_PASSWORD_REQUIRED"; }
+
+/** Exception indicating that the request requires providing crypto details */
+class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTOKEY_REQUIRED"; }
 
 use Andromeda\Core\DecryptionFailedException;
 
+/**
+ * The class used to authenticate requests
+ *
+ * This is the API class that should be used in other apps.
+ * Allows admins to masquerade as other users ("sudouser")
+ */
 class Authenticator
 {
     private Account $account; 
@@ -33,13 +50,37 @@ class Authenticator
     
     private ObjectDatabase $database; 
    
+    /** Returns the authenticated user account */
     public function GetAccount() : Account { return $this->account; }
+    
+    /** Returns the session used for the request */
     public function GetSession() : Session { return $this->session; }
+    
+    /** Returns the client used for the request */
     public function GetClient() : Client { return $this->client; }
     
-    private bool $issudouser = false; public function isSudoUser() : bool { return $this->issudouser; }
-    private Account $realaccount;     public function GetRealAccount() : Account { return $this->realaccount; }
+    private bool $issudouser = false; 
     
+    /** Returns true if the user is masquering as another user */
+    public function isSudoUser() : bool { return $this->issudouser; }
+    
+    private Account $realaccount;    
+    
+    /** Returns the actual account used for the request, not the masqueraded one */
+    public function GetRealAccount() : Account { return $this->realaccount; }
+    
+    /**
+     * The primary authentication routine
+     * 
+     * Loads the specified session, checks validity, updates dates, checks sudouser.
+     * Note that only a session must be provided, not the client that owns it.
+     * @param ObjectDatabase $database database reference
+     * @param Input $input the input containing auth details
+     * @param IOInterface $interface the interface used for the request
+     * @throws InvalidSessionException if the given session details are invalid
+     * @throws AccountDisabledException if the given account is disabled
+     * @throws UnknownAccountException if the given sudo account is not valid
+     */
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {        
         $sessionid = $input->TryGetParam('auth_sessionid',SafeParam::TYPE_RANDSTR);
@@ -59,7 +100,8 @@ class Authenticator
             
         $account = $session->GetAccount(); $client = $session->GetClient();
         
-        $this->realaccount = $account; $this->session = $session; $this->client = $client;
+        $this->realaccount = $account; 
+        $this->session = $session; $this->client = $client;
         $this->database = $database; $this->input = $input;
 
         if (!$account->isEnabled()) throw new AccountDisabledException();
@@ -68,42 +110,57 @@ class Authenticator
         
         if ($input->HasParam('auth_sudouser') && $account->isAdmin())
         {
-            $sudouser = $input->TryGetParam('auth_sudouser', SafeParam::TYPE_RANDSTR);
-            if ($sudouser === null) throw new AuthenticationFailedException();
-            else
-            {
-                $this->issudouser = true;
-                $account = Account::TryLoadByID($database, $sudouser);
-                if ($account === null) throw new UnknownAccountException();   
-            }      
+            $this->issudouser = true;
+            $sudouser = $input->GetParam('auth_sudouser', SafeParam::TYPE_RANDSTR);
+            $account = Account::TryLoadByID($database, $sudouser);
+            if ($account === null) throw new UnknownAccountException();     
         }
         
         $this->account = $account;
     }
     
+    /**
+     * Returns a new authenticator object
+     * @see Authenticator::__construct()
+     */
     public static function Authenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : self
     {
         return new self($database, $input, $interface);
     }
     
+    /**
+     * Returns a new authenticator object, or null if it fails (instead of exceptions)
+     * @see Authenticator::__construct()
+     */
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
         try { return new self($database, $input, $interface); }
         catch (AuthenticationFailedException | SafeParamException | DatabaseException $e) { return null; }
     }
     
+    /** Returns true if the real account used for the request is an admin */
     public function isAdmin() : bool { return $this->realaccount->isAdmin(); }
     
+    /**
+     * Requires that the user is an administrator
+     * @throws AdminRequiredException if not an admin
+     */
     public function RequireAdmin() : self
     {
-        if (!$this->realaccount->isAdmin()) throw new AdminRequiredException(); return $this;
+        if (!$this->isAdmin()) throw new AdminRequiredException(); return $this;
     }
     
+    /**
+     * Requires that the user posts a twofactor code, if the account uses twofactor
+     * @throws TwoFactorRequiredException if twofactor was not given
+     * @throws AuthenticationFailedException if the given twofactor was invalid
+     */
     public function TryRequireTwoFactor() : self
     {
         static::StaticTryRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
     }
     
+    /** @see Authenticator::TryRequireTwoFactor() */
     public static function StaticTryRequireTwoFactor(Input $input, Account $account, ?Session $session = null) : void
     {
         if (!$account->HasValidTwoFactor()) return; 
@@ -115,6 +172,11 @@ class Authenticator
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
     
+    /**
+     * Requires that the user provides their password
+     * @throws PasswordRequiredException if the password is not given
+     * @throws AuthenticationFailedException if the password is invalid
+     */
     public function RequirePassword() : self
     {
         $password = $this->input->TryGetParam('auth_password',SafeParam::TYPE_RAW);
@@ -126,21 +188,37 @@ class Authenticator
         return $this;
     }
     
+    /**
+     * Same as RequireCrypto() but does nothing if the account does not have crypto
+     * @see Authenticator::RequireCrypto()
+     */
     public function TryRequireCrypto() : self
     {
         return (!$this->account->hasCrypto()) ? $this : $this->RequireCrypto();
     }
     
+    /**
+     * Same as StaticRequireCrypto() but does nothing if the account does not have crypto
+     * @see Authenticator::StaticRequireCrypto()
+     */
     public static function StaticTryRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
     {
         if ($account->hasCrypto()) static::StaticRequireCrypto($input, $account, $session);
     }
     
+    /**
+     * Requires that the account's crypto is unlocked for the request (and exists)
+     *
+     * Account crypto can be unlocked via a session, a recovery key, or a password
+     * @throws AuthenticationFailedException if the given keysource is not valid
+     * @throws CryptoKeyRequiredException if no key source was given
+     */
     public function RequireCrypto() : self
     {
         static::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
     }
     
+    /** @see Authenticator::RequireCrypto() */
     public static function StaticRequireCrypto(Input $input, Account $account, ?Session $session = null) : void
     {
         if ($account->CryptoAvailable()) return;

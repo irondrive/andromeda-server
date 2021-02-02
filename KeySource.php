@@ -6,6 +6,12 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/accounts/Account.php");
 
+/** 
+ * An object that holds an encrypted copy of an Account's master key 
+ * 
+ * Inherits from AuthObject, using the auth key as the key that wraps the master key.
+ * This is used to provide methods of unlocking crypto in a request other than having the user's password.
+ */
 abstract class KeySource extends AuthObject
 {
     public static function GetFieldTemplate() : array
@@ -17,9 +23,13 @@ abstract class KeySource extends AuthObject
         ));
     }
 
+    /** Returns true if this key source contains key material */
     public function hasCrypto() : bool { return $this->TryGetScalar('master_key') !== null; }
+    
+    /** Returns the account that owns this key source */
     public function GetAccount() : Account  { return $this->GetObject('account'); }
     
+    /** Creates a new key source for the given account, initializing crypto if the account has it */
     public static function CreateKeySource(ObjectDatabase $database, Account $account) : self
     {
         $obj = parent::BaseCreate($database)->SetObject('account',$account);;
@@ -27,6 +37,14 @@ abstract class KeySource extends AuthObject
         return (!$account->hasCrypto()) ? $obj : $obj->InitializeCrypto();
     }
     
+    /**
+     * Initializes crypto, storing a copy of the account's master key
+     * 
+     * Crypto must be unlocked for the account to get a copy of the key
+     * @throws CryptoAlreadyInitializedException if already initialized
+     * @see Account::GetEncryptedMasterKey()
+     * @return $this
+     */
     public function InitializeCrypto() : self
     {
         if ($this->hasCrypto()) throw new CryptoAlreadyInitializedException();
@@ -43,6 +61,11 @@ abstract class KeySource extends AuthObject
             ->SetScalar('master_key', $master_key);
     }
 
+    /**
+     * Returns the decrypted account master key
+     * @throws CryptoNotInitializedException if no key material exists
+     * @see AuthObject::GetAuthKey()
+     */
     public function GetUnlockedKey() : string
     {
         if (!$this->hasCrypto()) throw new CryptoNotInitializedException();
@@ -56,6 +79,7 @@ abstract class KeySource extends AuthObject
         return CryptoSecret::Decrypt($master, $master_nonce, $cryptokey);
     }
 
+    /** Erases all key material from the object */
     public function DestroyCrypto() : self
     {
         $this->SetScalar('master_key', null);
