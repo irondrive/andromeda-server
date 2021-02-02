@@ -11,6 +11,11 @@ class LocalNonAdminException extends ActivateException { public $message = "LOCA
 
 FSManager::RegisterStorageType(Local::class);
 
+/** 
+ * A storage on local-disk on the server
+ * 
+ * Only admin can add storages of this type!
+ */
 class Local extends FWrapper
 {
     public function Activate() : self { return $this; }
@@ -40,6 +45,10 @@ class Local extends FWrapper
         return $this->GetPath($path);
     }
     
+    /**
+     * Import the file quickly by just renaming it
+     * @see FWrapper::ImportFile()
+     */
     public function ImportFile(string $src, string $dest) : self
     {
         $this->CheckReadOnly();

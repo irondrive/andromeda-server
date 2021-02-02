@@ -6,6 +6,11 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php");
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 
+/** 
+ * A basic filesystem type that stores files as files (revolutionary) 
+ * 
+ * Each file call is translated into a root-relative path and passed to storage.
+ */
 abstract class BaseFileFS extends FSImpl
 {
     protected abstract function GetFilePath(File $file) : string;
@@ -40,6 +45,12 @@ abstract class BaseFileFS extends FSImpl
         $this->GetStorage()->CopyFile($this->GetFilePath($file), $this->GetFilePath($dest)); return $this; 
     }
     
+    /**
+     * Helper function to emulate copying a folder by copying its contents manually
+     * @param Folder $folder folder to copy
+     * @param Folder $dest new folder object to copy to
+     * @return $this
+     */
     protected function ManualCopyFolder(Folder $folder, Folder $dest) : self
     {
         $this->CreateFolder($dest);        
@@ -49,21 +60,29 @@ abstract class BaseFileFS extends FSImpl
     }
 }
 
+/**
+ * An Andromeda native filesystem stores only file content.
+ * 
+ * All folders and file/folder metadata is stored only in the database.
+ * The database is the authoritative record of what exists.
+ */
 class Native extends BaseFileFS
 {
-    public function RefreshFile(File $file) : self { return $this; }
-    public function RefreshFolder(Folder $folder) : self { return $this; }    
-    public function CreateFolder(Folder $folder) : self { return $this; }
-    public function DeleteFolder(Folder $folder) : self { return $this; }    
-    public function RenameFile(File $file, string $name) : self { return $this; }
-    public function RenameFolder(Folder $folder, string $name) : self { return $this; }    
-    public function MoveFile(File $file, Folder $parent) : self { return $this; }
-    public function MoveFolder(Folder $folder, Folder $parent) : self { return $this; }
+    /** no-op */ public function RefreshFile(File $file) : self { return $this; }
+    /** no-op */ public function RefreshFolder(Folder $folder) : self { return $this; }    
+    /** no-op */ public function CreateFolder(Folder $folder) : self { return $this; }
+    /** no-op */ public function DeleteFolder(Folder $folder) : self { return $this; }    
+    /** no-op */ public function RenameFile(File $file, string $name) : self { return $this; }
+    /** no-op */ public function RenameFolder(Folder $folder, string $name) : self { return $this; }    
+    /** no-op */ public function MoveFile(File $file, Folder $parent) : self { return $this; }
+    /** no-op */ public function MoveFolder(Folder $folder, Folder $parent) : self { return $this; }
     
+    /** @see BaseFileFS::ManualCopyFolder() */
     public function CopyFolder(Folder $folder, Folder $dest) : self
     {
         return $this->ManualCopyFolder($folder, $dest);
     }
 
+    /** The path to a file is simply its ID */
     protected function GetFilePath(File $file) : string { return $file->ID(); }
 }

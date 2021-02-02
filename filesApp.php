@@ -19,12 +19,12 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
-require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
+require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -40,32 +40,75 @@ use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException};
 use Andromeda\Apps\Accounts\UnknownAccountException;
 use Andromeda\Apps\Accounts\UnknownGroupException;
 
+/** Exception indicating that the requested item does not exist */
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
+
+/** Exception indicating that the requested file does not exist */
 class UnknownFileException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_FILE"; }
+
+/** Exception indicating that the requested folder does not exist */
 class UnknownFolderException extends Exceptions\ClientNotFoundException     { public $message = "UNKNOWN_FOLDER"; }
+
+/** Exception indicating that the requested object does not exist */
 class UnknownObjectException extends Exceptions\ClientNotFoundException     { public $message = "UNKNOWN_OBJECT"; }
 
+/** Exception indicating that the requested parent does not exist */
 class UnknownParentException  extends Exceptions\ClientNotFoundException    { public $message = "UNKNOWN_PARENT"; }
+
+/** Exception indicating that the requested destination folder does not exist */
 class UnknownDestinationException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_DESTINATION"; }
+
+/** Exception indicating that the requested filesystem does not exist */
 class UnknownFilesystemException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_FILESYSTEM"; }
 
+/** Exception indicating that the requested download byte range is invalid */
 class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; public $message = "INVALID_BYTE_RANGE"; }
 
+/** Exception indicating that the input file parameter format is incorrect */
 class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
+
+/** Exception indicating that the requested byte range for file writing is invalid */
 class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
+/** Exception indicating that access to the requested item is denied */
 class ItemAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "ITEM_ACCESS_DENIED"; }
+
+/** Exception indicating that access to the requested file is denied */
 class FileAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "FILE_ACCESS_DENIED"; }
+
+/** Exception indicating that access to the requested folder is denied */
 class FolderAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "FOLDER_ACCESS_DENIED"; }
 
+/** Exception indicating that user-added filesystems are not allowed */
 class UserStorageDisabledException extends Exceptions\ClientDeniedException   { public $message = "USER_STORAGE_NOT_ALLOWED"; }
+
+/** Exception indicating that random write access is not allowed */
 class RandomWriteDisabledException extends Exceptions\ClientDeniedException   { public $message = "RANDOM_WRITE_NOT_ALLOWED"; }
 
+/** Exception indicating that item sharing is not allowed */
 class ItemSharingDisabledException extends Exceptions\ClientDeniedException   { public $message = "SHARING_DISABLED"; }
+
+/** Exception indicating that emailing share links is not allowed */
 class EmailShareDisabledException extends Exceptions\ClientDeniedException    { public $message = "EMAIL_SHARES_DISABLED"; }
-class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_REQUEST_URI"; }
+
+/** Exception indicating that the absolute URL of a share cannot be determined */
+class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_SHARE_URI"; }
+
+/** Exception indicating that sharing to everyone is not allowed */
 class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
 
+/**
+ * App that provides user-facing filesystem services.
+ * 
+ * Provides a general filesystem API for managing files and folders,
+ * as well as admin-level functions like managing filesystems and config.
+ * 
+ * Supports features like random-level byte access, multiple (user or admin-added)
+ * filesystems with various backend storage drivers, social features including
+ * likes and comments, sharing of content via links or to users or groups,
+ * configurable rules per-account or per-filesystem, and granular statistics
+ * gathering and limiting for accounts/groups/filesystems.
+ */
 class FilesApp extends AppBase
 {
     public static function getVersion() : array { return array(0,0,1); } 
@@ -83,7 +126,7 @@ class FilesApp extends AppBase
             'writefile --file file --fileid id [--offset int]',
             'fileinfo --fileid id',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
-            'getitembypath [--rootfolder id | --filesystem id] [--path text] [--isfile bool]',
+            'getitembypath [--folder id | --filesystem id] [--path text] [--isfile bool]',
             'createfolder --parent id --name fsname',
             'deletefile [--fileid id | --files id_array]',
             'deletefolder [--folder id | --folders id_array]',
@@ -91,14 +134,14 @@ class FilesApp extends AppBase
             'renamefolder --folder id --name fsname [--overwrite bool] [--copy bool]',
             'movefile --parent id [--fileid id | --files id_array] [--overwrite bool] [--copy bool]',
             'movefolder --parent id [--folder id | --folders id_array] [--overwrite bool] [--copy bool]',
-            'likefile --fileid id --value -1|0|1',
-            'likefolder --folder id --value -1|0|1',
+            'likefile --fileid id --value ?bool',
+            'likefolder --folder id --value ?bool',
             'tagfile [--fileid id | --files id_array] --tag alphanum',
             'tagfolder [--folder id | --folders id_array] --tag alphanum',
             'deletetag --tag id',
             'commentfile --fileid id --comment text [--private bool]',
             'commentfolder --folder id --comment text [--private bool]',
-            'editcomment --commentid id --comment text',
+            'editcomment --commentid id [--comment text] [--private bool]',
             'deletecomment --commentid id',
             'sharefile [--fileid id | --files id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
             'sharefolder [--folder id | --folders id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
@@ -129,11 +172,16 @@ class FilesApp extends AppBase
         ); 
     }
     
-    private Config $config;
-    private ObjectDatabase $database;
+    /** files app config */ private Config $config;
     
+    /** database reference */ private ObjectDatabase $database;
+    
+    /** Authenticator for the current Run() */ private ?Authenticator $authenticator;
+    
+    /** function to be called when crypto unlock is required */
     private static $providesCrypto;
-    private function providesCrypto(callable $func){ static::$providesCrypto = $func; }
+
+    /** informs the files app that account crypto needs to be available */
     public static function needsCrypto(){ $func = static::$providesCrypto; $func(); }
      
     public function __construct(Main $api)
@@ -142,24 +190,25 @@ class FilesApp extends AppBase
         $this->database = $api->GetDatabase();
         
         try { $this->config = Config::GetInstance($api->GetDatabase()); }
-        catch (DatabaseException $e) { }
-        
-        Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
-        { 
-            FSManager::DeleteByAccount($database, $account);             
-            Folder::DeleteRootsByAccount($database, $account);
-        });        
+        catch (DatabaseException $e) { }     
     }
-        
+    
+    /**
+     * {@inheritDoc}
+     * @throws UnknownConfigException if config needs to be initialized
+     * @throws UnknownActionException if the given action is not valid
+     * @see AppBase::Run()
+     */
     public function Run(Input $input)
     {
+        // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
             throw new UnknownConfigException(static::class);
         
         $this->authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
         
-        $this->providesCrypto(function(){ $this->authenticator->RequireCrypto(); });
+        static::$providesCrypto = function(){ $this->authenticator->RequireCrypto(); };
 
         switch($input->GetAction())
         {
@@ -220,29 +269,39 @@ class FilesApp extends AppBase
         }
     }
     
+    /** Returns an ItemAccess authenticating the given file ID (or null to get from input), throws exceptions on failure */
     private function AuthenticateFileAccess(Input $input, ?string $id = null) : ItemAccess {
         $id ??= $input->TryGetParam('fileid', SafeParam::TYPE_RANDSTR);
         return ItemAccess::Authenticate($this->database, $input, $this->authenticator, File::class, $id); }
         
+    /** Returns an ItemAccess authenticating the given file ID (or null to get from input), returns null on failure */
     private function TryAuthenticateFileAccess(Input $input, ?string $id = null) : ?ItemAccess {
         $id ??= $input->TryGetParam('fileid', SafeParam::TYPE_RANDSTR);
         return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, File::class, $id); }
             
+    /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), throws exceptions on failure */
     private function AuthenticateFolderAccess(Input $input, ?string $id = null) : ItemAccess { 
         $id ??= $input->TryGetParam('folder', SafeParam::TYPE_RANDSTR);
         return ItemAccess::Authenticate($this->database, $input, $this->authenticator, Folder::class, $id); }
         
+    /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), returns null on failure */
     private function TryAuthenticateFolderAccess(Input $input, ?string $id = null) : ?ItemAccess {
         $id ??= $input->TryGetParam('folder', SafeParam::TYPE_RANDSTR);
         return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, Folder::class, $id); }
         
+    /** Returns an ItemAccess authenticating the given item class/ID, throws exceptions on failure */
     private function AuthenticateItemAccess(Input $input, string $class, string $id) : ItemAccess {
         return ItemAccess::Authenticate($this->database, $input, $this->authenticator, $class, $id); }
         
+    /** Returns an ItemAccess authenticating the given item class/ID, returns null on failure */
     private function TryAuthenticateItemAccess(Input $input, string $class, string $id) : ?ItemAccess {
         return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $class, $id); }
 
-    protected function Install(Input $input)
+    /**
+     * Installs the app by importing its SQL file and creating config
+     * @throws UnknownActionException if config already exists
+     */
+    protected function Install(Input $input) : void
     {
         if (isset($this->config)) throw new UnknownActionException();
         
@@ -251,23 +310,46 @@ class FilesApp extends AppBase
         
         Config::Create($database)->Save();
     }        
-        
+    
+    /**
+     * Gets config for this app
+     * @return array Config
+     * @see Config::GetClientObject()
+     */
     protected function GetConfig(Input $input) : array
     {
-        $account = $this->authenticator->GetAccount();
+        $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
+
         $admin = $account !== null && $account->isAdmin();
 
         return $this->config->GetClientObject($admin);
     }
     
+    /**
+     * Sets config for this app
+     * @throws AuthenticationFailedException if not admin
+     * @return array Config
+     * @see Config::GetClientObject()
+     */
     protected function SetConfig(Input $input) : array
     {
-        $account = $this->authenticator->GetAccount();
-        $admin = $account !== null && $account->isAdmin();
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
         
-        return $this->config->SetConfig($input)->GetClientObject($admin);
+        $this->authenticator->RequireAdmin();
+
+        return $this->config->SetConfig($input)->GetClientObject(true);
     }
     
+    /**
+     * Uploads new files to the given folder
+     * 
+     * Multiple files can be provided. Bandwidth is counted.
+     * @throws AuthenticationFailedException if not signed in and public upload not allowed
+     * @throws ItemAccessDeniedException if accessing via share and share does not allow upload
+     * @throws InvalidFileWriteException if no input files were provided
+     * @return array [id:File] newly created files
+     * @see File::GetClientObject()
+     */
     protected function UploadFiles(Input $input) : array
     {
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
@@ -296,6 +378,13 @@ class FilesApp extends AppBase
         return $return;
     }
     
+    /**
+     * Downloads a file or part of a file
+     * 
+     * Can accept an input byte range. Also accepts the HTTP_RANGE header.
+     * @throws ItemAccessDeniedException if accessing via share and read is not allowed
+     * @throws InvalidDLRangeException if the given byte range is invalid
+     */
     protected function DownloadFile(Input $input) : void
     {
         $access = $this->AuthenticateFileAccess($input); 
@@ -391,6 +480,16 @@ class FilesApp extends AppBase
         });
     }
     
+    /**
+     * Writes new data to an existing file - data is posted as a file
+     * @throws AuthenticationFailedException if public access and public modify is not allowed
+     * @throws RandomWriteDisabledException if random write is not allowed on the file
+     * @throws ItemAccessDeniedException if acessing via share and share doesn't allow modify
+     * @throws InvalidFileWriteException if not exactly one file was posted
+     * @throws InvalidFileRangeException if the given byte range is invalid
+     * @return array File
+     * @see File::GetClientObject()
+     */
     protected function WriteToFile(Input $input) : array
     {
         $access = $this->AuthenticateFileAccess($input);
@@ -459,6 +558,15 @@ class FilesApp extends AppBase
         return $file->GetClientObject();
     }
     
+    /**
+     * Truncates (resizes a file)
+     * @throws AuthenticationFailedException if public access and public modify is not allowed
+     * @throws RandomWriteDisabledException if random writes are not enabled on the file
+     * @throws ItemAccessDeniedException if access via share and share does not allow modify
+     * @throws InvalidFileRangeException if the given size is < 0
+     * @return array File
+     * @see File::GetClientObject()
+     */
     protected function TruncateFile(Input $input) : array
     {   
         $access = $this->AuthenticateFileAccess($input);
@@ -483,6 +591,12 @@ class FilesApp extends AppBase
         return $file->GetClientObject();
     }
     
+    /**
+     * Returns file metadata
+     * @throws ItemAccessDeniedException if accessing via share and reading is not allowed
+     * @return array File
+     * @see File::GetClientObject()
+     */
     protected function GetFileInfo(Input $input) : array
     {
         $access = $this->AuthenticateFileAccess($input);
@@ -494,6 +608,15 @@ class FilesApp extends AppBase
         return $file->GetClientObject($details);
     }
 
+    /**
+     * Lists folder metadata and optionally the items in a folder (or filesystem root)
+     * @throws ItemAccessDeniedException if accessing via share and reading is not allowed
+     * @throws AuthenticationFailedException if public access and no folder ID is given
+     * @throws UnknownFilesystemException if the given filesystem does not exist
+     * @throws UnknownFolderException if the given folder does not exist
+     * @return array Folder
+     * @see Folder::GetClientObject()
+     */
     protected function GetFolder(Input $input) : array
     {
         if ($input->TryGetParam('folder',SafeParam::TYPE_RANDSTR))
@@ -538,10 +661,20 @@ class FilesApp extends AppBase
         if ($return === null) throw new UnknownFolderException(); return $return;
     }
     
+    /**
+     * Reads an item by a path (rather than by ID) - can specify a root folder or filesystem
+     * @throws ItemAccessDeniedException if access via share and read is not allowed
+     * @throws AuthenticationFailedException if public access and no root is given
+     * @throws UnknownFilesystemException if the given filesystem is not found
+     * @throws UnknownFolderException if the given folder is not found
+     * @throws UnknownItemException if the given item path is invalid
+     * @return array File|Folder
+     * @see File::GetClientObject()
+     * @see Folder::GetClientObject()
+     */
     protected function GetItemByPath(Input $input) : array
     {
-        $rid = $input->TryGetParam('rootfolder',SafeParam::TYPE_RANDSTR);
-        if (($raccess = $this->TryAuthenticateFolderAccess($input, $rid)) !== null)
+        if (($raccess = $this->TryAuthenticateFolderAccess($input)) !== null)
         {
             $folder = $raccess->GetItem(); $share = $raccess->GetShare();
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
@@ -593,6 +726,13 @@ class FilesApp extends AppBase
         $retval['isfile'] = ($item instanceof File); return $retval;
     }
     
+    /**
+     * Creates a folder in the given parent
+     * @throws AuthenticationFailedException if public access and public upload not allowed
+     * @throws ItemAccessDeniedException if accessing via share and share upload not allowed
+     * @return array Folder
+     * @see Folder::GetClientObject()
+     */
     protected function CreateFolder(Input $input) : array
     {
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
@@ -610,17 +750,36 @@ class FilesApp extends AppBase
         return Folder::Create($this->database, $parent, $account, $name)->GetClientObject();
     }
     
+    /**
+     * Deletes a file or files
+     * @see FilesApp::DeleteItem()
+     */
     protected function DeleteFile(Input $input) : array
     {
         return $this->DeleteItem(File::class, 'fileid', 'files', $input);
     }
     
+    /**
+     * Deletes a folder or folders
+     * @see FilesApp::DeleteItem()
+     */
     protected function DeleteFolder(Input $input) : array
     {
         return $this->DeleteItem(Folder::class, 'folder', 'folders', $input);
     }
     
-    private function DeleteItem(string $class, string $key, string $keys, Input $input) : array
+    /**
+     * Deletes one or more items.
+     * 
+     * If multiple items are given, it tries all and reports failures.
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @param string $keys input param for an array of items
+     * @throws AuthenticationFailedException if public access and public modify is not allowed
+     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     * @return ?array [id:bool] array of success/failure
+     */
+    private function DeleteItem(string $class, string $key, string $keys, Input $input) : ?array
     {       
         $item = $input->TryGetParam($key,SafeParam::TYPE_RANDSTR);
         $items = $input->TryGetParam($keys,SafeParam::TYPE_ARRAY | SafeParam::TYPE_RANDSTR);
@@ -635,7 +794,7 @@ class FilesApp extends AppBase
             
             if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
 
-            $itemobj->Delete(); return array();
+            $itemobj->Delete(); return null;
         }
         else if ($items !== null)
         {
@@ -661,17 +820,37 @@ class FilesApp extends AppBase
         else ItemAccess::ItemException($class);
     }
     
+    /**
+     * Renames (or copies) a file
+     * @see FilesApp::RenameItem()
+     * @return array File
+     * @see File::GetClientObject()
+     */
     protected function RenameFile(Input $input) : array
     {
         return $this->RenameItem(File::class, 'fileid', $input);
     }
     
+    /**
+     * Renames (or copies) a folder
+     * @see FilesApp::RenameItem()
+     * @return array Folder
+     * @see Folder::GetClientObject()
+     */
     protected function RenameFolder(Input $input) : array
     {
         return $this->RenameItem(Folder::class, 'folder', $input);
     }
     
-    private function RenameItem(string $class, string $key, Input $input)
+    /**
+     * Renames or copies an item
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @param string $keys input param for an array of items
+     * @throws ItemAccessDeniedException if access via share and share upload/modify is not allowed
+     * @throws AuthenticationFailedException if public access and public upload/modify is not allowed
+     */
+    private function RenameItem(string $class, string $key, Input $input) : array
     {
         $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
 
@@ -712,16 +891,38 @@ class FilesApp extends AppBase
         return $retval->GetClientObject();
     }
     
+    /**
+     * Moves (or copies) a file or files
+     * @see FilesApp::MoveItem()
+     * @return array File | [id:false|File]
+     * @see File::GetClientObject()
+     */
     protected function MoveFile(Input $input) : array
     {
         return $this->MoveItem(File::class, 'fileid', 'files', $input);
     }
     
+    /**
+     * Moves (or copies) a folder or folders
+     * @see FilesApp::MoveItem()
+     * @return array Folder | [id:false|Folder]
+     * @see Folder::GetClientObject()
+     */
     protected function MoveFolder(Input $input) : array
     {
         return $this->MoveItem(Folder::class, 'folder', 'folders', $input);
     }
     
+    /**
+     * Moves or copies an item or items
+     * 
+     * If multiple items are given, it tries all and reports failures.
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @param string $keys input param for an array of items
+     * @throws AuthenticationFailedException if public access and public modify/upload not allowed
+     * @throws ItemAccessDeniedException if access via share and share modify/upload not allowed
+     */
     private function MoveItem(string $class, string $key, string $keys, Input $input) : array
     {
         $copy = $input->TryGetParam('copy',SafeParam::TYPE_BOOL) ?? false;
@@ -779,18 +980,35 @@ class FilesApp extends AppBase
         }
         else ItemAccess::ItemException($class);
     }
-        
+    
+    /** 
+     * Likes or dislikes a file 
+     * @see FilesApp::LikeItem()
+     */
     protected function LikeFile(Input $input) : array
     {
         return $this->LikeItem(File::class, 'fileid', $input);
     }
     
+    /** 
+     * Likes or dislikes a folder
+     * @see FilesApp::LikeItem()
+     */
     protected function LikeFolder(Input $input) : array
     {
         return $this->LikeItem(Folder::class, 'folder', $input);
     }
     
-    private function LikeItem(string $class, string $key, Input $input) : array
+    /**
+     * Likes or dislikes an item
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @throws AuthenticationFailedException if not signed in
+     * @throws ItemAccessDeniedException if access via share if social is not allowed
+     * @return array ?Like
+     * @see Like::GetClientObject()
+     */
+    private function LikeItem(string $class, string $key, Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -801,22 +1019,40 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanSocial()) throw new ItemAccessDeniedException();
         
-        $value = $input->GetParam('value',SafeParam::TYPE_INT);
-        if ($value > 0) $value = 1; else if ($value < 0) $value = -1;
+        $value = $input->TryGetParam('value',SafeParam::TYPE_BOOL);
         
-        return Like::CreateOrUpdate($this->database, $account, $item, $value)->GetClientObject();
+        $like = Like::CreateOrUpdate($this->database, $account, $item, $value);
+        return ($like !== null) ? $like->GetClientObject() : null;
     }
     
+    /** 
+     * Adds a tag to a file or files 
+     * @see FilesApp::TagItem()
+     */
     protected function TagFile(Input $input) : array
     {
         return $this->TagItem(File::class, 'fileid', 'files', $input);
     }
     
+    /** 
+     * Adds a tag to a folder or folders 
+     * @see FilesApp::TagItem() 
+     */
     protected function TagFolder(Input $input) : array
     {
         return $this->TagItem(Folder::class, 'folder', 'folders', $input);
     }
     
+    /**
+     * Adds a tag to an item or items
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @param string $keys input param for an array of items
+     * @throws AuthenticationFailedException if not signed in
+     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     * @return array Tag | [id:Tag]
+     * @see Tag::GetClientObject()
+     */
     private function TagItem(string $class, string $key, string $keys, Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -856,7 +1092,13 @@ class FilesApp extends AppBase
         else ItemAccess::ItemException($class);
     }
     
-    protected function DeleteTag(Input $input) : array
+    /**
+     * Deletes an item tag
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownItemException if the given tag is not found
+     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     */
+    protected function DeleteTag(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -871,19 +1113,36 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
         
-        $tag->Delete(); return array();
+        $tag->Delete();
     }
     
+    /**
+     * Adds a comment to a file
+     * @see FilesApp::CommentItem()
+     */
     protected function CommentFile(Input $input) : array
     {
         return $this->CommentItem(File::class, 'fileid', $input);
     }
     
+    /**
+     * Adds a comment to a folder
+     * @see FilesApp::CommentFolder()
+     */
     protected function CommentFolder(Input $input) : array
     {
         return $this->CommentItem(Folder::class, 'folder', $input);
     }
     
+    /**
+     * Adds a comment to an item
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @throws AuthenticationFailedException if not signed in
+     * @throws ItemAccessDeniedException if access via share and share social is not allowed
+     * @return array Comment
+     * @see Comment::GetClientObject()
+     */
     private function CommentItem(string $class, string $key, Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -905,44 +1164,83 @@ class FilesApp extends AppBase
         return $cobj->GetClientObject();
     }
     
+    /**
+     * Edits an existing comment properties
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownItemException if the comment is not found
+     * @return array Comment
+     * @see Comment::GetClientObject()
+     */
     protected function EditComment(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
-        
-        $comment = $input->GetParam('comment', SafeParam::TYPE_TEXT);
-        
-        $id = $input->TryGetParam('commentid',SafeParam::TYPE_RANDSTR);
+                
+        $id = $input->GetParam('commentid',SafeParam::TYPE_RANDSTR);
         
         $cobj = Comment::TryLoadByAccountAndID($this->database, $account, $id);
         if ($cobj === null) throw new UnknownItemException();
         
-        return $cobj->SetComment($comment)->GetClientObject();
+        $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
+        if ($comment !== null) $cobj->SetComment($comment);
+        
+        $private = $input->TryGetParam('private', SafeParam::TYPE_BOOL);
+        if ($private !== null) $cobj->SetPrivate($private);
+        
+        return $cobj->GetClientObject();
     }
     
-    protected function DeleteComment(Input $input) : array
+    /**
+     * Deletes a comment
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownItemException if the comment is not found
+     */
+    protected function DeleteComment(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $id = $input->TryGetParam('commentid',SafeParam::TYPE_RANDSTR);
+        $id = $input->GetParam('commentid',SafeParam::TYPE_RANDSTR);
         
         $cobj = Comment::TryLoadByAccountAndID($this->database, $account, $id);
         if ($cobj === null) throw new UnknownItemException();
         
-        $cobj->Delete(); return array();
+        $cobj->Delete();
     }
 
+    /**
+     * Creates shares for a file or files
+     * @see FilesApp::ShareItem()
+     */
     protected function ShareFile(Input $input) : array
     {
         return $this->ShareItem(File::class, 'fileid', 'files', $input);
     }
     
+    /**
+     * Creates shares for a folder or folders
+     * @see FilesApp::ShareItem()
+     */
     protected function ShareFolder(Input $input) : array
     {
         return $this->ShareItem(Folder::class, 'folder', 'folders', $input);
     }
     
+    /**
+     * Creates shares for an item or items
+     *
+     * If multiple items are given, it tries all and reports failures.
+     * @param string $class item class
+     * @param string $key input param for a single item
+     * @param string $keys input param for an array of items
+     * @throws AuthenticationFailedException if public access and public modify/upload not allowed
+     * @throws UnknownDestinationException if the given share target is not found
+     * @throws UnknownItemException if the given item to share is not found
+     * @throws EmailShareDisabledException if emailing shares is not enabled
+     * @throws ShareURLGenerateException if the URL to email could be not determined
+     * @return array Share
+     * @see Share::GetClientObject()
+     */
     private function ShareItem(string $class, string $key, string $keys, Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -965,7 +1263,7 @@ class FilesApp extends AppBase
 
         if ($item !== null)
         {
-            $share = static::InnerShareItem($class, $input, $item, $account, $dest, $islink);
+            $share = static::InnerShareItem($input, $class, $item, $account, $dest, $islink);
             $shares = array($share); $retval = $share->GetClientObject(false, $islink); 
         }
         else if ($items !== null)
@@ -973,7 +1271,7 @@ class FilesApp extends AppBase
             $shares = array();
             foreach ($items as $item)
             {
-                try { $shares[$item] = static::InnerShareItem($class, $input, $item, $account, $dest, $islink); }
+                try { $shares[$item] = static::InnerShareItem($input, $class, $item, $account, $dest, $islink); }
                 catch (Exceptions\ClientException $e) { $shares[$item] = null; continue; }
             };
             $retval = array_map(function(Share $share)use($islink){ return $share->GetClientObject(false, $islink); }, $shares);
@@ -1008,7 +1306,19 @@ class FilesApp extends AppBase
         return $retval;
     }    
     
-    private function InnerShareItem(string $class, Input $input, string $item, Account $account, ?AuthEntity $dest, bool $islink) : Share
+    /**
+     * Authenticates access to the given item and creates a share object
+     * @param string $class class of item to share
+     * @param string $item ID of item to be shared
+     * @param Account $account account creating the share
+     * @param AuthEntity $dest target of share (if not link, or to everyone)
+     * @param bool $islink true to create a link share
+     * @throws UnknownItemException if the given item is not found
+     * @throws ItemSharingDisabledException if sharing is not enabled
+     * @throws ShareEveryoneDisabledException if sharing to everyone is not enabled
+     * @return Share
+     */
+    private function InnerShareItem(Input $input, string $class, string $item, Account $account, ?AuthEntity $dest, bool $islink) : Share
     {
         $access = static::AuthenticateItemAccess($input, $class, $item);
         
@@ -1028,6 +1338,13 @@ class FilesApp extends AppBase
         return $newshare->SetShareOptions($input, $oldshare);
     }
   
+    /**
+     * Edits properties of an existing share
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownItemException if the given share is not found
+     * @return array Share
+     * @see Share::GetClientObject()
+     */
     protected function EditShare(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1047,7 +1364,12 @@ class FilesApp extends AppBase
         return $share->SetShareOptions($input, $origshare)->GetClientObject();
     }
     
-    protected function DeleteShare(Input $input) : array
+    /**
+     * Deletes an existing share
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownItemException if the given share is not found
+     */
+    protected function DeleteShare(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -1057,15 +1379,28 @@ class FilesApp extends AppBase
         $share = Share::TryLoadByOwnerAndID($this->database, $account, $id, true);
         if ($share === null) throw new UnknownItemException();
         
-        $share->Delete(); return array();
+        $share->Delete();
     }
     
+    /**
+     * Retrieves metadata on a share object (from a link)
+     * @return array Share
+     * @see Share::GetClientObject()
+     */
     protected function ShareInfo(Input $input) : array
     {
         $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator);
         return $access->GetShare()->GetClientObject(true);
     }
     
+    /**
+     * Returns a list of shares
+     * 
+     * if $mine, show all shares we created, else show all shares we're the target of
+     * @throws AuthenticationFailedException if not signed in
+     * @return array [id:Share]
+     * @see Share::GetClientObject()
+     */
     protected function ListShares(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1079,6 +1414,13 @@ class FilesApp extends AppBase
         return array_map(function($share){ return $share->GetClientObject(true); }, $shares);
     }    
     
+    /**
+     * Returns filesystem metadata (default if none specified)
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownFilesystemException if no filesystem was specified or is the default
+     * @return array FSManager
+     * @see FSManager::GetClientObject()
+     */
     protected function GetFilesystem(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1096,6 +1438,12 @@ class FilesApp extends AppBase
         return $filesystem->GetClientObject($isadmin);
     }
     
+    /**
+     * Returns a list of all filesystems available
+     * @throws AuthenticationFailedException if not signed in
+     * @return array [id:FSManager]
+     * @see FSManager::GetClientObject()
+     */
     protected function GetFilesystems(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1107,6 +1455,13 @@ class FilesApp extends AppBase
         return array_map(function($filesystem){ return $filesystem->GetClientObject(); }, $filesystems);
     }
     
+    /**
+     * Creates a new filesystem
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UserStorageDisabledException if not admin and user storage is not allowed
+     * @return array FSManager
+     * @see FSManager::GetClientObject()
+     */
     protected function CreateFilesystem(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1121,7 +1476,14 @@ class FilesApp extends AppBase
         $filesystem = FSManager::Create($this->database, $input, $global ? null : $account);
         return $filesystem->GetClientObject(true);
     }
-    
+
+    /**
+     * Edits an existing filesystem
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownFilesystemException if the given filesystem is not found
+     * @return array FSManager
+     * @see FSManager::GetCLientObject()
+     */
     protected function EditFilesystem(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1138,7 +1500,12 @@ class FilesApp extends AppBase
         return $filesystem->Edit($input)->GetClientObject(true);
     }
 
-    protected function DeleteFilesystem(Input $input) : array
+    /**
+     * Removes a filesystem (and potentially its content)
+     * @throws AuthenticationFailedException if not signed in
+     * @throws UnknownFilesystemException if the given filesystem is not found
+     */
+    protected function DeleteFilesystem(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -1154,9 +1521,20 @@ class FilesApp extends AppBase
         $force = $input->TryGetParam('force', SafeParam::TYPE_BOOL);
 
         if ($filesystem === null) throw new UnknownFilesystemException();
-        if ($force) $filesystem->ForceDelete(); else $filesystem->Delete(); return array();
+        if ($force) $filesystem->ForceDelete(); else $filesystem->Delete();
     }
     
+    /**
+     * Common function for loading and authenticating the limited object and limit class referred to by input
+     * @param bool $allowAuto if true, return the current account if no object is specified
+     * @param bool $allowMany if true, allow selecting all of the given type
+     * @param bool $timed if true, return a timed limit class (not total)
+     * @throws UnknownGroupException if the given group is not found
+     * @throws UnknownAccountException if the given account is not found
+     * @throws UnknownFilesystemException if the given filesystem is not found
+     * @throws UnknownObjectException if nothing valid was specified
+     * @return array `{class:string, obj:object}`
+     */
     private function GetLimitObject(Input $input, bool $allowAuto, bool $allowMany, bool $timed) : array
     {
         $obj = null;
@@ -1212,7 +1590,13 @@ class FilesApp extends AppBase
         return array('obj' => $obj, 'class' => $class);
     }
     
-    protected function GetLimits(Input $input) : array
+    /**
+     * Loads the total limit object or objects for the given objects
+     * @throws AuthenticationFailedException if not signed in
+     * @return array|NULL Limit | [id:Limit]
+     * @see Limits\Base::GetClientObject()
+     */
+    protected function GetLimits(Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $isadmin = $this->authenticator->isAdmin();
@@ -1223,7 +1607,7 @@ class FilesApp extends AppBase
         if ($obj !== null)
         {
             $lim = $class::LoadByClient($this->database, $obj);
-            return ($lim !== null) ? $lim->GetClientObject($isadmin) : array();
+            return ($lim !== null) ? $lim->GetClientObject($isadmin) : null;
         }
         else
         {
@@ -1234,7 +1618,13 @@ class FilesApp extends AppBase
                 return $obj->GetClientObject($isadmin); },$lims);
         }
     }
-
+    
+    /**
+     * Loads the timed limit object or objects for the given objects
+     * @throws AuthenticationFailedException if not signed in
+     * @return array|NULL Limit | [id:Limit]
+     * @see Limits\Base::GetClientObject()
+     */
     protected function GetTimedLimits(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1258,7 +1648,13 @@ class FilesApp extends AppBase
             return $lim->GetClientObject($isadmin); }, array_values($lims));
     }
     
-    protected function GetTimedStatsFor(Input $input) : array
+    /**
+     * Returns all stored time stats for an object
+     * @throws AuthenticationFailedException if not signed in
+     * @return array|NULL [id:TimedStats]
+     * @see Limits\TimedStats::GetClientObject()
+     */
+    protected function GetTimedStatsFor(Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -1268,7 +1664,7 @@ class FilesApp extends AppBase
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_INT);
         $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
         
-        if ($lim === null) return array();
+        if ($lim === null) return null;
 
         $count = $input->TryGetParam('limit',SafeParam::TYPE_INT);
         $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
@@ -1277,7 +1673,13 @@ class FilesApp extends AppBase
             Limits\TimedStats::LoadAllByLimit($this->database, $lim, $count, $offset));        
     }
     
-    protected function GetTimedStatsAt(Input $input) : array
+    /**
+     * Returns timed stats for the given object or objects at the given time
+     * @throws AuthenticationFailedException if not signed in
+     * @return array|NULL TimedStats | [id:TimedStats]
+     * @see Limits\TimedStats::GetClientObject()
+     */
+    protected function GetTimedStatsAt(Input $input) : ?array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -1290,10 +1692,10 @@ class FilesApp extends AppBase
         if ($obj !== null)
         {
             $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
-            if ($lim === null) return array();
+            if ($lim === null) return null;
             
             $stats = Limits\TimedStats::LoadByLimitAtTime($this->database, $lim, $attime);
-            return ($stats !== null) ? $stats->GetClientObject() : array();
+            return ($stats !== null) ? $stats->GetClientObject() : null;
         }
         else
         {
@@ -1312,6 +1714,12 @@ class FilesApp extends AppBase
         }   
     }
 
+    /**
+     * Configures total limits for the given object
+     * @throws AuthenticationFailedException if not admin
+     * @return array Limits
+     * @see Limits\Base::GetClientObject()
+     */
     protected function ConfigLimits(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1323,7 +1731,13 @@ class FilesApp extends AppBase
         
         return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
     }    
-
+    
+    /**
+     * Configures timed limits for the given object
+     * @throws AuthenticationFailedException if not admin
+     * @return array Limits
+     * @see Limits\Base::GetClientObject()
+     */
     protected function ConfigTimedLimits(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1336,6 +1750,11 @@ class FilesApp extends AppBase
         return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
     }
     
+    /**
+     * Deletes all total limits for the given object
+     * @throws AuthenticationFailedException if not admin
+     * @return bool true if limits existed
+     */
     protected function PurgeLimits(Input $input) : bool
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -1349,6 +1768,11 @@ class FilesApp extends AppBase
         if ($lim !== null) $lim->Delete(); return $lim !== null;
     }    
     
+    /**
+     * Deletes all timed limits for the given object
+     * @throws AuthenticationFailedException if not admin
+     * @return bool true if limits existed
+     */
     protected function PurgeTimedLimits(Input $input) : bool
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();

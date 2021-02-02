@@ -8,9 +8,17 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 require_once(ROOT."/apps/files/limits/Base.php");
 
+/**
+ * The basic kind of limit not subject to a timeperiod, also stores config
+ *
+ * Stores counters that are cumulative over all-time and allows limiting
+ * those that make sense (bandwidth cannot decrease so that cannot be limited here).
+ * Also allows storing config that is specific to the limited object.
+ */
 abstract class Total extends Base
 {
-    protected static $cache = array(); /* [objectID => self] */
+    /** array<limited object ID, self] */
+    protected static $cache = array();
     
     public static function GetFieldTemplate() : array
     {
@@ -33,6 +41,7 @@ abstract class Total extends Base
         ));
     }
     
+    /** Loads the limit object corresponding to the given limited object */
     public static function LoadByClient(ObjectDatabase $database, StandardObject $obj) : ?self
     {
         if (!array_key_exists($obj->ID(), static::$cache))
@@ -43,15 +52,28 @@ abstract class Total extends Base
         return static::$cache[$obj->ID()];
     }
 
+    /** Updates the last download timestamp to now */
     public function SetDownloadDate() : self { return $this->SetDate('download'); }
+    
+    /** Updates the last upload (file create) timestamp to now */
     public function SetUploadDate() : self { return $this->SetDate('upload'); }
     
-    public function GetAllowRandomWrite() : ?bool { return $this->TryGetFeature('randomwrite'); }    
-    public function GetAllowPublicModify() : ?bool { return $this->TryGetFeature('publicmodify'); }    
-    public function GetAllowPublicUpload() : ?bool { return $this->TryGetFeature('publicupload'); }    
+    /** Returns true if the limited object should allow random writes to files */
+    public function GetAllowRandomWrite() : ?bool { return $this->TryGetFeature('randomwrite'); }
+    
+    /** Returns true if the limited object should allow public modification of files */
+    public function GetAllowPublicModify() : ?bool { return $this->TryGetFeature('publicmodify'); } 
+    
+    /** Returns true if the limited object should allow public upload to folders */
+    public function GetAllowPublicUpload() : ?bool { return $this->TryGetFeature('publicupload'); }
+    
+    /** Returns true if the limited object should allow sharing items */
     public function GetAllowItemSharing() : ?bool { return $this->TryGetFeature('itemsharing'); }
+    
+    /** Returns true if the limited object should allow sharing to everyone */
     public function GetAllowShareEveryone() : ?bool { return $this->TryGetFeature('shareeveryone'); }
     
+    /** Creates and caches a new limit object for the given limited object */
     protected static function Create(ObjectDatabase $database, StandardObject $obj) : self
     {
         $newobj = parent::BaseCreate($database)->SetObject('object',$obj);
@@ -82,6 +104,18 @@ abstract class Total extends Base
         if ($lim->isCreated()) $lim->Initialize();
         
         return $lim;
+    }
+    
+    /**
+     * Returns a printable client object of this timed limit
+     * @return array `{dates:{created:int, download:?int, upload:?int}, features:{track_items:bool,track_dlstats:bool,
+            itemsharing:?bool, shareeveryone:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
+        limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, downloads:int, bandwidth:int}}`
+     * @see TimedStats::GetClientObject()
+     */
+    public function GetClientObject() : array
+    {
+        return parent::GetClientObject();
     }
 }
 

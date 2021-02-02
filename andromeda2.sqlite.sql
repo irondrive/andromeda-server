@@ -23,18 +23,18 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
 ,  `dates__created` integer NOT NULL
 ,  `dates__modified` integer DEFAULT NULL
 ,  `dates__accessed` integer DEFAULT NULL
-,  `size` integer NOT NULL DEFAULT '0'
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  `size` integer NOT NULL DEFAULT 0
+,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  `owner` char(12) DEFAULT NULL
 ,  `parent` char(16) NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `likes` integer NOT NULL DEFAULT '0'
-,  `counters__likes` integer NOT NULL DEFAULT '0'
-,  `counters__dislikes` integer NOT NULL DEFAULT '0'
-,  `tags` integer NOT NULL DEFAULT '0'
-,  `comments` integer NOT NULL DEFAULT '0'
-,  `shares` integer NOT NULL DEFAULT '0'
+,  `likes` integer NOT NULL DEFAULT 0
+,  `counters__likes` integer NOT NULL DEFAULT 0
+,  `counters__dislikes` integer NOT NULL DEFAULT 0
+,  `tags` integer NOT NULL DEFAULT 0
+,  `comments` integer NOT NULL DEFAULT 0
+,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
@@ -56,24 +56,24 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
 ,  `dates__created` integer NOT NULL
 ,  `dates__modified` integer DEFAULT NULL
 ,  `dates__accessed` integer DEFAULT NULL
-,  `counters__size` integer NOT NULL DEFAULT '0'
-,  `counters__visits` integer NOT NULL DEFAULT '0'
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  `counters__size` integer NOT NULL DEFAULT 0
+,  `counters__visits` integer NOT NULL DEFAULT 0
+,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  `owner` char(12) DEFAULT NULL
 ,  `parent` char(16) DEFAULT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `files` integer NOT NULL DEFAULT '0'
-,  `folders` integer NOT NULL DEFAULT '0'
-,  `counters__subfiles` integer NOT NULL DEFAULT '0'
-,  `counters__subfolders` integer NOT NULL DEFAULT '0'
-,  `counters__subshares` integer NOT NULL DEFAULT '0'
-,  `likes` integer NOT NULL DEFAULT '0'
-,  `counters__likes` integer NOT NULL DEFAULT '0'
-,  `counters__dislikes` integer NOT NULL DEFAULT '0'
-,  `tags` integer NOT NULL DEFAULT '0'
-,  `comments` integer NOT NULL DEFAULT '0'
-,  `shares` integer NOT NULL DEFAULT '0'
+,  `files` integer NOT NULL DEFAULT 0
+,  `folders` integer NOT NULL DEFAULT 0
+,  `counters__subfiles` integer NOT NULL DEFAULT 0
+,  `counters__subfolders` integer NOT NULL DEFAULT 0
+,  `counters__subshares` integer NOT NULL DEFAULT 0
+,  `likes` integer NOT NULL DEFAULT 0
+,  `counters__likes` integer NOT NULL DEFAULT 0
+,  `counters__dislikes` integer NOT NULL DEFAULT 0
+,  `tags` integer NOT NULL DEFAULT 0
+,  `comments` integer NOT NULL DEFAULT 0
+,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
@@ -100,14 +100,14 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
 ,  `features__userstorage` integer DEFAULT NULL
 ,  `features__track_items` integer DEFAULT NULL
 ,  `features__track_dlstats` integer DEFAULT NULL
-,  `counters__size` integer NOT NULL DEFAULT '0'
-,  `counters__items` integer NOT NULL DEFAULT '0'
-,  `counters__shares` integer NOT NULL DEFAULT '0'
+,  `counters__size` integer NOT NULL DEFAULT 0
+,  `counters__items` integer NOT NULL DEFAULT 0
+,  `counters__shares` integer NOT NULL DEFAULT 0
 ,  `counters_limits__size` integer DEFAULT NULL
 ,  `counters_limits__items` integer DEFAULT NULL
 ,  `counters_limits__shares` integer DEFAULT NULL
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
 );
@@ -124,21 +124,21 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
 ,  `features__randomwrite` integer DEFAULT NULL
 ,  `features__track_items` integer DEFAULT NULL
 ,  `features__track_dlstats` integer DEFAULT NULL
-,  `counters__size` integer NOT NULL DEFAULT '0'
-,  `counters__items` integer NOT NULL DEFAULT '0'
-,  `counters__shares` integer NOT NULL DEFAULT '0'
+,  `counters__size` integer NOT NULL DEFAULT 0
+,  `counters__items` integer NOT NULL DEFAULT 0
+,  `counters__shares` integer NOT NULL DEFAULT 0
 ,  `counters_limits__size` integer DEFAULT NULL
 ,  `counters_limits__items` integer DEFAULT NULL
 ,  `counters_limits__shares` integer DEFAULT NULL
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
 );
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
-,  `stats` integer NOT NULL DEFAULT '0'
+,  `stats` integer NOT NULL DEFAULT 0
 ,  `dates__created` integer NOT NULL
 ,  `timeperiod` integer NOT NULL
 ,  `max_stats_age` integer DEFAULT NULL
@@ -154,13 +154,12 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
 ,  `limitobj` varchar(64) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `dates__timestart` integer NOT NULL
-,  `timeperiod` integer NOT NULL
 ,  `iscurrent` integer DEFAULT NULL
-,  `counters__size` integer NOT NULL DEFAULT '0'
-,  `counters__items` integer NOT NULL DEFAULT '0'
-,  `counters__shares` integer NOT NULL DEFAULT '0'
-,  `counters__downloads` integer NOT NULL DEFAULT '0'
-,  `counters__bandwidth` integer NOT NULL DEFAULT '0'
+,  `counters__size` integer NOT NULL DEFAULT 0
+,  `counters__items` integer NOT NULL DEFAULT 0
+,  `counters__shares` integer NOT NULL DEFAULT 0
+,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`limitobj`,`dates__timestart`)
 ,  UNIQUE (`limitobj`,`iscurrent`)
@@ -170,11 +169,11 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
 ,  `item` varchar(64) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `dest` varchar(64) DEFAULT NULL
-,  `authkey` text
-,  `password` text
+,  `authkey` text DEFAULT NULL
+,  `password` text DEFAULT NULL
 ,  `dates__created` integer NOT NULL
 ,  `dates__accessed` integer DEFAULT NULL
-,  `counters__accessed` integer NOT NULL DEFAULT '0'
+,  `counters__accessed` integer NOT NULL DEFAULT 0
 ,  `counters_limits__accessed` integer DEFAULT NULL
 ,  `dates__expires` integer DEFAULT NULL
 ,  `features__read` integer NOT NULL
@@ -195,9 +194,9 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
 ,  `implssl` integer NOT NULL
 ,  `path` text NOT NULL
 ,  `username` varbinary(255) DEFAULT NULL
-,  `password` tinyblob
+,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
-,  `password_nonce` tinyblob
+,  `password_nonce` tinyblob DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
@@ -218,10 +217,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
 ,  `username` varbinary(255) NOT NULL
-,  `password` tinyblob
-,  `privkey` text
-,  `pubkey` text
-,  `keypass` tinyblob
+,  `password` tinyblob DEFAULT NULL
+,  `privkey` text DEFAULT NULL
+,  `pubkey` text DEFAULT NULL
+,  `keypass` tinyblob DEFAULT NULL
 ,  `hostauth` integer DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
@@ -238,7 +237,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
 ,  `hostname` varchar(255) NOT NULL
 ,  `workgroup` varchar(255) DEFAULT NULL
 ,  `username` varbinary(255) NOT NULL
-,  `password` tinyblob
+,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)

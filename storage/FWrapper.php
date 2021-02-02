@@ -10,6 +10,10 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 
 require_once(ROOT."/apps/files/storage/Storage.php");
 
+/**
+ * A storage that uses PHP's fwrapper functions
+ * @see https://www.php.net/manual/en/wrappers.php
+ */
 abstract class FWrapper extends Storage
 {
     public static function GetFieldTemplate() : array
@@ -51,9 +55,13 @@ abstract class FWrapper extends Storage
         return $this;
     }
     
+    /** Returns the full fwrapper URL for the given path */
     protected abstract function GetFullURL(string $path = "") : string;
     
+    /** Returns the full storage level path for the given root-relative path */
     protected function GetPath(string $path = "") : string { return $this->GetScalar('path').'/'.$path; }  // TODO rawurlencode?? I think I tried that before and it didn't work but SMB says to use it... use for filenames only?
+    
+    /** Sets the path of the storage's root */
     private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
     
     public function ItemStat(string $path) : ItemStat
@@ -197,17 +205,22 @@ abstract class FWrapper extends Storage
         return $this;
     }
     
-    // path=>resource map for all file handles
+    /** path=>resource map for all file handles */
     private $handles = array(); 
     
-    // path array listing files being written to
+    /** path array listing files being written to */
     private $writing = array();
 
+    /** Opens and returns read handle for the given file path */
     protected function GetReadHandle(string $path) { return fopen($path,'rb'); }
+    
+    /** Opens and returns a read/write handle for the given file path */
     protected function GetWriteHandle(string $path) { return fopen($path,'rb+'); }
     
+    /** Closes the given file resource handle */
     protected function CloseHandle($handle) : bool { return fclose($handle); }
     
+    /** Closes any open handles for the given file path */
     protected function ClosePath(string $path) : void
     {
         if (array_key_exists($path, $this->handles))
@@ -219,7 +232,15 @@ abstract class FWrapper extends Storage
                 unset($this->writing[$path]);
         }
     }
-    
+
+    /**
+     * Opens, caches and returns a handle for the given file
+     * @param string $path path to file
+     * @param bool $isWrite true if write access is needed
+     * @throws FileWriteFailedException opening write handle fails
+     * @throws FileReadFailedException opening read handle fails
+     * @return resource opened handle
+     */
     protected function GetHandle(string $path, bool $isWrite)
     {        
         $isOpen = array_key_exists($path, $this->handles);

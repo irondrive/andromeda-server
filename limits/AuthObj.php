@@ -9,6 +9,7 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
 
+/** GroupTotal and AccountTotal have some extra common features not applicable to filesystems */
 abstract class AuthTotal extends Total
 {
     public static function GetDBClass() : string { return self::class; }
@@ -37,7 +38,7 @@ abstract class AuthTotal extends Total
 abstract class AuthTimed extends Timed
 {
     // USAGE: -1 means keep forever, 0 means don't keep, null means no value/inherit, otherwise int for max age
-    public static function GetTimedUsage() : string { return "[--max_stats_age -1|0|?int]"; }
+    public static function GetTimedUsage() : string { return "[--max_stats_age -1 (forever)|0 (none)|?int]"; }
     
     protected function SetTimedLimits(Input $input) : void
     {
