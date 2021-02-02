@@ -16,20 +16,20 @@ class ErrorLogEntry extends BaseObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'time' => null,
-            'addr' => null,
-            'agent' => null,
-            'app' => null,
-            'action' => null,
-            'code' => null,
-            'file' => null,
-            'message' => null,
-            'trace_basic' => null,
-            'trace_full' => null,
-            'objects' => null,
-            'queries' => null,
-            'params' => null,
-            'log' => null
+            'time' => null,     // time of the request
+            'addr' => null,     // user address for the request
+            'agent' => null,    // user agent for the request
+            'app' => null,      // command app
+            'action' => null,   // command action
+            'code' => null,     // error code
+            'file' => null,     // the file with the error
+            'message' => null,  // the error message
+            'trace_basic' => null,  // a basic backtrace
+            'trace_full' => null,   // full backtrace including all arguments
+            'objects' => null,  // objects in memory in the database
+            'queries' => null,  // db queries that were performed
+            'params' => null,   // all client input parameters
+            'log' => null       // the custom API log
          ));
     }
     

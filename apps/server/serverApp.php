@@ -25,6 +25,11 @@ class DatabaseFailException extends Exceptions\ClientErrorException     { public
 /** Client error indicating authentication failed */
 class AuthFailedException extends Exceptions\ClientDeniedException      { public $message = "ACCESS_DENIED"; }
 
+/**
+ * Primary app included with the framework.
+ * 
+ * Handles DB config, install, and getting/setting config.
+ */
 class ServerApp extends AppBase
 {
     public static function getVersion() : array { return array(0,0,1); } 
@@ -312,10 +317,10 @@ class ServerApp extends AppBase
     
     /**
      * Loads server config
-     * @return array if admin, `{config:Config::GetClientObject(), database:Database::GetConfig()}` \
-         if not admin, `Config::GetClientObject()`
+     * @return array if admin, `{config:Config, database:Database}` \
+         if not admin, `Config`
      * @see Config::GetClientObject() 
-     * @see Database::GetConfig()
+     * @see Database::GetClientObject()
      */
     protected function GetConfig(Input $input) : array
     {
@@ -323,14 +328,14 @@ class ServerApp extends AppBase
         
         return array(
             'config' => $this->API->GetConfig()->GetClientObject(true),
-            'database' => $this->API->GetDatabase()->getConfig()
+            'database' => $this->API->GetDatabase()->GetClientObject()
         );
     }
 
     /**
      * Sets server config
      * @throws AuthFailedException if not an admin
-     * @return array Config::GetClientObject()
+     * @return array Config
      * @see Config::GetClientObject()
      */
     protected function SetConfig(Input $input) : array
@@ -343,7 +348,7 @@ class ServerApp extends AppBase
     /**
      * Returns a list of the configured mailers
      * @throws AuthFailedException if not an admin
-     * @return array {[id:Emailer::GetClientObject()]}
+     * @return array [id:Emailer]
      * @see Emailer::GetClientObject()
      */
     protected function GetMailers(Input $input) : array
@@ -357,7 +362,7 @@ class ServerApp extends AppBase
     /**
      * Creates a new emailer config
      * @throws AuthFailedException if not an admin
-     * @return array Emailer::GetClientObject()
+     * @return array Emailer
      * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(Input $input) : array

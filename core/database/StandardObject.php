@@ -13,9 +13,7 @@ abstract class StandardObject extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
-        return array(
-            'dates__created' => null
-        );
+        return array('dates__created' => null);
     }
     
     /** 

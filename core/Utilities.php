@@ -124,8 +124,8 @@ abstract class Utilities
     }
     
     /** Returns a class name with the namespace stripped */
-    public static function ShortClassName(string $class) : string { 
-        return self::array_last(explode("\\",$class)); }
+    public static function ShortClassName(?string $class) : ?string { 
+        return $class ? self::array_last(explode("\\",$class)) : null; }
     
     /**
      * Returns a size string converted to bytes

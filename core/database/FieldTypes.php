@@ -580,7 +580,7 @@ class ObjectJoin extends ObjectRefs
     /** Return the actual join object used to join us to the given object */
     public function GetJoinObject(BaseObject $joinobj) : ?JoinObject
     {
-        return JoinObject::LoadJoin($this->database, $this, $joinobj);
+        return ($this->joinclass)::TryLoadJoin($this->database, $this, $joinobj);
     }
     
     /**
@@ -591,7 +591,7 @@ class ObjectJoin extends ObjectRefs
     {
         if ($notification) return parent::AddObject($object, $notification);
         
-        JoinObject::CreateJoin($this->database, $this, $object); return false;
+        ($this->joinclass)::CreateJoin($this->database, $this, $object); return false;
     }
     
     /**
@@ -602,6 +602,10 @@ class ObjectJoin extends ObjectRefs
     {
         if ($notification) return parent::RemoveObject($object, $notification);
         
-        JoinObject::DeleteJoin($this->database, $this, $object); return false;
+        $joinobj = ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
+        
+        if ($joinobj !== null) $joinobj->Delete();
+        
+        return false;
     }
 }

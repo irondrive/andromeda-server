@@ -193,7 +193,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_EMAIL)
         {
-            if (mb_strlen($value) >= 256 || !($value = filter_var($value, FILTER_VALIDATE_EMAIL)))
+            if (mb_strlen($value) >= 128 || !($value = filter_var($value, FILTER_VALIDATE_EMAIL)))
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSNAME)
