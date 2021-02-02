@@ -6,6 +6,8 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 class LDAPExtensionException extends Exceptions\ServerException   { public $message = "LDAP_EXTENSION_MISSING"; }
@@ -13,14 +15,15 @@ class LDAPConnectionFailure extends Exceptions\ServerException    { public $mess
 
 Manager::RegisterAuthType(LDAP::class);
 
+/** Uses an LDAP server for authentication */
 class LDAP extends External
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'hostname' => null,
-            'secure' => null,
-            'userprefix' => null
+            'secure' => null,    // true to use LDAP-SSL
+            'userprefix' => null // LDAP prefix for user lookup
         ));
     }
     
@@ -47,6 +50,10 @@ class LDAP extends External
         return $this;
     }
     
+    /**
+     * Returns a printable client object for this LDAP
+     * @return array `{hostname:stsring, secure:bool, userprefix:string}`
+     */
     public function GetClientObject() : array
     {
         return array(
@@ -58,15 +65,22 @@ class LDAP extends External
     
     private $ldap;
     
+    /** Returns the hostname of the LDAP server */
     public function GetHostname() : string { return $this->GetScalar('hostname'); }
+    
+    /** Returns whether to use SSL with the LDAP server */
     public function GetUseSSL() : bool { return $this->GetScalar('secure'); }
+    
+    /** Returns the user prefix to use for looking up users in LDAP */
     public function GetUserPrefix() : ?string { return $this->TryGetScalar('userprefix'); }
     
+    /** Checks for the existence of the LDAP extension */
     public function SubConstruct() : void
     {        
         if (!function_exists('ldap_bind')) throw new LDAPExtensionException();
     }
     
+    /** Initiates a connection to the LDAP server */
     public function Activate() : self
     {
         if (isset($this->ldap)) return $this;
@@ -82,9 +96,9 @@ class LDAP extends External
         return $this;
     }
     
-    public function VerifyPassword(string $username, string $password) : bool
+    public function VerifyPassword(Account $account, string $password) : bool
     {
-        $this->Activate();  
+        $this->Activate(); $username = $account->GetUsername();
         
         $prefix = $this->GetUserPrefix(); 
         if ($prefix !== null) $username = "$prefix\\$username";

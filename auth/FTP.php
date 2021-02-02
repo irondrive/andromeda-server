@@ -6,6 +6,8 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 class FTPExtensionException extends Exceptions\ServerException   { public $message = "FTP_EXTENSION_MISSING"; }
@@ -13,12 +15,13 @@ class FTPConnectionFailure extends Exceptions\ServerException    { public $messa
 
 Manager::RegisterAuthType(FTP::class);
 
+/** Uses an FTP server for authentication */
 class FTP extends External
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'implssl' => null,
+            'implssl' => null, // true to use implicit SSL, false for explicit or none
             'hostname' => null,
             'port' => null
         ));
@@ -47,6 +50,10 @@ class FTP extends External
         return $this;
     }
     
+    /**
+     * Returns a printable client object for this FTP
+     * @return array `{hostname:stsring, port:int, implssl:bool}`
+     */
     public function GetClientObject() : array
     {
         return array(
@@ -58,11 +65,13 @@ class FTP extends External
     
     private $ftp;
     
+    /** Asserts that the FTP extension exists */
     public function SubConstruct() : void
     {
         if (!function_exists('ftp_connect')) throw new FTPExtensionException();
     }
     
+    /** Initiates a connection to the FTP server */
     public function Activate() : self
     {
         if (isset($this->ftp)) return $this;
@@ -77,9 +86,9 @@ class FTP extends External
         return $this;
     }
     
-    public function VerifyPassword(string $username, string $password) : bool
+    public function VerifyPassword(Account $account, string $password) : bool
     {
-        $this->Activate();
+        $this->Activate(); $username = $account->GetUsername();
 
         try { return ftp_login($this->ftp, $username, $password); }
         catch (Exceptions\PHPError $e) { return false; }

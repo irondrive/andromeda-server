@@ -13,6 +13,7 @@ if (!file_exists(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/G
     die("Missing library: GoogleAuthenticator - git submodule init/update?");
 require_once(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/GoogleAuthenticator.php"); use PHPGangsta_GoogleAuthenticator;
 
+/** Object for tracking used two factor codes, to prevent replay attacks */
 class UsedToken extends StandardObject
 {
     public static function GetFieldTemplate() : array
@@ -23,24 +24,33 @@ class UsedToken extends StandardObject
         ));
     }
     
-    public function GetCode() : string          { return $this->GetScalar('code'); }
-    public function GetTwoFactor() : TwoFactor  { return $this->GetObject('twofactor'); }
+    /** Returns the value of the used token */
+    public function GetCode() : string { return $this->GetScalar('code'); }
     
-    public static  function PruneOldCodes(ObjectDatabase $database) : void
+    /** Returns the two factor code this is associated with */
+    public function GetTwoFactor() : TwoFactor { return $this->GetObject('twofactor'); }
+    
+    /** Prunes old codes from the database that are too old to be valid anyway */
+    public static function PruneOldCodes(ObjectDatabase $database) : void
     {
         $mintime = Main::GetInstance()->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
         $q = new QueryBuilder(); $q->Where($q->LessThan('dates__created', $mintime));
         static::DeleteByQuery($database, $q);
     }
     
+    /** Logs a used token with the given twofactor object and code */
     public static function Create(ObjectDatabase $database, TwoFactor $twofactor, string $code) : UsedToken 
     {
-        return parent::BaseCreate($database)
-            ->SetScalar('code',$code)
-            ->SetObject('twofactor',$twofactor);            
+        return parent::BaseCreate($database)->SetObject('twofactor',$twofactor)->SetScalar('code',$code);            
     }
 }
 
+/** 
+ * Describes an OTP twofactor authentication source for an account 
+ * 
+ * Accounts can have > 1 of these so the user is able to use multiple devices.
+ * If account crypto is available, the secret is stored encrypted in the database.
+ */
 class TwoFactor extends StandardObject
 {
     public static function GetFieldTemplate() : array
@@ -55,25 +65,43 @@ class TwoFactor extends StandardObject
         ));
     }
     
-    const SECRET_LENGTH = 32; const TIME_TOLERANCE = 1;
+    /** The length of the OTP secret */
+    const SECRET_LENGTH = 32; 
     
+    /** the time tolerance for codes, as a multiple of 30-seconds */
+    const TIME_TOLERANCE = 1;
+    
+    /** Gets the account that owns this object */
     public function GetAccount() : Account { return $this->GetObject('account'); }
+    
+    /** Gets the comment/label the user assigned to this object */
     public function GetComment() : ?string { return $this->TryGetScalar("comment"); }
     
+    /**
+     * Gets an array of used tokens
+     * @return array<string, UsedTokens> used tokens indexed by ID
+     */
     private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
+    
+    /** Returns the number of used tokens that exist */
     private function CountUsedTokens() : int { return $this->CountObjectRefs('usedtokens'); }
 
-    public function GetIsValid() : bool     { return $this->GetScalar('valid'); }
-    public function SetIsValid(bool $data = true) : self { return $this->SetScalar('valid',$data); }
+    /** Returns whether this twofactor has been validated */
+    public function GetIsValid() : bool { return $this->GetScalar('valid'); }
     
+    /** Returns whether the OTP secret is stored encrypted */
     public function hasCrypto() : bool { return $this->TryGetScalar('nonce') !== null; }
     
+    /** 
+     * Tries to load a two factor object by the given account and ID
+     * @return ?self the loaded object or null if not found */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
         return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
+    /** Creates and returns a new twofactor object for the given account */
     public static function Create(ObjectDatabase $database, Account $account, string $comment = null) : TwoFactor
     {
         $obj = parent::BaseCreate($database)
@@ -93,6 +121,7 @@ class TwoFactor extends StandardObject
         return $obj->SetScalar('secret',$secret);
     }
     
+    /** Returns the (decrypted) OTP secret */
     private function GetSecret() : string
     {
         $secret = $this->GetScalar('secret');
@@ -105,10 +134,11 @@ class TwoFactor extends StandardObject
         
         return $secret;
     }
-        
+    
+    /** Checks and returns whether the given twofactor code is valid */
     public function CheckCode(string $code) : bool
     {
-        UsedToken::PruneOldCodes($this->database);        
+        UsedToken::PruneOldCodes($this->database);
         
         foreach ($this->GetUsedTokens() as $usedtoken)
         {
@@ -119,11 +149,14 @@ class TwoFactor extends StandardObject
         
         if (!$ga->verifyCode($this->GetSecret(), $code, self::TIME_TOLERANCE)) return false;
 
-        $this->SetIsValid(); UsedToken::Create($this->database, $this, $code);       
+        $this->SetScalar('valid', true);
+        
+        UsedToken::Create($this->database, $this, $code);       
         
         return true;
     }
     
+    /** Returns a Google URL for viewing a QR code of the OTP secret */
     public function GetURL() : string
     {
         $ga = new PHPGangsta_GoogleAuthenticator();
@@ -131,6 +164,12 @@ class TwoFactor extends StandardObject
         return $ga->getQRCodeGoogleUrl("Andromeda", $this->GetSecret());
     }
     
+    /**
+     * Returns a printable client object for this twofactor
+     * @param bool $secret if true, show the OTP secret
+     * @return array `{id:string, comment:?string, dates:{created:int}` \
+        if $secret, add `{secret:string, qrcodeurl:string}`
+     */
     public function GetClientObject(bool $secret = false) : array
     {
         $data = array(

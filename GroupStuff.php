@@ -2,10 +2,12 @@
 
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/core/database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
+/** A value and inherit-source pair */
 class InheritedProperty
 {
     private $value; private ?BaseObject $source;
@@ -15,7 +17,8 @@ class InheritedProperty
         $this->value = $value; $this->source = $source; }
 }
 
-class GroupJoin extends StandardObject
+/** Class representing a group membership, joining an account and a group */
+class GroupJoin extends JoinObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -26,6 +29,7 @@ class GroupJoin extends StandardObject
     }
 }
 
+/** Base class for account/groups containing properties that can be set per-account or per-group */
 abstract class AuthEntity extends StandardObject
 {
     public abstract function GetDisplayName() : string;
@@ -34,23 +38,25 @@ abstract class AuthEntity extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'features__admin' => null,
-            'features__enabled' => null,
-            'features__forcetf' => null,
-            'features__allowcrypto' => null,
-            'counters_limits__sessions' => null,
-            'counters_limits__contactinfos' => null,
-            'counters_limits__recoverykeys' => null,
-            'max_session_age' => null,
-            'max_password_age' => null,
-            'dates__modified' => null
+            'features__admin' => null, // true if the account is an admin
+            'features__enabled' => null, // true if the account is enabled
+            'features__forcetf' => null, // true if two-factor is required to create sessions (not just clients)
+            'features__allowcrypto' => null, // true if server-side account crypto is enabled
+            'counters_limits__sessions' => null, // maximum number of sessions for the account
+            'counters_limits__contactinfos' => null, // maximum number of contacts for the account
+            'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
+            'max_session_age' => null, // server-side timeout - max time for a session to be inactive
+            'max_password_age' => null, // max time since the account's password changed
+            'dates__modified' => null // last timestamp these properties were modified
         ));
     }
     
+    /** defines command usage for SetProperties() */
     public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] ".
                                                             "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
                                                             "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool]"; }
 
+    /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
     {
         foreach (array('max_session_age','max_password_age') as $prop)
