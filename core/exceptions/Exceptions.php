@@ -22,19 +22,19 @@ abstract class ClientException extends BaseException
 }
 
 /** Base class for generally invalid client requests (HTTP 400) */
-class ClientErrorException extends ClientException { public $code = 400; public $message = "INVALID_REQUEST"; }
+abstract class ClientErrorException extends ClientException { public $code = 400; public $message = "INVALID_REQUEST"; }
 
 /** Base class for client requests that are denied (HTTP 403) */
-class ClientDeniedException extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }
+abstract class ClientDeniedException extends ClientException { public $code = 403; public $message = "ACCESS_DENIED"; }
 
 /** Base class for client requests referencing something that was not found (HTTP 404) */
-class ClientNotFoundException extends ClientException { public $code = 404; public $message = "NOT_FOUND"; }
+abstract class ClientNotFoundException extends ClientException { public $code = 404; public $message = "NOT_FOUND"; }
 
 /** Exception indicating something is not implemented - these are not unexpected server errors (HTTP 501) */
 class NotImplementedException extends ClientException { public $code = 501; public $message = "NOT_IMPLEMENTED"; }
 
 /** Base class for server exceptions (errors in server code) */
-class ServerException extends BaseException 
+abstract class ServerException extends BaseException 
 {     
     public $code = 0; public $message = "GENERIC_SERVER_ERROR";
     

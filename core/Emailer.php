@@ -69,12 +69,12 @@ class Emailer extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'type' => null,
-            'hosts' => new FieldTypes\JSON(),
+            'hosts' => new FieldTypes\JSON(), // array of hosts to try, in-order
             'username' => null,
             'password' => null,
             'from_address' => null,
             'from_name' => null,
-            'features__reply' => null
+            'features__reply' => null // if true, add a Reply-To header
         ));
     }    
     

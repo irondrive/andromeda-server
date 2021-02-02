@@ -41,7 +41,6 @@ class Config extends SingletonObject
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
-     * @param Input $input contains config settings
      * @throws UnwriteableDatadirException if given a new datadir that is invalid
      * @return $this
      * @source show source

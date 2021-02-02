@@ -178,7 +178,7 @@ class Database implements Transactions
      * returns the array of config that was loaded from the config file 
      * @return array<string, mixed> {driver:string, connect:string, ?username:string, ?password:true, ?persistent:bool}
      */
-    public function getConfig() : array
+    public function GetClientObject() : array
     {
         $config = $this->config;
         

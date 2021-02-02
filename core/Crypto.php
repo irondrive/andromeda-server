@@ -103,7 +103,7 @@ class CryptoPublic
 {
     /**
      * Generates a public/private keypair
-     * @return array {public:string, private:string}
+     * @return array `{public:string, private:string}`
      */
     public static function GenerateKeyPair() : array
     {

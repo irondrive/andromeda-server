@@ -23,6 +23,8 @@ class NullValueException extends DatabaseException      { public $message = "VAL
  * Manages interaction with the database, provides functions for managing object data, 
  * and provides helper functions for the outside world. Most of the public functions are intended
  * to be ignored in favor of more domain-specific alternatives provided by classes that extend this one.
+ * 
+ * All objects have a unique ID that globally identifies them.
  */
 abstract class BaseObject
 {
@@ -248,9 +250,9 @@ abstract class BaseObject
     
     /** 
      * Returns an array of the object's ID and its class name 
-     * @return string[] [string, string]
+     * @return array<string, string> ID => class name
      */
-    public function getIDType() : array { return array($this->ID(), Utilities::ShortClassName(static::class)); }
+    public function getIDType() : array { return array($this->ID() => Utilities::ShortClassName(static::class)); }
     
     /** 
      * Returns the given object's getIDType() if not null, else null 
@@ -358,9 +360,22 @@ abstract class BaseObject
      * @throws KeyNotFoundException if the field name is invalid
      * @return string|NULL the class name of the referenced object
      */
-    protected function GetObjectType(string $field) : ?string
+    protected function GetObjectType(string $field) : string
     {
         if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        $value = $this->objects[$field]->GetRefClass();
+        if ($value !== null) return $value; else throw new NullValueException($field);
+    }
+    
+    /**
+     * Gets the class name of a referenced object without actually loading it (faster)
+     * @param string $field the field name holding the reference
+     * @throws KeyNotFoundException if the field name is invalid
+     * @return string|NULL the class name of the referenced object
+     */
+    protected function TryGetObjectType(string $field) : ?string
+    {
+        if (!array_key_exists($field, $this->objects)) return null;
         return $this->objects[$field]->GetRefClass();
     }
     
