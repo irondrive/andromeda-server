@@ -94,7 +94,7 @@ abstract class Utilities
      */
     public static function JSONDecode(string $data)
     {
-        if (!($data = json_decode($data, true))) {
+        if (($data = json_decode($data, true)) === null) {
             throw new JSONDecodingException(); };
         return $data;
     }

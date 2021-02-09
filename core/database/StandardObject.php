@@ -192,21 +192,25 @@ abstract class StandardObject extends BaseObject
 
     /**
      * Gets an array of the values of all fields matching a prefix
-     * @param string $prefix the prefix to match fields against
+     * @param ?string $prefix the prefix to match fields against, or null to get all
      * @param callable $vfunc the function to map to each field, or TryGetScalar if null
      * @return array mapping field names (stripped of their prefix) to their values
      * @see BaseObject::TryGetScalar
      */
-    private function GetAllScalars(string $prefix, callable $vfunc = null) : array
+    protected function GetAllScalars(?string $prefix, callable $vfunc = null) : array
     {
         $output = array(); 
         foreach (array_keys($this->scalars) as $key)
         {
-            $keyarr = explode("__",$key,2); 
-            if ($keyarr[0] === $prefix)
+            if ($prefix !== null)
             {
-                $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $this->TryGetScalar($key);
+                $keyarr = explode("__",$key,2); 
+                if ($keyarr[0] === $prefix)
+                {
+                    $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $this->TryGetScalar($key);
+                }
             }
+            else $output[$key] = $this->TryGetScalar($key);
         }
         return $output;
     }
