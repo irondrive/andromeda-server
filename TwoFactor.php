@@ -59,7 +59,8 @@ class TwoFactor extends StandardObject
             'comment' => null,
             'secret' => null,
             'nonce' => null,
-            'valid' => null,         
+            'valid' => null,
+            'dates__used' => null,
             'account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
             'usedtokens' => new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor')
         ));
@@ -149,7 +150,7 @@ class TwoFactor extends StandardObject
         
         if (!$ga->verifyCode($this->GetSecret(), $code, self::TIME_TOLERANCE)) return false;
 
-        $this->SetScalar('valid', true);
+        $this->SetScalar('valid', true)->SetDate('used');
         
         UsedToken::Create($this->database, $this, $code);       
         

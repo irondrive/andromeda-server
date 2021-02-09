@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
 ,  `nonce` binary(24) DEFAULT NULL
 ,  `valid` integer NOT NULL DEFAULT 0
 ,  `dates__created` integer NOT NULL
+,  `dates__used` integer DEFAULT NULL
 ,  `account` char(12) NOT NULL
 ,  `usedtokens` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
