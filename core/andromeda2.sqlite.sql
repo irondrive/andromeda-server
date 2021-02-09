@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS `a2_objects_core_config` (
   `id` char(12) NOT NULL
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
-,  `apiurl` text DEFAULT NULL
 ,  `dates__created` integer NOT NULL
 ,  `features__debug` integer NOT NULL
 ,  `features__debug_http` integer NOT NULL

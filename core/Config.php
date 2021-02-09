@@ -21,7 +21,6 @@ class Config extends SingletonObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
-            'apiurl' => null,
             'features__debug' => new FieldTypes\Scalar(self::LOG_ERRORS),
             'features__debug_http' => new FieldTypes\Scalar(false),
             'features__debug_dblog' => new FieldTypes\Scalar(true),
@@ -37,7 +36,7 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool] [--apiurl string]"; }
+    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool]"; }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -53,8 +52,6 @@ class Config extends SingletonObject
             if (!is_readable($datadir) || !is_writeable($datadir)) throw new UnwriteableDatadirException();
             $this->SetScalar('datadir', $datadir);
         }
-        
-        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->TryGetParam('apiurl',SafeParam::TYPE_RAW));
         
         if ($input->HasParam('debug')) $this->SetFeature('debug',$input->GetParam('debug',SafeParam::TYPE_INT));
         if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
@@ -107,10 +104,7 @@ class Config extends SingletonObject
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
-    
-    /** Returns the URL this server API is accessible from over HTTP */
-    public function GetAPIUrl() : ?string { return $this->TryGetScalar('apiurl'); }
-    
+
     const LOG_ERRORS = 1; const LOG_DEVELOPMENT = 2; const LOG_SENSITIVE = 3;
     
     /** Returns the current debug level */
@@ -151,7 +145,7 @@ class Config extends SingletonObject
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
      * @return array `{features: {read_only:bool, enabled:bool}, apps:[{string:[int]}]}` \
-         if admin, add: `{datadir:?string, apiurl:?string, features:{ debug:int, 
+         if admin, add: `{datadir:?string, features:{ debug:int, 
          debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
@@ -169,7 +163,6 @@ class Config extends SingletonObject
         if ($admin)
         {
             $data['datadir'] = $this->GetDataDir();
-            $data['apiurl'] = $this->GetAPIUrl();
             $data['features'] = $this->GetAllFeatures();
         }
         

@@ -28,7 +28,6 @@ CREATE TABLE public.a2_objects_core_config (
     id character(12) NOT NULL,
     datadir text,
     apps text NOT NULL,
-    apiurl text,
     dates__created bigint NOT NULL,
     features__debug smallint NOT NULL,
     features__debug_http boolean NOT NULL,
