@@ -6,6 +6,7 @@ require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorLogEntry.php"); use Andromeda\Core\Exceptions\ErrorLogEntry;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException, DatabaseConfigException};
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -53,7 +54,8 @@ class ServerApp extends AppBase
             'getmailers',
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
             ...array_map(function($s){ return "\t $s"; },Emailer::GetCreateUsages()),
-            'deletemailer --mailid id'
+            'deletemailer --mailid id',
+            'geterrors '.ErrorLogEntry::GetLoadUsage()
         );
     }
  
@@ -122,6 +124,8 @@ class ServerApp extends AppBase
             case 'getmailers': return $this->GetMailers($input); 
             case 'createmailer': return $this->CreateMailer($input);
             case 'deletemailer': return $this->DeleteMailer($input);
+            
+            case 'geterrors': return $this->GetErrors($input);
             
             case 'usage': case 'help':
                 return $this->GetUsages($input);
@@ -395,6 +399,18 @@ class ServerApp extends AppBase
         if ($mailer === null) throw new UnknownMailerException();
         
         $mailer->Delete();
+    }
+    
+    /**
+     * Returns the server error log, possibly filtered
+     * @throws AuthFailedException if not an admin 
+     */
+    protected function GetErrors(Input $input) : array
+    {
+        if (!$this->isAdmin) throw new AuthFailedException();
+        
+        return array_map(function(ErrorLogEntry $e){ return $e->GetClientObject(); },
+            ErrorLogEntry::LoadByInput($this->API->GetDatabase(), $input));
     }
 }
 
