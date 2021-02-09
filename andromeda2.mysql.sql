@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
   `nonce` binary(24) DEFAULT NULL,
   `valid` tinyint(1) NOT NULL DEFAULT 0,
   `dates__created` bigint(20) NOT NULL,
+  `dates__used` bigint(20) DEFAULT NULL,
   `account` char(12) NOT NULL,
   `usedtokens` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
