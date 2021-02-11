@@ -133,10 +133,8 @@ class Folder extends Item
     /** Asserts that this folder is not the given folder, or any of its parents */
     private function CheckIsNotChildOrSelf(Folder $folder) : void
     {
-        do {
-            if ($folder === $this)
-                throw new InvalidDestinationException();
-        }
+        do { if ($folder === $this)
+                throw new InvalidDestinationException(); }
         while (($folder = $folder->GetParent()) !== null);
     }
     
@@ -194,13 +192,15 @@ class Folder extends Item
     private bool $refreshed = false;
     private bool $subrefreshed = false;
     
+    private static bool $skiprefresh = false;
+    
     /**
      * Refreshes the folder's metadata from disk
      * @param bool $doContents if true, refresh all contents of the folder
      */
     public function Refresh(bool $doContents = false) : self
     {
-        if ($this->deleted) return $this;
+        if ($this->deleted || static::$skiprefresh) return $this;
         else if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true; $this->subrefreshed = $doContents;
@@ -256,7 +256,8 @@ class Folder extends Item
         
         $loaded = static::TryLoadUniqueByQuery($database, $q->Where($where));
         if ($loaded) return $loaded;
-        else {
+        else 
+        {
             $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
             return self::CreateRoot($database, $filesystem, $owner)->Refresh();
         }
@@ -288,12 +289,19 @@ class Folder extends Item
         return static::LoadByQuery($database, $q->Where($where));
     }
     
-    /** Deletes all root folders on the given filesystem - if the FS is shared or $force, only remove DB objects */
-    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $notify = false) : void
+    /** Deletes all root folders on the given filesystem - if the FS is shared or $unlink, only remove DB objects */
+    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $unlink = false) : void
     {
-        foreach (static::LoadRootsByFSManager($database, $filesystem) as $folder)
+        $unlink = $filesystem->isShared() || $unlink;
+        if ($unlink) static::$skiprefresh = true;
+        
+        $roots = static::LoadRootsByFSManager($database, $filesystem);
+        
+        static::$skiprefresh = false;
+        
+        foreach ($roots as $folder)
         {
-            if ($filesystem->isShared() || $notify) $folder->NotifyDelete(); else $folder->Delete();
+            if ($unlink) $folder->NotifyDelete(); else $folder->Delete();
         }
     }
     
@@ -318,9 +326,9 @@ class Folder extends Item
     }
     
     /** Deletes this folder and its contents from the DB only */
-    public function NotifyDelete(bool $isNotify = true) : void
-    {        
-        $this->DeleteChildren($isNotify);
+    public function NotifyDelete() : void
+    {
+        $this->DeleteChildren(true);
         
         parent::Delete();
     }

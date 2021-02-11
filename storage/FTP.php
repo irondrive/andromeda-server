@@ -113,9 +113,9 @@ class FTP extends FWrapper
 
     public function __destruct()
     {
-      foreach ($this->appending_handles as $handle) fclose($handle);
+       foreach ($this->appending_handles as $handle) fclose($handle);
 
-      if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
+       if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
     }
     
     protected function GetFullURL(string $path = "") : string

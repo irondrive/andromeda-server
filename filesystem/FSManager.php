@@ -73,7 +73,7 @@ class FSManager extends StandardObject
     public function isReadOnly() : bool { return $this->TryGetScalar('readonly') ?? false; }
     
     /** Sets whether this filesystem is read-only */
-    public function setReadOnly(bool $ro) : self { return $this->SetScalar('readonly', $ro); }
+    public function SetReadOnly(bool $ro) : self { return $this->SetScalar('readonly', $ro); }
     
     /** Returns the name (or null) of this filesystem */
     public function GetName() : ?string { return $this->TryGetScalar('name'); }
@@ -81,8 +81,7 @@ class FSManager extends StandardObject
     /** Sets the name of this filesystem, checks uniqueness */
     public function SetName(?string $name) : self 
     {
-        $dupfs = static::TryLoadByAccountAndName($this->database, $this->GetOwner(), $name);
-        if ($dupfs !== null || $name === "default")
+        if (static::TryLoadByAccountAndName($this->database, $this->GetOwner(), $name) !== null)
             throw new InvalidNameException();
         
         return $this->SetScalar('name',$name); 
@@ -198,7 +197,7 @@ class FSManager extends StandardObject
         
         $filesystem = parent::BaseCreate($database)
             ->SetOwner($account)->SetName($name)
-            ->SetType($fstype)->setReadOnly($readonly);
+            ->SetType($fstype)->SetReadOnly($readonly);
         
         if ($filesystem->isSecure())
         {
@@ -212,7 +211,7 @@ class FSManager extends StandardObject
         
             $filesystem->GetStorage()->Test(); 
         }
-        catch (ActivateException | Exceptions\ClientException $e){ throw InvalidStorageException::Copy($e); }
+        catch (ActivateException $e){ throw InvalidStorageException::Copy($e); }
         
         return $filesystem;
     }
@@ -223,11 +222,8 @@ class FSManager extends StandardObject
     /** Edits an existing filesystem with the given values, and tests it */
     public function Edit(Input $input) : self
     {
-        $ro = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL);
-        $name = $input->TryGetParam('name', SafeParam::TYPE_NAME);
-        
-        if ($name !== null) $this->SetName($name);
-        if ($ro !== null) $this->setReadOnly($ro);
+        if ($input->HasParam('name')) $this->SetName($input->TryGetParam('name',SafeParam::TYPE_NAME));
+        if ($input->HasParam('readonly')) $this->SetReadOnly($input->GetParam('readonly',SafeParam::TYPE_BOOL));
         
         $this->EditStorage($input)->Test(); return $this;
     }
@@ -283,20 +279,11 @@ class FSManager extends StandardObject
     {
         parent::DeleteByObject($database, 'owner', $account);
     }
-    
-    /** Deletes this filesystem and all folder roots on it, from DB only */
-    public function ForceDelete() : void 
+
+    /** Deletes this filesystem and all folder roots on it - if $unlink, from DB only */
+    public function Delete(bool $unlink = false) : void
     {
-        // TODO test that this works when the underlying storage can't activate
-        Folder::DeleteRootsByFSManager($this->database, $this, true);
-        
-        $this->DeleteObject('storage'); parent::Delete();
-    }
-    
-    /** Deletes this filesystem and all folder roots on it */
-    public function Delete() : void
-    {
-        Folder::DeleteRootsByFSManager($this->database, $this);
+        Folder::DeleteRootsByFSManager($this->database, $this, $unlink);
         
         $this->DeleteObject('storage'); parent::Delete();
     }

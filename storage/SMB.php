@@ -12,6 +12,12 @@ require_once(ROOT."/apps/files/storage/CredCrypt.php");
 /** Exception indicating that the libsmbclient extension is missing */
 class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
 
+/** Exception indicating that the SMB state initialization failed */
+class SMBStateInitException extends ActivateException { public $message = "SMB_STATE_INIT_FAILED"; }
+
+/** Exception indicating that SMB failed to connect or read the base path */
+class SMBConnectException extends ActivateException { public $message = "SMB_BASE_CONNECT_FAILED"; }
+
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(SMB::class);
@@ -74,7 +80,29 @@ class SMB extends FWrapper
         if (!function_exists('smbclient_version')) throw new SMBExtensionException();
     }
     
-    public function Activate() : self { return $this; }
+    private $state = false;
+    
+    public function Activate() : self
+    {
+        $this->state = smbclient_state_new();
+        if ($this->state === false) throw new SMBStateInitException();
+        
+        if (smbclient_state_init($this->state) === 1)
+            throw new SMBStateInitException();
+        
+        if (!is_readable($this->GetFullURL()))
+            throw new SMBConnectException();
+        
+        return $this; 
+    }    
+    
+    public function __destruct()
+    {
+        parent::__destruct();
+        
+        if (isset($this->state) && is_resource($this->state)) 
+            smbclient_state_free($this->state);
+    }
 
     protected function GetFullURL(string $path = "") : string
     {
@@ -102,19 +130,13 @@ class SMB extends FWrapper
         $this->CheckReadOnly();
         $this->ClosePath($path); // close existing handles
         
-        $state = smbclient_state_new();
-        if ($state === false) throw new FileWriteFailedException();
-        
-        if (smbclient_state_init($state) === 1) 
-            throw new FileWriteFailedException();
-        
-        $handle = smbclient_open($state, $this->GetFullURL($path), 'r+');
+        $handle = smbclient_open($this->state, $this->GetFullURL($path), 'r+');
         if ($handle === false) throw new FileWriteFailedException();
             
-        if (!smbclient_ftruncate($state, $handle, $length))
+        if (!smbclient_ftruncate($this->state, $handle, $length))
             throw new FileWriteFailedException();
         
-        if (!smbclient_close($state, $handle))
+        if (!smbclient_close($this->state, $handle))
             throw new FileWriteFailedException();
 
         return $this;
@@ -145,6 +167,14 @@ class SMB extends FWrapper
         return implode($data);
     }
     
-    // TODO can do a get free space here
-
+    public function canGetFreeSpace() : bool { return true; }
+    
+    public function GetFreeSpace() : int
+    {
+        $data = smbclient_statvfs($this->state, $this->GetFullURL());
+        
+        if ($data === false) throw new FreeSpaceFailedException();
+        
+        return $data['frsize'] * $data['bsize'] * $data['bavail'];
+    }
 }

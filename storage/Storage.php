@@ -92,11 +92,16 @@ abstract class Storage extends StandardObject implements Transactions
      */
     public function GetClientObject() : array
     {
-        return array(
+        $retval = array(
             'id' => $this->ID(),
             'owner' => $this->TryGetObjectID('owner'),
             'filesystem' => $this->GetObjectID('filesystem')
         );
+        
+        if ($this->canGetFreeSpace())
+            $retval['freespace'] = $this->GetFreeSpace();
+        
+        return $retval;
     }
 
     /** Returns the command usage for Create() */
@@ -130,7 +135,10 @@ abstract class Storage extends StandardObject implements Transactions
     protected function CheckReadOnly(){ if ($this->GetFilesystem()->isReadOnly()) throw new ReadOnlyException(); }
 
     /** Returns the available space in bytes on the storage */
-    public function GetFreeSpace() : ?int { return null; }
+    public function GetFreeSpace() : int { throw new FreeSpaceFailedException(); }
+    
+    /** Returns whether or not the storage supports getting free space */
+    public function canGetFreeSpace() : bool { return false; }
     
     /** Returns an ItemStat object on the given path */
     public abstract function ItemStat(string $path) : ItemStat;
