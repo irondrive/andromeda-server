@@ -198,15 +198,15 @@ class SafeParam
         }
         else if ($type === self::TYPE_FSNAME)
         {
-            if (mb_strlen($value) >= 256 || preg_match("%[\\/?*:;{}]+%") ||
+            if (mb_strlen($value) >= 256 || preg_match("%[\\/?*:;{}]+%",$value) ||
                 basename($value) !== $value || in_array($value, array('.','..')) ||
-               !($value = filter_var($value, FILTER_FLAG_STRIP_LOW)))
+               !($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)))
                     throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSPATH)
         {
-            if (strlen($value) >= 65536 || preg_match("%[?*:;{}]+%") ||
-                !($value = filter_var($value, FILTER_FLAG_STRIP_LOW)))
+            if (strlen($value) >= 65536 || preg_match("%[?*:;{}]+%",$value) ||
+                !($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)))
                     throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_HOSTNAME)

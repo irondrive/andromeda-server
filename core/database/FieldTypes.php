@@ -203,7 +203,7 @@ class ObjectRef extends Scalar
     protected ?BaseObject $object;
     
     /** The class of the object that is referenced */
-    protected string $refclass; 
+    protected ?string $refclass; 
     
     /** The name of the field in the referenced object that cross-references our parent object */
     protected ?string $reffield; 
@@ -229,7 +229,7 @@ class ObjectRef extends Scalar
     public function GetBaseClass() : string { return $this->refclass; }
     
     /** @see ObjectRef::$refclass */
-    public function GetRefClass() : string { return $this->refclass; }
+    public function GetRefClass() : ?string { return $this->refclass; }
     
     /** @see ObjectRef::$reffield */
     public function GetRefField() : ?string { return $this->reffield; }
