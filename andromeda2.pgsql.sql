@@ -42,6 +42,7 @@ CREATE TABLE public.a2_objects_apps_files_comment (
 CREATE TABLE public.a2_objects_apps_files_config (
     id character(12) NOT NULL,
     dates__created bigint NOT NULL,
+    apiurl text,
     rwchunksize bigint NOT NULL,
     crchunksize bigint NOT NULL,
     features__timedstats boolean NOT NULL
@@ -380,131 +381,131 @@ ALTER TABLE ONLY public.a2_objects_apps_files_limits_total
 
 
 --
--- Name: a2_objects_apps_files_comment idx_29810_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_comment idx_30985_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_comment
-    ADD CONSTRAINT idx_29810_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_30985_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_config idx_29816_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_config idx_30991_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_config
-    ADD CONSTRAINT idx_29816_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_30991_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_file idx_29819_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_file idx_30997_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_file
-    ADD CONSTRAINT idx_29819_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_30997_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_filesystem_fsmanager idx_29832_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_filesystem_fsmanager idx_31010_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_filesystem_fsmanager
-    ADD CONSTRAINT idx_29832_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31010_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_folder idx_29841_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_folder idx_31019_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_folder
-    ADD CONSTRAINT idx_29841_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31019_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_like idx_29862_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_like idx_31040_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_like
-    ADD CONSTRAINT idx_29862_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31040_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_limits_authtotal idx_29865_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_limits_authtotal idx_31043_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_limits_authtotal
-    ADD CONSTRAINT idx_29865_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31043_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_limits_filesystemtotal idx_29873_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_limits_filesystemtotal idx_31051_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_limits_filesystemtotal
-    ADD CONSTRAINT idx_29873_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31051_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_limits_timed idx_29881_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_limits_timed idx_31059_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_limits_timed
-    ADD CONSTRAINT idx_29881_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31059_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_limits_timedstats idx_29885_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_limits_timedstats idx_31063_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_limits_timedstats
-    ADD CONSTRAINT idx_29885_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31063_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_share idx_29893_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_share idx_31071_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_share
-    ADD CONSTRAINT idx_29893_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31071_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_storage_ftp idx_29901_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_storage_ftp idx_31079_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_storage_ftp
-    ADD CONSTRAINT idx_29901_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31079_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_storage_local idx_29909_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_storage_local idx_31087_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_storage_local
-    ADD CONSTRAINT idx_29909_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31087_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_storage_sftp idx_29916_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_storage_sftp idx_31094_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_storage_sftp
-    ADD CONSTRAINT idx_29916_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31094_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_storage_smb idx_29926_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_storage_smb idx_31104_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_storage_smb
-    ADD CONSTRAINT idx_29926_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31104_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_files_tag idx_29936_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_files_tag idx_31114_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_files_tag
-    ADD CONSTRAINT idx_29936_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31114_primary PRIMARY KEY (id);
 
 
 --
@@ -515,213 +516,213 @@ CREATE UNIQUE INDEX idx_25983_object ON public.a2_objects_apps_files_limits_tota
 
 
 --
--- Name: idx_29810_item; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30985_item; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29810_item ON public.a2_objects_apps_files_comment USING btree (item);
-
-
---
--- Name: idx_29810_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29810_owner ON public.a2_objects_apps_files_comment USING btree (owner);
+CREATE INDEX idx_30985_item ON public.a2_objects_apps_files_comment USING btree (item);
 
 
 --
--- Name: idx_29819_filesystem; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30985_owner; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29819_filesystem ON public.a2_objects_apps_files_file USING btree (filesystem);
-
-
---
--- Name: idx_29819_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29819_id ON public.a2_objects_apps_files_file USING btree (id);
+CREATE INDEX idx_30985_owner ON public.a2_objects_apps_files_comment USING btree (owner);
 
 
 --
--- Name: idx_29819_owner; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30997_filesystem; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29819_owner ON public.a2_objects_apps_files_file USING btree (owner);
-
-
---
--- Name: idx_29819_parent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29819_parent ON public.a2_objects_apps_files_file USING btree (parent);
+CREATE INDEX idx_30997_filesystem ON public.a2_objects_apps_files_file USING btree (filesystem);
 
 
 --
--- Name: idx_29832_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30997_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29832_name ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (name);
-
-
---
--- Name: idx_29832_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29832_owner ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (owner);
+CREATE INDEX idx_30997_id ON public.a2_objects_apps_files_file USING btree (id);
 
 
 --
--- Name: idx_29832_owner_2; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30997_owner; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29832_owner_2 ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (owner, name);
-
-
---
--- Name: idx_29841_filesystem; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29841_filesystem ON public.a2_objects_apps_files_folder USING btree (filesystem);
+CREATE INDEX idx_30997_owner ON public.a2_objects_apps_files_file USING btree (owner);
 
 
 --
--- Name: idx_29841_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_30997_parent; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29841_id ON public.a2_objects_apps_files_folder USING btree (id);
-
-
---
--- Name: idx_29841_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29841_owner ON public.a2_objects_apps_files_folder USING btree (owner);
+CREATE INDEX idx_30997_parent ON public.a2_objects_apps_files_file USING btree (parent);
 
 
 --
--- Name: idx_29841_parent; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31010_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29841_parent ON public.a2_objects_apps_files_folder USING btree (parent);
-
-
---
--- Name: idx_29862_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29862_owner ON public.a2_objects_apps_files_like USING btree (owner, item);
+CREATE INDEX idx_31010_name ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (name);
 
 
 --
--- Name: idx_29865_object; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31010_owner; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29865_object ON public.a2_objects_apps_files_limits_authtotal USING btree (object);
-
-
---
--- Name: idx_29873_object; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29873_object ON public.a2_objects_apps_files_limits_filesystemtotal USING btree (object);
+CREATE INDEX idx_31010_owner ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (owner);
 
 
 --
--- Name: idx_29881_object; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31010_owner_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29881_object ON public.a2_objects_apps_files_limits_timed USING btree (object);
-
-
---
--- Name: idx_29881_object_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29881_object_2 ON public.a2_objects_apps_files_limits_timed USING btree (object, timeperiod);
+CREATE UNIQUE INDEX idx_31010_owner_2 ON public.a2_objects_apps_files_filesystem_fsmanager USING btree (owner, name);
 
 
 --
--- Name: idx_29885_limitobj; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31019_filesystem; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29885_limitobj ON public.a2_objects_apps_files_limits_timedstats USING btree (limitobj, dates__timestart);
-
-
---
--- Name: idx_29885_limitobj_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29885_limitobj_2 ON public.a2_objects_apps_files_limits_timedstats USING btree (limitobj, iscurrent);
+CREATE INDEX idx_31019_filesystem ON public.a2_objects_apps_files_folder USING btree (filesystem);
 
 
 --
--- Name: idx_29893_item; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31019_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29893_item ON public.a2_objects_apps_files_share USING btree (item, dest);
-
-
---
--- Name: idx_29893_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29893_owner ON public.a2_objects_apps_files_share USING btree (owner);
+CREATE INDEX idx_31019_id ON public.a2_objects_apps_files_folder USING btree (id);
 
 
 --
--- Name: idx_29901_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31019_owner; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29901_id ON public.a2_objects_apps_files_storage_ftp USING btree (id);
-
-
---
--- Name: idx_29901_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29901_owner ON public.a2_objects_apps_files_storage_ftp USING btree (owner);
+CREATE INDEX idx_31019_owner ON public.a2_objects_apps_files_folder USING btree (owner);
 
 
 --
--- Name: idx_29909_owner; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31019_parent; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29909_owner ON public.a2_objects_apps_files_storage_local USING btree (owner);
-
-
---
--- Name: idx_29916_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29916_id ON public.a2_objects_apps_files_storage_sftp USING btree (id);
+CREATE INDEX idx_31019_parent ON public.a2_objects_apps_files_folder USING btree (parent);
 
 
 --
--- Name: idx_29926_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31040_owner; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29926_id ON public.a2_objects_apps_files_storage_smb USING btree (id);
-
-
---
--- Name: idx_29936_item; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_29936_item ON public.a2_objects_apps_files_tag USING btree (item, tag);
+CREATE UNIQUE INDEX idx_31040_owner ON public.a2_objects_apps_files_like USING btree (owner, item);
 
 
 --
--- Name: idx_29936_item_2; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31043_object; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29936_item_2 ON public.a2_objects_apps_files_tag USING btree (item);
+CREATE UNIQUE INDEX idx_31043_object ON public.a2_objects_apps_files_limits_authtotal USING btree (object);
 
 
 --
--- Name: idx_29936_owner; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31051_object; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29936_owner ON public.a2_objects_apps_files_tag USING btree (owner);
+CREATE UNIQUE INDEX idx_31051_object ON public.a2_objects_apps_files_limits_filesystemtotal USING btree (object);
+
+
+--
+-- Name: idx_31059_object; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31059_object ON public.a2_objects_apps_files_limits_timed USING btree (object);
+
+
+--
+-- Name: idx_31059_object_2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31059_object_2 ON public.a2_objects_apps_files_limits_timed USING btree (object, timeperiod);
+
+
+--
+-- Name: idx_31063_limitobj; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31063_limitobj ON public.a2_objects_apps_files_limits_timedstats USING btree (limitobj, dates__timestart);
+
+
+--
+-- Name: idx_31063_limitobj_2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31063_limitobj_2 ON public.a2_objects_apps_files_limits_timedstats USING btree (limitobj, iscurrent);
+
+
+--
+-- Name: idx_31071_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31071_item ON public.a2_objects_apps_files_share USING btree (item, dest);
+
+
+--
+-- Name: idx_31071_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31071_owner ON public.a2_objects_apps_files_share USING btree (owner);
+
+
+--
+-- Name: idx_31079_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31079_id ON public.a2_objects_apps_files_storage_ftp USING btree (id);
+
+
+--
+-- Name: idx_31079_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31079_owner ON public.a2_objects_apps_files_storage_ftp USING btree (owner);
+
+
+--
+-- Name: idx_31087_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31087_owner ON public.a2_objects_apps_files_storage_local USING btree (owner);
+
+
+--
+-- Name: idx_31094_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31094_id ON public.a2_objects_apps_files_storage_sftp USING btree (id);
+
+
+--
+-- Name: idx_31104_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31104_id ON public.a2_objects_apps_files_storage_smb USING btree (id);
+
+
+--
+-- Name: idx_31114_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31114_item ON public.a2_objects_apps_files_tag USING btree (item, tag);
+
+
+--
+-- Name: idx_31114_item_2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31114_item_2 ON public.a2_objects_apps_files_tag USING btree (item);
+
+
+--
+-- Name: idx_31114_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31114_owner ON public.a2_objects_apps_files_tag USING btree (owner);
 
 
 --

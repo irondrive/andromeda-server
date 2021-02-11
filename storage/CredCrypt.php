@@ -16,6 +16,9 @@ class CredentialsEncryptedException extends Exceptions\ClientErrorException { pu
 /** Exception indicating that crypto has not been initialized on the required account */
 class CryptoNotAvailableException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_CRYPTO_NOT_AVAILABLE"; }
 
+/** Exception indicating that crypto cannot be used without an account given */
+class CryptoWithoutOwnerException extends Exceptions\ClientErrorException { public $message = "CANNOT_CREATE_CRYPTO_WITHOUT_OWNER"; }
+
 /**
  * Trait for storage classes that store a possibly-encrypted username and password
  * 
@@ -53,7 +56,7 @@ trait CredCrypt
     public function CredCryptCreate(Input $input, ?Account $account) : self
     {
         $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;
-        if ($account === null && $credcrypt) throw new CryptoNotAvailableException();
+        if ($account === null && $credcrypt) throw new CryptoWithoutOwnerException();
         
         return $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt)
             ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);

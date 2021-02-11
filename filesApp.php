@@ -153,7 +153,7 @@ class FilesApp extends AppBase
             'getfilesystems',
             'createfilesystem '.FSManager::GetCreateUsage(),
             ...FSManager::GetCreateUsages(),
-            'deletefilesystem --filesystem id --auth_password raw',
+            'deletefilesystem --filesystem id --auth_password raw [--unlink bool]',
             'editfilesystem --filesystem id '.FSManager::GetEditUsage(),
             'getlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
             'gettimedlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
@@ -435,8 +435,8 @@ class FilesApp extends AppBase
         // transfer chunk size must be an integer multiple of the FS chunk size
         if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;        
         
-        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
-            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::LOG_DEVELOPMENT)
+        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false) ||
+            $this->API->GetDebugLevel() < \Andromeda\Core\Config::LOG_DEVELOPMENT)
         {
             $this->API->GetInterface()->DisableOutput();
             
@@ -1286,9 +1286,9 @@ class FilesApp extends AppBase
             $account = $this->authenticator->GetAccount();
             $subject = $account->GetDisplayName()." shared files with you"; 
             
-            $body = implode("<br />",array_map(function(Share $share){
-                
-                $url = $this->API->GetConfig()->GetAPIUrl();
+            $body = implode("<br />",array_map(function(Share $share)
+            {                
+                $url = $this->config->GetAPIUrl();
                 if (!$url) throw new ShareURLGenerateException();
                 
                 $params = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
@@ -1518,10 +1518,11 @@ class FilesApp extends AppBase
             $filesystem = FSManager::TryLoadByID($this->API->GetDatabase(), $fsid);
         else $filesystem = FSManager::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $fsid);
         
-        $force = $input->TryGetParam('force', SafeParam::TYPE_BOOL);
+        $unlink = $input->TryGetParam('unlink', SafeParam::TYPE_BOOL) ?? false;
 
         if ($filesystem === null) throw new UnknownFilesystemException();
-        if ($force) $filesystem->ForceDelete(); else $filesystem->Delete();
+        
+        $filesystem->Delete($unlink);
     }
     
     /**

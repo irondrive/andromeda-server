@@ -66,8 +66,6 @@ class SFTP extends FWrapper
         ));
     }
 
-    // TODO get free space?
-
     /** Returns the configured username (mandatory) */
     protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }
     

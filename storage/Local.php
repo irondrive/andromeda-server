@@ -25,14 +25,9 @@ class Local extends FWrapper
         if ($account && !$account->isAdmin()) throw new LocalNonAdminException();
         else return parent::Create($database, $input, $account, $filesystem);
     }
-    
-    public function GetClientObject() : array
-    {
-        return array_merge(parent::GetClientObject(), array(
-            'freespace' => $this->GetFreeSpace()
-        ));
-    }
 
+    public function canGetFreeSpace() : bool { return true; }
+    
     public function GetFreeSpace() : int
     {
         $space = disk_free_space($this->GetPath());

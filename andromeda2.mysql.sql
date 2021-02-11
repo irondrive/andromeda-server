@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
 CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
+  `apiurl` text DEFAULT NULL,
   `rwchunksize` int(11) NOT NULL,
   `crchunksize` int(11) NOT NULL,
   `features__timedstats` tinyint(1) NOT NULL,

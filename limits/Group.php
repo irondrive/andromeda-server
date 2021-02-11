@@ -14,6 +14,8 @@ require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
 require_once(ROOT."/apps/files/limits/AuthObj.php");
 
+interface IGroupLimit { }
+
 /**
  * Group limits common between total and timed
  * 
@@ -52,7 +54,7 @@ trait GroupCommon
      * @param AccountCommon $aclim the account limits
      * @param bool $add true to add, false to subtract
      */
-    public function ProcessAccountChange(AccountCommon $aclim, bool $add) : void
+    public function ProcessAccountChange(IAccountLimit $aclim, bool $add) : void
     {
         $mul = $add ? 1 : -1;
         $this->CountDownloads($mul*$aclim->GetDownloads());
@@ -90,7 +92,7 @@ trait GroupCommon
 }
 
 /** Concrete class providing group config and total stats */
-class GroupTotal extends AuthTotal          
+class GroupTotal extends AuthTotal implements IGroupLimit
 { 
     use GroupCommon; 
     
@@ -164,7 +166,7 @@ class GroupTotal extends AuthTotal
 }
 
 /** Concrete class providing timed group member limits */
-class GroupTimed extends AuthTimed
+class GroupTimed extends AuthTimed implements IGroupLimit
 { 
     use GroupCommon;
     

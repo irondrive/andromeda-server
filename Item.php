@@ -303,6 +303,9 @@ abstract class Item extends StandardObject
     /** Returns true if the item should allow public shares (shares with all users) */
     public function GetAllowShareEveryone(Account $account) : bool {
         return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareEveryone(); }, $account); }
+        
+    /** Deletes the item from the DB only */
+    public abstract function NotifyDelete() : void;
     
     /** Deleting an item also deletes all of its component objects (likes, tags, comments, shares) */
     public function Delete() : void

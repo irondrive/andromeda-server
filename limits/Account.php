@@ -19,6 +19,8 @@ require_once(ROOT."/apps/files/limits/Timed.php");
 require_once(ROOT."/apps/files/limits/AuthObj.php");
 require_once(ROOT."/apps/files/limits/Group.php");
 
+interface IAccountLimit { }
+
 /**
  * Account limits common between total and timed
  * 
@@ -93,12 +95,12 @@ trait AccountCommon
      * 
      * The account limit will be deleted if it does not have any properties that
      * were set specifically for it, and no other group limits applicable to it exist
-     * @param GroupTotal $grlim
+     * @param GroupCommon $grlim group to remove
      */
-    public function ProcessGroupRemove(GroupCommon $grlim) : void
+    public function ProcessGroupRemove(IGroupLimit $grlim) : void
     {
         // see if the account has any properties specific to it
-        foreach (array_keys($this->GetInheritedProperties()) as $field)
+        foreach (array_keys($this->GetInheritedFields()) as $field)
         {
             if ($this->TryGetInheritsScalarFrom($field) === $this) return;
         }
@@ -112,7 +114,7 @@ trait AccountCommon
 }
 
 /** Concrete class providing account config and total stats */
-class AccountTotal extends AuthTotal  
+class AccountTotal extends AuthTotal implements IAccountLimit
 { 
     use AccountCommon;
     
@@ -247,7 +249,7 @@ class AccountTotal extends AuthTotal
 }
 
 /** A fake empty account limits that returns default property values */
-class AccountTotalDefault extends AccountTotal
+class AccountTotalDefault extends AccountTotal implements IAccountLimit
 {
     public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
     
