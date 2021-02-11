@@ -109,9 +109,9 @@ class Group extends AuthEntity
     }
     
     /** Creates and returns a new group with the given name, priority, and comment */
-    public static function Create(ObjectDatabase $database, string $name, int $priority = 0, ?string $comment = null) : self
+    public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
     {
-        $group = parent::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority);
+        $group = parent::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority ?? 0);
         
         if ($comment !== null) $group->SetScalar('comment', $comment);
         

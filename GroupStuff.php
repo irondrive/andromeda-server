@@ -23,8 +23,8 @@ class GroupJoin extends JoinObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'account' => new FieldTypes\ObjectRef(Account::class, 'groups'),
-            'group' => new FieldTypes\ObjectRef(Group::class, 'accounts')
+            'accounts' => new FieldTypes\ObjectRef(Account::class, 'groups'),
+            'groups' => new FieldTypes\ObjectRef(Group::class, 'accounts')
         ));
     }
 }
