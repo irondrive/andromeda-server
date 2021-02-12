@@ -57,10 +57,10 @@ class Config extends SingletonObject
     public function GetUseEmailAsUsername() : bool  { return $this->GetFeature('emailasusername'); }
     
     /** Sets whether the API for creating new accounts is enabled */
-    public function SetAllowCreateAccount(bool $allow) : self { return $this->SetFeature('createaccount', $allow); }
+    public function SetAllowCreateAccount(bool $value, bool $temp = false) : self { return $this->SetFeature('createaccount', $value, $temp); }
     
     /** Sets whether emails should be used as usernames */
-    public function SetUseEmailAsUsername(bool $useem) : self { return $this->SetFeature('emailasusername', $useem); }
+    public function SetUseEmailAsUsername(bool $value, bool $temp = false) : self { return $this->SetFeature('emailasusername', $value, $temp); }
     
     const CONTACT_EXIST = 1; const CONTACT_VALID = 2;
     
@@ -68,7 +68,7 @@ class Config extends SingletonObject
     public function GetRequireContact() : int          { return $this->GetFeature('requirecontact'); }
     
     /* Sets whether a contact info for accounts is required or validated */
-    public function SetRequireContact(int $req) : self { return $this->SetFeature('requirecontact', $req); }
+    public function SetRequireContact(int $value, bool $temp = false) : self { return $this->SetFeature('requirecontact', $value, $temp); }
      
     /**
      * Gets the config as a printable client object
