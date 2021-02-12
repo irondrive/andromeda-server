@@ -47,11 +47,13 @@ abstract class FWrapper extends Storage
     
     public function Test() : self
     {
-        $this->Activate(); $path = $this->GetFullURL(); 
+        $this->Activate();
+        
         $ro = $this->GetFilesystem()->isReadOnly();
         
-        if (!is_readable($path) || (!$ro && !is_writeable($path)))
-            throw new TestFailedException();
+        if (!is_readable($this->GetFullURL())) throw new TestReadFailedException();
+        if (!$ro && !$this->isWriteable()) throw new TestWriteFailedException();
+        
         return $this;
     }
     
@@ -59,7 +61,8 @@ abstract class FWrapper extends Storage
     protected abstract function GetFullURL(string $path = "") : string;
     
     /** Returns the full storage level path for the given root-relative path */
-    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').'/'.$path; }  // TODO rawurlencode?? I think I tried that before and it didn't work but SMB says to use it... use for filenames only?
+    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').($path ? "/$path" :""); }
+    // TODO rawurlencode?? I think I tried that before and it didn't work but SMB says to use it... use for filenames only?
     
     /** Sets the path of the storage's root */
     private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
@@ -81,6 +84,12 @@ abstract class FWrapper extends Storage
         return is_file($this->GetFullURL($path));
     }
     
+    /** Returns true if the filesystem root can be written to */
+    public function isWriteable() : bool
+    {
+        return is_writeable($this->GetFullURL());
+    }
+    
     public function ReadFolder(string $path) : ?array
     {
         if (!$this->isFolder($path)) return null;
@@ -92,7 +101,7 @@ abstract class FWrapper extends Storage
     {
         $this->CheckReadOnly();
         if ($this->isFolder($path)) return $this;
-        if (!mkdir($this->GetFullURL($path))) throw new FolderCreateFailedException();
+        if (!mkdir($this->GetFullURL($path),0750,true)) throw new FolderCreateFailedException();
         else return $this;
     }
     

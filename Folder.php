@@ -90,9 +90,7 @@ class Folder extends Item
             $parent->DeltaSize($size);
         return $this->DeltaCounter('size',$size); 
     }   
-    
-    // TODO check for root folder SetName and root folder SetParent here, not in filesApp
-    
+
     public function SetName(string $name, bool $overwrite = false) : self
     {
         parent::CheckName($name, $overwrite);

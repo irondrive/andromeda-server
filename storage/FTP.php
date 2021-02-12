@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -99,11 +100,13 @@ class FTP extends FWrapper
         
         $host = $this->GetScalar('hostname'); 
         $port = $this->TryGetScalar('port') ?? 21;
-        $user = $this->TryGetUsername() ?? 'anonymous'; // TODO check this
+        $user = $this->TryGetUsername() ?? 'anonymous';
         $pass = $this->TryGetPassword() ?? "";
         
-        if ($this->GetScalar('implssl')) $this->ftp = ftp_ssl_connect($host, $port);
-        else $this->ftp = $this->ftp = ftp_connect($host, $port);
+        if ($this->GetScalar('implssl')) 
+            $this->ftp = ftp_ssl_connect($host, $port);
+        else $this->ftp = ftp_connect($host, $port);
+        
         if (!$this->ftp) throw new FTPConnectionFailure();
         
         if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();
@@ -128,9 +131,9 @@ class FTP extends FWrapper
         $usrstr = $username ? "$username:$password@" : "";
         $hostname = $this->GetScalar('hostname');
         $portstr = $port ? ":$port" : "";
-        $connectstr = "$proto://$usrstr$hostname$portstr/";
+        $connectstr = "$proto://$usrstr$hostname$portstr";
         
-        return $connectstr.$this->GetPath($path);
+        return $connectstr.'/'.$this->GetPath($path);
     }
     
     // even though FTP can uses PHP's fwrapper, we'll override most of the
@@ -153,6 +156,18 @@ class FTP extends FWrapper
     public function isFile(string $path) : bool
     {
         return ftp_size($this->ftp, $this->GetPath($path)) >= 0;
+    }
+    
+    public function isWriteable() : bool
+    {
+        try
+        {
+            $name = Utilities::Random(16).".tmp";            
+            $this->CreateFile($name)->DeleteFile($name);
+            
+            return true;
+        }
+        catch (StorageException $e){ return false; }        
     }
     
     public function ReadFolder(string $path) : ?array
@@ -230,8 +245,9 @@ class FTP extends FWrapper
             throw new FTPWriteUnsupportedException();
         
         $handle = $this->TrackAppending($path, strlen($data));
-        if (!$handle) throw new FileWriteFailedException();
-        fwrite($handle, $data); return $this;
+        if (!$handle || fwrite($handle, $data) !== strlen($data)) 
+            throw new FileWriteFailedException();
+        return $this;
     }
     
     /** @throws FTPWriteUnsupportedException */
