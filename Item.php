@@ -374,11 +374,11 @@ abstract class Item extends StandardObject
 
         if ($details)
         {
-            $comments = $this->GetComments(); // TODO limit/offset for these!
+            $comments = $this->GetComments();
             if ($details < self::DETAILS_OWNER)
                 $comments = array_filter($comments, function($c){ return !$c->IsPrivate(); });
                 
-            $data['likes'] = array_map($mapobj, array_values($this->GetLikes())); // TODO limit/offset for these!
+            $data['likes'] = array_map($mapobj, array_values($this->GetLikes()));
             $data['tags'] = array_map($mapobj, $this->GetTags());
             $data['comments'] = array_map($mapobj, $comments);
             $data['shares'] = array_map($mapobj, $this->GetShares());

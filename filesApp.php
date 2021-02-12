@@ -111,7 +111,7 @@ class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { 
  */
 class FilesApp extends AppBase
 {
-    public static function getVersion() : array { return array(0,0,1); } 
+    public static function getVersion() : string { return "2.0.0-alpha"; } 
     
     public static function getUsage() : array 
     { 
@@ -189,7 +189,7 @@ class FilesApp extends AppBase
         parent::__construct($api);
         $this->database = $api->GetDatabase();
         
-        try { $this->config = Config::GetInstance($api->GetDatabase()); }
+        try { $this->config = Config::GetInstance($this->database); }
         catch (DatabaseException $e) { }     
     }
     
@@ -204,6 +204,8 @@ class FilesApp extends AppBase
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
             throw new UnknownConfigException(static::class);
+        
+        if (isset($this->authenticator)) $oldauth = $this->authenticator;
         
         $this->authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
@@ -267,6 +269,8 @@ class FilesApp extends AppBase
             
             default: throw new UnknownActionException();
         }
+        
+        if (isset($oldauth)) $this->authenticator = $oldauth; else unset($this->authenticator);
     }
     
     /** Returns an ItemAccess authenticating the given file ID (or null to get from input), throws exceptions on failure */

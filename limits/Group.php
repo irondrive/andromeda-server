@@ -129,7 +129,9 @@ class GroupTotal extends AuthTotal implements IGroupLimit
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
-            $aclim = AccountTotal::LoadByGroup($database, $group);
+            if ($this->isDeleted() || $group !== $this->GetGroup()) return;
+            
+            $aclim = AccountTotal::LoadByAccount($database, $account);
             if ($aclim === null || !isset($this->acctlims)) return;
             
             if ($added) $this->acctlims[$aclim->ID()] = $aclim;
@@ -203,7 +205,9 @@ class GroupTimed extends AuthTimed implements IGroupLimit
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
-            $aclim = AccountTimed::LoadByGroup($database, $group, $this->GetTimePeriod());
+            if ($this->isDeleted() || $group !== $this->GetGroup()) return;
+            
+            $aclim = AccountTimed::LoadByAccount($database, $account, $this->GetTimePeriod());
             if ($aclim === null || !isset($this->acctlims)) return;
             
             if ($added) $this->acctlims[$aclim->ID()] = $aclim;

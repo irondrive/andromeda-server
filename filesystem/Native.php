@@ -83,6 +83,23 @@ class Native extends BaseFileFS
         return $this->ManualCopyFolder($folder, $dest);
     }
 
-    /** The path to a file is simply its ID */
-    protected function GetFilePath(File $file) : string { return $file->ID(); }
+    /** The path to a file is simply its ID, broken into prefixes */
+    protected function GetFilePath(File $file) : string 
+    {
+        $id = $file->ID();
+        
+        // alternative abstracted implementation
+        /*$len = 2; $level = 2; $path = array();
+        for ($i = 0; $i < $level; $i++)
+            array_push($path, substr($id, $i*$len, $len));
+        $path = implode('/',$path);*/
+
+        $len = 2; $path = substr($id, 0, $len);
+        
+        $storage = $this->GetStorage();
+        
+        if (!$storage->isFolder($path)) $storage->CreateFolder($path);
+        
+        return $path.'/'.substr($id, $len); 
+    }
 }

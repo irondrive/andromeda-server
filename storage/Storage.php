@@ -19,8 +19,11 @@ abstract class StorageException extends Exceptions\ServerException { }
 /** Exception indicating that activating the storage failed */
 abstract class ActivateException extends StorageException { }
 
-/** Exception indicating that testing the storage config failed */
-class TestFailedException extends ActivateException { public $message = "STORAGE_TEST_FAILED"; }
+/** Exception indicating that the tested storage is not readable */
+class TestReadFailedException extends ActivateException { public $message = "STORAGE_TEST_READ_FAILED"; }
+
+/** Exception indicating that the tested storage is not writeable */
+class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; }
 
 /** Exception indicating that creating the folder failed */
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }

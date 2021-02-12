@@ -151,6 +151,8 @@ class AccountTotal extends AuthTotal implements IAccountLimit
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
+            if ($this->isDeleted() || $account !== $this->GetAccount()) return;
+            
             $grlim = GroupTotal::LoadByGroup($database, $group);
             if ($grlim === null || !isset($this->grouplims)) return;
             
@@ -294,6 +296,8 @@ class AccountTimed extends AuthTimed
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
+            if ($this->isDeleted() || $account !== $this->GetAccount()) return;
+            
             $grlim = GroupTimed::LoadByGroup($database, $group, $this->GetTimePeriod());
             if ($grlim === null || !isset($this->grouplims)) return;
             
