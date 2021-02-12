@@ -33,7 +33,7 @@ class AuthFailedException extends Exceptions\ClientDeniedException      { public
  */
 class ServerApp extends AppBase
 {
-    public static function getVersion() : array { return array(0,0,1); } 
+    public static function getVersion() : string { return "2.0.0-alpha"; } 
 
     public static function getUsage() : array
     {
@@ -70,6 +70,7 @@ class ServerApp extends AppBase
     public function __construct(Main $api)
     {
         parent::__construct($api);
+        $this->database = $api->GetDatabase();
         
         $this->useAuth = file_exists(ROOT."/apps/accounts/Authenticator.php");
         if ($this->useAuth) { require_once(ROOT."/apps/accounts/Authenticator.php"); }
@@ -85,7 +86,7 @@ class ServerApp extends AppBase
     public function Run(Input $input)
     {
         // if the database is not installed, require configuring it
-        if (!$this->API->GetDatabase())
+        if (!$this->database)
         {
             if ($input->GetAction() !== 'dbconf')
                 throw new DatabaseConfigException();
@@ -94,11 +95,14 @@ class ServerApp extends AppBase
         else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
             throw new UnknownConfigException(static::class);
         
+        if (isset($this->isAdmin)) $oldadmin = $this->isAdmin;
+        if (isset($this->authenticator)) $oldauth = $this->authenticator;
+        
         // if the Accounts app is installed, use it for authentication, else check interface privilege
-        if ($this->useAuth && $this->API->GetDatabase())
+        if ($this->useAuth && $this->database)
         {
             $this->authenticator = Authenticator::TryAuthenticate(
-                $this->API->GetDatabase(), $input, $this->API->GetInterface());
+                $this->database, $input, $this->API->GetInterface());
             $this->isAdmin = $this->authenticator !== null && $this->authenticator->isAdmin();
         }
         else $this->isAdmin = $this->API->GetInterface()->isPrivileged();
@@ -132,6 +136,9 @@ class ServerApp extends AppBase
             
             default: throw new UnknownActionException();
         }
+        
+        if (isset($oldadmin)) $this->isAdmin = $oldadmin; else unset($this->isAdmin);
+        if (isset($oldauth)) $this->authenticator = $oldauth; else unset($this->authenticator);
     }
     
     /**
@@ -206,12 +213,11 @@ class ServerApp extends AppBase
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
-        $database = $this->API->GetDatabase();
-        $database->importTemplate(ROOT."/core");        
+        $this->database->importTemplate(ROOT."/core");        
         
         $apps = array_filter(scandir(ROOT."/apps"),function($e){ return !in_array($e,array('.','..')); });
         
-        $config = Config::Create($database);
+        $config = Config::Create($this->database);
         foreach ($apps as $app) $config->EnableApp($app);
         
         $enable = $input->TryGetParam('enable', SafeParam::TYPE_BOOL);        
@@ -251,7 +257,7 @@ class ServerApp extends AppBase
             'addr' => $_SERVER['SERVER_ADDR'] ?? "",
             'port' => $_SERVER['SERVER_PORT'] ?? "",
             'file' => $_SERVER['SCRIPT_FILENAME'],
-            'db' => $this->API->GetDatabase()->getInfo()
+            'db' => $this->database->getInfo()
         );
     }
     
@@ -277,7 +283,7 @@ class ServerApp extends AppBase
         
         if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_RANDSTR)) !== null)
         {
-            $mailer = Emailer::TryLoadByID($this->API->GetDatabase(), $mailer);
+            $mailer = Emailer::TryLoadByID($this->database, $mailer);
             if ($mailer === null) throw new UnknownMailerException();
             else $mailer->Activate();
         }
@@ -332,7 +338,7 @@ class ServerApp extends AppBase
         
         return array(
             'config' => $this->API->GetConfig()->GetClientObject(true),
-            'database' => $this->API->GetDatabase()->GetClientObject()
+            'database' => $this->database->GetClientObject()
         );
     }
 
@@ -360,7 +366,7 @@ class ServerApp extends AppBase
         if (!$this->isAdmin) throw new AuthFailedException();
         
         return array_map(function($m){ return $m->GetClientObject(); }, 
-            Emailer::LoadAll($this->API->GetDatabase()));
+            Emailer::LoadAll($this->database));
     }
     
     /**
@@ -373,7 +379,7 @@ class ServerApp extends AppBase
     {
         if (!$this->isAdmin) throw new AuthFailedException();
         
-        $emailer = Emailer::Create($this->API->GetDatabase(), $input);
+        $emailer = Emailer::Create($this->database, $input);
         
         if (($dest = $input->TryGetParam('test',SafeParam::TYPE_EMAIL)) !== null)
         {
@@ -395,7 +401,7 @@ class ServerApp extends AppBase
         if (!$this->isAdmin) throw new AuthFailedException();
         
         $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR);
-        $mailer = Emailer::TryLoadByID($this->API->GetDatabase(), $mailid);
+        $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
         
         $mailer->Delete();
@@ -410,7 +416,7 @@ class ServerApp extends AppBase
         if (!$this->isAdmin) throw new AuthFailedException();
         
         return array_map(function(ErrorLogEntry $e){ return $e->GetClientObject(); },
-            ErrorLogEntry::LoadByInput($this->API->GetDatabase(), $input));
+            ErrorLogEntry::LoadByInput($this->database, $input));
     }
 }
 

@@ -144,7 +144,7 @@ class Config extends SingletonObject
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{features: {read_only:bool, enabled:bool}, apps:[{string:[int]}]}` \
+     * @return array `{features: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
          if admin, add: `{datadir:?string, features:{ debug:int, 
          debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
      */

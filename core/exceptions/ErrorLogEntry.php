@@ -38,7 +38,7 @@ class ErrorLogEntry extends BaseObject
     }
     
     /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--mintime int] [--maxtime int] [--code raw] [--addr raw] [--app alphanum] [--action alphanum] [--logic and|or] [--limit int] [--offset int]"; }
+    public static function GetLoadUsage() : string { return "[--mintime int] [--maxtime int] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--logic and|or] [--limit int] [--offset int]"; }
     
     /** Returns all error log entries matching the given input */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
@@ -49,13 +49,16 @@ class ErrorLogEntry extends BaseObject
         if ($input->HasParam('mintime')) array_push($criteria, $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_INT)));
         
         if ($input->HasParam('code')) array_push($criteria, $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW)));
-        if ($input->HasParam('addr')) array_push($criteria, $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW)));        
+        if ($input->HasParam('addr')) array_push($criteria, $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW)));  
+        if ($input->HasParam('agent')) array_push($criteria, $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW)));
+        
         if ($input->HasParam('app')) array_push($criteria, $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM)));
         if ($input->HasParam('action')) array_push($criteria, $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM)));
                 
         $or = $input->TryGetParam('logic',SafeParam::TYPE_ALPHANUM,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
-        array_push($criteria, $or ? "false" : "true"); // if no criteria
+        
+        if (!count($criteria)) array_push($criteria, $or ? "FALSE" : "TRUE");
         
         if ($input->HasParam('limit')) $q->Limit($input->GetParam('limit',SafeParam::TYPE_INT));
         if ($input->HasParam('offset')) $q->Limit($input->GetParam('offset',SafeParam::TYPE_INT));
