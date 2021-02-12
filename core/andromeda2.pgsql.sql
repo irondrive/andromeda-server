@@ -80,97 +80,97 @@ CREATE TABLE public.a2_objects_core_exceptions_errorlogentry (
 
 
 --
--- Name: a2_objects_core_config idx_29939_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_config idx_31117_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_config
-    ADD CONSTRAINT idx_29939_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31117_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_emailer idx_29945_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_emailer idx_31123_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_emailer
-    ADD CONSTRAINT idx_29945_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31123_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_exceptions_errorlogentry idx_29953_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_exceptions_errorlogentry idx_31131_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlogentry
-    ADD CONSTRAINT idx_29953_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_31131_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_29939_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31117_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29939_id ON public.a2_objects_core_config USING btree (id);
-
-
---
--- Name: idx_29939_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29939_id_2 ON public.a2_objects_core_config USING btree (id);
+CREATE UNIQUE INDEX idx_31117_id ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_29945_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31117_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29945_id ON public.a2_objects_core_emailer USING btree (id);
-
-
---
--- Name: idx_29945_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29945_id_2 ON public.a2_objects_core_emailer USING btree (id);
+CREATE INDEX idx_31117_id_2 ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_29953_action; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31123_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29953_action ON public.a2_objects_core_exceptions_errorlogentry USING btree (action);
-
-
---
--- Name: idx_29953_addr; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29953_addr ON public.a2_objects_core_exceptions_errorlogentry USING btree (addr);
+CREATE UNIQUE INDEX idx_31123_id ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_29953_app; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31123_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29953_app ON public.a2_objects_core_exceptions_errorlogentry USING btree (app);
-
-
---
--- Name: idx_29953_code; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_29953_code ON public.a2_objects_core_exceptions_errorlogentry USING btree (code);
+CREATE INDEX idx_31123_id_2 ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_29953_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31131_action; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_29953_id ON public.a2_objects_core_exceptions_errorlogentry USING btree (id);
+CREATE INDEX idx_31131_action ON public.a2_objects_core_exceptions_errorlogentry USING btree (action);
 
 
 --
--- Name: idx_29953_time; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_31131_addr; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_29953_time ON public.a2_objects_core_exceptions_errorlogentry USING btree ("time");
+CREATE INDEX idx_31131_addr ON public.a2_objects_core_exceptions_errorlogentry USING btree (addr);
+
+
+--
+-- Name: idx_31131_app; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31131_app ON public.a2_objects_core_exceptions_errorlogentry USING btree (app);
+
+
+--
+-- Name: idx_31131_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31131_code ON public.a2_objects_core_exceptions_errorlogentry USING btree (code);
+
+
+--
+-- Name: idx_31131_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_31131_id ON public.a2_objects_core_exceptions_errorlogentry USING btree (id);
+
+
+--
+-- Name: idx_31131_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_31131_time ON public.a2_objects_core_exceptions_errorlogentry USING btree ("time");
 
 
 --

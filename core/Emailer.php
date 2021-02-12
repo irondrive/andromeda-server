@@ -52,7 +52,7 @@ class Emailer extends StandardObject
 {    
     private PHPMailer\PHPMailer $mailer;
     
-    private const SMTP_TIMEOUT = 15; // TODO configure?
+    private const SMTP_TIMEOUT = 15;
     
     public const TYPE_PHPMAIL = 0; 
     public const TYPE_SENDMAIL = 1; 

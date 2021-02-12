@@ -37,11 +37,8 @@ abstract class AppBase implements Transactions
      */
     public abstract static function getUsage() : array;
     
-    /**
-     * Returns an array of the app's version information
-     * @return array<int>
-     */
-    public abstract static function getVersion() : array;
+    /** Returns the app's version information */
+    public abstract static function getVersion() : string;
     
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }

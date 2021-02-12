@@ -17,7 +17,7 @@ require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Excep
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file name] [--\$param data]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file name] [--\$param data] [--\$param@ file]\n".
                       "batch/version:   php index.php [version | batch myfile.txt]\n".
                       "get all actions: php index.php server usage"; }
 
@@ -48,7 +48,7 @@ class CLI extends IOInterface
             });
         }
     }
-    
+
     /** 
      * Initializes CLI by fetching some global params from $argv
      * 
@@ -141,7 +141,7 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {                
-                case 'version': die("Andromeda ".implode(".",ServerApp::getVersion())."\n"); break;
+                case 'version': die("Andromeda ".ServerApp::getVersion()."\n"); break;
                 
                 case 'batch':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -173,51 +173,67 @@ class CLI extends IOInterface
     
     private $tmpfiles = array();
     
+    /** Strips -- off the given string and returns (or false if not found) */
+    private static function getKey(string $str)
+    { 
+        if (mb_substr($str,0,2) !== "--") return false; else return mb_substr($str,2);
+    }
+    
     /** Fetches an Input object by reading it from the command line */
     private function GetInput(array $argv) : Input
     {
         if (count($argv) < 2) throw new IncorrectCLIUsageException();
         
-        $app = $argv[0]; $action = $argv[1]; $params = new SafeParams(); $files = array();
+        $app = $argv[0]; $action = $argv[1]; 
+        $params = new SafeParams(); $files = array();
+        
+        // add environment variables to argv
+        foreach (array_keys($_SERVER) as $key)
+        {
+            $value = $_SERVER[$key]; 
+            $key = explode('_',$key,2);
+            
+            if ($key[0] == 'andromeda' && count($key) == 2)
+            {
+                array_push($argv, "--".$key[1], $value);
+            }
+        }    
         
         for ($i = 2; $i < count($argv); $i++)
         {
-            if (mb_substr($argv[$i],0,2) !== "--") throw new IncorrectCLIUsageException();
+            $param = static::getKey($argv[$i]); 
+            if (!$param) throw new IncorrectCLIUsageException();
             
-            if (!isset($argv[$i+1]) || mb_substr($argv[$i+1],0,2) === "--") 
-                throw new IncorrectCLIUsageException();
+            $val = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : true;
             
-            $param = mb_substr($argv[$i],2); $val = $argv[$i+1];
-            
+            // optionally load a param value from a file instead
+            if (mb_substr($param,-1) === '@')
+            {
+                $param = mb_substr($param,0,-1); 
+                if (!$param) throw new IncorrectCLIUsageException();
+                
+                if (!is_readable($val)) throw new InvalidFileException();
+                
+                $val = trim(file_get_contents($val));
+            }
+
+            // send a filename to the app instead of a regular key/value
             if (in_array($param, array('file','move-file','copy-file')))
             {
                 if (!is_readable($val)) throw new InvalidFileException();   
                 
                 $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
                 
-                if ($param === 'move-file') 
-                    rename($val, $tmpfile); 
-                else copy($val, $tmpfile);
+                if ($param === 'move-file') rename($val, $tmpfile); else copy($val, $tmpfile);
                 
-                $filename = $val;
-                if (isset($argv[$i+2]) && mb_substr($argv[$i+2],0,2) !== "--")
-                    { $filename = $argv[$i+2]; $i++; }
+                $filename = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : $val;       
                 
                 $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
 
-                array_push($this->tmpfiles, $tmpfile);
-                $files[$filename] = $tmpfile; $i++;
+                array_push($this->tmpfiles, $tmpfile);                
+                $files[$filename] = $tmpfile;
             }
-            else { $params->AddParam($param, $val); $i++; }
-        }
-
-        foreach (array_keys($_SERVER) as $key)
-        {
-            $value = $_SERVER[$key];
-            $key = explode('_',$key,2);
-            
-            if ($key[0] == 'andromeda' && count($key) == 2)
-                $params->AddParam($key[1], $value);
+            else $params->AddParam($param, $val);
         }
         
         return new Input($app, $action, $params, $files);

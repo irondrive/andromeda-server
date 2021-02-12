@@ -129,7 +129,8 @@ class SafeParam
         
         if ($value === null || $value === "" || $value === "null") $value = null;
         
-        $key = filter_var($key, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
+        if (!preg_match("%^[a-zA-Z0-9_.]+$%", $key))
+            throw new SafeParamInvalidException("(key)", SafeParam::TYPE_ALPHANUM);
         
         $this->key = $key; $this->value = $value;
     }
