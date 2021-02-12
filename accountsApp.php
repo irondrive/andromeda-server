@@ -108,7 +108,7 @@ class AccountsApp extends AppBase
     /** Authenticator for the current Run() */
     private ?Authenticator $authenticator;
     
-    public static function getVersion() : array { return array(0,0,1); } 
+    public static function getVersion() : string { return "2.0.0-alpha"; } 
     
     public static function getUsage() : array 
     { 
@@ -156,9 +156,10 @@ class AccountsApp extends AppBase
     
     public function __construct(Main $api)
     {
-        parent::__construct($api);   
+        parent::__construct($api);
+        $this->database = $api->GetDatabase();
         
-        try { $this->config = Config::GetInstance($api->GetDatabase()); }
+        try { $this->config = Config::GetInstance($this->database); }
         catch (DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
@@ -176,8 +177,10 @@ class AccountsApp extends AppBase
         if (!isset($this->config) && $input->GetAction() !== 'install')
             throw new UnknownConfigException(static::class);
 
+        if (isset($this->authenticator)) $oldauth = $this->authenticator;
+        
         $this->authenticator = Authenticator::TryAuthenticate(
-            $this->API->GetDatabase(), $input, $this->API->GetInterface());
+            $this->database, $input, $this->API->GetInterface());
         
         switch($input->GetAction())
         {
@@ -227,6 +230,8 @@ class AccountsApp extends AppBase
             
             default: throw new UnknownActionException();
         }
+        
+        if (isset($oldauth)) $this->authenticator = $oldauth; else unset($this->authenticator);
     }
     
     /**
@@ -258,15 +263,14 @@ class AccountsApp extends AppBase
     {
         if (isset($this->config)) throw new UnknownActionException();
         
-        $database = $this->API->GetDatabase();
-        $database->importTemplate(ROOT."/apps/accounts");
+        $this->database->importTemplate(ROOT."/apps/accounts");
         
-        Config::Create($database)->Save();
+        Config::Create($this->database)->Save();
         
         $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
 
-        $account = Account::Create($database, Auth\Local::GetInstance(), $username, $password);
+        $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password);
 
         $account->setAdmin(true);
         
@@ -309,7 +313,7 @@ class AccountsApp extends AppBase
     {
         $admin = $this->authenticator !== null && $this->authenticator->isAdmin();
         return array_map(function(Auth\Manager $m)use($admin){ return $m->GetClientObject($admin); },
-            Auth\Manager::LoadAll($this->API->GetDatabase()));
+            Auth\Manager::LoadAll($this->database));
     }
 
     /**
@@ -326,7 +330,7 @@ class AccountsApp extends AppBase
         {
             $this->authenticator->RequireAdmin();
             
-            $account = Account::TryLoadByID($this->API->GetDatabase(), $account);
+            $account = Account::TryLoadByID($this->database, $account);
             if ($account === null) throw new UnknownAccountException();
             return $account->GetClientObject(Account::OBJECT_ADMIN);
         }
@@ -352,7 +356,7 @@ class AccountsApp extends AppBase
         if ($recoverykey !== null)
         {
             $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
-            $account = Account::TryLoadByUsername($this->API->GetDatabase(), $username);
+            $account = Account::TryLoadByUsername($this->database, $username);
             if ($account === null) throw new AuthenticationFailedException();
         }
         else
@@ -418,12 +422,12 @@ class AccountsApp extends AppBase
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
-        $account = Account::TryLoadByUsername($this->API->GetDatabase(), $username);
+        $account = Account::TryLoadByUsername($this->database, $username);
         if ($account === null) throw new UnknownAccountException();
         
         if ($account->hasCrypto() || $account->HasValidTwoFactor()) throw new RecoveryKeyCreateException();
 
-        $key = RecoveryKey::Create($this->API->GetDatabase(), $account)->GetFullKey();   
+        $key = RecoveryKey::Create($this->database, $account)->GetFullKey();   
         
         $subject = "Andromeda Account Recovery Key";
         $body = "Your recovery key is: $key";
@@ -458,14 +462,13 @@ class AccountsApp extends AppBase
         else $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
         
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
-        
-        $database = $this->API->GetDatabase();        
-        if (Account::TryLoadByUsername($database, $username) !== null) throw new AccountExistsException();
-        if ($emailaddr !== null && ContactInfo::TryLoadByInfo($database, $emailaddr) !== null) throw new AccountExistsException();
+              
+        if (Account::TryLoadByUsername($this->database, $username) !== null) throw new AccountExistsException();
+        if ($emailaddr !== null && ContactInfo::TryLoadByInfo($this->database, $emailaddr) !== null) throw new AccountExistsException();
 
-        $account = Account::Create($database, Auth\Local::GetInstance(), $username, $password);
+        $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password);
         
-        if ($emailaddr !== null) $contact = ContactInfo::Create($database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
+        if ($emailaddr !== null) $contact = ContactInfo::Create($this->database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
 
         if (!$admin && $requireemail >= Config::CONTACT_VALID)
         {
@@ -500,7 +503,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);        
-        $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
+        $account = Account::TryLoadByID($this->database, $accountid);
         if ($account === null) throw new UnknownAccountException();
         
         if (!$this->authenticator->GetRealAccount()->isAdmin())
@@ -541,22 +544,20 @@ class AccountsApp extends AppBase
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
-        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW); 
-        
-        $database = $this->API->GetDatabase();
+        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW);
         
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
         {
-            $authsource = Auth\Manager::TryLoadByID($database, $authsource);
+            $authsource = Auth\Manager::TryLoadByID($this->database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
             else $authsource = $authsource->GetAuthSource();
         }
         else $authsource = Auth\Local::GetInstance();
         
         /* try loading by username, or even by an email address */
-        $account = Account::TryLoadByUsername($database, $username);
-        if ($account === null) $account = Account::TryLoadByContactInfo($database, $username);
+        $account = Account::TryLoadByUsername($this->database, $username);
+        if ($account === null) $account = Account::TryLoadByContactInfo($this->database, $username);
         
         /* if we found an account, verify the password and correct authsource */
         if ($account !== null)
@@ -572,7 +573,7 @@ class AccountsApp extends AppBase
             if (!$authsource->VerifyPassword($username, $password))
                 throw new AuthenticationFailedException();
             
-            $account = Account::Create($this->API->GetDatabase(), $authsource, $username);    
+            $account = Account::Create($this->database, $authsource, $username);    
         }
         else throw new AuthenticationFailedException();
         
@@ -589,7 +590,7 @@ class AccountsApp extends AppBase
             if ($account->GetForceTwoFactor() && $account->HasValidTwoFactor()) 
                 Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $client = Client::TryLoadByID($database, $clientid);
+            $client = Client::TryLoadByID($this->database, $clientid);
             if ($client === null || !$client->CheckMatch($interface, $clientkey)) 
                 throw new UnknownClientException();
         } 
@@ -602,7 +603,7 @@ class AccountsApp extends AppBase
             }
             else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $client = Client::Create($interface, $database, $account);
+            $client = Client::Create($interface, $this->database, $account);
         }
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */
@@ -631,7 +632,7 @@ class AccountsApp extends AppBase
         $session = $client->GetSession();
         if ($session !== null) $session->Delete();
 
-        $session = Session::Create($database, $account, $client);
+        $session = Session::Create($this->database, $account, $client);
         
         /* update object dates */
         $session->setActiveDate();
@@ -657,7 +658,7 @@ class AccountsApp extends AppBase
         
         $this->authenticator->TryRequireTwoFactor()->RequirePassword()->TryRequireCrypto();        
         
-        $keys = RecoveryKey::CreateSet($this->API->GetDatabase(), $account);
+        $keys = RecoveryKey::CreateSet($this->database, $account);
         
         $output = array_map(function(RecoveryKey $key){
             return $key->GetClientObject(true); }, $keys);
@@ -682,7 +683,6 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
-        $database = $this->API->GetDatabase();
         
         $this->authenticator->RequirePassword()->TryRequireCrypto();
         
@@ -692,13 +692,13 @@ class AccountsApp extends AppBase
             
             $account->InitializeCrypto($password);
             $this->authenticator->GetSession()->InitializeCrypto();
-            Session::DeleteByAccountExcept($database, $account, $this->authenticator->GetSession());
+            Session::DeleteByAccountExcept($this->database, $account, $this->authenticator->GetSession());
         }
         
         $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
         
-        $twofactor = TwoFactor::Create($database, $account, $comment);
-        $recoverykeys = RecoveryKey::CreateSet($database, $account);
+        $twofactor = TwoFactor::Create($this->database, $account, $comment);
+        $recoverykeys = RecoveryKey::CreateSet($this->database, $account);
         
         $tfobj = $twofactor->GetClientObject(true);
         $keyobjs = array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); }, $recoverykeys);
@@ -747,9 +747,9 @@ class AccountsApp extends AppBase
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE"); // TODO better exception
         }        
         
-        if (ContactInfo::TryLoadByInfo($this->API->GetDatabase(), $info) !== null) throw new ContactInfoExistsException();
+        if (ContactInfo::TryLoadByInfo($this->database, $info) !== null) throw new ContactInfoExistsException();
 
-        $contact = ContactInfo::Create($this->API->GetDatabase(), $account, $type, $info);
+        $contact = ContactInfo::Create($this->database, $account, $type, $info);
         
         if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && !$this->authenticator->GetRealAccount()->isAdmin())
         { 
@@ -789,7 +789,7 @@ class AccountsApp extends AppBase
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
         }
         
-        $contact = ContactInfo::TryLoadByInfo($this->API->GetDatabase(), $info);
+        $contact = ContactInfo::TryLoadByInfo($this->database, $info);
         if ($contact === null || $contact->GetAccount() !== $account) throw new UnknownContactInfoException();        
         
         if (!$this->authenticator->GetRealAccount()->isAdmin())
@@ -836,7 +836,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator->isSudoUser() || $sessionid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $session = Session::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $sessionid);
+            $session = Session::TryLoadByAccountAndID($this->database, $account, $sessionid);
             if ($session === null) throw new UnknownSessionException();
         }
         
@@ -864,7 +864,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator->isSudoUser() || $clientid !== null)
         {
             if (!$this->authenticator->isSudoUser()) $this->authenticator->RequirePassword();
-            $client = Client::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $clientid);
+            $client = Client::TryLoadByAccountAndID($this->database, $account, $clientid);
             if ($client === null) throw new UnknownClientException();
         }
         
@@ -888,7 +888,7 @@ class AccountsApp extends AppBase
         if ($input->TryGetParam('everyone',SafeParam::TYPE_BOOL) ?? false)
         {
             $this->authenticator->RequireAdmin()->TryRequireTwoFactor();
-            Client::DeleteAll($this->API->GetDatabase());
+            Client::DeleteAll($this->database);
         }
         else $this->authenticator->GetAccount()->DeleteClients();
         
@@ -911,7 +911,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         
         $twofactorid = $input->GetParam("twofactor", SafeParam::TYPE_RANDSTR);
-        $twofactor = TwoFactor::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $twofactorid); 
+        $twofactor = TwoFactor::TryLoadByAccountAndID($this->database, $account, $twofactorid); 
         if ($twofactor === null) throw new UnknownTwoFactorException();
 
         $twofactor->Delete();
@@ -943,7 +943,7 @@ class AccountsApp extends AppBase
             default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
         }     
         
-        $contact = ContactInfo::TryLoadByInfo($this->API->GetDatabase(), $info);
+        $contact = ContactInfo::TryLoadByInfo($this->database, $info);
         if ($contact === null || $contact->GetAccount() !== $account) throw new UnknownContactInfoException();
         
         $contact->Delete();
@@ -975,7 +975,7 @@ class AccountsApp extends AppBase
         $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ?? false;
         $type = $full ? Account::OBJECT_ADMIN : Account::OBJECT_SIMPLE;
         
-        $accounts = Account::LoadAll($this->API->GetDatabase(), $limit, $offset);        
+        $accounts = Account::LoadAll($this->database, $limit, $offset);        
         return array_map(function(Account $account)use($type){ return $account->GetClientObject($type); }, $accounts);
     }
     
@@ -993,7 +993,7 @@ class AccountsApp extends AppBase
         $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT);
         $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
         
-        $groups = Group::LoadAll($this->API->GetDatabase(), $limit, $offset);
+        $groups = Group::LoadAll($this->database, $limit, $offset);
         return array_map(function(Group $group){ return $group->GetClientObject(); }, $groups);
     }
     
@@ -1013,10 +1013,10 @@ class AccountsApp extends AppBase
         $priority = $input->TryGetParam("priority", SafeParam::TYPE_INT);
         $comment = $input->TryGetParam("comment", SafeParam::TYPE_TEXT);
         
-        $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
+        $duplicate = Group::TryLoadByName($this->database, $name);
         if ($duplicate !== null) throw new GroupExistsException();
 
-        $group = Group::Create($this->API->GetDatabase(), $name, $priority, $comment);
+        $group = Group::Create($this->database, $name, $priority, $comment);
         
         return $group->Initialize()->GetClientObject(true);
     }    
@@ -1033,16 +1033,14 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $database = $this->API->GetDatabase();
-        
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
-        $group = Group::TryLoadByID($database, $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
         if ($input->HasParam('name')) 
         {
             $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
-            $duplicate = Group::TryLoadByName($this->API->GetDatabase(), $name);
+            $duplicate = Group::TryLoadByName($this->database, $name);
             if ($duplicate !== null) throw new GroupExistsException();
             
             $group->SetName($name);
@@ -1066,10 +1064,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $database = $this->API->GetDatabase();
-        
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
-        $group = Group::TryLoadByID($database, $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
         return $group->GetClientObject(true);
@@ -1085,10 +1081,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $database = $this->API->GetDatabase();
-        
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
-        $group = Group::TryLoadByID($database, $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
             
         $group->Delete();
@@ -1111,10 +1105,10 @@ class AccountsApp extends AppBase
         $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         
-        $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
+        $account = Account::TryLoadByID($this->database, $accountid);
         if ($account === null) throw new UnknownAccountException();
         
-        $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
 
         if (!$account->HasGroup($group)) $account->AddGroup($group);
@@ -1141,10 +1135,10 @@ class AccountsApp extends AppBase
         $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
         
-        $account = Account::TryLoadByID($this->API->GetDatabase(), $accountid);
+        $account = Account::TryLoadByID($this->database, $accountid);
         if ($account === null) throw new UnknownAccountException();
         
-        $group = Group::TryLoadByID($this->API->GetDatabase(), $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
         if (in_array($group, $account->GetDefaultGroups(), true))
@@ -1170,7 +1164,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin()->RequirePassword();
 
-        $manager = Auth\Manager::Create($this->API->GetDatabase(), $input);
+        $manager = Auth\Manager::Create($this->database, $input);
         
         if ($input->HasParam('test_username'))
         {
@@ -1195,7 +1189,7 @@ class AccountsApp extends AppBase
         $this->authenticator->RequireAdmin();
         
         $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
-        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();        
         
         $testuser = $input->GetParam('test_username',SafeParam::TYPE_TEXT);
@@ -1220,7 +1214,7 @@ class AccountsApp extends AppBase
         $this->authenticator->RequireAdmin()->RequirePassword();
         
         $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
-        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
         if ($input->HasParam('test_username')) $this->TestAuthSource($input);
@@ -1239,7 +1233,7 @@ class AccountsApp extends AppBase
         $this->authenticator->RequireAdmin()->RequirePassword()->TryRequireTwoFactor();
         
         $manager = $input->GetParam('manager', SafeParam::TYPE_RANDSTR);
-        $manager = Auth\Manager::TryLoadByID($this->API->GetDatabase(), $manager);
+        $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
         $manager->Delete();
@@ -1257,10 +1251,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $database = $this->API->GetDatabase();
-        
         $acctid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
-        $account = Account::TryLoadByID($database, $acctid);
+        $account = Account::TryLoadByID($this->database, $acctid);
         if ($account === null) throw new UnknownAccountException();
         
         if ($input->TryGetParam("expirepw", SafeParam::TYPE_BOOL) ?? false) $account->resetPasswordDate();
@@ -1280,10 +1272,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $database = $this->API->GetDatabase();
-        
         $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
-        $group = Group::TryLoadByID($database, $groupid);
+        $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
 
         return $group->SetProperties($input)->GetClientObject(true);
@@ -1291,11 +1281,9 @@ class AccountsApp extends AppBase
 
     public function Test(Input $input)
     {
-        $config = $this->config;
-        
-        $old1 = $config->GetAllowCreateAccount(); $config->SetAllowCreateAccount(true);
-        $old2 = $config->GetUseEmailAsUsername(); $config->SetUseEmailAsUsername(false);
-        $old3 = $config->GetRequireContact(); $config->SetRequireContact(Config::CONTACT_EXIST);
+        $this->config->SetAllowCreateAccount(true, true);
+        $this->config->SetUseEmailAsUsername(false, true);
+        $this->config->SetRequireContact(Config::CONTACT_EXIST, true);
 
         $results = array(); $app = "accounts";
         
@@ -1332,10 +1320,6 @@ class AccountsApp extends AppBase
             ->AddParam('auth_sessionkey',$sessionkey)
             ->AddParam('auth_password',$password)));
         array_push($results, $test);
-        
-        $config->SetAllowCreateAccount($old1);
-        $config->SetUseEmailAsUsername($old2);
-        $config->SetRequireContact($old3);
         
         return $results;
     }

@@ -381,9 +381,6 @@ class Account extends AuthEntity
         
         foreach ($this->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
-            
-        // preload these in one query (optimization)
-        $this->GetSessions(); $this->GetClients();
         
         $this->DeleteObjectRefs('sessions');
         $this->DeleteObjectRefs('clients');
