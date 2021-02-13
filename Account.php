@@ -216,7 +216,7 @@ class Account extends AuthEntity
     public function HasTwoFactor() : bool       { return $this->CountObjectRefs('twofactors') > 0; }
     
     /** True if two factor should be required to create a session even for a pre-existing client */
-    public function GetForceTwoFactor() : bool  { return $this->TryGetFeature('forcetf') ?? self::GetInheritedFields()['features__forcetf']; }
+    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeature('forcetf') ?? self::GetInheritedFields()['features__forcetf']; }
     
     /** True if account-based server-side crypto is allowed */
     public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? self::GetInheritedFields()['features__allowcrypto']; }

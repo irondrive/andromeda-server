@@ -587,7 +587,7 @@ class AccountsApp extends AppBase
         /* if a clientid is provided, check that it and the clientkey are correct */
         if ($clientid !== null && $clientkey !== null)
         {
-            if ($account->GetForceTwoFactor() && $account->HasValidTwoFactor()) 
+            if ($account->GetForceUseTwoFactor() && $account->HasValidTwoFactor()) 
                 Authenticator::StaticTryRequireTwoFactor($input, $account);
             
             $client = Client::TryLoadByID($this->database, $clientid);
