@@ -90,6 +90,21 @@ class ErrorLogEntry extends BaseObject
         
         return $base;
     }
+    
+    private static function stringArray(array &$data) : void
+    {
+        foreach ($data as &$val)
+        {
+            if (is_object($val)) 
+            {
+                $val = method_exists($val,'__toString') ? (string)$val : get_class($val);
+            }
+            else if (is_array($val)) static::stringArray($val);
+            
+            try { Utilities::JSONEncode(array($val)); }
+            catch (JSONEncodingException $e) { $val = base64_encode($val); }
+        }
+    }
 
     /**
      * Builds an array of debug data from the given exception
@@ -122,8 +137,7 @@ class ErrorLogEntry extends BaseObject
             $sensitive = $api && $api->GetDebugLevel() >= Config::LOG_SENSITIVE;
             
             if ($extended)
-            {
-                
+            {                
                 if ($api) { $log = $api->GetDebugLog(); if ($log !== null) $data['log'] = $log; }
                 
                 $data['objects'] = ($api && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
@@ -132,8 +146,7 @@ class ErrorLogEntry extends BaseObject
             
             if ($sensitive)
             {
-                $data['params'] = ($api && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";                
-
+                $data['params'] = ($api && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";   
             }
             
             $data['trace_basic'] = explode("\n",$e->getTraceAsString());
@@ -147,9 +160,7 @@ class ErrorLogEntry extends BaseObject
                     if (!array_key_exists('args', $data['trace_full'][$key])) continue;
                     if (!$sensitive) { unset($data['trace_full'][$key]['args']); continue; }
                     
-                    try { Utilities::JSONEncode($data['trace_full'][$key]['args']); }
-                    catch (JSONEncodingException $e) { 
-                        $data['trace_full'][$key]['args'] = base64_encode(print_r($data['trace_full'][$key]['args'],true)); }
+                    static::stringArray($data['trace_full'][$key]['args']);
                 }
             }
             

@@ -239,7 +239,7 @@ class ObjectRef extends Scalar
 
     /** Returns the object referenced by this field, possibly loading it from the DB */
     public function GetObject() : ?BaseObject
-    {
+    {        
         $id = $this->GetValue(); if ($id === null) return null;
         
         if (!isset($this->object)) $this->object = $this->GetRefClass()::TryLoadByID($this->database, $id);
@@ -249,7 +249,7 @@ class ObjectRef extends Scalar
     
     /** Sets the value of this field to reference the given object */
     public function SetObject(?BaseObject $object) : bool
-    { 
+    {        
         if (isset($this->object) && $object === $this->object) return false;
         
         if ($object !== null && !is_a($object, $this->GetBaseClass())) 

@@ -105,7 +105,14 @@ class Config extends SingletonObject
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
 
-    const LOG_ERRORS = 1; const LOG_DEVELOPMENT = 2; const LOG_SENSITIVE = 3;
+    /** show a basic back trace */ 
+    const LOG_ERRORS = 1; 
+    
+    /** show a full back trace, loaded objects, SQL queries, performance metrics */
+    const LOG_DEVELOPMENT = 2;
+    
+    /** also show input params, function arguments, SQL values */ 
+    const LOG_SENSITIVE = 3;
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->GetFeature('debug'); }
