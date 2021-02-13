@@ -166,9 +166,7 @@ class ObjectDatabase extends Database
     /** internally mark an object as deleted, remove it from the cache */
     private function AddDeletedObject(BaseObject $object) : void
     {
-        unset($this->modified[$object->ID()]); 
-        
-        unset($this->objects[$object->ID()]); 
+        unset($this->modified[$object->ID()]);
         $this->deleted[$object->ID()] = $object;
     }
     

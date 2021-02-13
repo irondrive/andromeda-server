@@ -88,11 +88,11 @@ class ServerApp extends AppBase
         // if the database is not installed, require configuring it
         if (!$this->database)
         {
-            if ($input->GetAction() !== 'dbconf')
+            if (!in_array($input->GetAction(), array('dbconf','usage')))
                 throw new DatabaseConfigException();
         }
         // if config is not available, require installing it
-        else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
+        else if (!$this->API->GetConfig() && !in_array($input->GetAction(), array('install','usage')))
             throw new UnknownConfigException(static::class);
         
         if (isset($this->isAdmin)) $oldadmin = $this->isAdmin;
@@ -159,15 +159,10 @@ class ServerApp extends AppBase
         
     /**
      * Collects usage strings from every installed app and returns them
-     * @throws UnknownActionException if not debugging or using CLI
      * @return string[] array of possible commands
      */
     protected function GetUsages(Input $input) : array
-    {
-        if ($this->API->GetDebugLevel() < Config::LOG_DEVELOPMENT &&
-            !$this->API->GetInterface()->isPrivileged())
-            throw new UnknownActionException();
-            
+    {            
         $want = $input->TryGetParam('app',SafeParam::TYPE_ALPHANUM);
         
         $output = array(); foreach ($this->API->GetApps() as $name=>$app)

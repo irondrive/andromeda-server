@@ -13,11 +13,13 @@ use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+/** Exception indicating that the app or action parameters are missing */
 class NoAppActionException extends Exceptions\ClientErrorException { public $message = "APP_OR_ACTION_MISSING"; }
-class InvalidBatchException extends Exceptions\ClientErrorException { public $message = "INVALID_BATCH_FORMAT"; }
-class InvalidParamException extends Exceptions\ClientErrorException { public $message = "INVALID_PARAMETER_FORMAT"; }
+
+/** Exception indicating that the remote response is invalid */
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
+/** The interface for using Andromeda over a web server */
 class AJAX extends IOInterface
 {
     public static function isApplicable() : bool
@@ -93,6 +95,7 @@ class AJAX extends IOInterface
         
         $files = array(); foreach($_FILES as $file)
         {
+            // the key name of the uploaded file is a don't-care
             if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
             $fname = (new SafeParam('name',$file['name']))->GetValue(SafeParam::TYPE_FSNAME);
             $files[$fname] = $file['tmp_name']; 

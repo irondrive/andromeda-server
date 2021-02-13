@@ -16,15 +16,22 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\ServerApp;
 
+/** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file name] [--\$param data] [--\$param@ file]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file file [name]] [--\$param data] [--\$param@ file]\n".
                       "batch/version:   php index.php [version | batch myfile.txt]\n".
                       "get all actions: php index.php server usage"; }
 
+/** Exception indicating that the given batch file is not valid */
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
+
+/** Exception indicating that the given batch file's syntax is not valid */
 class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
+
+/** Exception indicating that the given file is not valid */
 class InvalidFileException extends Exceptions\ClientErrorException { public $message = "INACCESSIBLE_FILE"; }
 
+/** The interface for using Andromeda via local console */
 class CLI extends IOInterface
 {
     public static function isApplicable() : bool
@@ -185,21 +192,22 @@ class CLI extends IOInterface
         if (count($argv) < 2) throw new IncorrectCLIUsageException();
         
         $app = $argv[0]; $action = $argv[1]; 
+        $argv = array_splice($argv, 2);
+        
         $params = new SafeParams(); $files = array();
         
         // add environment variables to argv
-        foreach (array_keys($_SERVER) as $key)
-        {
-            $value = $_SERVER[$key]; 
+        $envargs = array(); foreach ($_SERVER as $key=>$value)
+        { 
             $key = explode('_',$key,2);
             
             if ($key[0] == 'andromeda' && count($key) == 2)
             {
-                array_push($argv, "--".$key[1], $value);
+                array_push($envargs, "--".$key[1], $value);
             }
-        }    
+        }; $argv = array_merge($envargs, $argv);
         
-        for ($i = 2; $i < count($argv); $i++)
+        for ($i = 0; $i < count($argv); $i++)
         {
             $param = static::getKey($argv[$i]); 
             if (!$param) throw new IncorrectCLIUsageException();

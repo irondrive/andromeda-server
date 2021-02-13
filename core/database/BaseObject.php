@@ -253,12 +253,13 @@ abstract class BaseObject
      * @return array<string, string> ID => class name
      */
     public function getIDType() : array { return array($this->ID() => Utilities::ShortClassName(static::class)); }
+    public function __toString() : string { return $this->ID().' => '.Utilities::ShortClassName(static::class); }
     
     /** 
      * Returns the given object's getIDType() if not null, else null 
      * @return ?string[] [string, string]
      */
-    public static function toIDType(?self $obj) : ?array { return $obj ? $obj->getIDType() : null; }
+    public static function toIDType(?self $obj) : ?array { return $obj ? $obj->getIDType() : null; }    
     
     /** @var array<string, FieldTypes\Scalar> array of scalar properties indexed by their field names */
     protected array $scalars = array();

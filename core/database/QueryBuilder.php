@@ -21,6 +21,8 @@ class QueryBuilder
                ($this->orderby!==null ?" ORDER BY ".$this->orderby:"");
     }
     
+    public function __toString() : string { return $this->GetText(); }
+    
     private ?string $where = null;
     private ?string $orderby = null;
     private ?string $join = null;
