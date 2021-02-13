@@ -1,13 +1,17 @@
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
-
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` char(12) NOT NULL,
   `username` varchar(127) NOT NULL,
   `fullname` varchar(255) DEFAULT NULL,
@@ -41,8 +45,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ftp` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
   `id` char(12) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
@@ -51,8 +57,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ftp` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_imap` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `id` char(12) NOT NULL,
   `protocol` tinyint(2) NOT NULL,
   `hostname` varchar(255) NOT NULL,
@@ -63,8 +71,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_imap` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ldap` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `id` char(12) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
@@ -73,8 +83,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ldap` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_manager` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL,
   `authsource` varchar(64) NOT NULL,
   `description` text NOT NULL,
@@ -83,8 +95,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_manager` (
   UNIQUE KEY `id` (`id`),
   KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `lastaddr` varchar(255) NOT NULL,
@@ -99,8 +113,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
   KEY `account*object*Apps\Accounts\Account*clients` (`account`),
   KEY `session*object*Apps\Accounts\Session` (`session`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_config` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL,
   `features__createaccount` tinyint(1) NOT NULL,
   `features__emailasusername` tinyint(1) NOT NULL,
@@ -110,8 +126,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_config` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_contactinfo` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
   `id` char(12) NOT NULL,
   `type` tinyint(4) NOT NULL,
   `info` varchar(127) NOT NULL,
@@ -125,8 +143,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_contactinfo` (
   KEY `type` (`type`),
   KEY `account*object*Apps\Accounts\Account*aliases` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_group` (
   `id` char(12) NOT NULL,
   `name` varchar(127) NOT NULL,
   `comment` text DEFAULT NULL,
@@ -147,8 +167,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
   UNIQUE KEY `id` (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL,
   `dates__created` int(11) NOT NULL,
   `accounts` char(12) NOT NULL,
@@ -159,8 +181,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
   KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
   KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `dates__created` bigint(20) NOT NULL DEFAULT 0,
@@ -172,8 +196,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
   KEY `id` (`id`),
   KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `dates__active` bigint(20) NOT NULL DEFAULT 0,
@@ -187,8 +213,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
   KEY `aid` (`account`),
   KEY `cid` (`client`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `id` char(12) NOT NULL,
   `comment` text DEFAULT NULL,
   `secret` binary(48) NOT NULL,
@@ -201,8 +229,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
   PRIMARY KEY (`id`),
   KEY `account*object*Apps\Accounts\Account` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_usedtoken` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `id` char(12) NOT NULL,
   `code` char(6) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -210,7 +240,14 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_usedtoken` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
