@@ -117,7 +117,7 @@ class AccountsApp extends AppBase
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
-            'getaccount [--account id]',
+            'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
             'changepassword --username text --new_password raw (--auth_password raw | --auth_recoverykey text)',
             'emailrecovery --username text',
@@ -233,26 +233,7 @@ class AccountsApp extends AppBase
         
         if (isset($oldauth)) $this->authenticator = $oldauth; else unset($this->authenticator);
     }
-    
-    /**
-     * Provide the client the change to load their account object at any time.
-     * 
-     * Returns null by default. If "getaccount true" is given, returns the account
-     * object for the account relevant to the request, either as the whole response
-     * (if it was null) or as a key in the response (if it was not)
-     * @param array $return the return value from the actual command
-     * @param Account $account the account to possibly show data for
-     * @return array|NULL the amended return value from the command
-     */
-    private function StandardReturn(Input $input, ?array $return = null, ?Account $account = null) : ?array
-    {
-        if ($account === null) $account = $this->authenticator->GetAccount();
-        $fullget = $input->TryGetParam("getaccount", SafeParam::TYPE_BOOL) ?? false;
-        if ($fullget && $return !== null) $return['account'] = $account->GetClientObject();
-        else if ($fullget) $return = $account->GetClientObject();
-        return $return;
-    }
-    
+
     /**
      * Installs the app by importing its SQL file, creating config, and creating an admin account
      * @throws UnknownActionException if config already exists
@@ -274,7 +255,7 @@ class AccountsApp extends AppBase
 
         $account->setAdmin(true);
         
-        return array('account'=>$account->GetClientObject());
+        return array('account'=>$account->GetClientObject(Account::OBJECT_FULL));
     }
     
     /**
@@ -326,16 +307,18 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) return null;
         
+        $type = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ? Account::OBJECT_FULL : 0;
+        
         if (($account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR)) !== null)
         {
             $this->authenticator->RequireAdmin();
             
             $account = Account::TryLoadByID($this->database, $account);
             if ($account === null) throw new UnknownAccountException();
-            return $account->GetClientObject(Account::OBJECT_ADMIN);
+            return $account->GetClientObject($type | Account::OBJECT_ADMIN);
         }
         
-        return $this->authenticator->GetAccount()->GetClientObject();
+        return $this->authenticator->GetAccount()->GetClientObject($type);
     }
 
     /**
@@ -345,10 +328,8 @@ class AccountsApp extends AppBase
      * If not logged in, this allows account recovery by resetting the password via a recovery key.
      * @throws AuthenticationFailedException if the given account or recovery key are invalid
      * @throws ChangeExternalPasswordException if the user's account uses an non-local auth source
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function ChangePassword(Input $input) : ?array
+    protected function ChangePassword(Input $input) : void
     {
         $new_password = $input->GetParam('new_password',SafeParam::TYPE_RAW);
         $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_RAW);
@@ -381,8 +362,6 @@ class AccountsApp extends AppBase
         
         Authenticator::StaticTryRequireCrypto($input, $account);
         $account->ChangePassword($new_password);
-
-        return $this->StandardReturn($input, null, $account);
     }
     
     /** Returns the given string with each character after a space capitalized */
@@ -396,17 +375,13 @@ class AccountsApp extends AppBase
     /**
      * Sets the user's full (real) name
      * @throws AuthenticationFailedException if not logged in
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function SetFullName(Input $input) : ?array
+    protected function SetFullName(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
         $fullname = $this->capitalizeWords($input->GetParam("fullname", SafeParam::TYPE_NAME));
         $this->authenticator->GetAccount()->SetFullName($fullname);
-        
-        return $this->StandardReturn($input);
     }
     
     /**
@@ -487,7 +462,7 @@ class AccountsApp extends AppBase
             $mailer->SendMail($subject, $body, $to);
         }
         
-        return $account->GetClientObject();
+        return $account->GetClientObject(Account::OBJECT_FULL);
     }
     
     /**
@@ -495,10 +470,8 @@ class AccountsApp extends AppBase
      * @throws Exceptions\ClientDeniedException if already logged in
      * @throws UnknownAccountException if the given account is invalid
      * @throws AuthenticationFailedException if the unlock code is invalid
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function UnlockAccount(Input $input) : ?array
+    protected function UnlockAccount(Input $input) : void
     {
         if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
         
@@ -516,8 +489,6 @@ class AccountsApp extends AppBase
         $contacts = $account->GetContactInfos();
         if (count($contacts) !== 1) throw new NotImplementedException(); // TODO FIXME
         array_values($contacts)[0]->SetIsValid(true);
-        
-        return $this->StandardReturn($input, null, $account);
     }
     
     /**
@@ -536,8 +507,9 @@ class AccountsApp extends AppBase
      * @throws UnknownClientException if the given client is invalid
      * @throws OldPasswordRequiredException if the old password is required to unlock crypto
      * @throws NewPasswordRequiredException if a new password is required to be set
-     * @return array Client
+     * @return array `{client:Client, account:Account}`
      * @see Client::GetClientObject()
+     * @see Account::GetClientObject()
      */
     protected function CreateSession(Input $input) : array
     {
@@ -639,16 +611,14 @@ class AccountsApp extends AppBase
         $client->setLoggedonDate()->setActiveDate();
         $account->setLoggedonDate()->setActiveDate();
         
-        $return = $client->GetClientObject(true);
-
-        return $this->StandardReturn($input, $return, $account);
+        return array('client'=>$client->GetClientObject(true), 
+                     'account'=>$account->GetClientObject());
     }
     
     /**
      * Creates a set of recovery keys
      * @throws AuthenticationFailedException if not logged in
-     * @return array `{recoverykeys:[id:RecoveryKey]}` + standard return
-     * @see AccountsApp::StandardReturn()
+     * @return array `[id:RecoveryKey]`
      * @see RecoveryKey::GetClientObject()
      */
     protected function CreateRecoveryKeys(Input $input) : array
@@ -660,12 +630,8 @@ class AccountsApp extends AppBase
         
         $keys = RecoveryKey::CreateSet($this->database, $account);
         
-        $output = array_map(function(RecoveryKey $key){
+        return array_map(function(RecoveryKey $key){
             return $key->GetClientObject(true); }, $keys);
-        
-        $return = array('recoverykeys' => $output);
-        
-        return $this->StandardReturn($input, $return);
     }
     
     /**
@@ -674,8 +640,7 @@ class AccountsApp extends AppBase
      * Also activates crypto for the account, if allowed and not active.
      * Doing so will delete all other sessions for the account.
      * @throws AuthenticationFailedException if not signed in
-     * @return array `{twofactor:TwoFactor,recoverykeys:[id:RecoveryKey]}` + standard return
-     * @see AccountsApp::StandardReturn()
+     * @return array `{twofactor:TwoFactor,recoverykeys:[id:RecoveryKey]}`
      * @see TwoFactor::GetClientObject()
      * @see RecoveryKey::GetClientObject()
      */
@@ -701,20 +666,17 @@ class AccountsApp extends AppBase
         $recoverykeys = RecoveryKey::CreateSet($this->database, $account);
         
         $tfobj = $twofactor->GetClientObject(true);
+        
         $keyobjs = array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); }, $recoverykeys);
         
-        $return = array('twofactor' => $tfobj, 'recoverykeys' => $keyobjs );
-        
-        return $this->StandardReturn($input, $return);
+        return array('twofactor'=>$tfobj, 'recoverykeys'=>$keyobjs );
     }
     
     /**
      * Verifies a two factor source
      * @throws AuthenticationFailedException if not signed in
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function VerifyTwoFactor(Input $input) : ?array
+    protected function VerifyTwoFactor(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -722,9 +684,8 @@ class AccountsApp extends AppBase
         
         $account = $this->authenticator->GetAccount();
         $code = $input->GetParam("auth_twofactor", SafeParam::TYPE_INT);
-        if (!$account->CheckTwoFactor($code, true)) throw new AuthenticationFailedException();
-        
-        return $this->StandardReturn($input);
+        if (!$account->CheckTwoFactor($code, true)) 
+            throw new AuthenticationFailedException();
     }
     
     /**
@@ -736,7 +697,7 @@ class AccountsApp extends AppBase
      * @return null (or standard return)
      * @see AccountsApp::StandardReturn()
      */
-    protected function CreateContactInfo(Input $input) : ?array
+    protected function CreateContactInfo(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -767,18 +728,14 @@ class AccountsApp extends AppBase
                 break;            
             } 
         }
-        
-        return $this->StandardReturn($input);
     }
     
     /**
      * Verifies a contact info entry
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownContactInfoException if the contact info does not exist
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function VerifyContactInfo(Input $input) : ?array
+    protected function VerifyContactInfo(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -799,8 +756,6 @@ class AccountsApp extends AppBase
         }
 
         $contact->SetUnlockCode(null)->SetIsValid(true);
-
-        return $this->StandardReturn($input);
     }
     
     /**
@@ -822,10 +777,8 @@ class AccountsApp extends AppBase
      * Deletes an account session (signing it out)
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownSessionException if an invalid session was provided
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn
      */
-    protected function DeleteSession(Input $input) : ?array
+    protected function DeleteSession(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -842,18 +795,14 @@ class AccountsApp extends AppBase
         
         if ($session->GetAccount()->HasValidTwoFactor()) $session->Delete();
         else $session->GetClient()->Delete();
-        
-        return $this->StandardReturn($input);
     }
     
     /**
      * Deletes an account session and client (signing out fully)
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownClientException if an invalid client was provided
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function DeleteClient(Input $input) : ?array
+    protected function DeleteClient(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -869,17 +818,13 @@ class AccountsApp extends AppBase
         }
         
         $client->Delete();
-        
-        return $this->StandardReturn($input);
     }
     
     /**
      * Deletes all registered clients/sessions for an account
      * @throws AuthenticationFailedException if not signed in
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
      */
-    protected function DeleteAllAuth(Input $input) : ?array
+    protected function DeleteAllAuth(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -891,8 +836,6 @@ class AccountsApp extends AppBase
             Client::DeleteAll($this->database);
         }
         else $this->authenticator->GetAccount()->DeleteClients();
-        
-        return $this->StandardReturn($input);
     }
     
     /**
@@ -901,10 +844,8 @@ class AccountsApp extends AppBase
      * If this leaves the account without two factor, crypto is disabled
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownTwoFactorException if the given twofactor is invalid
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn
      */
-    protected function DeleteTwoFactor(Input $input) : ?array
+    protected function DeleteTwoFactor(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequirePassword();
@@ -921,8 +862,6 @@ class AccountsApp extends AppBase
             $this->authenticator->RequireCrypto();
             $account->DestroyCrypto();
         }
-        
-        return $this->StandardReturn($input);
     }    
     
     /**
@@ -930,9 +869,8 @@ class AccountsApp extends AppBase
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownContactInfoException if the contact info is invalid
      * @throws EmailAddressRequiredException if an email address is required
-     * @return array|NULL
      */
-    protected function DeleteContactInfo(Input $input) : ?array
+    protected function DeleteContactInfo(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
@@ -954,8 +892,6 @@ class AccountsApp extends AppBase
             if ($require >= Config::CONTACT_EXIST && !$account->CountContactInfos())
                 throw new EmailAddressRequiredException();  
         }
-
-        return $this->StandardReturn($input);
     }
     
     /**
@@ -973,7 +909,7 @@ class AccountsApp extends AppBase
         $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
         
         $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ?? false;
-        $type = $full ? Account::OBJECT_ADMIN : Account::OBJECT_SIMPLE;
+        $type = $full ? Account::OBJECT_ADMIN : 0;
         
         $accounts = Account::LoadAll($this->database, $limit, $offset);        
         return array_map(function(Account $account)use($type){ return $account->GetClientObject($type); }, $accounts);
@@ -1302,8 +1238,8 @@ class AccountsApp extends AppBase
             ->AddParam('auth_password',$password)));
         array_push($results, $test);
         
-        $sessionid = $test['session']['id'];
-        $sessionkey = $test['session']['authkey'];
+        $sessionid = $test['client']['session']['id'];
+        $sessionkey = $test['client']['session']['authkey'];
         
         $password2 = Utilities::Random(16);
         $test = $this->API->Run(new Input($app,'changepassword', (new SafeParams())

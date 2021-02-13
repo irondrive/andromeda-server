@@ -391,7 +391,7 @@ class Account extends AuthEntity
         parent::Delete();
     }
     
-    const OBJECT_SIMPLE = 0; const OBJECT_FULL = 1; const OBJECT_ADMIN = 2;
+    const OBJECT_FULL = 1; const OBJECT_ADMIN = 2;
     
     /**
      * Gets this account as a printable object
@@ -407,7 +407,7 @@ class Account extends AuthEntity
      * @see TwoFactor::GetClientObject()
      * @see Client::GetClientObject()
      */
-    public function GetClientObject(int $level = self::OBJECT_FULL) : array
+    public function GetClientObject(int $level = 0) : array
     {
         $mapobj = function($e) { return $e->GetClientObject(); };
         
