@@ -1,13 +1,17 @@
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
-
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_comment` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
@@ -19,8 +23,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
   KEY `owner` (`owner`),
   KEY `item` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `apiurl` text DEFAULT NULL,
@@ -29,8 +35,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
   `features__timedstats` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_file` (
   `id` char(16) NOT NULL,
   `name` varchar(255) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -54,8 +62,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
   KEY `parent` (`parent`),
   KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `type` tinyint(2) NOT NULL,
@@ -70,8 +80,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
   KEY `owner` (`owner`),
   KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_folder` (
   `id` char(16) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -101,8 +113,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
   KEY `id` (`id`),
   KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_like` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
@@ -111,8 +125,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `owner` (`owner`,`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -138,8 +154,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `object` (`object`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -163,8 +181,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `object` (`object`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `stats` int(11) NOT NULL DEFAULT 0,
@@ -179,8 +199,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
   UNIQUE KEY `object_2` (`object`,`timeperiod`),
   KEY `object` (`object`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL,
   `limitobj` varchar(64) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
@@ -195,8 +217,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
   UNIQUE KEY `limitobj` (`limitobj`,`dates__timestart`),
   UNIQUE KEY `limitobj_2` (`limitobj`,`iscurrent`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_share` (
   `id` char(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `owner` char(12) NOT NULL,
@@ -217,8 +241,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
   UNIQUE KEY `item` (`item`,`dest`),
   KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -235,8 +261,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
   UNIQUE KEY `id` (`id`),
   KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_local` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -245,8 +273,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_local` (
   PRIMARY KEY (`id`),
   KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -266,8 +296,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL,
   `dates__created` bigint(20) NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -282,8 +314,10 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_tag` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_tag` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
@@ -294,7 +328,14 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_tag` (
   KEY `owner` (`owner`),
   KEY `item_2` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
