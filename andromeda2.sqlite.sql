@@ -1,5 +1,5 @@
 PRAGMA journal_mode = MEMORY;
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
+CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` char(12) NOT NULL
 ,  `username` varchar(127) NOT NULL
 ,  `fullname` varchar(255) DEFAULT NULL
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_account` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ftp` (
+CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
   `id` char(12) NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ftp` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_imap` (
+CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `id` char(12) NOT NULL
 ,  `protocol` integer NOT NULL
 ,  `hostname` varchar(255) NOT NULL
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_imap` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ldap` (
+CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `id` char(12) NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `secure` integer NOT NULL
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_ldap` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_manager` (
+CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL
 ,  `authsource` varchar(64) NOT NULL
 ,  `description` text NOT NULL
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_auth_manager` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
+CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
 ,  `lastaddr` varchar(255) NOT NULL
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_client` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_config` (
+CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL
 ,  `features__createaccount` integer NOT NULL
 ,  `features__emailasusername` integer NOT NULL
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_config` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_contactinfo` (
+CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
   `id` char(12) NOT NULL
 ,  `type` integer NOT NULL
 ,  `info` varchar(127) NOT NULL
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_contactinfo` (
 ,  UNIQUE (`id`)
 ,  UNIQUE (`info`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
+CREATE TABLE `a2_objects_apps_accounts_group` (
   `id` char(12) NOT NULL
 ,  `name` varchar(127) NOT NULL
 ,  `comment` text DEFAULT NULL
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_group` (
 ,  UNIQUE (`id`)
 ,  UNIQUE (`name`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
+CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `accounts` char(12) NOT NULL
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_groupjoin` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`accounts`,`groups`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
+CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
 ,  `dates__created` integer NOT NULL DEFAULT 0
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_recoverykey` (
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
+CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
 ,  `dates__active` integer NOT NULL DEFAULT 0
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_session` (
 ,  `client` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
+CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `id` char(12) NOT NULL
 ,  `comment` text DEFAULT NULL
 ,  `secret` binary(48) NOT NULL
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_twofactor` (
 ,  `usedtokens` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_accounts_usedtoken` (
+CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `id` char(12) NOT NULL
 ,  `code` char(6) NOT NULL
 ,  `dates__created` integer NOT NULL
