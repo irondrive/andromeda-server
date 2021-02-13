@@ -111,6 +111,8 @@ class FTP extends FWrapper
         
         if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();
         
+        ftp_pasv($this->ftp, true);
+        
         return $this;
     }
 
@@ -173,8 +175,10 @@ class FTP extends FWrapper
     public function ReadFolder(string $path) : ?array
     {
         if (!$this->isFolder($path)) return null;
-        return array_map(function($item){ return basename($item); },
-            ftp_nlist($this->ftp, $this->GetPath($path)));
+        
+        $list = ftp_nlist($this->ftp, $this->GetPath($path));
+        if ($list === false) throw new FolderReadFailedException();
+        return array_map(function($item){ return basename($item); }, $list);
     }
     
     public function ReadBytes(string $path, int $start, int $length) : string
