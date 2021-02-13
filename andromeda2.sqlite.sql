@@ -1,5 +1,5 @@
 PRAGMA journal_mode = MEMORY;
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
+CREATE TABLE `a2_objects_apps_files_comment` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` varchar(64) NOT NULL
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_comment` (
 ,  `dates__modified` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
+CREATE TABLE `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `apiurl` text DEFAULT NULL
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_config` (
 ,  `features__timedstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
+CREATE TABLE `a2_objects_apps_files_file` (
   `id` char(16) NOT NULL
 ,  `name` varchar(255) NOT NULL
 ,  `dates__created` integer NOT NULL
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_file` (
 ,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
+CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `type` integer NOT NULL
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_filesystem_fsmanager` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`owner`,`name`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
+CREATE TABLE `a2_objects_apps_files_folder` (
   `id` char(16) NOT NULL
 ,  `name` varchar(255) DEFAULT NULL
 ,  `dates__created` integer NOT NULL
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_folder` (
 ,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
+CREATE TABLE `a2_objects_apps_files_like` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` varchar(64) NOT NULL
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_like` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`owner`,`item`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
+CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
 ,  `dates__created` integer NOT NULL
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_authtotal` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
+CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
 ,  `dates__created` integer NOT NULL
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_filesystemtotal` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
+CREATE TABLE `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
 ,  `stats` integer NOT NULL DEFAULT 0
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timed` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`,`timeperiod`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
+CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL
 ,  `limitobj` varchar(64) NOT NULL
 ,  `dates__created` integer NOT NULL
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_limits_timedstats` (
 ,  UNIQUE (`limitobj`,`dates__timestart`)
 ,  UNIQUE (`limitobj`,`iscurrent`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
+CREATE TABLE `a2_objects_apps_files_share` (
   `id` char(16) NOT NULL
 ,  `item` varchar(64) NOT NULL
 ,  `owner` char(12) NOT NULL
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_share` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`item`,`dest`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
+CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `filesystem` char(12) NOT NULL
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_ftp` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_local` (
+CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `filesystem` char(12) NOT NULL
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_local` (
 ,  `path` text NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
+CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `filesystem` char(12) NOT NULL
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_sftp` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
+CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL
 ,  `dates__created` integer NOT NULL
 ,  `filesystem` char(12) NOT NULL
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_storage_smb` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE IF NOT EXISTS `a2_objects_apps_files_tag` (
+CREATE TABLE `a2_objects_apps_files_tag` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` varchar(64) NOT NULL
