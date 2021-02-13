@@ -186,18 +186,18 @@ class File extends Item
     /** Deletes the file from the DB only */
     public function NotifyDelete() : void 
     { 
-        $this->MapToLimits(function(Limits\Base $lim){
-            if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
-        
+        if (!$this->deleted)
+            $this->MapToLimits(function(Limits\Base $lim){
+                if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
+
         parent::Delete(); 
     }
 
     /** Deletes the file from both the DB and disk */
     public function Delete() : void
-    {        
-        $parent = $this->GetParent();
-        $isReal = ($parent === null || !$parent->isNotifyDeleted());
-        if ($isReal) $this->GetFSImpl()->DeleteFile($this);
+    {
+        if (!$this->GetParent()->isNotifyDeleted()) 
+            $this->GetFSImpl()->DeleteFile($this);
         
         $this->NotifyDelete();
     }    

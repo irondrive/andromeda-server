@@ -163,12 +163,12 @@ class AccountTotal extends AuthTotal implements IAccountLimit
 
     protected function GetInheritedFields() : array { return array(
         'features__itemsharing' => true,
-        'features__shareeveryone' => false,
+        'features__shareeveryone' => true,
         'features__emailshare' => true,
-        'features__publicupload' => false,
-        'features__publicmodify' => false,
+        'features__publicupload' => true,
+        'features__publicmodify' => true,
         'features__randomwrite' => true,
-        'features__userstorage' => false,
+        'features__userstorage' => true,
         'features__track_items' => false,
         'features__track_dlstats' => false,
         'counters_limits__size' => null,

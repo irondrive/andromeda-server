@@ -318,6 +318,7 @@ class Folder extends Item
     public function DeleteChildren(bool $isNotify = true) : void
     {
         if (!$isNotify) $this->Refresh(true);
+        
         $this->notifyDeleted = $isNotify;
         $this->DeleteObjectRefs('files');
         $this->DeleteObjectRefs('folders');

@@ -315,7 +315,8 @@ abstract class Item extends StandardObject
         $this->DeleteObjectRefs('comments');
         $this->DeleteObjectRefs('shares');
         
-        $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); });
+        if (!$this->deleted)
+            $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); });
         
         parent::Delete();
     }    

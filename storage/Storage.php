@@ -25,6 +25,9 @@ class TestReadFailedException extends ActivateException { public $message = "STO
 /** Exception indicating that the tested storage is not writeable */
 class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; }
 
+/** Exception indicating that reading folder contents failed */
+class FolderReadFailedException extends StorageException { public $message = "FOLDER_READ_FAILED"; }
+
 /** Exception indicating that creating the folder failed */
 class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
 

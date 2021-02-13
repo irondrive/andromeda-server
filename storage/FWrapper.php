@@ -61,9 +61,11 @@ abstract class FWrapper extends Storage
     protected abstract function GetFullURL(string $path = "") : string;
     
     /** Returns the full storage level path for the given root-relative path */
-    protected function GetPath(string $path = "") : string { return $this->GetScalar('path').($path ? "/$path" :""); }
-    // TODO rawurlencode?? I think I tried that before and it didn't work but SMB says to use it... use for filenames only?
-    
+    protected function GetPath(string $path = "") : string 
+    { 
+       return $this->GetScalar('path').$path; 
+    }
+
     /** Sets the path of the storage's root */
     private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
     
@@ -93,8 +95,9 @@ abstract class FWrapper extends Storage
     public function ReadFolder(string $path) : ?array
     {
         if (!$this->isFolder($path)) return null;
-        return array_filter(scandir($this->GetFullURL($path), SCANDIR_SORT_NONE), 
-            function($item){ return $item !== "." && $item !== ".."; });
+        $list = scandir($this->GetFullURL($path), SCANDIR_SORT_NONE);
+        if ($list === false) throw new FolderReadFailedException();
+        return array_filter($list, function($item){ return $item !== "." && $item !== ".."; });
     }
     
     public function CreateFolder(string $path) : self
