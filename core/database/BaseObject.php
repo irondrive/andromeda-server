@@ -51,6 +51,13 @@ abstract class BaseObject
     public static function GetDBClass() : string { return static::class; }
     
     /**
+     * Returns the name of the class that should be used for a given DB row
+     * 
+     * Defaults to the actual class used. Allows polymorphism on DB rows based on properties
+     */
+    public static function GetObjClass(array $row) : string { return static::class; }
+    
+    /**
      * Loads an array of objects from the DB matching the given query
      * @param ObjectDatabase $database Reference to the database
      * @param QueryBuilder $query The query to use for matching objects
