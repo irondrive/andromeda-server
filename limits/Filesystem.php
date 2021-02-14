@@ -6,6 +6,7 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
+require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\RootFolder;
 
 require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
@@ -48,7 +49,7 @@ class FilesystemTotal extends Total
     {
         if (!$this->canTrackItems()) return $this;
         
-        $roots = Folder::LoadRootsByFSManager($this->database, $this->GetFilesystem());
+        $roots = RootFolder::LoadRootsByFSManager($this->database, $this->GetFilesystem());
         $this->CountSize(array_sum(array_map(function(Folder $folder){ return $folder->GetSize(); }, $roots)),true);
         $this->CountItems(array_sum(array_map(function(Folder $folder){ return $folder->GetNumItems(); }, $roots)));
         $this->CountShares(array_sum(array_map(function(Folder $folder){ return $folder->GetTotalShares(); }, $roots)));

@@ -366,7 +366,7 @@ abstract class Item extends StandardObject
         
         $data = array(
             'id' => $this->ID(),
-            'name' => $this->TryGetScalar('name'),
+            'name' => $this->GetName(),
             'owner' => $this->GetOwnerID(),
             'parent' => $this->GetParentID()
         );

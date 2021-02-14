@@ -1,10 +1,13 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
+use Andromeda\Core\Main;
+
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
+use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
 /** Exception indicating that the read-write was not aligned to a chunk multiple */
 class UnalignedAccessException extends Exceptions\ServerException { public $message = "FS_ACCESS_NOT_ALIGNED"; }
@@ -64,39 +67,66 @@ class NativeCrypt extends Native
     
     public function ReadBytes(File $file, int $start, int $length) : string
     {
-        $toend = $start + $length === $file->GetSize();
-        if ($start % $this->chunksize || ($length % $this->chunksize && !$toend))
-            throw new UnalignedAccessException();
-        
-        $length = min($start+$length, $file->GetSize())-$start;
-        
         $chunk0 = $this->GetChunkIndex($start);
-        $chunks = $this->GetNumChunks($length);        
-        $fchunks = $this->GetNumChunks($file->GetSize());
-        $chunks = min($chunks, $fchunks-$chunk0);
+        $chunkn = $this->GetChunkIndex($start+$length-1);
 
-        $data = array(); for ($chunk = $chunk0; $chunk < $chunk0+$chunks; $chunk++)
-            array_push($data, $this->ReadChunk($file, $chunk));
-        return implode($data);
+        $output = array(); for ($chunk = $chunk0; $chunk <= $chunkn; $chunk++)
+        {            
+            $data = $this->ReadChunk($file, $chunk);            
+            $dstart = $this->chunksize * $chunk;
+            
+            // maybe need to trim off the start of the chunk
+            if ($start > $dstart) { $data = substr($data, $start-$dstart); $dstart = $start; }
+                
+            // maybe need to trim off the end of the chunk
+            $end = $start + $length; $dend = $dstart + strlen($data);
+            if ($end < $dend) { $data = substr($data, 0, $end - $dend); }
+            
+            array_push($output, $data);
+        }
+        
+        $retval = implode($output);
+        
+        if (strlen($retval) !== $length)
+            throw new FileReadFailedException();
+        
+        return $retval;
     }
     
     public function WriteBytes(File $file, int $start, string $data) : self
     {
-        $length = strlen($data); $toend = $start + $length === $file->GetSize();
-        if ($start % $this->chunksize || ($length % $this->chunksize && !$toend))
-            throw new UnalignedAccessException();
-        
-        $length = min($start+$length, $file->GetSize())-$start;
+        if ($start > $file->GetSize()) $file->SetSize($start);
         
         $chunk0 = $this->GetChunkIndex($start);
-        $chunks = $this->GetNumChunks($length);
-        $fchunks = $this->GetNumChunks($file->GetSize());
-        $chunks = min($chunks, $fchunks-$chunk0);
+        $chunkn = $this->GetChunkIndex($start+strlen($data)-1);
         
-        for ($chunk = 0; $chunk < $chunks; $chunk++)
-        {
-            $subdata = substr($data, $chunk*$this->chunksize, $this->chunksize);
-            $this->WriteChunk($file, $chunk+$chunk0, $subdata);
+        for ($chunk = $chunk0; $chunk <= $chunkn; $chunk++)
+        {            
+            $cstart = $this->chunksize * $chunk; $cdata = null;
+            
+            // maybe need to trim down the input data
+            $wstart = max($start, $cstart); 
+            $wlen = $this->chunksize - $wstart + $cstart;
+            $wdata = substr($data, $wstart - $start, $wlen);
+            
+            // maybe need to add old data to the beginning
+            if ($cstart < $wstart)
+            {
+                $cdata = $this->ReadChunk($file, $chunk);
+                $wdata = substr($cdata, 0, $wstart-$cstart).$wdata; $wstart = $cstart;
+            }
+            
+            // maybe need to add old data to the end
+            $wend = $wstart + strlen($wdata);            
+            $cend = min($cstart + $this->chunksize, $file->GetSize());
+            
+            if ($wend < $cend)
+            {
+                $cdata ??= $this->ReadChunk($file, $chunk);
+                $wdata .= substr($cdata, $wend-$cend);
+            }
+                        
+            $this->WriteChunk($file, $chunk, $wdata);
         }
         return $this;
     }
@@ -105,54 +135,44 @@ class NativeCrypt extends Native
     {
         $length = max($length, 0);
         
-        $noncesize = CryptoSecret::NonceLength();
-        $extrasize = $noncesize + CryptoSecret::OutputOverhead();
+        if ($length === $file->GetSize()) return $this;
+        
+        if (!$length) { parent::Truncate($file, 0); return $this; }
         
         $chunks = $this->GetNumChunks($length);
-        $rlength = $chunks * $extrasize + $length;
-        $length0 = $file->GetSize();
-
-        if ($length != $length0)
-        {            
-            $chunks0 = $this->GetNumChunks($length0);
-            $remain = ($length-1) % $this->chunksize + 1;    
-            if ($chunks <= $chunks0)
-            {     
-                if ($remain) $data = $this->ReadChunk($file, $chunks-1);    
-                parent::Truncate($file, $rlength);
-                
-                if ($remain) // rewrite new last chunk
-                {
-                    $data = str_pad(substr($data, 0, $remain), $remain, "\0");
-                    $this->WriteChunk($file, $chunks-1, $data);  
-                }                
-            }
-            else // write new chunks
-            {
-                if ($chunks0) $data0 = $this->ReadChunk($file, $chunks0-1);
-                parent::Truncate($file, $rlength);
-                
-                if ($chunks0) // rewrite old last chunk
-                {
-                    $data0 = str_pad($data0, $this->chunksize, "\0");
-                    $this->WriteChunk($file, $chunks0-1, $data0);
-                }
-                
-                if ($chunks > $chunks0) // fill new blank chunks
-                {
-                    $datan = str_pad("", $this->chunksize, "\0");
-                    for ($chunk = $chunks0; $chunk < $chunks; $chunk++)
-                    {
-                        if ($chunk == $chunks-1) // trim last chunk
-                            $datan = substr($datan, 0, $remain);
-                        $this->WriteChunk($file, $chunk, $datan);
-                    }
-                }
-            }
-        }
-        else parent::Truncate($file, $rlength);
+        $chunks0 = $this->GetNumChunks($file->GetSize());
         
-        return $this;
+        $cfix = min($chunks, $chunks0) - 1;
+        
+        if ($cfix >= 0) // may need to rewrite a chunk
+        {
+            $coffset = $cfix * $this->chunksize;
+            $cwant = min($this->chunksize, $length-$coffset);
+            
+            $cdata = $this->ReadChunk($file, $cfix);        
+            $dofix = ($cwant !== strlen($cdata));
+            
+            if ($cwant > strlen($cdata)) // extend the chunk
+                $cdata = str_pad($cdata, $cwant, "\0");
+            if ($cwant < strlen($cdata)) // trim the chunk
+                $cdata = substr($cdata, 0, $cwant);
+            
+            if ($dofix) $this->WriteChunk($file, $cfix, $cdata);
+        }
+        
+        for ($chunk = $chunks0; $chunk < $chunks; $chunk++)
+        {
+            $coffset = $chunk * $this->chunksize;
+            $csize = min($this->chunksize, $length-$coffset);
+            
+            $cdata = str_pad("", $csize, "\0");            
+            $this->WriteChunk($file, $chunk, $cdata);
+        }
+        
+        $overhead = CryptoSecret::NonceLength() + CryptoSecret::OutputOverhead();
+        $fsize = $overhead * ($this->GetNumChunks($length)) + $length;
+        
+        parent::Truncate($file, $fsize); return $this;
     }
     
     /**
@@ -173,12 +193,15 @@ class NativeCrypt extends Native
         $dataoffset = $nonceoffset + $noncesize;
 
         // make sure we don't read beyond the end of the file
-        $foverhead = $overhead * ($this->GetNumChunks($file->GetSize()-1));
+        $foverhead = $overhead * ($this->GetNumChunks($file->GetSize()));
         $datasize = min($datasize, $file->GetSize() + $foverhead - $dataoffset);
 
         // a chunk is stored as [nonce,data]
         $nonce = parent::ReadBytes($file, $nonceoffset, $noncesize);
         $data = parent::ReadBytes($file, $dataoffset, $datasize);
+        
+        if (strlen($nonce) != $noncesize || strlen($data) != $datasize) throw new FileReadFailedException();
+        
         $auth = $this->GetAuthString($file, $index);
         
         return CryptoSecret::Decrypt($data, $nonce, $this->masterkey, $auth);
@@ -192,7 +215,7 @@ class NativeCrypt extends Native
      * @return $this
      */
     protected function WriteChunk(File $file, int $index, string $data) : self
-    {
+    {   
         $noncesize = CryptoSecret::NonceLength();
         
         $blocksize = $noncesize + $this->chunksize + CryptoSecret::OutputOverhead();

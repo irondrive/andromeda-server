@@ -13,7 +13,8 @@ require_once(ROOT."/apps/files/Share.php");
 require_once(ROOT."/apps/files/limits/Filesystem.php");
 require_once(ROOT."/apps/files/limits/Account.php");
 
-require_once(ROOT."/apps/files/storage/Storage.php");
+require_once(ROOT."/apps/files/storage/Storage.php"); 
+use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException, FileReadFailedException};
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
@@ -36,7 +37,6 @@ use Andromeda\Core\UnknownActionException;
 use Andromeda\Core\UnknownConfigException;
 
 use Andromeda\Core\Database\DatabaseException;
-use Andromeda\Apps\Files\Storage\{StorageException, ReadOnlyException};
 use Andromeda\Apps\Accounts\UnknownAccountException;
 use Andromeda\Apps\Accounts\UnknownGroupException;
 
@@ -126,7 +126,7 @@ class FilesApp extends AppBase
             'writefile --file file --fileid id [--offset int]',
             'fileinfo --fileid id',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
-            'getitembypath [--folder id | --filesystem id] [--path text] [--isfile bool]',
+            'getitembypath --path fspath [--folder id] [--isfile bool]',
             'createfolder --parent id --name fsname',
             'deletefile [--fileid id | --files id_array]',
             'deletefolder [--folder id | --folders id_array]',
@@ -399,6 +399,7 @@ class FilesApp extends AppBase
         // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
         // TODO if no page is configured, configure outmode as PLAIN and just show "404 - not found" with MIME type text/plain (do this at the beginning of this function)
 
+        // first determine the byte range to read
         $fsize = $file->GetSize();
         $fstart = $input->TryGetParam('fstart',SafeParam::TYPE_INT) ?? 0;
         $flast  = $input->TryGetParam('flast',SafeParam::TYPE_INT) ?? $fsize-1;
@@ -419,30 +420,34 @@ class FilesApp extends AppBase
 
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
-        
-        if ($fstart != 0 || $flast != $fsize-1)
-        {
-            http_response_code(206);
-            header("Content-Range: bytes $fstart-$flast/$fsize");     
-        }
-        else $file->CountDownload((isset($share) && $share !== null));
-        
-        $length = $flast-$fstart+1;
-        
+                
         // check required bandwidth ahead of time and prepare stats objects
-        $file->CountBandwidth($length); $file->CountBandwidth($length*-1);
+        $length = $flast-$fstart+1;
+        $file->CountBandwidth($length); 
+        $file->CountBandwidth($length*-1);
         
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetRWChunkSize();
         
-        $align = ($fschunksize !== null);
+        $align = ($fschunksize !== null);        
         // transfer chunk size must be an integer multiple of the FS chunk size
-        if ($align) $chunksize = ceil(min($fsize,$chunksize)/$fschunksize)*$fschunksize;        
+        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
         
-        if (!($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false) ||
-            $this->API->GetDebugLevel() < \Andromeda\Core\Config::LOG_DEVELOPMENT)
+        $debugdl = ($input->TryGetParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
+            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::LOG_DEVELOPMENT;
+        
+        $partial = $fstart != 0 || $flast != $fsize-1;
+
+        // send necessary headers
+        if (!$debugdl)
         {
             $this->API->GetInterface()->DisableOutput();
+            
+            if ($partial)
+            {
+                http_response_code(206);
+                header("Content-Range: bytes $fstart-$flast/$fsize");
+            }
             
             header("Content-Length: $length");
             header("Accept-Ranges: bytes");
@@ -452,34 +457,32 @@ class FilesApp extends AppBase
             header('Content-Transfer-Encoding: binary');
         }
         
+        if (!$partial) $file->CountDownload((isset($share) && $share !== null));
+        
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->RegisterOutputHandler(function(Output $output) 
-            use($file,$fstart,$flast,$fsize,$chunksize,$align)
-        {
+            use($file,$fstart,$flast,$chunksize,$align,$debugdl)
+        {            
             set_time_limit(0); ignore_user_abort(true);
             
-            for ($byte = $fstart; $byte <= $flast; $byte += $chunksize)
+            for ($byte = $fstart; $byte <= $flast; )
             {
                 if (connection_aborted()) break;
                 
-                $maxlen = min($chunksize, $flast - $byte + 1);
-                
-                if ($align)
-                {
-                    $rstart = intdiv($byte, $chunksize) * $chunksize;
-                    $roffset = $byte - $rstart; $byte = $rstart;
-                    
-                    $data = $file->ReadBytes($rstart, $chunksize);
-                    
-                    if ($roffset || $maxlen != strlen($data))
-                        $data = substr($data, $roffset, $maxlen);
-                }
-                else $data = $file->ReadBytes($byte, $maxlen);
+                // the next read should begin on a chunk boundary if aligned
+                if (!$align) $nbyte = $byte + $chunksize;
+                else $nbyte = (intdiv($byte, $chunksize) + 1) * $chunksize;
 
-                $file->CountBandwidth(strlen($data));
+                $rlen = min($nbyte - $byte, $flast - $byte + 1);                
+                $data = $file->ReadBytes($byte, $rlen); 
                 
-                echo $data; flush();
+                if (strlen($data) != $rlen)
+                    throw new FileReadFailedException();
+
+                $byte += $rlen; $file->CountBandwidth($rlen);
+                
+                if (!$debugdl) { echo $data; flush(); }
             }
         });
     }
@@ -515,50 +518,38 @@ class FilesApp extends AppBase
         
         $wstart = $input->TryGetParam('offset',SafeParam::TYPE_INT) ?? 0;
         $length = filesize($filepath); $wlast = $wstart + $length - 1;
-        $flength = $file->GetSize();
-        
-        if ($wlast >= $flength)
-            $file->SetSize($wlast+1);
-        $flength = $file->GetSize();
-        
-        if ($wstart < 0 || $wlast < $wstart)
+
+        if ($wstart < 0 || $wlast+1 < $wstart)
             throw new InvalidFileRangeException();
         
         $file->CountBandwidth($length);        
-        
+
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetRWChunkSize();  
-        
+
         $align = ($fschunksize !== null);
-        if ($align) $chunksize = ceil(min($length,$chunksize)/$fschunksize)*$fschunksize;
+        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
 
-        $rhandle = fopen($filepath, 'rb');
+        $inhandle = fopen($filepath, 'rb');
 
-        for ($wbyte = $wstart; $wbyte <= $wlast; $wbyte += $chunksize)
+        for ($wbyte = $wstart; $wbyte <= $wlast; )
         {
-            fseek($rhandle, $wbyte - $wstart);
+            $rstart = $wbyte - $wstart;
+            
+            // the next write should begin on a chunk boundary if aligned
+            if (!$align) $nbyte = $wbyte + $chunksize;
+            else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
 
-            if ($align)
-            {              
-                $roffset = $wbyte % $chunksize;                
-                $rlength = min($wlast+1-$wbyte, $chunksize-$roffset);                
-                $padlast = min($chunksize-$roffset, $flength-$wbyte) - $rlength;
-                
-                if ($roffset || $padlast)
-                    $dataf = $file->ReadBytes($wbyte-$roffset, $chunksize);
-                             
-                $data = fread($rhandle, $rlength);
-                
-                if ($roffset) $data = substr($dataf, 0, $roffset).$data;                
-                if ($padlast) $data = $data.substr($dataf, -$padlast);
+            $wlen = min($nbyte - $wbyte, $length - $rstart);
+            
+            fseek($inhandle, $rstart);
+            $data = fread($inhandle, $wlen);
+            
+            if (strlen($data) != $wlen) throw new FileReadFailedException();
 
-                $wbyte -= $roffset;
-            }
-            else $data = fread($rhandle, $chunksize);
-
-            $file->WriteBytes($wbyte, $data);
+            $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
         }
-
+            
         return $file->GetClientObject();
     }
     
@@ -642,7 +633,7 @@ class FilesApp extends AppBase
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
                 
-            $folder = Folder::LoadRootByAccountAndFS($this->database, $account, $filesys);
+            $folder = RootFolder::LoadRootByAccountAndFS($this->database, $account, $filesys);
         }
 
         if ($folder === null) throw new UnknownFolderException();
@@ -666,42 +657,51 @@ class FilesApp extends AppBase
     }
     
     /**
-     * Reads an item by a path (rather than by ID) - can specify a root folder or filesystem
+     * Reads an item by a path (rather than by ID) - can specify a root folder
+     * 
+     * This is the primary helper routine for the FUSE client - the first
+     * component of the path (if not using a root folder) is the filesystem name
      * @throws ItemAccessDeniedException if access via share and read is not allowed
      * @throws AuthenticationFailedException if public access and no root is given
      * @throws UnknownFilesystemException if the given filesystem is not found
      * @throws UnknownFolderException if the given folder is not found
      * @throws UnknownItemException if the given item path is invalid
-     * @return array File|Folder
+     * @return array File|Folder with {isfile:bool}
      * @see File::GetClientObject()
      * @see Folder::GetClientObject()
      */
     protected function GetItemByPath(Input $input) : array
     {
+        $path = array_filter(explode('/', $input->GetParam('path',SafeParam::TYPE_FSPATH)));
+        
         if (($raccess = $this->TryAuthenticateFolderAccess($input)) !== null)
         {
             $folder = $raccess->GetItem(); $share = $raccess->GetShare();
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         }
-        else
+        else // no root folder given
         {
             if ($this->authenticator === null) throw new AuthenticationFailedException();
             $account = $this->authenticator->GetAccount();
             
-            $filesys = $input->TryGetParam('filesystem',SafeParam::TYPE_RANDSTR);
-            if ($filesys !== null)
+            if (!count($path)) 
             {
-                $filesys = FSManager::TryLoadByID($this->database, $filesys);
-                if ($filesys === null) throw new UnknownFilesystemException();
+                $retval = RootFolder::GetSuperRootClientObject($this->database, $account);
+                
+                $retval['isfile'] = false; return $retval;
             }
-            
-            $folder = Folder::LoadRootByAccountAndFS($this->database, $account, $filesys);
-        }
+            else
+            {
+                $filesystem = FSManager::TryLoadByAccountAndName($this->database, $account, array_shift($path));
+                if ($filesystem === null) throw new UnknownFilesystemException();
+                
+                $folder = RootFolder::LoadRootByAccountAndFS($this->database, $account, $filesystem);
+            }           
+        }        
         
         if ($folder === null) throw new UnknownFolderException();
         
-        $path = $input->TryGetParam('path',SafeParam::TYPE_FSPATH) ?? '/';
-        $path = array_filter(explode('/',$path)); $name = array_pop($path);
+        $name = array_pop($path);
 
         foreach ($path as $subfolder)
         {
@@ -751,14 +751,14 @@ class FilesApp extends AppBase
 
         $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
 
-        return Folder::Create($this->database, $parent, $account, $name)->GetClientObject();
+        return SubFolder::Create($this->database, $parent, $account, $name)->GetClientObject();
     }
     
     /**
      * Deletes a file or files
      * @see FilesApp::DeleteItem()
      */
-    protected function DeleteFile(Input $input) : array
+    protected function DeleteFile(Input $input) : ?array
     {
         return $this->DeleteItem(File::class, 'fileid', 'files', $input);
     }
@@ -767,7 +767,7 @@ class FilesApp extends AppBase
      * Deletes a folder or folders
      * @see FilesApp::DeleteItem()
      */
-    protected function DeleteFolder(Input $input) : array
+    protected function DeleteFolder(Input $input) : ?array
     {
         return $this->DeleteItem(Folder::class, 'folder', 'folders', $input);
     }
@@ -953,7 +953,6 @@ class FilesApp extends AppBase
             if (!$copy && !$this->authenticator && !$itemobj->GetAllowPublicModify())
                 throw new AuthenticationFailedException();
             
-            if (!$itemobj->GetParentID()) throw new ItemAccessDeniedException();
             if (!$copy && $share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
             
             return ($copy ? $itemobj->CopyToParent($account, $parent, $overwrite)
@@ -973,7 +972,6 @@ class FilesApp extends AppBase
                 
                 if (!$copy && !$this->authenticator && !$itemobj->GetAllowPublicModify()) continue;
                 
-                if (!$itemobj->GetParentID()) continue;
                 if (!$copy && $share !== null && !$share->CanModify()) continue;        
                 
                 try { $retval[$item] = ($copy ? $itemobj->CopyToParent($account, $parent, $overwrite)

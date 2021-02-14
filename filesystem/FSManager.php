@@ -14,13 +14,14 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/storage/Storage.php"); 
-use Andromeda\Apps\Files\Storage\{Storage, ActivateException, StorageException};
+use Andromeda\Apps\Files\Storage\{Storage, ActivateException};
 
 require_once(ROOT."/apps/files/filesystem/Shared.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
-use Andromeda\Apps\Files\{Config, Folder};
+require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
+require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\RootFolder;
 
 /** Exception indicating that the stored filesystem type is not valid */
 class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
@@ -62,6 +63,8 @@ class FSManager extends StandardObject
             'crypto_chunksize' => null
         ));
     }
+    
+    public const DEFAULT_NAME = "Default";
 
     /** Returns true if the data in this filesystem is shared with the filesystem itself, false if Andromeda owns it */
     public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
@@ -76,11 +79,13 @@ class FSManager extends StandardObject
     public function SetReadOnly(bool $ro) : self { return $this->SetScalar('readonly', $ro); }
     
     /** Returns the name (or null) of this filesystem */
-    public function GetName() : ?string { return $this->TryGetScalar('name'); }
+    public function GetName() : string { return $this->TryGetScalar('name') ?? self::DEFAULT_NAME; }
     
     /** Sets the name of this filesystem, checks uniqueness */
     public function SetName(?string $name) : self 
     {
+        if ($name === self::DEFAULT_NAME) $name = null;
+
         if (static::TryLoadByAccountAndName($this->database, $this->GetOwner(), $name) !== null)
             throw new InvalidNameException();
         
@@ -91,7 +96,7 @@ class FSManager extends StandardObject
     public function isUserOwned() : bool { return $this->HasObject('owner'); }
     
     /** Returns the owner of this filesystem (or null) */
-    public function GetOwner() : ?Account  { return $this->TryGetObject('owner'); }
+    public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
     
     /** Returns the owner ID of this filesystem (or null) */
     public function GetOwnerID() : ?string { return $this->TryGetObjectID('owner'); }
@@ -173,11 +178,11 @@ class FSManager extends StandardObject
     /**
      * Creates and tests a new filesystem
      * @param ObjectDatabase $database database reference
-     * @param Account $account owner of the filesystem
+     * @param Account $owner owner of the filesystem
      * @throws InvalidStorageException if the storage fails
      * @return self
      */
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account) : self
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
         $name = $input->TryGetParam('name', SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
         $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
@@ -196,7 +201,7 @@ class FSManager extends StandardObject
         }
         
         $filesystem = parent::BaseCreate($database)
-            ->SetOwner($account)->SetName($name)
+            ->SetOwner($owner)->SetName($name)
             ->SetType($fstype)->SetReadOnly($readonly);
         
         if ($filesystem->isSecure())
@@ -207,7 +212,7 @@ class FSManager extends StandardObject
 
         try
         {            
-            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $account, $filesystem));
+            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $owner, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
         }
@@ -258,8 +263,13 @@ class FSManager extends StandardObject
     /** Attempts to load a filesystem with the given owner (or null) and name */
     public static function TryLoadByAccountAndName(ObjectDatabase $database, ?Account $account, ?string $name) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account ? $account->ID() : null),$q->Equals('name',$name));
-        return self::TryLoadUniqueByQuery($database, $q->Where($w));
+        if ($name === self::DEFAULT_NAME) $name = null;
+        
+        $q = new QueryBuilder(); 
+        
+        $w1 = $q->Or($q->IsNull('owner'), $q->Equals('owner',$account ? $account->ID() : null));
+
+        return self::TryLoadUniqueByQuery($database, $q->Where($q->And($w1, $q->Equals('name',$name))));
     }
     
     /**
@@ -283,7 +293,7 @@ class FSManager extends StandardObject
     /** Deletes this filesystem and all folder roots on it - if $unlink, from DB only */
     public function Delete(bool $unlink = false) : void
     {
-        Folder::DeleteRootsByFSManager($this->database, $this, $unlink);
+        RootFolder::DeleteRootsByFSManager($this->database, $this, $unlink);
         
         $this->DeleteObject('storage'); parent::Delete();
     }
@@ -299,8 +309,8 @@ class FSManager extends StandardObject
     {
         $data = array(
             'id' => $this->ID(),
-            'name' => $this->TryGetScalar('name'),
-            'owner' => $this->TryGetObjectID('owner'),
+            'name' => $this->GetName(),
+            'owner' => $this->GetOwnerID(),
             'shared' => $this->isShared(),
             'secure' => $this->isSecure(),
             'readonly' => $this->isReadOnly(),
@@ -309,6 +319,7 @@ class FSManager extends StandardObject
         
         if ($admin) 
         {
+            $data['dates'] = $this->GetAllDates();
             $data['storage'] = $this->GetStorage()->GetClientObject();
             $data['chunksize'] = $this->TryGetScalar('crypto_chunksize');
         }
@@ -321,7 +332,7 @@ class FSManager extends StandardObject
 Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
 {
     FSManager::DeleteByAccount($database, $account);
-    Folder::DeleteRootsByAccount($database, $account);
+    RootFolder::DeleteRootsByAccount($database, $account);
 });
 
 // Load the registered storage types 
