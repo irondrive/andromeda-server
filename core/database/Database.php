@@ -2,8 +2,8 @@
 
 if (!class_exists('PDO')) die("PHP PDO Extension Required\n"); use \PDO;
 
-require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities, Transactions};
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Main, Config};
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions, JSONEncodingException};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -332,6 +332,9 @@ class Database implements Transactions
         {            
             foreach ($data as $key=>$val)
             {
+                try { Utilities::JSONEncode(array($val)); }
+                catch (JSONEncodingException $e) { $val = base64_encode($val); }
+                
                 $sql = str_replace(":$key", ($val===null)?'NULL':"'$val'", $sql);
             }
         }

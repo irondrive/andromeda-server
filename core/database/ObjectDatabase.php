@@ -90,8 +90,10 @@ class ObjectDatabase extends Database
             if (in_array($id, array_keys($this->objects), true))
                 $output[$id] = $this->objects[$id];                
             else 
-            { 
+            {
+                $class = $class::GetObjClass($row);
                 $object = new $class($this, $row);
+                
                 $output[$id] = $object; 
                 $this->objects[$id] = $object; 
             }
