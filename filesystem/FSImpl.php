@@ -4,8 +4,6 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
@@ -29,9 +27,9 @@ abstract class FSImpl implements Transactions
     }
     
     /**
-     * Returns the chunk size of the filesystem.
+     * Returns the preferred byte alignment of the filesystem.
      * 
-     * Reads and writes must be of one or more chunks if not null.
+     * Reads and writes should align to these boundaries for performance
      * @return int|NULL FS chunk size
      */
     public function GetChunkSize() : ?int { return null; }
@@ -66,7 +64,9 @@ abstract class FSImpl implements Transactions
     public abstract function DeleteFile(File $file) : self;
     
     /**
-     * Reads from the given file
+     * Reads the exact number of desired bytes from the given file
+     * 
+     * Throws an error if the read goes beyond the end of the file
      * @param File $file file to read
      * @param int $start byte offset
      * @param int $length number of bytes
@@ -75,7 +75,7 @@ abstract class FSImpl implements Transactions
     public abstract function ReadBytes(File $file, int $start, int $length) : string;
     
     /**
-     * Writes to the given file
+     * Writes to the given file, possibly appending it
      * @param File $file file to write
      * @param int $start byte offset
      * @param string $data data to write

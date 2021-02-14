@@ -63,7 +63,7 @@ abstract class FWrapper extends Storage
     /** Returns the full storage level path for the given root-relative path */
     protected function GetPath(string $path = "") : string 
     { 
-       return $this->GetScalar('path').$path; 
+       return $this->GetScalar('path').'/'.$path;
     }
 
     /** Sets the path of the storage's root */
@@ -104,7 +104,7 @@ abstract class FWrapper extends Storage
     {
         $this->CheckReadOnly();
         if ($this->isFolder($path)) return $this;
-        if (!mkdir($this->GetFullURL($path),0750,true)) throw new FolderCreateFailedException();
+        if (!mkdir($this->GetFullURL($path))) throw new FolderCreateFailedException();
         else return $this;
     }
     

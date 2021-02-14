@@ -180,7 +180,9 @@ class File extends Item
      */
     public function WriteBytes(int $start, string $data) : self
     {
-        $this->SetModified(); $this->GetFSImpl()->WriteBytes($this, $start, $data); return $this;
+        $this->SetModified(); $this->GetFSImpl()->WriteBytes($this, $start, $data); 
+        
+        $this->SetSize(max($this->GetSize(), $start+strlen($data)), true); return $this;
     }    
     
     /** Deletes the file from the DB only */

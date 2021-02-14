@@ -9,6 +9,7 @@ require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
+require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
 
 /** Exception indicating that the scanned folder item is not a file or folder (not readable) */
 class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_UNREADABLE"; }
@@ -91,7 +92,7 @@ class Shared extends BaseFileFS
             if ($fsitems === null) { $folder->NotifyDelete(); return $this; }
             
             $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());
-            uasort($dbitems, function($a,$b){ return strcmp($a->GetName(),$b->GetName()); });
+            uasort($dbitems, function(Item $a, Item $b){ return strcmp($a->GetName(),$b->GetName()); });
             
             foreach ($fsitems as $fsitem)
             {
@@ -113,7 +114,7 @@ class Shared extends BaseFileFS
                 
                 if ($dbitem === null)
                 {
-                    $itemclass = $isfile ? File::class : Folder::class;
+                    $itemclass = $isfile ? File::class : SubFolder::class;
                     $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem);
                     $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
                 }

@@ -91,14 +91,17 @@ class Native extends BaseFileFS
         // alternative abstracted implementation
         /*$len = 2; $level = 2; $path = array();
         for ($i = 0; $i < $level; $i++)
+        {
             array_push($path, substr($id, $i*$len, $len));
+            $storage->CreateFolder(implode('/',$path));
+        }
         $path = implode('/',$path);*/
 
         $len = 2; $path = substr($id, 0, $len);
         
         $storage = $this->GetStorage();
         
-        if (!$storage->isFolder($path)) $storage->CreateFolder($path);
+        $storage->CreateFolder($path);
         
         return $path.'/'.substr($id, $len); 
     }

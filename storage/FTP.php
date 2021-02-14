@@ -230,11 +230,19 @@ class FTP extends FWrapper
     }
     
     /** Returns true if the given path can be appended at the given offset */
-    private function CheckAppending(string $path, int $offset) : bool
+    private function CheckAppending(string $path, int $offset, int $length) : bool
     {
         if (array_key_exists($path, $this->appending_offsets))
             return $this->appending_offsets[$path] === $offset;
-        else return ftp_size($this->ftp, $this->GetPath($path)) === $offset;
+        
+        $size = ftp_size($this->ftp, $this->GetPath($path));
+        
+        if ($offset === $size) return true;
+        else if (!$offset && $length >= $size)
+        {
+            $this->Truncate($path, 0); return true;
+        }
+        else return false;
     }
 
     /**
@@ -245,7 +253,8 @@ class FTP extends FWrapper
     public function WriteBytes(string $path, int $start, string $data) : self
     {
         $this->CheckReadOnly();
-        if (!$this->CheckAppending($path, $start))
+
+        if (!$this->CheckAppending($path, $start, strlen($data)))
             throw new FTPWriteUnsupportedException();
         
         $handle = $this->TrackAppending($path, strlen($data));
@@ -257,7 +266,10 @@ class FTP extends FWrapper
     /** @throws FTPWriteUnsupportedException */
     public function Truncate(string $path, int $length) : self
     {
-        throw new FTPWriteUnsupportedException();
+        if (!$length) $this->DeleteFile($path)->CreateFile($path);
+        else if (ftp_size($this->ftp, $this->GetPath($path)) !== $length)
+            throw new FTPWriteUnsupportedException();
+        return $this;
     }    
     
     public function CreateFile(string $path) : self
