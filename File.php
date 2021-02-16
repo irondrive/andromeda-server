@@ -207,7 +207,7 @@ class File extends Item
     /**
      * Returns a printable client object of the file
      * @see Item::SubGetClientObject()
-     * @return array|NULL null if deleted, else `{size:int, dates:{created:int,modified:?int,accessed:?int},
+     * @return array|NULL null if deleted, else `{size:int, dates:{created:float,modified:?float,accessed:?float},
          counters:{downloads:int, bandwidth:int, likes:int, dislikes:int}}`
      */
     public function GetClientObject(int $details = self::DETAILS_NONE) : ?array

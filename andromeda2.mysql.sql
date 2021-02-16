@@ -17,8 +17,8 @@ CREATE TABLE `a2_objects_apps_files_comment` (
   `item` varchar(64) NOT NULL,
   `comment` text NOT NULL,
   `private` tinyint(1) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__modified` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
+  `dates__modified` double NOT NULL,
   PRIMARY KEY (`id`),
   KEY `owner` (`owner`),
   KEY `item` (`item`)
@@ -28,7 +28,7 @@ CREATE TABLE `a2_objects_apps_files_comment` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `apiurl` text DEFAULT NULL,
   `rwchunksize` int(11) NOT NULL,
   `crchunksize` int(11) NOT NULL,
@@ -41,9 +41,9 @@ CREATE TABLE `a2_objects_apps_files_config` (
 CREATE TABLE `a2_objects_apps_files_file` (
   `id` char(16) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__modified` bigint(20) DEFAULT NULL,
-  `dates__accessed` bigint(20) DEFAULT NULL,
+  `dates__created` double NOT NULL,
+  `dates__modified` double DEFAULT NULL,
+  `dates__accessed` double DEFAULT NULL,
   `size` bigint(20) NOT NULL DEFAULT 0,
   `counters__downloads` int(11) NOT NULL DEFAULT 0,
   `counters__bandwidth` bigint(20) NOT NULL DEFAULT 0,
@@ -67,7 +67,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `type` tinyint(2) NOT NULL,
   `readonly` tinyint(1) NOT NULL,
   `storage` varchar(64) NOT NULL,
@@ -86,9 +86,9 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
 CREATE TABLE `a2_objects_apps_files_folder` (
   `id` char(16) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__modified` bigint(20) DEFAULT NULL,
-  `dates__accessed` bigint(20) DEFAULT NULL,
+  `dates__created` double NOT NULL,
+  `dates__modified` double DEFAULT NULL,
+  `dates__accessed` double DEFAULT NULL,
   `counters__size` bigint(20) NOT NULL DEFAULT 0,
   `counters__visits` int(11) NOT NULL DEFAULT 0,
   `counters__downloads` int(11) NOT NULL DEFAULT 0,
@@ -120,7 +120,7 @@ CREATE TABLE `a2_objects_apps_files_like` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `value` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `owner` (`owner`,`item`)
@@ -128,12 +128,12 @@ CREATE TABLE `a2_objects_apps_files_like` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
+CREATE TABLE `a2_objects_apps_files_limits_authentitytotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__download` bigint(20) DEFAULT NULL,
-  `dates__upload` bigint(20) DEFAULT NULL,
+  `dates__created` double NOT NULL,
+  `dates__download` double DEFAULT NULL,
+  `dates__upload` double DEFAULT NULL,
   `features__itemsharing` tinyint(1) DEFAULT NULL,
   `features__shareeveryone` tinyint(1) DEFAULT NULL,
   `features__emailshare` tinyint(1) DEFAULT NULL,
@@ -160,9 +160,9 @@ CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
 CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__download` bigint(20) DEFAULT NULL,
-  `dates__upload` bigint(20) DEFAULT NULL,
+  `dates__created` double NOT NULL,
+  `dates__download` double DEFAULT NULL,
+  `dates__upload` double DEFAULT NULL,
   `features__itemsharing` tinyint(1) DEFAULT NULL,
   `features__shareeveryone` tinyint(1) DEFAULT NULL,
   `features__publicupload` tinyint(1) DEFAULT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `stats` int(11) NOT NULL DEFAULT 0,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `timeperiod` int(11) NOT NULL,
   `max_stats_age` bigint(20) DEFAULT NULL,
   `features__track_items` tinyint(1) DEFAULT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
 CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL,
   `limitobj` varchar(64) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `dates__timestart` bigint(20) NOT NULL,
   `iscurrent` tinyint(1) DEFAULT NULL,
   `counters__size` bigint(20) NOT NULL DEFAULT 0,
@@ -227,8 +227,8 @@ CREATE TABLE `a2_objects_apps_files_share` (
   `dest` varchar(64) DEFAULT NULL,
   `authkey` text DEFAULT NULL,
   `password` text DEFAULT NULL,
-  `dates__created` bigint(20) NOT NULL,
-  `dates__accessed` bigint(20) DEFAULT NULL,
+  `dates__created` double NOT NULL,
+  `dates__accessed` double DEFAULT NULL,
   `counters__accessed` int(11) NOT NULL DEFAULT 0,
   `counters_limits__accessed` int(11) DEFAULT NULL,
   `dates__expires` bigint(20) DEFAULT NULL,
@@ -246,7 +246,7 @@ CREATE TABLE `a2_objects_apps_files_share` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
   `owner` char(12) DEFAULT NULL,
   `hostname` varchar(255) NOT NULL,
@@ -266,7 +266,7 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
   `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
@@ -278,7 +278,7 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
   `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
@@ -301,7 +301,7 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
   `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
@@ -322,7 +322,7 @@ CREATE TABLE `a2_objects_apps_files_tag` (
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
   `tag` varchar(127) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `item` (`item`,`tag`),
   KEY `owner` (`owner`),

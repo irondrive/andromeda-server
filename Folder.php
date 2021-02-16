@@ -220,7 +220,7 @@ abstract class Folder extends Item
      * @param int $offset offset of items to show
      * @param int $details detail level of output
      * @return array|NULL null if deleted, else `{filesystem:id, files:[id:File], folders:[id:Folder],
-         dates:{created:int, modified:?int, accessed:?int}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
+         dates:{created:float, modified:?float, accessed:?float}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
             subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
      * @see Item::SubGetClientObject()
      */

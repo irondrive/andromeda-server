@@ -465,7 +465,7 @@ class FilesApp extends AppBase
             use($file,$fstart,$flast,$chunksize,$align,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
-            
+
             for ($byte = $fstart; $byte <= $flast; )
             {
                 if (connection_aborted()) break;
@@ -474,7 +474,8 @@ class FilesApp extends AppBase
                 if (!$align) $nbyte = $byte + $chunksize;
                 else $nbyte = (intdiv($byte, $chunksize) + 1) * $chunksize;
 
-                $rlen = min($nbyte - $byte, $flast - $byte + 1);                
+                $rlen = min($nbyte - $byte, $flast - $byte + 1); 
+                
                 $data = $file->ReadBytes($byte, $rlen); 
                 
                 if (strlen($data) != $rlen)
@@ -531,7 +532,7 @@ class FilesApp extends AppBase
         if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
 
         $inhandle = fopen($filepath, 'rb');
-
+        
         for ($wbyte = $wstart; $wbyte <= $wlast; )
         {
             $rstart = $wbyte - $wstart;

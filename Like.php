@@ -58,7 +58,7 @@ class Like extends StandardObject
     
     /**
      * Returns a printable client object of this like
-     * @return array `{owner:string, item:id, value:bool, dates:{created:int}}`
+     * @return array `{owner:string, item:id, value:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {

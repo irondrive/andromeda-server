@@ -10,7 +10,7 @@ require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
 
 /** GroupTotal and AccountTotal have some extra common features not applicable to filesystems */
-abstract class AuthTotal extends Total
+abstract class AuthEntityTotal extends Total
 {
     public static function GetDBClass() : string { return self::class; }
     

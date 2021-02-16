@@ -120,7 +120,7 @@ class RootFolder extends Folder
      * Special function that returns a client object listing all root folders
      * @param ObjectDatabase $database database reference
      * @return array `{files:[], folders:[id:RootFolder],
-         dates:{created:int}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
+         dates:{created:float}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
             subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
      * @see Folder::GetClientObject()
      */

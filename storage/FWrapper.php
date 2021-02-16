@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -150,7 +152,12 @@ abstract class FWrapper extends Storage
         
         $data = fread($handle, $length);
         if ($data === false || strlen($data) !== $length)
+        {
+            Main::GetInstance()->PrintDebug(array(
+                'read'=>strlen($data), 'wanted'=>$length));
             throw new FileReadFailedException();
+        }
+        
         else return $data;
     }
     
@@ -160,9 +167,16 @@ abstract class FWrapper extends Storage
         $path = $this->GetFullURL($path);
         $handle = $this->GetHandle($path, true);    
         
-        if (fseek($handle, $start) !== 0 || 
-            fwrite($handle, $data) !== strlen($data))
+        if (fseek($handle, $start)) throw new FileWriteFailedException();
+        
+        $written = fwrite($handle, $data);
+        
+        if ($written !== strlen($data))
+        {
+            Main::GetInstance()->PrintDebug(array(
+                'wrote'=>$written, 'wanted'=>strlen($data)));
             throw new FileWriteFailedException();
+        }
             
         return $this;
     }
@@ -171,9 +185,11 @@ abstract class FWrapper extends Storage
     {
         $this->CheckReadOnly();
         $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, true);        
+        $handle = $this->GetHandle($path, true);    
+        
         if (!ftruncate($handle, $length))
             throw new FileWriteFailedException();
+        
         return $this;
     }
 

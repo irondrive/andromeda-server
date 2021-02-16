@@ -1,16 +1,10 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
-use Andromeda\Core\Main;
-
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
-/** Exception indicating that the read-write was not aligned to a chunk multiple */
-class UnalignedAccessException extends Exceptions\ServerException { public $message = "FS_ACCESS_NOT_ALIGNED"; }
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
 /**
  * Implements an encryption layer on top of the native filesystem.
@@ -137,8 +131,6 @@ class NativeCrypt extends Native
         
         if ($length === $file->GetSize()) return $this;
         
-        if (!$length) { parent::Truncate($file, 0); return $this; }
-        
         $chunks = $this->GetNumChunks($length);
         $chunks0 = $this->GetNumChunks($file->GetSize());
         
@@ -160,6 +152,7 @@ class NativeCrypt extends Native
             if ($dofix) $this->WriteChunk($file, $cfix, $cdata);
         }
         
+        // may need to extend the file with new chunks
         for ($chunk = $chunks0; $chunk < $chunks; $chunk++)
         {
             $coffset = $chunk * $this->chunksize;
@@ -200,7 +193,8 @@ class NativeCrypt extends Native
         $nonce = parent::ReadBytes($file, $nonceoffset, $noncesize);
         $data = parent::ReadBytes($file, $dataoffset, $datasize);
         
-        if (strlen($nonce) != $noncesize || strlen($data) != $datasize) throw new FileReadFailedException();
+        if (strlen($nonce) != $noncesize || strlen($data) != $datasize) 
+            throw new FileReadFailedException();
         
         $auth = $this->GetAuthString($file, $index);
         

@@ -42,7 +42,7 @@ class Tag extends StandardObject
 
     /**
      * Returns a printable client object of this tag
-     * @return array `{id:id, owner:string, item:id, tag:string, dates:{created:int}}`
+     * @return array `{id:id, owner:string, item:id, tag:string, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
