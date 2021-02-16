@@ -3,7 +3,7 @@ CREATE TABLE `a2_objects_core_config` (
   `id` char(12) NOT NULL
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `features__debug` integer NOT NULL
 ,  `features__debug_http` integer NOT NULL
 ,  `features__debug_dblog` integer NOT NULL
@@ -23,13 +23,13 @@ CREATE TABLE `a2_objects_core_emailer` (
 ,  `from_address` varchar(255) NOT NULL
 ,  `from_name` varchar(255) DEFAULT NULL
 ,  `features__reply` integer DEFAULT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `id` char(12) NOT NULL
-,  `time` integer NOT NULL
+,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
 ,  `agent` text NOT NULL
 ,  `app` varchar(255) NOT NULL

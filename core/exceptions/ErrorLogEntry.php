@@ -120,7 +120,7 @@ class ErrorLogEntry extends BaseObject
         {
             $data = array(
                 
-                'time'=>    $api ? $api->GetTime() : time(),
+                'time'=>    $api ? $api->GetTime() : microtime(true),
                 
                 'addr'=>    $api ? $api->GetInterface()->GetAddress() : "",
                 'agent'=>   $api ? $api->GetInterface()->GetUserAgent() : "",

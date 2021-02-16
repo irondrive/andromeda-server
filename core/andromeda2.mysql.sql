@@ -15,7 +15,7 @@ CREATE TABLE `a2_objects_core_config` (
   `id` char(12) NOT NULL,
   `datadir` text DEFAULT NULL,
   `apps` text NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `features__debug` tinyint(2) NOT NULL,
   `features__debug_http` tinyint(1) NOT NULL,
   `features__debug_dblog` tinyint(1) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE `a2_objects_core_emailer` (
   `from_address` varchar(255) NOT NULL,
   `from_name` varchar(255) DEFAULT NULL,
   `features__reply` tinyint(1) DEFAULT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `id_2` (`id`)
@@ -49,7 +49,7 @@ CREATE TABLE `a2_objects_core_emailer` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   `id` char(12) NOT NULL,
-  `time` bigint(20) NOT NULL,
+  `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
   `app` varchar(255) NOT NULL,
