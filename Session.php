@@ -28,7 +28,7 @@ class Session extends KeySource
     public function GetClient() : Client { return $this->GetObject('client'); }
 
     /** Returns the last timestamp this session was active */
-    public function getActiveDate() : int { return $this->GetDate('active'); }
+    public function getActiveDate() : float { return $this->GetDate('active'); }
     
     /** Sets the timestamp the session was active to now */
     public function setActiveDate() : Session { return $this->SetDate('active'); }
@@ -61,7 +61,7 @@ class Session extends KeySource
     
     /**
      * Returns a printable client object for this session
-     * @return array `{id:string,client:id,dates:{created:int,active:int]}`
+     * @return array `{id:string,client:id,dates:{created:float,active:float]}`
      * @see AuthObject::GetClientObject()
      */
     public function GetClientObject(bool $secret = false) : array

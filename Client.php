@@ -23,6 +23,7 @@ class Client extends AuthObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
+            'name' => null,
             'lastaddr' => null,
             'useragent' => null,
             'dates__loggedon' => null,            
@@ -44,14 +45,17 @@ class Client extends AuthObject
     /** Gets the session in use on this client, if one exists */
     public function GetSession() : ?Session { return $this->TryGetObject('session'); }
     
+    /** Deletes an existing session for this client */
+    public function DeleteSession() : self { return $this->DeleteObject('session'); }
+    
     /** Gets the last timestamp this client was active */
-    public function getActiveDate() : int { return $this->GetDate('active'); }
+    public function getActiveDate() : float { return $this->GetDate('active'); }
     
     /** Sets the timestamp this client was active to now */
     public function setActiveDate() : self { return $this->SetDate('active'); }
     
     /** Gets the last timestamp the client created a session */
-    public function getLoggedonDate() : int { return $this->GetDate('loggedon'); }
+    public function getLoggedonDate() : float { return $this->GetDate('loggedon'); }
     
     /** Sets the timestamp when the client last created a session */
     public function setLoggedonDate() : self { return $this->SetDate('loggedon'); }
@@ -61,11 +65,12 @@ class Client extends AuthObject
      * @param IOInterface $interface the interface used for the request
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns this client
+     * @param string $name custom name to show for the client
      * @return self new Client
      */
-    public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account) : self
+    public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account, ?string $name = null) : self
     {
-        return parent::BaseCreate($database)
+        return parent::BaseCreate($database)->SetScalar('name',$name)
             ->SetScalar('lastaddr',$interface->GetAddress())
             ->SetScalar('useragent',$interface->GetUserAgent())
             ->SetObject('account',$account);
@@ -101,7 +106,7 @@ class Client extends AuthObject
     
     /**
      * Gets this client as a printable object
-     * @return array `{id:string, lastaddr:string, useragent:string, dates:{created:int, active:int, loggedon:int}, session:Session}`
+     * @return array `{id:string, name:?string, lastaddr:string, useragent:string, dates:{created:float, active:float, loggedon:float}, session:Session}`
      * @see AuthObject::GetClientObject()
      * @see Session::GetClientObject()
      */
@@ -109,6 +114,7 @@ class Client extends AuthObject
     {
         $data = array_merge(parent::GetClientObject($secret), array(
             'id' => $this->ID(),
+            'name' => $this->TryGetScalar('name'),
             'lastaddr' => $this->GetLastAddress(),
             'useragent' => $this->GetUserAgent(),
             'dates' => $this->GetAllDates(),

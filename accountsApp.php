@@ -123,7 +123,9 @@ class AccountsApp extends AppBase
             'emailrecovery --username text',
             'createaccount (--email email | --username alphanum) --password raw',
             'unlockaccount --account id --unlockcode alphanum',
-            'createsession --username text --auth_password raw [--authsource id] [(--auth_clientid id --auth_clientkey alphanum) | --recoverykey text | --auth_twofactor int]',
+            'createsession --username text --auth_password raw [--authsource id]',
+                "\t [--recoverykey text | --auth_twofactor int] [--name name]",
+                "\t --auth_clientid id --auth_clientkey alphanum",
             'createrecoverykeys --auth_password raw --auth_twofactor int',
             'createtwofactor --auth_password raw [--comment text]',
             'verifytwofactor --auth_twofactor int',
@@ -513,7 +515,7 @@ class AccountsApp extends AppBase
      */
     protected function CreateSession(Input $input) : array
     {
-        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
+        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException(); // TODO these are abstract - fix
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
         $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW);
@@ -575,7 +577,8 @@ class AccountsApp extends AppBase
             }
             else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $client = Client::Create($interface, $this->database, $account);
+            $cname = $input->TryGetParam('name', SafeParam::TYPE_NAME);
+            $client = Client::Create($interface, $this->database, $account, $cname);
         }
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */
@@ -601,10 +604,7 @@ class AccountsApp extends AppBase
         }
         
         /* delete old session associated with this client, create a new one */
-        $session = $client->GetSession();
-        if ($session !== null) $session->Delete();
-
-        $session = Session::Create($this->database, $account, $client);
+        $session = Session::Create($this->database, $account, $client->DeleteSession());
         
         /* update object dates */
         $session->setActiveDate();

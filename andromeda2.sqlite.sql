@@ -4,11 +4,11 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 ,  `username` varchar(127) NOT NULL
 ,  `fullname` varchar(255) DEFAULT NULL
 ,  `unlockcode` char(8) DEFAULT NULL
-,  `dates__created` integer NOT NULL DEFAULT 0
-,  `dates__passwordset` integer NOT NULL DEFAULT 0
-,  `dates__loggedon` integer NOT NULL DEFAULT 0
-,  `dates__active` integer NOT NULL DEFAULT 0
-,  `dates__modified` integer DEFAULT NULL
+,  `dates__created` double NOT NULL DEFAULT 0
+,  `dates__passwordset` double NOT NULL DEFAULT 0
+,  `dates__loggedon` double NOT NULL DEFAULT 0
+,  `dates__active` double NOT NULL DEFAULT 0
+,  `dates__modified` double DEFAULT NULL
 ,  `max_session_age` integer DEFAULT NULL
 ,  `max_password_age` integer DEFAULT NULL
 ,  `features__admin` integer DEFAULT NULL
@@ -72,12 +72,13 @@ CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
 );
 CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` char(12) NOT NULL
+,  `name` varchar(255) DEFAULT NULL
 ,  `authkey` text NOT NULL
 ,  `lastaddr` varchar(255) NOT NULL
 ,  `useragent` text NOT NULL
-,  `dates__active` integer NOT NULL DEFAULT 0
-,  `dates__created` integer NOT NULL DEFAULT 0
-,  `dates__loggedon` integer NOT NULL DEFAULT 0
+,  `dates__active` double NOT NULL DEFAULT 0
+,  `dates__created` double NOT NULL DEFAULT 0
+,  `dates__loggedon` double NOT NULL DEFAULT 0
 ,  `account` char(12) NOT NULL
 ,  `session` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
@@ -89,7 +90,7 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
 ,  `features__emailasusername` integer NOT NULL
 ,  `features__requirecontact` integer NOT NULL
 ,  `default_group` char(12) DEFAULT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
@@ -99,7 +100,7 @@ CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
 ,  `info` varchar(127) NOT NULL
 ,  `valid` integer NOT NULL DEFAULT 1
 ,  `unlockcode` char(8) DEFAULT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
@@ -110,8 +111,8 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 ,  `name` varchar(127) NOT NULL
 ,  `comment` text DEFAULT NULL
 ,  `priority` integer NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__modified` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__modified` double DEFAULT NULL
 ,  `features__admin` integer DEFAULT NULL
 ,  `features__enabled` integer DEFAULT NULL
 ,  `features__forcetf` integer DEFAULT NULL
@@ -137,7 +138,7 @@ CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
 CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
-,  `dates__created` integer NOT NULL DEFAULT 0
+,  `dates__created` double NOT NULL DEFAULT 0
 ,  `master_key` binary(48) DEFAULT NULL
 ,  `master_nonce` binary(24) DEFAULT NULL
 ,  `master_salt` binary(16) DEFAULT NULL
@@ -147,8 +148,8 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
 CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
-,  `dates__active` integer NOT NULL DEFAULT 0
-,  `dates__created` integer NOT NULL DEFAULT 0
+,  `dates__active` double NOT NULL DEFAULT 0
+,  `dates__created` double NOT NULL DEFAULT 0
 ,  `master_key` binary(48) DEFAULT NULL
 ,  `master_nonce` binary(24) DEFAULT NULL
 ,  `master_salt` binary(16) DEFAULT NULL
@@ -162,8 +163,8 @@ CREATE TABLE `a2_objects_apps_accounts_twofactor` (
 ,  `secret` binary(48) NOT NULL
 ,  `nonce` binary(24) DEFAULT NULL
 ,  `valid` integer NOT NULL DEFAULT 0
-,  `dates__created` integer NOT NULL
-,  `dates__used` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__used` double DEFAULT NULL
 ,  `account` char(12) NOT NULL
 ,  `usedtokens` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
@@ -171,7 +172,7 @@ CREATE TABLE `a2_objects_apps_accounts_twofactor` (
 CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `id` char(12) NOT NULL
 ,  `code` char(6) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `twofactor` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
