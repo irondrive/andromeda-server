@@ -14,10 +14,10 @@ class DBStats
     private array $queries = array();
     
     /** Constructs a new stats context and logs the current time */
-    public function __construct(){ $this->start_time = microtime(true); }
+    public function __construct(){ $this->start_time = hrtime(true); }
 
     /** Begins tracking a query by logging the current time */
-    public function startQuery() : void { $this->temp = microtime(true); }
+    public function startQuery() : void { $this->tempt = hrtime(true); }
 
     /**
      * Ends tracking a query and updates the relevant stats
@@ -27,7 +27,7 @@ class DBStats
      */
     public function endQuery(string $sql, int $type, bool $count = true) : void
     { 
-        $el = microtime(true) - $this->temp;
+        $el = (hrtime(true)-$this->tempt)/1e9;
         
         $isRead = $type & Database::QUERY_READ;
         $isWrite = $type & Database::QUERY_WRITE;
@@ -49,7 +49,7 @@ class DBStats
     /** Returns an array of statistics collected */
     public function getStats() : array
     {
-        $totaltime = microtime(true) - $this->start_time;
+        $totaltime = (hrtime(true)-$this->start_time)/1e9;
         $codetime = $totaltime - $this->read_time - $this->write_time;
         return array(
             'db_reads' => $this->reads,

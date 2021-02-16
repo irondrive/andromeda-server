@@ -42,7 +42,7 @@ class Main extends Singleton
     private array $commit_stats = array();
     private DBStats $sum_stats;
     
-    private int $time;
+    private float $time;
     private array $apps = array(); 
     
     /** @var Input[] stack of inputs for nested Run() calls */
@@ -57,7 +57,7 @@ class Main extends Singleton
     private bool $dirty = false;
     
     /** Gets the timestamp of when the request was started */
-    public function GetTime() : int { return $this->time; }
+    public function GetTime() : float { return $this->time; }
     
     /**
      * Gets an array of instantiated apps
@@ -92,7 +92,7 @@ class Main extends Singleton
         
         parent::__construct();
         
-        $this->time = time();
+        $this->time = microtime(true);
         $this->interface = $interface;
         $this->sum_stats = new DBStats();
         
@@ -193,14 +193,14 @@ class Main extends Singleton
      */
     public function RunRemote(string $url, Input $input)
     {
-        $start = microtime(true); 
+        $start = hrtime(true); 
 
         $data = AJAX::RemoteRequest($url, $input);
 
         if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT)
         {
             array_push($this->run_stats, array(
-                'remote_time' => microtime(true) - $start,
+                'remote_time' => (hrtime(true)-$start)/1e9,
             ));
         }  
 

@@ -20,27 +20,27 @@ abstract class StandardObject extends BaseObject
      * Returns the timestamp value stored in the given date field 
      * @see BaseObject::GetScalar()
      */
-    protected function GetDate(string $name) : int { return $this->GetScalar("dates__$name"); }
+    protected function GetDate(string $name) : float { return $this->GetScalar("dates__$name"); }
     
     /**
      * Returns the timestamp value stored in the given date field
      * @see BaseObject::TryGetScalar()
      */
-    protected function TryGetDate(string $name) : ?int { return $this->TryGetScalar("dates__$name"); } 
+    protected function TryGetDate(string $name) : ?float { return $this->TryGetScalar("dates__$name"); } 
     
     /**
      * Sets the value of the given date field to the given value
      * @param string $name the name of the date field to set
-     * @param ?int $value the value of the timestamp, or null to use the current time
+     * @param ?float $value the value of the timestamp, or null to use the current time
      * @see BaseObject::SetScalar()
      */
-    protected function SetDate(string $name, ?int $value = null) : self
+    protected function SetDate(string $name, ?float $value = null) : self
     { 
         return $this->SetScalar("dates__$name", $value ?? Main::GetInstance()->GetTime()); 
     }
     
     /** Returns the timestamp when this object was created */
-    public function GetDateCreated() : int { return $this->GetDate('created'); }
+    public function GetDateCreated() : float { return $this->GetDate('created'); }
     
     /**
      * Create the object by setting its created date
