@@ -108,7 +108,7 @@ abstract class Total extends Base
     
     /**
      * Returns a printable client object of this timed limit
-     * @return array `{dates:{created:int, download:?int, upload:?int}, features:{track_items:bool,track_dlstats:bool,
+     * @return array `{dates:{created:float, download:?float, upload:?float}, features:{track_items:bool,track_dlstats:bool,
             itemsharing:?bool, shareeveryone:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, downloads:int, bandwidth:int}}`
      * @see TimedStats::GetClientObject()

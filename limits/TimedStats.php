@@ -167,7 +167,7 @@ class TimedStats extends StandardObject
     
     /**
      * Returns a printable client object of the stats
-     * @return array `{iscurrent:bool, dates:{created:int, timestart:int}, counters:{
+     * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, counters:{
         size:int, items:int, shares:int, downloads:int, bandwidth:int}}`
      */
     public function GetClientObject() : array

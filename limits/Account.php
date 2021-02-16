@@ -114,7 +114,7 @@ trait AccountCommon
 }
 
 /** Concrete class providing account config and total stats */
-class AccountTotal extends AuthTotal implements IAccountLimit
+class AccountTotal extends AuthEntityTotal implements IAccountLimit
 { 
     use AccountCommon;
     
@@ -216,7 +216,7 @@ class AccountTotal extends AuthTotal implements IAccountLimit
      * Loads all limit objects for the given account, including its groups
      * @param ObjectDatabase $database database reference
      * @param Account $account account of interest
-     * @return array<string, AuthTotal> limits indexed by ID
+     * @return array<string, AuthEntityTotal> limits indexed by ID
      */
     public static function LoadByAccountAll(ObjectDatabase $database, Account $account) : array
     {

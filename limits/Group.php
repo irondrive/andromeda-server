@@ -92,7 +92,7 @@ trait GroupCommon
 }
 
 /** Concrete class providing group config and total stats */
-class GroupTotal extends AuthTotal implements IGroupLimit
+class GroupTotal extends AuthEntityTotal implements IGroupLimit
 { 
     use GroupCommon; 
     

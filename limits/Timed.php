@@ -156,7 +156,7 @@ abstract class Timed extends Base
     
     /**
      * Returns a printable client object of this timed limit
-     * @return array `{timeperiod:int, dates:{created:int}, 
+     * @return array `{timeperiod:int, dates:{created:float}, 
         features:{track_items:bool,track_dlstats:bool}, limits:{downloads:?int, bandwidth:?int}`
      * @see TimedStats::GetClientObject()        
      */

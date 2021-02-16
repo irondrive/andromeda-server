@@ -5,13 +5,13 @@ CREATE TABLE `a2_objects_apps_files_comment` (
 ,  `item` varchar(64) NOT NULL
 ,  `comment` text NOT NULL
 ,  `private` integer NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__modified` integer NOT NULL
+,  `dates__created` double NOT NULL
+,  `dates__modified` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `apiurl` text DEFAULT NULL
 ,  `rwchunksize` integer NOT NULL
 ,  `crchunksize` integer NOT NULL
@@ -21,9 +21,9 @@ CREATE TABLE `a2_objects_apps_files_config` (
 CREATE TABLE `a2_objects_apps_files_file` (
   `id` char(16) NOT NULL
 ,  `name` varchar(255) NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__modified` integer DEFAULT NULL
-,  `dates__accessed` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__modified` double DEFAULT NULL
+,  `dates__accessed` double DEFAULT NULL
 ,  `size` integer NOT NULL DEFAULT 0
 ,  `counters__downloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
@@ -40,7 +40,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
 );
 CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `type` integer NOT NULL
 ,  `readonly` integer NOT NULL
 ,  `storage` varchar(64) NOT NULL
@@ -54,9 +54,9 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
 CREATE TABLE `a2_objects_apps_files_folder` (
   `id` char(16) NOT NULL
 ,  `name` varchar(255) DEFAULT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__modified` integer DEFAULT NULL
-,  `dates__accessed` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__modified` double DEFAULT NULL
+,  `dates__accessed` double DEFAULT NULL
 ,  `counters__size` integer NOT NULL DEFAULT 0
 ,  `counters__visits` integer NOT NULL DEFAULT 0
 ,  `counters__downloads` integer NOT NULL DEFAULT 0
@@ -81,17 +81,17 @@ CREATE TABLE `a2_objects_apps_files_like` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` varchar(64) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `value` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`owner`,`item`)
 );
-CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
+CREATE TABLE `a2_objects_apps_files_limits_authentitytotal` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__download` integer DEFAULT NULL
-,  `dates__upload` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__download` double DEFAULT NULL
+,  `dates__upload` double DEFAULT NULL
 ,  `features__itemsharing` integer DEFAULT NULL
 ,  `features__shareeveryone` integer DEFAULT NULL
 ,  `features__emailshare` integer DEFAULT NULL
@@ -115,9 +115,9 @@ CREATE TABLE `a2_objects_apps_files_limits_authtotal` (
 CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__download` integer DEFAULT NULL
-,  `dates__upload` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__download` double DEFAULT NULL
+,  `dates__upload` double DEFAULT NULL
 ,  `features__itemsharing` integer DEFAULT NULL
 ,  `features__shareeveryone` integer DEFAULT NULL
 ,  `features__publicupload` integer DEFAULT NULL
@@ -140,7 +140,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
   `id` char(12) NOT NULL
 ,  `object` varchar(64) NOT NULL
 ,  `stats` integer NOT NULL DEFAULT 0
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `timeperiod` integer NOT NULL
 ,  `max_stats_age` integer DEFAULT NULL
 ,  `features__track_items` integer DEFAULT NULL
@@ -153,7 +153,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
 CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL
 ,  `limitobj` varchar(64) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `dates__timestart` integer NOT NULL
 ,  `iscurrent` integer DEFAULT NULL
 ,  `counters__size` integer NOT NULL DEFAULT 0
@@ -172,8 +172,8 @@ CREATE TABLE `a2_objects_apps_files_share` (
 ,  `dest` varchar(64) DEFAULT NULL
 ,  `authkey` text DEFAULT NULL
 ,  `password` text DEFAULT NULL
-,  `dates__created` integer NOT NULL
-,  `dates__accessed` integer DEFAULT NULL
+,  `dates__created` double NOT NULL
+,  `dates__accessed` double DEFAULT NULL
 ,  `counters__accessed` integer NOT NULL DEFAULT 0
 ,  `counters_limits__accessed` integer DEFAULT NULL
 ,  `dates__expires` integer DEFAULT NULL
@@ -187,7 +187,7 @@ CREATE TABLE `a2_objects_apps_files_share` (
 );
 CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `hostname` varchar(255) NOT NULL
@@ -203,7 +203,7 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
 );
 CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
@@ -211,7 +211,7 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
 );
 CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
@@ -231,7 +231,7 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
 );
 CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
@@ -249,7 +249,7 @@ CREATE TABLE `a2_objects_apps_files_tag` (
 ,  `owner` char(12) NOT NULL
 ,  `item` varchar(64) NOT NULL
 ,  `tag` varchar(127) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`item`,`tag`)
 );
