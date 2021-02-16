@@ -159,7 +159,7 @@ class Account extends AuthEntity
     }
     
     /** Returns the timestamp of when the account was added to the given group */
-    public function GetGroupAddedDate(Group $group) : ?int 
+    public function GetGroupAddedDate(Group $group) : ?float 
     {
         $joinobj = $this->TryGetJoinObject('groups', $group);
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
@@ -240,18 +240,18 @@ class Account extends AuthEntity
     public function setUnlockCode(?string $code) : self { return $this->SetScalar('unlockcode', $code); }
     
     /** Gets the timestamp when this user was last active */
-    public function getActiveDate() : int       { return $this->GetDate('active'); }
+    public function getActiveDate() : float     { return $this->GetDate('active'); }
     
     /** Sets the last-active timestamp to now */
     public function setActiveDate() : self      { return $this->SetDate('active'); }
     
     /** Gets the timestamp when this user last created a session */
-    public function getLoggedonDate() : int     { return $this->GetDate('loggedon'); }
+    public function getLoggedonDate() : float   { return $this->GetDate('loggedon'); }
     
     /** Sets the timestamp of last-login to now */
     public function setLoggedonDate() : self    { return $this->SetDate('loggedon'); }
     
-    private function getPasswordDate() : int     { return $this->GetDate('passwordset'); }
+    private function getPasswordDate() : float  { return $this->GetDate('passwordset'); }
     private function setPasswordDate() : self   { return $this->SetDate('passwordset'); }
     
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
@@ -396,7 +396,7 @@ class Account extends AuthEntity
     /**
      * Gets this account as a printable object
      * @return array `{id:string,username:string,dispname:string}` \
-        if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:int,passwordset:int,loggedon:int,active:int}, 
+        if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
             counters:{groups:int,sessions:int,contactinfos:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contactinfos:?int,recoverykeys:?int}, features:{admin:bool,enabled:bool,forcetf:bool,allowcrypto:bool}, 
             max_session_age:?int, max_password_age:?int} \

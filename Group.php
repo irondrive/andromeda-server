@@ -82,7 +82,7 @@ class Group extends AuthEntity
     public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
     
     /** Gets the date that an account became a member of this group (or null) */
-    public function GetAccountAddedDate(Account $account) : ?int 
+    public function GetAccountAddedDate(Account $account) : ?float
     {
         $joinobj = $this->TryGetJoinObject('accounts', $account);
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
@@ -140,7 +140,7 @@ class Group extends AuthEntity
     /**
      * Gets this group as a printable object
      * @param bool $full if true, show the list of account IDs
-     * @return array `{id:string,name:string,priority:int,comment:?string,dates:{created:int}}` \
+     * @return array `{id:string,name:string,priority:int,comment:?string,dates:{created:float}}` \
         if full, add `{accounts:[id]}` \
         also returns all inheritable account properties
      * @see Account::GetClientObject()

@@ -95,7 +95,7 @@ class ContactInfo extends StandardObject
     
     /**
      * Gets this contact info as a printable object
-     * @return array `{id:string, type:int, info:string, valid:bool, dates:{created:int}}`
+     * @return array `{id:string, type:int, info:string, valid:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
