@@ -156,7 +156,7 @@ class Group extends AuthEntity
             'features' => $this->GetAllFeatures(),
             'counters' => $this->GetAllCounters(),
             'limits' => $this->GetAllCounterLimits(),
-            'max_session_age' => $this->TryGetScalar('max_session_age'),
+            'session_timeout' => $this->TryGetScalar('session_timeout'),
             'max_password_age' => $this->TryGetScalar('max_password_age')
         );
         
