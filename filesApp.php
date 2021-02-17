@@ -305,14 +305,13 @@ class FilesApp extends AppBase
      * Installs the app by importing its SQL file and creating config
      * @throws UnknownActionException if config already exists
      */
-    protected function Install(Input $input) : void
+    public function Install(Input $input) : void
     {
         if (isset($this->config)) throw new UnknownActionException();
         
-        $database = $this->API->GetDatabase();
-        $database->importTemplate(ROOT."/apps/files");
+        $this->database->importTemplate(ROOT."/apps/files");
         
-        Config::Create($database)->Save();
+        Config::Create($this->database)->Save();
     }        
     
     /**
@@ -421,10 +420,9 @@ class FilesApp extends AppBase
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
                 
-        // check required bandwidth ahead of time and prepare stats objects
+        // check required bandwidth ahead of time
         $length = $flast-$fstart+1;
-        $file->CountBandwidth($length); 
-        $file->CountBandwidth($length*-1);
+        $file->CheckBandwidth($length);
         
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetRWChunkSize();
@@ -523,7 +521,7 @@ class FilesApp extends AppBase
         if ($wstart < 0 || $wlast+1 < $wstart)
             throw new InvalidFileRangeException();
         
-        $file->CountBandwidth($length);        
+        $file->CheckSize($wlast+1); $file->CountBandwidth($length);        
 
         $fschunksize = $file->GetChunkSize();
         $chunksize = $this->config->GetRWChunkSize();  

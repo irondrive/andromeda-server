@@ -23,6 +23,8 @@ require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
 require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\RootFolder;
 
+require_once(ROOT."/apps/files/limits/Account.php"); use Andromeda\Apps\Files\Limits;
+
 /** Exception indicating that the stored filesystem type is not valid */
 class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
 
@@ -164,7 +166,8 @@ class FSManager extends StandardObject
     }
     
     /** Returns the common command usage of Create() */
-    public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types))." [--fstype native|crypt|shared] [--name name] [--global bool] [--readonly bool]"; }
+    public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types)).
+        " [--fstype native|crypt|shared] [--name name] [--global bool] [--readonly bool] [--chunksize int]"; }
     
     /** Returns the command usage of Create() specific to each storage type */
     public static function GetCreateUsages() : array 
@@ -206,7 +209,15 @@ class FSManager extends StandardObject
         
         if ($filesystem->isSecure())
         {
-            $filesystem->SetScalar('crypto_chunksize', Config::GetInstance($database)->GetCryptoChunkSize());
+            if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
+            {
+                $chunksize = $input->TryGetParam('chunksize',SafeParam::TYPE_INT,function($v){
+                    return $v >= 4*1024 && $v <= 1*1024*1024; });
+            }
+            
+            if (!($chunksize ?? false)) $chunksize = Config::GetInstance($database)->GetCryptoChunkSize();
+            
+            $filesystem->SetScalar('crypto_chunksize', $chunksize);
             $filesystem->SetScalar('crypto_masterkey', CryptoSecret::GenerateKey());
         }
 

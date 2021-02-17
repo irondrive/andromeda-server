@@ -79,7 +79,7 @@ class Share extends AuthObject
         $expires = $this->TryGetDate('expires');
         if ($expires !== null && Main::GetInstance()->GetTime() > $expires) return true;
         
-        return $this->IsCounterOverLimit('accessed', 1);
+        return !$this->CheckCounter('accessed', 1, false);
     }
     
     /** Sets the share's access date to now and increments the access counter */

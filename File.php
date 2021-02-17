@@ -1,8 +1,8 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\CounterOverLimitException;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/exceptions/Exceptions.php");
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -53,18 +53,33 @@ class File extends Item
      */
     public function SetSize(int $size, bool $notify = false) : self 
     {
-        if (!$notify)
-            $this->GetFSImpl()->Truncate($this, $size);
-        
         $delta = $size - ($this->TryGetScalar('size') ?? 0);
         
         $this->GetParent()->DeltaSize($delta);
         
-        // TODO this assumes the FS never changes - will not work for cross-FS move!
-        $this->MapToLimits(function(Limits\Base $lim)use($delta){ 
-            if (!$this->onOwnerFS()) $lim->CountSize($delta); });
+        if (!$notify)
+        {
+            $this->MapToLimits(function(Limits\Base $lim)use($delta){ 
+                if (!$this->onOwnerFS()) $lim->CountSize($delta); });
+            
+            $this->GetFSImpl()->Truncate($this, $size);                
+        }
         
         return $this->SetScalar('size', $size); 
+    }
+    
+    /**
+     * Checks if the given total size would exceed the limit
+     * @param int $size the new size of the file
+     * @see Limits\Base::CheckBandwidth()
+     * @return $this
+     */
+    public function CheckSize(int $size) : self
+    {
+        $delta = $size - ($this->TryGetScalar('size') ?? 0);
+        
+        $this->MapToLimits(function(Limits\Base $lim)use($delta){
+            if (!$this->onOwnerFS()) $lim->CheckSize($delta); });
     }
     
     /** 
@@ -85,6 +100,18 @@ class File extends Item
         $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });
         
         return parent::CountBandwidth($bytes);
+    }
+    
+    /**
+     * Checks if the given bandwidth would exceed the limit
+     * @param int $size the bandwidth delta
+     * @see Limits\Base::CheckBandwidth()
+     * @return $this
+     */
+    public function CheckBandwidth(int $delta) : self
+    {
+        $this->MapToLimits(function(Limits\Base $lim)use($delta){
+            if (!$this->onOwnerFS()) $lim->CheckBandwidth($delta); });
     }
         
     private bool $refreshed = false;
@@ -180,9 +207,15 @@ class File extends Item
      */
     public function WriteBytes(int $start, string $data) : self
     {
-        $this->SetModified(); $this->GetFSImpl()->WriteBytes($this, $start, $data); 
+        $length = max($this->GetSize(), $start+strlen($data)); 
         
-        $this->SetSize(max($this->GetSize(), $start+strlen($data)), true); return $this;
+        $this->CheckSize($length); 
+        
+        $this->GetFSImpl()->WriteBytes($this, $start, $data); 
+        
+        $this->SetSize($length, true); 
+        
+        $this->SetModified(); return $this;
     }    
     
     /** Deletes the file from the DB only */
