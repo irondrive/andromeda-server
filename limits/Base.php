@@ -61,10 +61,22 @@ abstract class Base extends StandardObject
     public function CountDownload() : self { return $this->canTrackDLStats() ? $this->DeltaCounter('downloads') : $this; }
     
     /** Adds to the bandwidth counter, if download tracking is allowed */
-    public function CountBandwidth(int $size) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('bandwidth',$size) : $this; }
+    public function CountBandwidth(int $delta) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('bandwidth',$delta) : $this; }
+    
+    /**
+     * Checks if the given bandwidth would exceed the limit
+     * @see StandardObject::CheckCounter()
+     */
+    public function CheckBandwidth(int $delta) : void { $this->CheckCounter('bandwidth',$delta); }
     
     /** Adds to the size counter, if item tracking is allowed */
-    public function CountSize(int $size) : self { return $this->canTrackItems() ? $this->DeltaCounter('size',$size) : $this; }
+    public function CountSize(int $delta) : self { return $this->canTrackItems() ? $this->DeltaCounter('size',$delta) : $this; }
+    
+    /** 
+     * Checks if the given size delta would exceed the size limit 
+     * @see StandardObject::CheckCounter()
+     */
+    public function CheckSize(int $delta) : void { $this->CheckCounter('size',$delta); }
     
     /** Increments the item counter, if item tracking is allowed. Decrements if not $count */
     public function CountItem(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('items',$count?1:-1) : $this; }
