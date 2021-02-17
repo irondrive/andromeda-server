@@ -5,6 +5,7 @@ require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
@@ -47,6 +48,12 @@ class ContactInfoExistsException extends Exceptions\ClientErrorException { publi
 
 /** Exception indicating that this group membership is for a default group and cannot be changed */
 class ImmutableGroupException extends Exceptions\ClientDeniedException { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
+
+/** Exception indicating that creating accounts is not allowed */
+class AccountCreateDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_CREATE_NOT_ALLOWED"; }
+
+/** Exception indicating that the user is already signed in */
+class AlreadySignedInException extends Exceptions\ClientDeniedException { public $message = "ALREADY_SIGNED_IN"; }
 
 /** Exception indicating that this group membership already exists */
 class DuplicateGroupMembershipException extends Exceptions\ClientErrorException { public $message = "GROUP_MEMBERSHIP_EXISTS"; }
@@ -108,12 +115,14 @@ class AccountsApp extends AppBase
     /** Authenticator for the current Run() */
     private ?Authenticator $authenticator;
     
+    private ObjectDatabase $database;
+    
     public static function getVersion() : string { return "2.0.0-alpha"; } 
     
     public static function getUsage() : array 
     { 
         return array(
-            'install --username name --password raw',
+            'install',
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -121,7 +130,7 @@ class AccountsApp extends AppBase
             'setfullname --fullname name',
             'changepassword --username text --new_password raw (--auth_password raw | --auth_recoverykey text)',
             'emailrecovery --username text',
-            'createaccount (--email email | --username alphanum) --password raw',
+            'createaccount (--email email | --username alphanum) --password raw [--admin bool]',
             'unlockaccount --account id --unlockcode alphanum',
             'createsession --username text --auth_password raw [--authsource id]',
                 "\t [--recoverykey text | --auth_twofactor int] [--name name]",
@@ -239,25 +248,14 @@ class AccountsApp extends AppBase
     /**
      * Installs the app by importing its SQL file, creating config, and creating an admin account
      * @throws UnknownActionException if config already exists
-     * @return array `{account:Account}`
-     * @see Account::GetClientObject()
      */
-    protected function Install(Input $input) : array
+    public function Install(Input $input) : void
     {
         if (isset($this->config)) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/apps/accounts");
         
         Config::Create($this->database)->Save();
-        
-        $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
-        $password = $input->GetParam("password", SafeParam::TYPE_RAW);
-
-        $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password);
-
-        $account->setAdmin(true);
-        
-        return array('account'=>$account->GetClientObject(Account::OBJECT_FULL));
     }
     
     /**
@@ -388,16 +386,13 @@ class AccountsApp extends AppBase
     
     /**
      * Emails a recovery key to the user's registered emails
-     * @throws Exceptions\ClientDeniedException if already signed in
      * @throws UnknownAccountException if the given username is invalid
      * @throws RecoveryKeyCreateException if crypto or two factor are enabled
      * @return string[] partially redacted email address strings
      * @see Account::GetEmailRecipients
      */
     protected function EmailRecovery(Input $input) : array
-    {
-        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
-        
+    {        
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
         $account = Account::TryLoadByUsername($this->database, $username);
         if ($account === null) throw new UnknownAccountException();
@@ -424,13 +419,14 @@ class AccountsApp extends AppBase
      */
     protected function CreateAccount(Input $input) : array
     {
-        if ($this->authenticator !== null) $this->authenticator->RequireAdmin();
-        else if (!$this->config->GetAllowCreateAccount()) throw new Exceptions\ClientDeniedException();
-        $admin = $this->authenticator !== null;
-
+        $admin = $this->authenticator !== null; if ($admin) $this->authenticator->RequireAdmin();
+        
+        $admin = $admin || $this->API->GetInterface()->isPrivileged();
+        
+        if (!$admin && !$this->config->GetAllowCreateAccount()) throw new AccountCreateDeniedException();
+        
         $emailasuser = $this->config->GetUseEmailAsUsername();
         $requireemail = $this->config->GetRequireContact();
-        $username = null; $emailaddr = null;
         
         if ($emailasuser || $requireemail >= Config::CONTACT_EXIST) 
             $emailaddr = $input->GetParam("email", SafeParam::TYPE_EMAIL);   
@@ -441,11 +437,14 @@ class AccountsApp extends AppBase
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
               
         if (Account::TryLoadByUsername($this->database, $username) !== null) throw new AccountExistsException();
-        if ($emailaddr !== null && ContactInfo::TryLoadByInfo($this->database, $emailaddr) !== null) throw new AccountExistsException();
+        
+        if (isset($emailaddr) && ContactInfo::TryLoadByInfo($this->database, $emailaddr) !== null) throw new AccountExistsException();
 
         $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password);
         
-        if ($emailaddr !== null) $contact = ContactInfo::Create($this->database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
+        if (isset($emailaddr)) $contact = ContactInfo::Create($this->database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
+        
+        if ($admin && $input->TryGetParam('admin',SafeParam::TYPE_BOOL)) $account->setAdmin(true);
 
         if (!$admin && $requireemail >= Config::CONTACT_VALID)
         {
@@ -469,14 +468,11 @@ class AccountsApp extends AppBase
     
     /**
      * Unlocks the user's account if it is disabled and has an unlock code
-     * @throws Exceptions\ClientDeniedException if already logged in
      * @throws UnknownAccountException if the given account is invalid
      * @throws AuthenticationFailedException if the unlock code is invalid
      */
     protected function UnlockAccount(Input $input) : void
-    {
-        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException();
-        
+    {        
         $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);        
         $account = Account::TryLoadByID($this->database, $accountid);
         if ($account === null) throw new UnknownAccountException();
@@ -515,7 +511,7 @@ class AccountsApp extends AppBase
      */
     protected function CreateSession(Input $input) : array
     {
-        if ($this->authenticator !== null) throw new Exceptions\ClientDeniedException(); // TODO these are abstract - fix
+        if ($this->authenticator !== null) throw new AlreadySignedInException();
         
         $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
         $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW);
@@ -536,8 +532,9 @@ class AccountsApp extends AppBase
         /* if we found an account, verify the password and correct authsource */
         if ($account !== null)
         {            
-            if ($account->GetAuthSource() === null && !($authsource instanceof Auth\Local)) throw new AuthenticationFailedException();
-            else if ($account->GetAuthSource() !== null && $account->GetAuthSource() !== $authsource) throw new AuthenticationFailedException();
+            if (($account->GetAuthSource() === null && !($authsource instanceof Auth\Local))
+                ($account->GetAuthSource() !== null && $account->GetAuthSource() !== $authsource)) 
+                    throw new AuthenticationFailedException();
             
             if (!$account->VerifyPassword($password)) throw new AuthenticationFailedException();
         }
@@ -607,7 +604,6 @@ class AccountsApp extends AppBase
         $session = Session::Create($this->database, $account, $client->DeleteSession());
         
         /* update object dates */
-        $session->setActiveDate();
         $client->setLoggedonDate()->setActiveDate();
         $account->setLoggedonDate()->setActiveDate();
         

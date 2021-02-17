@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -84,22 +86,22 @@ class Client extends AuthObject
      */
     public function CheckMatch(IOInterface $interface, string $key) : bool
     {        
-        $good = $this->CheckKeyMatch($key);
+        if (!$this->CheckKeyMatch($key)) return false;
         
-        if ($good)
-        {
-            $this->SetScalar('useragent', $interface->getUserAgent());
-            $this->SetScalar('lastaddr', $interface->GetAddress());  
-        }
+        $maxage = $this->GetAccount()->GetSessionTimeout(); $time = Main::GetInstance()->GetTime();
         
-        return $good;
+        if ($maxage !== null && $time - $this->getActiveDate() > $maxage) return false;
+
+        $this->SetScalar('useragent', $interface->getUserAgent());
+        $this->SetScalar('lastaddr', $interface->GetAddress());  
+        
+        return true;
     }
 
     /** Deletes this client and its session */
     public function Delete() : void
     {
-        if ($this->HasObject('session'))
-            $this->DeleteObject('session'); 
+        $this->DeleteSession();
         
         parent::Delete();
     }

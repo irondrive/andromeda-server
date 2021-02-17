@@ -106,7 +106,7 @@ class Authenticator
 
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
-        $session->setActiveDate(); $account->setActiveDate(); $client->setActiveDate();
+        $account->setActiveDate(); $client->setActiveDate();
         
         if ($input->HasParam('auth_sudouser') && $account->isAdmin())
         {

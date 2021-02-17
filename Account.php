@@ -75,7 +75,7 @@ class Account extends AuthEntity
      * @return array<string, mixed>
      */
     protected static function GetInheritedFields() : array { return array(
-        'max_session_age' => null,
+        'session_timeout' => null,
         'max_password_age' => null,
         'features__admin' => false,
         'features__enabled' => true,
@@ -257,8 +257,8 @@ class Account extends AuthEntity
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
     public function resetPasswordDate() : self  { return $this->SetDate('passwordset', 0); }
     
-    /** Returns the maximum allowed session age for the account */
-    public function GetMaxSessionAge() : ?int   { return $this->TryGetScalar('max_session_age') ?? self::GetInheritedFields()['max_session_age']; }
+    /** Returns the maximum allowed time since a lesson was last active for it to be valid */
+    public function GetSessionTimeout() : ?int   { return $this->TryGetScalar('session_timeout') ?? self::GetInheritedFields()['session_timeout']; }
     private function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age') ?? self::GetInheritedFields()['max_password_age']; }
     
     /**
@@ -399,10 +399,10 @@ class Account extends AuthEntity
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
             counters:{groups:int,sessions:int,contactinfos:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contactinfos:?int,recoverykeys:?int}, features:{admin:bool,enabled:bool,forcetf:bool,allowcrypto:bool}, 
-            max_session_age:?int, max_password_age:?int} \
+            session_timeout:?int, max_password_age:?int} \
         if OBJECT_FULL, add: {contactinfos:[id:ContactInfo], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:{id:class}], 
-            features_from:[string:{id:class}], max_session_age_from:{id:class}, max_password_age_from:{id:class}}
+            features_from:[string:{id:class}], session_timeout_from:{id:class}, max_password_age_from:{id:class}}
      * @see ContactInfo::GetClientObject()
      * @see TwoFactor::GetClientObject()
      * @see Client::GetClientObject()
@@ -424,7 +424,7 @@ class Account extends AuthEntity
                 'counters' => $this->GetAllCounters(),
                 'limits' => $this->GetAllCounterLimits(),
                 'features' => $this->GetAllFeatures(),
-                'max_session_age' => $this->GetMaxSessionAge(),
+                'session_timeout' => $this->GetSessionTimeout(),
                 'max_password_age' => $this->GetMaxPasswordAge()
             ));
         }
@@ -446,7 +446,7 @@ class Account extends AuthEntity
                 'groups' => array_keys($this->GetGroups()),
                 'limits_from' => $this->ToInheritsScalarFromClient([$this,'GetAllCounterLimits']),
                 'features_from' => $this->ToInheritsScalarFromClient([$this,'GetAllFeatures']),
-                'max_session_age_from' => self::toIDType($this->TryGetInheritsScalarFrom('max_session_age')),
+                'session_timeout_from' => self::toIDType($this->TryGetInheritsScalarFrom('session_timeout')),
                 'max_password_age_from' => self::toIDType($this->TryGetInheritsScalarFrom('max_password_age'))
             ));
         }

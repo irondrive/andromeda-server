@@ -45,21 +45,21 @@ abstract class AuthEntity extends StandardObject
             'counters_limits__sessions' => null, // maximum number of sessions for the account
             'counters_limits__contactinfos' => null, // maximum number of contacts for the account
             'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
-            'max_session_age' => null, // server-side timeout - max time for a session to be inactive
+            'session_timeout' => null, // server-side timeout - max time for a session to be inactive
             'max_password_age' => null, // max time since the account's password changed
             'dates__modified' => null // last timestamp these properties were modified
         ));
     }
     
     /** defines command usage for SetProperties() */
-    public static function GetPropUsage() : string { return "[--max_session_age int] [--max_password_age int] ".
+    public static function GetPropUsage() : string { return "[--session_timeout int] [--max_password_age int] ".
                                                             "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
                                                             "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool]"; }
 
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
     {
-        foreach (array('max_session_age','max_password_age') as $prop)
+        foreach (array('session_timeout','max_password_age') as $prop)
             if ($input->HasParam($prop)) $this->SetScalar($prop, $input->TryGetParam($prop, SafeParam::TYPE_INT));
         
         foreach (array('max_sessions','max_contactinfos','max_recoverykeys') as $prop)
