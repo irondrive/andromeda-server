@@ -8,6 +8,7 @@ require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emai
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/exceptions/ErrorLogEntry.php"); use Andromeda\Core\Exceptions\ErrorLogEntry;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException, DatabaseConfigException};
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
@@ -42,6 +43,7 @@ class ServerApp extends AppBase
             'usage|help', 
             'runtests',
             'install [--enable bool]',
+            'installapps',
             'dbconf '.Database::GetInstallUsage(),
             ...Database::GetInstallUsages(),
             'phpinfo',
@@ -61,6 +63,8 @@ class ServerApp extends AppBase
  
     private ?Authenticator $authenticator = null;
     
+    private ObjectDatabase $database;
+    
     /** if true, the Accounts app is installed and should be used */
     private bool $useAuth;
     
@@ -72,8 +76,7 @@ class ServerApp extends AppBase
         parent::__construct($api);
         $this->database = $api->GetDatabase();
         
-        $this->useAuth = file_exists(ROOT."/apps/accounts/Authenticator.php");
-        if ($this->useAuth) { require_once(ROOT."/apps/accounts/Authenticator.php"); }
+        $this->useAuth = array_key_exists('accounts',$this->API->GetApps());
     }
 
     /**
@@ -114,6 +117,7 @@ class ServerApp extends AppBase
             
             case 'dbconf':  return $this->ConfigDB($input);
             case 'install': return $this->Install($input);
+            case 'installapps': return $this->InstallApps($input);
             
             case 'phpinfo':    return $this->PHPInfo($input);
             case 'serverinfo': return $this->ServerInfo($input);
@@ -204,7 +208,7 @@ class ServerApp extends AppBase
      * @throws UnknownActionException if config already exists
      * @return array `{apps:[string]}` list of registered apps
      */
-    protected function Install(Input $input) : array
+    public function Install(Input $input) : array
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
@@ -219,6 +223,16 @@ class ServerApp extends AppBase
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
         
         return array('apps'=>array_filter($apps,function($e){ return $e !== 'server'; }));
+    }
+    
+    protected function InstallApps(Input $input) : array
+    {
+        if (!$this->isAdmin) throw new AuthFailedException();
+        
+        return array_map(function(AppBase $app)use($input){ 
+            try { return $app->Install($input); }
+            catch (UnknownActionException $e){ return null; }
+        }, $this->API->GetApps());
     }
     
     /**

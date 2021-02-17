@@ -112,16 +112,21 @@ abstract class StandardObject extends BaseObject
      * Checks whether the given counter plus a delta would exceed the limit
      * @param string $name the name of the counter and counter limit field to check
      * @param int $delta the value to try incrementing the counter by
-     * @return bool if true, the limit exists and is exceeded
+     * @param bool $except if true, throw an exception instead of returning false
+     * @return bool if true, the limit exists and is not exceeded
+     * @throws CounterOverLimitException if $except and retval is false
      */
-    protected function IsCounterOverLimit(string $name, int $delta = 0) : bool
+    protected function CheckCounter(string $name, int $delta = 0, bool $except = true) : bool
     {
         if (($limit = $this->TryGetCounterLimit($name)) !== null)
         {
-            $value = $this->GetCounter($name) + $delta;
-            if ($value > $limit) return true;
+            if ($this->GetCounter($name) + $delta > $limit) 
+            {
+                if (!$except) return false;
+                else throw new CounterOverLimitException($name);
+            }
         } 
-        return false;
+        return true;
     }
     
     /**
@@ -135,8 +140,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
     {
-        if (!$ignoreLimit && $delta > 0 && $this->IsCounterOverLimit($name, $delta))
-            throw new CounterOverLimitException($name); 
+        if (!$ignoreLimit && $delta > 0) $this->CheckCounter($name, $delta);
             
         return parent::DeltaCounter("counters__$name",$delta); 
     }
