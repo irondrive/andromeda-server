@@ -36,7 +36,7 @@ abstract class SingletonObject extends StandardObject
      */
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
-        if (count(static::LoadAll($database) > 0)) 
+        if (count(static::LoadAll($database)) > 0) 
             throw new DuplicateSingletonException();
         
         return (self::$instances[static::class] = parent::BaseCreate($database));

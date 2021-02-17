@@ -31,6 +31,8 @@ abstract class AppBase implements Transactions
     
     public function Test(Input $input) { }
     
+    public function Install(Input $input) { }
+    
     /**
      * Returns an array of strings showing the CLI usage of the app
      * @return array<string> possible commands
