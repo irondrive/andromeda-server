@@ -50,6 +50,11 @@ class QueryBuilder
     /** Returns a string asserting the given column is null */
     public function IsNull(string $key) : string { return "$key IS NULL"; }
     
+    public static function EscapeWildcards(string $query) : string
+    {
+        return str_replace('%','\%',str_replace('_','\_',$query));
+    }
+    
     /**
      * Returns a string comparing the given column to a value using LIKE
      * @param string $key the name of the column to compare
@@ -60,7 +65,7 @@ class QueryBuilder
     public function Like(string $key, string $val, bool $hasMatch = false) : string 
     {
         $val = str_replace('\\','\\\\',$val);
-        if (!$hasMatch) $val = "%$val%";
+        if (!$hasMatch) $val = '%'.static::EscapeWildcards($val).'%';
         return $this->BaseCompare($key,$val,'LIKE'); 
     }
     
