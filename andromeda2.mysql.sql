@@ -27,6 +27,8 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `features__enabled` tinyint(1) DEFAULT NULL,
   `features__forcetf` tinyint(1) DEFAULT NULL,
   `features__allowcrypto` tinyint(1) DEFAULT NULL,
+  `features__accountsearch` tinyint(2) DEFAULT NULL,
+  `features__groupsearch` tinyint(2) DEFAULT NULL,
   `counters_limits__sessions` tinyint(4) DEFAULT NULL,
   `counters_limits__contactinfos` tinyint(4) DEFAULT NULL,
   `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
@@ -43,7 +45,8 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `twofactors` tinyint(4) NOT NULL DEFAULT 0,
   `recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
+  UNIQUE KEY `username` (`username`),
+  KEY `fullname` (`fullname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -158,6 +161,8 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `features__enabled` tinyint(1) DEFAULT NULL,
   `features__forcetf` tinyint(1) DEFAULT NULL,
   `features__allowcrypto` tinyint(1) DEFAULT NULL,
+  `features__accountsearch` tinyint(2) DEFAULT NULL,
+  `features__groupsearch` tinyint(2) DEFAULT NULL,
   `counters_limits__sessions` tinyint(4) DEFAULT NULL,
   `counters_limits__contactinfos` tinyint(4) DEFAULT NULL,
   `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,

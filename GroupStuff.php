@@ -42,6 +42,8 @@ abstract class AuthEntity extends StandardObject
             'features__enabled' => null, // true if the account is enabled
             'features__forcetf' => null, // true if two-factor is required to create sessions (not just clients)
             'features__allowcrypto' => null, // true if server-side account crypto is enabled
+            'features__accountsearch' => null, // whether looking up accounts by name is allowed
+            'features__groupsearch' => null, // whether looking up groups by name is allowed
             'counters_limits__sessions' => null, // maximum number of sessions for the account
             'counters_limits__contactinfos' => null, // maximum number of contacts for the account
             'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
@@ -54,7 +56,8 @@ abstract class AuthEntity extends StandardObject
     /** defines command usage for SetProperties() */
     public static function GetPropUsage() : string { return "[--session_timeout int] [--max_password_age int] ".
                                                             "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
-                                                            "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool]"; }
+                                                            "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool] ".
+                                                            "[--accountsearch int] [--groupsearch int]"; }
 
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
@@ -68,6 +71,9 @@ abstract class AuthEntity extends StandardObject
         foreach (array('admin','enabled','forcetf','allowcrypto') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_BOOL));
         
+        foreach (array('accountsearch','groupsearch') as $prop)
+            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_INT));
+            
         return $this->SetDate('modified');
     }
 }

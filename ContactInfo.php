@@ -4,6 +4,7 @@ require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 /** An object describing a contact method for a user account */
 class ContactInfo extends StandardObject
@@ -25,6 +26,23 @@ class ContactInfo extends StandardObject
     public static function TryLoadByInfo(ObjectDatabase $database, string $info) : ?ContactInfo
     {
         return static::TryLoadUniqueByKey($database, 'info', $info);
+    }
+    
+    /**
+     * Returns all accounts matching the given contact info
+     * @param ObjectDatabase $database database reference
+     * @param string $info contact info to match (wildcard)
+     * @param int $limit return up to this many
+     * @return array Account
+     * @see Account::GetClientObject()
+     */
+    public static function LoadAccountsMatchingInfo(ObjectDatabase $database, string $info, int $limit) : array
+    {
+        $q = new QueryBuilder(); $info = QueryBuilder::EscapeWildcards($info).'%'; // search by prefix
+        
+        $loaded = static::LoadByQuery($database, $q->Where($q->Like('info',$info,true))->Limit($limit));
+        
+        $retval = array(); foreach ($loaded as $obj){ $acct = $obj->GetAccount(); $retval[$acct->ID()] = $acct; }; return $retval;
     }
     
     /** Returns the enum describing the type of contact info */

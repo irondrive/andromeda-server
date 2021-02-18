@@ -2,6 +2,7 @@
 
 require_once(ROOT."/apps/accounts/GroupStuff.php");
 
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
@@ -93,6 +94,23 @@ class Group extends AuthEntity
     {
         return static::TryLoadUniqueByKey($database, 'name', $name);
     }
+    
+    /**
+     * Loads all groups matching the given name
+     * @param ObjectDatabase $database database reference
+     * @param string $name name to match (wildcard)
+     * @param int $limit max number to load - returns nothing if exceeded
+     * @return array Group
+     * @see Group::GetClientObject()
+     */
+    public static function LoadAllMatchingName(ObjectDatabase $database, string $name, int $limit) : array
+    {
+        $q = new QueryBuilder(); $name = QueryBuilder::EscapeWildcards($name).'%'; // search by prefix
+        
+        $loaded = parent::LoadByQuery($database, $q->Where($q->Like('name',$name,true))->Limit($limit+1));
+        
+        return (count($loaded) >= $limit+1) ? array() : $loaded;
+    }
 
     // TODO clean this up (see account)
     public function GetMailTo() : array
@@ -137,30 +155,38 @@ class Group extends AuthEntity
         parent::Delete();
     }
     
+    const OBJECT_FULL = 1; const OBJECT_ADMIN = 2;
+    
     /**
      * Gets this group as a printable object
-     * @param bool $full if true, show the list of account IDs
+     * @param int $level if FULL, show list of account IDs, if ADMIN, show details
      * @return array `{id:string,name:string,priority:int,comment:?string,dates:{created:float}}` \
         if full, add `{accounts:[id]}` \
         also returns all inheritable account properties
      * @see Account::GetClientObject()
      */
-    public function GetClientObject(bool $full = false) : array
+    public function GetClientObject(int $level = 0) : array
     {
         $retval = array(
             'id' => $this->ID(),
-            'name' => $this->GetDisplayName(),
-            'priority' => $this->GetPriority(),
-            'comment' => $this->GetComment(),
-            'dates' => $this->GetAllDates(),
-            'features' => $this->GetAllFeatures(),
-            'counters' => $this->GetAllCounters(),
-            'limits' => $this->GetAllCounterLimits(),
-            'session_timeout' => $this->TryGetScalar('session_timeout'),
-            'max_password_age' => $this->TryGetScalar('max_password_age')
+            'name' => $this->GetDisplayName()
         );
         
-        if ($full) $retval['accounts'] = array_map(function($e){ return $e->ID(); }, array_values($this->GetAccounts()));
+        if ($level && self::OBJECT_ADMIN)
+        {
+            $retval = array_merge($retval, array(
+                'priority' => $this->GetPriority(),
+                'comment' => $this->GetComment(),
+                'dates' => $this->GetAllDates(),
+                'features' => $this->GetAllFeatures(),
+                'counters' => $this->GetAllCounters(),
+                'limits' => $this->GetAllCounterLimits(),
+                'session_timeout' => $this->TryGetScalar('session_timeout'),
+                'max_password_age' => $this->TryGetScalar('max_password_age')
+            ));
+        }            
+        
+        if ($level && self::OBJECT_FULL) $retval['accounts'] = array_map(function($e){ return $e->ID(); }, array_values($this->GetAccounts()));
         
         return $retval;
     }

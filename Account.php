@@ -81,6 +81,8 @@ class Account extends AuthEntity
         'features__enabled' => true,
         'features__forcetf' => false,
         'features__allowcrypto' => true,
+        'features__accountsearch' => 1,
+        'features__groupsearch' => 1,
         'counters_limits__sessions' => null,
         'counters_limits__contactinfos' => null,
         'counters_limits__recoverykeys' => null
@@ -221,6 +223,12 @@ class Account extends AuthEntity
     /** True if account-based server-side crypto is allowed */
     public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? self::GetInheritedFields()['features__allowcrypto']; }
     
+    /** Returns 0 if account search is disabled, or N if up to N matches are allowed */
+    public function GetAllowAccountSearch() : int { return $this->TryGetFeature('accountsearch') ?? self::GetInheritedFields()['features__accountsearch']; }
+
+    /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
+    public function GetAllowGroupSearch() : int { return $this->TryGetFeature('groupsearch') ?? self::GetInheritedFields()['features__groupsearch']; }
+    
     /** True if this account has administrator privileges */
     public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? self::GetInheritedFields()['features__admin']; }
     
@@ -293,6 +301,32 @@ class Account extends AuthEntity
     {
         $info = ContactInfo::TryLoadByInfo($database, $info);
         if ($info === null) return null; else return $info->GetAccount();
+    }
+    
+    /**
+     * Returns all accounts whose username, fullname or contact info matches the given info
+     * @param ObjectDatabase $database database reference
+     * @param string $info username/other info to match by (wildcard)
+     * @param int $limit max # to load - returns nothing if exceeded (in a single category)
+     * @return array Account
+     * @see Account::GetClientObject()
+     */
+    public static function LoadAllMatchingInfo(ObjectDatabase $database, string $info, int $limit) : array
+    {
+        $q1 = new QueryBuilder(); $q2 = new QueryBuilder(); 
+        
+        $info = QueryBuilder::EscapeWildcards($info).'%'; // search by prefix
+        
+        $loaded1 = parent::LoadByQuery($database, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1));
+        if (count($loaded1) >= $limit+1) $loaded1 = array(); else $limit -= count($loaded1);
+        
+        $loaded2 = ContactInfo::LoadAccountsMatchingInfo($database, $info, $limit+1);
+        if (count($loaded2) >= $limit+1) $loaded2 = array(); else $limit -= count($loaded2);
+        
+        $loaded3 = parent::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
+        if (count($loaded3) >= $limit+1) $loaded3 = array(); else $limit -= count($loaded3);
+        
+        return array_merge($loaded1, $loaded2, $loaded3);
     }
     
     /**
@@ -398,8 +432,8 @@ class Account extends AuthEntity
      * @return array `{id:string,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
             counters:{groups:int,sessions:int,contactinfos:int,clients:int,twofactors:int,recoverykeys:int}, 
-            limits:{sessions:?int,contactinfos:?int,recoverykeys:?int}, features:{admin:bool,enabled:bool,forcetf:bool,allowcrypto:bool}, 
-            session_timeout:?int, max_password_age:?int} \
+            limits:{sessions:?int,contactinfos:?int,recoverykeys:?int}, features:{admin:bool,enabled:bool,forcetf:bool,allowcrypto:bool
+                accountsearch:int, groupsearch:int},session_timeout:?int, max_password_age:?int} \
         if OBJECT_FULL, add: {contactinfos:[id:ContactInfo], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:{id:class}], 
             features_from:[string:{id:class}], session_timeout_from:{id:class}, max_password_age_from:{id:class}}

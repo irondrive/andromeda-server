@@ -15,6 +15,8 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 ,  `features__enabled` integer DEFAULT NULL
 ,  `features__forcetf` integer DEFAULT NULL
 ,  `features__allowcrypto` integer DEFAULT NULL
+,  `features__accountsearch` integer DEFAULT NULL
+,  `features__groupsearch` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
 ,  `counters_limits__contactinfos` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL
@@ -117,6 +119,8 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 ,  `features__enabled` integer DEFAULT NULL
 ,  `features__forcetf` integer DEFAULT NULL
 ,  `features__allowcrypto` integer DEFAULT NULL
+,  `features__accountsearch` integer DEFAULT NULL
+,  `features__groupsearch` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
 ,  `counters_limits__contactinfos` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL
@@ -185,6 +189,7 @@ CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_groups*object*Apps\Accounts
 CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_id" ON "a2_objects_apps_accounts_groupjoin" (`id`);
 CREATE INDEX "idx_a2_objects_apps_accounts_contactinfo_type" ON "a2_objects_apps_accounts_contactinfo" (`type`);
 CREATE INDEX "idx_a2_objects_apps_accounts_contactinfo_account*object*Apps\Accounts\Account*aliases" ON "a2_objects_apps_accounts_contactinfo" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_account_fullname" ON "a2_objects_apps_accounts_account" (`fullname`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_aid" ON "a2_objects_apps_accounts_session" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_cid" ON "a2_objects_apps_accounts_session" (`client`);
 CREATE INDEX "idx_a2_objects_apps_accounts_client_account*object*Apps\Accounts\Account*clients" ON "a2_objects_apps_accounts_client" (`account`);

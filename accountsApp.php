@@ -55,6 +55,9 @@ class AccountCreateDeniedException extends Exceptions\ClientDeniedException { pu
 /** Exception indicating that the user is already signed in */
 class AlreadySignedInException extends Exceptions\ClientDeniedException { public $message = "ALREADY_SIGNED_IN"; }
 
+/** Exception indicating that account/group search is not allowed */
+class SearchDeniedException extends Exceptions\ClientDeniedException { public $message = "SEARCH_NOT_ALLOWED"; }
+
 /** Exception indicating that this group membership already exists */
 class DuplicateGroupMembershipException extends Exceptions\ClientErrorException { public $message = "GROUP_MEMBERSHIP_EXISTS"; }
 
@@ -146,8 +149,10 @@ class AccountsApp extends AppBase
             'deleteallauth --auth_password raw [--everyone bool]',
             'deletetwofactor --auth_password raw --twofactor id',
             'deletecontactinfo --type int --info email',
+            'searchaccounts --name text',
+            'searchgroups --name text',
             'listaccounts [--limit int] [--offset int]',
-            'listgroups [--limit int] [--offset int]',
+            'listgroups [--limit int] [--offset int]',            
             'creategroup --name name [--priority int] [--comment text]',
             'editgroup --group id [--name name] [--priority int] [--comment text]',
             'getgroup --group id',
@@ -227,6 +232,8 @@ class AccountsApp extends AppBase
             case 'deletetwofactor':     return $this->DeleteTwoFactor($input);
             case 'deletecontactinfo':   return $this->DeleteContactInfo($input); 
             
+            case 'searchaccounts':      return $this->SearchAccounts($input);
+            case 'searchgroups':        return $this->SearchGroups($input);
             case 'listaccounts':        return $this->ListAccounts($input);
             case 'listgroups':          return $this->ListGroups($input);
             case 'creategroup':         return $this->CreateGroup($input);
@@ -298,7 +305,7 @@ class AccountsApp extends AppBase
     }
 
     /**
-     * Gets the current account, or the specified one (if admin)
+     * Gets the current account object, or the specified one
      * @throws UnknownAccountException if the specified account is not valid
      * @return array Account
      * @see Account::GetClientObject()
@@ -307,18 +314,22 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) return null;
         
-        $type = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ? Account::OBJECT_FULL : 0;
+        $account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR);
         
-        if (($account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR)) !== null)
+        if ($account !== null)
         {
-            $this->authenticator->RequireAdmin();
-            
             $account = Account::TryLoadByID($this->database, $account);
             if ($account === null) throw new UnknownAccountException();
-            return $account->GetClientObject($type | Account::OBJECT_ADMIN);
         }
+        else $account = $this->authenticator->GetAccount();
         
-        return $this->authenticator->GetAccount()->GetClientObject($type);
+        $admin = $this->authenticator->isAdmin();
+        
+        $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) && ($account === null || $admin);
+
+        $type = ($full ? Account::OBJECT_FULL : 0) | ($admin ? Account::OBJECT_ADMIN : 0);
+        
+        return $account->GetClientObject($type);
     }
 
     /**
@@ -482,6 +493,7 @@ class AccountsApp extends AppBase
             $code = $input->GetParam("unlockcode", SafeParam::TYPE_RANDSTR);
             if ($account->getUnlockCode() !== $code) throw new AuthenticationFailedException();           
         }
+        
         $account->setUnlockCode(null)->setEnabled(null);
         
         $contacts = $account->GetContactInfos();
@@ -532,7 +544,7 @@ class AccountsApp extends AppBase
         /* if we found an account, verify the password and correct authsource */
         if ($account !== null)
         {            
-            if (($account->GetAuthSource() === null && !($authsource instanceof Auth\Local))
+            if (($account->GetAuthSource() === null && !($authsource instanceof Auth\Local)) ||
                 ($account->GetAuthSource() !== null && $account->GetAuthSource() !== $authsource)) 
                     throw new AuthenticationFailedException();
             
@@ -708,7 +720,8 @@ class AccountsApp extends AppBase
 
         $contact = ContactInfo::Create($this->database, $account, $type, $info);
         
-        if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && !$this->authenticator->GetRealAccount()->isAdmin())
+        if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && 
+            !$this->authenticator->GetRealAccount()->isAdmin())
         { 
             $code = Utilities::Random(8); $contact->SetIsValid(false)->SetUnlockCode($code);
             
@@ -890,6 +903,34 @@ class AccountsApp extends AppBase
         }
     }
     
+    protected function SearchAccounts(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        if (!($limit = $this->authenticator->GetAccount()->GetAllowAccountSearch())) throw new SearchDeniedException();
+        
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
+        
+        if (strlen($name) < 3) return array();
+
+        return array_map(function(Account $account){ return $account->GetClientObject(); },
+            Account::LoadAllMatchingInfo($this->database, $name, $limit));
+    }
+    
+    protected function SearchGroups(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        
+        if (!($limit = $this->authenticator->GetAccount()->GetAllowGroupSearch())) throw new SearchDeniedException();
+        
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
+        
+        if (strlen($name) < 3) return array();
+        
+        return array_map(function(Group $group){ return $group->GetClientObject(); },
+            Group::LoadAllMatchingName($this->database, $name, $limit));
+    }
+    
     /**
      * Returns a list of all registered accounts
      * @throws AuthenticationFailedException if not admin
@@ -926,7 +967,7 @@ class AccountsApp extends AppBase
         $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
         
         $groups = Group::LoadAll($this->database, $limit, $offset);
-        return array_map(function(Group $group){ return $group->GetClientObject(); }, $groups);
+        return array_map(function(Group $group){ return $group->GetClientObject(Group::OBJECT_ADMIN); }, $groups);
     }
     
     /**
@@ -950,7 +991,7 @@ class AccountsApp extends AppBase
 
         $group = Group::Create($this->database, $name, $priority, $comment);
         
-        return $group->Initialize()->GetClientObject(true);
+        return $group->Initialize()->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }    
     
     /**
@@ -981,7 +1022,7 @@ class AccountsApp extends AppBase
         if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT));
         if ($input->HasParam('comment')) $group->SetComment($input->TryGetParam("comment", SafeParam::TYPE_TEXT));
         
-        return $group->GetClientObject();
+        return $group->GetClientObject(Group::OBJECT_ADMIN);
     }
     
     /**
@@ -1000,7 +1041,7 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        return $group->GetClientObject(true);
+        return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
 
     /**
@@ -1046,7 +1087,7 @@ class AccountsApp extends AppBase
         if (!$account->HasGroup($group)) $account->AddGroup($group);
         else throw new DuplicateGroupMembershipException();
 
-        return $group->GetClientObject(true);
+        return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
     
     /**
@@ -1079,7 +1120,7 @@ class AccountsApp extends AppBase
         if ($account->HasGroup($group)) $account->RemoveGroup($group);
         else throw new UnknownGroupMembershipException();
         
-        return $group->GetClientObject(true);
+        return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
     
     /**
@@ -1208,7 +1249,7 @@ class AccountsApp extends AppBase
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
 
-        return $group->SetProperties($input)->GetClientObject(true);
+        return $group->SetProperties($input)->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
 
     public function Test(Input $input)
