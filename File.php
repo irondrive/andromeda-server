@@ -78,7 +78,7 @@ class File extends Item
     {
         $delta = $size - ($this->TryGetScalar('size') ?? 0);
         
-        $this->MapToLimits(function(Limits\Base $lim)use($delta){
+        return $this->MapToLimits(function(Limits\Base $lim)use($delta){
             if (!$this->onOwnerFS()) $lim->CheckSize($delta); });
     }
     
@@ -110,8 +110,7 @@ class File extends Item
      */
     public function CheckBandwidth(int $delta) : self
     {
-        $this->MapToLimits(function(Limits\Base $lim)use($delta){
-            if (!$this->onOwnerFS()) $lim->CheckBandwidth($delta); });
+        return $this->MapToLimits(function(Limits\Base $lim)use($delta){ $lim->CheckBandwidth($delta); });
     }
         
     private bool $refreshed = false;

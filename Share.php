@@ -58,6 +58,9 @@ class Share extends AuthObject
     /** Returns the account that created the share */
     public function GetOwner() : Account { return $this->GetObject('owner'); }
     
+    /** Returns the ID of the account that created the share */
+    public function GetOwnerID() : string { return $this->GetObjectID('owner'); }
+    
     /** Returns true if the share grants read access to the item */
     public function CanRead() : bool { return $this->GetFeature('read'); }
     
@@ -301,7 +304,7 @@ class Share extends AuthObject
     /**
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
-     * @return array `{id:id, owner:string, item:Item|id, itemtype:string, islink:bool, password:bool, dest:?id, desttype:?string,
+     * @return array `{id:id, owner:id, item:Item|id, itemtype:string, islink:bool, password:bool, dest:?id, desttype:?string,
         expired:bool, dates:{created:float, accessed:?float, expires:?float}, counters:{accessed:int}, limits:{accessed:?int},
         features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool}}`
      * @see Item::SubGetClientObject()
@@ -311,7 +314,7 @@ class Share extends AuthObject
     {
         return array_merge(parent::GetClientObject($secret),array(
             'id' => $this->ID(),
-            'owner' => $this->GetOwner()->GetDisplayName(),
+            'owner' => $this->GetOwnerID(),
             'item' => $item ? $this->GetItem()->GetClientObject() : $this->GetObjectID('item'),
             'itemtype' => Utilities::ShortClassName($this->GetObjectType('item')),
             'islink' => $this->IsLink(),

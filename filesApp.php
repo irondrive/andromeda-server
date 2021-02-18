@@ -94,6 +94,9 @@ class EmailShareDisabledException extends Exceptions\ClientDeniedException    { 
 /** Exception indicating that the absolute URL of a share cannot be determined */
 class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_SHARE_URI"; }
 
+/** Exception indicating that sharing to groups is not allowed */
+class ShareGroupDisabledException extends Exceptions\ClientDeniedException    { public $message = "SHARE_GROUPS_DISABLED"; }
+
 /** Exception indicating that sharing to everyone is not allowed */
 class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
 
@@ -1254,7 +1257,10 @@ class FilesApp extends AppBase
         $destgroup = $input->TryGetParam('group',SafeParam::TYPE_RANDSTR);
         $everyone = $input->TryGetParam('everyone',SafeParam::TYPE_BOOL) ?? false;
         $islink = $input->TryGetParam('link',SafeParam::TYPE_BOOL) ?? false;
-
+        
+        if ($destgroup !== null && !$account->GetAllowGroupSearch())
+            throw new ShareGroupDisabledException();
+            
         $dest = null; if (!$islink)
         {
             if ($destacct !== null)       $dest = Account::TryLoadByID($this->database, $destacct);
@@ -1493,8 +1499,8 @@ class FilesApp extends AppBase
         $fsid = $input->GetParam('filesystem', SafeParam::TYPE_RANDSTR);
         
         if ($this->authenticator->isAdmin())
-            $filesystem = FSManager::TryLoadByID($this->API->GetDatabase(), $fsid);
-        else $filesystem = FSManager::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $fsid);
+            $filesystem = FSManager::TryLoadByID($this->database, $fsid);
+        else $filesystem = FSManager::TryLoadByAccountAndID($this->database, $account, $fsid);
         
         if ($filesystem === null) throw new UnknownFilesystemException();
 
@@ -1516,8 +1522,8 @@ class FilesApp extends AppBase
         $fsid = $input->GetParam('filesystem', SafeParam::TYPE_RANDSTR);
         
         if ($this->authenticator->isAdmin())
-            $filesystem = FSManager::TryLoadByID($this->API->GetDatabase(), $fsid);
-        else $filesystem = FSManager::TryLoadByAccountAndID($this->API->GetDatabase(), $account, $fsid);
+            $filesystem = FSManager::TryLoadByID($this->database, $fsid);
+        else $filesystem = FSManager::TryLoadByAccountAndID($this->database, $account, $fsid);
         
         $unlink = $input->TryGetParam('unlink', SafeParam::TYPE_BOOL) ?? false;
 
