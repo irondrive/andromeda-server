@@ -13,6 +13,8 @@
 
 define("ROOT",__DIR__.'/');
 
+require_once(ROOT."/vendor/autoload.php");
+
 if (!version_compare(phpversion(),'7.4.0','>='))
     die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n");
 

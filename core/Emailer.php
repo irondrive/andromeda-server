@@ -8,12 +8,7 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
-if (!file_exists(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php")) 
-    die("Missing library: PHPMailer - git submodule init/update?\n");
-
-require_once(ROOT."/core/libraries/PHPMailer/src/PHPMailer.php"); use \PHPMailer\PHPMailer;
-require_once(ROOT."/core/libraries/PHPMailer/src/Exception.php");
-require_once(ROOT."/core/libraries/PHPMailer/src/SMTP.php");
+use \PHPMailer\PHPMailer; // via autoloader
 
 /** Exception indicating that sending mail failed */
 class MailSendException extends Exceptions\ServerException        { public $message = "MAIL_SEND_FAILURE"; }
