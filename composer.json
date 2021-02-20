@@ -4,7 +4,6 @@
         }
     ],
     "name" : "lightray22/andromeda-server-framework",
-    "type" : "andromeda-core",
     "description" : "Core framework for Andromeda",
     "license" : "AGPL-3.0",
     "require" : {
