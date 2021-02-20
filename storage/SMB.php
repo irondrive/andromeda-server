@@ -95,14 +95,6 @@ class SMB extends FWrapper
         
         return $this; 
     }    
-    
-    public function __destruct()
-    {
-        parent::__destruct();
-        
-        if (isset($this->state) && is_resource($this->state)) 
-            smbclient_state_free($this->state);
-    }
 
     protected function GetFullURL(string $path = "") : string
     {

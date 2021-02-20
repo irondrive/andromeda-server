@@ -302,7 +302,7 @@ abstract class FWrapper extends Storage
     }
     
     public function __destruct()
-    {        
+    {
         foreach ($this->handles as $handle)
         {
             try { $this->CloseHandle($handle); } 

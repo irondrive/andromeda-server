@@ -1489,7 +1489,7 @@ class FilesApp extends AppBase
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownFilesystemException if the given filesystem is not found
      * @return array FSManager
-     * @see FSManager::GetCLientObject()
+     * @see FSManager::GetClientObject()
      */
     protected function EditFilesystem(Input $input) : array
     {
