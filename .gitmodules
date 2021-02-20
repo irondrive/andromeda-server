@@ -1,6 +1,0 @@
-[submodule "core/libraries/PHPMailer"]
-	path = core/libraries/PHPMailer
-	url = https://github.com/PHPMailer/PHPMailer.git
-[submodule "core/libraries/php-arguments"]
-	path = core/libraries/php-arguments
-	url = https://github.com/clue/php-arguments
