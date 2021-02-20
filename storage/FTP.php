@@ -22,7 +22,7 @@ class FTPConnectionFailure extends ActivateException     { public $message = "FT
 class FTPAuthenticationFailure extends ActivateException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
 
 /** Exception indicating that a random write was requested (FTP does not support it) */
-class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_DOES_NOT_SUPPORT_MODIFY"; }
+class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_WRITE_APPEND_ONLY"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
 
@@ -118,9 +118,9 @@ class FTP extends FWrapper
 
     public function __destruct()
     {
+       parent::__destruct();
+        
        foreach ($this->appending_handles as $handle) fclose($handle);
-
-       if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
     }
     
     protected function GetFullURL(string $path = "") : string

@@ -1,9 +1,9 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\{Main, Exceptions};
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -115,6 +115,7 @@ class SFTP extends FWrapper
         $privfile = "$fpath/privkey"; $pubfile = "$fpath/pubkey";
         
         $datadir = Main::GetInstance()->GetConfig()->GetDataDir();
+        
         file_put_contents("$datadir/$privfile", $keyfile);
         file_put_contents("$datadir/$pubfile", $pubkey);
         
@@ -164,6 +165,7 @@ class SFTP extends FWrapper
         if ($password) { $authd = true; $authok &= ssh2_auth_password($this->ssh, $username, $password); }
         
         $datadir = Main::GetInstance()->GetConfig()->GetDataDir();
+        
         $pubkey = $this->TryGetScalar('pubkey');
         $privkey = $this->TryGetScalar('privkey');
         $keypass = $this->TryGetKeypass();
@@ -177,11 +179,6 @@ class SFTP extends FWrapper
         
         return $this;
     }
-    
-    public function __destruct()
-    {
-        if (isset($this->ssh)) try { ssh2_disconnect($this->ssh); } catch (Exceptions\PHPError $e) { }
-    }
 
     protected function GetFullURL(string $path = "") : string
     {
@@ -194,5 +191,17 @@ class SFTP extends FWrapper
         if (!ssh2_scp_send($this->ssh, $src, $this->GetPath($dest)))
             throw new FileCreateFailedException();
         return $this;
+    }
+    
+    public function isWriteable() : bool
+    {
+        try
+        {
+            $name = Utilities::Random(16).".tmp";
+            $this->CreateFile($name)->DeleteFile($name);
+            
+            return true;
+        }
+        catch (StorageException $e){ return false; }
     }
 }
