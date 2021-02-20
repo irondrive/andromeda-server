@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/apps/files/vendor/autoload.php");
+
 require_once(ROOT."/apps/files/Config.php");
 require_once(ROOT."/apps/files/ItemAccess.php");
 require_once(ROOT."/apps/files/Item.php");
