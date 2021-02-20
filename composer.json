@@ -1,18 +1,18 @@
 {
-	"authors" : [{
-			"name" : "lightray22"
-		}
-	],
-	"name" : "lightray22/andromeda-files-app",
-	"type" : "andromeda-app",
-	"description" : "File manager app for the Andromeda framework",
-	"license" : "AGPL-3.0",
-	"require" : {
+    "authors" : [{
+            "name" : "lightray22"
+        }
+    ],
+    "name" : "lightray22/andromeda-files-app",
+    "type" : "andromeda-app",
+    "description" : "File manager app for the Andromeda framework",
+    "license" : "AGPL-3.0",
+    "require" : {
         "php" : ">=7.4",
         "ext-ftp": "*",
         "ext-smbclient": "*",
         "composer/installers" : "*",
-		"sabre/dav" : "~4.1",
-		"phpseclib/phpseclib" : "~3.0"
-	}
+        "sabre/dav" : "~4.1",
+        "phpseclib/phpseclib" : "~3.0"
+    }
 }
