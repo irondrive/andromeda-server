@@ -1,3 +1,0 @@
-[submodule "libraries/GoogleAuthenticator"]
-	path = libraries/GoogleAuthenticator
-	url = https://github.com/PHPGangsta/GoogleAuthenticator.git

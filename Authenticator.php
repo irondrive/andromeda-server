@@ -167,7 +167,7 @@ class Authenticator
         
         static::StaticTryRequireCrypto($input, $account, $session);
         
-        $twofactor = $input->TryGetParam('auth_twofactor',SafeParam::TYPE_INT);
+        $twofactor = $input->TryGetParam('auth_twofactor', SafeParam::TYPE_ALPHANUM); // not an int (leading zeroes)
         if ($twofactor === null) throw new TwoFactorRequiredException();
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
