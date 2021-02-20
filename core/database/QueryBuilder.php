@@ -50,6 +50,7 @@ class QueryBuilder
     /** Returns a string asserting the given column is null */
     public function IsNull(string $key) : string { return "$key IS NULL"; }
     
+    /** Returns the given string with escaped SQL wildcard characters */
     public static function EscapeWildcards(string $query) : string
     {
         return str_replace('%','\%',str_replace('_','\_',$query));
