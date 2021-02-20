@@ -10,6 +10,8 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
+require_once(ROOT."/apps/accounts/vendor/autoload.php");
+
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Authenticator.php");
 require_once(ROOT."/apps/accounts/AuthObject.php");
@@ -691,7 +693,7 @@ class AccountsApp extends AppBase
         $this->authenticator->TryRequireCrypto();
         
         $account = $this->authenticator->GetAccount();
-        $code = $input->GetParam("auth_twofactor", SafeParam::TYPE_INT);
+        $code = $input->GetParam("auth_twofactor", SafeParam::TYPE_ALPHANUM); // not an int (leading zeroes)
         if (!$account->CheckTwoFactor($code, true)) 
             throw new AuthenticationFailedException();
     }

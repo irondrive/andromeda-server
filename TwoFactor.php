@@ -9,10 +9,6 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/apps/accounts/Account.php");
 
-if (!file_exists(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/GoogleAuthenticator.php")) 
-    die("Missing library: GoogleAuthenticator - git submodule init/update?");
-require_once(ROOT."/apps/accounts/libraries/GoogleAuthenticator/PHPGangsta/GoogleAuthenticator.php"); use PHPGangsta_GoogleAuthenticator;
-
 /** Object for tracking used two factor codes, to prevent replay attacks */
 class UsedToken extends StandardObject
 {
@@ -70,7 +66,7 @@ class TwoFactor extends StandardObject
     const SECRET_LENGTH = 32; 
     
     /** the time tolerance for codes, as a multiple of 30-seconds */
-    const TIME_TOLERANCE = 1;
+    const TIME_TOLERANCE = 2;
     
     /** Gets the account that owns this object */
     public function GetAccount() : Account { return $this->GetObject('account'); }
@@ -109,7 +105,7 @@ class TwoFactor extends StandardObject
                 ->SetScalar('comment',$comment)
                 ->SetObject('account',$account);
         
-        $ga = new PHPGangsta_GoogleAuthenticator();
+        $ga = new \PHPGangsta_GoogleAuthenticator();
         $secret = $ga->createSecret(self::SECRET_LENGTH);
         
         if ($account->hasCrypto())
@@ -146,7 +142,7 @@ class TwoFactor extends StandardObject
             if ($usedtoken->GetCode() === $code) return false;
         }
 
-        $ga = new PHPGangsta_GoogleAuthenticator();
+        $ga = new \PHPGangsta_GoogleAuthenticator();
         
         if (!$ga->verifyCode($this->GetSecret(), $code, self::TIME_TOLERANCE)) return false;
 
@@ -160,7 +156,7 @@ class TwoFactor extends StandardObject
     /** Returns a Google URL for viewing a QR code of the OTP secret */
     public function GetURL() : string
     {
-        $ga = new PHPGangsta_GoogleAuthenticator();
+        $ga = new \PHPGangsta_GoogleAuthenticator();
         
         return $ga->getQRCodeGoogleUrl("Andromeda", $this->GetSecret());
     }
