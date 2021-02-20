@@ -194,26 +194,26 @@ class SafeParam
         }
         else if ($type === self::TYPE_EMAIL)
         {
-            if (mb_strlen($value) >= 128 || !($value = filter_var($value, FILTER_VALIDATE_EMAIL)))
+            if (mb_strlen($value) >= 128 || ($value = filter_var($value, FILTER_VALIDATE_EMAIL)) === false)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSNAME)
         {
             if (mb_strlen($value) >= 256 || preg_match("%[\\/?*:;{}]+%",$value) ||
                 basename($value) !== $value || in_array($value, array('.','..')) ||
-               !($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)))
+               ($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)) === false)
                     throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_FSPATH)
         {
             if (strlen($value) >= 65536 || preg_match("%[?*:;{}]+%",$value) ||
-                !($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)))
+                ($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)) === false)
                     throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_HOSTNAME)
         {
             if (mb_strlen($value) >= 256 || 
-                !($value = filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)))
+                ($value = filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) === false)
                     throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_TEXT)
@@ -221,7 +221,8 @@ class SafeParam
             if (strlen($value) >= 65536) 
                 throw new SafeParamInvalidException($key, $type);
             
-            $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS);
+            if (($value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS)) === false)
+                throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_RAW) 
         { 
