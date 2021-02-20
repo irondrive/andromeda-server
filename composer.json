@@ -12,7 +12,6 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-sodium": "*",
-        "composer/installers" : "*",
         "phpmailer/phpmailer": "~6",
         "clue/arguments": "~2"
     },
@@ -21,5 +20,8 @@
         "ext-pdo_sqlite": "For SQLite databases",
         "ext-pdo_pgsql": "For Postgresql databases",
         "ext-pgsql": "For Postgresql databases"
+    },
+    "require-dev": {
+        "phpmetrics/phpmetrics": "~2"
     }
 }

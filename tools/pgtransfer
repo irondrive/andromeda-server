@@ -1,0 +1,11 @@
+#!/bin/bash
+
+read -sp "MySQL password: " MYSQLPW
+read -sp "PGSQL password: " PGSQLPW
+
+echo "LOAD DATABASE
+    FROM mysql://root:$MYSQLPW@localhost/andromeda2
+    INTO pgsql://postgres:$PGSQLPW@localhost/andromeda
+ALTER SCHEMA 'andromeda2' rename to 'public';" > tmp.load
+
+pgloader tmp.load; rm tmp.load

@@ -3,11 +3,15 @@
 .settings
 .phpdoc
 
-data
-apps
-tools
-metrics
-vendor
-core/docs
+apps/
+vendor/
+
+data/
+metrics/
+core/docs/
+combined.php
 
 core/database/Config.php
+
+tools/mysql2sqlite
+tools/phpDocumentor.phar

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd tools; if [ ! -f phpDocumentor.phar ]; then
+   wget https://github.com/phpDocumentor/phpDocumentor/releases/download/v3.0.0/phpDocumentor.phar
+fi; cd ..
+
+rundocs(){
+    echo running $i...
+    rm -Rf $1/docs; php7.4 tools/phpDocumentor.phar -d $1 -t $1/docs --ignore "$1/vendor/" --sourcecode
+    if [ $(dirname $1) = "apps" ]; then php index.php --debug 0 server usage | grep $(basename $1) > $1/docs/USAGE; fi
+}
+
+for i in core apps/*; do rundocs $i; done
