@@ -903,6 +903,14 @@ class AccountsApp extends AppBase
         }
     }
     
+    /**
+     * Searches for accounts identified with the given name prefix
+     * @throws AuthenticationFailedException if not signed in
+     * @throws SearchDeniedException if the feature is disabled
+     * @return array Account
+     * @see Account::LoadAllMatchingInfo()
+     * @see Account::GetClientObject()
+     */
     protected function SearchAccounts(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
@@ -917,6 +925,14 @@ class AccountsApp extends AppBase
             Account::LoadAllMatchingInfo($this->database, $name, $limit));
     }
     
+    /**
+     * Searches for groups identified with the given name prefix
+     * @throws AuthenticationFailedException if not signed in
+     * @throws SearchDeniedException if the feature is disabled
+     * @return array Group
+     * @see Group::LoadAllMatchingName()
+     * @see Group::GetClientObject()
+     */
     protected function SearchGroups(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
