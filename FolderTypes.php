@@ -167,37 +167,43 @@ class SubFolder extends Folder
 
     public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite);
+        parent::CheckName($name, $overwrite, false);
+        
         $this->GetFSImpl()->RenameFolder($this, $name);
         return $this->SetScalar('name', $name);
     }
     
-    public function SetParent(Folder $folder, bool $overwrite = false) : self
+    public function SetParent(Folder $parent, bool $overwrite = false) : self
     {
-        $this->CheckIsNotChildOrSelf($folder);
-        parent::CheckParent($folder, $overwrite);
+        $this->CheckIsNotChildOrSelf($parent);
+        parent::CheckParent($parent, $overwrite, false);       
         
-        $this->GetFSImpl()->MoveFolder($this, $folder);
-        return $this->SetObject('parent', $folder);
+        $this->GetFSImpl()->MoveFolder($this, $parent);
+        return $this->SetObject('parent', $parent);
     }
     
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite);
-
-        $newfolder = static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        $folder = parent::CheckName($name, $overwrite, true);
         
-        $this->GetFSImpl()->CopyFolder($this, $newfolder); return $newfolder;
+        if ($folder !== null) $folder->DeleteChildren(false);
+
+        $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        
+        $this->GetFSImpl()->CopyFolder($this, $folder); return $folder;
     }
     
-    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self
+    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
     {
-        parent::CheckParent($folder, $overwrite);
-        $this->CheckIsNotChildOrSelf($folder);
+        $this->CheckIsNotChildOrSelf($parent);
         
-        $newfolder = static::NotifyCreate($this->database, $folder, $owner, $this->GetName());
+        $folder = parent::CheckParent($parent, $overwrite, true);
         
-        $this->GetFSImpl()->CopyFolder($this, $newfolder); return $newfolder;
+        if ($folder !== null) $folder->DeleteChildren(false);
+    
+        $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
+        
+        $this->GetFSImpl()->CopyFolder($this, $folder); return $folder;
     } 
     
     /**
@@ -220,7 +226,10 @@ class SubFolder extends Folder
      */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = static::NotifyCreate($database, $parent, $account, $name)->CheckName($name);
+        $folder = static::TryLoadByParentAndName($database, $parent, $name);
+        if ($folder !== null) throw new DuplicateItemException();
+
+        $folder = static::NotifyCreate($database, $parent, $account, $name);
         
         $folder->GetFSImpl()->CreateFolder($folder); return $folder;
     }
