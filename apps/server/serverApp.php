@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -13,19 +13,21 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
-use Andromeda\Apps\Accounts\Authenticator;
 
 /** Exception indicating that the specified mailer object does not exist */
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
 
 /** Client error indicating that the mailer config failed */
-class MailSendFailException extends Exceptions\ClientErrorException     { public $message = "MAIL_SEND_FAILURE"; }
+class MailSendFailException extends Exceptions\ClientErrorException { public $message = "MAIL_SEND_FAILURE"; }
 
 /** Client error indicating that the database config failed */
-class DatabaseFailException extends Exceptions\ClientErrorException     { public $message = "INVALID_DATABASE"; }
+class DatabaseFailException extends Exceptions\ClientErrorException { public $message = "INVALID_DATABASE"; }
 
 /** Client error indicating authentication failed */
-class AuthFailedException extends Exceptions\ClientDeniedException      { public $message = "ACCESS_DENIED"; }
+class AuthFailedException extends Exceptions\ClientDeniedException { public $message = "ACCESS_DENIED"; }
+
+/** Exception indicating an invalid app name was given */
+class InvalidAppException extends Exceptions\ClientErrorException { public $message = "INVALID_APPNAME"; }
 
 /**
  * Primary app included with the framework.
@@ -60,9 +62,7 @@ class ServerApp extends AppBase
             'geterrors '.ErrorLogEntry::GetLoadUsage()
         );
     }
- 
-    private ?Authenticator $authenticator = null;
-    
+  
     private ObjectDatabase $database;
     
     /** if true, the Accounts app is installed and should be used */
@@ -104,7 +104,9 @@ class ServerApp extends AppBase
         // if the Accounts app is installed, use it for authentication, else check interface privilege
         if ($this->useAuth && $this->database)
         {
-            $this->authenticator = Authenticator::TryAuthenticate(
+            require_once(ROOT."/apps/accounts/Authenticator.php");
+            
+            $this->authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
             $this->isAdmin = $this->authenticator !== null && $this->authenticator->isAdmin();
         }
@@ -225,6 +227,11 @@ class ServerApp extends AppBase
         return array('apps'=>array_filter($apps,function($e){ return $e !== 'server'; }));
     }
     
+    /**
+     * Runs Install() on all registered apps
+     * @throws AuthFailedException if not admin
+     * @return array [string:mixed]
+     */
     protected function InstallApps(Input $input) : array
     {
         if (!$this->isAdmin) throw new AuthFailedException();
@@ -313,8 +320,9 @@ class ServerApp extends AppBase
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM);
         
-        $this->API->GetConfig()->EnableApp($app);
-        
+        try { $this->API->LoadApp($app)->GetConfig()->EnableApp($app); }
+        catch (FailedAppLoadException $e){ throw new InvalidAppException(); }
+
         return $this->API->GetConfig()->GetApps();
     }
     

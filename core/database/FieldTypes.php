@@ -578,9 +578,9 @@ class ObjectJoin extends ObjectRefs
     }
     
     /** Return the actual join object used to join us to the given object */
-    public function GetJoinObject(BaseObject $joinobj) : ?JoinObject
+    public function GetJoinObject(BaseObject $object) : ?JoinObject
     {
-        return ($this->joinclass)::TryLoadJoin($this->database, $this, $joinobj);
+        return ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
     }
     
     /**

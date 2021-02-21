@@ -115,18 +115,7 @@ class Main extends Singleton
         }
         catch (DatabaseException $e) { $apps = array('server'); }
         
-        foreach ($apps as $app)
-        {
-            $path = ROOT."/apps/$app/$app"."App.php";
-            $app_class = "Andromeda\\Apps\\$app\\$app".'App';
-            
-            if (is_file($path)) require_once($path); 
-                else throw new FailedAppLoadException();
-                
-            if (!class_exists($app_class)) throw new FailedAppLoadException();
-            
-            $this->apps[$app] = new $app_class($this);
-        }
+        foreach ($apps as $app) $this->LoadApp($app);
 
         if ($this->database)
         {
@@ -137,6 +126,22 @@ class Main extends Singleton
         
         register_shutdown_function(function(){
             if ($this->dirty) $this->rollBack(false); });        
+    }
+    
+    public function LoadApp(string $app) : self
+    {
+        $path = ROOT."/apps/$app/$app"."App.php";
+        $app_class = "Andromeda\\Apps\\$app\\$app".'App';
+        
+        if (is_file($path)) require_once($path);
+        else throw new FailedAppLoadException();
+        
+        if (!class_exists($app_class)) throw new FailedAppLoadException();
+        
+        if (!array_key_exists($app, $this->apps))
+            $this->apps[$app] = new $app_class($this);
+        
+        return $this;
     }
     
     /**

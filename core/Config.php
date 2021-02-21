@@ -76,7 +76,6 @@ class Config extends SingletonObject
     {
         $apps = $this->GetApps();
         if (!in_array($app, $apps)) array_push($apps, $app);
-        // TODO try loading app to check validity
         return $this->SetScalar('apps', $apps);
     }
     
