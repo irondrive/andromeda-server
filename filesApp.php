@@ -136,6 +136,8 @@ class FilesApp extends AppBase
             'fileinfo --fileid id [--details bool]',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
             'getitembypath --path fspath [--folder id] [--isfile bool]',
+            'editfilemeta --fileid id [--description text]',
+            'editfoldermeta --folder id [--description text]',
             'createfolder --parent id --name fsname',
             'deletefile [--fileid id | --files id_array]',
             'deletefolder [--folder id | --folders id_array]',
@@ -148,9 +150,9 @@ class FilesApp extends AppBase
             'tagfile [--fileid id | --files id_array] --tag alphanum',
             'tagfolder [--folder id | --folders id_array] --tag alphanum',
             'deletetag --tag id',
-            'commentfile --fileid id --comment text [--private bool]',
-            'commentfolder --folder id --comment text [--private bool]',
-            'editcomment --commentid id [--comment text] [--private bool]',
+            'commentfile --fileid id --comment text',
+            'commentfolder --folder id --comment text',
+            'editcomment --commentid id [--comment text]',
             'deletecomment --commentid id',
             'sharefile [--fileid id | --files id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
             'sharefolder [--folder id | --folders id_array] (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
@@ -232,6 +234,7 @@ class FilesApp extends AppBase
             case 'download':   return $this->DownloadFile($input);
             case 'ftruncate':  return $this->TruncateFile($input);
             case 'writefile':  return $this->WriteToFile($input);
+            case 'createfolder':  return $this->CreateFolder($input);
             
             case 'getfilelikes':   return $this->GetFileLikes($input);
             case 'getfolderlikes': return $this->GetFolderLikes($input);
@@ -241,8 +244,10 @@ class FilesApp extends AppBase
             case 'fileinfo':      return $this->GetFileInfo($input);
             case 'getfolder':     return $this->GetFolder($input);
             case 'getitembypath': return $this->GetItemByPath($input);
-            case 'createfolder':  return $this->CreateFolder($input);
             
+            case 'editfilemeta':   return $this->EditFileMeta($input);
+            case 'editfoldermeta': return $this->EditFolderMeta($input);
+           
             case 'deletefile':   return $this->DeleteFile($input);
             case 'deletefolder': return $this->DeleteFolder($input);            
             case 'renamefile':   return $this->RenameFile($input);
@@ -604,7 +609,7 @@ class FilesApp extends AppBase
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function GetFileInfo(Input $input) : array
+    protected function GetFileInfo(Input $input) : ?array
     {
         $access = $this->AuthenticateFileAccess($input);
         $file = $access->GetItem(); $share = $access->GetShare();
@@ -625,7 +630,7 @@ class FilesApp extends AppBase
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function GetFolder(Input $input) : array
+    protected function GetFolder(Input $input) : ?array
     {
         if ($input->TryGetParam('folder',SafeParam::TYPE_RANDSTR))
         {
@@ -666,7 +671,7 @@ class FilesApp extends AppBase
         $return = $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
         if ($return === null) throw new UnknownFolderException(); return $return;
     }
-    
+
     /**
      * Reads an item by a path (rather than by ID) - can specify a root folder
      * 
@@ -740,6 +745,43 @@ class FilesApp extends AppBase
         
         $retval['isfile'] = ($item instanceof File); return $retval;
     }
+    
+    /**
+     * Edits file metadata
+     * @see FilesApp::EditItemMeta()
+     */
+    protected function EditFileMeta(Input $input) : ?array
+    {
+        return $this->EditItemMeta($this->AuthenticateFileAccess($input), $input);
+    }
+    
+    /**
+     * Edits folder metadata
+     * @see FilesApp::EditItemMeta()
+     */
+    protected function EditFolderMeta(Input $input) : ?array
+    {
+        return $this->EditItemMeta($this->AuthenticateFolderAccess($input), $input);
+    }
+    
+    /**
+     * Edits item metadata
+     * @param ItemAccess $access access object for item
+     * @param Input $input input object with edit values
+     * @throws ItemAccessDeniedException if accessing via share and can't modify
+     * @return array|NULL Item
+     * @see Item::GetClientObject()
+     */
+    private function EditItemMeta(ItemAccess $access, Input $input) : ?array
+    {
+        $item = $access->GetItem(); $share = $access->GetShare();
+        
+        if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+        
+        if ($input->HasParam('description')) $item->SetDescription($input->TryGetParam('description',SafeParam::TYPE_TEXT));
+        
+        return $item->GetClientObject();
+    }    
     
     /**
      * Creates a folder in the given parent
@@ -1170,10 +1212,6 @@ class FilesApp extends AppBase
         $comment = $input->GetParam('comment', SafeParam::TYPE_TEXT);       
         $cobj = Comment::Create($this->database, $account, $item, $comment);
         
-        $private = $input->TryGetParam('private', SafeParam::TYPE_BOOL);
-        if ($private !== null && $share === null) 
-            $cobj->SetPrivate($private);
-        
         return $cobj->GetClientObject();
     }
     
@@ -1196,9 +1234,6 @@ class FilesApp extends AppBase
         
         $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
         if ($comment !== null) $cobj->SetComment($comment);
-        
-        $private = $input->TryGetParam('private', SafeParam::TYPE_BOOL);
-        if ($private !== null) $cobj->SetPrivate($private);
         
         return $cobj->GetClientObject();
     }
@@ -1257,9 +1292,7 @@ class FilesApp extends AppBase
         $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
         
         $comments = $item->GetComments($limit, $offset);
-        
-        if ($share !== null) $comments = array_filter($comments, function($c){ return !$c->IsPrivate(); });
-        
+
         return array_map(function(Comment $c){ return $c->GetClientObject(); }, $comments);
     }
     
