@@ -129,32 +129,36 @@ class File extends Item
 
     public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite);
+        parent::CheckName($name, $overwrite, false);
+        
         $this->GetFSImpl()->RenameFile($this, $name); 
         return $this->SetScalar('name', $name);
     }
     
-    public function SetParent(Folder $folder, bool $overwrite = false) : self
-    {        
-        parent::CheckParent($folder, $overwrite);
-        $this->GetFSImpl()->MoveFile($this, $folder);
-        return $this->SetObject('parent', $folder);
+    public function SetParent(Folder $parent, bool $overwrite = false) : self
+    {
+        parent::CheckParent($parent, $overwrite, false);
+        
+        $this->GetFSImpl()->MoveFile($this, $parent);
+        return $this->SetObject('parent', $parent);
     }
 
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite);
-        $newfile = static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        $file = parent::CheckName($name, $overwrite, true);
+
+        $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFSImpl()->CopyFile($this, $newfile); return $newfile;
+        $this->GetFSImpl()->CopyFile($this, $file); return $file;
     }
     
-    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self
-    {        
-        parent::CheckParent($folder, $overwrite);
-        $newfile = static::NotifyCreate($this->database, $folder, $owner, $this->GetName());
+    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
+    {
+        $file = parent::CheckParent($parent, $overwrite, true);
         
-        $this->GetFSImpl()->CopyFile($this, $newfile); return $newfile;
+        $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());        
+        
+        $this->GetFSImpl()->CopyFile($this, $file); return $file;
     }
 
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
@@ -175,8 +179,12 @@ class File extends Item
      */
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
     {
-        $file = static::NotifyCreate($database, $parent, $account, $name)
-            ->CheckName($name,$overwrite)->SetSize(filesize($path),true); // TODO maybe reuse the same object for overwrite? may not want to clear all comments/shares, etc.
+        $file = static::TryLoadByParentAndName($database, $parent, $name);
+        if ($file !== null && !$overwrite) throw new DuplicateItemException();
+        
+        $file ??= static::NotifyCreate($database, $parent, $account, $name);
+        
+        $file->SetSize(filesize($path),true);
         
         $file->GetFSImpl()->ImportFile($file, $path); return $file;       
     }

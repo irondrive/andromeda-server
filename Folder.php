@@ -165,7 +165,7 @@ abstract class Folder extends Item
     private bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
     
     /** Deletes all subfiles and subfolders, refresh if not isNotify */
-    public function DeleteChildren(bool $isNotify = true) : void
+    public function DeleteChildren(bool $isNotify) : void
     {
         if (!$isNotify) $this->Refresh(true);
         

@@ -82,7 +82,7 @@ abstract class Item extends StandardObject
     public abstract function SetName(string $name, bool $overwrite = false) : self;
     
     /** Moves the item to a new parent. If $overwrite, deletes an object if the target already exists. */
-    public abstract function SetParent(Folder $folder, bool $overwrite = false) : self;
+    public abstract function SetParent(Folder $parent, bool $overwrite = false) : self;
     
     /**
      * Copies the item to a new name.  If $overwrite, deletes an object if the target already exists.
@@ -98,44 +98,54 @@ abstract class Item extends StandardObject
      * @param Folder $folder the parent folder of the new item
      * @param bool if true, overwrite a item that exists with the same name
      */
-    public abstract function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self;
+    public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self;
     
     /**
-     * Checks whether the item can be given the given name
-     * @param string $name the new name to check
-     * @param bool $overwrite if true and the name already exists, deletes it
-     * @throws DuplicateItemException if $overwrite is false and the name already exists
-     * @return $this
+     * Asserts that this item can be moved to the given name
+     * @param string $name the item name to check for
+     * @param bool $overwrite if true, delete the duplicate item
+     * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
+     * @throws DuplicateItemException if a duplicate item exists and not $overwrite
+     * @return self|NULL Item
      */
-    protected function CheckName(string $name, bool $overwrite = false) : self
+    protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?self
     {
-        if (($olditem = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name)) !== null)
-        { 
-            if ($overwrite && $olditem !== $this) $olditem->Delete(); 
-            else throw new DuplicateItemException(); 
+        $item = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
+        
+        if ($item !== null)
+        {
+            if ($overwrite && $item !== $this) 
+            {
+                if ($reuse) return $item; else $item->Delete();
+            }
+            else throw new DuplicateItemException();
         }
-        return $this;
     }
     
     /**
-     * Checks whether the item can be under the given parent
-     * @param Folder $folder the new potential parent
-     * @param bool $overwrite if true and the name already exists, deletes it
-     * @throws CrossFilesystemException if the new parent is not on the same filesystem
-     * @throws DuplicateItemException if $overwrite is false and the name already exists
-     * @return $this
+     * Asserts that this item can be moved to the given parent
+     * @param Folder $parent parent folder to check
+     * @param bool $overwrite if true, delete the duplicate item
+     * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
+     * @throws CrossFilesystemException if the parent is on a different filesystem
+     * @throws DuplicateItemException if a duplicate item exists and not $overwrite
+     * @return self|NULL Item
      */
-    protected function CheckParent(Folder $folder, bool $overwrite = false) : self
+    protected function CheckParent(Folder $parent, bool $overwrite, bool $reuse) : ?self
     {
-        if ($folder->GetFilesystemID() !== $this->GetFilesystemID())
+        if ($parent->GetFilesystemID() !== $this->GetFilesystemID())
             throw new CrossFilesystemException();
-
-        if (($olditem = static::TryLoadByParentAndName($this->database, $folder, $this->GetName())) !== null) 
-        { 
-            if ($overwrite && $olditem !== $this) $olditem->Delete(); 
-            else throw new DuplicateItemException(); 
+            
+        $item = static::TryLoadByParentAndName($this->database, $parent, $this->GetName());
+        
+        if ($item !== null)
+        {
+            if ($overwrite && $item !== $this)
+            {
+                if ($reuse) return $item; else $item->Delete();
+            }
+            else throw new DuplicateItemException();
         }
-        return $this;
     }
     
     /**
