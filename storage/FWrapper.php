@@ -40,6 +40,8 @@ abstract class FWrapper extends Storage
         return parent::Create($database, $input, $account, $filesystem)->SetPath($path);
     }
     
+    public static function GetEditUsage() : string { return "--path text"; }
+    
     public function Edit(Input $input) : self
     {
         $path = $input->TryGetParam('path', SafeParam::TYPE_FSPATH);

@@ -129,7 +129,11 @@ class FilesApp extends AppBase
             'download --fileid id [--fstart int] [--flast int]',
             'ftruncate --fileid id --size int',
             'writefile --file file --fileid id [--offset int]',
-            'fileinfo --fileid id',
+            'getfilelikes --fileid id [--limit int] [--offset int]',
+            'getfolderlikes --folder id [--limit int] [--offset int]',
+            'getfilecomments --fileid id [--limit int] [--offset int]',
+            'getfoldercomments --folder id [--limit int] [--offset int]',
+            'fileinfo --fileid id [--details bool]',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
             'getitembypath --path fspath [--folder id] [--isfile bool]',
             'createfolder --parent id --name fsname',
@@ -155,11 +159,12 @@ class FilesApp extends AppBase
             'shareinfo --sid id --skey alphanum [--spassword raw]',
             'listshares [--mine bool]',
             'getfilesystem [--filesystem id]',
-            'getfilesystems',
+            'getfilesystems [--everyone bool [--limit int] [--offset int]]',
             'createfilesystem '.FSManager::GetCreateUsage(),
             ...FSManager::GetCreateUsages(),
             'deletefilesystem --filesystem id --auth_password raw [--unlink bool]',
             'editfilesystem --filesystem id '.FSManager::GetEditUsage(),
+            ...FSManager::GetEditUsages(),
             'getlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
             'gettimedlimits [--account ?id | --group ?id | --filesystem ?id] [--limit int] [--offset int]',
             'gettimedstatsfor [--account id | --group id | --filesystem id] --timeperiod int [--limit int] [--offset int]',
@@ -227,6 +232,11 @@ class FilesApp extends AppBase
             case 'download':   return $this->DownloadFile($input);
             case 'ftruncate':  return $this->TruncateFile($input);
             case 'writefile':  return $this->WriteToFile($input);
+            
+            case 'getfilelikes':   return $this->GetFileLikes($input);
+            case 'getfolderlikes': return $this->GetFolderLikes($input);
+            case 'getfilecomments':   return $this->GetFileComments($input);
+            case 'getfoldercomments': return $this->GetFolderComments($input);
             
             case 'fileinfo':      return $this->GetFileInfo($input);
             case 'getfolder':     return $this->GetFolder($input);
@@ -326,9 +336,7 @@ class FilesApp extends AppBase
      */
     protected function GetConfig(Input $input) : array
     {
-        $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
-
-        $admin = $account !== null && $account->isAdmin();
+        $admin = $this->authenticator !== null && $this->authenticator->isAdmin();
 
         return $this->config->GetClientObject($admin);
     }
@@ -589,7 +597,7 @@ class FilesApp extends AppBase
         
         return $file->GetClientObject();
     }
-    
+
     /**
      * Returns file metadata
      * @throws ItemAccessDeniedException if accessing via share and reading is not allowed
@@ -602,7 +610,8 @@ class FilesApp extends AppBase
         $file = $access->GetItem(); $share = $access->GetShare();
 
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
-        $details = $share !== null ? Item::DETAILS_PUBLIC : Item::DETAILS_OWNER;
+        
+        $details = $input->TryGetParam('details',SafeParam::TYPE_BOOL) ?? false;
         
         return $file->GetClientObject($details);
     }
@@ -653,8 +662,6 @@ class FilesApp extends AppBase
         $public = isset($share) && $share !== null;
 
         if ($public && ($files || $folders)) $folder->CountVisit();
-        
-        if ($details) $details = $public ? Item::DETAILS_PUBLIC : Item::DETAILS_OWNER;
         
         $return = $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
         if ($return === null) throw new UnknownFolderException(); return $return;
@@ -715,7 +722,7 @@ class FilesApp extends AppBase
         
         $item = null; $isfile = $input->TryGetParam('isfile',SafeParam::TYPE_BOOL);
         
-        if ($name === null) $item = $isfile !== true ? $folder : null;
+        if ($name === null) $item = ($isfile !== true) ? $folder : null;
         else
         {
             if ($isfile === null || $isfile) $item = File::TryLoadByParentAndName($this->database, $folder, $name);
@@ -1213,7 +1220,89 @@ class FilesApp extends AppBase
         
         $cobj->Delete();
     }
-
+    
+    /**
+     * Returns comments on a file
+     * @see FilesApp::GetItemComments()
+     */
+    protected function GetFileComments(Input $input) : array
+    {
+        return $this->GetItemComments($this->AuthenticateFileAccess($input), $input);
+    }
+    
+    /**
+     * Returns comments on a folder
+     * @see FilesApp::GetItemComments()
+     */
+    protected function GetFolderComments(Input $input) : array
+    {
+        return $this->GetItemComments($this->AuthenticateFolderAccess($input), $input);
+    }
+    
+    /**
+     * Returns comments on an item
+     * @param ItemAccess $access file or folder access object
+     * @param Input $input input object
+     * @throws ItemAccessDeniedException if access via share and can't read
+     * @return array Comment
+     * @see Comment::GetClientObject()
+     */
+    private function GetItemComments(ItemAccess $access, Input $input) : array
+    {
+        $item = $access->GetItem(); $share = $access->GetShare();
+        
+        if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
+        
+        $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+        $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+        
+        $comments = $item->GetComments($limit, $offset);
+        
+        if ($share !== null) $comments = array_filter($comments, function($c){ return !$c->IsPrivate(); });
+        
+        return array_map(function(Comment $c){ return $c->GetClientObject(); }, $comments);
+    }
+    
+    /**
+     * Returns likes on a file
+     * @see FilesApp::GetItemLikes()
+     */
+    protected function GetFileLikes(Input $input) : array
+    {
+        return $this->GetItemLikes($this->AuthenticateFileAccess($input), $input);
+    }
+    
+    /**
+     * Returns likes on a folder
+     * @see FilesApp::GetItemLikes()
+     */
+    protected function GetFolderLikes(Input $input) : array
+    {
+        return $this->GetItemLikes($this->AuthenticateFolderAccess($input), $input);
+    }
+    
+    /**
+     * Returns likes on an item
+     * @param ItemAccess $access file or folder access object
+     * @param Input $input input object
+     * @throws ItemAccessDeniedException if access via share and can't read
+     * @return array Like
+     * @see Like::GetClientObject()
+     */
+    private function GetItemLikes(ItemAccess $access, Input $input) : array
+    {
+        $item = $access->GetItem(); $share = $access->GetShare();
+        
+        if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
+        
+        $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+        $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+        
+        $likes = $item->GetLikes($limit, $offset);
+        
+        return array_map(function(Like $c){ return $c->GetClientObject(); }, $likes);
+    }
+    
     /**
      * Creates shares for a file or files
      * @see FilesApp::ShareItem()
@@ -1443,7 +1532,8 @@ class FilesApp extends AppBase
         
         if ($filesystem === null) throw new UnknownFilesystemException();
         
-        $isadmin = $account->isAdmin() || $account === $filesystem->GetOwner();
+        $isadmin = $this->authenticator->isAdmin() || $account === $filesystem->GetOwner();
+        
         return $filesystem->GetClientObject($isadmin);
     }
     
@@ -1457,10 +1547,16 @@ class FilesApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
+
+        if ($this->authenticator->isAdmin() && $input->TryGetParam('everyone',SafeParam::TYPE_BOOL))
+        {
+            $limit = $input->TryGetParam('limit',SafeParam::TYPE_INT);
+            $offset = $input->TryGetParam('offset',SafeParam::TYPE_INT);
+            
+            $filesystems = FSManager::LoadAll($this->database, $limit, $offset);
+        }
+        else $filesystems = FSManager::LoadByAccount($this->database, $account);
         
-        // TODO admin function to get all filesystems with offset/limit
-        
-        $filesystems = FSManager::LoadByAccount($this->database, $account);
         return array_map(function($filesystem){ return $filesystem->GetClientObject(); }, $filesystems);
     }
     

@@ -119,6 +119,9 @@ abstract class Storage extends StandardObject implements Transactions
         return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
     }
     
+    /** Returns the command usage for Edit() */
+    public abstract static function GetEditUsage() : string;
+    
     /** Edits an existing storage with the given input */
     public function Edit(Input $input) : self { return $this; }
     

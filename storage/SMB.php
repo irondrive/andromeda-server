@@ -63,6 +63,8 @@ class SMB extends FWrapper
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));

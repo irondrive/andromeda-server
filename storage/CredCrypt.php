@@ -59,14 +59,21 @@ trait CredCrypt
         if ($account === null && $credcrypt) throw new CryptoWithoutOwnerException();
         
         return $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt)
-            ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
+                    ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
     }
+    
+    /** Returns the command usage for CredCryptEdit() */
+    public static function CredCryptGetEditUsage() : string { return "[--username alphanum] [--password raw] [--credcrypt bool]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
     public function CredCryptEdit(Input $input) : self 
     { 
-        $crypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL);
-        if ($crypt !== null) $this->SetEncrypted($crypt);
+        $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL);
+        if ($credcrypt !== null) $this->SetEncrypted($credcrypt);
+        
+        if ($input->HasParam('password')) $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt);
+        if ($input->HasParam('username')) $this->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
+                
         return $this;
     }
     

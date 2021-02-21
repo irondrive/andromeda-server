@@ -88,7 +88,7 @@ abstract class Item extends StandardObject
      * Copies the item to a new name.  If $overwrite, deletes an object if the target already exists.
      * @param ?Account $owner the owner of the new item
      * @param string $name the name of the new item
-     * @param bool if true, overwrite a item that exists with the same name
+     * @param bool $overwrite if true, reuse the duplicate object
      */
     public abstract function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self;
     
@@ -96,7 +96,7 @@ abstract class Item extends StandardObject
      * Copies the item to a new parent.  If $overwrite, deletes an object if the target already exists.
      * @param ?Account $owner the owner of the new item
      * @param Folder $folder the parent folder of the new item
-     * @param bool if true, overwrite a item that exists with the same name
+     * @param bool $overwrite if true, reuse the duplicate object
      */
     public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self;
     
@@ -184,21 +184,25 @@ abstract class Item extends StandardObject
     
     /**
      * Returns the like objects for this item
+     * @param ?int $limit max # to load
+     * @param ?int $offset index to load from
      * @return array<string, Like> likes indexed by ID
      */
-    public function GetLikes() : array { return $this->GetObjectRefs('likes'); }
+    public function GetLikes(?int $limit = null, ?int $offset = null) : array { return $this->GetObjectRefs('likes',$limit,$offset); }
+    
+    /**
+     * Returns the comment objects for this item
+     * @param ?int $limit max # to load
+     * @param ?int $offset index to load from
+     * @return array<string, Comment> comments indexed by ID
+     */
+    public function GetComments(?int $limit = null, ?int $offset = null) : array { return $this->GetObjectRefs('comments',$limit,$offset); }
     
     /**
      * Returns the tag objects for this item
      * @return array<string, Tag> tags indexed by ID
      */
     public function GetTags() : array { return $this->GetObjectRefs('tags'); }
-    
-    /**
-     * Returns the comment objects for this item
-     * @return array<string, Comment> comments indexed by ID
-     */
-    public function GetComments() : array { return $this->GetObjectRefs('comments'); }
     
     /**
      * Returns the share objects for this item
@@ -356,21 +360,16 @@ abstract class Item extends StandardObject
         $q = new QueryBuilder(); $where = $q->Equals('owner',$account->ID());
         return parent::LoadByQuery($database, $q->Where($where));
     }
-    
-    const DETAILS_NONE = 0; const DETAILS_PUBLIC = 1; const DETAILS_OWNER = 2; 
-    
+
     /**
      * Returns a printable client object of this item
-     * @param int $details level of details, see return
+     * @param bool $details if true, show tags and shares
      * @return array|NULL `{id:string, name:?string, owner:?string, parent:?string}` \
-         if details, add: `{comments:[id:Comment], likes:Like[], tags:[id:Tag], shares:[id:Share]}` \
-         if details is public, comments will not show private owner comments
-     * @see Comment::GetClientObject()
+         if details, add: `{tags:[id:Tag], shares:[id:Share]}`
      * @see Tag::GetClientObject()
-     * @see Like::GetClientObject()
      * @see Share::GetClientObject()
      */
-    public function SubGetClientObject(int $details = self::DETAILS_NONE) : ?array
+    public function SubGetClientObject(bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
@@ -384,14 +383,8 @@ abstract class Item extends StandardObject
         $mapobj = function($e) { return $e->GetClientObject(); };
 
         if ($details)
-        {
-            $comments = $this->GetComments();
-            if ($details < self::DETAILS_OWNER)
-                $comments = array_filter($comments, function($c){ return !$c->IsPrivate(); });
-                
-            $data['likes'] = array_map($mapobj, array_values($this->GetLikes()));
+        {                
             $data['tags'] = array_map($mapobj, $this->GetTags());
-            $data['comments'] = array_map($mapobj, $comments);
             $data['shares'] = array_map($mapobj, $this->GetShares());
         }
         

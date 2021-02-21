@@ -174,7 +174,7 @@ class File extends Item
      * @param Account $account the account owning this file
      * @param string $name the name of the file
      * @param string $path the path of the file content
-     * @param bool $overwrite if true
+     * @param bool $overwrite if true (reuses the same object)
      * @return self newly created object
      */
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
@@ -250,7 +250,7 @@ class File extends Item
      * @return array|NULL null if deleted, else `{size:int, dates:{created:float,modified:?float,accessed:?float},
          counters:{downloads:int, bandwidth:int, likes:int, dislikes:int}}`
      */
-    public function GetClientObject(int $details = self::DETAILS_NONE) : ?array
+    public function GetClientObject(bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         
