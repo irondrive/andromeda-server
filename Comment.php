@@ -18,24 +18,16 @@ class Comment extends StandardObject
             'owner'  => new FieldTypes\ObjectRef(Account::class),
             'item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
             'comment' => null,
-            'private' => null,
             'dates__modified' => null
         ));
     }
-    
-    /** Returns true if the comment should only be viewable by its owner */
-    public function IsPrivate() : bool { return $this->TryGetScalar('private') ?? false; }
-    
-    /** Sets whether a comment should only be viewable by its owner */
-    public function SetPrivate(bool $priv) : self { return $this->SetScalar('private',$priv); }
     
     /** Sets the value of this comment and updates the modified date */
     public function SetComment(string $val){ return $this->SetScalar('comment', $val)->SetDate('modified'); }
     
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : self
     {
-        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)
-            ->SetComment($comment)->SetScalar('private');
+        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetComment($comment);
     }
     
     /** Tries to load a comment object by the given account and comment ID */
@@ -45,11 +37,15 @@ class Comment extends StandardObject
         return static::TryLoadUniqueByQuery($database, $q->Where($where));
     }
     
+    /**
+     * Returns a printable client object of this comment
+     * @return array `{id:id,owner:id,item:id,comment:string,dates{created:float,modified:?float}}`
+     */
     public function GetClientObject() : array
     {
         return array(
             'id' => $this->ID(),
-            'owner' => $this->GetObject('owner')->GetDisplayName(),
+            'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'comment' => $this->GetScalar('comment'),
             'dates' => $this->GetAllDates()

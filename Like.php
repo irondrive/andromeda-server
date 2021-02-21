@@ -58,12 +58,12 @@ class Like extends StandardObject
     
     /**
      * Returns a printable client object of this like
-     * @return array `{owner:string, item:id, value:bool, dates:{created:float}}`
+     * @return array `{owner:id, item:id, value:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
         return array(
-            'owner' => $this->GetObject('owner')->GetDisplayName(),
+            'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'value' => $this->GetScalar('value'),
             'dates' => $this->GetAllDates()

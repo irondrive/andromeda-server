@@ -16,7 +16,6 @@ CREATE TABLE `a2_objects_apps_files_comment` (
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
   `comment` text NOT NULL,
-  `private` tinyint(1) NOT NULL,
   `dates__created` double NOT NULL,
   `dates__modified` double NOT NULL,
   PRIMARY KEY (`id`),
@@ -41,6 +40,7 @@ CREATE TABLE `a2_objects_apps_files_config` (
 CREATE TABLE `a2_objects_apps_files_file` (
   `id` char(16) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
   `dates__created` double NOT NULL,
   `dates__modified` double DEFAULT NULL,
   `dates__accessed` double DEFAULT NULL,
@@ -86,6 +86,7 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
 CREATE TABLE `a2_objects_apps_files_folder` (
   `id` char(16) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
   `dates__created` double NOT NULL,
   `dates__modified` double DEFAULT NULL,
   `dates__accessed` double DEFAULT NULL,

@@ -42,13 +42,13 @@ class Tag extends StandardObject
 
     /**
      * Returns a printable client object of this tag
-     * @return array `{id:id, owner:string, item:id, tag:string, dates:{created:float}}`
+     * @return array `{id:id, owner:id, item:id, tag:string, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
         return array(
             'id' => $this->ID(),
-            'owner' => $this->GetObject('owner')->GetDisplayName(),
+            'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'tag' => $this->GetScalar('tag'),
             'dates' => $this->GetAllDates()

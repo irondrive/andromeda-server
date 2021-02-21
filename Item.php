@@ -35,6 +35,7 @@ abstract class Item extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
+            'description' => null,
             'dates__modified' => null,
             'dates__accessed' => new FieldTypes\Scalar(null, true),         
             'counters__bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
@@ -83,6 +84,12 @@ abstract class Item extends StandardObject
     
     /** Moves the item to a new parent. If $overwrite, deletes an object if the target already exists. */
     public abstract function SetParent(Folder $parent, bool $overwrite = false) : self;
+    
+    /** Returns this item's description */
+    public function GetDescription() : ?string { return $this->TryGetScalar('description'); }
+    
+    /** Sets this item's description to the given value */
+    public function SetDescription(?string $val) : self { return $this->SetScalar('description',$val); }
     
     /**
      * Copies the item to a new name.  If $overwrite, deletes an object if the target already exists.
@@ -377,7 +384,8 @@ abstract class Item extends StandardObject
             'id' => $this->ID(),
             'name' => $this->GetName(),
             'owner' => $this->GetOwnerID(),
-            'parent' => $this->GetParentID()
+            'parent' => $this->GetParentID(),
+            'description' => $this->GetDescription()
         );
                 
         $mapobj = function($e) { return $e->GetClientObject(); };
