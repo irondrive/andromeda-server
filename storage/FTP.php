@@ -73,6 +73,8 @@ class FTP extends FWrapper
             ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
+    
     public function Edit(Input $input) : self
     {
         $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);

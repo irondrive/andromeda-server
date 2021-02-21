@@ -122,6 +122,8 @@ class SFTP extends FWrapper
         $this->SetScalar('privkey', $privfile)->SetScalar('pubkey', $pubfile);
     }
     
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
+    
     public function Edit(Input $input) : self
     {
         $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);

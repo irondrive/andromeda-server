@@ -218,14 +218,13 @@ abstract class Folder extends Item
      * @param bool $recursive if true, show recursive contents
      * @param int $limit max number of items to show
      * @param int $offset offset of items to show
-     * @param int $details detail level of output
      * @return array|NULL null if deleted, else `{filesystem:id, files:[id:File], folders:[id:Folder],
          dates:{created:float, modified:?float, accessed:?float}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
             subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
      * @see Item::SubGetClientObject()
      */
     public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
-        ?int $limit = null, ?int $offset = null, int $details = self::DETAILS_NONE) : ?array
+        ?int $limit = null, ?int $offset = null, bool $details = false) : ?array
     {
         if ($this->isDeleted()) return null;
         

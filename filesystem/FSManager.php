@@ -233,7 +233,15 @@ class FSManager extends StandardObject
     }
     
     /** Returns the command usage of Edit() */
-    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; } // TODO GetEditUsages
+    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; }
+    
+    public static function GetEditUsages() : array
+    {
+        $retval = array();
+        foreach (self::$storage_types as $name=>$class)
+            array_push($retval, "\t --sttype $name ".$class::GetEditUsage());
+        return $retval;
+    }
     
     /** Edits an existing filesystem with the given values, and tests it */
     public function Edit(Input $input) : self
