@@ -39,8 +39,8 @@ abstract class JoinObject extends StandardObject
     {        
         $q = new QueryBuilder(); $thisobj = $joinfield->GetParent();
         
-        $w = $q->And($q->Equals($joinfield->getRefField(),$destobj->ID()),
-                     $q->Equals($joinfield->getMyField(),$thisobj->ID()));
+        $w = $q->And($q->Equals($joinfield->getMyField(),$destobj->ID()),
+                     $q->Equals($joinfield->getRefField(),$thisobj->ID()));
         
         return parent::TryLoadUniqueByQuery($database, $q->Where($w));
     }

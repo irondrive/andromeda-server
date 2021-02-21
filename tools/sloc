@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm combined.php
+
 getfiles() {
     find $1 -name '*.php' | grep -v "/data/\|/tools/\|/vendor/"
 }
