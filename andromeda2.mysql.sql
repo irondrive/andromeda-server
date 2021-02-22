@@ -292,7 +292,7 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `keypass` tinyblob DEFAULT NULL,
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` binary(24) DEFAULT NULL,
-  `privkey_nonce` binary(24) NOT NULL,
+  `privkey_nonce` binary(24) DEFAULT NULL,
   `keypass_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
