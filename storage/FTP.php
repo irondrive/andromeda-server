@@ -26,6 +26,16 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(FTP::class);
 
+class FTPHandle
+{
+    public $handle;
+    public int $offset;
+    public bool $isAppend;
+    
+    public function __construct($handle, int $offset, bool $isAppend){
+        $this->handle = $handle; $this->offset = $offset; $this->isAppend = $isAppend; }
+}
+
 /**
  * Allows FTP to be used as a backend storage
  * 
@@ -120,8 +130,8 @@ class FTP extends FWrapper
     {
        parent::__destruct();
         
-       foreach (array_keys($this->appending_handles) as $path) 
-           $this->RemoveAppending($path);
+       foreach (array_keys($this->handles) as $path) 
+           $this->CloseFTPHandle($path);
     }
     
     protected function GetFullURL(string $path = "") : string
@@ -173,69 +183,67 @@ class FTP extends FWrapper
         return array_map(function($item){ return basename($item); }, $list);
     }
     
+    /** @var array[path:FTPHandle] array of read/write handles */
+    private $handles = array();
+    
+    private function CloseFTPHandle(string $path) : void
+    {
+        if (array_key_exists($path, $this->handles))
+        {
+            try { fclose($this->handles[$path]); } catch (\Throwable $e) { }
+            
+            unset($this->handles[$path]);
+        }
+    }
+    
+    private function GetFTPHandle(string $path, int $start, bool $isAppend, callable $create)
+    {
+        $handle = (array_key_exists($path, $this->handles)) ? $this->handles[$path] : null;
+        
+        if ($handle !== null && ($handle->isAppend != $isAppend || $handle->offset != $start))
+        {
+            $this->CloseFTPHandle($path); $handle = null;
+        }
+        
+        $handle ??= new FTPHandle($create(), $start, $isAppend);
+
+        $this->handles[$path] = $handle;
+        
+        return $handle;
+    }
+    
+    private function GetFTPReadHandle(string $path, int $start)
+    {
+        return $this->GetFTPHandle($path, $start, false, function()use($start,$path)
+        {
+            $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$start)));
+            return fopen($this->GetFullURL($path), 'rb', null, $stropt);
+        });
+    }
+    
+    private function GetFTPWriteHandle(string $path, int $start, int $length)
+    {
+        return $this->GetFTPHandle($path, $start, true, function()use($start,$path,$length)
+        {
+            $fsize = ftp_size($this->ftp, $this->GetPath($path));
+            if (!$start && $length >= $fsize) $this->Truncate($path, 0);
+            else if ($start != $fsize) throw new FTPWriteUnsupportedException();
+            
+            return fopen($this->GetFullURL($path),'a');
+        });
+    }
+    
     public function ReadBytes(string $path, int $start, int $length) : string
     {
-        $this->RemoveAppending($path);
-            
-        $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$start)));
-        $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
+        $handle = $this->GetFTPReadHandle($path, $start);
         
-        $data = $this->ReadHandle($handle, $length);
+        $data = $this->ReadHandle($handle->handle, $length);
         
-        try { fclose($handle); } catch (\Throwable $e){ }
+        $handle->offset += strlen($data);
         
         return $data;
-    }
+    }    
     
-    // FTP does not support writing to random offsets but it does allow
-    // the special case of writing to the end of the file (appending)
-    
-    /** path=>resource array of handles */
-    private $appending_handles = array(); 
-    
-    /** path=>byte array of current byte offsets */
-    private $appending_offsets = array();
-    
-    /** Closes the appending handle for the given path */
-    private function RemoveAppending(string $path) : void
-    {
-        if (array_key_exists($path, $this->appending_handles))
-        {
-            try { fclose($this->appending_handles[$path]); } catch (\Throwable $e) { }
-            
-            unset($this->appending_handles[$path]);
-            unset($this->appending_offsets[$path]);
-        }
-    }
-    
-    /** Creates, tracks and returns an appending context for the given path at the given offset */
-    private function TrackAppending(string $path, int $bytes)
-    {
-        if (!array_key_exists($path, $this->appending_handles))
-        {
-            $this->appending_offsets[$path] = ftp_size($this->ftp, $this->GetPath($path));
-            $this->appending_handles[$path] = fopen($this->GetFullURL($path),'a');
-        }
-        $this->appending_offsets[$path] += $bytes;
-        return $this->appending_handles[$path];
-    }
-    
-    /** Returns true if the given path can be appended at the given offset */
-    private function CheckAppending(string $path, int $offset, int $length) : bool
-    {
-        if (array_key_exists($path, $this->appending_offsets))
-            return $this->appending_offsets[$path] === $offset;
-        
-        $size = ftp_size($this->ftp, $this->GetPath($path));
-        
-        if ($offset === $size) return true;
-        else if (!$offset && $length >= $size)
-        {
-            $this->Truncate($path, 0); return true;
-        }
-        else return false;
-    }
-
     /**
      * FTP can only append ($start must equal the length of the file)
      * @throws FTPWriteUnsupportedException if not appending
@@ -244,16 +252,16 @@ class FTP extends FWrapper
     public function WriteBytes(string $path, int $start, string $data) : self
     {
         $this->CheckReadOnly();
-
-        if (!$this->CheckAppending($path, $start, strlen($data)))
-            throw new FTPWriteUnsupportedException();
         
-        $handle = $this->TrackAppending($path, strlen($data));
-        if (!$handle) throw new FileWriteFailedException();
+        $handle = $this->GetFTPWriteHandle($path, $start, strlen($data));
         
-        return $this->WriteHandle($handle, $data);
+        $this->WriteHandle($handle->handle, $data);
+        
+        $handle->offset += strlen($data);
+        
+        return $this;
     }
-    
+
     /** @throws FTPWriteUnsupportedException */
     public function Truncate(string $path, int $length) : self
     {
