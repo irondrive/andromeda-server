@@ -160,11 +160,10 @@ class Account extends AuthEntity
         return parent::RemoveObjectRef($field, $object, $notification);
     }
     
-    /** Returns the timestamp of when the account was added to the given group */
-    public function GetGroupAddedDate(Group $group) : ?float 
+    /** Returns the object joining this account to the given group */
+    public function GetGroupJoin(Group $group) : ?GroupJoin 
     {
-        $joinobj = $this->TryGetJoinObject('groups', $group);
-        return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
+        return $this->TryGetJoinObject('groups', $group);
     }
 
     /** Returns the auth source the account authenticates against */
