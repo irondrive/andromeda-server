@@ -24,9 +24,8 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 FSManager::RegisterStorageType(SFTP::class);
 
 /**
- * Allows using an SFTP server for backend storage using PHP fwrapper
+ * Allows using an SFTP server for backend storage using phpseclib
  * 
- * Uses PHP's SSH2 extension for SFTP, and OpenSSL for parsing keys.
  * Uses credcrypt to allow encrypting the username/password.
  */
 class SFTP extends FWrapper
