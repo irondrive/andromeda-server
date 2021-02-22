@@ -767,7 +767,6 @@ class FilesApp extends AppBase
     /**
      * Edits item metadata
      * @param ItemAccess $access access object for item
-     * @param Input $input input object with edit values
      * @throws ItemAccessDeniedException if accessing via share and can't modify
      * @return array|NULL Item
      * @see Item::GetClientObject()
@@ -1277,7 +1276,6 @@ class FilesApp extends AppBase
     /**
      * Returns comments on an item
      * @param ItemAccess $access file or folder access object
-     * @param Input $input input object
      * @throws ItemAccessDeniedException if access via share and can't read
      * @return array Comment
      * @see Comment::GetClientObject()
@@ -1317,7 +1315,6 @@ class FilesApp extends AppBase
     /**
      * Returns likes on an item
      * @param ItemAccess $access file or folder access object
-     * @param Input $input input object
      * @throws ItemAccessDeniedException if access via share and can't read
      * @return array Like
      * @see Like::GetClientObject()

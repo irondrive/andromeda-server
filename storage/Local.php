@@ -26,6 +26,8 @@ class Local extends FWrapper
         else return parent::Create($database, $input, $account, $filesystem);
     }
 
+    protected function UseChunks() : bool { return false; }
+    
     public function canGetFreeSpace() : bool { return true; }
     
     public function GetFreeSpace() : int

@@ -136,31 +136,6 @@ class SMB extends FWrapper
         return $this;
     }
     
-    // WORKAROUND: php-smbclient seems to only be able to read 8K at a time
-    public function ReadBytes(string $path, int $start, int $length) : string
-    {
-        $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, false);
-        
-        $blocksize = 8192; $data = array();
-
-        for ($byte = $start; $byte < $start + $length; )
-        {
-            if (fseek($handle, $byte) !== 0)
-                throw new FileReadFailedException();
-            
-            $delta = min($start+$length-$byte, $blocksize - $byte%$blocksize);
-            
-            $temp = fread($handle, $delta);
-            if ($temp === false || strlen($temp) !== $delta)
-                throw new FileReadFailedException();
-            
-            array_push($data, $temp); $byte += $delta;          
-        }
-        
-        return implode($data);
-    }
-    
     public function canGetFreeSpace() : bool { return true; }
     
     public function GetFreeSpace() : int
