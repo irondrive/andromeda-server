@@ -218,14 +218,14 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
+,  `hostkey` text NOT NULL
 ,  `username` varbinary(255) NOT NULL
 ,  `password` tinyblob DEFAULT NULL
-,  `privkey` text DEFAULT NULL
-,  `pubkey` text DEFAULT NULL
+,  `privkey` blob DEFAULT NULL
 ,  `keypass` tinyblob DEFAULT NULL
-,  `hostauth` integer DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
+,  `privkey_nonce` binary(24) NOT NULL
 ,  `keypass_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
