@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -48,19 +48,7 @@ abstract class FWrapper extends Storage
         if ($path !== null) $this->SetPath($path);
         return parent::Edit($input);
     }
-    
-    public function Test() : self
-    {
-        $this->Activate();
-        
-        $ro = $this->GetFilesystem()->isReadOnly();
-        
-        if (!is_readable($this->GetFullURL())) throw new TestReadFailedException();
-        if (!$ro && !$this->isWriteable()) throw new TestWriteFailedException();
-        
-        return $this;
-    }
-    
+
     /** Returns the full fwrapper URL for the given path */
     protected abstract function GetFullURL(string $path = "") : string;
     
@@ -90,10 +78,26 @@ abstract class FWrapper extends Storage
         return is_file($this->GetFullURL($path));
     }
     
-    /** Returns true if the filesystem root can be written to */
+    public function isReadable() : bool
+    {
+        return is_readable($this->GetFullURL());
+    }
+    
     public function isWriteable() : bool
     {
         return is_writeable($this->GetFullURL());
+    }
+    
+    /** Manually tests if the root is writeable by uploading a test file */
+    public function TestWriteable() : bool
+    {
+        try
+        {
+            $name = Utilities::Random(16).".tmp";
+            $this->CreateFile($name)->DeleteFile($name);
+            return true;
+        }
+        catch (StorageException $e){ return false; }
     }
     
     public function ReadFolder(string $path) : ?array
@@ -147,39 +151,98 @@ abstract class FWrapper extends Storage
     public function ReadBytes(string $path, int $start, int $length) : string
     {
         $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, false);   
+        $handle = $this->GetHandle($path, false);
         
         if (fseek($handle, $start) !== 0)
             throw new FileReadFailedException();
         
-        $data = fread($handle, $length);
+        return $this->ReadHandle($handle, $length);
+    }
+    
+    /** Returns true if fread() and fwrite() may need to be in chunks */
+    protected function UseChunks() : bool { return true; }
+    
+    /**
+     * Reads bytes from the given handle by chunking if required
+     * @param resource $handle the stream to read from
+     * @param int $length number of bytes to read
+     * @throws FileReadFailedException if reading fails
+     * @return string read bytes
+     */
+    protected function ReadHandle($handle, int $length) : string
+    {
+        if ($this->UseChunks()) 
+        {
+            $byte = 0; $data = array();
+            
+            while (!feof($handle) && $byte < $length)
+            {
+                $read = fread($handle, $length-$byte);
+                
+                if ($read === false) break;
+                
+                array_push($data, $read); $byte += strlen($read);
+            }
+            
+            $data = implode($data);
+        }
+        else $data = fread($handle, $length);        
+        
         if ($data === false || strlen($data) !== $length)
         {
             Main::GetInstance()->PrintDebug(array(
                 'read'=>strlen($data), 'wanted'=>$length));
+            
             throw new FileReadFailedException();
         }
         
-        else return $data;
+        return $data;
     }
     
     public function WriteBytes(string $path, int $start, string $data) : self
     {
         $this->CheckReadOnly();
+        
         $path = $this->GetFullURL($path);
         $handle = $this->GetHandle($path, true);    
         
         if (fseek($handle, $start)) throw new FileWriteFailedException();
-        
-        $written = fwrite($handle, $data);
+
+        return $this->WriteHandle($handle, $data);
+    }
+    
+    /**
+     * Writes the given data to the given handle, chunking if required
+     * @param resource $handle stream to write to 
+     * @param string $data data to write
+     * @throws FileWriteFailedException if writing fails
+     * @return $this
+     */
+    protected function WriteHandle($handle, string $data) : self
+    {
+        if ($this->UseChunks())
+        {
+            $written = 0; while ($written < strlen($data))
+            {
+                $piece = $written ? substr($data, $written) : $data;
+                
+                $bytes = fwrite($handle, $piece);
+                
+                if ($bytes === false) break;
+                
+                $written += $bytes;
+            }
+        }
+        else $written = fwrite($handle, $data);
         
         if ($written !== strlen($data))
         {
             Main::GetInstance()->PrintDebug(array(
                 'wrote'=>$written, 'wanted'=>strlen($data)));
+            
             throw new FileWriteFailedException();
         }
-            
+        
         return $this;
     }
     

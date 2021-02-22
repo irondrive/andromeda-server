@@ -1,11 +1,9 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -122,7 +120,8 @@ class FTP extends FWrapper
     {
        parent::__destruct();
         
-       foreach ($this->appending_handles as $handle) fclose($handle);
+       foreach (array_keys($this->appending_handles) as $path) 
+           $this->RemoveAppending($path);
     }
     
     protected function GetFullURL(string $path = "") : string
@@ -162,17 +161,8 @@ class FTP extends FWrapper
         return ftp_size($this->ftp, $this->GetPath($path)) >= 0;
     }
     
-    public function isWriteable() : bool
-    {
-        try
-        {
-            $name = Utilities::Random(16).".tmp";            
-            $this->CreateFile($name)->DeleteFile($name);
-            
-            return true;
-        }
-        catch (StorageException $e){ return false; }        
-    }
+    // WORKAROUND - is_writeable does not work on directories
+    public function isWriteable() : bool { return $this->TestWriteable(); }
     
     public function ReadFolder(string $path) : ?array
     {
@@ -190,13 +180,11 @@ class FTP extends FWrapper
         $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$start)));
         $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
         
-        $data = fread($handle, $length);
-        try { fclose($handle); } catch (\Throwable $e) { 
-            ErrorManager::GetInstance()->Log($e); }
+        $data = $this->ReadHandle($handle, $length);
         
-        if ($data === false || strlen($data) !== $length) 
-            throw new FileReadFailedException();
-        else return $data;
+        try { fclose($handle); } catch (\Throwable $e){ }
+        
+        return $data;
     }
     
     // FTP does not support writing to random offsets but it does allow
@@ -213,7 +201,8 @@ class FTP extends FWrapper
     {
         if (array_key_exists($path, $this->appending_handles))
         {
-            fclose($this->appending_handles[$path]);
+            try { fclose($this->appending_handles[$path]); } catch (\Throwable $e) { }
+            
             unset($this->appending_handles[$path]);
             unset($this->appending_offsets[$path]);
         }
@@ -260,9 +249,9 @@ class FTP extends FWrapper
             throw new FTPWriteUnsupportedException();
         
         $handle = $this->TrackAppending($path, strlen($data));
-        if (!$handle || fwrite($handle, $data) !== strlen($data)) 
-            throw new FileWriteFailedException();
-        return $this;
+        if (!$handle) throw new FileWriteFailedException();
+        
+        return $this->WriteHandle($handle, $data);
     }
     
     /** @throws FTPWriteUnsupportedException */

@@ -127,6 +127,7 @@ abstract class Item extends StandardObject
             }
             else throw new DuplicateItemException();
         }
+        return null;
     }
     
     /**
@@ -153,6 +154,7 @@ abstract class Item extends StandardObject
             }
             else throw new DuplicateItemException();
         }
+        return null;
     }
     
     /**

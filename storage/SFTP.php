@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
@@ -10,20 +10,14 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
-/** Exception indicating that the SSH extension is not installed */
-class SSHExtensionException extends ActivateException    { public $message = "SSH_EXTENSION_MISSING"; }
-
-/** Exception indicating that the OpenSSL extension is not installed */
-class OpenSSLExtensionException extends ActivateException { public $message = "OPENSSL_EXTENSION_MISSING"; }
-
 /** Exception indicating that the SSH connection failed */
 class SSHConnectionFailure extends ActivateException     { public $message = "SSH_CONNECTION_FAILURE"; }
 
 /** Exception indicating that SSH authentication failed */
 class SSHAuthenticationFailure extends ActivateException { public $message = "SSH_AUTHENTICATION_FAILURE"; }
 
-/** Exception indicating that parsing the given keyfile failed */
-class InvalidKeyfileException extends ActivateException  { public $message = "SSH_INVALID_KEYFILE"; }
+/** Exception indicating that the server's public key has changed */
+class HostKeyMismatchException extends ActivateException { public $message = "SSH_HOST_KEY_MISMATCH"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SFTP::DecryptAccount($database, $account); });
 
@@ -44,9 +38,10 @@ class SFTP extends FWrapper
         return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
-            'privkey' => null, // path to private key
-            'pubkey' => null,  // path to public key
+            'hostkey' => null,
+            'privkey' => null, // private key material for auth
             'keypass' => null, // key for unlocking the private key
+            'privkey_nonce' => null,
             'keypass_nonce' => null,
         ));
     }
@@ -61,7 +56,8 @@ class SFTP extends FWrapper
         return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
-            'pubkey' => boolval($this->TryGetScalar('pubkey')),
+            'hostkey' => $this->TryGetHostKey(),
+            'privkey' => boolval($this->TryGetScalar('privkey')),
             'keypass' => boolval($this->TryGetKeypass()),
         ));
     }
@@ -69,13 +65,33 @@ class SFTP extends FWrapper
     /** Returns the configured username (mandatory) */
     protected function GetUsername() : string { return $this->GetEncryptedScalar('username'); }
     
+    /** Returns the private key for authentication */
+    protected function TryGetPrivkey() : ?string { return $this->TryGetEncryptedScalar('privkey'); }
+    
     /** Returns the password for the private key */
     protected function TryGetKeypass() : ?string { return $this->TryGetEncryptedScalar('keypass'); }
     
-    /** Sets the password for the private key, encrypted if $credcrypt */
-    protected function SetKeypass(?string $keypass, bool $credcrypt) : self { return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); }
+    /** Sets the private key used for authentication */
+    protected function SetPrivkey(?string $privkey, ?bool $credcrypt = null) : self 
+    {
+        $credcrypt ??= $this->hasCryptoField('privkey');
+        return $this->SetEncryptedScalar('privkey',$privkey,$credcrypt); 
+    }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
+    /** Sets the password for the private key, encrypted if $credcrypt */
+    protected function SetKeypass(?string $keypass, ?bool $credcrypt = null) : self 
+    {
+        $credcrypt ??= $this->hasCryptoField('keypass');
+        return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); 
+    }
+    
+    /** Returns the cached public key for the server host */
+    protected function TryGetHostKey() : ? string { return $this->TryGetScalar('hostkey'); }
+    
+    /** Sets the cached host public key to the given value */
+    protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
+    
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--file file privkey] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
     {
@@ -84,45 +100,16 @@ class SFTP extends FWrapper
         
         $obj = parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
-            ->SetKeypass($keypass, $credcrypt);
-
-        if (($keyfile = $input->TryGetFile('keyfile')) !== null) 
-            $obj->ProcessKeyfile($keyfile, $keypass);
+            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT));         
+        
+        if ($input->HasFile('privkey')) $obj->SetPrivkey(file_get_contents($input->GetFile('privkey')), $credcrypt);
+        
+        $obj->SetKeypass($keypass, $credcrypt);
         
         return $obj;
     }
-    
-    /**
-     * Processes an uploaded keyfile into its private/public components and stores it
-     * @param string $keyfile the uploaded key file path
-     * @param string $keypass private key password if required
-     * @throws OpenSSLExtensionException if OpenSSL is not installed
-     * @throws InvalidKeyfileException if parsing fails
-     */
-    private function ProcessKeyfile(string $keyfile, ?string $keypass) : void
-    {
-        if (!function_exists('openssl_pkey_get_private'))
-            throw new OpenSSLExtensionException();
 
-        $keyfile = file_get_contents($keyfile);
-        $keyrsrc = openssl_pkey_get_private($keyfile, $keypass);
-        if ($keyrsrc === false) throw new InvalidKeyfileException();
-        
-        $pubkey = openssl_pkey_get_details($keyrsrc)['key'];
-        
-        $fpath = implode('/',array('sftp_keys', $this->GetObjectID('filesystem')));
-        $privfile = "$fpath/privkey"; $pubfile = "$fpath/pubkey";
-        
-        $datadir = Main::GetInstance()->GetConfig()->GetDataDir();
-        
-        file_put_contents("$datadir/$privfile", $keyfile);
-        file_put_contents("$datadir/$pubfile", $pubkey);
-        
-        $this->SetScalar('privkey', $privfile)->SetScalar('pubkey', $pubfile);
-    }
-    
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--file file keyfile] [--keypass raw]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--file file privkey] [--keypass raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
@@ -133,77 +120,88 @@ class SFTP extends FWrapper
         if ($port !== null) $this->SetScalar('port', $port);
         
         $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);        
-        if ($keypass !== null) $this->SetKeypass($keypass, $this->hasCryptoField('keypass'));
+        if ($keypass !== null) $this->SetKeypass($keypass);
+
+        if ($input->HasFile('privkey')) $this->SetPrivkey(file_get_contents($input->GetFile('privkey')));
         
-        if (($keyfile = $input->TryGetFile('keyfile')) !== null)
-            $this->ProcessKeyfile($keyfile, $keypass);
+        if ($input->TryGetParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
         
         return parent::Edit($input)->CredCryptEdit($input);
     }
 
-    /** ssh2 connection resource */ private $ssh; 
     /** sftp connection resource */ private $sftp;
-    
-    /** Checks for the SSH2 extension */
-    public function SubConstruct() : void
-    {
-        if (!function_exists('ssh2_connect')) throw new SSHExtensionException();
-    }
-    
+
     public function Activate() : self
     {
-        if (isset($this->ssh)) return $this;
+        if (isset($this->sftp)) return $this;
         
+        \phpseclib3\Net\SFTP\Stream::register();
+
         $host = $this->GetScalar('hostname'); 
         $port = $this->TryGetScalar('port') ?? 22;
-                
-        $this->ssh = ssh2_connect($host, $port);        
-        if (!$this->ssh) throw new SSHConnectionFailure();
         
-        $username = $this->GetUsername();
-        $password = $this->TryGetPassword();
+        try
+        {
+            $this->sftp = new \phpseclib3\Net\SFTP($host, $port);
+            
+            $hostkey = $this->sftp->getServerPublicHostKey();
+            
+            $cached = $this->TryGetHostKey();
+            if ($cached === null) $this->SetHostKey($hostkey);
+            else if ($cached !== $hostkey) throw new HostKeyMismatchException();            
+        }
+        catch (Exceptions\PHPError $e) { throw SSHConnectionFailure::Copy($e); }
 
-        $authok = true; $authd = false;      
-        if ($password) { $authd = true; $authok &= ssh2_auth_password($this->ssh, $username, $password); }
-        
-        $datadir = Main::GetInstance()->GetConfig()->GetDataDir();
-        
-        $pubkey = $this->TryGetScalar('pubkey');
-        $privkey = $this->TryGetScalar('privkey');
-        $keypass = $this->TryGetKeypass();
-        
-        if ($pubkey) { $authd = true; $authok &= ssh2_auth_pubkey_file($this->ssh, $username, $datadir.$pubkey, $datadir.$privkey, $keypass); }
-        
-        if (!$authok || !$authd) throw new SSHConnectionFailure('methods: '.implode(',',ssh2_auth_none($this->ssh, $username)));
-
-        $this->sftp = ssh2_sftp($this->ssh);
-        if (!$this->sftp) throw new SSHConnectionFailure();
+        try
+        {
+            $username = $this->GetUsername();
+            $this->sftp->login($username);
+    
+            if (($password = $this->TryGetPassword()) !== null) 
+                $this->sftp->login($username, $password);
+    
+            if (($privkey = $this->TryGetPrivkey()) !== null)
+            {
+                $keypass = $this->TryGetKeypass();
+                $privkey = \phpseclib3\Crypt\PublicKeyLoader::load($privkey, $keypass);            
+                $this->sftp->login($username, $privkey);
+            }
+    
+            if (!$this->sftp->isAuthenticated()) throw new SSHAuthenticationFailure();
+        }
+        catch (\RuntimeException $e) { throw SSHAuthenticationFailure::Copy($e); }
         
         return $this;
     }
 
     protected function GetFullURL(string $path = "") : string
     {
-        return "ssh2.sftp://".$this->sftp."/".$this->GetPath($path);
+        return "sftp://".$this->sftp."/".$this->GetPath($path);
     }
     
     public function ImportFile(string $src, string $dest) : self
     {
-        $this->CheckReadOnly();
-        if (!ssh2_scp_send($this->ssh, $src, $this->GetPath($dest)))
+        $this->CheckReadOnly(); 
+        
+        $mode = \phpseclib3\Net\SFTP::SOURCE_LOCAL_FILE;
+        
+        if (!$this->sftp->put($this->GetPath($dest), $src, $mode))   
             throw new FileCreateFailedException();
+            
         return $this;
     }
     
-    public function isWriteable() : bool
+    // WORKAROUND - is_writeable does not work on directories
+    public function isWriteable() : bool { return $this->TestWriteable(); }
+    
+    // WORKAROUND writing past the end of a file is not supported
+    public function WriteBytes(string $path, int $start, string $data) : self
     {
-        try
-        {
-            $name = Utilities::Random(16).".tmp";
-            $this->CreateFile($name)->DeleteFile($name);
-            
-            return true;
-        }
-        catch (StorageException $e){ return false; }
+        $length = $start+strlen($data);
+        
+        if ($length > filesize($this->GetFullURL($path))) 
+            $this->Truncate($path, $length);
+        
+        return parent::WriteBytes($path, $start, $data);
     }
 }

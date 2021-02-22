@@ -239,7 +239,7 @@ class FSManager extends StandardObject
     {
         $retval = array();
         foreach (self::$storage_types as $name=>$class)
-            array_push($retval, "\t --sttype $name ".$class::GetEditUsage());
+            array_push($retval, "\t $name: ".$class::GetEditUsage());
         return $retval;
     }
     

@@ -126,7 +126,23 @@ abstract class Storage extends StandardObject implements Transactions
     public function Edit(Input $input) : self { return $this; }
     
     /** Asserts that the underlying storage can be connected and read from/written to */
-    public abstract function Test() : self;
+    public function Test() : self
+    {
+        $this->Activate();
+        
+        $ro = $this->GetFilesystem()->isReadOnly();
+        
+        if (!$this->isReadable()) throw new TestReadFailedException();
+        if (!$ro && !$this->isWriteable()) throw new TestWriteFailedException();
+        
+        return $this;
+    }
+    
+    /** Returns true if the filesystem root can be read */
+    public abstract function isReadable() : bool;
+    
+    /** Returns true if the filesystem root can be written to */
+    public abstract function isWriteable() : bool;
     
     /** Activates the storage by making any required connections */
     public abstract function Activate() : self;
