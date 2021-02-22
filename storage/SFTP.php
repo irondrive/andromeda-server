@@ -192,15 +192,4 @@ class SFTP extends FWrapper
     
     // WORKAROUND - is_writeable does not work on directories
     public function isWriteable() : bool { return $this->TestWriteable(); }
-    
-    // WORKAROUND writing past the end of a file is not supported
-    public function WriteBytes(string $path, int $start, string $data) : self
-    {
-        $length = $start+strlen($data);
-        
-        if ($length > filesize($this->GetFullURL($path))) 
-            $this->Truncate($path, $length);
-        
-        return parent::WriteBytes($path, $start, $data);
-    }
 }
