@@ -89,6 +89,12 @@ class Group extends AuthEntity
         return ($joinobj !== null) ? $joinobj->GetDateCreated() : null;
     }
     
+    /** Returns the object joining this group to the given account */
+    public function GetAccountJoin(Account $account) : ?GroupJoin
+    {
+        return $this->TryGetJoinObject('accounts', $account);
+    }
+    
     /** Tries to load a group by name, returning null if not found */
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {

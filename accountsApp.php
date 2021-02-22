@@ -161,6 +161,7 @@ class AccountsApp extends AppBase
             'deletegroup --group id',
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
+            'getmembership --account id --group id',
             'getauthsources',
             'createauthsource --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             ...Auth\Manager::GetPropUsages(),
@@ -244,6 +245,7 @@ class AccountsApp extends AppBase
             case 'deletegroup':         return $this->DeleteGroup($input);
             case 'addgroupmember':      return $this->AddGroupMember($input);
             case 'removegroupmember':   return $this->RemoveGroupmember($input);
+            case 'getmembership':       return $this->GetMembership($input);
             
             case 'setaccountprops':     return $this->SetAccountProps($input);
             case 'setgroupprops':       return $this->SetGroupProps($input);
@@ -1139,6 +1141,26 @@ class AccountsApp extends AppBase
         else throw new UnknownGroupMembershipException();
         
         return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
+    }
+    
+    protected function GetMembership(Input $input) : ?array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);
+        $groupid = $input->GetParam("group", SafeParam::TYPE_RANDSTR);
+        
+        $account = Account::TryLoadByID($this->database, $accountid);
+        if ($account === null) throw new UnknownAccountException();
+        
+        $group = Group::TryLoadByID($this->database, $groupid);
+        if ($group === null) throw new UnknownGroupException();
+        
+        $joinobj = $account->GetGroupJoin($group);
+        if ($joinobj === null) throw new UnknownGroupMembershipException();
+        
+        return $joinobj->GetClientObject();
     }
     
     /**

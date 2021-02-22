@@ -27,6 +27,15 @@ class GroupJoin extends JoinObject
             'groups' => new FieldTypes\ObjectRef(Group::class, 'accounts')
         ));
     }
+    
+    /**
+     * Returns a printable client object of this group membership
+     * @return array `{dates:{created:float}}`
+     */
+    public function GetClientObject()
+    {
+        return array('dates'=>$this->GetAllDates());
+    }
 }
 
 /** Base class for account/groups containing properties that can be set per-account or per-group */
