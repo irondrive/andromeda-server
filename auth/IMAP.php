@@ -32,7 +32,7 @@ class IMAP extends External
     
     private const PROTOCOLS = array('imap'=>self::PROTOCOL_IMAP,'pop3'=>self::PROTOCOL_POP3,'nntp'=>self::PROTOCOL_NNTP);
     
-    public static function GetPropUsage() : string { return "--protocol imap|pop3|nntp --hostname alphanum [--port int] [--implssl bool] [--secauth bool]"; }
+    public static function GetPropUsage() : string { return "--protocol imap|pop3|nntp --hostname alphanum [--port ?int] [--implssl bool] [--secauth bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
@@ -48,15 +48,10 @@ class IMAP extends External
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
-        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
-        $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
-        $secauth = $input->TryGetParam('secauth', SafeParam::TYPE_BOOL);
-        
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        if ($port !== null) $this->SetScalar('port', $port);
-        if ($implssl !== null) $this->SetScalar('implssl', $implssl);
-        if ($secauth !== null) $this->SetScalar('secauth', $secauth);
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));       
+        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));        
+        if ($input->HasParam('secauth')) $this->SetScalar('secauth',$input->GetParam('secauth', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->TryGetParam('port', SafeParam::TYPE_INT));
         
         return $this;
     }

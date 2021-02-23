@@ -156,7 +156,7 @@ class AccountsApp extends AppBase
             'listaccounts [--limit int] [--offset int]',
             'listgroups [--limit int] [--offset int]',            
             'creategroup --name name [--priority int] [--comment text]',
-            'editgroup --group id [--name name] [--priority int] [--comment text]',
+            'editgroup --group id [--name name] [--priority int] [--comment ?text]',
             'getgroup --group id',
             'deletegroup --group id',
             'addgroupmember --account id --group id',
