@@ -30,6 +30,8 @@ class Local extends FWrapper
     
     public function canGetFreeSpace() : bool { return true; }
     
+    public function usesBandwidth() : bool { return false; }
+    
     public function GetFreeSpace() : int
     {
         $space = disk_free_space($this->GetPath());

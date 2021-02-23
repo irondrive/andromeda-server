@@ -21,9 +21,9 @@ require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
  */
 abstract class FSImpl implements Transactions
 {
-    public function __construct(FSManager $filesystem)
+    public function __construct(FSManager $fsmanager)
     {
-        $this->filesystem = $filesystem;
+        $this->fsmanager = $fsmanager;
     }
     
     /**
@@ -34,12 +34,15 @@ abstract class FSImpl implements Transactions
      */
     public function GetChunkSize() : ?int { return null; }
     
+    /** Returns a reference to the parent FS manager */
+    protected function GetFSManager() : FSManager { return $this->fsmanager; }
+
     /** Returns the underlying storage */
-    protected function GetStorage() : Storage { return $this->filesystem->GetStorage(); }
+    protected function GetStorage() : Storage { return $this->fsmanager->GetStorage(); }
     
     /** Returns a database reference */
-    protected function GetDatabase() : ObjectDatabase { return $this->filesystem->GetDatabase(); }
-
+    protected function GetDatabase() : ObjectDatabase { return $this->fsmanager->GetDatabase(); }
+    
     /** Synchronizes the given file's metadata with storage */
     public abstract function RefreshFile(File $file) : self;
     
