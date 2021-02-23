@@ -381,9 +381,10 @@ class FilesApp extends AppBase
         if (!$this->authenticator && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
         
-        if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
-        
         $overwrite = $input->TryGetParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
+        
+        if ($share !== null && (!$share->CanUpload() || ($overwrite && !$share->CanModify()))) 
+            throw new ItemAccessDeniedException();
         
         $return = array(); $files = $input->GetFiles();
         if (!count($files)) throw new InvalidFileWriteException();
@@ -539,35 +540,44 @@ class FilesApp extends AppBase
         if ($wstart < 0 || $wlast+1 < $wstart)
             throw new InvalidFileRangeException();
         
-        $file->CheckSize($wlast+1); $file->CountBandwidth($length);        
-
-        $fschunksize = $file->GetChunkSize();
-        $chunksize = $this->config->GetRWChunkSize();  
-
-        $align = ($fschunksize !== null);
-        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
-
-        $inhandle = fopen($filepath, 'rb');
+        $file->CountBandwidth($length);
         
-        for ($wbyte = $wstart; $wbyte <= $wlast; )
+        if (!$wstart && $length >= $file->GetSize())
         {
-            $rstart = $wbyte - $wstart;
+            if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
             
-            // the next write should begin on a chunk boundary if aligned
-            if (!$align) $nbyte = $wbyte + $chunksize;
-            else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
-
-            $wlen = min($nbyte - $wbyte, $length - $rstart);
-            
-            fseek($inhandle, $rstart);
-            $data = fread($inhandle, $wlen);
-            
-            if (strlen($data) != $wlen) throw new FileReadFailedException();
-
-            $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
+            return $file->SetContents($filepath)->GetClientObject();
         }
+        else
+        {            
+            $fschunksize = $file->GetChunkSize();
+            $chunksize = $this->config->GetRWChunkSize();
             
-        return $file->GetClientObject();
+            $align = ($fschunksize !== null);
+            if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
+            
+            $inhandle = fopen($filepath, 'rb');
+            
+            for ($wbyte = $wstart; $wbyte <= $wlast; )
+            {
+                $rstart = $wbyte - $wstart;
+                
+                // the next write should begin on a chunk boundary if aligned
+                if (!$align) $nbyte = $wbyte + $chunksize;
+                else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
+                
+                $wlen = min($nbyte - $wbyte, $length - $rstart);
+                
+                fseek($inhandle, $rstart);
+                $data = fread($inhandle, $wlen);
+                
+                if (strlen($data) != $wlen) throw new FileReadFailedException();
+                
+                $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
+            }
+            
+            return $file->GetClientObject();
+        }
     }
     
     /**

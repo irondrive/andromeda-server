@@ -184,9 +184,19 @@ class File extends Item
         
         $file ??= static::NotifyCreate($database, $parent, $account, $name);
         
-        $file->SetSize(filesize($path),true);
+        return $file->SetContents($path);     
+    }
+    
+    /**
+     * Sets the file's contents to the file of the given path
+     * @param string $path file to load bytes from
+     * @return $this
+     */
+    public function SetContents(string $path) : self
+    {
+        $this->SetSize(filesize($path),true);
         
-        $file->GetFSImpl()->ImportFile($file, $path); return $file;       
+        $this->GetFSImpl()->ImportFile($this, $path); return $this;  
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
