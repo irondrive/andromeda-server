@@ -20,11 +20,6 @@ abstract class BaseFileFS extends FSImpl
         $this->GetStorage()->ImportFile($path, $this->GetFilePath($file)); return $this;
     }
     
-    public function DeleteFile(File $file) : self
-    {
-        $this->GetStorage()->DeleteFile($this->GetFilePath($file)); return $this;
-    }
-    
     public function ReadBytes(File $file, int $start, int $length) : string
     {
         return $this->GetStorage()->ReadBytes($this->GetFilePath($file), $start, $length);
@@ -43,6 +38,11 @@ abstract class BaseFileFS extends FSImpl
     public function CopyFile(File $file, File $dest) : self 
     {
         $this->GetStorage()->CopyFile($this->GetFilePath($file), $this->GetFilePath($dest)); return $this; 
+    }
+    
+    public function DeleteFile(File $file) : self
+    {
+        $this->GetStorage()->DeleteFile($this->GetFilePath($file)); return $this;
     }
     
     /**

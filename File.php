@@ -97,6 +97,8 @@ class File extends Item
     /** Counts bandwidth by updating the count and notifying parents */
     public function CountBandwidth(int $bytes) : self
     {
+        $fs = $this->GetFilesystem(); if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
+        
         $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });
         
         return parent::CountBandwidth($bytes);
@@ -104,13 +106,15 @@ class File extends Item
     
     /**
      * Checks if the given bandwidth would exceed the limit
-     * @param int $size the bandwidth delta
+     * @param int $bytes the bandwidth delta
      * @see Limits\Base::CheckBandwidth()
      * @return $this
      */
-    public function CheckBandwidth(int $delta) : self
+    public function CheckBandwidth(int $bytes) : self
     {
-        return $this->MapToLimits(function(Limits\Base $lim)use($delta){ $lim->CheckBandwidth($delta); });
+        $fs = $this->GetFilesystem(); if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
+        
+        return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
     }
         
     private bool $refreshed = false;

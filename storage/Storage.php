@@ -159,12 +159,6 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected function CheckReadOnly(){ if ($this->GetFilesystem()->isReadOnly()) throw new ReadOnlyException(); }
 
-    /** Returns the available space in bytes on the storage */
-    public function GetFreeSpace() : int { throw new FreeSpaceFailedException(); }
-    
-    /** Returns whether or not the storage supports getting free space */
-    public function canGetFreeSpace() : bool { return false; }
-    
     /** Returns an ItemStat object on the given path */
     public abstract function ItemStat(string $path) : ItemStat;
     
@@ -247,7 +241,16 @@ abstract class Storage extends StandardObject implements Transactions
     
     /** By default, most storages cannot copy whole folders */
     public function canCopyFolders() : bool { return false; }
-
+    
+    /** Returns whether or not the storage supports getting free space */
+    public function canGetFreeSpace() : bool { return false; }
+    
+    /** Returns the available space in bytes on the storage */
+    public function GetFreeSpace() : int { throw new FreeSpaceFailedException(); }
+    
+    /** By default, most storages use network bandwidth */
+    public function usesBandwidth() : bool { return true; }
+    
     public function commit() { }
     public function rollback() { }
 }
