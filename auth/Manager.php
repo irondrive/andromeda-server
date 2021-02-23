@@ -41,7 +41,7 @@ class Manager extends BaseObject
     }
     
     /** Returns basic command usage for Create() and Edit() */
-    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types))." [--description text] [--createdefgroup bool]"; }
+    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types))." [--description ?text] [--createdefgroup bool]"; }
     
     /** Gets command usage specific to external authentication backends */
     public static function GetPropUsages() : array

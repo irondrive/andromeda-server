@@ -63,10 +63,10 @@ abstract class AuthEntity extends StandardObject
     }
     
     /** defines command usage for SetProperties() */
-    public static function GetPropUsage() : string { return "[--session_timeout int] [--max_password_age int] ".
-                                                            "[--max_sessions int] [--max_contactinfos int] [--max_recoverykeys int] ".
-                                                            "[--admin bool] [--enabled bool] [--forcetf bool] [--allowcrypto bool] ".
-                                                            "[--accountsearch int] [--groupsearch int]"; }
+    public static function GetPropUsage() : string { return "[--session_timeout ?int] [--max_password_age ?int] ".
+                                                            "[--max_sessions ?int] [--max_contactinfos ?int] [--max_recoverykeys ?int] ".
+                                                            "[--admin ?bool] [--enabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
+                                                            "[--accountsearch ?int] [--groupsearch ?int]"; }
 
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self

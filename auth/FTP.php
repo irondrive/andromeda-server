@@ -27,7 +27,7 @@ class FTP extends External
         ));
     }    
     
-    public static function GetPropUsage() : string { return "--hostname alphanum [--port int] [--implssl bool]"; }
+    public static function GetPropUsage() : string { return "--hostname alphanum [--port ?int] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
@@ -39,20 +39,16 @@ class FTP extends External
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
-        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
-        $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
-        
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        if ($port !== null) $this->SetScalar('port', $port);
-        if ($implssl !== null) $this->SetScalar('implssl', $implssl);
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
+        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->TryGetParam('port', SafeParam::TYPE_INT));
         
         return $this;
     }
     
     /**
      * Returns a printable client object for this FTP
-     * @return array `{hostname:stsring, port:int, implssl:bool}`
+     * @return array `{hostname:string, port:?int, implssl:bool}`
      */
     public function GetClientObject() : array
     {

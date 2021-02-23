@@ -27,7 +27,7 @@ class LDAP extends External
         ));
     }
     
-    public static function GetPropUsage() : string { return "--hostname alphanum [--secure bool] [--userprefix text]"; }
+    public static function GetPropUsage() : string { return "--hostname alphanum [--secure bool] [--userprefix ?text]"; }
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
@@ -39,13 +39,9 @@ class LDAP extends External
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
-        $secure = $input->TryGetParam('secure', SafeParam::TYPE_BOOL);
-        $userprefix = $input->TryGetParam('userprefix', SafeParam::TYPE_TEXT);
-        
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        if ($secure !== null) $this->SetScalar('secure', $secure);
-        if ($userprefix !== null) $this->SetScalar('userprefix', $userprefix);
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname',SafeParam::TYPE_HOSTNAME));
+        if ($input->HasParam('secure')) $this->SetScalar('secure',$input-yGetParam('secure',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->TryGetParam('userprefix',SafeParam::TYPE_TEXT));
         
         return $this;
     }
