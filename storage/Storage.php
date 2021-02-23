@@ -84,23 +84,27 @@ class ItemStat
  */
 abstract class Storage extends StandardObject implements Transactions
 {
+    /** Returns the account that owns this storage (or null) */
+    public function GetAccount() : ?Account { return $this->GetFilesystem()->GetOwner(); }
+    
+    /** Returns the FSManager that manages this storage */
+    public function GetFilesystem() : FSManager { return $this->GetObject('filesystem'); }
+    
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
-            'owner' => new FieldTypes\ObjectRef(Account::class)
+            'filesystem' => new FieldTypes\ObjectRef(FSManager::class)
         ));
     }
     
     /**
      * Returns a printable client object of this storage
-     * @return array `{id:id, owner:id, filesystem:id}`
+     * @return array `{id:id, filesystem:id}`
      */
     public function GetClientObject() : array
     {
         $retval = array(
             'id' => $this->ID(),
-            'owner' => $this->TryGetObjectID('owner'),
             'filesystem' => $this->GetObjectID('filesystem')
         );
         
@@ -113,10 +117,10 @@ abstract class Storage extends StandardObject implements Transactions
     /** Returns the command usage for Create() */
     public abstract static function GetCreateUsage() : string;
     
-    /** Creates a new storage with the given input for the given account and FS manager */
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    /** Creates a new storage with the given input and the given FS manager */
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::BaseCreate($database)->SetObject('filesystem',$filesystem)->SetObject('owner',$account);
+        return parent::BaseCreate($database)->SetObject('filesystem',$filesystem);
     }
     
     /** Returns the command usage for Edit() */
@@ -138,27 +142,25 @@ abstract class Storage extends StandardObject implements Transactions
         return $this;
     }
     
+    /**
+     * Asserts that the storage is not read only
+     * @throws ReadOnlyException if the filesystem is read only
+     */
+    protected function CheckReadOnly()
+    { 
+        if ($this->GetFilesystem()->isReadOnly()) 
+            throw new ReadOnlyException(); 
+    }
+
+    /** Activates the storage by making any required connections */
+    public abstract function Activate() : self;
+
     /** Returns true if the filesystem root can be read */
     public abstract function isReadable() : bool;
     
     /** Returns true if the filesystem root can be written to */
     public abstract function isWriteable() : bool;
     
-    /** Activates the storage by making any required connections */
-    public abstract function Activate() : self;
-
-    /** Returns the account that owns this storage (or null) */
-    public function GetAccount() : ?Account { return $this->TryGetObject('owner'); }
-    
-    /** Returns the FSManager that manages this storage */
-    public function GetFilesystem() : FSManager { return $this->GetObject('filesystem'); }    
-    
-    /**
-     * Asserts that the storage is not read only
-     * @throws ReadOnlyException if the filesystem is read only
-     */
-    protected function CheckReadOnly(){ if ($this->GetFilesystem()->isReadOnly()) throw new ReadOnlyException(); }
-
     /** Returns an ItemStat object on the given path */
     public abstract function ItemStat(string $path) : ItemStat;
     

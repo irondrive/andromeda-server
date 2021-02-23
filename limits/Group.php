@@ -64,7 +64,7 @@ trait GroupCommon
         $this->CountShares($mul*$aclim->GetShares());
     }
     
-    public static function GetBaseUsage() : string { return "[--track_items ?(0|1|2) [--track_dlstats ?(0|1|2)"; }
+    public static function GetBaseUsage() : string { return "[--track_items ?(0|1|2)] [--track_dlstats ?(0|1|2)]"; }
     
     protected function SetBaseLimits(Input $input) : void
     {

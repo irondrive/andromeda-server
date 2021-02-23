@@ -71,27 +71,24 @@ class FTP extends FWrapper
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--implssl bool]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
+        return parent::Create($database, $input, $filesystem)
+            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT))
             ->SetScalar('implssl', $input->TryGetParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--implssl bool]"; }
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
-        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
-        $implssl = $input->TryGetParam('implssl', SafeParam::TYPE_BOOL);
-        
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        if ($port !== null) $this->SetScalar('port', $port);
-        if ($implssl !== null) $this->SetScalar('implssl', $implssl);
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
+        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->TryGetParam('port', SafeParam::TYPE_INT));
         
         return parent::Edit($input)->CredCryptEdit($input);
     }

@@ -223,7 +223,7 @@ class FSManager extends StandardObject
 
         try
         {            
-            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $owner, $filesystem));
+            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
         }
@@ -233,7 +233,7 @@ class FSManager extends StandardObject
     }
     
     /** Returns the command usage of Edit() */
-    public static function GetEditUsage() : string { return "[--name name] [--readonly bool]"; }
+    public static function GetEditUsage() : string { return "[--name ?name] [--readonly bool]"; }
     
     public static function GetEditUsages() : array
     {

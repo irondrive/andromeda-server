@@ -83,7 +83,9 @@ abstract class Total extends Base
     
     public static function GetConfigUsage() : string { return static::GetBaseUsage(); }
 
-    public static function BaseConfigUsage() : string { return "[--randomwrite bool] [--publicmodify bool] [--publicupload bool] [--itemsharing bool] [--shareeveryone bool] [--max_size int] [--max_items int] [--max_shares int]"; }
+    public static function BaseConfigUsage() : string { return "[--randomwrite ?bool] [--publicmodify ?bool] [--publicupload ?bool] ".
+                                                               "[--itemsharing ?bool] [--shareeveryone ?bool] ".
+                                                               "[--max_size ?int] [--max_items ?int] [--max_shares ?int]"; }
         
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {

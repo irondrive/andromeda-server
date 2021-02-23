@@ -20,10 +20,13 @@ class Local extends FWrapper
 {
     public function Activate() : self { return $this; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        if ($account && !$account->isAdmin()) throw new LocalNonAdminException();
-        else return parent::Create($database, $input, $account, $filesystem);
+        $account = $filesystem->GetOwner();
+        if ($account && !$account->isAdmin()) 
+            throw new LocalNonAdminException();
+        
+        else return parent::Create($database, $input, $filesystem);
     }
 
     protected function UseChunks() : bool { return false; }
