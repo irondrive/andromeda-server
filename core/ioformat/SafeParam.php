@@ -78,17 +78,20 @@ class SafeParam
     /** A value containing a hostname, see FILTER_FLAG_STRIP_LOW, FILTER_VALIDATE_DOMAIN and FILTER_FLAG_HOSTNAME */
     public const TYPE_HOSTNAME = 10;
     
+    /** A value containing a full URL, see FILTER_VALIDATE_URL */
+    public const TYPE_URL      = 11;
+    
     /** A string value with a max length of 65535, HTML-escapes special characters, see FILTER_SANITIZE_SPECIAL_CHARS */
-    public const TYPE_TEXT     = 11;
+    public const TYPE_TEXT     = 12;
     
     /** A raw value that does no sanitizing or validating */
-    public const TYPE_RAW      = 12;
+    public const TYPE_RAW      = 13;
     
     /** A value that itself is a collection of SafeParams (an associative array) */
-    public const TYPE_OBJECT   = 13;
+    public const TYPE_OBJECT   = 14;
 
     /** can be combined with any type to indicate an array of that type */
-    public const TYPE_ARRAY = 16;
+    public const TYPE_ARRAY = 128;
 
     const TYPE_STRINGS = array(
         null => 'custom',
@@ -102,6 +105,7 @@ class SafeParam
         self::TYPE_FSNAME => 'fsname',
         self::TYPE_FSPATH => 'fspath',
         self::TYPE_HOSTNAME => 'hostname',
+        self::TYPE_URL => 'url',
         self::TYPE_TEXT => 'text',
         self::TYPE_RAW => 'raw',
         self::TYPE_OBJECT => 'object',
@@ -215,6 +219,12 @@ class SafeParam
             if (mb_strlen($value) >= 256 || 
                 ($value = filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) === false)
                     throw new SafeParamInvalidException($key, $type);
+        }
+        else if ($type === self::TYPE_URL)
+        {
+            if (mb_strlen($value) >= 65536 ||
+                ($value = filter_var($value, FILTER_VALIDATE_URL)) === false)
+                throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_TEXT)
         {
