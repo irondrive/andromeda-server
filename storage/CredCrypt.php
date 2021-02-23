@@ -50,7 +50,7 @@ trait CredCrypt
     }
     
     /** Returns the command usage for CredCryptCreate() */
-    public static function CredCryptGetCreateUsage() : string { return "[--username alphanum] [--password raw] [--credcrypt bool]"; }
+    public static function CredCryptGetCreateUsage() : string { return "[--username ?alphanum] [--password ?raw] [--credcrypt bool]"; }
 
     /** Performs cred-crypt level initialization on a new storage */
     public function CredCryptCreate(Input $input, ?Account $account) : self

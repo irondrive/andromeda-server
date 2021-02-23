@@ -90,14 +90,15 @@ class SFTP extends FWrapper
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port int] [--file file privkey] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--file file privkey] [--keypass ?raw]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;   
         $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);
         
-        $obj = parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
+        $obj = parent::Create($database, $input, $filesystem)
+            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT));         
         
@@ -108,19 +109,14 @@ class SFTP extends FWrapper
         return $obj;
     }
 
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--port int] [--file file privkey] [--keypass raw] [--resethost bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--file file privkey] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
-        $hostname = $input->TryGetParam('hostname', SafeParam::TYPE_HOSTNAME);
-        $port = $input->TryGetParam('port', SafeParam::TYPE_INT);
+        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->TryGetParam('port', SafeParam::TYPE_INT));
         
-        if ($hostname !== null) $this->SetScalar('hostname', $hostname);
-        if ($port !== null) $this->SetScalar('port', $port);
-        
-        $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);        
-        if ($keypass !== null) $this->SetKeypass($keypass);
-
+        if ($input->HasParam('keypass')) $this->SetKeypass($input->TryGetParam('keypass',SafeParam::TYPE_RAW));
         if ($input->HasFile('privkey')) $this->SetPrivkey(file_get_contents($input->GetFile('privkey')));
         
         if ($input->TryGetParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);

@@ -24,7 +24,7 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
     
     /** Returns the command usage for SetConfig() */
-    public static function GetSetConfigUsage() : string { return "[--rwchunksize int] [--crchunksize int] [--timedstats bool] [--apiurl string]"; }
+    public static function GetSetConfigUsage() : string { return "[--rwchunksize int] [--crchunksize int] [--timedstats bool] [--apiurl ?string]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self

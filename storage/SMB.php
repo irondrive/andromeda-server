@@ -54,16 +54,17 @@ class SMB extends FWrapper
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup ?alphanum]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $account, $filesystem)->CredCryptCreate($input,$account)
+        return parent::Create($database, $input, $filesystem)
+            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--workgroup ?alphanum]"; }
     
     public function Edit(Input $input) : self
     {

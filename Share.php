@@ -153,16 +153,19 @@ class Share extends AuthObject
      * @param bool $check if true, only set the password if a rehash is required
      * @return $this
      */
-    protected function SetPassword(string $password, bool $check = false) : self
+    protected function SetPassword(?string $password, bool $check = false) : self
     {
+        if ($password === null) return $this->SetScalar('password',null);
+        
         $algo = Utilities::GetHashAlgo();        
         if (!$check || password_needs_rehash($this->GetScalar('password'), $algo))
-            $this->SetScalar('password', password_hash($password, $algo));        
+            $this->SetScalar('password', password_hash($password, $algo));
+        
         return $this;
     }
     
     /** Returns the command usage for SetShareOptions() */
-    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword raw] [--expires int] [--maxaccess int]"; }
+    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
     
     /**
      * Modifies share permissions and properties from the given input
@@ -183,14 +186,9 @@ class Share extends AuthObject
         if ($f_social !== null)  $this->SetFeature('social', $f_social && ($access === null || $access->CanSocial()));
         if ($f_reshare !== null) $this->SetFeature('reshare', $f_reshare && ($access === null || $access->CanReshare()));
         
-        $password = $input->TryGetParam('spassword',SafeParam::TYPE_RAW);
-        if ($password !== null) $this->SetPassword($password);
-        
-        $expires = $input->TryGetParam('expires',SafeParam::TYPE_INT);
-        if ($expires !== null) $this->SetDate('expires', $expires);
-        
-        $maxaccess = $input->TryGetParam('maxaccess',SafeParam::TYPE_INT);
-        if ($maxaccess !== null) $this->SetCounterLimit('accesses',$maxaccess);
+        if ($input->HasParam('spassword')) $this->SetPassword($input->TryGetParam('spassword',SafeParam::TYPE_RAW));
+        if ($input->HasParam('expires')) $this->SetDate('expires',$input->TryGetParam('expires',SafeParam::TYPE_INT));
+        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->TryGetParam('maxaccess',SafeParam::TYPE_INT));
         
         return $this;
     }

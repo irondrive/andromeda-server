@@ -32,15 +32,15 @@ abstract class FWrapper extends Storage
         ));
     }
     
-    public static function GetCreateUsage() : string { return "--path text"; }
+    public static function GetCreateUsage() : string { return "--path fspath"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $account, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         $path = $input->GetParam('path', SafeParam::TYPE_FSPATH);
-        return parent::Create($database, $input, $account, $filesystem)->SetPath($path);
+        return parent::Create($database, $input, $filesystem)->SetPath($path);
     }
     
-    public static function GetEditUsage() : string { return "--path text"; }
+    public static function GetEditUsage() : string { return "[--path fspath]"; }
     
     public function Edit(Input $input) : self
     {

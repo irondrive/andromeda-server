@@ -22,7 +22,7 @@ abstract class AuthEntityTotal extends Total
         ));
     }
 
-    public static function GetConfigUsage() : string { return static::GetBaseUsage()." [--emailshare bool] [--userstorage bool]"; }
+    public static function GetConfigUsage() : string { return static::GetBaseUsage()." [--emailshare ?bool] [--userstorage ?bool]"; }
     
     public static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {

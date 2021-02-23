@@ -135,7 +135,7 @@ abstract class Timed extends Base
     
     public static function GetConfigUsage() : string { return static::GetBaseUsage()." ".static::GetTimedUsage(); }
     
-    public static function BaseConfigUsage() : string { return "--timeperiod int [--max_downloads int] [--max_bandwidth int]"; }
+    public static function BaseConfigUsage() : string { return "--timeperiod int [--max_downloads ?int] [--max_bandwidth ?int]"; }
     
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {
