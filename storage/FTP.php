@@ -221,13 +221,12 @@ class FTP extends FWrapper
         });
     }
     
-    private function GetFTPWriteHandle(string $path, int $start, int $length)
+    private function GetFTPWriteHandle(string $path, int $start)
     {
-        return $this->GetFTPHandle($path, $start, true, function()use($start,$path,$length)
+        return $this->GetFTPHandle($path, $start, true, function()use($start,$path)
         {
             $fsize = ftp_size($this->ftp, $this->GetPath($path));
-            if (!$start && $length >= $fsize) $this->Truncate($path, 0);
-            else if ($start != $fsize) throw new FTPWriteUnsupportedException();
+            if ($start != $fsize) throw new FTPWriteUnsupportedException();
             
             return fopen($this->GetFullURL($path),'a');
         });
@@ -253,7 +252,7 @@ class FTP extends FWrapper
     {
         $this->CheckReadOnly();
         
-        $handle = $this->GetFTPWriteHandle($path, $start, strlen($data));
+        $handle = $this->GetFTPWriteHandle($path, $start);
         
         $this->WriteHandle($handle->handle, $data);
         
