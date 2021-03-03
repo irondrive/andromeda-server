@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/apps/accounts/ContactInfo.php");
+require_once(ROOT."/apps/accounts/Contact.php");
 require_once(ROOT."/apps/accounts/Client.php"); 
 require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/Group.php");
@@ -33,7 +33,6 @@ class CryptoAlreadyInitializedException extends Exceptions\ServerException { pub
 class RecoveryKeyFailedException extends Exceptions\ServerException { public $message = "RECOVERY_KEY_UNLOCK_FAILED"; }
 
 use Andromeda\Core\Database\NullValueException;
-use Andromeda\Core\EmailUnavailableException;
 
 /**
  * Class representing a user account in the database
@@ -49,7 +48,6 @@ class Account extends AuthEntity
         return array_merge(parent::GetFieldTemplate(), array(
             'username' => null, 
             'fullname' => null, 
-            'unlockcode' => null,
             'comment' => null,
             'master_key' => null,
             'master_nonce' => null,
@@ -60,7 +58,7 @@ class Account extends AuthEntity
             'dates__active' => new FieldTypes\Scalar(null, true),
             'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
             'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
-            'contactinfos'  => new FieldTypes\ObjectRefs(ContactInfo::class, 'account'),
+            'contacts'      => new FieldTypes\ObjectRefs(Contact::class, 'account'),
             'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
             'twofactors'    => new FieldTypes\ObjectRefs(TwoFactor::class, 'account'),
             'recoverykeys'  => new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'),
@@ -70,6 +68,9 @@ class Account extends AuthEntity
     
     use GroupInherit;
     
+    public const DISABLE_PERMANENT = 1;
+    public const DISABLE_PENDING_CONTACT = 2;
+    
     /**
      * Gets the fields that can be inherited from a group, with their default values
      * @return array<string, mixed>
@@ -78,13 +79,13 @@ class Account extends AuthEntity
         'session_timeout' => null,
         'max_password_age' => null,
         'features__admin' => false,
-        'features__enabled' => true,
+        'features__disabled' => false,
         'features__forcetf' => false,
         'features__allowcrypto' => true,
         'features__accountsearch' => 1,
         'features__groupsearch' => 1,
         'counters_limits__sessions' => null,
-        'counters_limits__contactinfos' => null,
+        'counters_limits__contacts' => null,
         'counters_limits__recoverykeys' => null
     ); }
     
@@ -188,15 +189,6 @@ class Account extends AuthEntity
      * @return array<string, Session> sessions indexed by ID
      */
     public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
-
-    /**
-     * Returns an array of contact infos for the account
-     * @return array<string, ContactInfo> contacts indexed by ID
-     */
-    public function GetContactInfos() : array   { return $this->GetObjectRefs('contactinfos'); } 
-    
-    /** Returns the number of contact infos for the account without loading them (faster) */
-    public function CountContactInfos() : int   { return $this->CountObjectRefs('contactinfos'); }
     
     /**
      * Returns an array of recovery keys for the account
@@ -232,19 +224,13 @@ class Account extends AuthEntity
     public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? self::GetInheritedFields()['features__admin']; }
     
     /** True if this account is enabled */
-    public function isEnabled() : bool          { return $this->TryGetFeature('enabled') ?? self::GetInheritedFields()['features__enabled']; }
+    public function isEnabled() : bool       { return !boolval($this->TryGetFeature('disabled') ?? self::GetInheritedFields()['features__disabled']); }
     
     /** Sets this account's admin-status to the given value */
     public function setAdmin(?bool $val) : self { return $this->SetFeature('admin', $val); }
     
-    /** Sets this account's enabled status to the given value */
-    public function setEnabled(?bool $val) : self { return $this->SetFeature('enabled', $val); }
-    
-    /** Returns the account's unlock code (or null) */
-    public function getUnlockCode() : ?string           { return $this->TryGetScalar('unlockcode'); }
-    
-    /** Sets the account's unlock code to the given value */
-    public function setUnlockCode(?string $code) : self { return $this->SetScalar('unlockcode', $code); }
+    /** Sets the account's disabled status to the given enum value */
+    public function setDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeature('disabled', $val); }    
     
     /** Gets the timestamp when this user was last active */
     public function getActiveDate() : float     { return $this->GetDate('active'); }
@@ -293,17 +279,17 @@ class Account extends AuthEntity
     /**
      * Attempts to load an account with the given contact info
      * @param ObjectDatabase $database database reference
-     * @param string $info contact info value
+     * @param ContactInfo $info the contact info type/value
      * @return self|NULL loaded account or null if not found
      */
-    public static function TryLoadByContactInfo(ObjectDatabase $database, string $info) : ?self
+    public static function TryLoadByContactInfo(ObjectDatabase $database, ContactInfo $info) : ?self
     {
-        $info = ContactInfo::TryLoadByInfo($database, $info);
-        if ($info === null) return null; else return $info->GetAccount();
+        $info = Contact::TryLoadByInfoPair($database, $info);
+        return ($info !== null) ? $info->GetAccount() : null;
     }
     
     /**
-     * Returns all accounts whose username, fullname or contact info matches the given info
+     * Returns all accounts whose username, fullname or contacts match the given info
      * @param ObjectDatabase $database database reference
      * @param string $info username/other info to match by (wildcard)
      * @param int $limit max # to load - returns nothing if exceeded (in a single category)
@@ -319,7 +305,7 @@ class Account extends AuthEntity
         $loaded1 = parent::LoadByQuery($database, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1));
         if (count($loaded1) >= $limit+1) $loaded1 = array(); else $limit -= count($loaded1);
         
-        $loaded2 = ContactInfo::LoadAccountsMatchingInfo($database, $info, $limit+1);
+        $loaded2 = Contact::LoadAccountsMatchingValue($database, $info, $limit+1);
         if (count($loaded2) >= $limit+1) $loaded2 = array(); else $limit -= count($loaded2);
         
         $loaded3 = parent::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
@@ -347,36 +333,60 @@ class Account extends AuthEntity
     public static function DeleteByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : void
     {
         parent::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
-    }
+    }   
     
-    // TODO this should be multiple functions for redacted/not redacted
-    public function GetEmailRecipients(bool $redacted = false) : array
+    /**
+     * Returns all contacts for this account
+     * @param bool $valid if true return only validated contacts
+     * @return array<string, Contact> contacts indexed by ID
+     */
+    public function GetContacts(bool $valid = true) : array
     {
-        $name = $this->GetDisplayName();
-        $emails = ContactInfo::GetEmails($this->GetContactInfos());
+        $contacts = $this->GetObjectRefs('contacts');
         
-        return array_map(function($email) use($name,$redacted){
-            if ($redacted) return ContactInfo::RedactEmail($email);
-            else return new EmailRecipient($email, $name);
-        }, $emails);
-    }
-    
-    // TODO cleanup this and GetEmailRecipients(), should just have this one?
-    public function GetMailTo() : array
-    {
-        $recipients = $this->GetEmailRecipients();        
-        if (!count($recipients)) throw new EmailUnavailableException();
-        return $recipients;
-    }
-    
-    public function GetMailFrom() : ?EmailRecipient
-    {
-        // TODO have a notion of which contact info is preferred rather than just [0]
+        if ($valid) $contacts = array_filter($contacts, 
+            function(Contact $contact){ return $contact->GetIsValid(); });
         
-        $from = $this->GetEmailRecipients();
-        return count($from) ? $from[0] : null;
+        return $contacts;
     }
     
+    /**
+     * Returns EmailReceipient objects for all email contacts
+     * @return array<string, EmailRecipient>
+     */
+    public function GetContactEmails() : array
+    {
+        $emails = array_filter($this->GetContacts(), function(Contact $contact){ return $contact->isEmail(); });
+        
+        return array_map(function(Contact $contact){ return $contact->GetAsEmailRecipient(); }, $emails);
+    }        
+
+    /**
+     * Returns the EmailRecipient to use for sending email FROM this account
+     * @return EmailRecipient|NULL email recipient object or null if not set
+     */
+    public function GetFromEmail() : ?EmailRecipient
+    {
+        $contact = Contact::TryLoadAccountFromContact($this->database, $this);
+        
+        return $contact->isEmail() ? $contact->GetAsEmailRecipient() : null;
+    }
+    
+    /**
+     * Sends a message to all of this account's valid contacts
+     * @see Contact::SendMessageMany()
+     */
+    public function SendMessage(string $subject, ?string $html, string $plain, ?Account $from = null) : void
+    {
+        Contact::SendMessageMany($subject, $html, $plain, $this->GetContacts(), false, $from);
+    }    
+
+    /** Sets this account to enabled if it was disabled pending a valid contact */
+    public function NotifyValidContact() : self
+    {
+        return ($this->TryGetFeature('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->setDisabled(null) : $this;
+    }
+        
     /**
      * Creates a new user account
      * @param ObjectDatabase $database database reference
@@ -418,7 +428,7 @@ class Account extends AuthEntity
         $this->DeleteObjectRefs('sessions');
         $this->DeleteObjectRefs('clients');
         $this->DeleteObjectRefs('twofactors');
-        $this->DeleteObjectRefs('contactinfos');
+        $this->DeleteObjectRefs('contacts');
         $this->DeleteObjectRefs('recoverykeys');
         
         parent::Delete();
@@ -430,13 +440,13 @@ class Account extends AuthEntity
      * Gets this account as a printable object
      * @return array `{id:string,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
-            counters:{groups:int,sessions:int,contactinfos:int,clients:int,twofactors:int,recoverykeys:int}, 
-            limits:{sessions:?int,contactinfos:?int,recoverykeys:?int}, features:{admin:bool,enabled:bool,forcetf:bool,allowcrypto:bool
+            counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
+            limits:{sessions:?int,contacts:?int,recoverykeys:?int}, features:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
                 accountsearch:int, groupsearch:int},session_timeout:?int, max_password_age:?int} \
-        if OBJECT_FULL, add: {contactinfos:[id:ContactInfo], clients:[id:Client], twofactors:[id:TwoFactor]} \
+        if OBJECT_FULL, add: {contacts:[id:Contact], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:{id:class}], 
             features_from:[string:{id:class}], session_timeout_from:{id:class}, max_password_age_from:{id:class}}
-     * @see ContactInfo::GetClientObject()
+     * @see Contact::GetClientObject()
      * @see TwoFactor::GetClientObject()
      * @see Client::GetClientObject()
      */
@@ -465,7 +475,7 @@ class Account extends AuthEntity
         if ($level & self::OBJECT_FULL)
         {
             $data = array_merge($data, array(
-                'contactinfos' => array_map($mapobj, $this->GetContactInfos()),
+                'contacts' => array_map($mapobj, $this->GetContacts(false)),
                 'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
                 'clients' => array_map($mapobj, $this->GetClients()),
             ));
@@ -522,9 +532,10 @@ class Account extends AuthEntity
     {
         if (!$this->HasRecoveryKeys()) return false; 
         
-        $obj = RecoveryKey::LoadByFullKey($this->database, $this, $key);
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
 
         if ($obj === null) return false;
+        
         else return $obj->CheckFullKey($key);
     }
     
@@ -669,7 +680,7 @@ class Account extends AuthEntity
         
         if (!$this->HasRecoveryKeys()) throw new RecoveryKeyFailedException();
         
-        $obj = RecoveryKey::LoadByFullKey($this->database, $this, $key);
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new RecoveryKeyFailedException();
         
         return $this->UnlockCryptoFromKeySource($obj, $key);

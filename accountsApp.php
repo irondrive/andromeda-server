@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
-require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -17,7 +16,7 @@ require_once(ROOT."/apps/accounts/Authenticator.php");
 require_once(ROOT."/apps/accounts/AuthObject.php");
 require_once(ROOT."/apps/accounts/Client.php");
 require_once(ROOT."/apps/accounts/Config.php");
-require_once(ROOT."/apps/accounts/ContactInfo.php");
+require_once(ROOT."/apps/accounts/Contact.php");
 require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/GroupStuff.php");
 require_once(ROOT."/apps/accounts/KeySource.php");
@@ -36,8 +35,6 @@ use Andromeda\Core\UnknownConfigException;
 use Andromeda\Core\DecryptionFailedException;
 
 use Andromeda\Core\Database\DatabaseException;
-use Andromeda\Core\Exceptions\NotImplementedException;
-use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
 /** Exception indicating that an account already exists under this username/email */
 class AccountExistsException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_ALREADY_EXISTS"; }
@@ -45,8 +42,8 @@ class AccountExistsException extends Exceptions\ClientErrorException { public $m
 /** Exception indicating that a group already exists with this name */
 class GroupExistsException extends Exceptions\ClientErrorException { public $message = "GROUP_ALREADY_EXISTS"; }
 
-/** Exception indicating that this contact info already exists */
-class ContactInfoExistsException extends Exceptions\ClientErrorException { public $message = "CONTACTINFO_ALREADY_EXISTS"; }
+/** Exception indicating that this contact already exists */
+class ContactExistsException extends Exceptions\ClientErrorException { public $message = "CONTACT_ALREADY_EXISTS"; }
 
 /** Exception indicating that this group membership is for a default group and cannot be changed */
 class ImmutableGroupException extends Exceptions\ClientDeniedException { public $message = "GROUP_MEMBERSHIP_REQUIRED"; }
@@ -76,7 +73,7 @@ class OldPasswordRequiredException extends Exceptions\ClientErrorException { pub
 class NewPasswordRequiredException extends Exceptions\ClientErrorException { public $message = "NEW_PASSWORD_REQUIRED"; }
 
 /** Exception indicating that an email address must be provided */
-class EmailAddressRequiredException extends Exceptions\ClientDeniedException { public $message = "EMAIL_ADDRESS_REQUIRED"; }
+class ContactRequiredException extends Exceptions\ClientDeniedException { public $message = "VALID_CONTACT_REQUIRED"; }
 
 /** Exception indicating that the test on the authentication source failed */
 class AuthSourceTestFailException extends Exceptions\ClientErrorException { public $message = "AUTH_SOURCE_TEST_FAIL"; }
@@ -99,8 +96,8 @@ class UnknownSessionException extends Exceptions\ClientNotFoundException { publi
 /** Exception indicating that an unknown twofactor was given */
 class UnknownTwoFactorException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_TWOFACTOR"; }
 
-/** Exception indicating that an unknown contactinfo was given */
-class UnknownContactInfoException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_CONTACTINFO"; }
+/** Exception indicating that an unknown contact was given */
+class UnknownContactException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_CONTACT"; }
 
 /** Exception indicating that the group membership does not exist */
 class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_GROUPMEMBERSHIP"; }
@@ -109,7 +106,7 @@ class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException
  * App for managing accounts and authenticating users.
  *
  * Creates and manages accounts, groups of accounts, authentication,
- * managing and validating contact info.  Supports account-crypto, two-factor 
+ * managing and validating contacts.  Supports account-crypto, two-factor 
  * authentication, multi-client/session management, authentication via external
  * sources, and granular per-account/per-group config.
  */
@@ -133,24 +130,24 @@ class AccountsApp extends AppBase
             'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
-            'changepassword --username text --new_password raw (--auth_password raw | --auth_recoverykey text)',
-            'emailrecovery --username text',
-            'createaccount (--email email | --username alphanum) --password raw [--admin bool]',
-            'unlockaccount --account id --unlockcode alphanum',
-            'createsession --username text --auth_password raw [--authsource id]',
+            'changepassword --new_password raw ((--username text --auth_password raw) | --recoverykey text)',
+            'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
+            'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
+            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id]',
                 "\t [--recoverykey text | --auth_twofactor int] [--name name]",
                 "\t --auth_clientid id --auth_clientkey alphanum",
             'createrecoverykeys --auth_password raw --auth_twofactor int',
             'createtwofactor --auth_password raw [--comment text]',
             'verifytwofactor --auth_twofactor int',
-            'createcontactinfo --type int --info email',
-            'verifycontactinfo --type int --unlockcode alphanum',
+            'createcontact '.Contact::GetFetchUsage(),
+            'verifycontact --authkey text',
             'deleteaccount --auth_password raw --auth_twofactor int',
             'deletesession [--session id --auth_password raw]',
             'deleteclient [--client id --auth_password raw]',
             'deleteallauth --auth_password raw [--everyone bool]',
             'deletetwofactor --auth_password raw --twofactor id',
-            'deletecontactinfo --type int --info email',
+            'deletecontact --contact id',
+            'editcontact --contact id [--usefrom bool] [--public bool]',
             'searchaccounts --name text',
             'searchgroups --name text',
             'listaccounts [--limit int] [--offset int]',
@@ -218,22 +215,23 @@ class AccountsApp extends AppBase
             case 'changepassword':      return $this->ChangePassword($input);
             case 'emailrecovery':       return $this->EmailRecovery($input);
             
-            case 'createaccount':       return $this->CreateAccount($input);
-            case 'unlockaccount':       return $this->UnlockAccount($input);            
+            case 'createaccount':       return $this->CreateAccount($input);           
             case 'createsession':       return $this->CreateSession($input);
             
             case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input);
             case 'createtwofactor':     return $this->CreateTwoFactor($input);
             case 'verifytwofactor':     return $this->VerifyTwoFactor($input);
-            case 'createcontactinfo':   return $this->CreateContactInfo($input);
-            case 'verifycontactinfo':   return $this->VerifyContactInfo($input);
+            case 'createcontact':   return $this->CreateContact($input);
+            case 'verifycontact':   return $this->VerifyContact($input);
             
             case 'deleteaccount':       return $this->DeleteAccount($input);
             case 'deletesession':       return $this->DeleteSession($input);
             case 'deleteclient':        return $this->DeleteClient($input);
             case 'deleteallauth':       return $this->DeleteAllAuth($input);
             case 'deletetwofactor':     return $this->DeleteTwoFactor($input);
-            case 'deletecontactinfo':   return $this->DeleteContactInfo($input); 
+            
+            case 'deletecontact':   return $this->DeleteContact($input); 
+            case 'editcontact':     return $this->EditContact($input);
             
             case 'searchaccounts':      return $this->SearchAccounts($input);
             case 'searchgroups':        return $this->SearchGroups($input);
@@ -320,6 +318,8 @@ class AccountsApp extends AppBase
         
         $account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR);
         
+        $self = ($account === null);
+        
         if ($account !== null)
         {
             $account = Account::TryLoadByID($this->database, $account);
@@ -329,7 +329,7 @@ class AccountsApp extends AppBase
         
         $admin = $this->authenticator->isAdmin();
         
-        $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) && ($account === null || $admin);
+        $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) && ($self || $admin);
 
         $type = ($full ? Account::OBJECT_FULL : 0) | ($admin ? Account::OBJECT_ADMIN : 0);
         
@@ -347,7 +347,7 @@ class AccountsApp extends AppBase
     protected function ChangePassword(Input $input) : void
     {
         $new_password = $input->GetParam('new_password',SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_RAW);
+        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
         
         if ($recoverykey !== null)
         {
@@ -400,16 +400,23 @@ class AccountsApp extends AppBase
     }
     
     /**
-     * Emails a recovery key to the user's registered emails
+     * Emails a recovery key to the user's registered contacts
      * @throws UnknownAccountException if the given username is invalid
      * @throws RecoveryKeyCreateException if crypto or two factor are enabled
-     * @return string[] partially redacted email address strings
-     * @see Account::GetEmailRecipients
      */
-    protected function EmailRecovery(Input $input) : array
-    {        
-        $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
-        $account = Account::TryLoadByUsername($this->database, $username);
+    protected function EmailRecovery(Input $input) : void
+    {
+        if ($input->HasParam('username'))
+        {
+            $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
+            $account = Account::TryLoadByUsername($this->database, $username);
+        }
+        else
+        {
+            $contactInfo = Contact::FetchInfoFromInput($input);
+            $account = Account::TryLoadByContactInfo($this->database, $contactInfo);
+        }        
+        
         if ($account === null) throw new UnknownAccountException();
         
         if ($account->hasCrypto() || $account->HasValidTwoFactor()) throw new RecoveryKeyCreateException();
@@ -417,94 +424,59 @@ class AccountsApp extends AppBase
         $key = RecoveryKey::Create($this->database, $account)->GetFullKey();   
         
         $subject = "Andromeda Account Recovery Key";
-        $body = "Your recovery key is: $key";
+        $body = "Your recovery key is: $key";       
         
         // TODO HTML - configure a directory where client templates reside
-        $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, $account->GetMailTo());
         
-        return $account->GetEmailRecipients(true);
+        $account->SendMessage($subject, null, $body);
     }
     
     /**
-     * Creates a new account, emails the user an unlockcode if required
-     * @throws Exceptions\ClientDeniedException if the feature is disabled
+     * Creates a new user account
+     * @throws AccountCreateDeniedException if the feature is disabled
      * @throws AccountExistsException if the account already exists
      * @return array Account
      * @see Account::GetClientObject()
      */
     protected function CreateAccount(Input $input) : array
     {
-        $admin = $this->authenticator !== null; if ($admin) $this->authenticator->RequireAdmin();
+        $admin = $this->authenticator !== null; 
+        if ($admin) $this->authenticator->RequireAdmin();
         
-        $admin = $admin || $this->API->GetInterface()->isPrivileged();
+        $admin = $admin || $this->API->GetInterface()->isPrivileged();        
+        if (!$admin && !$this->config->GetAllowCreateAccount()) 
+            throw new AccountCreateDeniedException();
         
-        if (!$admin && !$this->config->GetAllowCreateAccount()) throw new AccountCreateDeniedException();
-        
-        $emailasuser = $this->config->GetUseEmailAsUsername();
-        $requireemail = $this->config->GetRequireContact();
-        
-        if ($emailasuser || $requireemail >= Config::CONTACT_EXIST) 
-            $emailaddr = $input->GetParam("email", SafeParam::TYPE_EMAIL);   
-        
-        if ($emailasuser) $username = $emailaddr;
-        else $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
-        
+        $userIsContact = $this->config->GetUsernameIsContact();
+        $requireContact = $this->config->GetRequireContact();
+               
+        if ($userIsContact || $requireContact >= Config::CONTACT_EXIST)
+        {
+            $contactInfo = Contact::FetchInfoFromInput($input);           
+        }
+
+        $username = $userIsContact ? $contactInfo->info : $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
+
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
-              
-        if (Account::TryLoadByUsername($this->database, $username) !== null) throw new AccountExistsException();
         
-        if (isset($emailaddr) && ContactInfo::TryLoadByInfo($this->database, $emailaddr) !== null) throw new AccountExistsException();
+        if (Account::TryLoadByUsername($this->database, $username) !== null) throw new AccountExistsException();
 
         $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password);
-        
-        if (isset($emailaddr)) $contact = ContactInfo::Create($this->database, $account, ContactInfo::TYPE_EMAIL, $emailaddr);
+       
+        if (isset($contactInfo)) 
+        {
+            $valid = $requireContact >= Config::CONTACT_VALID;
+            
+            if ($valid) $account->setDisabled(Account::DISABLE_PENDING_CONTACT);
+            
+            Contact::Create($this->database, $account, $contactInfo, $valid);
+        }
         
         if ($admin && $input->TryGetParam('admin',SafeParam::TYPE_BOOL)) $account->setAdmin(true);
 
-        if (!$admin && $requireemail >= Config::CONTACT_VALID)
-        {
-            $contact->SetIsValid(false);
-            
-            $code = Utilities::Random(8);
-            $account->setEnabled(false)->setUnlockCode($code);
-            
-            $mailer = $this->API->GetConfig()->GetMailer();
-            $to = array(new EmailRecipient($emailaddr, $username));
-            
-            $subject = "Andromeda Account Validation Code";
-            $body = "Your validation code is: $code";
-            
-            // TODO HTML - configure a directory where client templates reside
-            $mailer->SendMail($subject, $body, $to);
-        }
-        
         return $account->GetClientObject(Account::OBJECT_FULL);
     }
-    
-    /**
-     * Unlocks the user's account if it is disabled and has an unlock code
-     * @throws UnknownAccountException if the given account is invalid
-     * @throws AuthenticationFailedException if the unlock code is invalid
-     */
-    protected function UnlockAccount(Input $input) : void
-    {        
-        $accountid = $input->GetParam("account", SafeParam::TYPE_RANDSTR);        
-        $account = Account::TryLoadByID($this->database, $accountid);
-        if ($account === null) throw new UnknownAccountException();
-        
-        if (!$this->authenticator->GetRealAccount()->isAdmin())
-        {
-            $code = $input->GetParam("unlockcode", SafeParam::TYPE_RANDSTR);
-            if ($account->getUnlockCode() !== $code) throw new AuthenticationFailedException();           
-        }
-        
-        $account->setUnlockCode(null)->setEnabled(null);
-        
-        $contacts = $account->GetContactInfos();
-        if (count($contacts) !== 1) throw new NotImplementedException(); // TODO FIXME
-        array_values($contacts)[0]->SetIsValid(true);
-    }
-    
+
     /**
      * Creates a new session, and possibly a new client for the account
      * 
@@ -529,9 +501,6 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator !== null) throw new AlreadySignedInException();
         
-        $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
-        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW);
-        
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
         {
@@ -541,9 +510,20 @@ class AccountsApp extends AppBase
         }
         else $authsource = Auth\Local::GetInstance();
         
-        /* try loading by username, or even by an email address */
-        $account = Account::TryLoadByUsername($this->database, $username);
-        if ($account === null) $account = Account::TryLoadByContactInfo($this->database, $username);
+        if ($input->HasParam('username'))
+        {
+            $username = $input->GetParam("username", SafeParam::TYPE_TEXT);
+            $account = Account::TryLoadByUsername($this->database, $username);
+        }
+        else 
+        {
+            $cinfo = Contact::FetchInfoFromInput($input);
+            $account = Account::TryLoadByContactInfo($this->database, $cinfo);
+            
+            if ($account === null) throw new AuthenticationFailedException();
+        }
+        
+        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW);        
         
         /* if we found an account, verify the password and correct authsource */
         if ($account !== null)
@@ -617,7 +597,7 @@ class AccountsApp extends AppBase
         }
         
         /* delete old session associated with this client, create a new one */
-        $session = Session::Create($this->database, $account, $client->DeleteSession());
+        Session::Create($this->database, $account, $client->DeleteSession());
         
         /* update object dates */
         $client->setLoggedonDate()->setActiveDate();
@@ -701,74 +681,39 @@ class AccountsApp extends AppBase
     }
     
     /**
-     * Adds a contact info the the account
-     * 
-     * Sends a validation code to the address if required
+     * Adds a contact to the account     * 
      * @throws AuthenticationFailedException if not signed in
-     * @throws ContactInfoExistsException if the value already exists
-     * @return null (or standard return)
-     * @see AccountsApp::StandardReturn()
+     * @throws ContactExistsException if the contact info is used
+     * @return array Contact
+     * @see Contact::GetClientObject()
      */
-    protected function CreateContactInfo(Input $input) : void
+    protected function CreateContact(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_INT); switch ($type)
-        {
-            case ContactInfo::TYPE_EMAIL: $info = $input->GetParam('info', SafeParam::TYPE_EMAIL); break;                
-            default: throw new SafeParamInvalidException("CONTACTINFO_TYPE"); // TODO better exception
-        }        
+        $verify = $this->config->GetRequireContact() >= Config::CONTACT_VALID;
         
-        if (ContactInfo::TryLoadByInfo($this->database, $info) !== null) throw new ContactInfoExistsException();
+        $info = Contact::FetchInfoFromInput($input);
+        
+        if (Contact::TryLoadByInfoPair($this->database, $info) !== null) throw new ContactExistsException();
 
-        $contact = ContactInfo::Create($this->database, $account, $type, $info);
-        
-        if ($this->config->GetRequireContact() >= Config::CONTACT_VALID && 
-            !$this->authenticator->GetRealAccount()->isAdmin())
-        { 
-            $code = Utilities::Random(8); $contact->SetIsValid(false)->SetUnlockCode($code);
-            
-            switch ($type)
-            {
-                // TODO HTML - configure a directory where client templates reside
-                case ContactInfo::TYPE_EMAIL:                    
-                    $mailer = $this->API->GetConfig()->GetMailer();
-                    $to = array(new EmailRecipient($info, $account->GetUsername()));                    
-                    $subject = "Andromeda Email Validation Code";
-                    $body = "Your validation code is: $code";                    
-                    $mailer->SendMail($subject, $body, $to);                    
-                break;            
-            } 
-        }
+        return Contact::Create($this->database, $account, $info, $verify)->GetClientObject();
     }
     
     /**
-     * Verifies a contact info entry
-     * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownContactInfoException if the contact info does not exist
+     * Verifies an account contact
+     * @throws AuthenticationFailedException if the given key is invalid
+     * @throws UnknownContactException if the contact does not exist
      */
-    protected function VerifyContactInfo(Input $input) : void
+    protected function VerifyContact(Input $input) : void
     {
-        if ($this->authenticator === null) throw new AuthenticationFailedException();
-        $account = $this->authenticator->GetAccount();
+        $authkey = $input->GetParam('authkey',SafeParam::TYPE_TEXT);
         
-        $type = $input->GetParam('type', SafeParam::TYPE_INT); switch ($type)
-        {
-            case ContactInfo::TYPE_EMAIL: $info = $input->GetParam('info', SafeParam::TYPE_EMAIL); break;            
-            default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
-        }
+        $contact = Contact::TryLoadByFullKey($this->database, $authkey);
+        if ($contact === null) throw new UnknownContactException();
         
-        $contact = ContactInfo::TryLoadByInfo($this->database, $info);
-        if ($contact === null || $contact->GetAccount() !== $account) throw new UnknownContactInfoException();        
-        
-        if (!$this->authenticator->GetRealAccount()->isAdmin())
-        {
-            $code = $input->GetParam("unlockcode", SafeParam::TYPE_RANDSTR);
-            if ($contact->GetUnlockCode() !== $code) throw new AuthenticationFailedException();
-        }
-
-        $contact->SetUnlockCode(null)->SetIsValid(true);
+        if (!$contact->CheckFullKey($authkey)) throw new AuthenticationFailedException();
     }
     
     /**
@@ -878,33 +823,44 @@ class AccountsApp extends AppBase
     }    
     
     /**
-     * Deletes a contact info from an account
+     * Deletes a contact from an account
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownContactInfoException if the contact info is invalid
-     * @throws EmailAddressRequiredException if an email address is required
+     * @throws UnknownContactException if the contact is invalid
+     * @throws ContactRequiredException if a valid contact is required
      */
-    protected function DeleteContactInfo(Input $input) : void
+    protected function DeleteContact(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_INT); switch ($type)
-        {
-            case ContactInfo::TYPE_EMAIL: $info = $input->GetParam('info', SafeParam::TYPE_EMAIL); break;                
-            default: throw new SafeParamInvalidException("CONTACTINFO_TYPE");
-        }     
-        
-        $contact = ContactInfo::TryLoadByInfo($this->database, $info);
-        if ($contact === null || $contact->GetAccount() !== $account) throw new UnknownContactInfoException();
+        $cid = $input->GetParam('contact',SafeParam::TYPE_RANDSTR);
+        $contact = Contact::TryLoadByAccountAndID($this->database, $account, $cid);
+        if ($contact === null) throw new UnknownContactException();
+
+        if ($this->config->GetRequireContact() && $contact->GetIsValid() && count($account->GetContacts()) <= 1)
+            throw new ContactRequiredException();
         
         $contact->Delete();
+    }
+    
+    /**
+     * Edits a contact for an account
+     * @throws AuthenticationFailedException
+     * @throws UnknownContactException
+     */
+    protected function EditContact(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
         
-        if ($type == ContactInfo::TYPE_EMAIL)
-        {
-            $require = $this->config->GetRequireEmails(); // TODO change to general require contact info?
-            if ($require >= Config::CONTACT_EXIST && !$account->CountContactInfos())
-                throw new EmailAddressRequiredException();  
-        }
+        $cid = $input->GetParam('contact',SafeParam::TYPE_RANDSTR);
+        $contact = Contact::TryLoadByAccountAndID($this->database, $account, $cid);
+        if ($contact === null) throw new UnknownContactException();
+        
+        if ($input->HasParam('usefrom')) $contact->setUseFrom($input->GetParam('usefrom',SafeParam::TYPE_BOOL));        
+        if ($input->HasParam('public')) $contact->setIsPublic($input->GetParam('public',SafeParam::TYPE_BOOL));
+        
+        return $contact->GetClientObject();
     }
     
     /**
@@ -1295,7 +1251,7 @@ class AccountsApp extends AppBase
     public function Test(Input $input)
     {
         $this->config->SetAllowCreateAccount(true, true);
-        $this->config->SetUseEmailAsUsername(false, true);
+        $this->config->SetUsernameIsContact(false, true);
         $this->config->SetRequireContact(Config::CONTACT_EXIST, true);
 
         $results = array(); $app = "accounts";

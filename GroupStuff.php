@@ -42,19 +42,22 @@ class GroupJoin extends JoinObject
 abstract class AuthEntity extends StandardObject
 {
     public abstract function GetDisplayName() : string;
-    public abstract function GetMailTo() : array;
+    
+    public abstract function GetContacts() : array;
+    
+    public abstract function SendMessage(string $subject, ?string $html, string $plain, ?Account $from = null) : void;
     
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'features__admin' => null, // true if the account is an admin
-            'features__enabled' => null, // true if the account is enabled
+            'features__disabled' => null, // > 0 if the account is disabled
             'features__forcetf' => null, // true if two-factor is required to create sessions (not just clients)
             'features__allowcrypto' => null, // true if server-side account crypto is enabled
             'features__accountsearch' => null, // whether looking up accounts by name is allowed
             'features__groupsearch' => null, // whether looking up groups by name is allowed
             'counters_limits__sessions' => null, // maximum number of sessions for the account
-            'counters_limits__contactinfos' => null, // maximum number of contacts for the account
+            'counters_limits__contacts' => null, // maximum number of contacts for the account
             'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
             'session_timeout' => null, // server-side timeout - max time for a session to be inactive
             'max_password_age' => null, // max time since the account's password changed
@@ -64,8 +67,8 @@ abstract class AuthEntity extends StandardObject
     
     /** defines command usage for SetProperties() */
     public static function GetPropUsage() : string { return "[--session_timeout ?int] [--max_password_age ?int] ".
-                                                            "[--max_sessions ?int] [--max_contactinfos ?int] [--max_recoverykeys ?int] ".
-                                                            "[--admin ?bool] [--enabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
+                                                            "[--max_sessions ?int] [--max_contacts ?int] [--max_recoverykeys ?int] ".
+                                                            "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
                                                             "[--accountsearch ?int] [--groupsearch ?int]"; }
 
     /** Sets the value of an inherited property for the object */
@@ -74,10 +77,10 @@ abstract class AuthEntity extends StandardObject
         foreach (array('session_timeout','max_password_age') as $prop)
             if ($input->HasParam($prop)) $this->SetScalar($prop, $input->TryGetParam($prop, SafeParam::TYPE_INT));
         
-        foreach (array('max_sessions','max_contactinfos','max_recoverykeys') as $prop)
+        foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
             if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->TryGetParam($prop, SafeParam::TYPE_INT));
         
-        foreach (array('admin','enabled','forcetf','allowcrypto') as $prop)
+        foreach (array('admin','disabled','forcetf','allowcrypto') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_BOOL));
         
         foreach (array('accountsearch','groupsearch') as $prop)
