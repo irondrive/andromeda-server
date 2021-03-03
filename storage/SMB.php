@@ -119,7 +119,7 @@ class SMB extends FWrapper
     protected function GetReadHandle(string $path) { return fopen($path,'r'); }
     protected function GetWriteHandle(string $path) { return fopen($path,'r+'); }
     
-    // WORKAROUND: php-smbclient does not implement stream ftruncate
+    // WORKAROUND: php-smbclient <= 3.0.5 does not implement stream ftruncate
     public function Truncate(string $path, int $length) : self
     {
         $this->CheckReadOnly();

@@ -190,7 +190,6 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `owner` char(12) DEFAULT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
 ,  `implssl` integer NOT NULL
@@ -206,7 +205,6 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
 ,  PRIMARY KEY (`id`)
 );
@@ -214,7 +212,6 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
@@ -234,10 +231,22 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `owner` char(12) DEFAULT NULL
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `workgroup` varchar(255) DEFAULT NULL
+,  `username` varbinary(255) NOT NULL
+,  `password` tinyblob DEFAULT NULL
+,  `username_nonce` binary(24) DEFAULT NULL
+,  `password_nonce` binary(24) DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`id`)
+);
+CREATE TABLE `a2_objects_apps_files_storage_webdav` (
+  `id` char(12) NOT NULL
+,  `dates__created` double NOT NULL
+,  `filesystem` char(12) NOT NULL
+,  `baseurl` text NOT NULL
+,  `path` text NOT NULL
 ,  `username` varbinary(255) NOT NULL
 ,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
@@ -259,10 +268,8 @@ CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_owner" ON "a2_objec
 CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_name" ON "a2_objects_apps_files_filesystem_fsmanager" (`name`);
 CREATE INDEX "idx_a2_objects_apps_files_tag_owner" ON "a2_objects_apps_files_tag" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_tag_item_2" ON "a2_objects_apps_files_tag" (`item`);
-CREATE INDEX "idx_a2_objects_apps_files_storage_ftp_owner" ON "a2_objects_apps_files_storage_ftp" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_comment_owner" ON "a2_objects_apps_files_comment" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_comment_item" ON "a2_objects_apps_files_comment" (`item`);
-CREATE INDEX "idx_a2_objects_apps_files_storage_local_owner" ON "a2_objects_apps_files_storage_local" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_limits_timed_object" ON "a2_objects_apps_files_limits_timed" (`object`);
 CREATE INDEX "idx_a2_objects_apps_files_folder_parent" ON "a2_objects_apps_files_folder" (`parent`);
 CREATE INDEX "idx_a2_objects_apps_files_folder_owner" ON "a2_objects_apps_files_folder" (`owner`);

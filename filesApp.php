@@ -1436,9 +1436,9 @@ class FilesApp extends AppBase
             
             // TODO param for the client to have the URL point at the client
             // TODO HTML - configure a directory where client templates reside
-            
-            $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, 
-                array(new EmailRecipient($email)), $account->GetMailFrom(), true);
+
+            $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
+                array(new EmailRecipient($email)), $account->GetFromEmail(), false);
         }
         
         return $retval;
