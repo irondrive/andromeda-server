@@ -3,7 +3,6 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` char(12) NOT NULL
 ,  `username` varchar(127) NOT NULL
 ,  `fullname` varchar(255) DEFAULT NULL
-,  `unlockcode` char(8) DEFAULT NULL
 ,  `dates__created` double NOT NULL DEFAULT 0
 ,  `dates__passwordset` double NOT NULL DEFAULT 0
 ,  `dates__loggedon` double NOT NULL DEFAULT 0
@@ -12,13 +11,13 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 ,  `session_timeout` integer DEFAULT NULL
 ,  `max_password_age` integer DEFAULT NULL
 ,  `features__admin` integer DEFAULT NULL
-,  `features__enabled` integer DEFAULT NULL
+,  `features__disabled` integer DEFAULT NULL
 ,  `features__forcetf` integer DEFAULT NULL
 ,  `features__allowcrypto` integer DEFAULT NULL
 ,  `features__accountsearch` integer DEFAULT NULL
 ,  `features__groupsearch` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
-,  `counters_limits__contactinfos` integer DEFAULT NULL
+,  `counters_limits__contacts` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL
 ,  `comment` text DEFAULT NULL
 ,  `master_key` binary(48) DEFAULT NULL
@@ -28,7 +27,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 ,  `authsource` varchar(64) DEFAULT NULL
 ,  `groups` integer NOT NULL DEFAULT 0
 ,  `sessions` integer NOT NULL DEFAULT 0
-,  `contactinfos` integer NOT NULL DEFAULT 0
+,  `contacts` integer NOT NULL DEFAULT 0
 ,  `clients` integer NOT NULL DEFAULT 0
 ,  `twofactors` integer NOT NULL DEFAULT 0
 ,  `recoverykeys` integer NOT NULL DEFAULT 0
@@ -89,24 +88,26 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL
 ,  `features__createaccount` integer NOT NULL
-,  `features__emailasusername` integer NOT NULL
+,  `features__usernameiscontact` integer NOT NULL
 ,  `features__requirecontact` integer NOT NULL
 ,  `default_group` char(12) DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
-CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
+CREATE TABLE `a2_objects_apps_accounts_contact` (
   `id` char(12) NOT NULL
 ,  `type` integer NOT NULL
 ,  `info` varchar(127) NOT NULL
-,  `valid` integer NOT NULL DEFAULT 1
-,  `unlockcode` char(8) DEFAULT NULL
+,  `valid` integer NOT NULL DEFAULT 0
+,  `usefrom` integer DEFAULT NULL
+,  `public` integer NOT NULL DEFAULT 1
+,  `authkey` text DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
-,  UNIQUE (`info`)
+,  UNIQUE (`type`,`info`)
+,  UNIQUE (`usefrom`,`account`)
 );
 CREATE TABLE `a2_objects_apps_accounts_group` (
   `id` char(12) NOT NULL
@@ -116,13 +117,13 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 ,  `dates__created` double NOT NULL
 ,  `dates__modified` double DEFAULT NULL
 ,  `features__admin` integer DEFAULT NULL
-,  `features__enabled` integer DEFAULT NULL
+,  `features__disabled` integer DEFAULT NULL
 ,  `features__forcetf` integer DEFAULT NULL
 ,  `features__allowcrypto` integer DEFAULT NULL
 ,  `features__accountsearch` integer DEFAULT NULL
 ,  `features__groupsearch` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
-,  `counters_limits__contactinfos` integer DEFAULT NULL
+,  `counters_limits__contacts` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL
 ,  `session_timeout` integer DEFAULT NULL
 ,  `max_password_age` integer DEFAULT NULL
@@ -187,8 +188,8 @@ CREATE INDEX "idx_a2_objects_apps_accounts_recoverykey_account*object*Apps\Accou
 CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_accounts*object*Apps\Accounts\Account*groups" ON "a2_objects_apps_accounts_groupjoin" (`accounts`);
 CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_groups*object*Apps\Accounts\Group*accounts" ON "a2_objects_apps_accounts_groupjoin" (`groups`);
 CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_id" ON "a2_objects_apps_accounts_groupjoin" (`id`);
-CREATE INDEX "idx_a2_objects_apps_accounts_contactinfo_type" ON "a2_objects_apps_accounts_contactinfo" (`type`);
-CREATE INDEX "idx_a2_objects_apps_accounts_contactinfo_account*object*Apps\Accounts\Account*aliases" ON "a2_objects_apps_accounts_contactinfo" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_contact_info" ON "a2_objects_apps_accounts_contact" (`info`);
+CREATE INDEX "idx_a2_objects_apps_accounts_contact_account" ON "a2_objects_apps_accounts_contact" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_account_fullname" ON "a2_objects_apps_accounts_account" (`fullname`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_aid" ON "a2_objects_apps_accounts_session" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_cid" ON "a2_objects_apps_accounts_session" (`client`);

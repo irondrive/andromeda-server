@@ -6,13 +6,15 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/apps/accounts/KeySource.php");
 
+class RecoveryKeyBase extends KeySource { use FullAuthKey; }
+
 /**
  * A recovery key allows account recovery by bypassing a password
  * 
  * Also stores a backup copy of the account's master key, 
  * and as a matter of convention, can byapss two factor
  */
-class RecoveryKey extends KeySource
+class RecoveryKey extends RecoveryKeyBase
 {
     public static function GetFieldTemplate() : array
     {
@@ -47,33 +49,16 @@ class RecoveryKey extends KeySource
     /** Overrides Save(), calling Delete() instead if the code was used */
     public function Save(bool $isRollback = false) : self
     {
-        if ($this->codeused) $this->Delete();
-        else return parent::Save($isRollback);
-    }
-    
-    /**
-     * Tries to load a recovery key object
-     * @param ObjectDatabase $database database reference
-     * @param Account $account the owner of the recovery key
-     * @param string $code the full user/serialized code
-     * @return self|NULL loaded object or null if not found
-     */
-    public static function LoadByFullKey(ObjectDatabase $database, Account $account, string $code) : ?self
-    {
-        $code = explode(":", $code, 3);        
-        if (count($code) !== 3 || $code[0] !== "tf") return null;
+        if ($this->codeused) { $this->Delete(); return $this; }
         
-        $q = new QueryBuilder(); $q->Where($q->And($q->Equals('account',$account->ID()),$q->Equals('id',$code[1])));
-        return static::TryLoadUniqueByQuery($database, $q);
+        return parent::Save($isRollback);
     }
     
-    /** Checks the given full/serialized key for validity, returns result */
+    protected static function GetFullKeyPrefix() : string { return "rk"; }
+
     public function CheckFullKey(string $code) : bool
     {
-        $code = explode(":", $code, 3);
-        if (count($code) !== 3 || $code[0] !== "tf") return false;
-
-        $retval = $this->CheckKeyMatch($code[2]);
+        $retval = parent::CheckFullKey($code);
         
         if ($retval) 
         {
@@ -84,17 +69,7 @@ class RecoveryKey extends KeySource
         
         return $retval;
     }
-    
-    /**
-     * Gets the full serialized recovery key value for the user
-     * 
-     * The serialized string contains both the key ID and key value
-     */
-    public function GetFullKey() : string
-    {
-        return implode(":",array("tf",$this->ID(),$this->GetAuthKey()));
-    }
-    
+
     /**
      * Gets a printable client object for this key
      * @return array `{authkey:string}` if $secret else `{}`

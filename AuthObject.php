@@ -23,7 +23,7 @@ abstract class AuthObject extends StandardObject
         ));
     }
     
-    private const KEY_LENGTH = 32;
+    protected const KEY_LENGTH = 32;
     
     /** a long random string doesn't need purposefully-slow hashing */
     private const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
@@ -52,8 +52,8 @@ abstract class AuthObject extends StandardObject
         $obj = parent::BaseCreate($database);
         if (!$withKey) return $obj;
         
-        $key = Utilities::Random(self::KEY_LENGTH);
-        return $obj->SetAuthKey($key, true);
+        $key = Utilities::Random(static::KEY_LENGTH);
+        return $obj->ChangeAuthKey($key);
     }
     
     /** Returns true if the given key is valid, and stores it in memory for GetAuthKey() */
@@ -61,7 +61,7 @@ abstract class AuthObject extends StandardObject
     {
         $hash = $this->GetAuthKey(true);
         $correct = password_verify($key, $hash);
-        if ($correct) $this->SetAuthKey($key);
+        if ($correct) $this->InformUnlockedKey($key);
         return $correct;
     }
     
@@ -79,31 +79,87 @@ abstract class AuthObject extends StandardObject
     
     private $haveKey = false;
     
+    /** Sets the auth key to a new random value */
+    protected function InitAuthKey() : self
+    {
+        return $this->ChangeAuthKey(Utilities::Random(static::KEY_LENGTH));
+    }
+    
     /**
-     * Sets the auth key to the given value (places it in memory)
+     * Sets the auth key to the given value and hashes it
      * @param string $key new auth key
-     * @param bool $forceHash if true, update the stored hash
      * @return $this
      */
-    protected function SetAuthKey(string $key, bool $forceHash = false) : self 
+    protected function ChangeAuthKey(?string $key) : self 
     {
         $this->haveKey = true; $algo = Utilities::GetHashAlgo(); 
+        
+        if ($key === null) return $this->SetScalar('authkey', null);
 
-        if ($forceHash || password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS)) 
+        $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
+        
+        return $this->SetScalar('authkey', $key, true);
+    }
+    
+    /**
+     * Sets the unlocked key in memory to the given value, possibly rehashing if required
+     * @param string $key unlocked key
+     * @return $this
+     */
+    private function InformUnlockedKey(string $key) : self
+    {
+        $this->haveKey = true; $algo = Utilities::GetHashAlgo();
+        
+        if (password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS))
         {
             $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
         }
         
         return $this->SetScalar('authkey', $key, true);
     }
+}
+
+/** A trait for getting a serialized user key with both the ID and auth key */
+trait FullAuthKey
+{    
+    /**
+     * Tries to load an AuthObject
+     * @param ObjectDatabase $database database reference
+     * @param string $code the full user/serialized code
+     * @param Account $account the owner of the authObject or null for any
+     * @return self|NULL loaded object or null if not found
+     */
+    public static function TryLoadByFullKey(ObjectDatabase $database, string $code, ?Account $account = null) : ?self
+    {
+        $code = explode(":", $code, 3);
+        
+        if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix()) return null;
+        
+        $q = new QueryBuilder(); $w = $q->Equals('id',$code[1]); 
+        
+        if ($account !== null) $w = $q->And($w,$q->Equals('account',$account->ID()));
+
+        return static::TryLoadUniqueByQuery($database, $q->Where($w));
+    }
+    
+    /** Checks the given full/serialized key for validity, returns result */
+    public function CheckFullKey(string $code) : bool
+    {
+        $code = explode(":", $code, 3);
+        if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix()) return false;
+        
+        return $this->CheckKeyMatch($code[2]);
+    }
     
     /**
-     * Returns a printable client object
-     * @param bool $secret if true, show the real key
-     * @return array|NULL `{authkey:string}` if $secret, else null
+     * Gets the full serialized key value for the user
+     *
+     * The serialized string contains both the key ID and key value
      */
-    public function GetClientObject(bool $secret = false) : array
+    public function GetFullKey() : string
     {
-        return $secret ? array('authkey'=>$this->GetAuthKey()) : array();
-    }
+        return implode(":",array(static::GetFullKeyPrefix(),$this->ID(),$this->GetAuthKey()));
+    }    
 }
+
+

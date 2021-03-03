@@ -118,18 +118,28 @@ class Group extends AuthEntity
         return (count($loaded) >= $limit+1) ? array() : $loaded;
     }
 
-    // TODO clean this up (see account)
-    public function GetMailTo() : array
+    /**
+     * Gets contact objects for all accounts in this group
+     * @return array <string, Contact> indexed by ID
+     * @see Account::GetContacts()
+     */
+    public function GetContacts() : array
     {
-        $accounts = $this->GetAccounts(); $output = array();
+        $output = array();
         
-        foreach($accounts as $account)
-        {
-            if (!$account->isEnabled()) continue;
-            $emails = $account->GetEmailRecipients();
-            foreach ($emails as $email) array_push($output, $email);
-        }
+        foreach($this->GetAccounts() as $account)
+            array_push($output, ...$account->GetContacts());
+        
         return $output;
+    }
+    
+    /**
+     * Sends a message to all of this group's accounts' valid contacts (with BCC)
+     * @see Contact::SendMessageMany()
+     */
+    public function SendMessage(string $subject, ?string $html, string $plain, ?Account $from = null) : void
+    {
+        Contact::SendMessageMany($subject, $html, $plain, $this->GetContacts(), true, $from);
     }
     
     /** Creates and returns a new group with the given name, priority, and comment */

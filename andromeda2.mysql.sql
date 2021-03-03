@@ -15,7 +15,6 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` char(12) NOT NULL,
   `username` varchar(127) NOT NULL,
   `fullname` varchar(255) DEFAULT NULL,
-  `unlockcode` char(8) DEFAULT NULL,
   `dates__created` double NOT NULL DEFAULT 0,
   `dates__passwordset` double NOT NULL DEFAULT 0,
   `dates__loggedon` double NOT NULL DEFAULT 0,
@@ -24,13 +23,13 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `session_timeout` bigint(20) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
   `features__admin` tinyint(1) DEFAULT NULL,
-  `features__enabled` tinyint(1) DEFAULT NULL,
+  `features__disabled` tinyint(2) DEFAULT NULL,
   `features__forcetf` tinyint(1) DEFAULT NULL,
   `features__allowcrypto` tinyint(1) DEFAULT NULL,
   `features__accountsearch` tinyint(2) DEFAULT NULL,
   `features__groupsearch` tinyint(2) DEFAULT NULL,
   `counters_limits__sessions` tinyint(4) DEFAULT NULL,
-  `counters_limits__contactinfos` tinyint(4) DEFAULT NULL,
+  `counters_limits__contacts` tinyint(4) DEFAULT NULL,
   `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
   `comment` text DEFAULT NULL,
   `master_key` binary(48) DEFAULT NULL,
@@ -40,7 +39,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `authsource` varchar(64) DEFAULT NULL,
   `groups` tinyint(4) NOT NULL DEFAULT 0,
   `sessions` tinyint(4) NOT NULL DEFAULT 0,
-  `contactinfos` tinyint(4) NOT NULL DEFAULT 0,
+  `contacts` tinyint(4) NOT NULL DEFAULT 0,
   `clients` tinyint(4) NOT NULL DEFAULT 0,
   `twofactors` tinyint(4) NOT NULL DEFAULT 0,
   `recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
@@ -123,7 +122,7 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL,
   `features__createaccount` tinyint(1) NOT NULL,
-  `features__emailasusername` tinyint(1) NOT NULL,
+  `features__usernameiscontact` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(2) NOT NULL,
   `default_group` char(12) DEFAULT NULL,
   `dates__created` double NOT NULL,
@@ -133,19 +132,21 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_contactinfo` (
+CREATE TABLE `a2_objects_apps_accounts_contact` (
   `id` char(12) NOT NULL,
-  `type` tinyint(4) NOT NULL,
+  `type` tinyint(2) NOT NULL,
   `info` varchar(127) NOT NULL,
-  `valid` tinyint(1) NOT NULL DEFAULT 1,
-  `unlockcode` char(8) DEFAULT NULL,
+  `valid` tinyint(1) NOT NULL DEFAULT 0,
+  `usefrom` tinyint(1) DEFAULT NULL,
+  `public` tinyint(1) NOT NULL DEFAULT 1,
+  `authkey` text DEFAULT NULL,
   `dates__created` double NOT NULL,
   `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `alias` (`info`),
-  KEY `type` (`type`),
-  KEY `account*object*Apps\Accounts\Account*aliases` (`account`)
+  UNIQUE KEY `type_2` (`type`,`info`),
+  UNIQUE KEY `prefer` (`usefrom`,`account`),
+  KEY `info` (`info`),
+  KEY `account` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -158,13 +159,13 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `dates__created` double NOT NULL,
   `dates__modified` double DEFAULT NULL,
   `features__admin` tinyint(1) DEFAULT NULL,
-  `features__enabled` tinyint(1) DEFAULT NULL,
+  `features__disabled` tinyint(1) DEFAULT NULL,
   `features__forcetf` tinyint(1) DEFAULT NULL,
   `features__allowcrypto` tinyint(1) DEFAULT NULL,
   `features__accountsearch` tinyint(2) DEFAULT NULL,
   `features__groupsearch` tinyint(2) DEFAULT NULL,
   `counters_limits__sessions` tinyint(4) DEFAULT NULL,
-  `counters_limits__contactinfos` tinyint(4) DEFAULT NULL,
+  `counters_limits__contacts` tinyint(4) DEFAULT NULL,
   `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,

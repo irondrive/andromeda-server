@@ -114,17 +114,19 @@ class Client extends AuthObject
      */
     public function GetClientObject(bool $secret = false) : array
     {
-        $data = array_merge(parent::GetClientObject($secret), array(
+        $data = array(
             'id' => $this->ID(),
             'name' => $this->TryGetScalar('name'),
             'lastaddr' => $this->GetLastAddress(),
             'useragent' => $this->GetUserAgent(),
             'dates' => $this->GetAllDates(),
-        ));
+        );
 
         $session = $this->GetSession();
         
         $data['session'] = ($session !== null) ? $session->GetClientObject($secret) : null;
+        
+        if ($secret) $data['authkey'] = $this->GetAuthKey();
 
         return $data;        
     }
