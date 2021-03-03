@@ -249,7 +249,6 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
-  `owner` char(12) DEFAULT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
@@ -259,8 +258,7 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` tinyblob DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `owner` (`owner`)
+  UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -269,10 +267,8 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
-  `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `owner` (`owner`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -281,7 +277,6 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
-  `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
@@ -304,10 +299,25 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
-  `owner` char(12) DEFAULT NULL,
   `path` text NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `workgroup` varchar(255) DEFAULT NULL,
+  `username` varbinary(255) NOT NULL,
+  `password` tinyblob DEFAULT NULL,
+  `username_nonce` binary(24) DEFAULT NULL,
+  `password_nonce` binary(24) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_webdav` (
+  `id` char(12) NOT NULL,
+  `dates__created` double NOT NULL,
+  `filesystem` char(12) NOT NULL,
+  `baseurl` text NOT NULL,
+  `path` text NOT NULL,
   `username` varbinary(255) NOT NULL,
   `password` tinyblob DEFAULT NULL,
   `username_nonce` binary(24) DEFAULT NULL,

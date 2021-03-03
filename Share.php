@@ -310,7 +310,7 @@ class Share extends AuthObject
      */
     public function GetClientObject(bool $item = false, bool $secret = false) : array
     {
-        return array_merge(parent::GetClientObject($secret),array(
+        $data = array(
             'id' => $this->ID(),
             'owner' => $this->GetOwnerID(),
             'item' => $item ? $this->GetItem()->GetClientObject() : $this->GetObjectID('item'),
@@ -324,6 +324,10 @@ class Share extends AuthObject
             'counters' => $this->GetAllCounters(),
             'limits' => $this->GetAllCounterLimits(),
             'features' => $this->GetAllFeatures()
-        ));
+        );
+        
+        if ($secret) $data['authkey'] = $this->GetAuthKey();
+        
+        return $data;
     }
 }
