@@ -292,7 +292,7 @@ class ServerApp extends AppBase
         else $dest = $input->TryGetParam('dest',SafeParam::TYPE_EMAIL);
         
         if ($dest) $dests = array(new EmailRecipient($dest));
-        else $dests = $this->authenticator->GetAccount()->GetMailTo();        
+        else $dests = $this->authenticator->GetAccount()->GetContactEmails();
         
         $subject = "Andromeda Email Test";
         $body = "This is a test email from Andromeda";
@@ -305,7 +305,7 @@ class ServerApp extends AppBase
         }
         else $mailer = $this->API->GetConfig()->GetMailer();
         
-        try { $mailer->SendMail($subject, $body, $dests); }
+        try { $mailer->SendMail($subject, $body, false, $dests, false); }
         catch (MailSendException $e) { throw MailSendFailException::Copy($e); }
     }
     

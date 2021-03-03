@@ -11,13 +11,13 @@ require_once(ROOT."/core/exceptions/Exceptions.php");
 use \PHPMailer\PHPMailer; // via autoloader
 
 /** Exception indicating that sending mail failed */
-class MailSendException extends Exceptions\ServerException        { public $message = "MAIL_SEND_FAILURE"; }
+class MailSendException extends Exceptions\ServerException { public $message = "MAIL_SEND_FAILURE"; }
 
 /** Exception indicating that no recipients were given */
-class EmptyRecipientsException extends Exceptions\ServerException { public $message = "NO_RECIPIENTS_GIVEN"; }
+class EmptyRecipientsException extends MailSendException { public $message = "NO_RECIPIENTS_GIVEN"; }
 
 /** Exception indicating that the configured mailer driver is invalid */
-class InvalidMailTypeException extends Exceptions\ServerException { public $message = "INVALID_MAILER_TYPE"; }
+class InvalidMailTypeException extends MailSendException { public $message = "INVALID_MAILER_TYPE"; }
 
 /** A name and address pair email recipient */
 class EmailRecipient
@@ -191,9 +191,9 @@ class Emailer extends StandardObject
      * @throws EmptyRecipientsException if no recipients were given
      * @throws MailSendException if sending the message fails
      */
-    public function SendMail(string $subject, string $message, array $recipients, ?EmailRecipient $from = null, bool $isHtml = false, bool $usebcc = false) : void
+    public function SendMail(string $subject, string $message, bool $isHtml, array $recipients, bool $usebcc, ?EmailRecipient $from = null) : void
     {
-        if (count($recipients) == 0) throw new EmptyRecipientsException();
+        if (!count($recipients)) throw new EmptyRecipientsException();
         
         $mailer = $this->mailer;
         
