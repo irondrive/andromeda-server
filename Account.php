@@ -105,13 +105,13 @@ class Account extends AuthEntity
     public function GetDefaultGroups() : array
     {
         $default = Config::GetInstance($this->database)->GetDefaultGroup();
-        $retval[$default->ID()] = $default;
+        if ($default !== null) $retval[$default->ID()] = $default;
         
         $authman = $this->GetAuthSource();
         if ($authman instanceof Auth\External) 
         {
             $default = $authman->GetManager()->GetDefaultGroup();
-            $retval[$default->ID()] = $default;
+            if ($default !== null) $retval[$default->ID()] = $default;
         }
         
         return array_filter($retval);
@@ -420,10 +420,11 @@ class Account extends AuthEntity
      */
     public function Delete() : void
     {
-        foreach (static::$delete_handlers as $func) $func($this->database, $this);
-        
+        // non-default groups will be handled in ref setting
         foreach ($this->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
+        
+        foreach (static::$delete_handlers as $func) $func($this->database, $this);
         
         $this->DeleteObjectRefs('sessions');
         $this->DeleteObjectRefs('clients');
