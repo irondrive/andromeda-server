@@ -1899,9 +1899,8 @@ class FilesApp extends AppBase
     /**
      * Deletes all total limits for the given object
      * @throws AuthenticationFailedException if not admin
-     * @return bool true if limits existed
      */
-    protected function PurgeLimits(Input $input) : bool
+    protected function PurgeLimits(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -1910,16 +1909,14 @@ class FilesApp extends AppBase
         $obj = $this->GetLimitObject($input, false, false, false);
         $class = $obj['class']; $obj = $obj['obj'];
         
-        $lim = $class::LoadByClient($this->database, $obj);
-        if ($lim !== null) $lim->Delete(); return $lim !== null;
+        $class::DeleteByClient($this->database, $obj);
     }    
     
     /**
      * Deletes all timed limits for the given object
      * @throws AuthenticationFailedException if not admin
-     * @return bool true if limits existed
      */
-    protected function PurgeTimedLimits(Input $input) : bool
+    protected function PurgeTimedLimits(Input $input) : void
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
@@ -1929,8 +1926,7 @@ class FilesApp extends AppBase
         $class = $obj['class']; $obj = $obj['obj'];
         
         $period = $input->GetParam('period', SafeParam::TYPE_INT);
-        $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
-        if ($lim !== null) $lim->Delete(); return $lim !== null;
+        $class::DeleteClientAndPeriod($this->database, $obj, $period);
     }
 }
 

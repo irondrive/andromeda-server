@@ -378,3 +378,10 @@ Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $
         }
     }
 });
+
+/** Handle deleting limits when an account is deleted */
+Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
+{
+    AccountTotal::DeleteByClient($database, $account);
+    AccountTimed::DeleteByClient($database, $account);
+});

@@ -114,7 +114,7 @@ class GroupTotal extends AuthEntityTotal implements IGroupLimit
             
             $this->acctlims = AccountTotal::LoadByQuery($this->database, $q);
             
-            foreach ($this->GetGroup()->GetDefaultAccounts() as $account)
+            foreach ($this->GetGroup()->GetDefaultAccounts() ?? array() as $account)
             {
                 $acctlim = AccountTotal::LoadByAccount($this->database, $account, false);
                 if ($acctlim !== null) $this->acctlims[$acctlim->ID()] = $acctlim;
@@ -190,7 +190,7 @@ class GroupTimed extends AuthTimed implements IGroupLimit
             
             $this->acctlims = AccountTimed::LoadByQuery($this->database, $q);
             
-            foreach ($this->GetGroup()->GetDefaultAccounts() as $account)
+            foreach ($this->GetGroup()->GetDefaultAccounts() ?? array() as $account)
             {
                 $acctlim = AccountTimed::LoadByAccount($this->database, $account, false);
                 if ($acctlim !== null) $this->acctlims[$acctlim->ID()] = $acctlim;
@@ -256,3 +256,10 @@ class GroupTimed extends AuthTimed implements IGroupLimit
         return $glim;
     }
 }
+
+/** Handle deleting limits when a group is deleted */
+Group::RegisterDeleteHandler(function(ObjectDatabase $database, Group $group)
+{
+    GroupTotal::DeleteByClient($database, $group);
+    GroupTimed::DeleteByClient($database, $group);
+});
