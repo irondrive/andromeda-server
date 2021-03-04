@@ -314,6 +314,9 @@ class FSManager extends StandardObject
     {
         RootFolder::DeleteRootsByFSManager($this->database, $this, $unlink);
         
+        Limits\FilesystemTotal::DeleteByClient($this->database, $this);
+        Limits\FilesystemTimed::DeleteByClient($this->database, $this);
+        
         $this->DeleteObject('storage'); parent::Delete();
     }
     

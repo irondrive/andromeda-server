@@ -51,6 +51,14 @@ abstract class Total extends Base
         
         return static::$cache[$obj->ID()];
     }
+    
+    /** Deletes the limit object corresponding to the given limited object */
+    public static function DeleteByClient(ObjectDatabase $database, StandardObject $obj) : void
+    {
+        if (array_key_exists($obj->ID(), static::$cache)) static::$cache[$obj->ID()] = null;
+        
+        static::DeleteByObject($database, 'object', $obj, true);
+    }
 
     /** Updates the last download timestamp to now */
     public function SetDownloadDate() : self { return $this->SetDate('download'); }

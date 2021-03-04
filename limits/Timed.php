@@ -93,6 +93,22 @@ abstract class Timed extends Base
             if ($lim->GetTimePeriod() === $period) return $lim;
         }
         return null;
+    }    
+    
+    /** Deletes all limit objects corresponding to the given limited object */
+    public static function DeleteByClient(ObjectDatabase $database, StandardObject $obj) : void
+    {
+        if (array_key_exists($obj->ID(), static::$cache)) static::$cache[$obj->ID()] = array();
+        
+        static::DeleteByObject($database, 'object', $obj, true);
+    }
+    
+    /** Deletes all limit objects corresponding to the given limited object and time period */
+    public static function DeleteByClientAndPeriod(ObjectDatabase $database, StandardObject $obj, int $period) : void
+    {
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('object',FieldTypes\ObjectPoly::GetObjectDBValue($obj)),$q->Equals('timeperiod',$period));
+        
+        static::DeleteByQuery($database, $q->Where($w));
     }
     
     /**
