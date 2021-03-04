@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/apps/accounts/Contact.php");
 require_once(ROOT."/apps/accounts/GroupStuff.php");
 
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -44,9 +45,9 @@ class Group extends AuthEntity
     
     /**
      * Gets the list of accounts that are implicitly part of this group
-     * @return array<string, Account> Accounts indexed by ID
+     * @return array<string, Account> Accounts indexed by ID or null if not a default group
      */
-    public function GetDefaultAccounts() : array
+    public function GetDefaultAccounts() : ?array
     {
         if (Config::GetInstance($this->database)->GetDefaultGroup() === $this)
         {
@@ -61,14 +62,14 @@ class Group extends AuthEntity
             }
         }
         
-        return array();
+        return null;
     }
 
     /**
      * Gets the list of all accounts in this group
      * @return array<string, Account> Accounts indexed by ID
      */
-    public function GetAccounts() : array { return array_merge($this->GetDefaultAccounts(), $this->GetMyAccounts()); }
+    public function GetAccounts() : array { return $this->GetDefaultAccounts() ?? $this->GetMyAccounts(); }
     
     /**
      * Gets the list of accounts that are explicitly part of this group
@@ -157,17 +158,28 @@ class Group extends AuthEntity
     {
         if (!$this->isCreated()) return $this;        
         
-        foreach ($this->GetDefaultAccounts() as $account)
+        foreach ($this->GetDefaultAccounts() ?? array() as $account)
             Account::RunGroupChangeHandlers($this->database, $account, $this, true);
         
         return $this;
     }
-
+    
+    private static array $delete_handlers = array();
+    
+    /** Registers a function to be run when a group is deleted */
+    public static function RegisterDeleteHandler(callable $func){ array_push(static::$delete_handlers,$func); }
+    
+    /**
+     * Deletes this group and all associated objects
+     * @see BaseObject::Delete()
+     */
     public function Delete() : void
     {
-        foreach ($this->GetDefaultAccounts() as $account)
+        foreach ($this->GetDefaultAccounts() ?? array() as $account)
             Account::RunGroupChangeHandlers($this->database, $account, $this, false);
-        
+            
+        foreach (static::$delete_handlers as $func) $func($this->database, $this);    
+            
         parent::Delete();
     }
     
@@ -206,5 +218,4 @@ class Group extends AuthEntity
         
         return $retval;
     }
-
 }

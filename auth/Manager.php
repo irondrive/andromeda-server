@@ -100,7 +100,7 @@ class Manager extends BaseObject
     public function GetDefaultGroupID() : ?string { return $this->TryGetObjectID('default_group'); }
     
     /** Creates a new default group whose implicit members are all accounts of this auth source */
-    public function CreateDefaultGroup() : self
+    private function CreateDefaultGroup() : self
     {
         if ($this->HasObject('default_group')) return $this;
         
@@ -130,7 +130,7 @@ class Manager extends BaseObject
      * See the GetClientObject() for each specific auth source type.
      * @param bool $admin if true, show admin-level details
      * @return array {id:string, description:string} \
-        if $admin, add {type:string, authsource:(Authsource), default_group:id}
+        if $admin, add {type:string, authsource:(Authsource), default_group:?id}
      */
     public function GetClientObject(bool $admin) : array
     {
