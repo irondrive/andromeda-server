@@ -3,7 +3,6 @@
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 class InvalidParseException extends Exceptions\ServerException { public $message = "PARSE_OUTPUT_INVALID"; }
-class InvalidOutputException extends Exceptions\ServerException { public $message = "CANNOT_STRINGIFY_OUTPUT"; }
 
 /** 
  * Represents the output to be shown to the user 
@@ -53,15 +52,13 @@ class Output
     }
     
     /**
-     * Returns the Output object as a single string
-     * @throws InvalidOutputException if the response body is more than just a string
+     * Returns the Output object as a single string (or null if it's more than a string)
      */
-    public function GetAsString() : string
+    public function GetAsString() : ?string
     {
         $extras = $this->debug !== null || $this->metrics !== null;
         
-        if (!is_string($this->data) || $extras)
-            throw new InvalidOutputException();
+        if (!is_string($this->data) || $extras) return null;
         
         return $this->data;
     }

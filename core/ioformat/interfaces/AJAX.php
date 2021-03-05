@@ -9,7 +9,6 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 require_once(ROOT."/core/ioformat/SafeParams.php"); 
 use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams};
-use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -120,21 +119,31 @@ class AJAX extends IOInterface
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            if (!headers_sent()) mb_http_output('UTF-8');
+            if (!headers_sent())
+            {
+                mb_http_output('UTF-8');
+                header("Content-Type: text/plain");
+            }
             
             // try echoing as a string, switch to json if it fails
-            try { echo $output->GetAsString(); } 
-            catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_JSON; }
+            $outstr = $output->GetAsString();
+            if ($outstr !== null) echo $outstr;
+            else $this->outmode = self::OUTPUT_JSON;
         }        
         
         if ($this->outmode === self::OUTPUT_PRINTR) 
         {
-            if (!headers_sent()) mb_http_output('UTF-8');
+            if (!headers_sent())
+            {
+                mb_http_output('UTF-8');
+                header("Content-Type: text/plain");
+            }
             
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true);
         }        
-        else if ($this->outmode === self::OUTPUT_JSON)
+        
+        if ($this->outmode === self::OUTPUT_JSON)
         {
             if (!headers_sent()) 
             {
