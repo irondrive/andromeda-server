@@ -11,7 +11,14 @@ use Andromeda\Apps\Accounts\{Account, Authenticator, AuthenticationFailedExcepti
 /** Exception indicating that the given share password is invalid */
 class InvalidSharePasswordException extends Exceptions\ClientDeniedException { public $message = "INVALID_SHARE_PASSWORD"; }
 
-/** Authenticator class that implements item access rules */
+/** 
+ * Authenticator class that implements item access rules 
+ * 
+ * Andromeda's access model goes as follows -
+ * 1) if you own an item (created it), you can access it and anything under it
+ * 2) users and groups can be granted access to an item (and its contents) via a Share
+ * 2b) Shares can control granular permissions like read/write/reshare, etc.
+ */
 class ItemAccess
 {
     private function __construct(Item $item, ?Share $share){ 
@@ -87,17 +94,12 @@ class ItemAccess
             if ($authenticator === null) throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
 
-            // first check if we are the owner of the item (simple case)
-            if ($item->GetOwner() !== $account) 
+            // first check if we are the owner of the item or a parent (simple case)
+            if ($item->GetOwner() !== $account && !static::AccountInChain($item, $account)) 
             {                
                 // second, check if there is a share in the chain that gives us access
                 $share = Share::TryAuthenticate($database, $item, $account);
-                if ($share === null)
-                {
-                    // third, check if we are elsewhere in the owner chain
-                    if (!static::AccountInChain($item, $account))
-                        return static::ItemDeniedException($class);
-                }
+                if ($share === null) return static::ItemDeniedException($class);
             }
             else $share = null;
         }
@@ -114,22 +116,21 @@ class ItemAccess
     /**
      * Returns whether the given account can access the given item without a share.
      * 
-     * The account must either own the item or one of its parents, or the 
-     * item and all of its parents must have no owner (shared FS).
+     * The account must either own the item or one of its parents, 
+     * or the item or any of its parents must have no owner (shared FS).
      * @param Item $item item to access
      * @param Account $account account accessing
      * @return bool true if access is allowed
      */
     public static function AccountInChain(Item $item, Account $account) : bool
     {
-        $haveOwner = false; $amOwner = false;
-        do {
-            $iowner = $item->GetOwnerID();
-            if ($iowner !== null) $haveOwner = true;
-            if ($iowner === $account->ID()) $amOwner = true;
+        do
+        {
+            $owner = $item->GetOwnerID();
+            
+            if ($owner === $account->ID() || $owner === null) return true;
         }
-        while (($item = $item->GetParent()) !== null && !$amOwner);
-        return (!$haveOwner || $amOwner);
+        while (($item = $item->GetParent()) !== null); return false;
     }
     
     /**

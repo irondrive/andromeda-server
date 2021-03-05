@@ -125,7 +125,7 @@ abstract class Folder extends Item
     /** Counts a share on a subitem of this folder */
     protected function CountSubShare(bool $count = true) : self
     {
-        $this->DeltaCounter('subshares', $count ? 1 : -1);
+        return $this->DeltaCounter('subshares', $count ? 1 : -1);
     }
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self

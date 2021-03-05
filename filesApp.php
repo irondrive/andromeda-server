@@ -28,6 +28,7 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -409,13 +410,16 @@ class FilesApp extends AppBase
      */
     protected function DownloadFile(Input $input) : void
     {
+        // TODO CLIENT - since this is not AJAX, we might want to redirect to a page when doing a 404, etc. - better than plaintext
+        
+        $iface = $this->API->GetInterface();
+        $oldmode = $iface->GetOutputMode();
+        $iface->SetOutputMode(IOInterface::OUTPUT_PLAIN);
+        
         $access = $this->AuthenticateFileAccess($input); 
         $file = $access->GetItem(); $share = $access->GetShare();
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
-        
-        // TODO since this is not AJAX, we might want to redirect to a page when doing a 404, etc. user won't want to see a bunch of JSON
-        // TODO if no page is configured, configure outmode as PLAIN and just show "404 - not found" with MIME type text/plain (do this at the beginning of this function)
 
         // first determine the byte range to read
         $fsize = $file->GetSize();
@@ -458,7 +462,7 @@ class FilesApp extends AppBase
         // send necessary headers
         if (!$debugdl)
         {
-            $this->API->GetInterface()->DisableOutput();
+            $iface->SetOutputMode(null);
             
             if ($partial)
             {
@@ -473,6 +477,7 @@ class FilesApp extends AppBase
             header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
             header('Content-Transfer-Encoding: binary');
         }
+        else $iface->SetOutputMode($oldmode);
         
         if (!$partial) $file->CountDownload((isset($share) && $share !== null));
         
@@ -1434,11 +1439,11 @@ class FilesApp extends AppBase
                 return "<a href='$link'>".$share->GetItem()->GetName()."</a>";
             }, $shares)); 
             
-            // TODO param for the client to have the URL point at the client
-            // TODO HTML - configure a directory where client templates reside
+            // TODO CLIENT - param for the client to have the URL point at the client
+            // TODO CLIENT - HTML - configure a directory where client templates reside
 
             $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
-                array(new EmailRecipient($email)), $account->GetFromEmail(), false);
+                array(new EmailRecipient($email)), $account->GetEmailFrom(), false);
         }
         
         return $retval;
@@ -1462,14 +1467,14 @@ class FilesApp extends AppBase
         
         $oldshare = $access->GetShare(); $item = $access->GetItem();
         if ($oldshare !== null && !$oldshare->CanReshare())
-            throw new UnknownItemException();
+            throw new ItemAccessDeniedException();
         
         if (!$item->GetAllowItemSharing($account))
             throw new ItemSharingDisabledException();
 
         if ($dest === null && !$item->GetAllowShareEveryone($account))
             throw new ShareEveryoneDisabledException();
-
+            
         if ($islink) $newshare = Share::CreateLink($this->database, $account, $item);
         else $newshare = Share::Create($this->database, $account, $item, $dest);
         

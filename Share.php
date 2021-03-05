@@ -11,11 +11,15 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
 require_once(ROOT."/apps/accounts/AuthObject.php"); use Andromeda\Apps\Accounts\AuthObject;
-require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\AuthEntity;
+require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\{AuthEntity, GroupJoin};
 
 /** Exception indicating that the requested share has expired */
 class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; }
+
+/** Exception indicating that a share was requested for a public item */
+class SharePublicItemException extends Exceptions\ClientErrorException { public $message = "CANNOT_SHARE_PUBLIC_ITEM"; }
 
 /**
  * A share granting access to an item
@@ -39,7 +43,7 @@ class Share extends AuthObject
             'password' => null, // possible password set on the share
             'dates__accessed' => new FieldTypes\Scalar(null, true),
             'counters__accessed' => new FieldTypes\Counter(), // the count of accesses
-            'counters_limits__accessed' => null,    // the maximum number of accesses
+            'counters_limits__accessed' => null,     // the maximum number of accesses
             'dates__expires' => null,   // the timestamp past which the share is not valid
             'features__read' => new FieldTypes\Scalar(true),
             'features__upload' => new FieldTypes\Scalar(false),
@@ -55,11 +59,17 @@ class Share extends AuthObject
     /** Returns the item being shared */
     public function GetItem() : Item { return $this->GetObject('item'); }
     
+    /** Returns the ID of the item being shared */
+    public function GetItemID() : string { return $this->GetObjectID('item'); }
+    
     /** Returns the account that created the share */
     public function GetOwner() : Account { return $this->GetObject('owner'); }
     
     /** Returns the ID of the account that created the share */
     public function GetOwnerID() : string { return $this->GetObjectID('owner'); }
+    
+    /** Returns the destination user/group of this share */
+    public function GetDest() : ?AuthEntity { return $this->TryGetObject('dest'); }
     
     /** Returns true if the share grants read access to the item */
     public function CanRead() : bool { return $this->GetFeature('read'); }
@@ -92,12 +102,20 @@ class Share extends AuthObject
         return $this->SetDate('accessed')->DeltaCounter('accessed');
     }
     
-    /** Returns a query string that matches shares for the given item to the given target */
-    private static function GetItemDestQuery(Item $item, ?AuthEntity $dest, QueryBuilder $q) : string
+    /**
+     * Loads a share for the given item and destination
+     * @param ObjectDatabase $database database reference
+     * @param Item $item shared item
+     * @param AuthEntity $dest share auth target
+     * @return ?self loaded share or null if not found
+     */
+    private static function TryLoadByItemAndDest(ObjectDatabase $database, Item $item, ?AuthEntity $dest) : ?self
     {
-        return $q->And($q->IsNull('authkey'),
+        $q = new QueryBuilder(); $w = $q->And($q->IsNull('authkey'),
             $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
-            $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($dest)));  
+            $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($dest)));
+        
+        return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
     /**
@@ -110,7 +128,9 @@ class Share extends AuthObject
      */
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
     {
-        $q = new QueryBuilder(); if (($ex = static::TryLoadUniqueByQuery($database, $q->Where(static::GetItemDestQuery($item, $dest, $q)))) !== null) return $ex;    
+        if (!$item->GetOwnerID()) throw new SharePublicItemException();
+            
+        if (($ex = static::TryLoadByItemAndDest($database, $item, $dest)) !== null) return $ex;    
         
         return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
     }
@@ -192,27 +212,14 @@ class Share extends AuthObject
         
         return $this;
     }
-    
-    /**
-     * Returns a query matching shares that match any of the given dests
-     * 
-     * Also returns shares with no dest listed (a share to everyone)
-     * @param string[] dests share destination DB values
-     * @param QueryBuilder $q querybuilder to reference
-     * @return string built SQL query
-     */
-    private static function GetDestsQuery(array $dests, QueryBuilder $q) : string
-    {
-        return $q->Or($q->OrArr(array_values($dests)),$q->And($q->IsNull('authkey'),$q->IsNull('dest'))); // TODO can we do this by join...?
-    }
-    
+
     /**
      * Returns all shares owned by the given account
      * @param ObjectDatabase $database database reference
      * @param Account $account account owner
      * @return array<string, Share> shares indexed by ID
      */
-    public static function LoadByAccountOwner(ObjectDatabase $database, Account $account) : array // TODO limit/offset
+    public static function LoadByAccountOwner(ObjectDatabase $database, Account $account) : array
     {
         return static::LoadByObject($database, 'owner', $account);
     }
@@ -223,17 +230,21 @@ class Share extends AuthObject
      * @param Account $account share target
      * @return array<string, Share> shares indexed by ID
      */
-    public static function LoadByAccountDest(ObjectDatabase $database, Account $account) : array // TODO limit/offset
-    {        
-        $dests = array_merge(array($account), $account->GetGroups());
-        $q = new QueryBuilder(); $dests = array_map(function($dest)use($q){ 
-            return $q->Equals('dest', FieldTypes\ObjectPoly::GetObjectDBValue($dest)); },$dests);   // TODO do by join...?
+    public static function LoadByAccountDest(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder(); 
         
-        return static::LoadByQuery($database, $q->Where(static::GetDestsQuery($dests,$q))); 
+        $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);        
+        $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID());
         
-        // TODO what about duplicates? also integrate with group priority
+        $group_shares = static::LoadByQuery($database, $q->Where($w));
+        
+        $q = new QueryBuilder(); $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
+                                             $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
+
+        return static::CondenseShares(array_merge($group_shares, static::LoadByQuery($database, $q->Where($w))));
     }
-    
+
     /**
      * Returns a share with the given ID and "owned" by the given account
      * @param ObjectDatabase $database database reference
@@ -265,13 +276,33 @@ class Share extends AuthObject
      */
     public static function TryAuthenticate(ObjectDatabase $database, Item $item, Account $account) : ?self
     {
-        do {
-            $dests = array_merge(array($account), $account->GetGroups());
-            $q = new QueryBuilder(); $dests = array_map(function($dest)use($q,$item){ 
-                return static::GetItemDestQuery($item, $dest, $q); },$dests);
+        do 
+        {
+            // maybe it's a share directly to this account
             
-            $found = static::TryLoadUniqueByQuery($database, $q->Where(static::GetDestsQuery($dests,$q)));  // TODO integrate with group priority if > 1 found
-            if ($found) return $found;
+            $q = new QueryBuilder(); $w = $q->And($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
+                                                  $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
+            
+            $share = static::TryLoadUniqueByQuery($database, $q->Where($w)); if ($share !== null) return $share;
+
+            // maybe it's a share to a group this account has
+            
+            $q = new QueryBuilder();
+            
+            $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);
+            $w = $q->And($q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID()),
+                         $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
+            
+            $shares = static::LoadByQuery($database, $q->Where($w));
+            
+            if (count($shares)) return array_values(static::CondenseShares($shares))[0];
+            
+            // maybe it's a share to everyone
+            
+            $q = new QueryBuilder(); $w = $q->And($q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
+                                                  $q->IsNull('authkey'),$q->IsNull('dest'));
+
+            $share = static::TryLoadUniqueByQuery($database, $q->Where($w)); if ($share !== null) return $share;
         }
         while (($item = $item->GetParent()) !== null);
         return null;
@@ -298,7 +329,70 @@ class Share extends AuthObject
         while (($item = $item->GetParent()) !== null);
         return null;
     }
-
+    
+    /**
+     * It is possible that a user is shared an item multiple times (groups)
+     *
+     * This function picks the "best" share for each item that is shared
+     * @param array<Share> $shares
+     * @return array<string, Share> one best share per item
+     */
+    private static function CondenseShares(array $shares) : array
+    {
+        $items = array(); // map item ID to array(shares)
+        
+        // group shares into a bucket for what item they point at
+        foreach ($shares as $share)
+        {
+            $item = $share->GetItemID();
+            
+            if (!array_key_exists($item, $items)) $items[$item] = array();
+            
+            array_push($items[$item], $share);
+        }
+        
+        $retval = array();
+        
+        // pick the "best" share for each item
+        foreach ($items as $ishares)
+        {
+            if (count($ishares) > 1)
+            {
+                $share = null; $pri = null;
+                
+                foreach ($ishares as $tmpshare)
+                {
+                    $tmpdest = $tmpshare->GetDest();
+                    
+                    // share to account is best
+                    if ($tmpdest instanceof Account)
+                    {
+                        $share = $tmpshare; break;
+                    }
+                    // share to group is 2nd best
+                    else if ($tmpdest instanceof Group)
+                    {
+                        $tmppri = $tmpdest->GetPriority();
+                        if ($pri === null || $tmppri > $pri)
+                        {
+                            $share = $tmpshare; $pri = $tmppri;
+                        }
+                    }
+                    // share to everyone is 3rd best
+                    else if ($tmpdest === null && $share === null)
+                    {
+                        $share = $tmpshare;
+                    }
+                }
+            }
+            else $share = $ishares[0];
+            
+            $retval[$share->ID()] = $share;
+        }
+        
+        return $retval;
+    }
+    
     /**
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
