@@ -56,6 +56,7 @@ abstract class AuthEntity extends StandardObject
             'features__allowcrypto' => null, // true if server-side account crypto is enabled
             'features__accountsearch' => null, // whether looking up accounts by name is allowed
             'features__groupsearch' => null, // whether looking up groups by name is allowed
+            'features__userdelete' => null, // whether the user is allowed to delete their account
             'counters_limits__sessions' => null, // maximum number of sessions for the account
             'counters_limits__contacts' => null, // maximum number of contacts for the account
             'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
@@ -69,7 +70,7 @@ abstract class AuthEntity extends StandardObject
     public static function GetPropUsage() : string { return "[--session_timeout ?int] [--max_password_age ?int] ".
                                                             "[--max_sessions ?int] [--max_contacts ?int] [--max_recoverykeys ?int] ".
                                                             "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
-                                                            "[--accountsearch ?int] [--groupsearch ?int]"; }
+                                                            "[--accountsearch ?int] [--groupsearch ?int] [--userdelete ?bool]"; }
 
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
@@ -80,7 +81,7 @@ abstract class AuthEntity extends StandardObject
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
             if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->TryGetParam($prop, SafeParam::TYPE_INT));
         
-        foreach (array('admin','disabled','forcetf','allowcrypto') as $prop)
+        foreach (array('admin','disabled','forcetf','allowcrypto','userdelete') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->TryGetParam($prop, SafeParam::TYPE_BOOL));
         
         foreach (array('accountsearch','groupsearch') as $prop)

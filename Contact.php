@@ -41,7 +41,7 @@ class Contact extends ContactBase
             'info' => null, // value of the contact
             'valid' => new FieldTypes\Scalar(false), // true if it has been validated
             'usefrom' => null, // true if this should be used as from
-            'public' => new FieldTypes\Scalar(true), // true if this info should be searchable
+            'public' => new FieldTypes\Scalar(false), // true if this should be searchable
             'account' => new FieldTypes\ObjectRef(Account::class, 'contacts')
         ));
     }
@@ -127,6 +127,9 @@ class Contact extends ContactBase
     
     /** Sets whether the contact has been validated */
     protected function SetIsValid() : self { return $this->SetScalar('valid',true); }
+    
+    /** Returns whether or not the contact is public */
+    public function getIsPublic() : bool { return $this->GetScalar('public'); }
     
     /** Sets whether this contact should be publically searchable */
     public function setIsPublic(bool $val) : self { return $this->SetScalar('public',$val); }
@@ -261,7 +264,7 @@ class Contact extends ContactBase
             'info' => $this->GetInfo(),
             'valid' => $this->GetIsValid(),
             'usefrom' => boolval($this->TryGetScalar('usefrom')),
-            'public' => $this->GetScalar('public'),
+            'public' => $this->getIsPublic(),
             'dates' => $this->GetAllDates(),
         );
     }

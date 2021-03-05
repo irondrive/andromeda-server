@@ -14,7 +14,7 @@ require_once(ROOT."/apps/accounts/auth/Local.php");
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, NullValueException};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -31,8 +31,6 @@ class CryptoAlreadyInitializedException extends Exceptions\ServerException { pub
 
 /** Exception indicating that the given recovery key is not valid */
 class RecoveryKeyFailedException extends Exceptions\ServerException { public $message = "RECOVERY_KEY_UNLOCK_FAILED"; }
-
-use Andromeda\Core\Database\NullValueException;
 
 /**
  * Class representing a user account in the database
@@ -84,6 +82,7 @@ class Account extends AuthEntity
         'features__allowcrypto' => true,
         'features__accountsearch' => 1,
         'features__groupsearch' => 1,
+        'features__userdelete' => true,
         'counters_limits__sessions' => null,
         'counters_limits__contacts' => null,
         'counters_limits__recoverykeys' => null
@@ -219,6 +218,9 @@ class Account extends AuthEntity
 
     /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
     public function GetAllowGroupSearch() : int { return $this->TryGetFeature('groupsearch') ?? self::GetInheritedFields()['features__groupsearch']; }
+    
+    /** Returns true if the user is allowed to delete their account */
+    public function GetAllowUserDelete() : bool { return $this->TryGetFeature('userdelete') ?? self::GetInheritedFields()['features__userdelete']; }
     
     /** True if this account has administrator privileges */
     public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? self::GetInheritedFields()['features__admin']; }
@@ -365,7 +367,7 @@ class Account extends AuthEntity
      * Returns the EmailRecipient to use for sending email FROM this account
      * @return EmailRecipient|NULL email recipient object or null if not set
      */
-    public function GetFromEmail() : ?EmailRecipient
+    public function GetEmailFrom() : ?EmailRecipient
     {
         $contact = Contact::TryLoadAccountFromContact($this->database, $this);
         
@@ -443,7 +445,7 @@ class Account extends AuthEntity
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contacts:?int,recoverykeys:?int}, features:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
-                accountsearch:int, groupsearch:int},session_timeout:?int, max_password_age:?int} \
+                accountsearch:int, groupsearch:int, userdelete:bool},session_timeout:?int, max_password_age:?int} \
         if OBJECT_FULL, add: {contacts:[id:Contact], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:{id:class}], 
             features_from:[string:{id:class}], session_timeout_from:{id:class}, max_password_age_from:{id:class}}
@@ -454,11 +456,12 @@ class Account extends AuthEntity
     public function GetClientObject(int $level = 0) : array
     {
         $mapobj = function($e) { return $e->GetClientObject(); };
+
         
         $data = array(
             'id' => $this->ID(),
             'username' => $this->GetUsername(),
-            'dispname' => $this->GetDisplayName(),
+            'dispname' => $this->GetDisplayName()
         );   
         
         if ($level & self::OBJECT_FULL || $level & self::OBJECT_ADMIN)
@@ -480,6 +483,11 @@ class Account extends AuthEntity
                 'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
                 'clients' => array_map($mapobj, $this->GetClients()),
             ));
+        }
+        else
+        {            
+            $data['contacts'] = array_map($mapobj, array_filter($this->GetContacts(),
+                function(Contact $c){ return $c->getIsPublic(); }));
         }
         
         if ($level & self::OBJECT_ADMIN)
