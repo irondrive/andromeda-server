@@ -56,11 +56,11 @@ abstract class IOInterface extends Singleton
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
-    /** Tells the interface to ignore printing output */
-    public function DisableOutput() : self 
-    {
-        $this->outmode = false; return $this; 
-    }
+    /** Gets the output mode in use currently */
+    public function GetOutputMode() : int { return $this->outmode; }
+
+    /** Sets the output mode to plain text */
+    public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
     
     private static $retfuncs = array();
     

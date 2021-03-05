@@ -10,7 +10,6 @@ require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
 require_once(ROOT."/core/ioformat/SafeParams.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
-use Andromeda\Core\IOFormat\InvalidOutputException;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -260,8 +259,9 @@ class CLI extends IOInterface
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
             // try echoing as a string, switch to printr if it fails
-            try { echo $output->GetAsString()."\n"; } 
-            catch (InvalidOutputException $e) { $this->outmode = self::OUTPUT_PRINTR; }
+            $outstr = $output->GetAsString();
+            if ($outstr !== null) echo "$outstr\n";
+            else $this->outmode = self::OUTPUT_PRINTR;
         }
 
         if ($this->outmode === self::OUTPUT_PRINTR)
@@ -269,7 +269,8 @@ class CLI extends IOInterface
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true)."\n";
         }        
-        else if ($this->outmode === self::OUTPUT_JSON)
+        
+        if ($this->outmode === self::OUTPUT_JSON)
         {
             $outdata = $output->GetAsArray();
             echo Utilities::JSONEncode($outdata)."\n";

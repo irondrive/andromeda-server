@@ -251,7 +251,7 @@ class ServerApp extends AppBase
         if (!$this->isAdmin) throw new AuthFailedException();
 
         $this->API->GetInterface()->RegisterOutputHandler(function(){
-            $this->API->GetInterface()->DisableOutput(); phpinfo(); });
+            $this->API->GetInterface()->SetOutputMode(null); phpinfo(); });
     }
     
     /**
