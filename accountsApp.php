@@ -51,6 +51,9 @@ class ImmutableGroupException extends Exceptions\ClientDeniedException { public 
 /** Exception indicating that creating accounts is not allowed */
 class AccountCreateDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_CREATE_NOT_ALLOWED"; }
 
+/** Exception indicating that deleting accounts is not allowed */
+class AccountDeleteDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_DELETE_NOT_ALLOWED"; }
+
 /** Exception indicating that the user is already signed in */
 class AlreadySignedInException extends Exceptions\ClientDeniedException { public $message = "ALREADY_SIGNED_IN"; }
 
@@ -166,7 +169,8 @@ class AccountsApp extends AppBase
             'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',
             'setaccountprops --account id '.AuthEntity::GetPropUsage().' [--expirepw bool]',
-            'setgroupprops --group id '.AuthEntity::GetPropUsage()
+            'setgroupprops --group id '.AuthEntity::GetPropUsage(),
+            'sendmessage (--account id | --group id) --subject text --text text [--html raw]'
         );
     }
     
@@ -221,8 +225,8 @@ class AccountsApp extends AppBase
             case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input);
             case 'createtwofactor':     return $this->CreateTwoFactor($input);
             case 'verifytwofactor':     return $this->VerifyTwoFactor($input);
-            case 'createcontact':   return $this->CreateContact($input);
-            case 'verifycontact':   return $this->VerifyContact($input);
+            case 'createcontact':       return $this->CreateContact($input);
+            case 'verifycontact':       return $this->VerifyContact($input);
             
             case 'deleteaccount':       return $this->DeleteAccount($input);
             case 'deletesession':       return $this->DeleteSession($input);
@@ -230,8 +234,8 @@ class AccountsApp extends AppBase
             case 'deleteallauth':       return $this->DeleteAllAuth($input);
             case 'deletetwofactor':     return $this->DeleteTwoFactor($input);
             
-            case 'deletecontact':   return $this->DeleteContact($input); 
-            case 'editcontact':     return $this->EditContact($input);
+            case 'deletecontact':       return $this->DeleteContact($input); 
+            case 'editcontact':         return $this->EditContact($input);
             
             case 'searchaccounts':      return $this->SearchAccounts($input);
             case 'searchgroups':        return $this->SearchGroups($input);
@@ -247,6 +251,8 @@ class AccountsApp extends AppBase
             
             case 'setaccountprops':     return $this->SetAccountProps($input);
             case 'setgroupprops':       return $this->SetGroupProps($input);
+            
+            case 'sendmessage':         return $this->SendMessage($input);
             
             default: throw new UnknownActionException();
         }
@@ -426,7 +432,7 @@ class AccountsApp extends AppBase
         $subject = "Andromeda Account Recovery Key";
         $body = "Your recovery key is: $key";       
         
-        // TODO HTML - configure a directory where client templates reside
+        // TODO CLIENT - HTML - configure a directory where client templates reside
         
         $account->SendMessage($subject, null, $body);
     }
@@ -719,16 +725,21 @@ class AccountsApp extends AppBase
     /**
      * Deletes the current account (and signs out)
      * @throws AuthenticationFailedException if not signed in
+     * @throws AccountDeleteDeniedException if delete is not allowed
      */
     protected function DeleteAccount(Input $input) : void
     {
-        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        if ($this->authenticator === null) throw new AuthenticationFailedException();        
+        $account = $this->authenticator->GetAccount();
+        
+        if (!$account->GetAllowUserDelete()) throw new AccountDeleteDeniedException();
         
         $this->authenticator->RequirePassword();
         
-        if (!$this->authenticator->isSudoUser()) $this->authenticator->TryRequireTwoFactor();
+        if (!$this->authenticator->isSudoUser()) 
+            $this->authenticator->TryRequireTwoFactor();
             
-        $this->authenticator->GetAccount()->Delete();
+        $account->Delete();
     }
     
     /**
@@ -1246,6 +1257,39 @@ class AccountsApp extends AppBase
         if ($group === null) throw new UnknownGroupException();
 
         return $group->SetProperties($input)->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
+    }
+    
+    /**
+     * Sends a message to the given account or group's contacts
+     * @throws AuthenticationFailedException if not admin 
+     * @throws UnknownGroupException if the given group is not found
+     * @throws UnknownAccountException if the given account is not found
+     */
+    protected function SendMessage(Input $input) : void
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        if ($input->HasParam('group'))
+        {
+            $groupid = $input->GetParam('group',SafeParam::TYPE_RANDSTR);
+            if (($dest = Group::TryLoadByID($this->database, $groupid)) === null) 
+                throw new UnknownGroupException();
+        }
+        else if ($input->HasParam('account'))
+        {
+            $acctid = $input->GetParam('account',SafeParam::TYPE_RANDSTR);
+            if (($dest = Account::TryLoadByID($this->database, $acctid)) === null)
+                throw new UnknownAccountException();
+        }
+        else throw new UnknownAccountException();
+        
+        $subject = $input->GetParam('subject',SafeParam::TYPE_TEXT);
+        
+        $text = $input->GetParam('text',SafeParam::TYPE_TEXT);
+        $html = $input->TryGetParam('html',SafeParam::TYPE_RAW);
+        
+        $dest->SendMessage($subject, $html, $text);
     }
 
     public function Test(Input $input)

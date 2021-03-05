@@ -128,8 +128,11 @@ class Group extends AuthEntity
     {
         $output = array();
         
-        foreach($this->GetAccounts() as $account)
-            array_push($output, ...$account->GetContacts());
+        foreach ($this->GetAccounts() as $account)
+        {
+            foreach ($account->GetContacts() as $contact)
+                $output[$contact->ID()] = $contact;
+        }
         
         return $output;
     }

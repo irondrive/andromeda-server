@@ -58,7 +58,7 @@ class Config extends SingletonObject
     }
 
     /** Returns whether the API for creating new accounts is enabled */
-    public function GetAllowCreateAccount() : bool  { return $this->GetFeature('createaccount'); }
+    public function GetAllowCreateAccount() : bool { return $this->GetFeature('createaccount'); }
     
     /** Returns whether emails should be used as usernames */
     public function GetUsernameIsContact() : bool  { return $this->GetFeature('usernameiscontact'); }
