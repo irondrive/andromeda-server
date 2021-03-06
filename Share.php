@@ -18,6 +18,9 @@ require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\
 /** Exception indicating that the requested share has expired */
 class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; }
 
+/** Exception indicating that the requested share already exists */
+class ShareExistsException extends Exceptions\ClientErrorException { public $message = "SHARE_ALREADY_EXISTS"; }
+
 /** Exception indicating that a share was requested for a public item */
 class SharePublicItemException extends Exceptions\ClientErrorException { public $message = "CANNOT_SHARE_PUBLIC_ITEM"; }
 
@@ -69,7 +72,7 @@ class Share extends AuthObject
     public function GetOwnerID() : string { return $this->GetObjectID('owner'); }
     
     /** Returns the destination user/group of this share */
-    public function GetDest() : ?AuthEntity { return $this->TryGetObject('dest'); }
+    public function GetDest() : AuthEntity { return $this->GetObject('dest'); }
     
     /** Returns true if the share grants read access to the item */
     public function CanRead() : bool { return $this->GetFeature('read'); }
@@ -101,23 +104,7 @@ class Share extends AuthObject
         if ($this->IsExpired()) throw new ShareExpiredException();
         return $this->SetDate('accessed')->DeltaCounter('accessed');
     }
-    
-    /**
-     * Loads a share for the given item and destination
-     * @param ObjectDatabase $database database reference
-     * @param Item $item shared item
-     * @param AuthEntity $dest share auth target
-     * @return ?self loaded share or null if not found
-     */
-    private static function TryLoadByItemAndDest(ObjectDatabase $database, Item $item, ?AuthEntity $dest) : ?self
-    {
-        $q = new QueryBuilder(); $w = $q->And($q->IsNull('authkey'),
-            $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
-            $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($dest)));
-        
-        return static::TryLoadUniqueByQuery($database, $q->Where($w));
-    }
-    
+
     /**
      * Creates a new share to a share target
      * @param ObjectDatabase $database database reference
@@ -129,8 +116,13 @@ class Share extends AuthObject
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
     {
         if (!$item->GetOwnerID()) throw new SharePublicItemException();
+        
+        $q = new QueryBuilder(); $w = $q->And(
+            $q->IsNull('authkey'), $q->Equals('owner',$owner->ID()),
+            $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
+            $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($dest)));
             
-        if (($ex = static::TryLoadByItemAndDest($database, $item, $dest)) !== null) return $ex;    
+        if (static::TryLoadUniqueByQuery($database, $q->Where($w)) !== null) throw new ShareExistsException(); 
         
         return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
     }
@@ -237,160 +229,59 @@ class Share extends AuthObject
         $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);        
         $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID());
         
-        $group_shares = static::LoadByQuery($database, $q->Where($w));
+        $shares = static::LoadByQuery($database, $q->Where($w));
         
         $q = new QueryBuilder(); $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
                                              $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
 
-        return static::CondenseShares(array_merge($group_shares, static::LoadByQuery($database, $q->Where($w))));
+        return array_merge($shares, static::LoadByQuery($database, $q->Where($w)));
     }
 
     /**
-     * Returns a share with the given ID and "owned" by the given account
-     * @param ObjectDatabase $database database reference
-     * @param Account $account must be either the owner of the share or the owner of the shared item
-     * @param string $id the ID of the share to fetch
-     * @param bool $allowDest if true, the account can be the target of the share also
-     * @return self|NULL
-     */
-    public static function TryLoadByOwnerAndID(ObjectDatabase $database, Account $account, string $id, bool $allowDest = false) : ?self
-    {
-        $found = static::TryLoadByID($database, $id); if (!$found) return null;
-        
-        $ok1 = $found->GetOwner() === $account;
-        $ok2 = $found->GetItem()->GetOwner() === $account;
-        $ok3 = $allowDest && $found->TryGetObject('dest') === $account;
-        
-        return ($ok1 || $ok2 || $ok3) ? $found : null;
-    }
-    
-    /**
-     * Primary share authentication routine for an account
+     * Checks whether this share gives access to the given item to the given account
      * 
-     * Allowed if the given account (or any of its groups) is the 
-     * target of a share for the item, or any of its parents
-     * @param ObjectDatabase $database database reference
-     * @param Item $item item that is shared
+     * Access to the item is given if this share is for the item or one of its parents,
+     * and the share target is null (everyone), the given account, or a group held by the account
      * @param Account $account account requesting access
-     * @return self|NULL share object if allowed, null if not
+     * @param Item $item item requesting access for
+     * @return bool true if access is granted
      */
-    public static function TryAuthenticate(ObjectDatabase $database, Item $item, Account $account) : ?self
+    public function Authenticate(Account $account, Item $item) : bool
     {
-        do 
+        if ($this->IsLink()) return false;
+        
+        do
         {
-            // maybe it's a share directly to this account
-            
-            $q = new QueryBuilder(); $w = $q->And($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
-                                                  $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
-            
-            $share = static::TryLoadUniqueByQuery($database, $q->Where($w)); if ($share !== null) return $share;
-
-            // maybe it's a share to a group this account has
-            
-            $q = new QueryBuilder();
-            
-            $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);
-            $w = $q->And($q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID()),
-                         $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
-            
-            $shares = static::LoadByQuery($database, $q->Where($w));
-            
-            if (count($shares)) return array_values(static::CondenseShares($shares))[0];
-            
-            // maybe it's a share to everyone
-            
-            $q = new QueryBuilder(); $w = $q->And($q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
-                                                  $q->IsNull('authkey'),$q->IsNull('dest'));
-
-            $share = static::TryLoadUniqueByQuery($database, $q->Where($w)); if ($share !== null) return $share;
-        }
-        while (($item = $item->GetParent()) !== null);
-        return null;
-    }
-    
-    /**
-     * Primary authentication routine for link-based shares
-     * 
-     * If item is not null, checks whether the given item is allowed by this share.  
-     * The item or any of its parents must be the item shared.
-     * @param ObjectDatabase $database database reference
-     * @param string $id the ID of the share in the link
-     * @param string $key the key for the share in the link
-     * @param Item $item if not null, authenticate against this item
-     * @return self|NULL share object if allowed, null if not
-     */
-    public static function TryAuthenticateByLink(ObjectDatabase $database, string $id, string $key, ?Item $item = null) : ?self
-    {
-        $share = static::TryLoadByID($database, $id);
-        if (!$share || !$share->CheckKeyMatch($key)) return null;        
-        if ($item === null) return $share;
-        
-        do { if ($item === $share->GetItem()) return $share; }
-        while (($item = $item->GetParent()) !== null);
-        return null;
-    }
-    
-    /**
-     * It is possible that a user is shared an item multiple times (groups)
-     *
-     * This function picks the "best" share for each item that is shared
-     * @param array<Share> $shares
-     * @return array<string, Share> one best share per item
-     */
-    private static function CondenseShares(array $shares) : array
-    {
-        $items = array(); // map item ID to array(shares)
-        
-        // group shares into a bucket for what item they point at
-        foreach ($shares as $share)
-        {
-            $item = $share->GetItemID();
-            
-            if (!array_key_exists($item, $items)) $items[$item] = array();
-            
-            array_push($items[$item], $share);
-        }
-        
-        $retval = array();
-        
-        // pick the "best" share for each item
-        foreach ($items as $ishares)
-        {
-            if (count($ishares) > 1)
+            if ($item->ID() === $this->GetItemID())
             {
-                $share = null; $pri = null;
+                $destobj = $this->GetDest();
                 
-                foreach ($ishares as $tmpshare)
-                {
-                    $tmpdest = $tmpshare->GetDest();
-                    
-                    // share to account is best
-                    if ($tmpdest instanceof Account)
-                    {
-                        $share = $tmpshare; break;
-                    }
-                    // share to group is 2nd best
-                    else if ($tmpdest instanceof Group)
-                    {
-                        $tmppri = $tmpdest->GetPriority();
-                        if ($pri === null || $tmppri > $pri)
-                        {
-                            $share = $tmpshare; $pri = $tmppri;
-                        }
-                    }
-                    // share to everyone is 3rd best
-                    else if ($tmpdest === null && $share === null)
-                    {
-                        $share = $tmpshare;
-                    }
-                }
+                if ($destobj === null || $destobj === $account) return true;
+                
+                else if ($destobj instanceof Group && $account->HasGroup($destobj)) return true;
             }
-            else $share = $ishares[0];
-            
-            $retval[$share->ID()] = $share;
         }
+        while (($item = $item->GetParent()) !== null);
         
-        return $retval;
+        return false;
+    }
+    
+    /**
+     * Checks whether this share gives access to the given item and checks the key
+     * 
+     * Access to the item is given if this share is for the item or one of its parents
+     * @param string $key key that authenticates the share
+     * @param Item $item item being requested access for
+     * @return bool true if access is granted
+     */
+    public function AuthenticateByLink(string $key, Item $item) : bool
+    {
+        if (!$this->IsLink() || !$this->CheckKeyMatch($key)) return false;
+        
+        do { if ($item->ID() === $this->GetItemID()) return true; }
+        while (($item = $item->GetParent()) !== null);
+        
+        return false;
     }
     
     /**
