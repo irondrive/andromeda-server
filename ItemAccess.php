@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
-use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -29,63 +28,49 @@ class ItemAccess
     
     /** Returns the share object that grants access, or null if the item is owned */
     public function GetShare() : ?Share { return $this->share; }
-    
-    /** Throws an unknown item exception for the given item class */
-    protected static function UnknownItemException(?string $class)
-    {
-        switch ($class)
-        {
-            case File::class: throw new UnknownFileException();
-            case Folder::class: throw new UnknownFolderException();
-            default: throw new UnknownItemException();
-        }
-    }
-    
-    /** Throws an item access denied exception for the given item class */
-    protected static function ItemDeniedException(?string $class)
-    {
-        switch ($class)
-        {
-            case File::class: throw new FileAccessDeniedException();
-            case Folder::class: throw new FolderAccessDeniedException();
-            default: throw new ItemAccessDeniedException();
-        }
-    }
-    
+
     /**
      * Primary authentication routine for granting access to an item
      * 
-     * First option is a share ID/key are given and authenticates them, which also loads the item.
-     * Second option is auth is given and a specific item is requested (class and itemid).
-     * The second option has 3 suboptions: direct ownership, OwnerInChain() and Share::TryAuthenticate()
+     * First option is the item is given and the account owns either the item or one of its parents.
+     * Second option is a share ID is given. Either the account must have access via a share, or 
+     * a share key must be provided.  The shared object will be used if one is not given.
      * @see ItemAccess::OwnerInChain() possible method of access
-     * @see Share::TryAuthenticate() possible method of access
+     * @see Share::Authenticate() access via account
+     * @see Share::AuthenticateByLink() access via link
      * @param ObjectDatabase $database database reference
      * @param Input $input user input possibly containing share info
      * @param Authenticator $authenticator current account auth
-     * @param string $class class of item being accessed if known or ID given
-     * @param string $itemid item ID being accessed (null if a share URL is given)
+     * @param ?Item $item the item being requested access to (or null if implicit via the share)
      * @throws InvalidSharePasswordException if the input share password is invalid
      * @throws AuthenticationFailedException if a specific item is requested and auth is null
      * @return self new ItemAccess object
      */
-    public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : self
+    public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?Item $item = null) : self
     {
-        $item = null; if ($itemid !== null)
-        {
-            $item = $class::TryLoadByID($database, $itemid);
-            if ($item === null) return static::UnknownItemException($class);
-        }
-
         if (($shareid = $input->TryGetParam('sid',SafeParam::TYPE_RANDSTR)) !== null)
         {
-            $sharekey = $input->GetParam('skey',SafeParam::TYPE_RANDSTR);
-
-            $share = Share::TryAuthenticateByLink($database, $shareid, $sharekey, $item);            
-            if ($share === null) return static::UnknownItemException($class);
-
+            $share = Share::TryLoadByID($database, $shareid);
+            if ($share === null) throw new UnknownItemException();
+            
             $item ??= $share->GetItem();
             
+            if ($input->HasParam('skey'))
+            {
+                $sharekey = $input->GetParam('skey',SafeParam::TYPE_RANDSTR);
+                
+                if (!$share->AuthenticateByLink($sharekey, $item)) 
+                    throw new ItemAccessDeniedException();            
+            }
+            else 
+            {
+                if ($authenticator === null) throw new AuthenticationFailedException();
+                $account = $authenticator->GetAccount();
+                
+                if (!$share->Authenticate($account, $item))
+                    throw new ItemAccessDeniedException();
+            }
+
             if ($share->NeedsPassword() && !$share->CheckPassword($input->GetParam('spassword',SafeParam::TYPE_RAW)))
                 throw new InvalidSharePasswordException();
         }
@@ -93,22 +78,16 @@ class ItemAccess
         {
             if ($authenticator === null) throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
-
-            // first check if we are the owner of the item or a parent (simple case)
-            if ($item->GetOwner() !== $account && !static::AccountInChain($item, $account)) 
-            {                
-                // second, check if there is a share in the chain that gives us access
-                $share = Share::TryAuthenticate($database, $item, $account);
-                if ($share === null) return static::ItemDeniedException($class);
+            
+            if ($item->GetOwner() !== $account && !static::ItemOwnerAccess($item, $account))
+            {
+                throw new ItemAccessDeniedException();
             }
-            else $share = null;
+            else $share = null; // owner-access
         }
-        else return static::UnknownItemException($class);
+        else throw new UnknownItemException();       
         
         if ($share) $share->SetAccessed();
-        
-        if ($item && $class && !is_a($item, $class)) 
-            return static::UnknownItemException($class);
 
         return new self($item, $share);
     }
@@ -116,19 +95,20 @@ class ItemAccess
     /**
      * Returns whether the given account can access the given item without a share.
      * 
-     * The account must either own the item or one of its parents, 
-     * or the item or any of its parents must have no owner (shared FS).
+     * The account must own either the item or one of its parents
      * @param Item $item item to access
      * @param Account $account account accessing
      * @return bool true if access is allowed
      */
-    public static function AccountInChain(Item $item, Account $account) : bool
+    protected static function ItemOwnerAccess(Item $item, Account $account) : bool
     {
+        if ($item->isWorldAccess()) return true;
+        
         do
         {
             $owner = $item->GetOwnerID();
             
-            if ($owner === $account->ID() || $owner === null) return true;
+            if ($owner === $account->ID()) return true;
         }
         while (($item = $item->GetParent()) !== null); return false;
     }
@@ -137,9 +117,9 @@ class ItemAccess
      * Same as ItemAccess::Authenticate() but returns null rather than client exceptions
      * @see ItemAccess::Authenticate()
      */
-    public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?string $class = null, ?string $itemid = null) : ?self
+    public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?Item $item = null) : ?self
     {
-        try { static::Authenticate($database, $input, $authenticator, $class, $itemid); }
+        try { static::Authenticate($database, $input, $authenticator, $item); }
         catch (Exceptions\ClientException $e) { return null; }
     }
 }

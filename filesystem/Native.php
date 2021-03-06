@@ -87,15 +87,6 @@ class Native extends BaseFileFS
     protected function GetFilePath(File $file) : string 
     {
         $id = $file->ID();
-        
-        // alternative abstracted implementation
-        /*$len = 2; $level = 2; $path = array();
-        for ($i = 0; $i < $level; $i++)
-        {
-            array_push($path, substr($id, $i*$len, $len));
-            $storage->CreateFolder(implode('/',$path));
-        }
-        $path = implode('/',$path);*/
 
         $len = 2; $path = substr($id, 0, $len);
         

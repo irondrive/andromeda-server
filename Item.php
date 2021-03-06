@@ -176,6 +176,14 @@ abstract class Item extends StandardObject
     /** Returns the filesystem manager's implementor that stores this object */
     protected function GetFSImpl() : FSImpl { return $this->GetFilesystem()->GetFSImpl(); }
     
+    /** Returns true if this file should be accessible by all accounts */
+    public function isWorldAccess() : bool 
+    { 
+        $fs = $this->GetFilesystem();
+        
+        return $fs->isShared() && !$fs->isUserOwned();
+    }
+    
     /** Sets the item's access time to the given value or now if null */
     public function SetAccessed(?int $time = null) : self { return $this->SetDate('accessed', $time); }
     

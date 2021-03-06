@@ -46,9 +46,6 @@ use Andromeda\Apps\Accounts\UnknownGroupException;
 /** Exception indicating that the requested item does not exist */
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
 
-/** Exception indicating that the requested file does not exist */
-class UnknownFileException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_FILE"; }
-
 /** Exception indicating that the requested folder does not exist */
 class UnknownFolderException extends Exceptions\ClientNotFoundException     { public $message = "UNKNOWN_FOLDER"; }
 
@@ -75,12 +72,6 @@ class InvalidFileRangeException extends Exceptions\ClientErrorException     { pu
 
 /** Exception indicating that access to the requested item is denied */
 class ItemAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "ITEM_ACCESS_DENIED"; }
-
-/** Exception indicating that access to the requested file is denied */
-class FileAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "FILE_ACCESS_DENIED"; }
-
-/** Exception indicating that access to the requested folder is denied */
-class FolderAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "FOLDER_ACCESS_DENIED"; }
 
 /** Exception indicating that user-added filesystems are not allowed */
 class UserStorageDisabledException extends Exceptions\ClientDeniedException   { public $message = "USER_STORAGE_NOT_ALLOWED"; }
@@ -125,7 +116,7 @@ class FilesApp extends AppBase
             'install',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
-            '- AUTH for shared items: [--sid id --skey alphanum] [--spassword raw]',
+            '- AUTH for shared items: --sid id [--skey alphanum] [--spassword raw]',
             'upload --file file [name] --parent id [--overwrite bool]',
             'download --fileid id [--fstart int] [--flast int]',
             'ftruncate --fileid id --size int',
@@ -295,32 +286,76 @@ class FilesApp extends AppBase
     }
     
     /** Returns an ItemAccess authenticating the given file ID (or null to get from input), throws exceptions on failure */
-    private function AuthenticateFileAccess(Input $input, ?string $id = null) : ItemAccess {
+    private function AuthenticateFileAccess(Input $input, ?string $id = null) : ItemAccess 
+    {
         $id ??= $input->TryGetParam('fileid', SafeParam::TYPE_RANDSTR);
-        return ItemAccess::Authenticate($this->database, $input, $this->authenticator, File::class, $id); }
+        return $this->AuthenticateItemAccess($input, File::class, $id);
+    }
         
     /** Returns an ItemAccess authenticating the given file ID (or null to get from input), returns null on failure */
-    private function TryAuthenticateFileAccess(Input $input, ?string $id = null) : ?ItemAccess {
+    private function TryAuthenticateFileAccess(Input $input, ?string $id = null) : ?ItemAccess 
+    {
         $id ??= $input->TryGetParam('fileid', SafeParam::TYPE_RANDSTR);
-        return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, File::class, $id); }
+        return $this->TryAuthenticateItemAccess($input, File::class, $id);
+    }
             
     /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), throws exceptions on failure */
-    private function AuthenticateFolderAccess(Input $input, ?string $id = null) : ItemAccess { 
+    private function AuthenticateFolderAccess(Input $input, ?string $id = null) : ItemAccess 
+    { 
         $id ??= $input->TryGetParam('folder', SafeParam::TYPE_RANDSTR);
-        return ItemAccess::Authenticate($this->database, $input, $this->authenticator, Folder::class, $id); }
+        return $this->AuthenticateItemAccess($input, Folder::class, $id);
+    }
         
     /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), returns null on failure */
-    private function TryAuthenticateFolderAccess(Input $input, ?string $id = null) : ?ItemAccess {
+    private function TryAuthenticateFolderAccess(Input $input, ?string $id = null) : ?ItemAccess 
+    {
         $id ??= $input->TryGetParam('folder', SafeParam::TYPE_RANDSTR);
-        return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, Folder::class, $id); }
-        
+        return $this->TryAuthenticateItemAccess($input, Folder::class, $id);
+    }    
+    
     /** Returns an ItemAccess authenticating the given item class/ID, throws exceptions on failure */
-    private function AuthenticateItemAccess(Input $input, string $class, string $id) : ItemAccess {
-        return ItemAccess::Authenticate($this->database, $input, $this->authenticator, $class, $id); }
+    private function AuthenticateItemAccess(Input $input, string $class, ?string $id) : ItemAccess 
+    {
+        $item = null; if ($id !== null)
+        {
+            $item = $class::TryLoadByID($this->database, $id);
+            if ($item === null) return static::UnknownItemException($class);
+        }
+        
+        $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator, $item); 
+
+        if (!is_a($access->GetItem(), $class)) throw new UnknownItemException();
+        
+        return $access;
+    }
         
     /** Returns an ItemAccess authenticating the given item class/ID, returns null on failure */
-    private function TryAuthenticateItemAccess(Input $input, string $class, string $id) : ?ItemAccess {
-        return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $class, $id); }
+    private function TryAuthenticateItemAccess(Input $input, string $class, ?string $id) : ?ItemAccess 
+    {
+        $item = null; if ($id !== null)
+        {
+            $item = $class::TryLoadByID($this->database, $id);
+            if ($item === null) return static::UnknownItemException($class);
+        }
+        
+        $access = ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $item); 
+        
+        if ($access !== null && !is_a($access->GetItem(), $class)) return null;
+        
+        return $access;
+    }
+    
+    /** Returns an ItemAccess authenticating the given object */
+    private function AuthenticateItemObjAccess(Input $input, Item $item) : ItemAccess
+    {
+        return ItemAccess::Authenticate($this->database, $input, $this->authenticator, $item);
+    }
+    
+    /** Returns an ItemAccess authenticating the given object, returns null on failure */
+    private function TryAuthenticateItemObjAccess(Input $input, Item $item) : ?ItemAccess
+    {
+        return ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $item);
+    }
 
     /**
      * Installs the app by importing its SQL file and creating config
@@ -888,7 +923,7 @@ class FilesApp extends AppBase
             };
             return $retval;
         }
-        else ItemAccess::ItemException($class);
+        else throw new UnknownItemException();
     }
     
     /**
@@ -936,8 +971,8 @@ class FilesApp extends AppBase
         
         if ($copy)
         {
-            $paccess = ItemAccess::Authenticate(
-                $this->database, $input, $this->authenticator, Folder::class, $item->GetParentID());            
+            $paccess = $this->AuthenticateItemObjAccess($input, $item->GetParent());
+            
             $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
             
             if (!$this->authenticator && !$parent->GetAllowPublicUpload())
@@ -1047,7 +1082,7 @@ class FilesApp extends AppBase
             };
             return $retval;
         }
-        else ItemAccess::ItemException($class);
+        else throw new UnknownItemException();
     }
     
     /** 
@@ -1158,7 +1193,7 @@ class FilesApp extends AppBase
             };
             return $retval;
         }
-        else ItemAccess::ItemException($class);
+        else throw new UnknownItemException();
     }
     
     /**
@@ -1175,8 +1210,7 @@ class FilesApp extends AppBase
         $tag = Tag::TryLoadByID($this->database, $id);
         if ($tag === null) throw new UnknownItemException();
 
-        $item = $tag->GetItem(); $access = ItemAccess::Authenticate(
-            $this->database, $input, $this->authenticator, get_class($item), $item->ID());
+        $item = $tag->GetItem(); $access = $this->AuthenticateItemObjAccess($input, $item);
         
         $share = $access->GetShare();
         
@@ -1485,6 +1519,7 @@ class FilesApp extends AppBase
      * Edits properties of an existing share
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownItemException if the given share is not found
+     * @throws ItemAccessDeniedException if not allowed
      * @return array Share
      * @see Share::GetClientObject()
      */
@@ -1494,15 +1529,12 @@ class FilesApp extends AppBase
         $account = $this->authenticator->GetAccount();
         
         $id = $input->TryGetParam('share',SafeParam::TYPE_RANDSTR);
+        $share = Share::TryLoadByID($this->database, $id);
+        if ($share === null) throw new UnknownItemException();        
         
-        $share = Share::TryLoadByOwnerAndID($this->database, $account, $id);
-        if ($share === null) throw new UnknownItemException();
-
-        $origshare = null; if ($share->GetItem()->GetOwner() !== $account)
-        {
-            $origshare = Share::TryAuthenticate($this->database, $share->GetItem(), $account);
-            if ($origshare === null) throw new UnknownItemException();
-        }
+        // allowed to edit the share if you have owner level access to the item, or own the share
+        $origshare = $this->AuthenticateItemObjAccess($input, $share->GetItem())->GetShare();        
+        if ($origshare !== null && $share->GetOwner() !== $account) throw new ItemAccessDeniedException();
         
         return $share->SetShareOptions($input, $origshare)->GetClientObject();
     }
@@ -1511,6 +1543,7 @@ class FilesApp extends AppBase
      * Deletes an existing share
      * @throws AuthenticationFailedException if not signed in
      * @throws UnknownItemException if the given share is not found
+     * @throws ItemAccessDeniedException if not allowed
      */
     protected function DeleteShare(Input $input) : void
     {
@@ -1518,9 +1551,15 @@ class FilesApp extends AppBase
         $account = $this->authenticator->GetAccount();
         
         $id = $input->TryGetParam('share',SafeParam::TYPE_RANDSTR);
-
-        $share = Share::TryLoadByOwnerAndID($this->database, $account, $id, true);
+        $share = Share::TryLoadByID($this->database, $id);
         if ($share === null) throw new UnknownItemException();
+
+        // if you don't own the share, you must have owner-level access to the item        
+        if ($share->GetOwner() !== $account)
+        {
+            if ($this->AuthenticateItemObjAccess($input, $share->GetItem())->GetShare() !== null)
+                throw new ItemAccessDeniedException();
+        }
         
         $share->Delete();
     }
@@ -1533,6 +1572,7 @@ class FilesApp extends AppBase
     protected function ShareInfo(Input $input) : array
     {
         $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator);
+        
         return $access->GetShare()->GetClientObject(true);
     }
     
