@@ -48,7 +48,7 @@ class Manager extends BaseObject
     {
         $retval = array();
         foreach (self::$auth_types as $name=>$class)
-            array_push($retval, "\t --type $name ".$class::GetPropUsage());
+            $retval[] = "\t --type $name ".$class::GetPropUsage();
         return $retval;
     }
     
