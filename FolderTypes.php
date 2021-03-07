@@ -176,7 +176,7 @@ class SubFolder extends Folder
     public function SetParent(Folder $parent, bool $overwrite = false) : self
     {
         $this->CheckIsNotChildOrSelf($parent);
-        parent::CheckParent($parent, $overwrite, false);       
+        parent::CheckParent($parent, $overwrite, false); 
         
         $this->GetFSImpl()->MoveFolder($this, $parent);
         return $this->SetObject('parent', $parent);
@@ -216,8 +216,11 @@ class SubFolder extends Folder
      */
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        return parent::BaseCreate($database)->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('owner',$account)->SetObject('parent',$parent)->SetScalar('name',$name)->CountCreate();
+        return parent::BaseCreate($database)
+            ->SetObject('filesystem',$parent->GetFilesystem())
+            ->SetObject('parent',$parent)            
+            ->SetObject('owner',$account)
+            ->SetScalar('name',$name)->CountCreate();
     }
     
     /**

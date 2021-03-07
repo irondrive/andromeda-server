@@ -155,6 +155,18 @@ abstract class Item extends StandardObject
             else throw new DuplicateItemException();
         }
         return null;
+    }    
+    
+    /** Sets this item's owner to the given account */
+    public function SetOwner(Account $account, bool $notify = false) : self
+    {
+        if (!$notify) $this->AddStatsToOwner(true);
+        
+        $this->SetObject('owner', $account);
+        
+        if (!$notify) $this->AddStatsToOwner();
+        
+        return $this;
     }
     
     /**
@@ -303,6 +315,48 @@ abstract class Item extends StandardObject
     }
     
     /**
+     * Adds this item's stats to all owner limits
+     * @param bool $sub if true, subtract
+     * @return $this
+     */
+    protected function AddStatsToOwner(bool $sub = false) : self
+    {
+        if (!$this->GetOwnerID()) return $this;
+        
+        foreach (Limits\AccountTotal::LoadByAccountAll($this->database, $this->GetOwner()) as $limit)
+            $this->AddStatsToLimit($limit, $sub);
+ 
+        if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
+            
+        foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $limit)
+            $this->AddStatsToLimit($limit, $sub);
+        
+        return $this;
+    }    
+
+    /**
+     * Adds this item's stats to all filesystem limits
+     * @param bool $sub if true, subtract
+     * @return $this
+     */
+    protected function AddStatsToFilesystem(bool $sub = false) : self
+    {        
+        $total = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem());
+        
+        if ($total !== null) $this->AddStatsToLimit($total, $sub);
+        
+        if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
+        
+        foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $limit)
+            $this->AddStatsToLimit($limit, $sub);
+        
+        return $this;
+    }
+    
+    /** Adds this item's stats to the given limit, substracting if $sub */
+    protected abstract function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void;
+    
+    /**
      * Returns a config bool for the item by checking applicable limits
      * @param callable $func the function returning the desired bool
      * @param Account $account the account to check the permission for, or null for defaults
@@ -377,6 +431,16 @@ abstract class Item extends StandardObject
         $q = new QueryBuilder(); $where = $q->Equals('owner',$account->ID());
         return parent::LoadByQuery($database, $q->Where($where));
     }
+    
+    /**
+     * Returns all items with a parent that is not owned by the item owner
+     * 
+     * Does not return items that are world accessible
+     * @param ObjectDatabase $database database reference
+     * @param Account $account the account that owns the items
+     * @return array<string, Item> items indexed by ID
+     */
+    public abstract static function LoadForeignByOwner(ObjectDatabase $database, Account $account) : array;
 
     /**
      * Returns a printable client object of this item

@@ -2,7 +2,11 @@
 
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+
+require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/Item.php");
 
@@ -83,6 +87,17 @@ abstract class Folder extends Item
         return $this->DeltaCounter('size',$size); 
     }
     
+    /** Sets this folder and its contents' owners to the given account */
+    public function SetOwnerRecursive(Account $account) : self
+    {
+        $this->SetOwner($account);
+        
+        foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item)
+            $item->SetOwner($account, true);
+       
+        return $this;
+    }
+    
     /** Asserts that this folder is not the given folder, or any of its parents */
     private function CheckIsNotChildOrSelf(Folder $folder) : void
     {
@@ -142,6 +157,8 @@ abstract class Folder extends Item
         return parent::RemoveObjectRef($field, $object, $notification);
     }
     
+    protected function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void { $limit->AddFolderCounts($this, $sub); }
+    
     private bool $refreshed = false;
     private bool $subrefreshed = false;
     
@@ -181,6 +198,26 @@ abstract class Folder extends Item
         
         parent::Delete();
     } 
+    
+    /**
+     * Returns all items with a parent that is not owned by the item owner
+     *
+     * Does not return items that are world accessible
+     * @param ObjectDatabase $database database reference
+     * @param Account $account the account that owns the items
+     * @return array<string, Item> items indexed by ID
+     */
+    public static function LoadForeignByOwner(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder();
+        
+        $q->SelfJoinWhere($database, Folder::class, 'parent', 'id', '_parent');
+        
+        $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.owner', $account->ID()),
+            $q->Equals($database->GetClassTableName(Folder::class).'.owner', $account->ID()));
+
+        return array_filter(parent::LoadByQuery($database, $q->Where($w)), function(Folder $folder){ return !$folder->isWorldAccess(); });
+    }
     
     /**
      * Recursively lists subitems in this folder

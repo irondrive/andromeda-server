@@ -238,8 +238,9 @@ CREATE TABLE `a2_objects_apps_files_share` (
   `features__modify` tinyint(1) NOT NULL,
   `features__social` tinyint(1) NOT NULL,
   `features__reshare` tinyint(1) NOT NULL,
+  `features__keepowner` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `item` (`item`,`dest`),
+  UNIQUE KEY `item` (`item`,`owner`,`dest`),
   KEY `owner` (`owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;

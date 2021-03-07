@@ -80,8 +80,14 @@ trait AccountCommon
     
     protected function SetBaseLimits(Input $input) : void
     {
-        if ($input->HasParam('track_items')) $this->SetFeature('track_items', $input->TryGetParam('track_items', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->TryGetParam('track_dlstats', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('track_items') )
+        {
+            $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_BOOL));
+            
+            if ($this->canTrackItems()) $this->Initialize();
+        }        
+        
+        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
     }    
     
     /** Configures limits for the given account with the given input */
@@ -259,7 +265,7 @@ class AccountTotalDefault extends AccountTotal implements IAccountLimit
 }
 
 /** Concrete class providing timed account limits */
-class AccountTimed extends AuthTimed 
+class AccountTimed extends AuthEntityTimed 
 {
     use AccountCommon;
     
@@ -332,7 +338,7 @@ class AccountTimed extends AuthTimed
      * Returns all timed limits for the given account and its groups
      * @param ObjectDatabase $database database reference
      * @param Account $account account of interest
-     * @return array<string, AuthTimed> limits indexed by ID
+     * @return array<string, AuthEntityTimed> limits indexed by ID
      */
     public static function LoadAllForAccountAll(ObjectDatabase $database, Account $account) : array
     {

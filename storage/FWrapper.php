@@ -44,7 +44,7 @@ abstract class FWrapper extends Storage
     
     public function Edit(Input $input) : self
     {
-        $path = $input->TryGetParam('path', SafeParam::TYPE_FSPATH);
+        $path = $input->GetOptParam('path', SafeParam::TYPE_FSPATH);
         if ($path !== null) $this->SetPath($path);
         return parent::Edit($input);
     }
@@ -181,7 +181,7 @@ abstract class FWrapper extends Storage
                 
                 if ($read === false) break;
                 
-                array_push($data, $read); $byte += strlen($read);
+                $data[] = $read; $byte += strlen($read);
             }
             
             $data = implode($data);
@@ -352,7 +352,7 @@ abstract class FWrapper extends Storage
                 if (!($this->handles[$path] ?? false)) 
                     throw new FileWriteFailedException();
                 
-                array_push($this->writing, $path);
+                $this->writing[] = $path;
             }
             else 
             {

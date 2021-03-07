@@ -183,8 +183,9 @@ CREATE TABLE `a2_objects_apps_files_share` (
 ,  `features__modify` integer NOT NULL
 ,  `features__social` integer NOT NULL
 ,  `features__reshare` integer NOT NULL
+,  `features__keepowner` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`item`,`dest`)
+,  UNIQUE (`item`,`owner`,`dest`)
 );
 CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `id` char(12) NOT NULL

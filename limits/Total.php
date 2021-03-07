@@ -101,15 +101,15 @@ abstract class Total extends Base
         
         $lim->SetBaseLimits($input);
         
-        if ($input->HasParam('randomwrite')) $lim->SetFeature('randomwrite', $input->TryGetParam('randomwrite', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicmodify')) $lim->SetFeature('publicmodify', $input->TryGetParam('publicmodify', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicupload')) $lim->SetFeature('publicupload', $input->TryGetParam('publicupload', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('itemsharing')) $lim->SetFeature('itemsharing', $input->TryGetParam('itemsharing', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('shareeveryone')) $lim->SetFeature('shareeveryone', $input->TryGetParam('shareeveryone', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('randomwrite')) $lim->SetFeature('randomwrite', $input->GetNullParam('randomwrite', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('publicmodify')) $lim->SetFeature('publicmodify', $input->GetNullParam('publicmodify', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('publicupload')) $lim->SetFeature('publicupload', $input->GetNullParam('publicupload', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('itemsharing')) $lim->SetFeature('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('shareeveryone')) $lim->SetFeature('shareeveryone', $input->GetNullParam('shareeveryone', SafeParam::TYPE_BOOL));
         
-        if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->TryGetParam('max_size', SafeParam::TYPE_INT));
-        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->TryGetParam('max_items', SafeParam::TYPE_INT));
-        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->TryGetParam('max_shares', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_INT));
 
         if ($lim->isCreated()) $lim->Initialize();
         

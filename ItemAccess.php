@@ -48,7 +48,7 @@ class ItemAccess
      */
     public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?Item $item = null) : self
     {
-        if (($shareid = $input->TryGetParam('sid',SafeParam::TYPE_RANDSTR)) !== null)
+        if (($shareid = $input->GetOptParam('sid',SafeParam::TYPE_RANDSTR)) !== null)
         {
             $share = Share::TryLoadByID($database, $shareid);
             if ($share === null) throw new UnknownItemException();

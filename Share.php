@@ -52,7 +52,8 @@ class Share extends AuthObject
             'features__upload' => new FieldTypes\Scalar(false),
             'features__modify' => new FieldTypes\Scalar(false),
             'features__social' => new FieldTypes\Scalar(true),
-            'features__reshare' => new FieldTypes\Scalar(false)
+            'features__reshare' => new FieldTypes\Scalar(false),
+            'features__keepowner' => new FieldTypes\Scalar(true)
         ));
     }
     
@@ -72,7 +73,7 @@ class Share extends AuthObject
     public function GetOwnerID() : string { return $this->GetObjectID('owner'); }
     
     /** Returns the destination user/group of this share */
-    public function GetDest() : AuthEntity { return $this->GetObject('dest'); }
+    public function GetDest() : ?AuthEntity { return $this->TryGetObject('dest'); }
     
     /** Returns true if the share grants read access to the item */
     public function CanRead() : bool { return $this->GetFeature('read'); }
@@ -88,6 +89,9 @@ class Share extends AuthObject
     
     /** Returns true if the share allows the target to re-share the item */
     public function CanReshare() : bool { return $this->GetFeature('reshare'); }
+    
+    /** True if the uploader should stay the owner, else the owner of the parent is the owner */
+    public function KeepOwner() : bool { return $this->GetFeature('keepowner'); }
 
     /** Returns true if the share is expired, either by access count or expiry time  */
     public function IsExpired() : bool
@@ -115,7 +119,7 @@ class Share extends AuthObject
      */
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
     {
-        if (!$item->GetOwnerID()) throw new SharePublicItemException();
+        if ($item->isWorldAccess()) throw new SharePublicItemException();
         
         $q = new QueryBuilder(); $w = $q->And(
             $q->IsNull('authkey'), $q->Equals('owner',$owner->ID()),
@@ -177,7 +181,8 @@ class Share extends AuthObject
     }
     
     /** Returns the command usage for SetShareOptions() */
-    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
+    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--keepowner bool] ".
+                                                                       "[--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
     
     /**
      * Modifies share permissions and properties from the given input
@@ -186,21 +191,23 @@ class Share extends AuthObject
      */
     public function SetShareOptions(Input $input, ?Share $access = null) : self
     {
-        $f_read =    $input->TryGetParam('read',SafeParam::TYPE_BOOL);
-        $f_upload =  $input->TryGetParam('upload',SafeParam::TYPE_BOOL);
-        $f_modify =  $input->TryGetParam('modify',SafeParam::TYPE_BOOL);
-        $f_social =  $input->TryGetParam('social',SafeParam::TYPE_BOOL);
-        $f_reshare = $input->TryGetParam('reshare',SafeParam::TYPE_BOOL);
+        $f_read =    $input->GetOptParam('read',SafeParam::TYPE_BOOL);
+        $f_upload =  $input->GetOptParam('upload',SafeParam::TYPE_BOOL);
+        $f_modify =  $input->GetOptParam('modify',SafeParam::TYPE_BOOL);
+        $f_social =  $input->GetOptParam('social',SafeParam::TYPE_BOOL);
+        $f_reshare = $input->GetOptParam('reshare',SafeParam::TYPE_BOOL);
+        $f_keepown = $input->GetOptParam('keepowner',SafeParam::TYPE_BOOL);
         
         if ($f_read !== null)    $this->SetFeature('read', $f_read && ($access === null || $access->CanRead()));
         if ($f_upload !== null)  $this->SetFeature('upload', $f_upload && ($access === null || $access->CanUpload()));
         if ($f_modify !== null)  $this->SetFeature('modify', $f_modify && ($access === null || $access->CanModify()));
         if ($f_social !== null)  $this->SetFeature('social', $f_social && ($access === null || $access->CanSocial()));
         if ($f_reshare !== null) $this->SetFeature('reshare', $f_reshare && ($access === null || $access->CanReshare()));
-        
-        if ($input->HasParam('spassword')) $this->SetPassword($input->TryGetParam('spassword',SafeParam::TYPE_RAW));
-        if ($input->HasParam('expires')) $this->SetDate('expires',$input->TryGetParam('expires',SafeParam::TYPE_INT));
-        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->TryGetParam('maxaccess',SafeParam::TYPE_INT));
+        if ($f_keepown !== null) $this->SetFeature('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
+                
+        if ($input->HasParam('spassword')) $this->SetPassword($input->GetNullParam('spassword',SafeParam::TYPE_RAW));
+        if ($input->HasParam('expires')) $this->SetDate('expires',$input->GetNullParam('expires',SafeParam::TYPE_INT));
+        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->GetNullParam('maxaccess',SafeParam::TYPE_INT));
         
         return $this;
     }
@@ -228,11 +235,17 @@ class Share extends AuthObject
         
         $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);        
         $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID());
-        
+
         $shares = static::LoadByQuery($database, $q->Where($w));
         
-        $q = new QueryBuilder(); $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
-                                             $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
+        $q = new QueryBuilder(); 
+        
+        $defgroups = $q->OrArr(array_map(function(Group $group)use($q){ 
+            return $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($group));
+        }, $account->GetDefaultGroups()));
+
+        $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
+                    $defgroups, $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
 
         return array_merge($shares, static::LoadByQuery($database, $q->Where($w)));
     }

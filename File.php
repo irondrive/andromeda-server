@@ -2,6 +2,9 @@
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\InputFile;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -115,6 +118,8 @@ class File extends Item
         
         return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
     }
+    
+    protected function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void { $limit->AddFolderCounts($limit, $sub); }
         
     private bool $refreshed = false;
     
@@ -165,9 +170,12 @@ class File extends Item
     }
 
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
-    {
-        return parent::BaseCreate($database)->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('owner', $account)->SetObject('parent',$parent)->SetScalar('name',$name)->CountCreate();
+    {        
+        return parent::BaseCreate($database)
+            ->SetObject('filesystem',$parent->GetFilesystem())
+            ->SetObject('parent',$parent)
+            ->SetObject('owner', $account)
+            ->SetScalar('name',$name)->CountCreate();
     }
     
     /**
@@ -175,19 +183,18 @@ class File extends Item
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the file's parent folder
      * @param Account $account the account owning this file
-     * @param string $name the name of the file
-     * @param string $path the path of the file content
+     * @param InputFile the input file name and content path
      * @param bool $overwrite if true (reuses the same object)
      * @return self newly created object
      */
-    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, string $path, bool $overwrite = false) : self
+    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputFile $infile, bool $overwrite = false) : self
     {
-        $file = static::TryLoadByParentAndName($database, $parent, $name);
+        $file = static::TryLoadByParentAndName($database, $parent, $infile->GetName());
         if ($file !== null && !$overwrite) throw new DuplicateItemException();
         
-        $file ??= static::NotifyCreate($database, $parent, $account, $name);
+        $file ??= static::NotifyCreate($database, $parent, $account, $infile->GetName());
         
-        return $file->SetContents($path);     
+        return $file->SetContents($infile->GetPath());     
     }
     
     /**
@@ -256,6 +263,25 @@ class File extends Item
         
         $this->NotifyDelete();
     }    
+    
+    /**
+     * Returns all items with a parent that is not owned by the item owner
+     *
+     * Does not return items that are world accessible
+     * @param ObjectDatabase $database database reference
+     * @param Account $account the account that owns the items
+     * @return array<string, Item> items indexed by ID
+     */
+    public static function LoadForeignByOwner(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder();
+        
+        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
+            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
+            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
+
+        return array_filter(parent::LoadByQuery($database, $q), function(File $file){ return !$file->isWorldAccess(); });
+    }
     
     /**
      * Returns a printable client object of the file

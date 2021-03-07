@@ -29,7 +29,7 @@ class Config extends SingletonObject
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self
     {
-        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->TryGetParam('apiurl',SafeParam::TYPE_RAW));
+        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW));
         
         if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_INT));
         if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_INT));

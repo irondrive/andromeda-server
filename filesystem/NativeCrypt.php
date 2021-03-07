@@ -76,7 +76,7 @@ class NativeCrypt extends Native
             $end = $start + $length; $dend = $dstart + strlen($data);
             if ($end < $dend) { $data = substr($data, 0, $end - $dend); }
             
-            array_push($output, $data);
+            $output[] = $data;
         }
         
         $retval = implode($output);

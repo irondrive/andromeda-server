@@ -54,13 +54,13 @@ class SMB extends FWrapper
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup ?alphanum]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
             ->CredCryptCreate($input, $filesystem->GetOwner())
-            ->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
+            ->SetScalar('workgroup', $input->GetOptParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
@@ -68,7 +68,7 @@ class SMB extends FWrapper
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->TryGetParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
+        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
         if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         
         return parent::Edit($input)->CredCryptEdit($input);
