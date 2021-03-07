@@ -52,7 +52,7 @@ class SafeParams
     }
     
     /** Same as GetParam() but returns null rather than throwing exceptions */
-    public function TryGetParam(string $key, int $type, ?callable $usrfunc = null)
+    public function GetNullParam(string $key, int $type, ?callable $usrfunc = null)
     {
         if (!$this->HasParam($key)) return null;
         return $this->params[$key]->GetValue($type, $usrfunc);

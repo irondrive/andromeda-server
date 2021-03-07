@@ -8,7 +8,7 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 require_once(ROOT."/core/ioformat/SafeParams.php"); 
-use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams};
+use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams,InputFile};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -55,21 +55,24 @@ class AJAX extends IOInterface
             if ($_GET['tryeach'] ?? false) $this->atomicbatch = false;
             
             $global_get = $_GET; unset($global_get['batch']);
-            $global_req = $_REQUEST; unset($global_req['batch']);
+            $global_files = $_FILES; unset($global_files['batch']);
+            $global_request = $_REQUEST; unset($global_request['batch']);
             
-            $inputs = array(); foreach(array_keys(batch) as $i)
+            $inputs = array(); foreach($_REQUEST['batch'] as $i)
             {
                 $get = is_array($_GET['batch'][$i] ?? null) ? $_GET['batch'][$i] : array();
-                $req = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
+                $files = is_array($_FILES['batch'][$i] ?? null) ? $_FILES['batch'][$i] : array();
+                $request = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
 
                 $get = array_merge($global_get, $get);
-                $req = array_merge($global_req, $req);
+                $files = array_merge($global_files, $files);
+                $request = array_merge($global_request, $request);
                 
-                $inputs[$i] = static::GetInput($get, $req);
+                $inputs[$i] = static::GetInput($get, $files, $request);
             }
             return $inputs;
         }
-        else return array(static::GetInput($_GET, $_REQUEST));
+        else return array(static::GetInput($_GET, $_FILES, $_REQUEST));
     }
     
     /** 
@@ -78,7 +81,7 @@ class AJAX extends IOInterface
      * App and Action must be part of $_GET, everything else
      * can be interchangeably in $_GET or $_POST
      */
-    private function GetInput(array $get, array $request) : Input
+    private function GetInput(array $get, array $files, array $request) : Input
     {
         
         if (empty($get['app'])) throw new NoAppActionException();
@@ -94,19 +97,21 @@ class AJAX extends IOInterface
             $params->AddParam($key, $request[$key]);
         }
         
-        $files = array(); foreach($_FILES as $file)
+        $pfiles = array(); foreach ($files as $key=>$file)
         {
-            // the key name of the uploaded file is a don't-care
             if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
+            
             $fname = (new SafeParam('name',$file['name']))->GetValue(SafeParam::TYPE_FSNAME);
-            $files[$fname] = $file['tmp_name']; 
+            
+            $pfiles[$key] = new InputFile($file['tmp_name'], $fname); 
         }
         
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;
         $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
+        
         $auth = ($user !== null && $pass !== null) ? (new InputAuth($user, $pass)) : null;
 
-        return new Input($app, $action, $params, $files, $auth);
+        return new Input($app, $action, $params, $pfiles, $auth);
     }
     
     public function UserOutput(Output $output) : bool

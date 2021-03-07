@@ -12,6 +12,15 @@ class InputAuth
     public function GetPassword() : string { return $this->password; }
 }
 
+/** A file path and name combination */
+class InputFile
+{
+    public function __construct(string $path, string $name) {
+        $this->path = $path; $this->name = $name; }
+    public function GetPath() : string { return $this->path; }
+    public function GetName() : string { return $this->name; }
+}
+
 /** 
  * An abstracted Input object gathered from an interface
  * 
@@ -47,7 +56,7 @@ class Input
     /** @see Input::GetFiles() */
     private array $files;       
     
-    /** @return string[] array of paths to input files */
+    /** @return InputFile[] array of input files */
     public function GetFiles() : array { return $this->files; }    
     
     /** @see SafeParams::HasParam() */
@@ -58,9 +67,13 @@ class Input
     public function GetParam(string $key, int $type, ?callable $usrfunc = null) { 
         return $this->params->GetParam($key, $type, $usrfunc); }
 
-    /** @see SafeParams::TryGetParam() */
-    public function TryGetParam(string $key, int $type, ?callable $usrfunc = null) {
-        return $this->params->TryGetParam($key, $type, $usrfunc); }
+    /** @see SafeParams::GetNullParam() */
+    public function GetNullParam(string $key, int $type, ?callable $usrfunc = null) {
+        return $this->params->GetNullParam($key, $type, $usrfunc); }
+        
+    /** Returns a non-null parameter if it was given, else null if not present (can't be present and null) */
+    public function GetOptParam(string $key, int $type, ?callable $usrfunc = null) {
+        return $this->HasParam($key) ? $this->GetParam($key,$type,$usrfunc) : null; }
         
     /**
      * Determines whether or not the given key exists as an input file
@@ -71,12 +84,12 @@ class Input
         return array_key_exists($key, $this->files); }
         
     /**
-     * Gets the file path mapped to the parameter name
+     * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
      * @throws SafeParamKeyMissingException if the key does not exist
-     * @return string the path to the temporary uploaded file
+     * @return InputFile the temporary uploaded file
      */
-    public function GetFile(string $key) : string
+    public function GetFile(string $key) : InputFile
     {
         if (!$this->HasFile($key)) 
             throw new SafeParamKeyMissingException($key);
@@ -87,7 +100,7 @@ class Input
      * Same as GetFile() but returns null rather than throwing an exception
      * @see Input::GetFile()
      */
-    public function TryGetFile(string $key) : ?string
+    public function TryGetFile(string $key) : ?InputFile
     {
         if (!$this->HasFile($key)) return null;
         else return $this->files[$key];

@@ -36,7 +36,7 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--datadir text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--datadir ?text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool]"; }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -48,8 +48,9 @@ class Config extends SingletonObject
     {
         if ($input->HasParam('datadir')) 
         {
-            $datadir = $input->TryGetParam('datadir',SafeParam::TYPE_FSPATH);
-            if (!is_readable($datadir) || !is_writeable($datadir)) throw new UnwriteableDatadirException();
+            $datadir = $input->GetNullParam('datadir',SafeParam::TYPE_FSPATH);
+            if ($datadir !== null && !is_readable($datadir) || !is_writeable($datadir)) 
+                throw new UnwriteableDatadirException();
             $this->SetScalar('datadir', $datadir);
         }
         

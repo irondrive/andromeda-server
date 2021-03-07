@@ -91,17 +91,16 @@ class Emailer extends StandardObject
         
         $mailer->SetScalar('type',$type)
             ->SetScalar('from_address',$input->GetParam('from_address',SafeParam::TYPE_EMAIL))
-            ->SetScalar('from_name',$input->TryGetParam('from_name',SafeParam::TYPE_NAME))
-            ->SetFeature('reply',$input->TryGetParam('use_reply',SafeParam::TYPE_BOOL));
+            ->SetScalar('from_name',$input->GetOptParam('from_name',SafeParam::TYPE_NAME))
+            ->SetFeature('reply',$input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
         
         if ($type == self::TYPE_SMTP)
         {
-            $mailer->SetScalar('username',$input->TryGetParam('username',SafeParam::TYPE_TEXT));
-            $mailer->SetScalar('password',$input->TryGetParam('password',SafeParam::TYPE_RAW));
+            $mailer->SetScalar('username',$input->GetOptParam('username',SafeParam::TYPE_TEXT));
+            $mailer->SetScalar('password',$input->GetOptParam('password',SafeParam::TYPE_RAW));
             
-            if ($input->HasParam('hosts'))
+            if (($hosts = $input->GetParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY)) !== null)
             {
-                $hosts = $input->TryGetParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY);
                 $hosts = array_map(function($i){ return self::BuildHostFromParams($i); }, $hosts);
             }
             else $hosts = array(self::BuildHostFromParams($input->GetParams()));
@@ -116,8 +115,8 @@ class Emailer extends StandardObject
     private static function BuildHostFromParams(SafeParams $input) : string
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
-        $port = $input->TryGetParam('port',SafeParam::TYPE_INT);
-        $proto = $input->TryGetParam('proto',SafeParam::TYPE_ALPHANUM,
+        $port = $input->GetOptParam('port',SafeParam::TYPE_INT);
+        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,
             function($d){ return in_array($d,array('tls','ssl')); });
         
         if ($port) $host .= ":$port";
