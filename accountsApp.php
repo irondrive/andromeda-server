@@ -471,6 +471,9 @@ class AccountsApp extends AppBase
        
         if (isset($contactInfo)) 
         {
+            if (Contact::TryLoadByInfoPair($this->database, $contactInfo) !== null)
+                throw new ContactExistsException();
+            
             $valid = $requireContact >= Config::CONTACT_VALID;
             
             if ($valid) $account->setDisabled(Account::DISABLE_PENDING_CONTACT);
@@ -1308,12 +1311,12 @@ class AccountsApp extends AppBase
             ->AddParam('email',$email)
             ->AddParam('username',$user)
             ->AddParam('password',$password)));
-        array_push($results, $test);
+        $results[] = $test;
         
         $test = $this->API->Run(new Input($app,'createsession', (new SafeParams())
             ->AddParam('username',$user)
             ->AddParam('auth_password',$password)));
-        array_push($results, $test);
+        $results[] = $test;
         
         $sessionid = $test['client']['session']['id'];
         $sessionkey = $test['client']['session']['authkey'];
@@ -1325,14 +1328,14 @@ class AccountsApp extends AppBase
             ->AddParam('getaccount',true)
             ->AddParam('auth_password',$password)
             ->AddParam('new_password',$password2)));
-        array_push($results, $test); 
+        $results[] = $test;
         $password = $password2;
         
         $test = $this->API->Run(new Input($app,'deleteaccount', (new SafeParams())
             ->AddParam('auth_sessionid',$sessionid)
             ->AddParam('auth_sessionkey',$sessionkey)
             ->AddParam('auth_password',$password)));
-        array_push($results, $test);
+        $results[] = $test;
         
         return $results;
     }

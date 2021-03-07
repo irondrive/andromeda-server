@@ -62,7 +62,7 @@ class Group extends AuthEntity
             }
         }
         
-        return null;
+        return null; // not a default group
     }
 
     /**
@@ -170,7 +170,7 @@ class Group extends AuthEntity
     private static array $delete_handlers = array();
     
     /** Registers a function to be run when a group is deleted */
-    public static function RegisterDeleteHandler(callable $func){ array_push(static::$delete_handlers,$func); }
+    public static function RegisterDeleteHandler(callable $func){ static::$delete_handlers[] = $func; }
     
     /**
      * Deletes this group and all associated objects

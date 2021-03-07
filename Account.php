@@ -98,11 +98,13 @@ class Account extends AuthEntity
     public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
     
     /**
-     * Loads the group that the account implicitly belongs to
+     * Loads the groups that the account implicitly belongs to
      * @return array<string, Group> groups indexed by ID
      */
     public function GetDefaultGroups() : array
     {
+        $retval = array();
+        
         $default = Config::GetInstance($this->database)->GetDefaultGroup();
         if ($default !== null) $retval[$default->ID()] = $default;
         
@@ -113,7 +115,7 @@ class Account extends AuthEntity
             if ($default !== null) $retval[$default->ID()] = $default;
         }
         
-        return array_filter($retval);
+        return $retval;
     }
     
     /**
@@ -140,7 +142,7 @@ class Account extends AuthEntity
     private static array $group_handlers = array();
     
     /** Registers a function to be run when the account is added to or removed from a group */
-    public static function RegisterGroupChangeHandler(callable $func){ array_push(static::$group_handlers,$func); }
+    public static function RegisterGroupChangeHandler(callable $func){ static::$group_handlers[] = $func; }
     
     /** Runs all functions registered to handle the account being added to or removed from a group */
     public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
@@ -414,7 +416,7 @@ class Account extends AuthEntity
     private static array $delete_handlers = array();
     
     /** Registers a function to be run when an account is deleted */
-    public static function RegisterDeleteHandler(callable $func){ array_push(static::$delete_handlers,$func); }
+    public static function RegisterDeleteHandler(callable $func){ static::$delete_handlers[] = $func; }
     
     /**
      * Deletes this account and all associated objects
@@ -698,7 +700,7 @@ class Account extends AuthEntity
     private static array $crypto_handlers = array();
     
     /** Registers a function to be run when crypto is enabled/disabled on the account */
-    public static function RegisterCryptoHandler(callable $func){ array_push(static::$crypto_handlers,$func); }
+    public static function RegisterCryptoHandler(callable $func){ static::$crypto_handlers[] = $func; }
 
     /**
      * Initializes secret-key crypto on the account
