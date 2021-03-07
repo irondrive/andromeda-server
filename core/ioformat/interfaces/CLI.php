@@ -18,7 +18,7 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
     public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file file [name]] [--\$param data] [--\$param@ file]\n".
-                      "batch/version:   php index.php [version | batch myfile.txt]\n".
+                      "batch/version:   php index.php [version | [--tryeach] batch myfile.txt]\n".
                       "get all actions: php index.php server usage"; }
 
 /** Exception indicating that the given batch file is not valid */
@@ -87,6 +87,8 @@ class CLI extends IOInterface
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
+                    
+                case '--tryeach': $this->atomicbatch = false; break;
 
                 default: throw new IncorrectCLIUsageException();
             }
@@ -132,8 +134,9 @@ class CLI extends IOInterface
             switch($argv[$i])
             {
                 case '--json': break;
-                case '--printr': break;           
-                case '--debug': $i++; break;        
+                case '--printr': break;    
+                case '--tryeach': break;
+                case '--debug': $i++; break;
                 case '--dbconf': $i++; break;
                     
                 case '--dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
@@ -165,8 +168,6 @@ class CLI extends IOInterface
     {       
         try { $lines = array_filter(explode("\n", file_get_contents($file))); }
         catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
-        
-        require_once(ROOT."/core/libraries/php-arguments/src/functions.php");
         
         global $argv; return array_map(function($line)use($argv)
         {
@@ -237,7 +238,7 @@ class CLI extends IOInterface
                 
                 $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
 
-                array_push($this->tmpfiles, $tmpfile);                
+                $this->tmpfiles[] = $tmpfile;                
                 $files[$filename] = $tmpfile;
             }
             else $params->AddParam($param, $val);

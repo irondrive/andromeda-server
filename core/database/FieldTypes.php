@@ -306,6 +306,14 @@ class ObjectPoly extends ObjectRef
     /** @see ObjectPoly::$baseclass */
     public function GetBaseClass() : string { return $this->baseclass; }
     
+    /** @see ObjectRef::GetRefClass() */
+    public function GetRefClass() : ?string
+    {
+        if (!isset($this->refclass)) return null;
+        
+        return parent::GetRefClass();
+    }
+    
     /**
      * Returns the serialized database value of the given object ID and type
      * 
@@ -489,7 +497,7 @@ class ObjectRefs extends Counter
 
         if (!in_array($object, $this->refs_added, true))
         {
-            array_push($this->refs_added, $object); 
+            $this->refs_added[] = $object; 
             parent::Delta(); $modified = true;
         }
                 
@@ -517,7 +525,7 @@ class ObjectRefs extends Counter
         
         if (!in_array($object, $this->refs_deleted, true))
         {
-            array_push($this->refs_deleted, $object); 
+            $this->refs_deleted[] = $object; 
             parent::Delta(-1); $modified = true;
         }
         

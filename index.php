@@ -38,15 +38,13 @@ $main = new Main($interface);
 
 $inputs = $interface->GetInputs($main->GetConfig());
 
-$data = array_map(function($input)use($main){ 
-    return $main->Run($input); }, $inputs);
+$retvals = $main->RunMany($inputs);
 
-$output = Output::Success($data);
-
-$main->commit();
+$output = Output::Success($retvals);
 
 if ($interface->UserOutput($output)) $main->commit();
 
 $output->SetMetrics($main->GetMetrics());
 
 $interface->FinalOutput($output);
+

@@ -146,7 +146,7 @@ class ServerApp extends AppBase
         if (isset($oldadmin)) $this->isAdmin = $oldadmin; else unset($this->isAdmin);
         if (isset($oldauth)) $this->authenticator = $oldauth; else unset($this->authenticator);
     }
-    
+
     /**
      * Generates a random value, usually for sanity checking
      * @throws UnknownActionException if not debugging or using CLI

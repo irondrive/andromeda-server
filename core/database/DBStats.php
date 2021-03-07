@@ -37,7 +37,7 @@ class DBStats
         if ($isRead) { $this->read_time += $el; if ($count) $this->reads++; }
         if ($isWrite) { $this->write_time += $el; if ($count) $this->writes++; }
      
-        array_push($this->queries, array('query'=>$sql, 'time'=>$el));
+        $this->queries[] = array('query'=>$sql, 'time'=>$el);
     }
     
     /** 

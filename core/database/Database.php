@@ -339,7 +339,7 @@ class Database implements Transactions
             }
         }
         
-        array_push($this->queries, $sql);
+        $this->queries[] = $sql;
     }
     
     /**
@@ -364,7 +364,7 @@ class Database implements Transactions
         if (!$this->connection->inTransaction())
         {
             $sql = "PDO->beginTransaction()";
-            array_push($this->queries, $sql);
+            $this->queries[] = $sql;
             $this->startTimingQuery();
             $this->connection->beginTransaction();
             $this->stopTimingQuery($sql, Database::QUERY_READ, false);
@@ -377,7 +377,7 @@ class Database implements Transactions
         if ($this->connection->inTransaction())
         {
             $sql = "PDO->rollback()";
-            array_push($this->queries, $sql);
+            $this->queries[] = $sql;
             $this->startTimingQuery();            
             $this->connection->rollback();
             $this->stopTimingQuery($sql, Database::QUERY_WRITE, false);
@@ -390,7 +390,7 @@ class Database implements Transactions
         if ($this->connection->inTransaction()) 
         {
             $sql = "PDO->commit()";
-            array_push($this->queries, $sql);
+            $this->queries[] = $sql;
             $this->startTimingQuery();            
             $this->connection->commit();             
             $this->stopTimingQuery($sql, Database::QUERY_WRITE, false);
@@ -414,7 +414,7 @@ class Database implements Transactions
     /** Add a new performance metrics context on to the stack */
     public function pushStatsContext() : self
     {
-        array_push($this->stats_stack, new DBStats()); return $this;
+        $this->stats_stack[] = new DBStats(); return $this;
     }
 
     /** Pop the current performance metrics context off of the stack */
