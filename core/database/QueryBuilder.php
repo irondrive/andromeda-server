@@ -14,7 +14,8 @@ class QueryBuilder
     /** Returns the compiled query as a string */
     public function GetText() : string 
     { 
-        return ($this->joinstr ?? "").
+        return ($this->fromalias ?? "").
+               ($this->joinstr!==null ?"JOIN ".$this->joinstr:"").
                ($this->where!==null ?" WHERE ".$this->where:"").
                ($this->limit!==null ?" LIMIT ".$this->limit:"").
                ($this->offset!==null ?" OFFSET ".$this->offset:"").
@@ -23,6 +24,8 @@ class QueryBuilder
     
     public function __toString() : string { return $this->GetText(); }
     
+    private ?string $fromalias = null;
+    private ?string $joinstr = null;
     private ?string $where = null;
     private ?string $orderby = null;
     private ?string $join = null;
@@ -34,7 +37,7 @@ class QueryBuilder
      * @param string $val the actual data value
      * @return string the placeholder to go in the query
      */
-    private function AddData(string $val) : string
+    public function AddData(string $val) : string
     {
         $idx = "d".count($this->data);
         $this->data[$idx] = $val;
@@ -137,6 +140,9 @@ class QueryBuilder
     /** Assigns a WHERE clause to the query */
     public function Where(string $where) : self { $this->where = $where; return $this; }
     
+    /** Returns the current WHERE string */
+    public function GetWhere() : ?string { return $this->where; }
+    
     /** Assigns an ORDER BY clause to the query */
     public function OrderBy(string $orderby) : self { $this->orderby = $orderby; return $this; }
     
@@ -158,7 +164,8 @@ class QueryBuilder
      */
     public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop, ?string $destpoly = null) : self
     {
-        $joinclass = $database->GetClassTableName($joinclass); $destclass = $database->GetClassTableName($destclass);
+        $joinclass = $database->GetClassTableName($joinclass); 
+        $destclass = $database->GetClassTableName($destclass);
         
         $joinstr = "$joinclass.$joinprop"; if ($destpoly !== null)
         {
@@ -166,7 +173,29 @@ class QueryBuilder
             $joinstr = $database->SQLConcat($joinstr, $classsym);
         }
         
-        $this->joinstr = "JOIN $joinclass ON $joinstr = $destclass.$destprop"; return $this;
+        $this->joinstr = "$joinclass ON $joinstr = $destclass.$destprop"; return $this;
+    }
+    
+    /**
+     * Performs a self join on a table (selects an alias table and sets the WHERE query)
+     * 
+     * If you need to add extra WHERE to the query, you must add to GetWhere()
+     * @param ObjectDatabase $database database reference
+     * @param string $joinclass the table to join to itself 
+     * @param string $prop1 the column to match to prop2
+     * @param string $prop2 the column to match to prop1
+     * @param string $tmptable the name of the temp table to join to (has prop2)
+     * @return $this
+     */
+    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2, string $tmptable = '_tmptable') : self
+    {
+        $joinclass = $database->GetClassTableName($joinclass); 
+        
+        $this->fromalias = ", $joinclass $tmptable";
+        
+        $this->where = "$joinclass.$prop1 = $tmptable.$prop2";
+        
+        return $this;
     }
 }
 

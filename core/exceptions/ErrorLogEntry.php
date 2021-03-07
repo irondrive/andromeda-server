@@ -55,7 +55,7 @@ class ErrorLogEntry extends BaseObject
         if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM));
         if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM));
                 
-        $or = $input->TryGetParam('logic',SafeParam::TYPE_ALPHANUM,
+        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
         
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");

@@ -142,7 +142,7 @@ class Database implements Transactions
             {
                 $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
                 
-                $port = $input->TryGetParam('port',SafeParam::TYPE_INT);
+                $port = $input->GetOptParam('port',SafeParam::TYPE_INT);
                 if ($port !== null) $connect .= ";port=$port";
             }
             
@@ -150,9 +150,9 @@ class Database implements Transactions
             
             $params['CONNECT'] = $connect;
             
-            $params['USERNAME'] = $input->TryGetParam('dbuser',SafeParam::TYPE_NAME);
-            $params['PASSWORD'] = $input->TryGetParam('dbpass',SafeParam::TYPE_RAW);
-            $params['PERSISTENT'] = $input->TryGetParam('persistent',SafeParam::TYPE_BOOL);
+            $params['USERNAME'] = $input->GetOptParam('dbuser',SafeParam::TYPE_NAME);
+            $params['PASSWORD'] = $input->GetOptParam('dbpass',SafeParam::TYPE_RAW);
+            $params['PERSISTENT'] = $input->GetOptParam('persistent',SafeParam::TYPE_BOOL);
         }
         else if ($driver === 'sqlite')
         {
@@ -163,7 +163,7 @@ class Database implements Transactions
         
         $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $outnam = $input->TryGetParam('outfile',SafeParam::TYPE_TEXT) ?? self::CONFIG_FILE;
+        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_TEXT) ?? self::CONFIG_FILE;
         
         $tmpnam = "$outnam.tmp.php";
         file_put_contents($tmpnam, $output);

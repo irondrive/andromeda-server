@@ -9,7 +9,7 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
 require_once(ROOT."/core/ioformat/SafeParams.php");
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,InputFile};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -17,7 +17,7 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--file file [name]] [--\$param data] [--\$param@ file]\n".
+    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--\$param data] [--\$param@ file] [--\$param% file [name]]\n".
                       "batch/version:   php index.php [version | [--tryeach] batch myfile.txt]\n".
                       "get all actions: php index.php server usage"; }
 
@@ -224,22 +224,23 @@ class CLI extends IOInterface
                 
                 $val = trim(file_get_contents($val));
             }
-
-            // send a filename to the app instead of a regular key/value
-            if (in_array($param, array('file','move-file','copy-file')))
+            // optionally send the app a path/name of a file instead
+            if (mb_substr($param,-1) === '%')
             {
-                if (!is_readable($val)) throw new InvalidFileException();   
+                $param = mb_substr($param,0,-1);
+                if (!$param) throw new IncorrectCLIUsageException();
                 
-                $tmpfile = tempnam(sys_get_temp_dir(),'a2_');
+                if (!is_readable($val)) throw new InvalidFileException();
                 
-                if ($param === 'move-file') rename($val, $tmpfile); else copy($val, $tmpfile);
+                $tmpfile = tempnam(sys_get_temp_dir(),'a2_'); copy($val, $tmpfile);
                 
                 $filename = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : $val;       
                 
                 $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
 
-                $this->tmpfiles[] = $tmpfile;                
-                $files[$filename] = $tmpfile;
+                $this->tmpfiles[] = $tmpfile;  
+                
+                $files[$param] = new InputFile($tmpfile, $filename);
             }
             else $params->AddParam($param, $val);
         }
@@ -249,8 +250,11 @@ class CLI extends IOInterface
     
     public function __destruct()
     {
-        foreach ($this->tmpfiles as $file) try { unlink($file); } 
+        foreach ($this->tmpfiles as $path) 
+        {
+            try { if (is_file($path)) unlink($path); }
             catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
+        }            
     }
     
     private $output_json = false;

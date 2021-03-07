@@ -158,8 +158,8 @@ class ServerApp extends AppBase
             !$this->API->GetInterface()->isPrivileged())
             throw new UnknownActionException();
         
-        $length = $input->TryGetParam("length", SafeParam::TYPE_INT);
-        
+        $length = $input->GetOptParam("length", SafeParam::TYPE_INT);
+    
         return Utilities::Random($length ?? 16);
     }
         
@@ -169,7 +169,7 @@ class ServerApp extends AppBase
      */
     protected function GetUsages(Input $input) : array
     {            
-        $want = $input->TryGetParam('app',SafeParam::TYPE_ALPHANUM);
+        $want = $input->GetOptParam('app',SafeParam::TYPE_ALPHANUM);
         
         $output = array(); foreach ($this->API->GetApps() as $name=>$app)
         {
@@ -221,7 +221,7 @@ class ServerApp extends AppBase
         $config = Config::Create($this->database);
         foreach ($apps as $app) $config->EnableApp($app);
         
-        $enable = $input->TryGetParam('enable', SafeParam::TYPE_BOOL);        
+        $enable = $input->GetOptParam('enable', SafeParam::TYPE_BOOL);        
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
         
         return array('apps'=>array_filter($apps,function($e){ return $e !== 'server'; }));
@@ -289,15 +289,15 @@ class ServerApp extends AppBase
         
         if (!$this->authenticator)
             $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL);
-        else $dest = $input->TryGetParam('dest',SafeParam::TYPE_EMAIL);
-        
+        else $dest = $input->GetOptParam('dest',SafeParam::TYPE_EMAIL);
+    
         if ($dest) $dests = array(new EmailRecipient($dest));
         else $dests = $this->authenticator->GetAccount()->GetContactEmails();
         
         $subject = "Andromeda Email Test";
         $body = "This is a test email from Andromeda";
         
-        if (($mailer = $input->TryGetParam('mailid', SafeParam::TYPE_RANDSTR)) !== null)
+        if (($mailer = $input->GetOptParam('mailid', SafeParam::TYPE_RANDSTR)) !== null)
         {
             $mailer = Emailer::TryLoadByID($this->database, $mailer);
             if ($mailer === null) throw new UnknownMailerException();
@@ -398,7 +398,7 @@ class ServerApp extends AppBase
         
         $emailer = Emailer::Create($this->database, $input);
         
-        if (($dest = $input->TryGetParam('test',SafeParam::TYPE_EMAIL)) !== null)
+        if (($dest = $input->GetOptParam('test',SafeParam::TYPE_EMAIL)) !== null)
         {
             $input->GetParams()->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
             
