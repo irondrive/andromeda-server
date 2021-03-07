@@ -41,6 +41,7 @@ CREATE TABLE public.a2_objects_apps_accounts_account (
     features__allowcrypto boolean,
     features__accountsearch smallint,
     features__groupsearch smallint,
+    features__userdelete boolean,
     counters_limits__sessions smallint,
     counters_limits__contacts smallint,
     counters_limits__recoverykeys smallint,
@@ -154,7 +155,7 @@ CREATE TABLE public.a2_objects_apps_accounts_contact (
     info character varying(127) NOT NULL,
     valid boolean DEFAULT false NOT NULL,
     usefrom boolean,
-    public boolean DEFAULT true NOT NULL,
+    public boolean DEFAULT false NOT NULL,
     authkey text,
     dates__created double precision NOT NULL,
     account character(12) NOT NULL
@@ -193,6 +194,7 @@ CREATE TABLE public.a2_objects_apps_accounts_group (
     features__allowcrypto boolean,
     features__accountsearch smallint,
     features__groupsearch smallint,
+    features__userdelete boolean,
     counters_limits__sessions smallint,
     counters_limits__contacts smallint,
     counters_limits__recoverykeys smallint,
@@ -283,115 +285,115 @@ ALTER TABLE ONLY public.a2_objects_apps_accounts_contactinfo
 
 
 --
--- Name: a2_objects_apps_accounts_account idx_53239_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_account idx_53646_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_account
-    ADD CONSTRAINT idx_53239_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53646_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_auth_ftp idx_53260_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_auth_ftp idx_53667_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_auth_ftp
-    ADD CONSTRAINT idx_53260_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53667_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_auth_imap idx_53263_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_auth_imap idx_53670_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_auth_imap
-    ADD CONSTRAINT idx_53263_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53670_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_auth_ldap idx_53266_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_auth_ldap idx_53673_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_auth_ldap
-    ADD CONSTRAINT idx_53266_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53673_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_auth_manager idx_53272_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_auth_manager idx_53679_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_auth_manager
-    ADD CONSTRAINT idx_53272_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53679_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_client idx_53279_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_client idx_53686_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_client
-    ADD CONSTRAINT idx_53279_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53686_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_config idx_53290_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_config idx_53697_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_config
-    ADD CONSTRAINT idx_53290_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53697_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_contact idx_53294_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_contact idx_53701_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_contact
-    ADD CONSTRAINT idx_53294_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53701_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_group idx_53302_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_group idx_53709_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_group
-    ADD CONSTRAINT idx_53302_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53709_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_groupjoin idx_53309_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_groupjoin idx_53716_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_groupjoin
-    ADD CONSTRAINT idx_53309_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53716_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_recoverykey idx_53312_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_recoverykey idx_53719_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_recoverykey
-    ADD CONSTRAINT idx_53312_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53719_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_session idx_53322_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_session idx_53729_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_session
-    ADD CONSTRAINT idx_53322_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53729_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_twofactor idx_53332_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_twofactor idx_53739_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_twofactor
-    ADD CONSTRAINT idx_53332_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53739_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_apps_accounts_usedtoken idx_53341_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_apps_accounts_usedtoken idx_53748_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_apps_accounts_usedtoken
-    ADD CONSTRAINT idx_53341_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_53748_primary PRIMARY KEY (id);
 
 
 --
@@ -423,192 +425,192 @@ CREATE INDEX idx_47458_type ON public.a2_objects_apps_accounts_contactinfo USING
 
 
 --
--- Name: idx_53239_fullname; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53646_fullname; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_53239_fullname ON public.a2_objects_apps_accounts_account USING btree (fullname);
-
-
---
--- Name: idx_53239_username; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_53239_username ON public.a2_objects_apps_accounts_account USING btree (username);
+CREATE INDEX idx_53646_fullname ON public.a2_objects_apps_accounts_account USING btree (fullname);
 
 
 --
--- Name: idx_53260_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53646_username; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53260_id ON public.a2_objects_apps_accounts_auth_ftp USING btree (id);
-
-
---
--- Name: idx_53263_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_53263_id ON public.a2_objects_apps_accounts_auth_imap USING btree (id);
+CREATE UNIQUE INDEX idx_53646_username ON public.a2_objects_apps_accounts_account USING btree (username);
 
 
 --
--- Name: idx_53266_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53667_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53266_id ON public.a2_objects_apps_accounts_auth_ldap USING btree (id);
-
-
---
--- Name: idx_53272_authsource*objectpoly*Apps\\Accounts\\Auth\\Source; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53272_authsource*objectpoly*Apps\\Accounts\\Auth\\Source" ON public.a2_objects_apps_accounts_auth_manager USING btree (authsource);
+CREATE UNIQUE INDEX idx_53667_id ON public.a2_objects_apps_accounts_auth_ftp USING btree (id);
 
 
 --
--- Name: idx_53272_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53670_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53272_id ON public.a2_objects_apps_accounts_auth_manager USING btree (id);
-
-
---
--- Name: idx_53279_account*object*Apps\\Accounts\\Account*clients; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53279_account*object*Apps\\Accounts\\Account*clients" ON public.a2_objects_apps_accounts_client USING btree (account);
+CREATE UNIQUE INDEX idx_53670_id ON public.a2_objects_apps_accounts_auth_imap USING btree (id);
 
 
 --
--- Name: idx_53279_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53673_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53279_id ON public.a2_objects_apps_accounts_client USING btree (id);
-
-
---
--- Name: idx_53279_session*object*Apps\\Accounts\\Session; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53279_session*object*Apps\\Accounts\\Session" ON public.a2_objects_apps_accounts_client USING btree (session);
+CREATE UNIQUE INDEX idx_53673_id ON public.a2_objects_apps_accounts_auth_ldap USING btree (id);
 
 
 --
--- Name: idx_53290_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53679_authsource*objectpoly*Apps\\Accounts\\Auth\\Source; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53290_id ON public.a2_objects_apps_accounts_config USING btree (id);
-
-
---
--- Name: idx_53294_account; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_53294_account ON public.a2_objects_apps_accounts_contact USING btree (account);
+CREATE INDEX "idx_53679_authsource*objectpoly*Apps\\Accounts\\Auth\\Source" ON public.a2_objects_apps_accounts_auth_manager USING btree (authsource);
 
 
 --
--- Name: idx_53294_info; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53679_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_53294_info ON public.a2_objects_apps_accounts_contact USING btree (info);
-
-
---
--- Name: idx_53294_prefer; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_53294_prefer ON public.a2_objects_apps_accounts_contact USING btree (usefrom, account);
+CREATE UNIQUE INDEX idx_53679_id ON public.a2_objects_apps_accounts_auth_manager USING btree (id);
 
 
 --
--- Name: idx_53294_type_2; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53686_account*object*Apps\\Accounts\\Account*clients; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53294_type_2 ON public.a2_objects_apps_accounts_contact USING btree (type, info);
-
-
---
--- Name: idx_53302_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_53302_id ON public.a2_objects_apps_accounts_group USING btree (id);
+CREATE INDEX "idx_53686_account*object*Apps\\Accounts\\Account*clients" ON public.a2_objects_apps_accounts_client USING btree (account);
 
 
 --
--- Name: idx_53302_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53686_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53302_name ON public.a2_objects_apps_accounts_group USING btree (name);
-
-
---
--- Name: idx_53309_account; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_53309_account ON public.a2_objects_apps_accounts_groupjoin USING btree (accounts, groups);
+CREATE UNIQUE INDEX idx_53686_id ON public.a2_objects_apps_accounts_client USING btree (id);
 
 
 --
--- Name: idx_53309_accounts*object*Apps\\Accounts\\Account*groups; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53686_session*object*Apps\\Accounts\\Session; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX "idx_53309_accounts*object*Apps\\Accounts\\Account*groups" ON public.a2_objects_apps_accounts_groupjoin USING btree (accounts);
-
-
---
--- Name: idx_53309_groups*object*Apps\\Accounts\\Group*accounts; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53309_groups*object*Apps\\Accounts\\Group*accounts" ON public.a2_objects_apps_accounts_groupjoin USING btree (groups);
+CREATE INDEX "idx_53686_session*object*Apps\\Accounts\\Session" ON public.a2_objects_apps_accounts_client USING btree (session);
 
 
 --
--- Name: idx_53309_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53697_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_53309_id ON public.a2_objects_apps_accounts_groupjoin USING btree (id);
-
-
---
--- Name: idx_53312_account*object*Apps\\Accounts\\Account*recoverykeys; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53312_account*object*Apps\\Accounts\\Account*recoverykeys" ON public.a2_objects_apps_accounts_recoverykey USING btree (account);
+CREATE UNIQUE INDEX idx_53697_id ON public.a2_objects_apps_accounts_config USING btree (id);
 
 
 --
--- Name: idx_53312_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53701_account; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_53312_id ON public.a2_objects_apps_accounts_recoverykey USING btree (id);
-
-
---
--- Name: idx_53322_aid; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_53322_aid ON public.a2_objects_apps_accounts_session USING btree (account);
+CREATE INDEX idx_53701_account ON public.a2_objects_apps_accounts_contact USING btree (account);
 
 
 --
--- Name: idx_53322_cid; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53701_info; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_53322_cid ON public.a2_objects_apps_accounts_session USING btree (client);
-
-
---
--- Name: idx_53332_account*object*Apps\\Accounts\\Account; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_53332_account*object*Apps\\Accounts\\Account" ON public.a2_objects_apps_accounts_twofactor USING btree (account);
+CREATE INDEX idx_53701_info ON public.a2_objects_apps_accounts_contact USING btree (info);
 
 
 --
--- Name: idx_53341_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_53701_prefer; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_53341_id ON public.a2_objects_apps_accounts_usedtoken USING btree (id);
+CREATE UNIQUE INDEX idx_53701_prefer ON public.a2_objects_apps_accounts_contact USING btree (usefrom, account);
+
+
+--
+-- Name: idx_53701_type_2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_53701_type_2 ON public.a2_objects_apps_accounts_contact USING btree (type, info);
+
+
+--
+-- Name: idx_53709_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_53709_id ON public.a2_objects_apps_accounts_group USING btree (id);
+
+
+--
+-- Name: idx_53709_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_53709_name ON public.a2_objects_apps_accounts_group USING btree (name);
+
+
+--
+-- Name: idx_53716_account; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_53716_account ON public.a2_objects_apps_accounts_groupjoin USING btree (accounts, groups);
+
+
+--
+-- Name: idx_53716_accounts*object*Apps\\Accounts\\Account*groups; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "idx_53716_accounts*object*Apps\\Accounts\\Account*groups" ON public.a2_objects_apps_accounts_groupjoin USING btree (accounts);
+
+
+--
+-- Name: idx_53716_groups*object*Apps\\Accounts\\Group*accounts; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "idx_53716_groups*object*Apps\\Accounts\\Group*accounts" ON public.a2_objects_apps_accounts_groupjoin USING btree (groups);
+
+
+--
+-- Name: idx_53716_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_53716_id ON public.a2_objects_apps_accounts_groupjoin USING btree (id);
+
+
+--
+-- Name: idx_53719_account*object*Apps\\Accounts\\Account*recoverykeys; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "idx_53719_account*object*Apps\\Accounts\\Account*recoverykeys" ON public.a2_objects_apps_accounts_recoverykey USING btree (account);
+
+
+--
+-- Name: idx_53719_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_53719_id ON public.a2_objects_apps_accounts_recoverykey USING btree (id);
+
+
+--
+-- Name: idx_53729_aid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_53729_aid ON public.a2_objects_apps_accounts_session USING btree (account);
+
+
+--
+-- Name: idx_53729_cid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_53729_cid ON public.a2_objects_apps_accounts_session USING btree (client);
+
+
+--
+-- Name: idx_53739_account*object*Apps\\Accounts\\Account; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "idx_53739_account*object*Apps\\Accounts\\Account" ON public.a2_objects_apps_accounts_twofactor USING btree (account);
+
+
+--
+-- Name: idx_53748_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_53748_id ON public.a2_objects_apps_accounts_usedtoken USING btree (id);
 
 
 --

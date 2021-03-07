@@ -136,7 +136,7 @@ class AccountsApp extends AppBase
             'changepassword --new_password raw ((--username text --auth_password raw) | --recoverykey text)',
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
-            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id]',
+            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
                 "\t [--recoverykey text | --auth_twofactor int] [--name name]",
                 "\t --auth_clientid id --auth_clientkey alphanum",
             'createrecoverykeys --auth_password raw --auth_twofactor int',
@@ -322,7 +322,7 @@ class AccountsApp extends AppBase
     {
         if ($this->authenticator === null) return null;
         
-        $account = $input->TryGetParam("account", SafeParam::TYPE_RANDSTR);
+        $account = $input->GetOptParam("account", SafeParam::TYPE_RANDSTR);
         
         $self = ($account === null);
         
@@ -335,7 +335,7 @@ class AccountsApp extends AppBase
         
         $admin = $this->authenticator->isAdmin();
         
-        $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) && ($self || $admin);
+        $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL) && ($self || $admin);
 
         $type = ($full ? Account::OBJECT_FULL : 0) | ($admin ? Account::OBJECT_ADMIN : 0);
         
@@ -353,7 +353,7 @@ class AccountsApp extends AppBase
     protected function ChangePassword(Input $input) : void
     {
         $new_password = $input->GetParam('new_password',SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT);
+        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_TEXT);
         
         if ($recoverykey !== null)
         {
@@ -481,7 +481,7 @@ class AccountsApp extends AppBase
             Contact::Create($this->database, $account, $contactInfo, $valid);
         }
         
-        if ($admin && $input->TryGetParam('admin',SafeParam::TYPE_BOOL)) $account->setAdmin(true);
+        if ($admin && $input->GetOptParam('admin',SafeParam::TYPE_BOOL)) $account->setAdmin(true);
 
         return $account->GetClientObject(Account::OBJECT_FULL);
     }
@@ -511,7 +511,7 @@ class AccountsApp extends AppBase
         if ($this->authenticator !== null) throw new AlreadySignedInException();
         
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
-        if (($authsource = $input->TryGetParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
+        if (($authsource = $input->GetOptParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
         {
             $authsource = Auth\Manager::TryLoadByID($this->database, $authsource);
             if ($authsource === null) throw new UnknownAuthSourceException();
@@ -555,8 +555,8 @@ class AccountsApp extends AppBase
         
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
-        $clientid = $input->TryGetParam("auth_clientid", SafeParam::TYPE_RANDSTR);
-        $clientkey = $input->TryGetParam("auth_clientkey", SafeParam::TYPE_RANDSTR);
+        $clientid = $input->GetOptParam("auth_clientid", SafeParam::TYPE_RANDSTR);
+        $clientkey = $input->GetOptParam("auth_clientkey", SafeParam::TYPE_RANDSTR);
         
         $interface = $this->API->GetInterface();
         
@@ -572,14 +572,14 @@ class AccountsApp extends AppBase
         } 
         else /* if no clientkey, require either a recoverykey or twofactor, create a client */
         { 
-            if (($recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_TEXT)) !== null)
+            if (($recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_TEXT)) !== null)
             {
                 if (!$account->CheckRecoveryKey($recoverykey))
                     throw new AuthenticationFailedException();
             }
             else Authenticator::StaticTryRequireTwoFactor($input, $account);
             
-            $cname = $input->TryGetParam('name', SafeParam::TYPE_NAME);
+            $cname = $input->GetOptParam('name', SafeParam::TYPE_NAME);
             $client = Client::Create($interface, $this->database, $account, $cname);
         }
         
@@ -589,7 +589,7 @@ class AccountsApp extends AppBase
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e)
             {
-                $old_password = $input->TryGetParam("old_password", SafeParam::TYPE_RAW);
+                $old_password = $input->GetOptParam("old_password", SafeParam::TYPE_RAW);
                 if ($old_password === null) throw new OldPasswordRequiredException();
                 $account->UnlockCryptoFromPassword($old_password);
                 
@@ -600,7 +600,7 @@ class AccountsApp extends AppBase
         /* check account password age, possibly require a new one */
         if (!$account->CheckPasswordAge())
         {
-            $new_password = $input->TryGetParam('new_password',SafeParam::TYPE_RAW);
+            $new_password = $input->GetOptParam('new_password',SafeParam::TYPE_RAW);
             if ($new_password === null) throw new NewPasswordRequiredException();
             $account->ChangePassword($new_password);
         }
@@ -661,7 +661,7 @@ class AccountsApp extends AppBase
             Session::DeleteByAccountExcept($this->database, $account, $this->authenticator->GetSession());
         }
         
-        $comment = $input->TryGetParam('comment', SafeParam::TYPE_TEXT);
+        $comment = $input->GetOptParam('comment', SafeParam::TYPE_TEXT);
         
         $twofactor = TwoFactor::Create($this->database, $account, $comment);
         $recoverykeys = RecoveryKey::CreateSet($this->database, $account);
@@ -756,7 +756,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $session = $this->authenticator->GetSession();
         
-        $sessionid = $input->TryGetParam("session", SafeParam::TYPE_RANDSTR);
+        $sessionid = $input->GetOptParam("session", SafeParam::TYPE_RANDSTR);
 
         if ($this->authenticator->isSudoUser() || $sessionid !== null)
         {
@@ -780,7 +780,7 @@ class AccountsApp extends AppBase
         $account = $this->authenticator->GetAccount();
         $client = $this->authenticator->GetClient();
         
-        $clientid = $input->TryGetParam("client", SafeParam::TYPE_RANDSTR);
+        $clientid = $input->GetOptParam("client", SafeParam::TYPE_RANDSTR);
         
         if ($this->authenticator->isSudoUser() || $clientid !== null)
         {
@@ -802,7 +802,7 @@ class AccountsApp extends AppBase
         
         $this->authenticator->RequirePassword();
         
-        if ($input->TryGetParam('everyone',SafeParam::TYPE_BOOL) ?? false)
+        if ($input->GetOptParam('everyone',SafeParam::TYPE_BOOL) ?? false)
         {
             $this->authenticator->RequireAdmin()->TryRequireTwoFactor();
             Client::DeleteAll($this->database);
@@ -932,10 +932,10 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT);
-        $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam("limit", SafeParam::TYPE_INT);
+        $offset = $input->GetNullParam("offset", SafeParam::TYPE_INT);
         
-        $full = $input->TryGetParam("full", SafeParam::TYPE_BOOL) ?? false;
+        $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL) ?? false;
         $type = $full ? Account::OBJECT_ADMIN : 0;
         
         $accounts = Account::LoadAll($this->database, $limit, $offset);        
@@ -953,8 +953,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $limit = $input->TryGetParam("limit", SafeParam::TYPE_INT);
-        $offset = $input->TryGetparam("offset", SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam("limit", SafeParam::TYPE_INT);
+        $offset = $input->GetNullParam("offset", SafeParam::TYPE_INT);
         
         $groups = Group::LoadAll($this->database, $limit, $offset);
         return array_map(function(Group $group){ return $group->GetClientObject(Group::OBJECT_ADMIN); }, $groups);
@@ -973,8 +973,8 @@ class AccountsApp extends AppBase
         $this->authenticator->RequireAdmin();
         
         $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
-        $priority = $input->TryGetParam("priority", SafeParam::TYPE_INT);
-        $comment = $input->TryGetParam("comment", SafeParam::TYPE_TEXT);
+        $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT);
+        $comment = $input->GetOptParam("comment", SafeParam::TYPE_TEXT);
         
         $duplicate = Group::TryLoadByName($this->database, $name);
         if ($duplicate !== null) throw new GroupExistsException();
@@ -1010,7 +1010,7 @@ class AccountsApp extends AppBase
         }
  
         if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT));
-        if ($input->HasParam('comment')) $group->SetComment($input->TryGetParam("comment", SafeParam::TYPE_TEXT));
+        if ($input->HasParam('comment')) $group->SetComment($input->GetNullParam("comment", SafeParam::TYPE_TEXT));
         
         return $group->GetClientObject(Group::OBJECT_ADMIN);
     }
@@ -1238,7 +1238,7 @@ class AccountsApp extends AppBase
         $account = Account::TryLoadByID($this->database, $acctid);
         if ($account === null) throw new UnknownAccountException();
         
-        if ($input->TryGetParam("expirepw", SafeParam::TYPE_BOOL) ?? false) $account->resetPasswordDate();
+        if ($input->GetOptParam("expirepw", SafeParam::TYPE_BOOL) ?? false) $account->resetPasswordDate();
         
         return $account->SetProperties($input)->GetClientObject(Account::OBJECT_ADMIN);
     }
@@ -1290,7 +1290,7 @@ class AccountsApp extends AppBase
         $subject = $input->GetParam('subject',SafeParam::TYPE_TEXT);
         
         $text = $input->GetParam('text',SafeParam::TYPE_TEXT);
-        $html = $input->TryGetParam('html',SafeParam::TYPE_RAW);
+        $html = $input->GetOptParam('html',SafeParam::TYPE_RAW);
         
         $dest->SendMessage($subject, $html, $text);
     }

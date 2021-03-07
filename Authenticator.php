@@ -83,8 +83,8 @@ class Authenticator
      */
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {        
-        $sessionid = $input->TryGetParam('auth_sessionid',SafeParam::TYPE_RANDSTR);
-        $sessionkey = $input->TryGetParam('auth_sessionkey',SafeParam::TYPE_RANDSTR);
+        $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR);
+        $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR);
         
         if (($auth = $input->GetAuth()) !== null)
         {
@@ -167,7 +167,7 @@ class Authenticator
         
         static::StaticTryRequireCrypto($input, $account, $session);
         
-        $twofactor = $input->TryGetParam('auth_twofactor', SafeParam::TYPE_ALPHANUM); // not an int (leading zeroes)
+        $twofactor = $input->GetOptParam('auth_twofactor', SafeParam::TYPE_ALPHANUM); // not an int (leading zeroes)
         if ($twofactor === null) throw new TwoFactorRequiredException();
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
@@ -179,7 +179,7 @@ class Authenticator
      */
     public function RequirePassword() : self
     {
-        $password = $this->input->TryGetParam('auth_password',SafeParam::TYPE_RAW);
+        $password = $this->input->GetOptParam('auth_password',SafeParam::TYPE_RAW);
         if ($password === null) throw new PasswordRequiredException();
 
         if (!$this->realaccount->VerifyPassword($password))
@@ -223,8 +223,8 @@ class Authenticator
     {
         if ($account->CryptoAvailable()) return;
         
-        $password = $input->TryGetParam('auth_password', SafeParam::TYPE_RAW);
-        $recoverykey = $input->TryGetParam('recoverykey', SafeParam::TYPE_RAW);
+        $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW);
+        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_RAW);
         
         if ($session !== null && $session->hasCrypto())
         {
