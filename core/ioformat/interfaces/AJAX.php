@@ -52,16 +52,18 @@ class AJAX extends IOInterface
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {
-            $global_req = $_REQUEST; unset($global_req['batch']);
-            $global_get = $_GET; unset($global_get['batch']);
+            if ($_GET['tryeach'] ?? false) $this->atomicbatch = false;
             
-            $inputs = array(); foreach(array_keys($_REQUEST['batch']) as $i)
+            $global_get = $_GET; unset($global_get['batch']);
+            $global_req = $_REQUEST; unset($global_req['batch']);
+            
+            $inputs = array(); foreach(array_keys(batch) as $i)
             {
-                $req = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
                 $get = is_array($_GET['batch'][$i] ?? null) ? $_GET['batch'][$i] : array();
+                $req = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
 
-                $req = array_merge($global_req, $req);
                 $get = array_merge($global_get, $get);
+                $req = array_merge($global_req, $req);
                 
                 $inputs[$i] = static::GetInput($get, $req);
             }

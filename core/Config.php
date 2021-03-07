@@ -75,7 +75,7 @@ class Config extends SingletonObject
     public function EnableApp(string $app) : self
     {
         $apps = $this->GetApps();
-        if (!in_array($app, $apps)) array_push($apps, $app);
+        if (!in_array($app, $apps)) $apps[] = $app;
         return $this->SetScalar('apps', $apps);
     }
     

@@ -7,7 +7,6 @@ require_once(ROOT."/core/exceptions/ErrorLogEntry.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/core/ioformat/interfaces/CLI.php"); use Andromeda\Core\IOFormat\Interfaces\CLI;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 /** 
@@ -24,7 +23,7 @@ class ErrorManager extends Singleton
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
     /** Returns true if the configured debug state is >= the requested level */
-    private function GetDebugState(int $minlevel) : bool
+    public function GetDebugState(int $minlevel) : bool
     {
         if ($this->API !== null) 
             return $this->API->GetDebugLevel() >= $minlevel;
@@ -32,7 +31,7 @@ class ErrorManager extends Singleton
     }
     
     /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
-    private function HandleClientException(ClientException $e) : Output
+    public function HandleClientException(ClientException $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(false);
             
@@ -43,7 +42,7 @@ class ErrorManager extends Singleton
     }
     
     /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
-    private function HandleThrowable(\Throwable $e) : Output
+    public function HandleThrowable(\Throwable $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(true);
 

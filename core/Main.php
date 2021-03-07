@@ -29,6 +29,8 @@ class FailedAppLoadException extends Exceptions\ServerException  { public $messa
 /** Exception indicating that the configured data directory is invalid */
 class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
+class Context { public Input $input; public function __construct(Input $input){ $this->input = $input; }}
+
 /**
  * The main container class managing API singletons and running apps
  * 
@@ -45,8 +47,8 @@ class Main extends Singleton
     private float $time;
     private array $apps = array(); 
     
-    /** @var Input[] stack of inputs for nested Run() calls */
-    private array $contexts = array(); 
+    /** @var Context[] stack frames for nested Run() calls */
+    private array $stack = array(); 
     
     private ?Config $config = null; 
     private ?ObjectDatabase $database = null; 
@@ -75,7 +77,11 @@ class Main extends Singleton
     public function GetInterface() : IOInterface { return $this->interface; }
     
     /** Returns the Input that is currently being executed */
-    public function GetContext() : ?Input { return Utilities::array_last($this->contexts); }
+    public function GetInput() : ?Input 
+    { 
+        $context = Utilities::array_last($this->stack); 
+        return ($context !== null) ? $context->input : null;
+    }
 
     /**
      * Initializes the Main API
@@ -145,6 +151,44 @@ class Main extends Singleton
     }
     
     /**
+     * Calls Run() for each of the given inputs
+     * 
+     * Depending on the setting in the interface, it will either
+     * atomically do all calls at once, or do a Try/commit on each
+     * @param array<Input> $inputs array of inputs
+     * @return array if atomic, array of Run() returns, else array of Output objects
+     */
+    public function RunMany(array $inputs) : array
+    {
+        $atomic = $this->GetInterface()->AtomicBatch();
+        
+        $data = array_map(function(Input $input)use($atomic)
+        {
+            if ($atomic)
+            {
+                return $this->Run($input);
+            }
+            else
+            {
+                try 
+                { 
+                    $result = Output::Success($this->Run($input)); $this->commit();
+                }
+                catch (Exceptions\ClientException $e) 
+                {
+                    $result = $this->error_manager->HandleClientException($e); 
+                }                    
+                    
+                return $result->GetAsArray();
+            }
+        }, $inputs);
+        
+        if ($atomic) $this->commit();
+        
+        return $data;
+    }
+    
+    /**
      * Calls into an app to run the given Input command
      * 
      * Calls Run() on the requested app and then saves (but does not commit) 
@@ -155,34 +199,30 @@ class Main extends Singleton
      */
     public function Run(Input $input)
     {        
-        $app = $input->GetApp();         
+        $app = $input->GetApp();
+        
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
+        $this->stack[] = new Context($input);
+        
         $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
-
-        if ($dbstats && $this->database)
-        { 
+        
+        if ($dbstats && $this->database) 
             $this->database->pushStatsContext();
-            $oldstats = &$this->run_stats; 
-            $idx = array_push($oldstats,array()); 
-            $this->run_stats = &$oldstats[$idx-1];
-        }
 
         $this->dirty = true;
         
-        array_push($this->contexts, $input);
-        
         $data = $this->apps[$app]->Run($input);
+
         if ($this->database) $this->database->saveObjects();
         
-        array_pop($this->contexts);        
-             
+        array_pop($this->stack);
+        
         if ($dbstats && $this->database)
         {
-            $newstats = $this->database->popStatsContext();
-            $this->sum_stats->add($newstats);
-            $this->run_stats = array_merge($this->run_stats, $newstats->getStats());
-            $oldstats[$idx-1] = &$this->run_stats; $this->run_stats = &$oldstats;
+            $stats = $this->database->popStatsContext();
+            $this->sum_stats->add($stats);
+            $this->run_stats[] = $stats->getStats();
         }
         
         return $data;
@@ -204,9 +244,9 @@ class Main extends Singleton
 
         if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT)
         {
-            array_push($this->run_stats, array(
+            $this->run_stats[] = array(
                 'remote_time' => (hrtime(true)-$start)/1e9,
-            ));
+            );
         }  
 
         return Output::ParseArray($data)->GetData();
@@ -227,7 +267,7 @@ class Main extends Singleton
         if (!$datadir || !is_writeable($datadir))
             throw new InvalidDataDirException();
         
-        array_push($this->writes, $path);
+        $this->writes[] = $path;
         file_put_contents($path, $data);
     }
     
@@ -285,7 +325,7 @@ class Main extends Singleton
             if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
-                array_push($this->commit_stats, $commit_stats->getStats());
+                $this->commit_stats[] = $commit_stats->getStats();
                 $this->sum_stats->Add($commit_stats);
             }
         }
@@ -319,7 +359,7 @@ class Main extends Singleton
     private static array $debuglog = array();
     
     /** Adds an entry to the custom debug log */
-    public static function PrintDebug($data){ array_push(self::$debuglog, $data); }
+    public static function PrintDebug($data){ self::$debuglog[] = $data; }
     
     /** Returns the custom debug log, if allowed by config */
     public function GetDebugLog() : ?array 

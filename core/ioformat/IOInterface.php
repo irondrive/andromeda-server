@@ -54,6 +54,12 @@ abstract class IOInterface extends Singleton
     /** Gets the default output mode for the interface */
     abstract public static function GetDefaultOutmode() : int;
     
+    protected bool $atomicbatch = true;
+    
+    public function AtomicBatch() : bool { return $this->atomicbatch; }
+    
+    protected int $outmode;
+    
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
     /** Gets the output mode in use currently */
@@ -67,7 +73,7 @@ abstract class IOInterface extends Singleton
     /** Registers a user output handler function to run after the initial commit */
     public function RegisterOutputHandler(callable $f) : self 
     {
-        array_push(self::$retfuncs, $f); return $this; 
+        self::$retfuncs[] = $f; return $this; 
     }
     
     /** Tells the interface to run the custom user output functions */

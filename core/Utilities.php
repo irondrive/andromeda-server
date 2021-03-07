@@ -120,6 +120,7 @@ abstract class Utilities
     public static function array_last(?array $arr)
     {
         if ($arr === null) return null;
+        
         $size = count($arr); return $size ? $arr[$size-1] : null;
     }
     

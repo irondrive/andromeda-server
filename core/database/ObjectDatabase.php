@@ -241,12 +241,12 @@ class ObjectDatabase extends Database
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
         
         foreach ($values as $key=>$value) {
-            array_push($criteria, "$key = :d$i");
+            $criteria[] = "$key = :d$i";
             $data["d$i"] = $value; $i++;
         }; 
         
         foreach ($counters as $key=>$counter) {
-            array_push($criteria, "$key = $key + :d$i");
+            $criteria[] = "$key = $key + :d$i";
             $data["d$i"] = $counter; $i++;
         }; 
         
@@ -273,8 +273,8 @@ class ObjectDatabase extends Database
         $values['id'] = $object->ID();
         
         foreach ($values as $key=>$value) {
-            array_push($columns, $key); 
-            array_push($indexes, $value !== null ? ":d$i" : "NULL");
+            $columns[] = $key; 
+            $indexes[] = ($value !== null ? ":d$i" : "NULL");
             if ($value !== null) $data["d$i"] = $value; $i++;
         }
         

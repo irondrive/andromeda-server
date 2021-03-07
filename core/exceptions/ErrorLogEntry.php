@@ -45,20 +45,20 @@ class ErrorLogEntry extends BaseObject
     {
         $q = new QueryBuilder(); $criteria = array();
         
-        if ($input->HasParam('maxtime')) array_push($criteria, $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_INT)));        
-        if ($input->HasParam('mintime')) array_push($criteria, $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_INT)));
+        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_INT));        
+        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_INT));
         
-        if ($input->HasParam('code')) array_push($criteria, $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW)));
-        if ($input->HasParam('addr')) array_push($criteria, $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW)));  
-        if ($input->HasParam('agent')) array_push($criteria, $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW)));
+        if ($input->HasParam('code')) $criteria[] = $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW));
+        if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));  
+        if ($input->HasParam('agent')) $criteria[] = $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW));
         
-        if ($input->HasParam('app')) array_push($criteria, $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM)));
-        if ($input->HasParam('action')) array_push($criteria, $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM)));
+        if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM));
                 
         $or = $input->TryGetParam('logic',SafeParam::TYPE_ALPHANUM,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
         
-        if (!count($criteria)) array_push($criteria, $or ? "FALSE" : "TRUE");
+        if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
         if ($input->HasParam('limit')) $q->Limit($input->GetParam('limit',SafeParam::TYPE_INT));
         if ($input->HasParam('offset')) $q->Limit($input->GetParam('offset',SafeParam::TYPE_INT));
@@ -129,8 +129,8 @@ class ErrorLogEntry extends BaseObject
                 'file'=>    $e->getFile()."(".$e->getLine().")",
                 'message'=> $e->getMessage(),
                 
-                'app'=>     ($api && $api->GetContext() !== null) ? $api->GetContext()->GetApp() : "",
-                'action'=>  ($api && $api->GetContext() !== null) ? $api->GetContext()->GetAction() : "",
+                'app'=>     ($api && $api->GetInput() !== null) ? $api->GetInput()->GetApp() : "",
+                'action'=>  ($api && $api->GetInput() !== null) ? $api->GetInput()->GetAction() : "",
             );
     
             $extended = $api && $api->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
@@ -146,7 +146,7 @@ class ErrorLogEntry extends BaseObject
             
             if ($sensitive)
             {
-                $data['params'] = ($api && $api->GetContext() !== null) ? $api->GetContext()->GetParams()->GetClientObject() : "";   
+                $data['params'] = ($api && $api->GetInput() !== null) ? $api->GetInput()->GetParams()->GetClientObject() : "";   
             }
             
             $data['trace_basic'] = explode("\n",$e->getTraceAsString());
