@@ -33,15 +33,15 @@ class LDAP extends External
     {
         return parent::Create($database, $input)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('secure', $input->TryGetParam('secure', SafeParam::TYPE_BOOL) ?? false)
-            ->SetScalar('userprefix', $input->TryGetParam('userprefix', SafeParam::TYPE_TEXT));
+            ->SetScalar('secure', $input->GetOptParam('secure', SafeParam::TYPE_BOOL) ?? false)
+            ->SetScalar('userprefix', $input->GetNullParam('userprefix', SafeParam::TYPE_TEXT));
     }
     
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname',SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('secure')) $this->SetScalar('secure',$input-yGetParam('secure',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->TryGetParam('userprefix',SafeParam::TYPE_TEXT));
+        if ($input->HasParam('secure')) $this->SetScalar('secure',$input->GetParam('secure',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->GetNullParam('userprefix',SafeParam::TYPE_TEXT));
         
         return $this;
     }

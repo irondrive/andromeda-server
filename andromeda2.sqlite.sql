@@ -16,6 +16,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 ,  `features__allowcrypto` integer DEFAULT NULL
 ,  `features__accountsearch` integer DEFAULT NULL
 ,  `features__groupsearch` integer DEFAULT NULL
+,  `features__userdelete` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
 ,  `counters_limits__contacts` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL
@@ -101,7 +102,7 @@ CREATE TABLE `a2_objects_apps_accounts_contact` (
 ,  `info` varchar(127) NOT NULL
 ,  `valid` integer NOT NULL DEFAULT 0
 ,  `usefrom` integer DEFAULT NULL
-,  `public` integer NOT NULL DEFAULT 1
+,  `public` integer NOT NULL DEFAULT 0
 ,  `authkey` text DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  `account` char(12) NOT NULL
@@ -122,6 +123,7 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 ,  `features__allowcrypto` integer DEFAULT NULL
 ,  `features__accountsearch` integer DEFAULT NULL
 ,  `features__groupsearch` integer DEFAULT NULL
+,  `features__userdelete` integer DEFAULT NULL
 ,  `counters_limits__sessions` integer DEFAULT NULL
 ,  `counters_limits__contacts` integer DEFAULT NULL
 ,  `counters_limits__recoverykeys` integer DEFAULT NULL

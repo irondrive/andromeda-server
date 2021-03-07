@@ -37,7 +37,7 @@ class Config extends SingletonObject
         if ($input->HasParam('usernameiscontact')) $this->SetFeature('usernameiscontact',$input->GetParam('usernameiscontact',SafeParam::TYPE_BOOL));
         if ($input->HasParam('requirecontact')) $this->SetFeature('requirecontact',$input->GetParam('requirecontact',SafeParam::TYPE_BOOL));
         
-        if ($input->TryGetParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
+        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
         
         return $this;
     }

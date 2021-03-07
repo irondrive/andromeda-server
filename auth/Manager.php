@@ -58,7 +58,7 @@ class Manager extends BaseObject
         $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
             function($val){ return array_key_exists($val, self::$auth_types); });
         
-        $descr = $input->TryGetParam('description', SafeParam::TYPE_TEXT);
+        $descr = $input->GetNullParam('description', SafeParam::TYPE_TEXT);
         
         try { $authsource = self::$auth_types[$type]::Create($database, $input)->Activate(); }
         catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }
@@ -67,7 +67,7 @@ class Manager extends BaseObject
         
         $manager->SetObject('authsource',$authsource)->SetScalar('description',$descr);
         
-        if ($input->TryGetParam('createdefgroup',SafeParam::TYPE_BOOL) ?? true) $manager->CreateDefaultGroup();
+        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? true) $manager->CreateDefaultGroup();
         
         return $manager;
     }
@@ -75,9 +75,9 @@ class Manager extends BaseObject
     /** Edits properties of an existing external auth backend */
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('description')) $this->SetScalar('description',$this->TryGetParam('description',SafeParam::TYPE_TEXT));
+        if ($input->HasParam('description')) $this->SetScalar('description',$this->GetNullParam('description',SafeParam::TYPE_TEXT));
         
-        if ($input->TryGetParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
+        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
         
         $this->GetAuthSource()->Edit($input); return $this;
     }
