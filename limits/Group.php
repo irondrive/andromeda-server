@@ -68,8 +68,14 @@ trait GroupCommon
     
     protected function SetBaseLimits(Input $input) : void
     {
-        if ($input->HasParam('track_items')) $this->SetFeature('track_items', $input->TryGetParam('track_items', SafeParam::TYPE_INT));
-        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->TryGetParam('track_dlstats', SafeParam::TYPE_INT));
+        if ($input->HasParam('track_items') )
+        {
+            $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_INT));
+            
+            if ($this->canTrackItems()) $this->Initialize();
+        }
+        
+        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_INT));
     }
     
     /** Configures limits for the given group with the given input */
@@ -168,7 +174,7 @@ class GroupTotal extends AuthEntityTotal implements IGroupLimit
 }
 
 /** Concrete class providing timed group member limits */
-class GroupTimed extends AuthTimed implements IGroupLimit
+class GroupTimed extends AuthEntityTimed implements IGroupLimit
 { 
     use GroupCommon;
     

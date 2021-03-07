@@ -90,17 +90,17 @@ class SFTP extends FWrapper
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--file file privkey] [--keypass ?raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--privkey% path] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;   
-        $keypass = $input->TryGetParam('keypass', SafeParam::TYPE_RAW);
+        $credcrypt = $input->GetOptParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;   
+        $keypass = $input->GetOptParam('keypass', SafeParam::TYPE_RAW);
         
         $obj = parent::Create($database, $input, $filesystem)
             ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->TryGetParam('port', SafeParam::TYPE_INT));         
+            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT));         
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey(file_get_contents($input->GetFile('privkey')), $credcrypt);
         
@@ -109,17 +109,17 @@ class SFTP extends FWrapper
         return $obj;
     }
 
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--file file privkey] [--keypass ?raw] [--resethost bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->TryGetParam('port', SafeParam::TYPE_INT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_INT));
         
-        if ($input->HasParam('keypass')) $this->SetKeypass($input->TryGetParam('keypass',SafeParam::TYPE_RAW));
+        if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW));
         if ($input->HasFile('privkey')) $this->SetPrivkey(file_get_contents($input->GetFile('privkey')));
         
-        if ($input->TryGetParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
+        if ($input->GetOptParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
         
         return parent::Edit($input)->CredCryptEdit($input);
     }

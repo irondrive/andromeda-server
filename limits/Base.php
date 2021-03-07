@@ -6,6 +6,9 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
+require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
+require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
+
 /**
  * The base type that all limits inherit from.
  * 
@@ -85,13 +88,39 @@ abstract class Base extends StandardObject
     public function CountShare(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$count?1:-1) : $this; }
     
     /** Increments the item counter by the given value, if item tracking is allowed */
-    protected function CountItems(int $items) : self   { return $this->canTrackItems() ? $this->DeltaCounter('items',$items) : $this; }
+    public function CountItems(int $items) : self   { return $this->canTrackItems() ? $this->DeltaCounter('items',$items) : $this; }
     
     /** Increments the share counter by the given value, if item tracking is allowed */
-    protected function CountShares(int $shares) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$shares) : $this; }
+    public function CountShares(int $shares) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$shares) : $this; }
     
     /** Increments the download counter by the given value, if item tracking is allowed */
-    protected function CountDownloads(int $dls) : self { return $this->canTrackItems() ? $this->DeltaCounter('downloads',$dls) : $this; }
+    public function CountDownloads(int $dls) : self { return $this->canTrackItems() ? $this->DeltaCounter('downloads',$dls) : $this; }
+    
+    /** Adds stats from the given file to this limit object */
+    public function AddFileCounts(File $file, bool $sub = false) : self
+    {
+        if (!$this->canTrackItems()) return $this;
+        
+        $mul = $sub ? -1 : 1;
+        
+        $this->CountItems($mul);
+        $this->CountSize($mul*$file->GetSize());
+        $this->CountShares($mul*$file->GetNumShares());
+        return $this;
+    }
+    
+    /** Adds stats from the given folder to this limit object */
+    public function AddFolderCounts(Folder $folder, bool $sub = false) : self
+    {
+        if (!$this->canTrackItems()) return $this;
+        
+        $mul = $sub ? -1 : 1;
+        
+        $this->CountSize($mul*$folder->GetSize());
+        $this->CountItems($mul*$folder->GetNumItems());
+        $this->CountShares($mul*$folder->GetTotalShares());        
+        return $this;
+    }
     
     /** Returns the downloads counter for the limited object */
     protected function GetDownloads() : int { return $this->GetCounter('downloads'); }

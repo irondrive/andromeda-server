@@ -174,7 +174,7 @@ class FSManager extends StandardObject
     { 
         $retval = array();
         foreach (self::$storage_types as $name=>$class)
-            array_push($retval, "\t --sttype $name ".$class::GetCreateUsage());
+            $retval[] = "\t --sttype $name ".$class::GetCreateUsage();
         return $retval;
     }
     
@@ -187,13 +187,13 @@ class FSManager extends StandardObject
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
-        $name = $input->TryGetParam('name', SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
-        $readonly = $input->TryGetParam('readonly', SafeParam::TYPE_BOOL) ?? false;
+        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
+        $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
         
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM,
             function($sttype){ return array_key_exists($sttype, self::$storage_types); });
         
-        $fstype = $input->TryGetParam('fstype', SafeParam::TYPE_ALPHANUM,
+        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM,
             function($fstype){ return in_array($fstype, array('native','crypt','shared')); });        
         
         switch ($fstype ?? 'native')
@@ -211,7 +211,7 @@ class FSManager extends StandardObject
         {
             if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
             {
-                $chunksize = $input->TryGetParam('chunksize',SafeParam::TYPE_INT,function($v){
+                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_INT,function($v){
                     return $v >= 4*1024 && $v <= 1*1024*1024; });
             }
             
@@ -239,14 +239,14 @@ class FSManager extends StandardObject
     {
         $retval = array();
         foreach (self::$storage_types as $name=>$class)
-            array_push($retval, "\t $name: ".$class::GetEditUsage());
+            $retval[] = "\t $name: ".$class::GetEditUsage();
         return $retval;
     }
     
     /** Edits an existing filesystem with the given values, and tests it */
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('name')) $this->SetName($input->TryGetParam('name',SafeParam::TYPE_NAME));
+        if ($input->HasParam('name')) $this->SetName($input->GetNullParam('name',SafeParam::TYPE_NAME));
         if ($input->HasParam('readonly')) $this->SetReadOnly($input->GetParam('readonly',SafeParam::TYPE_BOOL));
         
         $this->EditStorage($input)->Test(); return $this;

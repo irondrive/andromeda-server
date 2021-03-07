@@ -28,20 +28,20 @@ abstract class AuthEntityTotal extends Total
     {
         $lim = parent::BaseConfigLimits($database, $obj, $input);
         
-        if ($input->HasParam('emailshare')) $lim->SetFeature('emailshare', $input->TryGetParam('emailshare', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('userstorage')) $lim->SetFeature('userstorage', $input->TryGetParam('userstorage', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('emailshare')) $lim->SetFeature('emailshare', $input->GetNullParam('emailshare', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('userstorage')) $lim->SetFeature('userstorage', $input->GetNullParam('userstorage', SafeParam::TYPE_BOOL));
         
         return $lim;
     }
 }
 
-abstract class AuthTimed extends Timed
+abstract class AuthEntityTimed extends Timed
 {
     // USAGE: -1 means keep forever, 0 means don't keep, null means no value/inherit, otherwise int for max age
     public static function GetTimedUsage() : string { return "[--max_stats_age -1 (forever)|0 (none)|?int]"; }
     
     protected function SetTimedLimits(Input $input) : void
     {
-        if ($input->HasParam('max_stats_age')) $this->SetScalar('max_stats_age', $input->TryGetParam('max_stats_age', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_stats_age')) $this->SetScalar('max_stats_age', $input->GetNullParam('max_stats_age', SafeParam::TYPE_INT));
     }
 }

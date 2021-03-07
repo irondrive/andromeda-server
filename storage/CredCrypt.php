@@ -55,11 +55,11 @@ trait CredCrypt
     /** Performs cred-crypt level initialization on a new storage */
     public function CredCryptCreate(Input $input, ?Account $account) : self
     {
-        $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;
+        $credcrypt = $input->GetOptParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;
         if ($account === null && $credcrypt) throw new CryptoWithoutOwnerException();
         
-        return $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt)
-                    ->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
+        return $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW), $credcrypt)
+                    ->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
     }
     
     /** Returns the command usage for CredCryptEdit() */
@@ -68,11 +68,11 @@ trait CredCrypt
     /** Performs cred-crypt level edit on an existing storage */
     public function CredCryptEdit(Input $input) : self 
     { 
-        $credcrypt = $input->TryGetParam('credcrypt', SafeParam::TYPE_BOOL);
+        $credcrypt = $input->GetOptParam('credcrypt', SafeParam::TYPE_BOOL);
         if ($credcrypt !== null) $this->SetEncrypted($credcrypt);
         
-        if ($input->HasParam('password')) $this->SetPassword($input->TryGetParam('password', SafeParam::TYPE_RAW), $credcrypt);
-        if ($input->HasParam('username')) $this->SetUsername($input->TryGetParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
+        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW), $credcrypt);
+        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
                 
         return $this;
     }

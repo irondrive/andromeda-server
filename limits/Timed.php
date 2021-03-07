@@ -124,7 +124,7 @@ abstract class Timed extends Base
         
         if (array_key_exists($obj->ID(),static::$cache))
         {
-            array_push(static::$cache[$obj->ID()], $newobj);
+            static::$cache[$obj->ID()][] = $newobj;
         }
         else static::$cache[$obj->ID()] = array($newobj);
         
@@ -161,8 +161,8 @@ abstract class Timed extends Base
         
         $lim->SetBaseLimits($input); $lim->SetTimedLimits($input);
 
-        if ($input->HasParam('max_downloads')) $lim->SetCounterLimit('downloads', $input->TryGetParam('max_downloads', SafeParam::TYPE_INT));
-        if ($input->HasParam('max_bandwidth')) $lim->SetCounterLimit('bandwidth', $input->TryGetParam('max_bandwidth', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_downloads')) $lim->SetCounterLimit('downloads', $input->GetNullParam('max_downloads', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_bandwidth')) $lim->SetCounterLimit('bandwidth', $input->GetNullParam('max_bandwidth', SafeParam::TYPE_INT));
         
         if ($lim->isCreated()) $lim->Initialize();
         else TimedStats::PruneStatsByLimit($database, $lim);

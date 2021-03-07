@@ -23,7 +23,13 @@ trait FilesystemCommon
     
     protected function SetBaseLimits(Input $input) : void
     {
-        if ($input->HasParam('track_items') || $this->isCreated()) $this->SetFeature('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('track_items') || $this->isCreated())
+        {
+            $this->SetFeature('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
+            
+            if ($this->canTrackItems()) $this->Initialize();
+        }
+        
         if ($input->HasParam('track_dlstats') || $this->isCreated()) $this->SetFeature('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
     }
         
@@ -50,9 +56,8 @@ class FilesystemTotal extends Total
         if (!$this->canTrackItems()) return $this;
         
         $roots = RootFolder::LoadRootsByFSManager($this->database, $this->GetFilesystem());
-        $this->CountSize(array_sum(array_map(function(Folder $folder){ return $folder->GetSize(); }, $roots)),true);
-        $this->CountItems(array_sum(array_map(function(Folder $folder){ return $folder->GetNumItems(); }, $roots)));
-        $this->CountShares(array_sum(array_map(function(Folder $folder){ return $folder->GetTotalShares(); }, $roots)));
+        
+        foreach ($roots as $root) $this->AddFolderCounts($root);
         
         return $this;
     }
