@@ -272,10 +272,15 @@ class FSManager extends StandardObject
         return $found;
     }
     
-    /** Attempts to load a filesystem with the given owner (not null) and ID */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    /** Attempts to load a filesystem with the given owner and ID - if $null, the owner can be null */
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id, bool $null = false) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id));
+        $q = new QueryBuilder(); $ownerq = $q->Equals('owner',$account->ID());
+        
+        if ($null) $ownerq = $q->Or($ownerq, $q->IsNull('owner'));
+        
+        $w = $q->And($ownerq,$q->Equals('id',$id));
+        
         return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     
