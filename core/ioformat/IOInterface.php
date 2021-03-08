@@ -58,12 +58,12 @@ abstract class IOInterface extends Singleton
     
     public function AtomicBatch() : bool { return $this->atomicbatch; }
     
-    protected int $outmode;
+    protected ?int $outmode;
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
     
     /** Gets the output mode in use currently */
-    public function GetOutputMode() : int { return $this->outmode; }
+    public function GetOutputMode() : ?int { return $this->outmode; }
 
     /** Sets the output mode to plain text */
     public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
