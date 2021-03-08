@@ -693,7 +693,7 @@ class FilesApp extends AppBase
             $filesys = $input->GetOptParam('filesystem',SafeParam::TYPE_RANDSTR);
             if ($filesys !== null)
             {
-                $filesys = FSManager::TryLoadByID($this->database, $filesys);  
+                $filesys = FSManager::TryLoadByAccountAndID($this->database, $account, $filesys, true);  
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
                 
@@ -773,7 +773,7 @@ class FilesApp extends AppBase
         
         $item = null; $isfile = $input->GetOptParam('isfile',SafeParam::TYPE_BOOL);
         
-        if ($name === null) $item = ($isfile !== true) ? $folder : null;
+        if ($name === null) $item = ($isfile !== true) ? $folder : null; // trailing / for folder
         else
         {
             if ($isfile === null || $isfile) $item = File::TryLoadByParentAndName($this->database, $folder, $name);
@@ -830,7 +830,8 @@ class FilesApp extends AppBase
     
     /**
      * Takes ownership of a file
-     * @see FilesApp::OwnItem()
+     * @return array File
+     * @see File::GetClientObject()
      */
     protected function OwnFile(Input $input) : array
     {
@@ -841,7 +842,7 @@ class FilesApp extends AppBase
         $file = File::TryLoadByID($this->database, $id);
         if ($file === null) throw new UnknownItemException();
         
-        if ($file->GetParent()->GetOwner() !== $account)
+        if ($file->isWorldAccess() || $file->GetParent()->GetOwner() !== $account)
             throw new ItemAccessDeniedException();
             
         return $file->SetOwner($account)->GetClientObject();
@@ -849,7 +850,8 @@ class FilesApp extends AppBase
     
     /**
      * Takes ownership of a folder
-     * @see FilesApp::OwnItem()
+     * @return array Folder
+     * @see Folder::GetClientObject()
      */
     protected function OwnFolder(Input $input) : array
     {
@@ -859,6 +861,8 @@ class FilesApp extends AppBase
         $id = $input->GetParam('folder',SafeParam::TYPE_RANDSTR);
         $folder = Folder::TryLoadByID($this->database, $id);
         if ($folder === null) throw new UnknownItemException();
+        
+        if ($folder->isWorldAccess()) throw new ItemAccessDeniedException();
         
         $parent = $folder->GetParent();
         if ($parent === null || $parent->GetOwner() !== $account)
