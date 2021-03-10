@@ -63,7 +63,7 @@ class ServerApp extends AppBase
         );
     }
   
-    private ObjectDatabase $database;
+    private ?ObjectDatabase $database;
     
     /** if true, the Accounts app is installed and should be used */
     private bool $useAuth;

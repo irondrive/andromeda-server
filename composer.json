@@ -3,8 +3,8 @@
             "name" : "lightray22"
         }
     ],
-    "name" : "lightray22/andromeda-server-framework",
-    "description" : "Core framework for Andromeda",
+    "name" : "lightray22/andromeda-server",
+    "description" : "Andromeda API server",
     "license" : "AGPL-3.0",
     "require" : {
         "php" : ">=7.4",
@@ -12,14 +12,21 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-sodium": "*",
+        "ext-ftp": "*",
+        "ext-smbclient": "*",
         "phpmailer/phpmailer": "~6",
-        "clue/arguments": "~2"
+        "clue/arguments": "~2",
+        "phpgangsta/googleauthenticator": "dev-master",
+        "phpseclib/phpseclib" : "~3"
     },
     "suggest": {    
         "ext-pdo_mysql": "For MySQL databases",
         "ext-pdo_sqlite": "For SQLite databases",
         "ext-pdo_pgsql": "For Postgresql databases",
-        "ext-pgsql": "For Postgresql databases"
+        "ext-pgsql": "For Postgresql databases",
+        "ext-ftp": "For FTP authentication",
+        "ext-imap": "For IMAP authentication",
+        "ext-ldap": "For LDAP authentication"
     },
     "require-dev": {
         "phpmetrics/phpmetrics": "~2"
