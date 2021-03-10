@@ -25,7 +25,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
 ,  `dates__modified` double DEFAULT NULL
 ,  `dates__accessed` double DEFAULT NULL
 ,  `size` integer NOT NULL DEFAULT 0
-,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__pubdownloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  `owner` char(12) DEFAULT NULL
 ,  `parent` char(16) NOT NULL
@@ -59,8 +59,8 @@ CREATE TABLE `a2_objects_apps_files_folder` (
 ,  `dates__modified` double DEFAULT NULL
 ,  `dates__accessed` double DEFAULT NULL
 ,  `counters__size` integer NOT NULL DEFAULT 0
-,  `counters__visits` integer NOT NULL DEFAULT 0
-,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__pubvisits` integer NOT NULL DEFAULT 0
+,  `counters__pubdownloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  `owner` char(12) DEFAULT NULL
 ,  `parent` char(16) DEFAULT NULL
@@ -108,7 +108,7 @@ CREATE TABLE `a2_objects_apps_files_limits_authentitytotal` (
 ,  `counters_limits__size` integer DEFAULT NULL
 ,  `counters_limits__items` integer DEFAULT NULL
 ,  `counters_limits__shares` integer DEFAULT NULL
-,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__pubdownloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
@@ -132,7 +132,7 @@ CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
 ,  `counters_limits__size` integer DEFAULT NULL
 ,  `counters_limits__items` integer DEFAULT NULL
 ,  `counters_limits__shares` integer DEFAULT NULL
-,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__pubdownloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`)
@@ -146,7 +146,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
 ,  `max_stats_age` integer DEFAULT NULL
 ,  `features__track_items` integer DEFAULT NULL
 ,  `features__track_dlstats` integer DEFAULT NULL
-,  `counters_limits__downloads` integer DEFAULT NULL
+,  `counters_limits__pubdownloads` integer DEFAULT NULL
 ,  `counters_limits__bandwidth` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`object`,`timeperiod`)
@@ -160,7 +160,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
 ,  `counters__size` integer NOT NULL DEFAULT 0
 ,  `counters__items` integer NOT NULL DEFAULT 0
 ,  `counters__shares` integer NOT NULL DEFAULT 0
-,  `counters__downloads` integer NOT NULL DEFAULT 0
+,  `counters__pubdownloads` integer NOT NULL DEFAULT 0
 ,  `counters__bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`limitobj`,`dates__timestart`)
