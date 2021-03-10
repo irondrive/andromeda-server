@@ -60,7 +60,7 @@ class FilesystemTotal extends Total
     /** Initializes the FS total stats by adding stats from all root folders */
     protected function Initialize() : self
     {
-        parent::ZeroCounters();
+        parent::Initialize();
         
         if (!$this->canTrackItems()) return $this;
         

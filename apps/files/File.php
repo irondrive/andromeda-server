@@ -83,14 +83,19 @@ class File extends Item
     
     /** 
      * Counts a download by updating limits, and notifying parents if $public 
-     * @param bool public if false, only updates limits and does not update item counters
+     * @param bool public if false, only updates the timestamp and not limit counters
      */
     public function CountDownload(bool $public = true) : self
-    {
-        $this->MapToLimits(function(Limits\Base $lim){ $lim->CountDownload(); })
-             ->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetDownloadDate(); });
+    {        
+        $this->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetDownloadDate(); });
         
-        if ($public) return parent::CountDownload(); else return $this;
+        if ($public)
+        {
+            $this->MapToLimits(function(Limits\Base $lim){ $lim->CountPublicDownload(); });
+            
+            return parent::CountPublicDownload();
+        }
+        else return $this;
     }
     
     /** Counts bandwidth by updating the count and notifying parents */
@@ -295,7 +300,7 @@ class File extends Item
      * Returns a printable client object of the file
      * @see Item::SubGetClientObject()
      * @return array|NULL null if deleted, else `{size:int, dates:{created:float,modified:?float,accessed:?float},
-         counters:{downloads:int, bandwidth:int, likes:int, dislikes:int}}`
+         counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int}}`
      */
     public function TryGetClientObject(bool $details = false) : ?array
     {

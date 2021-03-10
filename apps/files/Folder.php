@@ -33,8 +33,8 @@ abstract class Folder extends Item
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'counters__visits' => new FieldTypes\Counter(), // number of public visits to this folder
-            'counters__size' => new FieldTypes\Counter(),   // total size of the folder and all contents
+            'counters__pubvisits' => new FieldTypes\Counter(), // number of public visits to this folder
+            'counters__size' => new FieldTypes\Counter(),      // total size of the folder and all contents
             'parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
             'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
             'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
@@ -80,7 +80,7 @@ abstract class Folder extends Item
     public function GetTotalShares() : int { return $this->GetNumShares() + $this->GetCounter('subshares'); }
     
     /** Increments the folder's visit counter */
-    public function CountVisit() : self { return $this->DeltaCounter('visits'); }
+    public function CountPublicVisit() : self { return $this->DeltaCounter('pubvisits'); }
     
     /** Increments the size of this folder and parents by the given #bytes */
     public function DeltaSize(int $size) : self 
@@ -118,7 +118,7 @@ abstract class Folder extends Item
         $this->SetModified(); $val = $add ? 1 : -1;
         $this->DeltaCounter('size', $item->GetSize() * $val);
         $this->DeltaCounter('bandwidth', $item->GetBandwidth() * $val);
-        $this->DeltaCounter('downloads', $item->GetDownloads() * $val);        
+        $this->DeltaCounter('pubdownloads', $item->GetPublicDownloads() * $val);        
         
         if ($item instanceof File) 
         {
@@ -269,7 +269,7 @@ abstract class Folder extends Item
      * @param int $limit max number of items to show
      * @param int $offset offset of items to show
      * @return array|NULL null if deleted, else `{filesystem:id, files:[id:File], folders:[id:Folder],
-         dates:{created:float, modified:?float, accessed:?float}, counters:{size:int, visits:int, downloads:int, bandwidth:int,
+         dates:{created:float, modified:?float, accessed:?float}, counters:{size:int, pubvisits:int, pubdownloads:int, bandwidth:int,
             subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
      * @see Item::SubGetClientObject()
      */
