@@ -59,66 +59,100 @@ abstract class Base extends StandardObject
     
     /** Returns true if we should count downloads and bandwidth */
     protected function canTrackDLStats() : bool { return $this->TryGetFeature('track_dlstats') ?? false; }
+
+    /** Adds to the size counter, if item tracking is allowed */
+    public function CountSize(int $delta, bool $noLimit = false) : self { return $this->canTrackItems() ? $this->DeltaCounter('size',$delta,$noLimit) : $this; }
+
+    /** Increments the item counter, if item tracking is allowed. Decrements if not $count */
+    public function CountItem(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('items',$count?1:-1) : $this; }
     
+    /** Increments the item counter by the given value, if item tracking is allowed */
+    public function CountItems(int $items, bool $noLimit = false) : self   { return $this->canTrackItems() ? $this->DeltaCounter('items',$items,$noLimit) : $this; }
+    
+    /** Increments the share counter, if item tracking is allowed. Decrements if not $count */
+    public function CountShare(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$count?1:-1) : $this; }
+    
+    /** Increments the share counter by the given value, if item tracking is allowed */
+    public function CountShares(int $shares, bool $noLimit = false) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$shares,$noLimit) : $this; }
+            
     /** Increments the download counter, if download tracking is allowed */
     public function CountDownload() : self { return $this->canTrackDLStats() ? $this->DeltaCounter('downloads') : $this; }
     
+    /** Increments the download counter by the given value, if DL tracking is allowed */
+    public function CountDownloads(int $dls, bool $noLimit = false) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('downloads',$dls,$noLimit) : $this; }
+        
     /** Adds to the bandwidth counter, if download tracking is allowed */
-    public function CountBandwidth(int $delta) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('bandwidth',$delta) : $this; }
-    
-    /**
-     * Checks if the given bandwidth would exceed the limit
-     * @see StandardObject::CheckCounter()
-     */
-    public function CheckBandwidth(int $delta) : void { $this->CheckCounter('bandwidth',$delta); }
-    
-    /** Adds to the size counter, if item tracking is allowed */
-    public function CountSize(int $delta) : self { return $this->canTrackItems() ? $this->DeltaCounter('size',$delta) : $this; }
-    
+    public function CountBandwidth(int $delta, bool $noLimit = false) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('bandwidth',$delta,$noLimit) : $this; }
+                
     /** 
      * Checks if the given size delta would exceed the size limit 
      * @see StandardObject::CheckCounter()
      */
     public function CheckSize(int $delta) : void { $this->CheckCounter('size',$delta); }
     
-    /** Increments the item counter, if item tracking is allowed. Decrements if not $count */
-    public function CountItem(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('items',$count?1:-1) : $this; }
-    
-    /** Increments the share counter, if item tracking is allowed. Decrements if not $count */
-    public function CountShare(bool $count = true) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$count?1:-1) : $this; }
-    
-    /** Increments the item counter by the given value, if item tracking is allowed */
-    public function CountItems(int $items) : self   { return $this->canTrackItems() ? $this->DeltaCounter('items',$items) : $this; }
-    
-    /** Increments the share counter by the given value, if item tracking is allowed */
-    public function CountShares(int $shares) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$shares) : $this; }
-    
-    /** Increments the download counter by the given value, if item tracking is allowed */
-    public function CountDownloads(int $dls) : self { return $this->canTrackItems() ? $this->DeltaCounter('downloads',$dls) : $this; }
-    
+    /**
+     * Checks if the given bandwidth would exceed the limit
+     * @see StandardObject::CheckCounter()
+     */
+    public function CheckBandwidth(int $delta) : void { $this->CheckCounter('bandwidth',$delta); }    
+        
     /** Adds stats from the given file to this limit object */
-    public function AddFileCounts(File $file, bool $sub = false) : self
+    public function AddFileCounts(File $file, bool $add = true, bool $noLimit = false) : self
     {
-        if (!$this->canTrackItems()) return $this;
+        $mul = $add ? 1 : -1;
         
-        $mul = $sub ? -1 : 1;
+        if ($this->canTrackItems())
+        {
+            $this->CountItems($mul,$noLimit);
+            
+            $this->CountShares($mul*$file->GetNumShares(),$noLimit);
+            
+            if (!$file->onOwnerFS())
+                $this->CountSize($mul*$file->GetSize(),$noLimit);
+        }
         
-        $this->CountItems($mul);
-        $this->CountSize($mul*$file->GetSize());
-        $this->CountShares($mul*$file->GetNumShares());
+        if ($this->canTrackDLStats())
+        {
+            $this->CountDownloads($mul*$file->GetDownloads(),$noLimit);
+            $this->CountBandwidth($mul*$file->GetBandwidth(),$noLimit);
+        }
+            
         return $this;
     }
     
     /** Adds stats from the given folder to this limit object */
-    public function AddFolderCounts(Folder $folder, bool $sub = false) : self
+    public function AddFolderCounts(Folder $folder, bool $add = true, bool $noLimit = false) : self
     {
-        if (!$this->canTrackItems()) return $this;
+        $mul = $add ? 1 : -1;
         
-        $mul = $sub ? -1 : 1;
+        if ($this->canTrackItems())
+        {
+            $this->CountItems($mul,$noLimit);
+            
+            $this->CountShares($mul*$folder->GetNumShares(),$noLimit);    
+        }
         
-        $this->CountSize($mul*$folder->GetSize());
-        $this->CountItems($mul*$folder->GetNumItems());
-        $this->CountShares($mul*$folder->GetTotalShares());        
+        return $this;
+    }
+    
+    /** Adds cumulative stats from the given folder to this limit object */
+    public function AddCumulativeFolderCounts(Folder $folder, bool $add = true, bool $noLimit = false) : self
+    {
+        $mul = $add ? 1 : -1;
+        
+        if ($this->canTrackItems())
+        {
+            $this->CountSize($mul*$folder->GetSize(),$noLimit);
+            $this->CountItems($mul*$folder->GetNumItems(),$noLimit);
+            $this->CountShares($mul*$folder->GetTotalShares(),$noLimit);
+        }
+        
+        if ($this->canTrackDLStats())
+        {
+            $this->CountDownloads($mul*$folder->GetDownloads(),$noLimit);
+            $this->CountBandwidth($mul*$folder->GetBandwidth(),$noLimit);
+        }
+        
         return $this;
     }
     

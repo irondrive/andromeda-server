@@ -55,7 +55,7 @@ trait GroupCommon
      * @param bool $add true to add, false to subtract
      */
     public function ProcessAccountChange(IAccountLimit $aclim, bool $add) : void
-    {
+    {  
         $mul = $add ? 1 : -1;
         $this->CountDownloads($mul*$aclim->GetDownloads());
         $this->CountBandwidth($mul*$aclim->GetBandwidth());
@@ -67,15 +67,22 @@ trait GroupCommon
     public static function GetBaseUsage() : string { return "[--track_items ?(0|1|2)] [--track_dlstats ?(0|1|2)]"; }
     
     protected function SetBaseLimits(Input $input) : void
-    {
-        if ($input->HasParam('track_items') )
+    {        
+        if ($input->HasParam('track_items'))
         {
             $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_INT));
             
-            if ($this->canTrackItems()) $this->Initialize();
+            if ($this->isFeatureModified('track_items')) $init = true;
         }
         
-        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_INT));
+        if ($input->HasParam('track_dlstats'))
+        {
+            $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_INT));
+            
+            if ($this->isFeatureModified('track_dlstats')) $init = true;
+        }
+        
+        if ($init ?? false) $this->Initialize();
     }
     
     /** Configures limits for the given group with the given input */
@@ -160,13 +167,14 @@ class GroupTotal extends AuthEntityTotal implements IGroupLimit
     /** Initializes group limits by adding a limit for each member account and adding stats */
     protected function Initialize() : self
     {
+        parent::ZeroCounters();
+        
         // force create rows for each account
         foreach ($this->GetGroup()->GetAccounts() as $account)
         {
             $aclim = AccountTotal::ForceLoadByAccount($this->database, $account);
             
-            if ($this->canTrackItems())
-                $this->ProcessAccountChange($aclim, true);
+            $this->ProcessAccountChange($aclim->Initialize(), true);
         }
 
         return $this;
@@ -240,10 +248,14 @@ class GroupTimed extends AuthEntityTimed implements IGroupLimit
 
     /** Initializes group limits by adding a limit for each member account */
     protected function Initialize() : self
-    {
+    {        
         // force create rows for each account
         foreach ($this->GetGroup()->GetAccounts() as $account)
-            AccountTimed::ForceLoadByAccount($this->database, $account, $this->GetTimePeriod());
+        {
+            $aclim = AccountTimed::ForceLoadByAccount($this->database, $account, $this->GetTimePeriod());
+            
+            $aclim->Initialize();
+        }            
         
         return $this;
     }

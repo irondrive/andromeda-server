@@ -80,14 +80,21 @@ trait AccountCommon
     
     protected function SetBaseLimits(Input $input) : void
     {
-        if ($input->HasParam('track_items') )
+        if ($input->HasParam('track_items'))
         {
             $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_BOOL));
             
-            if ($this->canTrackItems()) $this->Initialize();
+            if ($this->isFeatureModified('track_items')) $init = true;
         }        
         
-        if ($input->HasParam('track_dlstats')) $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('track_dlstats')) 
+        {
+            $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
+            
+            if ($this->isFeatureModified('track_dlstats')) $init = true;
+        }
+        
+        if ($init ?? false) $this->Initialize();
     }    
     
     /** Configures limits for the given account with the given input */
@@ -215,7 +222,7 @@ class AccountTotal extends AuthEntityTotal implements IAccountLimit
     /** Loads a limit object for the given account, creating it if it does not exist */
     public static function ForceLoadByAccount(ObjectDatabase $database, Account $account) : self
     {
-        return static::LoadByClient($database, $account) ?? static::Create($database, $account)->Initialize();
+        return static::LoadByClient($database, $account) ?? static::Create($database, $account);
     }
     
     /**
@@ -239,18 +246,17 @@ class AccountTotal extends AuthEntityTotal implements IAccountLimit
     }
   
     /** Initializes the account limit by adding stats from all FS items that it owns */
-    protected function Initialize() : self
+    public function Initialize() : self
     {
+        parent::ZeroCounters();
+        
         if (!$this->canTrackItems()) return $this;
         
         $files = File::LoadByOwner($this->database, $this->GetAccount());
-        $folders = Folder::LoadByOwner($this->database, $this->GetAccount());        
-        $this->CountItems(count($files) + count($folders));
+        $folders = Folder::LoadByOwner($this->database, $this->GetAccount());
         
-        $files_global = array_filter($files, function(File $file){ return !$file->onOwnerFS(); });
-        $this->CountSize(array_sum(array_map(function(File $file){ return $file->GetSize(); }, $files_global)));  
-        
-        $this->CountShares(array_sum(array_map(function(Item $item){ return $item->GetNumShares(); }, array_merge($files,$folders))));
+        foreach ($files as $file) $this->AddFileCounts($file,true);
+        foreach ($folders as $folder) $this->AddFolderCounts($folder,true);
                 
         return $this;
     }

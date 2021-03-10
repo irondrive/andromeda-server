@@ -43,6 +43,9 @@ abstract class Folder extends Item
             'counters__subshares' => new FieldTypes\Counter()   // total number of shares (recursive)
         ));
     }
+    
+    /** Returns true if this folder can be deleted if it no longer exists on storage */
+    public abstract function CanRefreshDelete() : bool;
 
     /** Returns the total size of the folder and its content in bytes */
     public function GetSize() : int { return $this->TryGetCounter('size') ?? 0; }
@@ -92,8 +95,7 @@ abstract class Folder extends Item
     {
         $this->SetOwner($account);
         
-        foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item)
-            $item->SetOwner($account, true);
+        foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item) $item->SetOwner($account);
        
         return $this;
     }
@@ -109,11 +111,11 @@ abstract class Folder extends Item
     /**
      * Adds the statistics from the given item to this folder
      * @param Item $item the item to add stats from
-     * @param bool $sub if true, subtract instead of add
+     * @param bool $add if true add, else subtract
      */
-    private function AddItemCounts(Item $item, bool $sub = false) : void
+    private function AddItemCounts(Item $item, bool $add = true) : void
     {
-        $this->SetModified(); $val = $sub ? -1 : 1;
+        $this->SetModified(); $val = $add ? 1 : -1;
         $this->DeltaCounter('size', $item->GetSize() * $val);
         $this->DeltaCounter('bandwidth', $item->GetBandwidth() * $val);
         $this->DeltaCounter('downloads', $item->GetDownloads() * $val);        
@@ -134,7 +136,7 @@ abstract class Folder extends Item
             $this->DeltaCounter('subshares', $item->GetTotalShares() * $val);
         }
         
-        $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($item, $sub);
+        $parent = $this->GetParent(); if ($parent !== null) $parent->AddItemCounts($item, $add);
     }
     
     /** Counts a share on a subitem of this folder */
@@ -145,19 +147,19 @@ abstract class Folder extends Item
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
-        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, false);
+        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, true);
         
         return parent::AddObjectRef($field, $object, $notification);
     }
     
     protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {        
-        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, true);
+        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, false);
         
         return parent::RemoveObjectRef($field, $object, $notification);
     }
     
-    protected function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void { $limit->AddFolderCounts($this, $sub); }
+    protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
     
     private bool $refreshed = false;
     private bool $subrefreshed = false;
@@ -248,6 +250,17 @@ abstract class Folder extends Item
         return $items;
     }
 
+    /** 
+     * @see Folder::TryGetClientObjects()
+     * @throws DeletedByStorageException if the item is deleted 
+     */
+    public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
+        ?int $limit = null, ?int $offset = null, bool $details = false) : array
+    {
+        $retval = $this->TryGetClientObject($files,$folders,$recursive,$limit,$offset,$details);
+        if ($retval === null) throw new DeletedByStorageException(); else return $retval;
+    }
+    
     /**
      * Returns a printable client object of this folder
      * @param bool $files if true, show subfiles
@@ -260,10 +273,10 @@ abstract class Folder extends Item
             subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
      * @see Item::SubGetClientObject()
      */
-    public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
+    public function TryGetClientObject(bool $files = false, bool $folders = false, bool $recursive = false, 
         ?int $limit = null, ?int $offset = null, bool $details = false) : ?array
     {
-        if ($this->isDeleted()) return null;
+        $this->Refresh(); if ($this->isDeleted()) return null;
         
         $this->SetAccessed();
 
@@ -279,21 +292,21 @@ abstract class Folder extends Item
             if ($folders)
             {
                 $subfolders = array_filter($items, function($item){ return ($item instanceof Folder); });
-                $data['folders'] = array_map(function($folder){ return $folder->GetClientObject(); },$subfolders);
+                $data['folders'] = array_filter(array_map(function($folder){ return $folder->TryGetClientObject(); },$subfolders));
             }
             
             if ($files)
             {
                 $subfiles = array_filter($items, function($item){ return ($item instanceof File); });
-                $data['files'] = array_map(function($file){ return $file->GetClientObject(); },$subfiles);
+                $data['files'] = array_filter(array_map(function($file){ return $file->TryGetClientObject(); },$subfiles));
             }            
         }
         else
         {
             if ($folders)
             {
-                $data['folders'] = array_map(function($folder){
-                    return $folder->GetClientObject(); }, $this->GetFolders($limit,$offset));
+                $data['folders'] = array_filter(array_map(function($folder){
+                    return $folder->TryGetClientObject(); }, $this->GetFolders($limit,$offset)));
             
                 $numitems = count($data['folders']);
                 if ($offset !== null) $offset = max(0, $offset-$numitems);
@@ -302,8 +315,8 @@ abstract class Folder extends Item
             
             if ($files)
             {
-                $data['files'] = array_map(function($file){
-                    return $file->GetClientObject(); }, $this->GetFiles($limit,$offset));
+                $data['files'] = array_filter(array_map(function($file){
+                    return $file->TryGetClientObject(); }, $this->GetFiles($limit,$offset)));
             }
         }        
         

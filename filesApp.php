@@ -27,7 +27,6 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
@@ -325,7 +324,7 @@ class FilesApp extends AppBase
         $item = null; if ($id !== null)
         {
             $item = $class::TryLoadByID($this->database, $id);
-            if ($item === null) return static::UnknownItemException($class);
+            if ($item === null) throw new UnknownItemException();
         }
         
         $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator, $item); 
@@ -341,7 +340,7 @@ class FilesApp extends AppBase
         $item = null; if ($id !== null)
         {
             $item = $class::TryLoadByID($this->database, $id);
-            if ($item === null) return static::UnknownItemException($class);
+            if ($item === null) throw new UnknownItemException();
         }
         
         $access = ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $item); 
@@ -697,7 +696,7 @@ class FilesApp extends AppBase
                 if ($filesys === null) throw new UnknownFilesystemException();
             }
                 
-            $folder = RootFolder::LoadRootByAccountAndFS($this->database, $account, $filesys);
+            $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesys);
         }
 
         if ($folder === null) throw new UnknownFolderException();
@@ -714,8 +713,7 @@ class FilesApp extends AppBase
 
         if ($public && ($files || $folders)) $folder->CountVisit();
         
-        $return = $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
-        if ($return === null) throw new UnknownFolderException(); return $return;
+        return $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
     }
 
     /**
@@ -757,7 +755,7 @@ class FilesApp extends AppBase
                 $filesystem = FSManager::TryLoadByAccountAndName($this->database, $account, array_shift($path));
                 if ($filesystem === null) throw new UnknownFilesystemException();
                 
-                $folder = RootFolder::LoadRootByAccountAndFS($this->database, $account, $filesystem);
+                $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesystem);
             }           
         }        
         
@@ -1434,9 +1432,9 @@ class FilesApp extends AppBase
                 $url = $this->config->GetAPIUrl();
                 if (!$url) throw new ShareURLGenerateException();
                 
-                $params = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
-                $link = AJAX::GetRemoteURL($url, new Input('files','download',$params));
-                return "<a href='$link'>".$share->GetItem()->GetName()."</a>";
+                $cmd = (new Input('files','download'))->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
+                
+                return "<a href='".AJAX::GetRemoteURL($url, $cmd)."'>".$share->GetItem()->GetName()."</a>";
             }, $shares)); 
             
             // TODO CLIENT - param for the client to have the URL point at the client

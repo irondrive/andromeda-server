@@ -20,6 +20,9 @@ class CrossFilesystemException extends Exceptions\ClientErrorException { public 
 /** Exception indicating that the item target name already exists */
 class DuplicateItemException extends Exceptions\ClientErrorException   { public $message = "ITEM_ALREADY_EXISTS"; }
 
+/** Exception indicating that the item was deleted when refreshed from storage */
+class DeletedByStorageException extends Exceptions\ClientNotFoundException { public $message = "ITEM_DELETED_BY_STORAGE"; }
+
 /**
  * An abstract class defining a user-created item in a filesystem.
  * 
@@ -39,12 +42,12 @@ abstract class Item extends StandardObject
             'dates__modified' => null,
             'dates__accessed' => new FieldTypes\Scalar(null, true),         
             'counters__bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
-            'counters__downloads' => new FieldTypes\Counter(),      // total download count (recursive for folders)
+            'counters__downloads' => new FieldTypes\Counter(),      // total public download count (recursive for folders)
             'owner' => new FieldTypes\ObjectRef(Account::class),
             'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
             'likes' => new FieldTypes\ObjectRefs(Like::class, 'item', true), // links to like objects
-            'counters__likes' => new FieldTypes\Counter(),      // actual total # of likes
-            'counters__dislikes' => new FieldTypes\Counter(),   // actual total # of dislikes
+            'counters__likes' => new FieldTypes\Counter(),      // recursive total # of likes
+            'counters__dislikes' => new FieldTypes\Counter(),   // recursive total # of dislikes
             'tags' => new FieldTypes\ObjectRefs(Tag::class, 'item', true),
             'comments' => new FieldTypes\ObjectRefs(Comment::class, 'item', true),
             'shares' => new FieldTypes\ObjectRefs(Share::class, 'item', true)
@@ -53,13 +56,6 @@ abstract class Item extends StandardObject
     
     /** Updates the metadata of this item by scanning the object in the filesystem */
     public abstract function Refresh() : self;
-    
-    /**
-     * Refreshes the file from disk in case it should be removed from the DB
-     * @see Item::Refresh()
-     * @see BaseObject::isDeleted()
-     */
-    public function isDeleted() : bool { $this->Refresh(); return parent::isDeleted(); }
     
     /** Returns the owner of this item, or null if it's on a shared FS */
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
@@ -158,13 +154,13 @@ abstract class Item extends StandardObject
     }    
     
     /** Sets this item's owner to the given account */
-    public function SetOwner(Account $account, bool $notify = false) : self
+    public function SetOwner(Account $account) : self
     {
-        if (!$notify) $this->AddStatsToOwner(true);
+        $this->AddStatsToOwner(false); // subtract stats from old owner
         
         $this->SetObject('owner', $account);
         
-        if (!$notify) $this->AddStatsToOwner();
+        $this->AddStatsToOwner(); // add stats to new owner
         
         return $this;
     }
@@ -185,8 +181,19 @@ abstract class Item extends StandardObject
     /** Returns the ID of the object's filesystem manager */
     protected function GetFilesystemID() : string { return $this->GetObjectID('filesystem'); }
     
-    /** Returns the filesystem manager's implementor that stores this object */
-    protected function GetFSImpl() : FSImpl { return $this->GetFilesystem()->GetFSImpl(); }
+    /** 
+     * Returns the filesystem manager's implementor that stores this object 
+     * 
+     * Refreshes the item from storage first to make sure it's ready to use.
+     * @throws DeletedByStorageException if the item is deleted on storage
+     */
+    protected function GetFSImpl() : FSImpl 
+    { 
+        $this->Refresh(); if ($this->isDeleted()) 
+            throw new DeletedByStorageException();
+        
+        return $this->GetFilesystem()->GetFSImpl(); 
+    }
     
     /** Returns true if this file should be accessible by all accounts */
     public function isWorldAccess() : bool 
@@ -197,13 +204,13 @@ abstract class Item extends StandardObject
     }
     
     /** Sets the item's access time to the given value or now if null */
-    public function SetAccessed(?int $time = null) : self { return $this->SetDate('accessed', $time); }
+    public function SetAccessed(?int $time = null) : self { return $this->SetDate('accessed', max($this->TryGetDate('accessed'), $time)); }
     
     /** Sets the item's created time to the given value or now if null */
-    public function SetCreated(?int $time = null) : self  { return $this->SetDate('created', $time); }
+    public function SetCreated(?int $time = null) : self  { return $this->SetDate('created', max($this->TryGetDate('created'), $time)); }
     
     /** Sets the item's modified time to the given value or now if null */
-    public function SetModified(?int $time = null) : self { return $this->SetDate('modified', $time); }
+    public function SetModified(?int $time = null) : self { return $this->SetDate('modified', max($this->TryGetDate('modified'), $time)); }
     
     /** Returns the bandwidth used by the item in bytes */
     public function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }
@@ -316,45 +323,45 @@ abstract class Item extends StandardObject
     
     /**
      * Adds this item's stats to all owner limits
-     * @param bool $sub if true, subtract
+     * @param bool $add if true add, else subtract
      * @return $this
      */
-    protected function AddStatsToOwner(bool $sub = false) : self
+    protected function AddStatsToOwner(bool $add = true) : self
     {
         if (!$this->GetOwnerID()) return $this;
         
         foreach (Limits\AccountTotal::LoadByAccountAll($this->database, $this->GetOwner()) as $limit)
-            $this->AddStatsToLimit($limit, $sub);
+            $this->AddStatsToLimit($limit, $add);
  
         if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
             
         foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $limit)
-            $this->AddStatsToLimit($limit, $sub);
+            $this->AddStatsToLimit($limit, $add);
         
         return $this;
     }    
 
     /**
      * Adds this item's stats to all filesystem limits
-     * @param bool $sub if true, subtract
+     * @param bool $add if true add, else subtract
      * @return $this
      */
-    protected function AddStatsToFilesystem(bool $sub = false) : self
+    protected function AddStatsToFilesystem(bool $add = true) : self
     {        
         $total = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem());
         
-        if ($total !== null) $this->AddStatsToLimit($total, $sub);
+        if ($total !== null) $this->AddStatsToLimit($total, $add);
         
         if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
         
         foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $limit)
-            $this->AddStatsToLimit($limit, $sub);
+            $this->AddStatsToLimit($limit, $add);
         
         return $this;
     }
     
-    /** Adds this item's stats to the given limit, substracting if $sub */
-    protected abstract function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void;
+    /** Adds this item's stats to the given limit, substracting if not $add */
+    protected abstract function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void;
     
     /**
      * Returns a config bool for the item by checking applicable limits
@@ -452,8 +459,6 @@ abstract class Item extends StandardObject
      */
     public function SubGetClientObject(bool $details = false) : ?array
     {
-        if ($this->isDeleted()) return null;
-        
         $data = array(
             'id' => $this->ID(),
             'name' => $this->GetName(),
