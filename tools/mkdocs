@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd tools; if [ ! -f phpDocumentor.phar ]; then
+   wget https://github.com/phpDocumentor/phpDocumentor/releases/download/v3.0.0/phpDocumentor.phar
+fi; cd ..
+
+rm -Rf ./docs; php7.4 tools/phpDocumentor.phar -d . -t ./docs --ignore "/vendor/" --sourcecode
+
+php index.php --debug 0 server usage > docs/USAGE

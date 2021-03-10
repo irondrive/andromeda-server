@@ -1,0 +1,27 @@
+{
+    "authors" : [{
+            "name" : "lightray22"
+        }
+    ],
+    "name" : "lightray22/andromeda-server-framework",
+    "description" : "Core framework for Andromeda",
+    "license" : "AGPL-3.0",
+    "require" : {
+        "php" : ">=7.4",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-sodium": "*",
+        "phpmailer/phpmailer": "~6",
+        "clue/arguments": "~2"
+    },
+    "suggest": {    
+        "ext-pdo_mysql": "For MySQL databases",
+        "ext-pdo_sqlite": "For SQLite databases",
+        "ext-pdo_pgsql": "For Postgresql databases",
+        "ext-pgsql": "For Postgresql databases"
+    },
+    "require-dev": {
+        "phpmetrics/phpmetrics": "~2"
+    }
+}

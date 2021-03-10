@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# uses https://github.com/dumblob/mysql2sqlite
+PATH=$PATH:tools/mysql2sqlite
+
+tools/pgtransfer
+
+for i in apps/* core; do if [ -f $i/andromeda2.mysql.sql ]; then
+
+   TABLES=$(mysql -D andromeda2 -u root -p -se "SHOW TABLES LIKE 'a2_objects_${i//\//_}%'")
+   mysqldump andromeda2 $TABLES --skip-comments --no-create-db --no-data \
+      --skip-add-drop-table -h localhost -u root -p > $i/andromeda2.mysql.sql
+
+   pg_dump --schema-only --table public.a2_objects_${i//\//_}"*" --dbname andromeda \
+      --host localhost --username postgres --no-owner > $i/andromeda2.pgsql.sql
+   sed -i "s/DEFAULT '\\\x4e554c4c'::bytea/DEFAULT NULL::bytea/" $i/andromeda2.pgsql.sql
+
+   mysql2sqlite "$i"/andromeda2.mysql.sql \
+      | grep -v TRANSACTION | grep -v "PRAGMA synchronous" > $i/andromeda2.sqlite.sql
+
+fi; done
