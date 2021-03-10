@@ -23,6 +23,9 @@ class UnknownAppException extends Exceptions\ClientErrorException   { public $me
 /** Exception indicating that the server is configured as disabled */
 class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
 
+/** Exception indicating that the server must be disabled for this request */
+class DisableRequiredException extends Exceptions\ClientErrorException { public $message = "DISABLE_REQUIRED"; }
+
 /** Exception indicating that the server failed to load a configured app */
 class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
 
@@ -342,6 +345,18 @@ class Main extends Singleton
         if ($this->config === null) return true;
         
         return $this->config->isEnabled() || $this->interface->isPrivileged();
+    }
+    
+    /**
+     * Asserts that the server is disabled
+     * @throws DisableRequiredException if not
+     */
+    public function requireDisabled() : self
+    {
+        if ($this->config !== null && $this->config->isEnabled())
+            throw new DisableRequiredException();
+       
+        return $this;
     }
     
     /** Returns the configured debug level, or the interface's default */
