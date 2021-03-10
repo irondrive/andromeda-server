@@ -73,6 +73,13 @@ abstract class StandardObject extends BaseObject
     protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { 
         return $this->SetScalar("features__$name", $value, $temp); }
     
+    
+    /** Returns true if the given feature has been modified */
+    protected function isFeatureModified(string $name) : bool
+    {
+        return boolval($this->GetScalarDelta("features__$name"));
+    }
+    
     /**
      * Gets the value of the given counter field
      * @see BaseObject::GetScalar()
