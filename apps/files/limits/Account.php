@@ -248,7 +248,7 @@ class AccountTotal extends AuthEntityTotal implements IAccountLimit
     /** Initializes the account limit by adding stats from all FS items that it owns */
     public function Initialize() : self
     {
-        parent::ZeroCounters();
+        parent::Initialize();
         
         if (!$this->canTrackItems()) return $this;
         
@@ -322,7 +322,7 @@ class AccountTimed extends AuthEntityTimed
         'max_stats_age' => null,
         'features__track_items' => false,
         'features__track_dlstats' => false,
-        'counters_limits__downloads' => null,
+        'counters_limits__pubdownloads' => null,
         'counters_limits__bandwidth' => null
     ); }
     

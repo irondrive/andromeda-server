@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -30,7 +31,7 @@ abstract class Total extends Base
             'features__publicupload' => null,
             'features__publicmodify' => null,
             'features__randomwrite' => null,
-            'counters__downloads' => new FieldTypes\Counter(),
+            'counters__pubdownloads' => new FieldTypes\Counter(),
             'counters__bandwidth' => new FieldTypes\Counter(true),
             'counters__size' => new FieldTypes\Counter(),
             'counters__items' => new FieldTypes\Counter(),
@@ -61,10 +62,10 @@ abstract class Total extends Base
     }
 
     /** Updates the last download timestamp to now */
-    public function SetDownloadDate() : self { return $this->SetDate('download'); }
+    public function SetDownloadDate() : self { return $this->canTrackDLStats() ? $this->SetDate('download') : $this; }
     
     /** Updates the last upload (file create) timestamp to now */
-    public function SetUploadDate() : self { return $this->SetDate('upload'); }
+    public function SetUploadDate() : self { return $this->canTrackDLStats() ? $this->SetDate('upload') : $this; }
     
     /** Returns true if the limited object should allow random writes to files */
     public function GetAllowRandomWrite() : ?bool { return $this->TryGetFeature('randomwrite'); }
@@ -117,10 +118,18 @@ abstract class Total extends Base
     }
     
     /** Sets all stats counters to zero */
-    protected function ZeroCounters() : self
+    protected function Initialize() : self
     {
-        foreach (array('items','size','shares','downloads','bandwidth') as $prop) 
+        Main::GetInstance()->requireDisabled();
+        
+        foreach (array('items','size','shares','pubdownloads','bandwidth') as $prop) 
             $this->DeltaCounter($prop, $this->GetCounter($prop)*-1);
+        
+        if (!$this->canTrackDLStats())
+        {
+            foreach (array('upload','download') as $prop) 
+                $this->SetDate($prop, null);
+        }
         
         return $this;
     }
@@ -129,7 +138,7 @@ abstract class Total extends Base
      * Returns a printable client object of this timed limit
      * @return array `{dates:{created:float, download:?float, upload:?float}, features:{track_items:bool,track_dlstats:bool,
             itemsharing:?bool, shareeveryone:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
-        limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, downloads:int, bandwidth:int}}`
+        limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see TimedStats::GetClientObject()
      */
     public function GetClientObject() : array
