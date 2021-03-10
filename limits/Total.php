@@ -116,6 +116,15 @@ abstract class Total extends Base
         return $lim;
     }
     
+    /** Sets all stats counters to zero */
+    protected function ZeroCounters() : self
+    {
+        foreach (array('items','size','shares','downloads','bandwidth') as $prop) 
+            $this->DeltaCounter($prop, $this->GetCounter($prop)*-1);
+        
+        return $this;
+    }
+    
     /**
      * Returns a printable client object of this timed limit
      * @return array `{dates:{created:float, download:?float, upload:?float}, features:{track_items:bool,track_dlstats:bool,

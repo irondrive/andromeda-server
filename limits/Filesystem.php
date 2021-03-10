@@ -27,10 +27,17 @@ trait FilesystemCommon
         {
             $this->SetFeature('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
             
-            if ($this->canTrackItems()) $this->Initialize();
+            if ($this->isFeatureModified('track_items')) $init = true;
         }
         
-        if ($input->HasParam('track_dlstats') || $this->isCreated()) $this->SetFeature('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('track_dlstats') || $this->isCreated())
+        {
+            $this->SetFeature('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
+            
+            if ($this->isFeatureModified('track_dlstats')) $init = true;
+        }
+        
+        if ($init ?? false) $this->Initialize();
     }
         
     public static function ConfigLimits(ObjectDatabase $database, FSManager $filesystem, Input $input) : self
@@ -53,11 +60,13 @@ class FilesystemTotal extends Total
     /** Initializes the FS total stats by adding stats from all root folders */
     protected function Initialize() : self
     {
+        parent::ZeroCounters();
+        
         if (!$this->canTrackItems()) return $this;
         
         $roots = RootFolder::LoadRootsByFSManager($this->database, $this->GetFilesystem());
         
-        foreach ($roots as $root) $this->AddFolderCounts($root);
+        foreach ($roots as $root) $this->AddCumulativeFolderCounts($root,true);
         
         return $this;
     }

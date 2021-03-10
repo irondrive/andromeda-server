@@ -79,7 +79,8 @@ class Shared extends BaseFileFS
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
         
-        if (!$storage->isFolder($path)) { $folder->NotifyDelete(); return $this; }
+        if ($folder->CanRefreshDelete() && !$storage->isFolder($path)) { 
+            $folder->NotifyDelete(); return $this; }
                 
         $stat = $storage->ItemStat($path);
         if ($stat->atime) $folder->SetAccessed($stat->atime);
@@ -92,7 +93,9 @@ class Shared extends BaseFileFS
             if ($fsitems === null) { $folder->NotifyDelete(); return $this; }
             
             $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());
-            uasort($dbitems, function(Item $a, Item $b){ return strcmp($a->GetName(),$b->GetName()); });
+            
+            uasort($dbitems, function(Item $a, Item $b){ 
+                return strcmp($a->GetName(),$b->GetName()); });
             
             foreach ($fsitems as $fsitem)
             {
@@ -115,7 +118,10 @@ class Shared extends BaseFileFS
                 if ($dbitem === null)
                 {
                     $itemclass = $isfile ? File::class : SubFolder::class;
-                    $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $folder->GetOwner(), $fsitem);
+                    $owner = $this->GetFSManager()->GetOwner();
+                    
+                    $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $owner, $fsitem);
+                    
                     $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
                 }
             }

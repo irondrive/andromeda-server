@@ -57,15 +57,12 @@ class File extends Item
     {
         $delta = $size - ($this->TryGetScalar('size') ?? 0);
         
-        $this->GetParent()->DeltaSize($delta);
+        $this->GetParent()->DeltaSize($delta);        
         
-        if (!$notify)
-        {
-            $this->MapToLimits(function(Limits\Base $lim)use($delta){ 
-                if (!$this->onOwnerFS()) $lim->CountSize($delta); });
-            
-            $this->GetFSImpl()->Truncate($this, $size);                
-        }
+        $this->MapToLimits(function(Limits\Base $lim)use($delta,$notify){
+            if (!$this->onOwnerFS()) $lim->CountSize($delta,$notify); });
+        
+        if (!$notify) $this->GetFSImpl()->Truncate($this, $size);
         
         return $this->SetScalar('size', $size); 
     }
@@ -119,7 +116,7 @@ class File extends Item
         return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
     }
     
-    protected function AddStatsToLimit(Limits\Base $limit, bool $sub = false) : void { $limit->AddFolderCounts($limit, $sub); }
+    protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($limit, $add); }
         
     private bool $refreshed = false;
     
@@ -284,14 +281,25 @@ class File extends Item
     }
     
     /**
+     * @see File::TryGetClientObjects()
+     * @throws DeletedByStorageException if the item is deleted
+     */
+    public function GetClientObject(bool $details = false) : array
+    {
+        $retval = $this->TryGetClientObject($details);
+        if ($retval === null) throw new DeletedByStorageException();
+        else return $retval;
+    }
+    
+    /**
      * Returns a printable client object of the file
      * @see Item::SubGetClientObject()
      * @return array|NULL null if deleted, else `{size:int, dates:{created:float,modified:?float,accessed:?float},
          counters:{downloads:int, bandwidth:int, likes:int, dislikes:int}}`
      */
-    public function GetClientObject(bool $details = false) : ?array
+    public function TryGetClientObject(bool $details = false) : ?array
     {
-        if ($this->isDeleted()) return null;
+        $this->Refresh(); if ($this->isDeleted()) return null;
         
         $data = array_merge(parent::SubGetClientObject($details),array(
             'size' => $this->TryGetScalar('size'),

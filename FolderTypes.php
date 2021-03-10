@@ -18,6 +18,8 @@ class RootFolder extends Folder
 {
     public static function GetObjClass(array $row) : string { return self::class; }
     
+    public function CanRefreshDelete() : bool { return false; }
+    
     public function GetName() : string { return $this->GetFilesystem()->GetName(); }
     
     public function SetName(string $name, bool $overwrite = false) : self { $this->GetFilesystem()->SetName($name); }
@@ -36,9 +38,9 @@ class RootFolder extends Folder
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner of the root folder
      * @param FSManager $filesystem the filesystem of the root, or null to get the default
-     * @return self|NULL loaded folder or null if the given FS does not exist
+     * @return self|NULL loaded folder or null if a default FS does not exist and none is given
      */
-    public static function LoadRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
+    public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {
         $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
         
@@ -130,7 +132,7 @@ class RootFolder extends Folder
         
         $roots = array(); foreach ($filesystems as $fs)
         {
-            $root = RootFolder::LoadRootByAccountAndFS($database, $account, $fs);
+            $root = RootFolder::GetRootByAccountAndFS($database, $account, $fs);
             
             $roots[$root->ID()] = $root;
         }
@@ -160,6 +162,8 @@ class RootFolder extends Folder
 class SubFolder extends Folder
 {
     public static function GetObjClass(array $row) : string { return self::class; }
+    
+    public function CanRefreshDelete() : bool { return true; }
     
     public function GetName() : string { return $this->GetScalar('name'); }
     public function GetParent() : Folder { return $this->GetObject('parent'); }
