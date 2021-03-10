@@ -303,6 +303,18 @@ abstract class BaseObject
     }
     
     /**
+     * Returns the delta of the given scalar (non-zero if modified)
+     * @param string $field the field name of the scalar
+     * @throws KeyNotFoundException if the field name is invalid
+     * @return int # of times modified for scalars, delta for counters
+     */
+    protected function GetScalarDelta(string $field) : int
+    {
+        if (!array_key_exists($field, $this->scalars)) throw new KeyNotFoundException($field);
+        return $this->scalars[$field]->GetDelta();
+    }
+    
+    /**
      * Gets a single object reference
      * @param string $field the field name holding the reference
      * @throws KeyNotFoundException if the field name is invalid

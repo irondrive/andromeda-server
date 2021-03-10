@@ -2,8 +2,6 @@
 
 require_once(ROOT."/core/ioformat/SafeParam.php");
 
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
 /** An exception indicating that the requested parameter name does not exist */
 class SafeParamKeyMissingException extends SafeParamException {
     public function __construct(string $key) { $this->message = "SAFEPARAM_KEY_MISSING: $key"; } }
@@ -14,6 +12,10 @@ class SafeParamNullValueException extends SafeParamException {
 
 /**
  * A thin class that manages a collection of SafeParam objects
+ * 
+ * This class exists rather than having $params directly in Input
+ * because a param can itself contain a collection of other params
+ * (see SafeParam::TYPE_OBJECT) represented by another SafeParams
  */
 class SafeParams
 {
@@ -51,7 +53,17 @@ class SafeParams
         else throw new SafeParamNullValueException($key);
     }
     
-    /** Same as GetParam() but returns null rather than throwing exceptions */
+    /** Same as GetParam() but returns null if the param is not present */
+    public function GetOptParam(string $key, int $type, ?callable $usrfunc = null)
+    {
+        if (!$this->HasParam($key)) return null;
+        
+        $data = $this->params[$key]->GetValue($type, $usrfunc);
+        if ($data !== null) return $data;
+        else throw new SafeParamNullValueException($key);
+    }
+    
+    /** Same as GetParam() but returns null if the param is not present, or is present and null */
     public function GetNullParam(string $key, int $type, ?callable $usrfunc = null)
     {
         if (!$this->HasParam($key)) return null;

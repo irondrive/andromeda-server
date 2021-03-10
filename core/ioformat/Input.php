@@ -3,6 +3,9 @@
 require_once(ROOT."/core/ioformat/SafeParam.php");
 require_once(ROOT."/core/ioformat/SafeParams.php");
 
+class InputFileMissingException extends SafeParamException {
+    public function __construct(string $key) { $this->message = "INPUT_FILE_MISSING: $key"; } }
+
 /** A username and password combination */
 class InputAuth 
 { 
@@ -41,40 +44,43 @@ class Input
     /** The app action to be run */
     public function GetAction() : string { return $this->action; }
     
-    /** @see Input::GetParams() */
-    private SafeParams $params; 
-    
-    /** The collection of parameters to be used */
-    public function GetParams() : SafeParams { return $this->params; }
-    
     /** @see Input::GetAuth() */
     private ?InputAuth $auth;   
     
     /** The basic authentication to be used */
     public function GetAuth() : ?InputAuth { return $this->auth; }
+        
+    /** @see Input::GetParams() */
+    private SafeParams $params;
     
-    /** @see Input::GetFiles() */
-    private array $files;       
+    /** The collection of parameters to be used */
+    public function GetParams() : SafeParams { return $this->params; }
     
-    /** @return InputFile[] array of input files */
-    public function GetFiles() : array { return $this->files; }    
+    // The following params functions are just syntactic sugar to avoid GetParams()
     
     /** @see SafeParams::HasParam() */
     public function HasParam(string $key) : bool {
         return $this->params->HasParam($key); }
+        
+    /** @see SafeParams::AddParam() */
+    public function AddParam(string $key, $value) : self { 
+        $this->params->AddParam($key, $value); return $this; }
     
     /** @see SafeParams::GetParam() */
     public function GetParam(string $key, int $type, ?callable $usrfunc = null) { 
         return $this->params->GetParam($key, $type, $usrfunc); }
-
+        
+    /** @see SafeParams::GetOptParam() */
+    public function GetOptParam(string $key, int $type, ?callable $usrfunc = null) {
+        return $this->params->GetOptParam($key, $type, $usrfunc); }
+        
     /** @see SafeParams::GetNullParam() */
     public function GetNullParam(string $key, int $type, ?callable $usrfunc = null) {
-        return $this->params->GetNullParam($key, $type, $usrfunc); }
+        return $this->params->GetNullParam($key, $type, $usrfunc); }      
         
-    /** Returns a non-null parameter if it was given, else null if not present (can't be present and null) */
-    public function GetOptParam(string $key, int $type, ?callable $usrfunc = null) {
-        return $this->HasParam($key) ? $this->GetParam($key,$type,$usrfunc) : null; }
-        
+    /** @see Input::GetFiles() */
+    private array $files;
+
     /**
      * Determines whether or not the given key exists as an input file
      * @param string $key the parameter name to check for
@@ -84,6 +90,15 @@ class Input
         return array_key_exists($key, $this->files); }
         
     /**
+     * Adds the given InputFile to the file array
+     * @param string $key param name for file
+     * @param InputFile $file file name/path
+     * @return $this
+     */
+    public function AddFile(string $key, InputFile $file) : self {
+        $this->files[$key] = $file; return $this; }
+    
+    /**
      * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
      * @throws SafeParamKeyMissingException if the key does not exist
@@ -92,7 +107,7 @@ class Input
     public function GetFile(string $key) : InputFile
     {
         if (!$this->HasFile($key)) 
-            throw new SafeParamKeyMissingException($key);
+            throw new InputFileMissingException($key);
         else return $this->files[$key];
     }
     
@@ -107,10 +122,13 @@ class Input
     }
     
     /** Constructs an input object using the data gathered from the interface, and sanitizes the app/action strings */
-    public function __construct(string $app, string $action, SafeParams $params,
-                                array $files = array(), ?InputAuth $auth = null)
+    public function __construct(string $app, string $action, ?SafeParams $params = null, 
+                                ?array $files = null, ?InputAuth $auth = null)
     {
-        $this->params = $params; $this->files = $files; $this->auth = $auth;
+        $this->params = $params ?? new SafeParams(); 
+        $this->files = $files ?? array(); 
+        
+        $this->auth = $auth;
 
         $this->app = (new SafeParam("app", strtolower($app)))->GetValue(SafeParam::TYPE_ALPHANUM);
         $this->action = (new SafeParam("action", strtolower($action)))->GetValue(SafeParam::TYPE_ALPHANUM);
