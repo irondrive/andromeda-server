@@ -57,7 +57,7 @@ trait GroupCommon
     public function ProcessAccountChange(IAccountLimit $aclim, bool $add) : void
     {  
         $mul = $add ? 1 : -1;
-        $this->CountDownloads($mul*$aclim->GetDownloads());
+        $this->CountPublicDownloads($mul*$aclim->GetPublicDownloads());
         $this->CountBandwidth($mul*$aclim->GetBandwidth());
         $this->CountSize($mul*$aclim->GetSize());
         $this->CountItems($mul*$aclim->GetItems());
@@ -167,7 +167,7 @@ class GroupTotal extends AuthEntityTotal implements IGroupLimit
     /** Initializes group limits by adding a limit for each member account and adding stats */
     protected function Initialize() : self
     {
-        parent::ZeroCounters();
+        parent::Initialize();
         
         // force create rows for each account
         foreach ($this->GetGroup()->GetAccounts() as $account)

@@ -30,7 +30,7 @@ class TimedStats extends StandardObject
             'counters__size' => new FieldTypes\Counter(),
             'counters__items' => new FieldTypes\Counter(),
             'counters__shares' => new FieldTypes\Counter(),
-            'counters__downloads' => new FieldTypes\Counter(),
+            'counters__pubdownloads' => new FieldTypes\Counter(),
             'counters__bandwidth' => new FieldTypes\Counter(true)
         ));
     }
@@ -168,7 +168,7 @@ class TimedStats extends StandardObject
     /**
      * Returns a printable client object of the stats
      * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, counters:{
-        size:int, items:int, shares:int, downloads:int, bandwidth:int}}`
+        size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      */
     public function GetClientObject() : array
     {
