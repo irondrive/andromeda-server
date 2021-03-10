@@ -8,8 +8,6 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
-require_once(ROOT."/apps/accounts/vendor/autoload.php");
-
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Authenticator.php");
 require_once(ROOT."/apps/accounts/AuthObject.php");
