@@ -711,7 +711,7 @@ class FilesApp extends AppBase
         
         $public = isset($share) && $share !== null;
 
-        if ($public && ($files || $folders)) $folder->CountVisit();
+        if ($public && ($files || $folders)) $folder->CountPublicVisit();
         
         return $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
     }
@@ -771,7 +771,10 @@ class FilesApp extends AppBase
         
         $item = null; $isfile = $input->GetOptParam('isfile',SafeParam::TYPE_BOOL);
         
-        if ($name === null) $item = ($isfile !== true) ? $folder : null; // trailing / for folder
+        if ($name === null) 
+        {
+            $item = ($isfile !== true) ? $folder : null; // trailing / for folder
+        }
         else
         {
             if ($isfile === null || $isfile) $item = File::TryLoadByParentAndName($this->database, $folder, $name);
@@ -780,10 +783,13 @@ class FilesApp extends AppBase
         
         if ($item === null) throw new UnknownItemException();
 
-        if ($item instanceof File) $retval = $item->GetClientObject();
+        if ($item instanceof File) 
+        {
+            $retval = $item->GetClientObject();
+        }
         else if ($item instanceof Folder)
         {
-            if (isset($share) && $share !== null) $item->CountVisit();
+            if (isset($share) && $share !== null) $item->CountPublicVisit();
             $retval = $item->GetClientObject(true,true);
         }
         

@@ -16,7 +16,7 @@ require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
  * and gather statistics about, filesystem-related objects.  The object
  * that is the subject of the limits is referred to as the limited object.
  * 
- * The base class merely tracks some statistics (e.g. download count).
+ * The base class merely tracks some statistics (e.g. public download count).
  * 
  * While not currently implemented, this infrastructure could be extended
  * to, for example, set limits on individual files and folders also.
@@ -57,7 +57,7 @@ abstract class Base extends StandardObject
     /** Returns true if we should track size, item count, and share count */
     protected function canTrackItems() : bool { return $this->TryGetFeature('track_items') ?? false; }
     
-    /** Returns true if we should count downloads and bandwidth */
+    /** Returns true if we should count public downloads and bandwidth */
     protected function canTrackDLStats() : bool { return $this->TryGetFeature('track_dlstats') ?? false; }
 
     /** Adds to the size counter, if item tracking is allowed */
@@ -75,11 +75,11 @@ abstract class Base extends StandardObject
     /** Increments the share counter by the given value, if item tracking is allowed */
     public function CountShares(int $shares, bool $noLimit = false) : self { return $this->canTrackItems() ? $this->DeltaCounter('shares',$shares,$noLimit) : $this; }
             
-    /** Increments the download counter, if download tracking is allowed */
-    public function CountDownload() : self { return $this->canTrackDLStats() ? $this->DeltaCounter('downloads') : $this; }
+    /** Increments the public download counter, if download tracking is allowed */
+    public function CountPublicDownload() : self { return $this->canTrackDLStats() ? $this->DeltaCounter('pubdownloads') : $this; }
     
-    /** Increments the download counter by the given value, if DL tracking is allowed */
-    public function CountDownloads(int $dls, bool $noLimit = false) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('downloads',$dls,$noLimit) : $this; }
+    /** Increments the public download counter by the given value, if DL tracking is allowed */
+    public function CountPublicDownloads(int $dls, bool $noLimit = false) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('pubdownloads',$dls,$noLimit) : $this; }
         
     /** Adds to the bandwidth counter, if download tracking is allowed */
     public function CountBandwidth(int $delta, bool $noLimit = false) : self { return $this->canTrackDLStats() ? $this->DeltaCounter('bandwidth',$delta,$noLimit) : $this; }
@@ -113,7 +113,7 @@ abstract class Base extends StandardObject
         
         if ($this->canTrackDLStats())
         {
-            $this->CountDownloads($mul*$file->GetDownloads(),$noLimit);
+            $this->CountPublicDownloads($mul*$file->GetPublicDownloads(),$noLimit);
             $this->CountBandwidth($mul*$file->GetBandwidth(),$noLimit);
         }
             
@@ -149,15 +149,15 @@ abstract class Base extends StandardObject
         
         if ($this->canTrackDLStats())
         {
-            $this->CountDownloads($mul*$folder->GetDownloads(),$noLimit);
+            $this->CountPublicDownloads($mul*$folder->GetPublicDownloads(),$noLimit);
             $this->CountBandwidth($mul*$folder->GetBandwidth(),$noLimit);
         }
         
         return $this;
     }
     
-    /** Returns the downloads counter for the limited object */
-    protected function GetDownloads() : int { return $this->GetCounter('downloads'); }
+    /** Returns the public downloads counter for the limited object */
+    protected function GetPublicDownloads() : int { return $this->GetCounter('pubdownloads'); }
     
     /** Returns the bandwidth counter for the limited object */
     protected function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }

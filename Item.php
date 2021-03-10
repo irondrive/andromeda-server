@@ -42,7 +42,7 @@ abstract class Item extends StandardObject
             'dates__modified' => null,
             'dates__accessed' => new FieldTypes\Scalar(null, true),         
             'counters__bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
-            'counters__downloads' => new FieldTypes\Counter(),      // total public download count (recursive for folders)
+            'counters__pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
             'owner' => new FieldTypes\ObjectRef(Account::class),
             'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
             'likes' => new FieldTypes\ObjectRefs(Like::class, 'item', true), // links to like objects
@@ -215,8 +215,8 @@ abstract class Item extends StandardObject
     /** Returns the bandwidth used by the item in bytes */
     public function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }
     
-    /** Returns the download count of the item */
-    public function GetDownloads() : int { return $this->GetCounter('downloads'); }
+    /** Returns the public download count of the item */
+    public function GetPublicDownloads() : int { return $this->GetCounter('pubdownloads'); }
     
     /**
      * Returns the like objects for this item
@@ -256,12 +256,12 @@ abstract class Item extends StandardObject
                     ->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetUploadDate(); }); 
     }
     
-    /** Counts a download on the item and its parents */
-    public function CountDownload() : self            
+    /** Counts a public download on the item and its parents */
+    public function CountPublicDownload() : self            
     {
         $parent = $this->GetParent();
-        if ($parent !== null) $parent->CountDownload();
-        return $this->DeltaCounter('downloads'); 
+        if ($parent !== null) $parent->CountPublicDownload();
+        return $this->DeltaCounter('pubdownloads'); 
     }
     
     /** Counts the given bandwidth on the item and its parents */

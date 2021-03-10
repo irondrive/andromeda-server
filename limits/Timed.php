@@ -35,7 +35,7 @@ abstract class Timed extends Base
             'stats' => new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true),
             'timeperiod' => null, // in seconds
             'max_stats_age' => null,
-            'counters_limits__downloads' => null,
+            'counters_limits__pubdownloads' => null,
             'counters_limits__bandwidth' => null
         ));
     }
@@ -151,7 +151,7 @@ abstract class Timed extends Base
     
     public static function GetConfigUsage() : string { return static::GetBaseUsage()." ".static::GetTimedUsage(); }
     
-    public static function BaseConfigUsage() : string { return "--timeperiod int [--max_downloads ?int] [--max_bandwidth ?int]"; }
+    public static function BaseConfigUsage() : string { return "--timeperiod int [--max_pubdownloads ?int] [--max_bandwidth ?int]"; }
     
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {
@@ -161,7 +161,7 @@ abstract class Timed extends Base
         
         $lim->SetBaseLimits($input); $lim->SetTimedLimits($input);
 
-        if ($input->HasParam('max_downloads')) $lim->SetCounterLimit('downloads', $input->GetNullParam('max_downloads', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_pubdownloads')) $lim->SetCounterLimit('pubdownloads', $input->GetNullParam('max_pubdownloads', SafeParam::TYPE_INT));
         if ($input->HasParam('max_bandwidth')) $lim->SetCounterLimit('bandwidth', $input->GetNullParam('max_bandwidth', SafeParam::TYPE_INT));
         
         if ($lim->isCreated()) $lim->Initialize();
@@ -173,7 +173,7 @@ abstract class Timed extends Base
     /**
      * Returns a printable client object of this timed limit
      * @return array `{timeperiod:int, dates:{created:float}, 
-        features:{track_items:bool,track_dlstats:bool}, limits:{downloads:?int, bandwidth:?int}`
+        features:{track_items:bool,track_dlstats:bool}, limits:{pubdownloads:?int, bandwidth:?int}`
      * @see TimedStats::GetClientObject()        
      */
     public function GetClientObject() : array
