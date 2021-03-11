@@ -121,13 +121,15 @@ class File extends Item
         return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
     }
     
-    protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($limit, $add); }
+    protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
         
     private bool $refreshed = false;
     
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
     public function Refresh() : self
     {
+        if ($this->isCreated()) return $this;
+        
         if ($this->deleted) return $this;
         else if (!$this->refreshed)
         {

@@ -172,6 +172,8 @@ abstract class Folder extends Item
      */
     public function Refresh(bool $doContents = false) : self
     {
+        if ($this->isCreated()) return $this;
+        
         if ($this->deleted || static::$skiprefresh) return $this;
         else if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
