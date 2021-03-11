@@ -10,6 +10,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
+require_once(ROOT."/apps/accounts/Config.php"); use Andromeda\Apps\Accounts\Config;
 
 /** Exception indicating that the created auth source is invalid */
 class InvalidAuthSourceException extends Exceptions\ClientErrorException { public $message = "AUTHSOURCE_FAILED"; }
@@ -25,11 +26,11 @@ class Manager extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array(
             'description' => null,
             'authsource' => new FieldTypes\ObjectPoly(External::class, 'manager', false),
             'default_group' => new FieldTypes\ObjectRef(Group::class)
-        ));
+        );
     }
     
     private static $auth_types = array();
@@ -87,8 +88,12 @@ class Manager extends BaseObject
     {
         Account::DeleteByAuthSource($this->database, $this);
         
-        $this->DeleteObject('authsource');
         $this->DeleteObject('default_group');
+        $this->DeleteObject('authsource');
+        
+        $config = Config::GetInstance($this->database);
+        if ($config->GetDefaultAuthID() === $this->ID())
+            $config->SetDefaultAuth(null);
         
         parent::Delete();
     }

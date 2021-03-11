@@ -79,9 +79,8 @@ class IMAP extends External
         if (!function_exists('imap_open')) throw new IMAPExtensionException();
     }
     
-    public function VerifyPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
-        $username = $account->GetUsername();
         $hostname = $this->GetScalar('hostname'); 
         
         if (($port = $this->TryGetScalar('port')) !== null) $hostname .= ":$port";

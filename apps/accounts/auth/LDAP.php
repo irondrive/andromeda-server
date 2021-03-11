@@ -92,9 +92,9 @@ class LDAP extends External
         return $this;
     }
     
-    public function VerifyPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
-        $this->Activate(); $username = $account->GetUsername();
+        $this->Activate();
         
         $prefix = $this->GetUserPrefix(); 
         if ($prefix !== null) $username = "$prefix\\$username";
@@ -102,10 +102,5 @@ class LDAP extends External
         try { return ldap_bind($this->ldap, $username, $password); }
         catch (Exceptions\PHPError $e) {
             Main::GetInstance()->PrintDebug(ldap_error()); return false; } 
-    }
-    
-    public function __destruct()
-    {
-        if (isset($this->ldap)) try { ldap_close($this->ldap); } catch (Exceptions\PHPError $e) { }
     }
 }
