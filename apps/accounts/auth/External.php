@@ -16,12 +16,19 @@ interface ISource
      * @param string $password the password to check
      * @return bool true if the password check is valid
      */
-    public function VerifyPassword(Account $account, string $password) : bool;
+    public function VerifyAccountPassword(Account $account, string $password) : bool;
 }
 
 /** Describes an external auth source that has a manager and lives in the database */
 abstract class External extends BaseObject implements ISource 
 { 
+    public function VerifyAccountPassword(Account $account, string $password) : bool
+    {
+        return $this->VerifyUsernamePassword($account->GetUsername(), $password);
+    }
+    
+    public abstract function VerifyUsernamePassword(string $username, string $password) : bool;
+    
     public static function GetFieldTemplate() : array
     {
         return array(

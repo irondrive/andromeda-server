@@ -271,7 +271,7 @@ class AccountTotalDefault extends AccountTotal implements IAccountLimit
 }
 
 /** Concrete class providing timed account limits */
-class AccountTimed extends AuthEntityTimed 
+class AccountTimed extends AuthEntityTimed implements IAccountLimit
 {
     use AccountCommon;
     

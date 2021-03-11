@@ -237,13 +237,13 @@ class Account extends AuthEntity
     public function setDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeature('disabled', $val); }    
     
     /** Gets the timestamp when this user was last active */
-    public function getActiveDate() : float     { return $this->GetDate('active'); }
+    public function getActiveDate() : ?float    { return $this->TryGetDate('active'); }
     
     /** Sets the last-active timestamp to now */
     public function setActiveDate() : self      { return $this->SetDate('active'); }
     
     /** Gets the timestamp when this user last created a session */
-    public function getLoggedonDate() : float   { return $this->GetDate('loggedon'); }
+    public function getLoggedonDate() : ?float  { return $this->TryGetDate('loggedon'); }
     
     /** Sets the timestamp of last-login to now */
     public function setLoggedonDate() : self    { return $this->SetDate('loggedon'); }
@@ -553,7 +553,7 @@ class Account extends AuthEntity
     /** Returns true if the given password is correct for this account */
     public function VerifyPassword(string $password) : bool
     {
-        return $this->GetAuthSource()->VerifyPassword($this, $password);
+        return $this->GetAuthSource()->VerifyAccountPassword($this, $password);
     }    
     
     /** Returns true if the account's password is not out of date, or is using external auth */

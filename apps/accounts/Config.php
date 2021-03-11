@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/apps/accounts/Group.php");
+require_once(ROOT."/apps/accounts/auth/Manager.php");
 
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
@@ -17,7 +18,8 @@ class Config extends SingletonObject
             'features__createaccount' => new FieldTypes\Scalar(false),
             'features__usernameiscontact' => new FieldTypes\Scalar(false),
             'features__requirecontact' => new FieldTypes\Scalar(0),
-            'default_group' => new FieldTypes\ObjectRef(Group::class)
+            'default_group' => new FieldTypes\ObjectRef(Group::class),
+            'default_auth' => new FieldTypes\ObjectRef(Auth\Manager::class)
         ));
     }
     
@@ -28,7 +30,7 @@ class Config extends SingletonObject
     }
 
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--usernameiscontact bool] [--requirecontact bool] [--createdefgroup bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--createaccount bool] [--usernameiscontact bool] [--requirecontact bool] [--createdefgroup bool] [--default_auth ?id]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self
@@ -38,6 +40,18 @@ class Config extends SingletonObject
         if ($input->HasParam('requirecontact')) $this->SetFeature('requirecontact',$input->GetParam('requirecontact',SafeParam::TYPE_BOOL));
         
         if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
+        
+        if ($input->HasParam('default_auth'))
+        {
+            if (($id = $input->GetNullParam('default_auth',SafeParam::TYPE_RANDSTR)) !== null)
+            {
+                $manager = Auth\Manager::TryLoadByID($this->database, $id);
+                if ($manager === null) throw new UnknownAuthSourceException();
+            }
+            else $manager = null;
+            
+            $this->SetDefaultAuth($manager);
+        }
         
         return $this;
     }
@@ -56,7 +70,13 @@ class Config extends SingletonObject
         $group = Group::Create($this->database, "Global Group");
         $this->SetObject('default_group', $group); $group->Initialize(); return $this;
     }
+    
+    /** Returns the ID of the auth manager clients should use by default */
+    public function GetDefaultAuthID() : ?string { return $this->TryGetObjectID('default_auth'); }
 
+    /** Sets the preferred default auth manager to the given value */
+    public function SetDefaultAuth(?Auth\Manager $manager) : self { return $this->SetObject('default_auth',$manager); }
+    
     /** Returns whether the API for creating new accounts is enabled */
     public function GetAllowCreateAccount() : bool { return $this->GetFeature('createaccount'); }
     
@@ -86,7 +106,8 @@ class Config extends SingletonObject
     public function GetClientObject(bool $admin) : array
     {
         $data = array(
-            'features' => $this->GetAllFeatures()
+            'features' => $this->GetAllFeatures(),
+            'default_auth' => $this->GetDefaultAuthID()
         );
         
         if ($admin) $data['default_group'] = $this->GetDefaultGroupID();

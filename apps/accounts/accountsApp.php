@@ -277,7 +277,8 @@ class AccountsApp extends AppBase
      */
     protected function GetConfig(Input $input) : array
     {
-        $account = $this->authenticator->GetAccount();
+        $account = $this->authenticator ? $this->authenticator->GetAccount() : null;
+        
         $admin = $account !== null && $account->isAdmin();
 
         return $this->config->GetClientObject($admin);
@@ -543,7 +544,7 @@ class AccountsApp extends AppBase
         /* if no account and using external auth, try the password, and if success, create a new account on the fly */
         else if ($authsource instanceof Auth\External)
         {            
-            if (!$authsource->VerifyPassword($username, $password))
+            if (!$authsource->VerifyUsernamePassword($username, $password))
                 throw new AuthenticationFailedException();
             
             $account = Account::Create($this->database, $authsource, $username);    
@@ -1175,7 +1176,7 @@ class AccountsApp extends AppBase
         $testuser = $input->GetParam('test_username',SafeParam::TYPE_TEXT);
         $testpass = $input->GetParam('test_password',SafeParam::TYPE_RAW);
         
-        if (!$manager->GetAuthSource()->VerifyPassword($testuser, $testpass))
+        if (!$manager->GetAuthSource()->VerifyUsernamePassword($testuser, $testpass))
             throw new AuthSourceTestFailException();        
            
         return $manager->GetClientObject(true);

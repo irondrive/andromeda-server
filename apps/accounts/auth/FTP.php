@@ -82,16 +82,11 @@ class FTP extends External
         return $this;
     }
     
-    public function VerifyPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
-        $this->Activate(); $username = $account->GetUsername();
+        $this->Activate();
 
         try { return ftp_login($this->ftp, $username, $password); }
         catch (Exceptions\PHPError $e) { return false; }
-    }
-    
-    public function __destruct()
-    {
-        if (isset($this->ftp)) try { ftp_close($this->ftp); } catch (Exceptions\PHPError $e) { }
     }
 }

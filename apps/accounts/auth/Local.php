@@ -11,7 +11,7 @@ require_once(ROOT."/apps/accounts/auth/External.php");
  */
 class Local extends Singleton implements ISource
 {
-    public function VerifyPassword(Account $account, string $password) : bool
+    public function VerifyAccountPassword(Account $account, string $password) : bool
     {
         $hash = $account->GetPasswordHash();
         
