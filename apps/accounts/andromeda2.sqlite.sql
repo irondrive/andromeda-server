@@ -3,10 +3,10 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `id` char(12) NOT NULL
 ,  `username` varchar(127) NOT NULL
 ,  `fullname` varchar(255) DEFAULT NULL
-,  `dates__created` double NOT NULL DEFAULT 0
-,  `dates__passwordset` double NOT NULL DEFAULT 0
-,  `dates__loggedon` double NOT NULL DEFAULT 0
-,  `dates__active` double NOT NULL DEFAULT 0
+,  `dates__created` double NOT NULL
+,  `dates__passwordset` double DEFAULT NULL
+,  `dates__loggedon` double DEFAULT NULL
+,  `dates__active` double DEFAULT NULL
 ,  `dates__modified` double DEFAULT NULL
 ,  `session_timeout` integer DEFAULT NULL
 ,  `max_password_age` integer DEFAULT NULL
@@ -67,7 +67,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
 CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL
 ,  `authsource` varchar(64) NOT NULL
-,  `description` text NOT NULL
+,  `description` text DEFAULT NULL
 ,  `default_group` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
@@ -92,6 +92,7 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
 ,  `features__usernameiscontact` integer NOT NULL
 ,  `features__requirecontact` integer NOT NULL
 ,  `default_group` char(12) DEFAULT NULL
+,  `default_auth` char(12) DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
