@@ -148,7 +148,7 @@ class FilesApp extends AppBase
             'sharefolder --folder id (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
             'editshare --share id '.Share::GetSetShareOptionsUsage(),
             'deleteshare --share id',
-            'shareinfo --sid id --skey alphanum [--spassword raw]',
+            'shareinfo --sid id [--skey alphanum] [--spassword raw]',
             'listshares [--mine bool]',
             'listforeign',
             'getfilesystem [--filesystem id]',
@@ -1419,7 +1419,7 @@ class FilesApp extends AppBase
         if ($islink) $share = Share::CreateLink($this->database, $account, $item);
         else $share = Share::Create($this->database, $account, $item, $dest);
         
-        return $share->SetShareOptions($input, $oldshare);
+        $share->SetShareOptions($input, $oldshare);
         
         $shares = array($share); $retval = $share->GetClientObject(false, $islink);
         

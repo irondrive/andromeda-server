@@ -382,7 +382,7 @@ abstract class Item extends StandardObject
     
     /** Returns true if the item should allow public uploading */
     public function GetAllowPublicUpload() : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowPublicUplaod(); }, null); }    
+        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowPublicUpload(); }, null); }    
     
     /** Returns true if the item should allow random/partial writes */
     public function GetAllowRandomWrite(Account $account) : bool {

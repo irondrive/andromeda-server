@@ -17,9 +17,11 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage:   php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--\$param data] [--\$param@ file] [--\$param% file [name]]\n".
-                      "batch/version:   php index.php [version | [--tryeach] batch myfile.txt]\n".
-                      "get all actions: php index.php server usage"; }
+    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
+                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file, optionally with a new name\n\n".
+                      "batch usage:   php index.php [--tryeach] batch myfile.txt\n".
+                      "get version:   php index.php version\n".
+                      "get actions:   php index.php server usage"; }
 
 /** Exception indicating that the given batch file is not valid */
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
