@@ -270,7 +270,8 @@ class SafeParam
         }
         else throw new SafeParamUnknownTypeException($type);
         
-        if ($usrfunc !== null && !$usrfunc($value)) throw new SafeParamInvalidException($key, null);
+        if ($value !== null && $usrfunc !== null && !$usrfunc($value)) 
+            throw new SafeParamInvalidException($key, null);
         
         return $value;
     }

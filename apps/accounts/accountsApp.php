@@ -20,6 +20,7 @@ require_once(ROOT."/apps/accounts/KeySource.php");
 require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/Session.php");
 require_once(ROOT."/apps/accounts/TwoFactor.php");
+require_once(ROOT."/apps/accounts/Whitelist.php");
 
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 require_once(ROOT."/apps/accounts/auth/Local.php");
@@ -47,6 +48,9 @@ class ImmutableGroupException extends Exceptions\ClientDeniedException { public 
 
 /** Exception indicating that creating accounts is not allowed */
 class AccountCreateDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_CREATE_NOT_ALLOWED"; }
+
+/** Exception indicating that the requested username is not whitelisted */
+class AccountWhitelistException extends Exceptions\ClientDeniedException { public $message = "USERNAME_NOT_WHITELISTED"; }
 
 /** Exception indicating that deleting accounts is not allowed */
 class AccountDeleteDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_DELETE_NOT_ALLOWED"; }
@@ -167,7 +171,10 @@ class AccountsApp extends AppBase
             'deleteauthsource --manager id --auth_password raw',
             'setaccountprops --account id '.AuthEntity::GetPropUsage().' [--expirepw bool]',
             'setgroupprops --group id '.AuthEntity::GetPropUsage(),
-            'sendmessage (--account id | --group id) --subject text --text text [--html raw]'
+            'sendmessage (--account id | --group id) --subject text --text text [--html raw]',
+            'addwhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
+            'removewhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
+            'getwhitelist'
         );
     }
     
@@ -250,6 +257,10 @@ class AccountsApp extends AppBase
             case 'setgroupprops':       return $this->SetGroupProps($input);
             
             case 'sendmessage':         return $this->SendMessage($input);
+            
+            case 'addwhitelist':        return $this->AddWhitelist($input);
+            case 'removewhitelist':     return $this->RemoveWhitelist($input);
+            case 'getwhitelist':        return $this->GetWhitelist($input);
             
             default: throw new UnknownActionException();
         }
@@ -446,10 +457,11 @@ class AccountsApp extends AppBase
     {
         $admin = $this->authenticator !== null; 
         if ($admin) $this->authenticator->RequireAdmin();
+        $admin = $admin || $this->API->GetInterface()->isPrivileged();
         
-        $admin = $admin || $this->API->GetInterface()->isPrivileged();        
-        if (!$admin && !$this->config->GetAllowCreateAccount()) 
-            throw new AccountCreateDeniedException();
+        $allowCreate = $this->config->GetAllowCreateAccount();
+        
+        if (!$admin && !$allowCreate) throw new AccountCreateDeniedException();
         
         $userIsContact = $this->config->GetUsernameIsContact();
         $requireContact = $this->config->GetRequireContact();
@@ -460,6 +472,15 @@ class AccountsApp extends AppBase
         }
 
         $username = $userIsContact ? $contactInfo->info : $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(127));
+        
+        if (!$admin && $allowCreate == Config::CREATE_WHITELIST)
+        {
+            $ok = Whitelist::ExistsTypeAndValue($this->database, Whitelist::TYPE_USERNAME, $username);
+            
+            if (isset($contactinfo)) $ok |= Whitelist::ExistsTypeAndValue($this->database, Whitelist::TYPE_CONTACT, $contactInfo->info);
+            
+            if (!$ok) throw new AccountWhitelistException();
+        }
 
         $password = $input->GetParam("password", SafeParam::TYPE_RAW);
         
@@ -1292,13 +1313,67 @@ class AccountsApp extends AppBase
         
         $dest->SendMessage($subject, $html, $text);
     }
+    
+    /**
+     * Adds a new entry to the account create whitelist
+     * @throws AuthenticationFailedException if not admin
+     * @return array Whitelist
+     * @see Whitelist::GetClientObject()
+     */
+    protected function AddWhitelist(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
+            function(string $v){ return array_key_exists($v, Whitelist::TYPES); });
+        
+        $type = Whitelist::TYPES[$type];
+        
+        $value = $input->GetParam('value', SafeParam::TYPE_TEXT);
+        
+        return Whitelist::Create($this->database, $type, $value)->GetClientObject();
+    }
+    
+    /**
+     * Removes an entry from the account create whitelist
+     * @throws AuthenticationFailedException if not admin
+     */
+    protected function RemoveWhitelist(Input $input) : void
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+        
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
+            function(string $v){ return array_key_exists($v, Whitelist::TYPES); });
+        
+        $type = Whitelist::TYPES[$type];
+        
+        $value = $input->GetParam('value', SafeParam::TYPE_TEXT);
+        
+        Whitelist::DeleteByTypeAndValue($this->database, $type, $value);
+    }
+    
+    /**
+     * Gets all entries in the account whitelist
+     * @throws AuthenticationFailedException if not admin
+     * @return array [id:Whitelist]
+     * @see Whitelist::GetClientObject()
+     */
+    protected function GetWhitelist(Input $input) : array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $this->authenticator->RequireAdmin();
+
+        return array_map(function(Whitelist $w){ return $w->GetClientObject(); }, Whitelist::LoadAll($this->database));
+    }
 
     public function Test(Input $input)
     {
-        $this->config->SetAllowCreateAccount(true, true);
-        $this->config->SetUsernameIsContact(false, true);
+        $this->config->SetAllowCreateAccount(Config::CREATE_PUBLIC, true);
         $this->config->SetRequireContact(Config::CONTACT_EXIST, true);
-
+        $this->config->SetUsernameIsContact(false, true);
+        
         $results = array(); $app = "accounts";
         
         $email = Utilities::Random(8)."@unittest.com";
