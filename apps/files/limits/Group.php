@@ -14,7 +14,18 @@ require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
 require_once(ROOT."/apps/files/limits/AuthObj.php");
 
-interface IGroupLimit { }
+interface IGroupLimit 
+{ 
+    /** Track stats for component accounts by inheriting this property */
+    const TRACK_ACCOUNTS = 1;
+    
+    /** Track stats for components accounts and also the group as a whole */
+    const TRACK_WHOLE_GROUP = 2;
+    
+    const TRACK_TYPES = array('none'=>0,
+        'accounts'=>self::TRACK_ACCOUNTS, 
+        'wholegroup'=>self::TRACK_WHOLE_GROUP);  
+}
 
 /**
  * Group limits common between total and timed
@@ -36,15 +47,9 @@ trait GroupCommon
     
     /** Returns the inheritance priority of the limited group */
     public function GetPriority() : int { return $this->GetGroup()->GetPriority(); }
-    
-    /** Track stats for component accounts by inheriting this property */
-    private static int $TRACK_ACCOUNTS = 1;
-    
-    /** Track stats for components accounts and also the group as a whole */
-    private static int $TRACK_WHOLE_GROUP = 2;
-    
-    protected function canTrackItems() : bool { return ($this->TryGetFeature('track_items') ?? 0) >= self::$TRACK_WHOLE_GROUP; }
-    protected function canTrackDLStats() : bool { return ($this->TryGetFeature('track_dlstats') ?? 0) >= self::$TRACK_WHOLE_GROUP; }
+
+    protected function canTrackItems() : bool { return ($this->TryGetFeature('track_items') ?? 0) >= self::TRACK_WHOLE_GROUP; }
+    protected function canTrackDLStats() : bool { return ($this->TryGetFeature('track_dlstats') ?? 0) >= self::TRACK_WHOLE_GROUP; }
 
     // the group's limits apply only to its component accounts
     protected function IsCounterOverLimit(string $name, int $delta = 0) : bool { return false; }
@@ -64,20 +69,29 @@ trait GroupCommon
         $this->CountShares($mul*$aclim->GetShares());
     }
     
-    public static function GetBaseUsage() : string { return "[--track_items ?(0|1|2)] [--track_dlstats ?(0|1|2)]"; }
+    public static function GetBaseUsage() : string { return "[--track_items ?(".implode('|',array_keys(self::TRACK_TYPES)).")] ".
+                                                            "[--track_dlstats ?(".implode('|',array_keys(self::TRACK_TYPES)).")]"; }
+    
+    protected static function GetTrackParam(Input $input, string $name) : ?int
+    {
+        $param = $input->GetNullParam($name,SafeParam::TYPE_ALPHANUM,
+            function($v){ return array_key_exists($v, self::TRACK_TYPES); });
+        
+        return ($param !== null) ? self::TRACK_TYPES[$param] : null;
+    }
     
     protected function SetBaseLimits(Input $input) : void
     {        
         if ($input->HasParam('track_items'))
         {
-            $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_INT));
+            $this->SetFeature('track_items', static::GetTrackParam($input,'track_items'));
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }
         
         if ($input->HasParam('track_dlstats'))
         {
-            $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_INT));
+            $this->SetFeature('track_dlstats', static::GetTrackParam($input,'track_dlstats'));
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -101,6 +115,21 @@ trait GroupCommon
             $aclim->ProcessGroupRemove($this);
         
         parent::Delete();
+    }
+    
+    /**
+     * @return array add: `features:{track_items:string,track_dlstats:string}`
+     * @see Total::GetClientObject()
+     * @see Timed::GetClientObject()
+     */
+    public function GetClientObject() : array
+    {
+        $retval = parent::GetClientObject();
+        
+        $retval['features']['track_items'] = array_flip(self::TRACK_TYPES)[$this->GetFeature('track_items')];
+        $retval['features']['track_dlstats'] = array_flip(self::TRACK_TYPES)[$this->GetFeature('track_dlstats')];
+        
+        return $retval;
     }
 }
 
