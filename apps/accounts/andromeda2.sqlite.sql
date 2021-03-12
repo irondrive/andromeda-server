@@ -184,6 +184,14 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`id`)
 );
+CREATE TABLE `a2_objects_apps_accounts_whitelist` (
+  `id` char(12) NOT NULL
+,  `dates__created` integer NOT NULL
+,  `type` integer NOT NULL
+,  `value` varchar(127) NOT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`type`,`value`)
+);
 CREATE INDEX "idx_a2_objects_apps_accounts_auth_manager_authsource*objectpoly*Apps\Accounts\Auth\Source" ON "a2_objects_apps_accounts_auth_manager" (`authsource`);
 CREATE INDEX "idx_a2_objects_apps_accounts_twofactor_account*object*Apps\Accounts\Account" ON "a2_objects_apps_accounts_twofactor" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_recoverykey_id" ON "a2_objects_apps_accounts_recoverykey" (`id`);

@@ -122,7 +122,7 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL,
-  `features__createaccount` tinyint(1) NOT NULL,
+  `features__createaccount` smallint(1) NOT NULL,
   `features__usernameiscontact` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(2) NOT NULL,
   `default_group` char(12) DEFAULT NULL,
@@ -248,6 +248,17 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `twofactor` char(12) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_accounts_whitelist` (
+  `id` char(12) NOT NULL,
+  `dates__created` bigint(20) NOT NULL,
+  `type` smallint(6) NOT NULL,
+  `value` varchar(127) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `type` (`type`,`value`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
