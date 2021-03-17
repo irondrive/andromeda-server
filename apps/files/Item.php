@@ -447,7 +447,7 @@ abstract class Item extends StandardObject
      * @param Account $account the account that owns the items
      * @return array<string, Item> items indexed by ID
      */
-    public abstract static function LoadForeignByOwner(ObjectDatabase $database, Account $account) : array;
+    public abstract static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array;
 
     /**
      * Returns a printable client object of this item

@@ -87,10 +87,13 @@ class Config extends SingletonObject
         $this->SetObject('default_group', $group); $group->Initialize(); return $this;
     }
     
-    /** Returns the ID of the auth manager clients should use by default */
+    /** Returns the auth manager that will be used by default */
+    public function GetDefaultAuth() : ?Auth\Manager { return $this->TryGetObject('default_auth'); }
+    
+    /** Returns the ID of the auth manager that will be used by default */
     public function GetDefaultAuthID() : ?string { return $this->TryGetObjectID('default_auth'); }
 
-    /** Sets the preferred default auth manager to the given value */
+    /** Sets the default auth manager to the given value */
     public function SetDefaultAuth(?Auth\Manager $manager) : self { return $this->SetObject('default_auth',$manager); }
     
     public const CREATE_WHITELIST = 1; public const CREATE_PUBLIC = 2;

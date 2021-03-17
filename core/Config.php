@@ -164,8 +164,10 @@ class Config extends SingletonObject
             )
         );
         
-        $data['apps'] = array_map(function($app){ return $app::getVersion(); }, 
-            Main::GetInstance()->GetApps());
+        $data['apps'] = array_map(function($app)use($admin){ 
+            return $admin ? $app::getVersion() : 
+                implode('.',array_slice(explode('.',$app::getVersion()),0,2));
+        }, Main::GetInstance()->GetApps());
                 
         if ($admin)
         {

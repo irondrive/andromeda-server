@@ -19,7 +19,7 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
     public $message = "general usage: php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf text] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
                       " - param@ puts the content of the file in the parameter, param% uploads the file as a file, optionally with a new name\n\n".
-                      "batch usage:   php index.php [--tryeach] batch myfile.txt\n".
+                      "batch usage:   php index.php batch myfile.txt\n".
                       "get version:   php index.php version\n".
                       "get actions:   php index.php server usage"; }
 
@@ -89,8 +89,6 @@ class CLI extends IOInterface
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
-                    
-                case '--tryeach': $this->atomicbatch = false; break;
 
                 default: throw new IncorrectCLIUsageException();
             }
@@ -136,8 +134,7 @@ class CLI extends IOInterface
             switch($argv[$i])
             {
                 case '--json': break;
-                case '--printr': break;    
-                case '--tryeach': break;
+                case '--printr': break;
                 case '--debug': $i++; break;
                 case '--dbconf': $i++; break;
                     

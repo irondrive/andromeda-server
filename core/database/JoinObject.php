@@ -24,9 +24,7 @@ abstract class JoinObject extends StandardObject
         
         $newobj = parent::BaseCreate($database)->SetDate('created')
             ->SetObject($joinfield->GetMyField(), $destobj)
-            ->SetObject($joinfield->GetRefField(), $thisobj, true);
-        
-        $newobj->created = true; $newobj->Save();
+            ->SetObject($joinfield->GetRefField(), $thisobj, true)->Save();
     }
     
     /**

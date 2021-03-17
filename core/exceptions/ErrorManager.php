@@ -23,7 +23,7 @@ class ErrorManager extends Singleton
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
     /** Returns true if the configured debug state is >= the requested level */
-    public function GetDebugState(int $minlevel) : bool
+    private function GetDebugState(int $minlevel) : bool
     {
         if ($this->API !== null) 
             return $this->API->GetDebugLevel() >= $minlevel;
@@ -31,7 +31,7 @@ class ErrorManager extends Singleton
     }
     
     /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
-    public function HandleClientException(ClientException $e) : Output
+    private function HandleClientException(ClientException $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(false);
             
@@ -42,7 +42,7 @@ class ErrorManager extends Singleton
     }
     
     /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
-    public function HandleThrowable(\Throwable $e) : Output
+    private function HandleThrowable(\Throwable $e) : Output
     {
         if ($this->API !== null) $this->API->rollBack(true);
 

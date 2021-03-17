@@ -51,9 +51,7 @@ class AJAX extends IOInterface
     public function GetInputs(?Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
-        {
-            if ($_GET['tryeach'] ?? false) $this->atomicbatch = false;
-            
+        {            
             $global_get = $_GET; unset($global_get['batch']);
             $global_files = $_FILES; unset($global_files['batch']);
             $global_request = $_REQUEST; unset($global_request['batch']);

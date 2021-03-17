@@ -37,7 +37,7 @@ class Scalar
     protected int $delta = 0; 
     
     /** If true, this field should always be saved even in a rollback */
-    protected bool $alwaysSave = false;
+    protected bool $mandatorySave = false;
     
     /** Reference to the database */
     protected ObjectDatabase $database;
@@ -54,11 +54,11 @@ class Scalar
     /**
      * Declares a new scalar fieldtype (use this in object templates)
      * @param mixed $defvalue the default value of the field type
-     * @see Scalar::$alwaysSave
+     * @see Scalar::$mandatorySave
      */
-    public function __construct($defvalue = null, bool $alwaysSave = false)
+    public function __construct($defvalue = null, bool $mandatorySave = false)
     {
-        $this->alwaysSave = $alwaysSave;
+        $this->mandatorySave = $mandatorySave;
         $this->tempvalue = $defvalue;
         $this->realvalue = $defvalue;
         $this->delta = ($defvalue !== null);
@@ -88,8 +88,8 @@ class Scalar
     /** @see Scalar::$myfield */
     public function GetMyField() : string { return $this->myfield; }
     
-    /** @see Scalar::$alwaysSave */
-    public function GetAlwaysSave() : bool { return $this->alwaysSave; }
+    /** @see Scalar::$mandatorySave */
+    public function isMandatorySave() : bool { return $this->mandatorySave; }
     
     /** @see Scalar::$parent */
     public function GetParent() : BaseObject { return $this->parent; }
@@ -154,11 +154,11 @@ class Counter extends Scalar
     
     /**
      * Constructs a new counter with a default value of zero
-     * @see Scalar::$alwaysSave
+     * @see Scalar::$mandatorySave
      */
-    public function __construct(bool $alwaysSave = false)
+    public function __construct(bool $mandatorySave = false)
     {
-        parent::__construct(0, $alwaysSave);
+        parent::__construct(0, $mandatorySave);
         $this->ResetDelta(); // using default values sets the delta
     }
     

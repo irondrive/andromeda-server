@@ -137,7 +137,7 @@ class AccountsApp extends AppBase
             'changepassword --new_password raw ((--username text --auth_password raw) | --recoverykey text)',
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
-            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
+            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource ?id] [--old_password raw] [--new_password raw]',
                 "\t [--recoverykey text | --auth_twofactor int] [--name name]",
                 "\t --auth_clientid id --auth_clientkey alphanum",
             'createrecoverykeys --auth_password raw --auth_twofactor int',
@@ -528,16 +528,20 @@ class AccountsApp extends AppBase
     protected function CreateSession(Input $input) : array
     {
         if ($this->authenticator !== null) throw new AlreadySignedInException();
-        
+
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
-        if (($authsource = $input->GetOptParam("authsource", SafeParam::TYPE_RANDSTR)) !== null) 
+        if ($input->HasParam('authsource'))
         {
-            $authsource = Auth\Manager::TryLoadByID($this->database, $authsource);
-            if ($authsource === null) throw new UnknownAuthSourceException();
-            else $authsource = $authsource->GetAuthSource();
+            if (($authsource = $input->GetNullParam('authsource',SafeParam::TYPE_RANSTR)) !== null)
+            {
+                $authsource = Auth\Manager::TryLoadByID($this->database, $authsource);
+                if ($authsource === null) throw new UnknownAuthSourceException();
+            }
         }
-        else $authsource = Auth\Local::GetInstance();
+        else $authsource = $this->config->GetDefaultAuth();
         
+        $authsource ??= Auth\Local::GetInstance();
+
         if ($input->HasParam('username'))
         {
             $username = $input->GetParam("username", SafeParam::TYPE_TEXT);

@@ -18,51 +18,30 @@ class DuplicateUniqueKeyException extends DatabaseException { public $message = 
  */
 class ObjectDatabase extends Database
 {
-    /** @var array<string, BaseObject>array of loaded objects, indexed by their IDs */
+    /** @var array<class, <id, BaseObject>> array of loaded objects */
     private array $objects = array();
-    
-    /** @var array<string, BaseObject>array of modified objects, indexed by their IDs */
-    private array $modified = array();
-    
-    /** @var array<string, BaseObject> array of deleted objects, indexed by their IDs */
-    private array $deleted = array();
- 
-    /**
-     * Informs the database that an object has been modified
-     * @param BaseObject $obj object to mark as dirty
-     */
-    public function setModified(BaseObject $obj) : void
-    {
-        $this->modified[$obj->ID()] = $obj;
-    }
-    
+
     /** returns an array mapping each loaded object ID to its class string, for debugging */
     public function getLoadedObjects() : array
     { 
-        return array_map(function($e){ return get_class($e); }, $this->objects);
+        return array_map(function(array $cobjs){ 
+            return array_map(function(BaseObject $obj){
+                return get_class($obj); },$cobjs);
+        }, $this->objects);
     }
     
     /**
-     * Loops through every modified object and saves them to the DB
+     * Loops through every objects and saves them to the DB
      * @return $this
      */
-    public function saveObjects(bool $isRollback = false) : self
+    public function saveObjects(bool $onlyMandatory = false) : self
     {
-        foreach ($this->modified as $object) $object->Save($isRollback);
+        foreach ($this->objects as $objs) foreach ($objs as $obj) 
+            $obj->Save($onlyMandatory);
         
         return $this;
     }
-
-    public function rollback() : void
-    {
-        parent::rollBack();
-        
-        // add deletions back to the cache so they can be deleted again
-        $this->objects = array_merge($this->objects, $this->deleted);
-        
-        $this->deleted = array();
-    }
-
+    
     /** Return the database table name for a class */
     public function GetClassTableName(string $class) : string
     {
@@ -86,16 +65,20 @@ class ObjectDatabase extends Database
         {
             $id = $row['id'];
             
+            $dbclass = $class::GetDBClass(); 
+            $this->objects[$dbclass] ??= array();
+            
             // if this object is already loaded, don't replace it
-            if (in_array($id, array_keys($this->objects), true))
-                $output[$id] = $this->objects[$id];                
+            if (array_key_exists($id, $this->objects[$dbclass]))
+                $output[$id] = $this->objects[$dbclass][$id];
             else 
             {
                 $class = $class::GetObjClass($row);
                 $object = new $class($this, $row);
                 
                 $output[$id] = $object; 
-                $this->objects[$id] = $object; 
+                
+                $this->objects[$dbclass][$id] = $object; 
             }
         }
         
@@ -111,13 +94,16 @@ class ObjectDatabase extends Database
      */
     private function TryPreloadObjectByID(string $class, string $id) : ?BaseObject
     {
-        if (array_key_exists($id, $this->objects))
+        $dbclass = $class::GetDBClass(); 
+        $this->objects[$dbclass] ??= array();
+        
+        if (array_key_exists($id, $this->objects[$dbclass]))
         {
-            if (!is_a($this->objects[$id],$class))
+            if (!is_a($this->objects[$dbclass][$id],$class))
             {
-                throw new ObjectTypeException("Expected $class, got a ".get_class($this->objects[$id]));
+                throw new ObjectTypeException("$id not $class");
             }
-            else return $this->objects[$id];
+            else return $this->objects[$dbclass][$id];
         } 
         else return null;
     }
@@ -165,13 +151,6 @@ class ObjectDatabase extends Database
         return array_filter($objects, function($obj){ return !$obj->isDeleted(); });
     }
     
-    /** internally mark an object as deleted, remove it from the cache */
-    private function AddDeletedObject(BaseObject $object) : void
-    {
-        unset($this->modified[$object->ID()]);
-        $this->deleted[$object->ID()] = $object;
-    }
-    
     /**
      * Delete objects matching the given query
      * 
@@ -197,7 +176,7 @@ class ObjectDatabase extends Database
         
         foreach ($this->Rows2Objects($result, $class) as $obj) 
         {
-            $this->AddDeletedObject($obj); $obj->Delete(); // notify object of deletion
+            $obj->setDeleted()->Delete(); // notify object of deletion
         }
         
         return $this;
@@ -211,11 +190,7 @@ class ObjectDatabase extends Database
      * @return $this
      */
     public function DeleteObject(BaseObject $object) : self
-    {
-        if (array_key_exists($object->ID(), $this->deleted)) return $this;
-        
-        $this->AddDeletedObject($object); 
-        
+    {        
         $q = new QueryBuilder(); $q->Where($q->Equals('id',$object->ID()));  
         
         $table = $this->GetClassTableName(get_class($object));        
@@ -233,9 +208,7 @@ class ObjectDatabase extends Database
      * @return $this
      */
     public function SaveObject(BaseObject $object, array $values, array $counters) : self
-    {
-        unset($this->modified[$object->ID()]);
-    
+    {    
         if ($object->isCreated()) return $this->SaveNewObject($object, array_merge($values, $counters));
         
         $criteria = array(); $data = array('id'=>$object->ID()); $i = 0;
