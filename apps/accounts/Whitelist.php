@@ -19,12 +19,25 @@ class Whitelist extends StandardObject
         ));
     }
     
-    /** Creates a new Config singleton */
+    /**
+     * Creates a new whitelist entry
+     * @param ObjectDatabase $database database reference
+     * @param int $type entry type enum
+     * @param string $value value of whitelist entry
+     * @return self new whitelist entry
+     */
     public static function Create(ObjectDatabase $database, int $type, string $value) : self
     {
         return parent::BaseCreate($database)->SetScalar('type',$type)->SetScalar('value',$value);
     }
     
+    /**
+     * Checks whether a whitelist entry exists
+     * @param ObjectDatabase $database database reference
+     * @param int $type type enum of whitelist entry
+     * @param string $value value of whitelist entry
+     * @return bool true if it exists (is whitelisted)
+     */
     public static function ExistsTypeAndValue(ObjectDatabase $database, int $type, string $value) : bool
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('type',$type),$q->Equals('value',$value));
@@ -32,6 +45,12 @@ class Whitelist extends StandardObject
         return (static::TryLoadUniqueByQuery($database, $q->Where($w)) !== null);
     }
     
+    /**
+     * Removes a whitelist entry, if it exists 
+     * @param ObjectDatabase $database database reference
+     * @param int $type type enum of whitelist entry
+     * @param string $value value of whitelist entry
+     */
     public static function DeleteByTypeAndValue(ObjectDatabase $database, int $type, string $value) : void
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('type',$type),$q->Equals('value',$value));
@@ -39,6 +58,10 @@ class Whitelist extends StandardObject
         static::DeleteByQuery($database, $q->Where($w));
     }
     
+    /**
+     * Returns a printable client object for this entry
+     * @return array `{type:string, value:string}`
+     */
     public function GetClientObject() : array
     {
         return array(

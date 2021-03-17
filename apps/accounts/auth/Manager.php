@@ -134,8 +134,8 @@ class Manager extends BaseObject
      * 
      * See the GetClientObject() for each specific auth source type.
      * @param bool $admin if true, show admin-level details
-     * @return array {id:string, description:string} \
-        if $admin, add {type:string, authsource:(Authsource), default_group:?id}
+     * @return array `{id:string, description:string}` \
+        if $admin, add `{type:string, authsource:(Authsource), default_group:?id}`
      */
     public function GetClientObject(bool $admin) : array
     {

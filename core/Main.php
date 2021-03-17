@@ -32,6 +32,9 @@ class FailedAppLoadException extends Exceptions\ServerException  { public $messa
 /** Exception indicating that the configured data directory is invalid */
 class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
+/** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
+class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
+
 class Context { public Input $input; public function __construct(Input $input){ $this->input = $input; }}
 
 /**
@@ -152,45 +155,7 @@ class Main extends Singleton
         
         return $this;
     }
-    
-    /**
-     * Calls Run() for each of the given inputs
-     * 
-     * Depending on the setting in the interface, it will either
-     * atomically do all calls at once, or do a Try/commit on each
-     * @param array<Input> $inputs array of inputs
-     * @return array if atomic, array of Run() returns, else array of Output objects
-     */
-    public function RunMany(array $inputs) : array
-    {
-        $atomic = $this->GetInterface()->AtomicBatch();
-        
-        $data = array_map(function(Input $input)use($atomic)
-        {
-            if ($atomic)
-            {
-                return $this->Run($input);
-            }
-            else
-            {
-                try 
-                { 
-                    $result = Output::Success($this->Run($input)); $this->commit();
-                }
-                catch (Exceptions\ClientException $e) 
-                {
-                    $result = $this->error_manager->HandleClientException($e); 
-                }                    
-                    
-                return $result->GetAsArray();
-            }
-        }, $inputs);
-        
-        if ($atomic) $this->commit();
-        
-        return $data;
-    }
-    
+
     /**
      * Calls into an app to run the given Input command
      * 
@@ -277,11 +242,13 @@ class Main extends Singleton
     /**
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
-     * First rolls back each app, then the database, then saves alwaysSave objects if not a server error
+     * First rolls back each app, then the database, then saves mandatorySave objects if not a server error
      * @param bool $serverError true if this rollback is due to a server error
      */
     public function rollBack(bool $serverError) : void
     {
+        $this->rollback = true;
+        
         foreach ($this->apps as $app) try { $app->rollback(); }
         catch (\Throwable $e) { $this->error_manager->Log($e); }
         
@@ -309,6 +276,8 @@ class Main extends Singleton
      */
     public function commit() : void
     {
+        if (isset($this->rollback)) throw new CommitAfterRollbackException();
+        
         $tl = ini_get('max_execution_time'); set_time_limit(0);
         $ua = ignore_user_abort(); ignore_user_abort(true);
         

@@ -54,10 +54,6 @@ abstract class IOInterface extends Singleton
     /** Gets the default output mode for the interface */
     abstract public static function GetDefaultOutmode() : int;
     
-    protected bool $atomicbatch = true;
-    
-    public function AtomicBatch() : bool { return $this->atomicbatch; }
-    
     protected ?int $outmode;
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }

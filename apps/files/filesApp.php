@@ -150,7 +150,7 @@ class FilesApp extends AppBase
             'deleteshare --share id',
             'shareinfo --sid id [--skey alphanum] [--spassword raw]',
             'listshares [--mine bool]',
-            'listforeign',
+            'listadopted',
             'getfilesystem [--filesystem id]',
             'getfilesystems [--everyone bool [--limit int] [--offset int]]',
             'createfilesystem '.FSManager::GetCreateUsage(),
@@ -265,7 +265,7 @@ class FilesApp extends AppBase
             case 'deleteshare':  return $this->DeleteShare($input);
             case 'shareinfo':    return $this->ShareInfo($input);
             case 'listshares':   return $this->ListShares($input);
-            case 'listforeign':  return $this->ListForeign($input);
+            case 'listadopted':  return $this->ListAdopted($input);
             
             case 'getfilesystem':  return $this->GetFilesystem($input);
             case 'getfilesystems': return $this->GetFilesystems($input);
@@ -426,7 +426,7 @@ class FilesApp extends AppBase
         
         $file = $input->GetFile('file');
         
-        $parent->CountBandWidth(filesize($file->GetPath()));
+        $parent->CountBandwidth(filesize($file->GetPath()));
         
         return File::Import($this->database, $parent, $owner, $file, $overwrite)->GetClientObject();
     }
@@ -582,7 +582,7 @@ class FilesApp extends AppBase
             return $file->SetContents($filepath)->GetClientObject();
         }
         else
-        {            
+        {
             $fschunksize = $file->GetChunkSize();
             $chunksize = $this->config->GetRWChunkSize();
             
@@ -1542,13 +1542,13 @@ class FilesApp extends AppBase
      * @see File::GetClientObject()
      * @see Folder::GetClientObject()
      */
-    protected function ListForeign(Input $input) : array
+    protected function ListAdopted(Input $input) : array
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $files = File::LoadForeignByOwner($this->database, $account);
-        $folders = Folder::LoadForeignByOwner($this->database, $account);
+        $files = File::LoadAdoptedByOwner($this->database, $account);
+        $folders = Folder::LoadAdoptedByOwner($this->database, $account);
         
         $files = array_map(function(File $file){ return $file->GetClientObject(); }, $files);
         $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(); }, $folders);

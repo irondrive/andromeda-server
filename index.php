@@ -24,6 +24,7 @@ else mb_internal_encoding("UTF-8");
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 
 /** 
@@ -38,9 +39,12 @@ $main = new Main($interface);
 
 $inputs = $interface->GetInputs($main->GetConfig());
 
-$retvals = $main->RunMany($inputs);
+$retvals = array_map(function(Input $input)use($main){
+    return $main->Run($input); }, $inputs);
 
 $output = Output::Success($retvals);
+
+$main->commit();
 
 if ($interface->UserOutput($output)) $main->commit();
 

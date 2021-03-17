@@ -44,14 +44,14 @@ abstract class BaseObject
     public abstract static function GetFieldTemplate() : array;
     
     /**
-     * Returns the name of the class that should be used in the database for the table name
+     * Returns the name of the class that should be used in the database for the table name (cast down at save)
      * 
      * Defaults to the actual class used.  Can be overriden e.g. if multiple classes need to use the same table.
      */
     public static function GetDBClass() : string { return static::class; }
     
     /**
-     * Returns the name of the class that should be used for a given DB row
+     * Returns the name of the class that should be used for a given DB row (cast up at load)
      * 
      * Defaults to the actual class used. Allows polymorphism on DB rows based on properties
      */
@@ -488,8 +488,8 @@ abstract class BaseObject
             else throw new KeyNotFoundException($field);
         }
         
-        if ($this->scalars[$field]->SetValue($value, $temp))
-            $this->database->setModified($this);
+        $this->modified |= $this->scalars[$field]->SetValue($value, $temp);
+        
         return $this;
     } 
 
@@ -510,8 +510,7 @@ abstract class BaseObject
         if ($this->scalars[$field]->GetOperatorType() !== FieldTypes\OPERATOR_INCREMENT)
             throw new NotCounterException($field);
         
-        if ($this->scalars[$field]->Delta($delta))
-            $this->database->setModified($this);
+        $this->modified |= $this->scalars[$field]->Delta($delta);
         
         return $this;
     }
@@ -560,8 +559,7 @@ abstract class BaseObject
             }
         }
 
-        if ($this->objects[$field]->SetObject($object))
-            $this->database->setModified($this);            
+        $this->modified |= $this->objects[$field]->SetObject($object); 
 
         return $this;
     } 
@@ -591,8 +589,7 @@ abstract class BaseObject
         
         $fieldobj = $this->objectrefs[$field];        
         
-        if ($fieldobj->AddObject($object, $notification))
-            $this->database->setModified($this);
+        $this->modified |= $fieldobj->AddObject($object, $notification);
         
         if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE) 
             $object->SetObject($fieldobj->GetRefField(), $this, true);
@@ -614,8 +611,7 @@ abstract class BaseObject
         
         $fieldobj = $this->objectrefs[$field];        
         
-        if ($this->objectrefs[$field]->RemoveObject($object, $notification))
-            $this->database->setModified($this);            
+        $this->modified |= $this->objectrefs[$field]->RemoveObject($object, $notification);
 
         if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE)
             $object->UnsetObject($fieldobj->GetRefField(), true);
@@ -667,25 +663,24 @@ abstract class BaseObject
 
     /** 
      * Collects fields that have changed and saves them to the database
-     * @param bool $isRollback true if this is a rollback and only specific fields should be saved
+     * @param bool $onlyMandatory true if only required fields should be saved
      * @return $this
      */
-    public function Save(bool $isRollback = false) : self
+    public function Save(bool $onlyMandatory = false) : self
     {
-        if ($this->deleted || ($isRollback && $this->created)) return $this;
+        if (!$this->modified || $this->deleted || ($onlyMandatory && $this->created)) return $this;
         
         $values = array(); $counters = array();
 
-        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key => $value)
+        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key=>$field)
         {
-            if (!$value->GetDelta()) continue;
-            if ($isRollback && !$value->GetAlwaysSave()) continue;
+            if (!$field->GetDelta() || ($onlyMandatory && !$field->isMandatorySave())) continue;
 
-            if ($value->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
-                $counters[$key] = $value->GetDBValue();
-            else $values[$key] = $value->GetDBValue();
+            if ($field->GetOperatorType() === FieldTypes\OPERATOR_INCREMENT)
+                $counters[$key] = $field->GetDBValue();
+            else $values[$key] = $field->GetDBValue();
             
-            $value->ResetDelta();
+            $field->ResetDelta();
         }
         
         $this->database->SaveObject($this, $values, $counters);
@@ -693,16 +688,25 @@ abstract class BaseObject
         $this->created = false; return $this;
     } 
     
+    /** whether or not this object has been modified */
+    protected bool $modified = false;
+    
+    /** whether or not this object has been modified */
+    public function isModified() : bool { return $this->modified; }
+    
     /** whether or not this object has been deleted */
     protected bool $deleted = false; 
     
-    /** whether or not this object has been, or should be considered, deleted
+    /** 
+     * whether or not this object has been, or should be considered, deleted
      * 
      * This function can be overriden with a custom validity-check, and is used as a filter when loading objects 
      */
     public function isDeleted() : bool { return $this->deleted; }
     
-    /** Unsets all object references and deletes this object from the DB */
+    public function setDeleted() : self { $this->deleted = true; return $this; }
+    
+    /** Deletes this object from the DB */
     public function Delete() : void
     {
         foreach ($this->objects as $field)
@@ -710,19 +714,19 @@ abstract class BaseObject
             $myfield = $field->GetMyField();
             if ($field->GetValue()) $this->UnsetObject($myfield);
         }
-
+        
         foreach ($this->objectrefs as $refs)
         {
             if (!$refs->GetValue()) continue;
             $objects = $refs->GetObjects(); $myfield = $refs->GetMyField();
             foreach ($objects as $object) $this->RemoveObjectRef($myfield, $object);
         }
-
-        $this->deleted = true; 
         
-        $this->database->DeleteObject($this);
+        if (!$this->deleted) $this->database->DeleteObject($this); 
+        
+        $this->deleted = true;
     }
-    
+
     /** True if this object has been created and not yet saved to DB */
     protected bool $created = false; 
     
@@ -734,8 +738,9 @@ abstract class BaseObject
     {
         $obj = $database->CreateObject(static::class); 
         
-        $database->setModified($obj);
+        $obj->modified = true;        
+        $obj->created = true;
         
-        $obj->created = true; return $obj;
+        return $obj;
     }
 }

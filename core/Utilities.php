@@ -83,7 +83,7 @@ abstract class Utilities
      */
     public static function JSONEncode($data) : string
     {
-        if (!($data = json_encode($data, JSON_NUMERIC_CHECK))) {
+        if (!($data = json_encode($data))) {
             throw new JSONEncodingException(); };
         return $data;
     }

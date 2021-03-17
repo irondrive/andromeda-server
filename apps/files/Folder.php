@@ -211,7 +211,7 @@ abstract class Folder extends Item
      * @param Account $account the account that owns the items
      * @return array<string, Item> items indexed by ID
      */
-    public static function LoadForeignByOwner(ObjectDatabase $database, Account $account) : array
+    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
     {
         $q = new QueryBuilder();
         
