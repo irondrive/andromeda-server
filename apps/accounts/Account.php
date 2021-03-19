@@ -581,6 +581,8 @@ class Account extends AuthEntity
         if ($this->hasCrypto())
         {
            $this->InitializeCrypto($new_password, true);
+           
+           foreach ($this->GetTwoFactors() as $tf) $tf->InitializeCrypto();
         }
         
         if ($this->GetAuthSource() instanceof Auth\Local)
@@ -711,7 +713,7 @@ class Account extends AuthEntity
      * or some other key source material transmitted in each request.  The crypto is of course
      * done server-side, but the raw keys are only ever available in memory, not in the database.
      * @param string $password the password to derive keys from
-     * @param bool $rekey true if crypto exists and we just want to re-key
+     * @param bool $rekey true if crypto exists and we want to keep the same master key
      * @throws CryptoUnlockRequiredException if crypto is not unlocked
      * @throws CryptoAlreadyInitializedException if crypto already exists and not re-keying
      */
@@ -739,6 +741,8 @@ class Account extends AuthEntity
         
         $this->cryptoAvailable = true; 
         
+        foreach ($this->GetTwoFactors() as $twofactor) $twofactor->InitializeCrypto();
+        
         foreach (static::$crypto_handlers as $func) $func($this->database, $this, true);
         
         return $this;
@@ -750,6 +754,7 @@ class Account extends AuthEntity
         foreach (static::$crypto_handlers as $func) $func($this->database, $this, false);
 
         foreach ($this->GetSessions() as $session) $session->DestroyCrypto();
+        foreach ($this->GetTwoFactors() as $twofactor) $twofactor->DestroyCrypto();
         foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
         
         $this->SetScalar('master_key', null);

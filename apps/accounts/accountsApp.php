@@ -61,6 +61,9 @@ class AlreadySignedInException extends Exceptions\ClientDeniedException { public
 /** Exception indicating that account/group search is not allowed */
 class SearchDeniedException extends Exceptions\ClientDeniedException { public $message = "SEARCH_NOT_ALLOWED"; }
 
+/** Exception indicating that server-side crypto is not allowed */
+class CryptoNotAllowedException extends Exceptions\ClientDeniedException { public $message = "CRYPTO_NOT_ALLOWED"; }
+
 /** Exception indicating that this group membership already exists */
 class DuplicateGroupMembershipException extends Exceptions\ClientErrorException { public $message = "GROUP_MEMBERSHIP_EXISTS"; }
 
@@ -134,13 +137,15 @@ class AccountsApp extends AppBase
             'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
+            'enablecrypto --auth_password raw [--auth_twofactor int]',
+            'disablecrypto --auth_password raw',
             'changepassword --new_password raw ((--username text --auth_password raw) | --recoverykey text)',
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
             'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource ?id] [--old_password raw] [--new_password raw]',
                 "\t [--recoverykey text | --auth_twofactor int] [--name name]",
                 "\t --auth_clientid id --auth_clientkey alphanum",
-            'createrecoverykeys --auth_password raw --auth_twofactor int',
+            'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
             'createtwofactor --auth_password raw [--comment text]',
             'verifytwofactor --auth_twofactor int',
             'createcontact '.Contact::GetFetchUsage(),
@@ -225,6 +230,8 @@ class AccountsApp extends AppBase
             
             case 'createaccount':       return $this->CreateAccount($input);           
             case 'createsession':       return $this->CreateSession($input);
+            case 'enablecrypto':        return $this->EnableCrypto($input);
+            case 'disablecrypto':       return $this->DisableCrypto($input);
             
             case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input);
             case 'createtwofactor':     return $this->CreateTwoFactor($input);
@@ -434,7 +441,8 @@ class AccountsApp extends AppBase
         
         if ($account === null) throw new UnknownAccountException();
         
-        if ($account->hasCrypto() || $account->HasValidTwoFactor()) throw new RecoveryKeyCreateException();
+        if ($account->hasCrypto() || $account->HasValidTwoFactor()) 
+            throw new RecoveryKeyCreateException();
 
         $key = RecoveryKey::Create($this->database, $account)->GetFullKey();   
         
@@ -444,6 +452,58 @@ class AccountsApp extends AppBase
         // TODO CLIENT - HTML - configure a directory where client templates reside
         
         $account->SendMessage($subject, null, $body);
+    }
+    
+    /**
+     * Enables server-side crypto for an account and returns new recovery keys
+     * 
+     * Deletes any existing recovery keys, requiring two factor if they exist
+     * @throws AuthenticationFailedException if not signed in
+     * @return array [id:RecoveryKey] if crypto was not enabled
+     * @see RecoveryKey::GetClientObject()
+     */
+    protected function EnableCrypto(Input $input) : ?array
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        if ($account->hasCrypto()) return null;
+        
+        if (!$account->GetAllowCrypto()) throw new CryptoNotAllowedException();
+        
+        $this->authenticator->RequirePassword();
+
+        if ($account->HasRecoveryKeys())
+        {
+            $this->authenticator->TryRequireTwoFactor();
+            
+            RecoveryKey::DeleteByAccount($this->database, $account);
+        }
+        
+        $account->InitializeCrypto($input->GetParam('auth_password',SafeParam::TYPE_RAW));
+        
+        $session = $this->authenticator->GetSession(); $session->InitializeCrypto();
+        
+        Session::DeleteByAccountExcept($this->database, $account, $session);
+        
+        return array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); },
+            RecoveryKey::CreateSet($this->database, $account));
+    }
+    
+    /**
+     * Disables server side crypto for an account
+     * @throws AuthenticationFailedException if not signed in
+     */
+    protected function DisableCrypto(Input $input) : void
+    {
+        if ($this->authenticator === null) throw new AuthenticationFailedException();
+        $account = $this->authenticator->GetAccount();
+        
+        if (!$account->hasCrypto()) return;
+
+        $this->authenticator->RequirePassword()->RequireCrypto();
+        
+        $account->DestroyCrypto();
     }
     
     /**
@@ -640,7 +700,7 @@ class AccountsApp extends AppBase
     }
     
     /**
-     * Creates a set of recovery keys
+     * Creates a set of recovery keys, optionally replacing existing
      * @throws AuthenticationFailedException if not logged in
      * @return array `[id:RecoveryKey]`
      * @see RecoveryKey::GetClientObject()
@@ -650,7 +710,10 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $account = $this->authenticator->GetAccount();
         
-        $this->authenticator->TryRequireTwoFactor()->RequirePassword()->TryRequireCrypto();        
+        $this->authenticator->RequirePassword()->TryRequireTwoFactor()->TryRequireCrypto();        
+        
+        if ($input->GetOptParam('replace',SafeParam::TYPE_BOOL))
+            RecoveryKey::DeleteByAccount($this->database, $account);
         
         $keys = RecoveryKey::CreateSet($this->database, $account);
         
@@ -664,7 +727,8 @@ class AccountsApp extends AppBase
      * Also activates crypto for the account, if allowed and not active.
      * Doing so will delete all other sessions for the account.
      * @throws AuthenticationFailedException if not signed in
-     * @return array `{twofactor:TwoFactor,recoverykeys:[id:RecoveryKey]}`
+     * @return array `{twofactor:TwoFactor,recoverykeys:[id:RecoveryKey]}` \
+     *  - recovery keys are returned only if they don't already exist
      * @see TwoFactor::GetClientObject()
      * @see RecoveryKey::GetClientObject()
      */
@@ -675,25 +739,21 @@ class AccountsApp extends AppBase
         
         $this->authenticator->RequirePassword()->TryRequireCrypto();
         
-        if ($account->GetAllowCrypto() && !$account->hasCrypto())
-        {
-            $password = $input->GetParam('auth_password',SafeParam::TYPE_RAW);
-            
-            $account->InitializeCrypto($password);
-            $this->authenticator->GetSession()->InitializeCrypto();
-            Session::DeleteByAccountExcept($this->database, $account, $this->authenticator->GetSession());
-        }
-        
         $comment = $input->GetOptParam('comment', SafeParam::TYPE_TEXT);
         
         $twofactor = TwoFactor::Create($this->database, $account, $comment);
-        $recoverykeys = RecoveryKey::CreateSet($this->database, $account);
+
+        $retval = array('twofactor'=>$twofactor->GetClientObject(true));
         
-        $tfobj = $twofactor->GetClientObject(true);
+        if (!$account->HasRecoveryKeys())
+        {
+            $keys = RecoveryKey::CreateSet($this->database, $account);
+            
+            $retval['recoverykeys'] = array_map(function(RecoveryKey $key){ 
+                return $key->GetClientObject(true); }, $keys);
+        }
         
-        $keyobjs = array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); }, $recoverykeys);
-        
-        return array('twofactor'=>$tfobj, 'recoverykeys'=>$keyobjs );
+        return $retval;
     }
     
     /**
@@ -851,12 +911,6 @@ class AccountsApp extends AppBase
         if ($twofactor === null) throw new UnknownTwoFactorException();
 
         $twofactor->Delete();
-        
-        if (!$account->HasTwoFactor() && $account->hasCrypto()) 
-        {
-            $this->authenticator->RequireCrypto();
-            $account->DestroyCrypto();
-        }
     }    
     
     /**

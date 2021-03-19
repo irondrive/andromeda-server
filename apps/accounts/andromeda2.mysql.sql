@@ -228,7 +228,7 @@ CREATE TABLE `a2_objects_apps_accounts_session` (
 CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `id` char(12) NOT NULL,
   `comment` text DEFAULT NULL,
-  `secret` binary(48) NOT NULL,
+  `secret` varbinary(48) NOT NULL,
   `nonce` binary(24) DEFAULT NULL,
   `valid` tinyint(1) NOT NULL DEFAULT 0,
   `dates__created` double NOT NULL,

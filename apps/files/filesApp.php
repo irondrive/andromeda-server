@@ -193,7 +193,7 @@ class FilesApp extends AppBase
         $this->database = $api->GetDatabase();
         
         try { $this->config = Config::GetInstance($this->database); }
-        catch (DatabaseException $e) { }     
+        catch (DatabaseException $e) { }
     }
     
     /**
@@ -556,28 +556,32 @@ class FilesApp extends AppBase
         $file = $access->GetItem(); $share = $access->GetShare();
         
         $account = $this->authenticator ? $this->authenticator->GetAccount() : null;
-        
-        if (!$account && !$file->GetAllowPublicModify())
-            throw new AuthenticationFailedException();
-            
-        if (!$file->GetAllowRandomWrite($account))
-            throw new RandomWriteDisabledException();
-        
-        if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();        
 
         $filepath = $input->GetFile('data')->GetPath();
         
         $wstart = $input->GetNullParam('offset',SafeParam::TYPE_INT) ?? 0;
-        $length = filesize($filepath); $wlast = $wstart + $length - 1;
+        $wlength = filesize($filepath); $wlast = $wstart + $wlength - 1;
+        
+        $file->CountBandwidth($wlength);        
+        
+        if (!$account && !$file->GetAllowPublicModify())
+            throw new AuthenticationFailedException();
+            
+        if ($share !== null && !$share->CanModify()) 
+            throw new ItemAccessDeniedException();        
 
         if ($wstart < 0 || $wlast+1 < $wstart)
             throw new InvalidFileRangeException();
         
-        $file->CountBandwidth($length);
-        
-        if (!$wstart && $length >= $file->GetSize())
+        $overwrite = (!$wstart && $wlength >= $file->GetSize());        
+
+        if (!$overwrite && $wstart != $file->GetSize() && !$file->GetAllowRandomWrite($account))
+            throw new RandomWriteDisabledException();
+            
+        if ($overwrite) 
         {
-            if ($share !== null && !$share->CanUpload()) throw new ItemAccessDeniedException();
+            if ($share !== null && !$share->CanUpload()) 
+                throw new ItemAccessDeniedException();
             
             return $file->SetContents($filepath)->GetClientObject();
         }
@@ -599,7 +603,7 @@ class FilesApp extends AppBase
                 if (!$align) $nbyte = $wbyte + $chunksize;
                 else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
                 
-                $wlen = min($nbyte - $wbyte, $length - $rstart);
+                $wlen = min($nbyte - $wbyte, $wlength - $rstart);
                 
                 fseek($inhandle, $rstart);
                 $data = fread($inhandle, $wlen);

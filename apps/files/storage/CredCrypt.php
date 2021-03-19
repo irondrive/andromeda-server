@@ -1,12 +1,15 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+
+require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 use Andromeda\Apps\Files\FilesApp;
 
@@ -134,7 +137,9 @@ trait CredCrypt
         $value = $this->TryGetScalar($field);
         if ($value !== null && $this->hasCryptoField($field))
         {
-            FilesApp::needsCrypto();            
+            if (!$account->CryptoAvailable())
+                FilesApp::needsCrypto();   
+            
             if (!$account->CryptoAvailable())
                 throw new CredentialsEncryptedException();
                 
@@ -160,10 +165,15 @@ trait CredCrypt
         $account = $this->GetAccount(); $nonce = null;
         if ($value !== null && $credcrypt)
         {
-            FilesApp::needsCrypto();            
             if (!$account->hasCrypto())
                 throw new CryptoNotAvailableException();
             
+            if (!$account->CryptoAvailable())
+                FilesApp::needsCrypto();
+        
+            if (!$account->CryptoAvailable())
+                throw new CredentialsEncryptedException();
+        
             $nonce = CryptoSecret::GenerateNonce();
             $value = $account->EncryptSecret($value, $nonce);            
         }
@@ -179,7 +189,8 @@ trait CredCrypt
     protected function SetEncrypted(bool $crypt) : self
     {
         $this->SetUsername($this->TryGetUsername(), $crypt);
-        $this->SetPassword($this->TryGetPassword(), $crypt);
+        $this->SetPassword($this->TryGetPassword(), $crypt);        
+        return $this;
     }
       
     /**
@@ -189,7 +200,13 @@ trait CredCrypt
      */
     public static function DecryptAccount(ObjectDatabase $database, Account $account) : void 
     { 
-        $storages = static::LoadByObject($database, 'owner', $account);
+        $q = new QueryBuilder();
+        
+        $q->Join($database, FSManager::class, 'id', static::class, 'filesystem');
+        $w = $q->Equals($database->GetClassTableName(FSManager::class).'.owner', $account->ID());
+        
+        $storages = static::LoadByQuery($database, $q->Where($w));
+        
         foreach ($storages as $storage) $storage->SetEncrypted(false);
     }
 }
