@@ -132,6 +132,22 @@ class TwoFactor extends StandardObject
         return $secret;
     }
     
+    /** Stores the secret as encrypted by the owner */
+    public function InitializeCrypto() : self
+    {
+        $nonce = CryptoSecret::GenerateNonce();
+        
+        $secret = $this->GetAccount()->EncryptSecret($this->GetSecret(), $nonce);  
+        
+        return $this->SetScalar('nonce',$nonce)->SetScalar('secret',$secret);
+    }
+    
+    /** Stores the secret as plaintext (not encrypted) */
+    public function DestroyCrypto() : self
+    {
+        return $this->SetScalar('secret',$this->GetSecret())->SetScalar('nonce',null);
+    }
+    
     /** Checks and returns whether the given twofactor code is valid */
     public function CheckCode(string $code) : bool
     {

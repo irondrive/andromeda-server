@@ -69,6 +69,12 @@ class RecoveryKey extends RecoveryKeyBase
         
         return $retval;
     }
+    
+    /** Deletes all recovery keys owned by the given account */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        static::DeleteByObject($database, 'account', $account);
+    }
 
     /**
      * Gets a printable client object for this key
