@@ -195,7 +195,7 @@ class FTP extends FTPCredCrypt
     {
         if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
             throw new FileCreateFailedException();
-            return $this;
+        return $this;
     }
     
     /** @var array[path:FTPHandle] array of read/write handles */

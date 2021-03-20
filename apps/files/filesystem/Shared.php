@@ -190,7 +190,4 @@ class Shared extends BaseFileFS
 
         return $this;
     }
-    
-    public function commit() { }
-    public function rollback() { }
 }

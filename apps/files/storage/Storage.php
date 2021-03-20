@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions};
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
@@ -80,6 +81,11 @@ class ItemStat
 
 /** 
  * A Storage implements the on-disk functions that actually store data.
+ * 
+ * Storages implement transactions, but only on a best-effort basis,
+ * since the underlying filesystems are obviously not transactional.
+ * Certain actions like deleting or writing to files cannot be undone.
+ * Any "expected" exceptions should always be checked before storage actions.
  * @see FSManager 
  */
 abstract class Storage extends StandardObject implements Transactions
@@ -207,9 +213,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        if ($this->isFolder($path)) return $this;
+        $this->SubCreateFolder($path);
         
-        return $this->SubCreateFolder($path);
+        array_push($this->onRollback, function()use($path){ 
+            $this->SubDeleteFolder($path); });
+        
+        return $this;
     }
     
     /**
@@ -223,9 +232,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        if ($this->isFile($path)) return $this;
+        $this->SubCreateFile($path);
         
-        return $this->SubCreateFile($path);
+        array_push($this->onRollback, function()use($path){
+            $this->SubDeleteFile($path); });
+        
+        return $this;
     }
     
     /**
@@ -244,7 +256,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubImportFile($src, $dest);
+        $this->SubImportFile($src, $dest);
+        
+        array_push($this->onRollback, function()use($dest){
+            $this->SubDeleteFile($dest); });
+        
+        return $this;
     }    
     
     /**
@@ -263,7 +280,7 @@ abstract class Storage extends StandardObject implements Transactions
     public abstract function ReadBytes(string $path, int $start, int $length) : string;
     
     /**
-     * Writes data to a file
+     * Writes data to a file - NO ROLLBACK
      * @param string $path file to write
      * @param int $start byte offset to write
      * @param string $data data to write
@@ -283,7 +300,7 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubWriteBytes(string $path, int $start, string $data) : self;
     
     /**
-     * Truncates the file (changes size)
+     * Truncates the file (changes size) - NO ROLLBACK
      * @param string $path file to resize
      * @param int $length new length of file
      * @return $this
@@ -301,7 +318,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubTruncate(string $path, int $length) : self;
     
-    /** Deletes the file with the given path */
+    /** Deletes the file with the given path - NO ROLLBACK */
     public function DeleteFile(string $path) : self
     {
         $this->AssertCanWrite();
@@ -317,7 +334,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubDeleteFile(string $path) : self;
     
-    /** Deletes the folder with the given path */
+    /** Deletes the folder with the given path - NO ROLLBACK */
     public function DeleteFolder(string $path) : self
     {
         $this->AssertCanWrite();
@@ -338,7 +355,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubRenameFile($old, $new);
+        $this->SubRenameFile($old, $new);
+        
+        array_push($this->onRollback, function()use($new,$old){
+            $this->SubRenameFile($new, $old); });
+        
+        return $this;
     }    
     
     /**
@@ -352,7 +374,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubRenameFolder($old, $new);
+        $this->SubRenameFolder($old, $new);
+        
+        array_push($this->onRollback, function()use($new,$old){
+            $this->SubRenameFolder($new, $old); });
+        
+        return $this;
     }
     
     /**
@@ -366,7 +393,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubMoveFile($old, $new);
+        $this->SubMoveFile($old, $new);
+        
+        array_push($this->onRollback, function()use($new,$old){
+            $this->SubMoveFile($new, $old); });
+        
+        return $this;
     }
     
     /**
@@ -380,7 +412,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubMoveFolder($old, $new);
+        $this->SubMoveFolder($old, $new);
+        
+        array_push($this->onRollback, function()use($new,$old){
+            $this->SubMoveFolder($new, $old); });
+        
+        return $this;
     }
     
     /**
@@ -394,7 +431,12 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
-        return $this->SubCopyFile($old, $new);
+        $this->SubCopyFile($old, $new);
+        
+        array_push($this->onRollback, function()use($new){
+            $this->SubDeleteFile($new); });
+        
+        return $this;
     }
     
     /**
@@ -408,7 +450,12 @@ abstract class Storage extends StandardObject implements Transactions
     { 
         $this->AssertCanWrite();
         
-        return $this->SubCopyFolder($old, $new);
+        $this->SubCopyFolder($old, $new);
+        
+        array_push($this->onRollback, function()use($new){
+            $this->SubDeleteFolder($new); });
+            
+        return $this;
     }
     
     /**
@@ -423,6 +470,17 @@ abstract class Storage extends StandardObject implements Transactions
     /** By default, most storages cannot copy whole folders */
     public function canCopyFolders() : bool { return false; }
     
-    public function commit() { }
-    public function rollback() { }
+    /** array of functions to run for commit */
+    protected array $onCommit = array();
+    
+    public function commit() { foreach ($this->onCommit as $func) $func(); }
+    
+    /** array of functions to run for rollback */
+    protected array $onRollback = array();
+    
+    public function rollback() 
+    { 
+        foreach (array_reverse($this->onRollback) as $func) try { $func(); } 
+            catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
+    }
 }
