@@ -5,10 +5,10 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\StorageException;
 require_once(ROOT."/apps/files/Folder.php");
 
-require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+use Andromeda\Apps\Files\Filesystem\FSManager;
 
 /** Exception indicating that the operation is not valid on a root folder */
 class InvalidRootOpException extends Exceptions\ClientErrorException { public $message = "ROOT_FOLDER_OP_INVALID"; }
@@ -17,8 +17,6 @@ class InvalidRootOpException extends Exceptions\ClientErrorException { public $m
 class RootFolder extends Folder
 {
     public static function GetObjClass(array $row) : string { return self::class; }
-    
-    public function CanRefreshDelete() : bool { return false; }
     
     public function GetName() : string { return $this->GetFilesystem()->GetName(); }
     
@@ -32,7 +30,21 @@ class RootFolder extends Folder
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self { throw new InvalidRootOpException(); }
     
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self { throw new InvalidRootOpException(); }
-
+   
+    /** 
+     * Don't let a storage exception fail refreshing a root folder 
+     * @see Folder::Refresh()
+     */
+    public function Refresh(bool $doContents = false) : self 
+    {
+        try { parent::Refresh($doContents); } catch (StorageException $e) { }
+        
+        return $this;
+    }
+    
+    /** Don't let a root folder be deleted if it's missing in storage */
+    public function CanRefreshDelete() : bool { return false; }
+    
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
      * @param ObjectDatabase $database database reference

@@ -48,7 +48,7 @@ class LDAP extends External
     
     /**
      * Returns a printable client object for this LDAP
-     * @return array `{hostname:stsring, secure:bool, userprefix:string}`
+     * @return array `{hostname:string, secure:bool, userprefix:string}`
      */
     public function GetClientObject() : array
     {

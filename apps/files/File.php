@@ -309,7 +309,7 @@ class File extends Item
         $this->Refresh(); if ($this->isDeleted()) return null;
         
         $data = array_merge(parent::SubGetClientObject($details),array(
-            'size' => $this->TryGetScalar('size'),
+            'size' => $this->GetSize(),
             'dates' => $this->GetAllDates(),
             'counters' => $this->GetAllCounters()
         ));

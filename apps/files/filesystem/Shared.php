@@ -89,8 +89,9 @@ class Shared extends BaseFileFS
 
         if ($doContents) 
         {
+            if (!$storage->isFolder($path)) { $folder->NotifyDelete(); return $this; }
+            
             $fsitems = $storage->ReadFolder($path); sort($fsitems);
-            if ($fsitems === null) { $folder->NotifyDelete(); return $this; }
             
             $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());
             

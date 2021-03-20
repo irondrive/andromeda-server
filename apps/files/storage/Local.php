@@ -50,9 +50,8 @@ class Local extends FWrapper
      * Import the file quickly by just renaming it
      * @see FWrapper::ImportFile()
      */
-    public function ImportFile(string $src, string $dest) : self
+    protected function SubImportFile(string $src, string $dest) : self
     {
-        $this->CheckReadOnly();
         if (!rename($src, $this->GetFullURL($dest)))
             throw new FileCreateFailedException();
         return $this;
