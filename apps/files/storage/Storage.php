@@ -3,7 +3,7 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
@@ -142,15 +142,14 @@ abstract class Storage extends StandardObject implements Transactions
         return $this;
     }
     
-    /**
-     * Asserts that the storage is not read only
-     * @throws ReadOnlyException if the filesystem is read only
-     */
-    protected function CheckReadOnly()
-    { 
-        if ($this->GetFilesystem()->isReadOnly()) 
-            throw new ReadOnlyException(); 
-    }
+    /** By default, most storages use network bandwidth */
+    public function usesBandwidth() : bool { return true; }
+    
+    /** Returns whether or not the storage supports getting free space */
+    public function canGetFreeSpace() : bool { return false; }
+    
+    /** Returns the available space in bytes on the storage */
+    public function GetFreeSpace() : int { throw new FreeSpaceFailedException(); }
 
     /** Activates the storage by making any required connections */
     public abstract function Activate() : self;
@@ -160,6 +159,32 @@ abstract class Storage extends StandardObject implements Transactions
     
     /** Returns true if the filesystem root can be written to */
     public abstract function isWriteable() : bool;
+    
+    /** 
+     * Manually tests if the root is writeable by uploading a test file 
+     * 
+     * Can be used to implement isWriteable() if no specific function exists
+     */
+    protected function TestWriteable() : bool
+    {
+        try
+        {
+            $name = Utilities::Random(16).".tmp";
+            $this->CreateFile($name)->DeleteFile($name);
+            return true;
+        }
+        catch (StorageException $e){ return false; }
+    }    
+    
+    /**
+     * Asserts that the storage is not read only
+     * @throws ReadOnlyException if the filesystem is read only
+     */
+    protected function AssertCanWrite()
+    {
+        if ($this->GetFilesystem()->isReadOnly())
+            throw new ReadOnlyException();
+    }
     
     /** Returns an ItemStat object on the given path */
     public abstract function ItemStat(string $path) : ItemStat;
@@ -175,16 +200,39 @@ abstract class Storage extends StandardObject implements Transactions
      * @param string $path folder path
      * @return string[] array of names
      */
-    public abstract function ReadFolder(string $path) : ?array;
+    public abstract function ReadFolder(string $path) : array;
     
     /** Creates a folder with the given path */
-    public abstract function CreateFolder(string $path) : self; 
+    public function CreateFolder(string $path) : self
+    {
+        $this->AssertCanWrite();
+        
+        if ($this->isFolder($path)) return $this;
+        
+        return $this->SubCreateFolder($path);
+    }
     
-    /** Deletes the folder with the given path */
-    public abstract function DeleteFolder(string $path) : self;
+    /**
+     * The storage-specific CreateFolder
+     * @see Storage::CreateFolder()
+     */
+    protected abstract function SubCreateFolder(string $path) : self;    
     
-    /** Deletes the file with the given path */
-    public abstract function DeleteFile(string $path) : self;
+    /** Creates a new empty file at the given path */
+    public function CreateFile(string $path) : self
+    {
+        $this->AssertCanWrite();
+        
+        if ($this->isFile($path)) return $this;
+        
+        return $this->SubCreateFile($path);
+    }
+    
+    /**
+     * The storage-specific CreateFile
+     * @see Storage::CreateFile()
+     */
+    protected abstract function SubCreateFile(string $path) : self;
     
     /**
      * Imports a file into the storage
@@ -192,10 +240,18 @@ abstract class Storage extends StandardObject implements Transactions
      * @param string $dest path of new file
      * @return $this
      */
-    public abstract function ImportFile(string $src, string $dest) : self;
+    public function ImportFile(string $src, string $dest) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubImportFile($src, $dest);
+    }    
     
-    /** Creates a new empty file at the given path */
-    public abstract function CreateFile(string $path) : self;
+    /**
+     * The storage-specific ImportFile
+     * @see Storage::ImportFile()
+     */
+    protected abstract function SubImportFile(string $src, string $dest) : self;
     
     /**
      * Reads data from a file
@@ -213,7 +269,18 @@ abstract class Storage extends StandardObject implements Transactions
      * @param string $data data to write
      * @return $this
      */
-    public abstract function WriteBytes(string $path, int $start, string $data) : self;
+    public function WriteBytes(string $path, int $start, string $data) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubWriteBytes($path, $start, $data);
+    }
+    
+    /**
+     * The storage-specific WriteBytes
+     * @see Storage::WriteBytes()
+     */
+    protected abstract function SubWriteBytes(string $path, int $start, string $data) : self;
     
     /**
      * Truncates the file (changes size)
@@ -221,37 +288,140 @@ abstract class Storage extends StandardObject implements Transactions
      * @param int $length new length of file
      * @return $this
      */
-    public abstract function Truncate(string $path, int $length) : self;
+    public function Truncate(string $path, int $length) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubTruncate($path, $length);
+    }    
+    
+    /**
+     * The storage-specific Truncate
+     * @see Storage::Truncate()
+     */
+    protected abstract function SubTruncate(string $path, int $length) : self;
+    
+    /** Deletes the file with the given path */
+    public function DeleteFile(string $path) : self
+    {
+        $this->AssertCanWrite();
+        
+        if (!$this->isFile($path)) return $this;
+        
+        return $this->SubDeleteFile($path);
+    }
+    
+    /**
+     * The storage-specific DeleteFile
+     * @see Storage::DeleteFile()
+     */
+    protected abstract function SubDeleteFile(string $path) : self;
+    
+    /** Deletes the folder with the given path */
+    public function DeleteFolder(string $path) : self
+    {
+        $this->AssertCanWrite();
+        
+        if (!$this->isFolder($path)) return $this;
+        
+        return $this->SubDeleteFolder($path);
+    }
+    
+    /**
+     * The storage-specific DeleteFolder
+     * @see Storage::DeleteFolder()
+     */
+    protected abstract function SubDeleteFolder(string $path) : self;
 
     /** Renames a file from $old to $new - path shall not change */
-    public abstract function RenameFile(string $old, string $new) : self;    
+    public function RenameFile(string $old, string $new) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubRenameFile($old, $new);
+    }    
+    
+    /**
+     * The storage-specific RenameFile
+     * @see Storage::RenameFile()
+     */
+    protected abstract function SubRenameFile(string $old, string $new) : self;
     
     /** Renames a folder from $old to $new - path shall not change */
-    public abstract function RenameFolder(string $old, string $new) : self;
+    public function RenameFolder(string $old, string $new) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubRenameFolder($old, $new);
+    }
+    
+    /**
+     * The storage-specific RenameFolder
+     * @see Storage::RenameFolder()
+     */
+    protected abstract function SubRenameFolder(string $old, string $new) : self;
     
     /** Moves a file from $old to $new - name shall not change */
-    public abstract function MoveFile(string $old, string $new) : self;
+    public function MoveFile(string $old, string $new) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubMoveFile($old, $new);
+    }
+    
+    /**
+     * The storage-specific MoveFile
+     * @see Storage::MoveFile()
+     */
+    protected abstract function SubMoveFile(string $old, string $new) : self;
     
     /** Moves a folder from $old to $new - name shall not change */
-    public abstract function MoveFolder(string $old, string $new) : self;
+    public function MoveFolder(string $old, string $new) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubMoveFolder($old, $new);
+    }
+    
+    /**
+     * The storage-specific MoveFolder
+     * @see Storage::MoveFolder()
+     */
+    protected abstract function SubMoveFolder(string $old, string $new) : self;
     
     /** Copies a file from $old to $new (path and name can change) */
-    public abstract function CopyFile(string $old, string $new) : self; 
+    public function CopyFile(string $old, string $new) : self
+    {
+        $this->AssertCanWrite();
+        
+        return $this->SubCopyFile($old, $new);
+    }
+    
+    /**
+     * The storage-specific CopyFile
+     * @see Storage::CopyFile()
+     */
+    protected abstract function SubCopyFile(string $old, string $new) : self;
     
     /** Copies a file from $old to $new (path and name can change) */
-    public function CopyFolder(string $old, string $new) : self { throw new FolderCopyFailedException(); }
+    public function CopyFolder(string $old, string $new) : self 
+    { 
+        $this->AssertCanWrite();
+        
+        return $this->SubCopyFolder($old, $new);
+    }
+    
+    /**
+     * The storage-specific CopyFolder
+     * @see Storage::CopyFolder()
+     */
+    protected function SubCopyFolder(string $old, string $new) : self
+    {
+        throw new FolderCopyFailedException();
+    }
     
     /** By default, most storages cannot copy whole folders */
     public function canCopyFolders() : bool { return false; }
-    
-    /** Returns whether or not the storage supports getting free space */
-    public function canGetFreeSpace() : bool { return false; }
-    
-    /** Returns the available space in bytes on the storage */
-    public function GetFreeSpace() : int { throw new FreeSpaceFailedException(); }
-    
-    /** By default, most storages use network bandwidth */
-    public function usesBandwidth() : bool { return true; }
     
     public function commit() { }
     public function rollback() { }

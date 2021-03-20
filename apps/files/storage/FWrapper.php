@@ -1,13 +1,11 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 require_once(ROOT."/apps/files/storage/Storage.php");
@@ -87,66 +85,94 @@ abstract class FWrapper extends Storage
     {
         return is_writeable($this->GetFullURL());
     }
-    
-    /** Manually tests if the root is writeable by uploading a test file */
-    public function TestWriteable() : bool
+
+    public function ReadFolder(string $path) : array
     {
-        try
-        {
-            $name = Utilities::Random(16).".tmp";
-            $this->CreateFile($name)->DeleteFile($name);
-            return true;
-        }
-        catch (StorageException $e){ return false; }
-    }
-    
-    public function ReadFolder(string $path) : ?array
-    {
-        if (!$this->isFolder($path)) return null;
         $list = scandir($this->GetFullURL($path), SCANDIR_SORT_NONE);
         if ($list === false) throw new FolderReadFailedException();
         return array_filter($list, function($item){ return $item !== "." && $item !== ".."; });
     }
     
-    public function CreateFolder(string $path) : self
+    protected function SubCreateFolder(string $path) : self
     {
-        $this->CheckReadOnly();
-        if ($this->isFolder($path)) return $this;
-        if (!mkdir($this->GetFullURL($path))) throw new FolderCreateFailedException();
+        if (!mkdir($this->GetFullURL($path))) 
+            throw new FolderCreateFailedException();        
         else return $this;
     }
     
-    public function DeleteFolder(string $path) : self
+    protected function SubCreateFile(string $path) : self
     {
-        $this->CheckReadOnly();
-        if (!$this->isFolder($path)) return $this;
-        if (!rmdir($this->GetFullURL($path))) throw new FolderDeleteFailedException();
-        else return $this;
-    }
-    
-    public function DeleteFile(string $path) : self
-    {
-        $this->CheckReadOnly();
-        if (!$this->isFile($path)) return $this;
-        if (!unlink($this->GetFullURL($path))) throw new FileDeleteFailedException();
-        else return $this;
-    }
-    
-    public function CreateFile(string $path) : self
-    {
-        $this->CheckReadOnly();
-        if ($this->isFile($path)) return $this;
-        if (!touch($this->GetFullURL($path))) throw new FileCreateFailedException();
+        if (!touch($this->GetFullURL($path))) 
+            throw new FileCreateFailedException();
         return $this;
     }
-    
-    public function ImportFile(string $src, string $dest) : self
+
+    protected function SubImportFile(string $src, string $dest) : self
     {
-        $this->CheckReadOnly();
         if (!copy($src, $this->GetFullURL($dest)))
             throw new FileCopyFailedException();
         return $this;
     }
+    
+    protected function SubTruncate(string $path, int $length) : self
+    {
+        $path = $this->GetFullURL($path);
+        $handle = $this->GetHandle($path, true);    
+        
+        if (!ftruncate($handle, $length))
+            throw new FileWriteFailedException();
+        
+        return $this;
+    }    
+    
+    protected function SubDeleteFile(string $path) : self
+    {        
+        if (!unlink($this->GetFullURL($path))) 
+            throw new FileDeleteFailedException();
+        else return $this;
+    }    
+    
+    protected function SubDeleteFolder(string $path) : self
+    {
+        if (!rmdir($this->GetFullURL($path))) 
+            throw new FolderDeleteFailedException();
+        else return $this;
+    }
+
+    protected function SubRenameFile(string $old, string $new) : self
+    {
+        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FileRenameFailedException();
+        return $this;
+    }
+    
+    protected function SubRenameFolder(string $old, string $new) : self
+    {
+        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FolderRenameFailedException();
+        return $this;
+    }
+    
+    protected function SubMoveFile(string $old, string $new) : self
+    {
+        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FileMoveFailedException();
+        return $this;
+    }
+    
+    protected function SubMoveFolder(string $old, string $new) : self
+    {
+        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FolderMoveFailedException();
+        return $this;
+    }
+    
+    protected function SubCopyFile(string $old, string $new) : self
+    {
+        if (!copy($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new FileCopyFailedException();
+        return $this;
+    }    
     
     public function ReadBytes(string $path, int $start, int $length) : string
     {
@@ -155,11 +181,11 @@ abstract class FWrapper extends Storage
         
         if (fseek($handle, $start) !== 0)
             throw new FileReadFailedException();
-        
-        return $this->ReadHandle($handle, $length);
+            
+            return $this->ReadHandle($handle, $length);
     }
     
-    /** Returns true if fread() and fwrite() may need to be in chunks */
+    /** Returns true if fread() and fwrite() may need to be in chunks (network) */
     protected function UseChunks() : bool { return true; }
     
     /**
@@ -171,7 +197,7 @@ abstract class FWrapper extends Storage
      */
     protected function ReadHandle($handle, int $length) : string
     {
-        if ($this->UseChunks()) 
+        if ($this->UseChunks())
         {
             $byte = 0; $data = array();
             
@@ -186,7 +212,7 @@ abstract class FWrapper extends Storage
             
             $data = implode($data);
         }
-        else $data = fread($handle, $length);        
+        else $data = fread($handle, $length);
         
         if ($data === false || strlen($data) !== $length)
         {
@@ -199,21 +225,19 @@ abstract class FWrapper extends Storage
         return $data;
     }
     
-    public function WriteBytes(string $path, int $start, string $data) : self
-    {
-        $this->CheckReadOnly();
-        
+    protected function SubWriteBytes(string $path, int $start, string $data) : self
+    {        
         $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, true);    
+        $handle = $this->GetHandle($path, true);
         
         if (fseek($handle, $start)) throw new FileWriteFailedException();
-
+        
         return $this->WriteHandle($handle, $data);
     }
     
     /**
      * Writes the given data to the given handle, chunking if required
-     * @param resource $handle stream to write to 
+     * @param resource $handle stream to write to
      * @param string $data data to write
      * @throws FileWriteFailedException if writing fails
      * @return $this
@@ -243,58 +267,6 @@ abstract class FWrapper extends Storage
             throw new FileWriteFailedException();
         }
         
-        return $this;
-    }
-    
-    public function Truncate(string $path, int $length) : self
-    {
-        $this->CheckReadOnly();
-        $path = $this->GetFullURL($path);
-        $handle = $this->GetHandle($path, true);    
-        
-        if (!ftruncate($handle, $length))
-            throw new FileWriteFailedException();
-        
-        return $this;
-    }
-
-    public function RenameFile(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new FileRenameFailedException();
-        return $this;
-    }
-    
-    public function RenameFolder(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new FolderRenameFailedException();
-        return $this;
-    }
-    
-    public function MoveFile(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new FileMoveFailedException();
-        return $this;
-    }
-    
-    public function MoveFolder(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new FolderMoveFailedException();
-        return $this;
-    }
-    
-    public function CopyFile(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
-        if (!copy($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new FileCopyFailedException();
         return $this;
     }
     
@@ -371,8 +343,7 @@ abstract class FWrapper extends Storage
         foreach ($this->handles as $handle)
         {
             try { $this->CloseHandle($handle); } 
-            catch (\Throwable $e) {
-                ErrorManager::GetInstance()->Log($e); }       
+            catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }       
         }
     }
 }

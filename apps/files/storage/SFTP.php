@@ -23,18 +23,18 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(SFTP::class);
 
+abstract class SFTPCredCrypt extends FWrapper { use CredCrypt; }
+
 /**
  * Allows using an SFTP server for backend storage using phpseclib
  * 
  * Uses credcrypt to allow encrypting the username/password.
  */
-class SFTP extends FWrapper
-{
-    use CredCrypt;
-    
+class SFTP extends SFTPCredCrypt
+{    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
             'hostkey' => null,
@@ -52,7 +52,7 @@ class SFTP extends FWrapper
      */
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
+        return array_merge(parent::GetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'hostkey' => $this->TryGetHostKey(),
@@ -83,6 +83,13 @@ class SFTP extends FWrapper
         $credcrypt ??= $this->hasCryptoField('keypass');
         return $this->SetEncryptedScalar('keypass',$keypass,$credcrypt); 
     }
+
+    protected function SetEncrypted(bool $crypt) : self
+    {
+        $this->SetPrivkey($this->TryGetPrivkey(), $crypt);
+        $this->SetKeypass($this->TryGetKeypass(), $crypt);
+        return parent::SetEncrypted($crypt);
+    }
     
     /** Returns the cached public key for the server host */
     protected function TryGetHostKey() : ? string { return $this->TryGetScalar('hostkey'); }
@@ -90,7 +97,7 @@ class SFTP extends FWrapper
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--privkey% path] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?int] [--privkey% path] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
@@ -98,7 +105,6 @@ class SFTP extends FWrapper
         $keypass = $input->GetOptParam('keypass', SafeParam::TYPE_RAW);
         
         $obj = parent::Create($database, $input, $filesystem)
-            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT));         
         
@@ -109,7 +115,7 @@ class SFTP extends FWrapper
         return $obj;
     }
 
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path] [--keypass ?raw] [--resethost bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
@@ -121,7 +127,7 @@ class SFTP extends FWrapper
         
         if ($input->GetOptParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
         
-        return parent::Edit($input)->CredCryptEdit($input);
+        return parent::Edit($input);
     }
 
     /** sftp connection resource */ private $sftp;
@@ -167,17 +173,18 @@ class SFTP extends FWrapper
         catch (\RuntimeException $e) { throw SSHAuthenticationFailure::Copy($e); }
         
         return $this;
-    }
+    }    
+    
+    // WORKAROUND - is_writeable does not work on directories
+    public function isWriteable() : bool { return $this->TestWriteable(); }
 
     protected function GetFullURL(string $path = "") : string
     {
         return "sftp://".$this->sftp."/".$this->GetPath($path);
     }
     
-    public function ImportFile(string $src, string $dest) : self
+    protected function SubImportFile(string $src, string $dest) : self
     {
-        $this->CheckReadOnly(); 
-        
         $mode = \phpseclib3\Net\SFTP::SOURCE_LOCAL_FILE;
         
         if (!$this->sftp->put($this->GetPath($dest), $src, $mode))   
@@ -185,7 +192,4 @@ class SFTP extends FWrapper
             
         return $this;
     }
-    
-    // WORKAROUND - is_writeable does not work on directories
-    public function isWriteable() : bool { return $this->TestWriteable(); }
 }

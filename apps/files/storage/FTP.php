@@ -36,6 +36,8 @@ class FTPHandle
         $this->handle = $handle; $this->offset = $offset; $this->isAppend = $isAppend; }
 }
 
+abstract class FTPCredCrypt extends FWrapper { use CredCrypt; }
+
 /**
  * Allows FTP to be used as a backend storage
  * 
@@ -44,13 +46,11 @@ class FTPHandle
  * every call.  fwrapper functions are still used as fallbacks where needed.
  * Uses the credcrypt trait for optionally encrypting server credentials.
  */
-class FTP extends FWrapper
+class FTP extends FTPCredCrypt
 {    
-    use CredCrypt;
-    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), array(
             'hostname' => null,
             'port' => null,
             'implssl' => null, // if true, use implicit SSL, else explicit/none
@@ -64,25 +64,24 @@ class FTP extends FWrapper
      */
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
+        return array_merge(parent::GetClientObject(), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'implssl' => $this->GetScalar('implssl'),
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--port ?int] [--implssl bool]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?int] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
-            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--port ?int] [--implssl bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?int] [--implssl bool]"; }
     
     public function Edit(Input $input) : self
     {
@@ -90,7 +89,7 @@ class FTP extends FWrapper
         if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
         if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_INT));
         
-        return parent::Edit($input)->CredCryptEdit($input);
+        return parent::Edit($input);
     }
     
     /** Check for the FTP extension */
@@ -171,13 +170,32 @@ class FTP extends FWrapper
     // WORKAROUND - is_writeable does not work on directories
     public function isWriteable() : bool { return $this->TestWriteable(); }
     
-    public function ReadFolder(string $path) : ?array
-    {
-        if (!$this->isFolder($path)) return null;
-        
+    public function ReadFolder(string $path) : array
+    {        
         $list = ftp_nlist($this->ftp, $this->GetPath($path));
         if ($list === false) throw new FolderReadFailedException();
         return array_map(function($item){ return basename($item); }, $list);
+    }    
+    
+    protected function SubCreateFolder(string $path) : self
+    {
+        if (!ftp_mkdir($this->ftp, $this->GetPath($path))) 
+            throw new FolderCreateFailedException();
+        else return $this;
+    }
+    
+    protected function SubCreateFile(string $path) : self
+    {
+        $handle = fopen($this->GetFullURL($path),'w');
+        if (!$handle) throw new FileCreateFailedException();
+        fclose($handle); return $this;
+    }
+    
+    protected function SubImportFile(string $src, string $dest): self
+    {
+        if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
+            throw new FileCreateFailedException();
+            return $this;
     }
     
     /** @var array[path:FTPHandle] array of read/write handles */
@@ -245,10 +263,8 @@ class FTP extends FWrapper
      * @throws FTPWriteUnsupportedException if not appending
      * @see FWrapper::WriteBytes()
      */
-    public function WriteBytes(string $path, int $start, string $data) : self
-    {
-        $this->CheckReadOnly();
-        
+    protected function SubWriteBytes(string $path, int $start, string $data) : self
+    {        
         $handle = $this->GetFTPWriteHandle($path, $start);
         
         $this->WriteHandle($handle->handle, $data);
@@ -259,7 +275,7 @@ class FTP extends FWrapper
     }
 
     /** @throws FTPWriteUnsupportedException */
-    public function Truncate(string $path, int $length) : self
+    protected function SubTruncate(string $path, int $length) : self
     {
         if (!$length) $this->DeleteFile($path)->CreateFile($path);
         else if (ftp_size($this->ftp, $this->GetPath($path)) !== $length)
@@ -267,74 +283,43 @@ class FTP extends FWrapper
         return $this;
     }    
     
-    public function CreateFile(string $path) : self
+    protected function SubDeleteFolder(string $path) : self
     {
-        $this->CheckReadOnly();
-        if ($this->isFile($path)) return $this;
-        $handle = fopen($this->GetFullURL($path),'w');
-        if (!$handle) throw new FileCreateFailedException();
-        fclose($handle); return $this;
-    }
-    
-    public function ImportFile(string $src, string $dest): self
-    {
-        $this->CheckReadOnly();
-        if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
-            throw new FileCreateFailedException();
-        return $this;
-    }
-    
-    public function CreateFolder(string $path) : self
-    {
-        $this->CheckReadOnly();
-        if ($this->isFolder($path)) return $this;
-        if (!ftp_mkdir($this->ftp, $this->GetPath($path))) throw new FolderCreateFailedException();
+        if (!ftp_rmdir($this->ftp, $this->GetPath($path))) 
+            throw new FolderDeleteFailedException();
         else return $this;
     }
     
-    public function DeleteFolder(string $path) : self
+    protected function SubDeleteFile(string $path) : self
     {
-        $this->CheckReadOnly();
-        if (!$this->isFolder($path)) return $this;
-        if (!ftp_rmdir($this->ftp, $this->GetPath($path))) throw new FolderDeleteFailedException();
+        if (!ftp_delete($this->ftp, $this->GetPath($path)))
+            throw new FileDeleteFailedException();
         else return $this;
     }
     
-    public function DeleteFile(string $path) : self
+    protected function SubRenameFile(string $old, string $new) : self
     {
-        $this->CheckReadOnly();
-        if (!$this->isFile($path)) return $this;
-        if (!ftp_delete($this->ftp, $this->GetPath($path))) throw new FileDeleteFailedException();
-        else return $this;
-    }
-    
-    public function RenameFile(string $old, string $new) : self
-    {
-        $this->CheckReadOnly();
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FileRenameFailedException();
         return $this;
     }
     
-    public function RenameFolder(string $old, string $new) : self
+    protected function SubRenameFolder(string $old, string $new) : self
     {
-        $this->CheckReadOnly();
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FolderRenameFailedException();
         return $this;
     }
-    
-    public function MoveFile(string $old, string $new) : self
+        
+    protected function SubMoveFile(string $old, string $new) : self
     {
-        $this->CheckReadOnly();
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FileMoveFailedException();
         return $this;
     }
     
-    public function MoveFolder(string $old, string $new) : self
+    protected function SubMoveFolder(string $old, string $new) : self
     {
-        $this->CheckReadOnly();
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FolderMoveFailedException();
         return $this;

@@ -30,46 +30,47 @@ class CryptoWithoutOwnerException extends Exceptions\ClientErrorException { publ
 trait CredCrypt
 {
     /** Gets the extra DB fields required for this trait */
-    public static function CredCryptGetFieldTemplate() : array
+    public static function GetFieldTemplate() : array
     {
-        return array(
+        return array_merge(parent::GetFieldTemplate(), array(
             'username' => null,
             'password' => null,
             'username_nonce' => null,
             'password_nonce' => null,
-        );
+        ));
     }
     
     /** 
      * Returns the printable client object of this trait
      * @return array `{username:?string, password:bool}`
      */
-    public function CredCryptGetClientObject() : array
+    public function GetClientObject() : array
     {
-        return array(
+        return array_merge(parent::GetClientObject(), array(
             'username' => $this->TryGetUsername(),
             'password' => boolval($this->TryGetPassword()),
-        );
+        ));
     }
     
-    /** Returns the command usage for CredCryptCreate() */
-    public static function CredCryptGetCreateUsage() : string { return "[--username ?alphanum] [--password ?raw] [--credcrypt bool]"; }
+    /** Returns the command usage for Create() */
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--username ?alphanum] [--password ?raw] [--credcrypt bool]"; }
 
     /** Performs cred-crypt level initialization on a new storage */
-    public function CredCryptCreate(Input $input, ?Account $account) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         $credcrypt = $input->GetOptParam('credcrypt', SafeParam::TYPE_BOOL) ?? false;
-        if ($account === null && $credcrypt) throw new CryptoWithoutOwnerException();
+        if ($filesystem->GetOwner() === null && $credcrypt) throw new CryptoWithoutOwnerException();
         
-        return $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW), $credcrypt)
-                    ->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
+        return parent::Create($database, $input, $filesystem)
+                   ->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW), $credcrypt)
+                   ->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
     }
     
-    /** Returns the command usage for CredCryptEdit() */
-    public static function CredCryptGetEditUsage() : string { return "[--username alphanum] [--password raw] [--credcrypt bool]"; }
+    /** Returns the command usage for Edit() */
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--username alphanum] [--password raw] [--credcrypt bool]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function CredCryptEdit(Input $input) : self 
+    public function Edit(Input $input) : self 
     { 
         $credcrypt = $input->GetOptParam('credcrypt', SafeParam::TYPE_BOOL);
         if ($credcrypt !== null) $this->SetEncrypted($credcrypt);
@@ -77,7 +78,7 @@ trait CredCrypt
         if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW), $credcrypt);
         if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)), $credcrypt);
                 
-        return $this;
+        return parent::Edit($input);
     }
     
     /** Returns the decrypted username */

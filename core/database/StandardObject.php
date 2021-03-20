@@ -173,14 +173,16 @@ abstract class StandardObject extends BaseObject
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllDates(callable $vfunc = null) : array { 
-        return $this->GetAllScalars('dates',$vfunc); }
-    
+        return array_map(function($v){ return (float)$v; }, 
+            $this->GetAllScalars('dates',$vfunc)); }    
+        
     /**
      * Gets an array of all feature field values
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllFeatures(callable $vfunc = null) : array {
-        return $this->GetAllScalars('features',$vfunc); }
+        return array_map(function($v){ return (int)$v; },
+            $this->GetAllScalars('features',$vfunc)); }   
     
     /**
      * Gets an array of all counter and objectrefs field values
@@ -188,9 +190,12 @@ abstract class StandardObject extends BaseObject
      */
     protected function GetAllCounters(callable $vfunc = null) : array
     { 
-        $counters = $this->GetAllScalars('counters',$vfunc); 
+        $counters = array_map(function($v){ return (int)$v; },
+            $this->GetAllScalars('counters',$vfunc));
+        
         foreach (array_keys($this->objectrefs) as $refskey) 
-            $counters["refs_$refskey"] = $this->objectrefs[$refskey]->GetValue();
+            $counters["refs_$refskey"] = (int)($this->objectrefs[$refskey]->GetValue());
+        
         return $counters;
     }
     
@@ -199,7 +204,8 @@ abstract class StandardObject extends BaseObject
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllCounterLimits(callable $vfunc = null) : array { 
-        return $this->GetAllScalars('counters_limits',$vfunc); }
+        return array_map(function($v){ return (int)$v; },
+        $this->GetAllScalars('counters_limits',$vfunc)); }   
 
     /**
      * Gets an array of the values of all fields matching a prefix

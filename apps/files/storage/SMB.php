@@ -22,6 +22,8 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(SMB::class);
 
+abstract class SMBCredCrypt extends FWrapper { use CredCrypt; }
+
 /**
  * Allows using an SMB/CIFS server for backend storage
  * 
@@ -29,13 +31,11 @@ FSManager::RegisterStorageType(SMB::class);
  * functions but some manual workarounds are needed.
  * Uses credcrypt to allow encrypting the username/password.
  */
-class SMB extends FWrapper
-{
-    use CredCrypt;
-    
+class SMB extends SMBCredCrypt
+{    
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), static::CredCryptGetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), array(
             'workgroup' => null,
             'hostname' => null
         ));
@@ -48,30 +48,29 @@ class SMB extends FWrapper
      */
     public function GetClientObject() : array
     {
-        return array_merge(parent::GetClientObject(), $this->CredCryptGetClientObject(), array(
+        return array_merge(parent::GetClientObject(), array(
             'workgroup' => $this->TryGetScalar('workgroup'),
             'hostname' => $this->GetScalar('hostname')
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".static::CredCryptGetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
-            ->CredCryptCreate($input, $filesystem->GetOwner())
             ->SetScalar('workgroup', $input->GetOptParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".static::CredCryptGetEditUsage()." [--hostname alphanum] [--workgroup ?alphanum]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--workgroup ?alphanum]"; }
     
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
         if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         
-        return parent::Edit($input)->CredCryptEdit($input);
+        return parent::Edit($input);
     }
     
     /** Returns the SMB workgroup to use (or null) */
@@ -120,9 +119,8 @@ class SMB extends FWrapper
     protected function GetWriteHandle(string $path) { return fopen($path,'r+'); }
     
     // WORKAROUND: php-smbclient <= 3.0.5 does not implement stream ftruncate
-    public function Truncate(string $path, int $length) : self
+    protected function SubTruncate(string $path, int $length) : self
     {
-        $this->CheckReadOnly();
         $this->ClosePath($path); // close existing handles
         
         $handle = smbclient_open($this->state, $this->GetFullURL($path), 'r+');
