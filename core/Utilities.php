@@ -56,7 +56,13 @@ class JSONEncodingException extends JSONException { public $message = "JSON_ENCO
 /** Exception indicating that JSON decoding failed */
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
 
-/** Simple interface with rollBack() and commit() */
+/** 
+ * Simple interface with rollBack() and commit() 
+ * 
+ * The Andromeda transaction model is that there is always a global commit
+ * or rollback at the end of the request. A rollback may follow a bad commit.
+ * There will NEVER be a rollback followed by a commit. There may be > 1 commit.
+ */
 interface Transactions { public function rollBack(); public function commit(); }
 
 /** Abstract with some global static utility functions */

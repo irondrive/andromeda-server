@@ -17,6 +17,7 @@ require_once(ROOT."/apps/files/storage/Storage.php");
 use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/filesystem/FSImpl.php"); use Andromeda\Apps\Files\Filesystem\FSImpl;
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
@@ -55,7 +56,7 @@ class UnknownParentException  extends Exceptions\ClientNotFoundException    { pu
 class UnknownDestinationException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_DESTINATION"; }
 
 /** Exception indicating that the requested filesystem does not exist */
-class UnknownFilesystemException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_FILESYSTEM"; }
+class UnknownFilesystemException extends Exceptions\ClientNotFoundException  { public $message = "UNKNOWN_FILESYSTEM"; }
 
 /** Exception indicating that the requested download byte range is invalid */
 class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; public $message = "INVALID_BYTE_RANGE"; }
@@ -195,6 +196,10 @@ class FilesApp extends AppBase
         try { $this->config = Config::GetInstance($this->database); }
         catch (DatabaseException $e) { }
     }
+    
+    public function commit() { FSImpl::commitAll(); }
+    
+    public function rollback() { FSImpl::rollbackAll(); }
     
     /**
      * {@inheritDoc}

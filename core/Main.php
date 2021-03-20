@@ -261,7 +261,8 @@ class Main extends Singleton
             
             if (!$serverError)
             {
-                $this->database->saveObjects(true)->commit();
+                try { $this->database->saveObjects(true)->commit(); }
+                catch (\Throwable $e) { $this->error_manager->Log($e); }
             }
         }
         

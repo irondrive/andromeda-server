@@ -2,6 +2,7 @@
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Transactions;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
@@ -21,9 +22,13 @@ require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
  */
 abstract class FSImpl implements Transactions
 {
+    private static $instances = array();
+    
     public function __construct(FSManager $fsmanager)
     {
         $this->fsmanager = $fsmanager;
+        
+        array_push(self::$instances, $this);
     }
     
     /**
@@ -135,6 +140,19 @@ abstract class FSImpl implements Transactions
     /** Passes commit to the underlying storage */
     public function commit() { return $this->GetStorage()->commit(); }
     
+    /** Commits all instantiated filesystems */
+    public static function commitAll() { foreach (self::$instances as $fs) $fs->commit(); }
+    
     /** Passes rollback to the underlying storage */
     public function rollback() { return $this->GetStorage()->rollback(); }
+    
+    /** Rolls back all instantiated filesystems */
+    public static function rollbackAll() 
+    { 
+        foreach (self::$instances as $fs) 
+        {
+            try { $fs->rollback(); } catch (\Throwable $e) { 
+                ErrorManager::GetInstance()->Log($e); }
+        }
+    }
 }
