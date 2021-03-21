@@ -12,7 +12,6 @@ require_once(ROOT."/apps/accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\
 
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
-require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 
 require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");
