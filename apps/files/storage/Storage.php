@@ -470,17 +470,35 @@ abstract class Storage extends StandardObject implements Transactions
     /** By default, most storages cannot copy whole folders */
     public function canCopyFolders() : bool { return false; }
     
+    /** array of all instantiated storages */
+    private static $instances = array();    
+    
+    public function SubConstruct() : void { array_push(self::$instances, $this); }
+    
     /** array of functions to run for commit */
     protected array $onCommit = array();
     
     public function commit() { foreach ($this->onCommit as $func) $func(); }
     
+    /** Commits all instantiated filesystems */
+    public static function commitAll() { foreach (self::$instances as $fs) $fs->commit(); }
+    
     /** array of functions to run for rollback */
     protected array $onRollback = array();
     
     public function rollback() 
-    { 
+    {
         foreach (array_reverse($this->onRollback) as $func) try { $func(); } 
             catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
     }
+    
+    /** Rolls back all instantiated filesystems */
+    public static function rollbackAll()
+    {
+        foreach (self::$instances as $fs)
+        {
+            try { $fs->rollback(); } catch (\Throwable $e) {
+                ErrorManager::GetInstance()->Log($e); }
+        }
+    }    
 }

@@ -17,7 +17,7 @@ require_once(ROOT."/apps/files/storage/Storage.php");
 use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/filesystem/FSImpl.php"); use Andromeda\Apps\Files\Filesystem\FSImpl;
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
@@ -197,9 +197,9 @@ class FilesApp extends AppBase
         catch (DatabaseException $e) { }
     }
     
-    public function commit() { FSImpl::commitAll(); }
+    public function commit() { Storage::commitAll(); }
     
-    public function rollback() { FSImpl::rollbackAll(); }
+    public function rollback() { Storage::rollbackAll(); }
     
     /**
      * {@inheritDoc}

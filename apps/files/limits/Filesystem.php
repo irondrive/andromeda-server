@@ -88,7 +88,7 @@ class FilesystemTimed extends Timed
         return static::LoadAllForClient($database, $filesystem);
     }    
     
-    public static function GetTimedUsage() : string { return "[--max_stats_age -1|0|int]"; }
+    public static function GetTimedUsage() : string { return "[--max_stats_age -1 (forever)|0 (none)|int]"; }
     
     protected function SetTimedLimits(Input $input) : void
     {
