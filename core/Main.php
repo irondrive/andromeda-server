@@ -140,6 +140,7 @@ class Main extends Singleton
             if ($this->dirty) $this->rollBack(false); });        
     }
     
+    /** Loads the main include file for an app */
     public function LoadApp(string $app) : self
     {
         $path = ROOT."/apps/$app/$app"."App.php";

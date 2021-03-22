@@ -13,7 +13,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
  * The main error handler/manager 
  * 
  * This class handles uncaught exceptions, logging them and converting to a client Output object.
- * This class should only be used internally by the framework.
+ * Application code can use Log() when an exception is caught but still needs to be logged.
  */
 class ErrorManager extends Singleton
 {
