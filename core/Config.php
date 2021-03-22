@@ -36,7 +36,8 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--datadir ?text] [--debug 0|1|2|3] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only 0|1|2] [--enabled bool] [--email bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
+                                                                 "[--read_only ".implode('|',array_keys(self::RUN_TYPES))."] [--enabled bool] [--email bool] [--datadir ?text]"; }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -53,13 +54,29 @@ class Config extends SingletonObject
                 throw new UnwriteableDatadirException();
             $this->SetScalar('datadir', $datadir);
         }
+
+        if ($input->HasParam('debug'))
+        {
+            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM,
+                function($v){ return array_key_exists($v, self::DEBUG_TYPES); });
+            
+            $this->SetFeature('debug', self::DEBUG_TYPES[$param]);
+        }
         
-        if ($input->HasParam('debug')) $this->SetFeature('debug',$input->GetParam('debug',SafeParam::TYPE_INT));
         if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
         if ($input->HasParam('debug_dblog')) $this->SetFeature('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
         if ($input->HasParam('debug_filelog')) $this->SetFeature('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
+
+        if ($input->HasParam('read_only'))
+        {
+            $this->overrideReadOnly();
+            
+            $param = $input->GetParam('read_only',SafeParam::TYPE_ALPHANUM,
+                function($v){ return array_key_exists($v, self::RUN_TYPES); });
+            
+            $this->SetFeature('read_only', self::RUN_TYPES[$param]);
+        }
         
-        if ($input->HasParam('read_only')) $this->SetFeature('read_only',$input->GetParam('read_only',SafeParam::TYPE_INT));
         if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
         if ($input->HasParam('email')) $this->SetFeature('email',$input->GetParam('email',SafeParam::TYPE_BOOL));        
        
@@ -99,6 +116,8 @@ class Config extends SingletonObject
     
     /** Fail when any writes queries are attempted */
     const RUN_READONLY = 2;
+    
+    const RUN_TYPES = array('norm'=>0, 'dryrun'=>self::RUN_DRYRUN, 'readonly'=>self::RUN_READONLY);
         
     /** Returns the enum for whether the server is set to read-only (or dry run) */
     public function getReadOnly() : int { return $this->GetFeature('read_only'); }
@@ -109,8 +128,13 @@ class Config extends SingletonObject
     /** Returns true if the server is set to read-only (not dry run) */
     public function isReadOnly() : bool { return $this->GetFeature('read_only') === self::RUN_READONLY; }
     
-    /** Temporarily overrides the read-only steting in config */
-    public function overrideReadOnly(int $data) : self { return $this->SetFeature('read_only', $data, true); }
+    /** Temporarily overrides the read-only steting in config to the given value */
+    public function overrideReadOnly(int $mode = 0) : self 
+    {
+        $this->database->setReadOnly($mode === self::RUN_READONLY);
+        
+        return $this->SetFeature('read_only', $mode, true); 
+    }
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
@@ -123,6 +147,8 @@ class Config extends SingletonObject
     
     /** also show input params, function arguments, SQL values */ 
     const LOG_SENSITIVE = 3;
+    
+    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::LOG_ERRORS, 'development'=>self::LOG_DEVELOPMENT, 'sensitive'=>self::LOG_SENSITIVE);
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->GetFeature('debug'); }
@@ -161,30 +187,30 @@ class Config extends SingletonObject
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{features: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, features:{ debug:int, 
+     * @return array `{features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
+         if admin, add: `{datadir:?string, features:{ debug:string, 
          debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
     { 
-        $data = array(
-            'features' => array(
-                'read_only' => $this->getReadOnly(),
-                'enabled' => $this->isEnabled()
-            )
-        );
+        $data = array('features' => $this->GetAllFeatures());
+        
+        $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
+        $data['features']['read_only'] = array_flip(self::RUN_TYPES)[$this->getReadOnly()];
         
         $data['apps'] = array_map(function($app)use($admin){ 
             return $admin ? $app::getVersion() : 
                 implode('.',array_slice(explode('.',$app::getVersion()),0,2));
         }, Main::GetInstance()->GetApps());
                 
-        if ($admin)
+        if ($admin) $data['datadir'] = $this->GetDataDir();
+        else
         {
-            $data['datadir'] = $this->GetDataDir();
-            $data['features'] = $this->GetAllFeatures();
+            $data['features'] = array_filter($data['features'], function($key){ 
+                return in_array($key, array('read_only','enabled')); 
+            }, ARRAY_FILTER_USE_KEY);
         }
-        
+
         return $data;
     }
 }
