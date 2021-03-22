@@ -120,7 +120,7 @@ class Main extends Singleton
 
             if (!$this->isEnabled()) throw new MaintenanceException();
             
-            if ($this->config->isReadOnly() == Config::RUN_READONLY) 
+            if ($this->config->isReadOnly()) 
                 $this->database->setReadOnly();    
 
             $apps = $this->config->GetApps();
@@ -261,7 +261,14 @@ class Main extends Singleton
             
             if (!$serverError)
             {
-                try { $this->database->saveObjects(true)->commit(); }
+                try 
+                { 
+                    $this->database->saveObjects(true);
+                    
+                    $rollback = $this->config && $this->config->getReadOnly();
+                    
+                    if ($rollback) $this->database->rollBack(); else $this->database->commit(); 
+                }
                 catch (\Throwable $e) { $this->error_manager->Log($e); }
             }
         }
@@ -287,9 +294,9 @@ class Main extends Singleton
             if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
                 $this->database->pushStatsContext();
             
-            $rollback = $this->config && $this->config->isReadOnly();
-            
             $this->database->saveObjects();
+                
+            $rollback = $this->config && $this->config->getReadOnly();
             
             foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
             
@@ -309,7 +316,7 @@ class Main extends Singleton
         $this->dirty = false;
     }
 
-    /** if false, requests are not allowed */
+    /** if false, requests are not allowed (always true for privileged interfaces) */
     protected function isEnabled() : bool
     {
         if ($this->config === null) return true;
@@ -318,7 +325,7 @@ class Main extends Singleton
     }
     
     /**
-     * Asserts that the server is disabled
+     * Asserts that the server is disabled via config
      * @throws DisableRequiredException if not
      */
     public function requireDisabled() : self

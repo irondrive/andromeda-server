@@ -80,7 +80,12 @@ abstract class Folder extends Item
     public function GetTotalShares() : int { return $this->GetNumShares() + $this->GetCounter('subshares'); }
     
     /** Increments the folder's visit counter */
-    public function CountPublicVisit() : self { return $this->DeltaCounter('pubvisits'); }
+    public function CountPublicVisit() : self 
+    {
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
+        return $this->DeltaCounter('pubvisits'); 
+    }
     
     /** Increments the size of this folder and parents by the given #bytes */
     public function DeltaSize(int $size) : self 
@@ -220,7 +225,8 @@ abstract class Folder extends Item
         $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.owner', $account->ID()),
             $q->Equals($database->GetClassTableName(Folder::class).'.owner', $account->ID()));
 
-        return array_filter(parent::LoadByQuery($database, $q->Where($w)), function(Folder $folder){ return !$folder->isWorldAccess(); });
+        return array_filter(parent::LoadByQuery($database, $q->Where($w)), 
+            function(Folder $folder){ return !$folder->isWorldAccess(); });
     }
     
     /**
@@ -284,43 +290,35 @@ abstract class Folder extends Item
 
         $data = array_merge(parent::SubGetClientObject($details),array(
             'filesystem' => $this->GetObjectID('filesystem')
-        ));
-        
+        ));        
         
         if ($recursive && ($files || $folders))
         {
             $items = $this->RecursiveItems($files,$folders,$limit,$offset);
             
-            if ($folders)
-            {
-                $subfolders = array_filter($items, function($item){ return ($item instanceof Folder); });
-                $data['folders'] = array_filter(array_map(function($folder){ return $folder->TryGetClientObject(); },$subfolders));
-            }
-            
-            if ($files)
-            {
-                $subfiles = array_filter($items, function($item){ return ($item instanceof File); });
-                $data['files'] = array_filter(array_map(function($file){ return $file->TryGetClientObject(); },$subfiles));
-            }            
+            if ($folders) $subfolders = array_filter($items, function($item){ return ($item instanceof Folder); });            
+            if ($files) $subfiles = array_filter($items, function($item){ return ($item instanceof File); });
         }
         else
         {
             if ($folders)
             {
-                $data['folders'] = array_filter(array_map(function($folder){
-                    return $folder->TryGetClientObject(); }, $this->GetFolders($limit,$offset)));
+                $subfolders = array_filter($this->GetFolders($limit,$offset), 
+                    function(Folder $folder){ return !$folder->Refresh()->isDeleted(); });
             
-                $numitems = count($data['folders']);
+                $numitems = count($subfolders);
                 if ($offset !== null) $offset = max(0, $offset-$numitems);
                 if ($limit !== null) $limit = max(0, $limit-$numitems);
             }
             
-            if ($files)
-            {
-                $data['files'] = array_filter(array_map(function($file){
-                    return $file->TryGetClientObject(); }, $this->GetFiles($limit,$offset)));
-            }
-        }        
+            if ($files) $subfiles = $this->GetFiles($limit,$offset);
+        }
+        
+        if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder){ 
+            return $folder->TryGetClientObject(); }, $subfolders));
+        
+        if ($folders) $data['files'] = array_filter(array_map(function(File $file){ 
+            return $file->TryGetClientObject(); }, $subfiles));
         
         $data['dates'] = $this->GetAllDates();
         $data['counters'] = $this->GetAllCounters();

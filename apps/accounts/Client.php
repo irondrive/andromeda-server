@@ -54,7 +54,12 @@ class Client extends AuthObject
     public function getActiveDate() : float { return $this->GetDate('active'); }
     
     /** Sets the timestamp this client was active to now */
-    public function setActiveDate() : self { return $this->SetDate('active'); }
+    public function setActiveDate() : self
+    {
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
+        return $this->SetDate('active');
+    }
     
     /** Gets the last timestamp the client created a session */
     public function getLoggedonDate() : float { return $this->GetDate('loggedon'); }

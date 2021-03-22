@@ -207,6 +207,9 @@ class Database implements Transactions
      */
     public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
     
+    /** Returns true if the database is read-only */
+    public function isReadOnly() : bool { return $this->read_only; }
+    
     /**
      * Imports the appropriate SQL template file for an app
      * @param string $path the base path containing the templates
@@ -261,13 +264,15 @@ class Database implements Transactions
      */
     public function query(string $sql, int $type, ?array $data = null) 
     {
-        if ($type & self::QUERY_WRITE && $this->read_only) throw new DatabaseReadOnlyException();
+        $this->logQuery($sql, $data);
+        
+        if ($type & self::QUERY_WRITE && $this->read_only) 
+            throw new DatabaseReadOnlyException();
 
+        $this->startTimingQuery();
+            
         if (!$this->connection->inTransaction()) 
             $this->beginTransaction();
-        
-        $this->startTimingQuery();        
-        $this->logQuery($sql, $data);
         
         $doSavepoint = false;
         

@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -204,7 +205,12 @@ abstract class Item extends StandardObject
     }
     
     /** Sets the item's access time to the given value or now if null */
-    public function SetAccessed(?int $time = null) : self { return $this->SetDate('accessed', max($this->TryGetDate('accessed'), $time)); }
+    public function SetAccessed(?int $time = null) : self 
+    { 
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+
+        return $this->SetDate('accessed', max($this->TryGetDate('accessed'), $time)); 
+    }
     
     /** Sets the item's created time to the given value or now if null */
     public function SetCreated(?int $time = null) : self  { return $this->SetDate('created', max($this->TryGetDate('created'), $time)); }
@@ -257,16 +263,16 @@ abstract class Item extends StandardObject
     }
     
     /** Counts a public download on the item and its parents */
-    public function CountPublicDownload() : self            
-    {
+    protected function CountPublicDownload() : self            
+    {        
         $parent = $this->GetParent();
         if ($parent !== null) $parent->CountPublicDownload();
         return $this->DeltaCounter('pubdownloads'); 
     }
     
     /** Counts the given bandwidth on the item and its parents */
-    public function CountBandwidth(int $bytes) : self 
-    {
+    protected function CountBandwidth(int $bytes) : self 
+    {        
         $parent = $this->GetParent();
         if ($parent !== null) $parent->CountBandwidth($bytes);
         return $this->DeltaCounter('bandwidth', $bytes); 
@@ -300,24 +306,29 @@ abstract class Item extends StandardObject
 
     /** Maps the given function to all applicable limit objects */
     protected function MapToLimits(callable $func) : self
-    {
+    {        
         return $this->MapToTotalLimits($func)->MapToTimedLimits($func);
     }
     
     /** Maps the given function to all applicable total limit objects */
     protected function MapToTotalLimits(callable $func) : self
-    {
+    {        
         $fslim = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem()); if ($fslim !== null) $func($fslim);
+        
         if ($this->GetOwnerID()) foreach (Limits\AccountTotal::LoadByAccountAll($this->database, $this->GetOwner()) as $lim) $func($lim);
+        
         return $this;
     }
     
     /** Maps the given function to all applicable timed limit objects */
     protected function MapToTimedLimits(callable $func) : self
-    {
+    {        
         if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
-        foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $lim) $func($lim);        
-        if ($this->GetOwnerID()) foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $lim) $func($lim);        
+        
+        foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $lim) $func($lim);    
+        
+        if ($this->GetOwnerID()) foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $lim) $func($lim);   
+        
         return $this;
     }
     

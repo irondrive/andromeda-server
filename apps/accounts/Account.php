@@ -240,7 +240,12 @@ class Account extends AuthEntity
     public function getActiveDate() : ?float    { return $this->TryGetDate('active'); }
     
     /** Sets the last-active timestamp to now */
-    public function setActiveDate() : self      { return $this->SetDate('active'); }
+    public function setActiveDate() : self      
+    { 
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
+        return $this->SetDate('active'); 
+    }
     
     /** Gets the timestamp when this user last created a session */
     public function getLoggedonDate() : ?float  { return $this->TryGetDate('loggedon'); }
