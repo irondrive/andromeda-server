@@ -18,6 +18,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 class ErrorManager extends Singleton
 {
     private ?Main $API = null; 
+    
     private IOInterface $interface;
 
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
@@ -95,6 +96,8 @@ class ErrorManager extends Singleton
         $debug = ErrorLogEntry::GetDebugData($this->API, $e);
         
         if ($this->API !== null && $mainlog) $this->API->PrintDebug($debug);
+        
+        if ($e instanceof ClientException) return $debug;
         
         try
         {

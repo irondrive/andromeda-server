@@ -1,9 +1,10 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\InputFile;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -86,7 +87,9 @@ class File extends Item
      * @param bool public if false, only updates the timestamp and not limit counters
      */
     public function CountDownload(bool $public = true) : self
-    {        
+    {
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
         $this->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetDownloadDate(); });
         
         if ($public)
@@ -101,6 +104,8 @@ class File extends Item
     /** Counts bandwidth by updating the count and notifying parents */
     public function CountBandwidth(int $bytes) : self
     {
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
         $fs = $this->GetFilesystem(); if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
         $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });

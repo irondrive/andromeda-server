@@ -3,10 +3,11 @@
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions};
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities, Transactions};
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -186,10 +187,19 @@ abstract class Storage extends StandardObject implements Transactions
      * Asserts that the storage is not read only
      * @throws ReadOnlyException if the filesystem is read only
      */
-    protected function AssertCanWrite()
+    protected function AssertCanWrite() : void
     {
         if ($this->GetFilesystem()->isReadOnly())
             throw new ReadOnlyException();
+        
+        if (Main::GetInstance()->GetConfig()->isReadOnly())
+            throw new ReadOnlyException();
+    }
+    
+    /** Returns true if the server is set to dry run mode */
+    protected function isDryRun() : bool
+    {
+        return Main::GetInstance()->GetConfig()->isDryRun();
     }
     
     /** Returns an ItemStat object on the given path */
@@ -290,6 +300,8 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
+        if ($this->isDryRun()) return $this;
+        
         return $this->SubWriteBytes($path, $start, $data);
     }
     
@@ -309,6 +321,8 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertCanWrite();
         
+        if ($this->isDryRun()) return $this;
+        
         return $this->SubTruncate($path, $length);
     }    
     
@@ -322,6 +336,8 @@ abstract class Storage extends StandardObject implements Transactions
     public function DeleteFile(string $path) : self
     {
         $this->AssertCanWrite();
+        
+        if ($this->isDryRun()) return $this;
         
         if (!$this->isFile($path)) return $this;
         
@@ -338,6 +354,8 @@ abstract class Storage extends StandardObject implements Transactions
     public function DeleteFolder(string $path) : self
     {
         $this->AssertCanWrite();
+        
+        if ($this->isDryRun()) return $this;
         
         if (!$this->isFolder($path)) return $this;
         

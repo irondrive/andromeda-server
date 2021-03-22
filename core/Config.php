@@ -36,7 +36,7 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--datadir ?text] [--debug int] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only int] [--enabled bool] [--email bool]"; }
+    public static function GetSetConfigUsage() : string { return "[--datadir ?text] [--debug 0|1|2|3] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] [--read_only 0|1|2] [--enabled bool] [--email bool]"; }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -94,10 +94,20 @@ class Config extends SingletonObject
     /** Set whether the server is allowed to respond to requests */
     public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
     
-    const RUN_READONLY = 1; const RUN_DRYRUN = 2;
+    /** Allow write queries but always rollback at the end */
+    const RUN_DRYRUN = 1;
     
-    /** Returns whether the server is set to read-only (or dry run) */
-    public function isReadOnly() : int { return $this->GetFeature('read_only'); }
+    /** Fail when any writes queries are attempted */
+    const RUN_READONLY = 2;
+        
+    /** Returns the enum for whether the server is set to read-only (or dry run) */
+    public function getReadOnly() : int { return $this->GetFeature('read_only'); }
+    
+    /** Returns true if the server is set to dry-run mode */
+    public function isDryRun() : bool { return $this->GetFeature('read_only') === self::RUN_DRYRUN; }
+    
+    /** Returns true if the server is set to read-only (not dry run) */
+    public function isReadOnly() : bool { return $this->GetFeature('read_only') === self::RUN_READONLY; }
     
     /** Temporarily overrides the read-only steting in config */
     public function overrideReadOnly(int $data) : self { return $this->SetFeature('read_only', $data, true); }
@@ -159,7 +169,7 @@ class Config extends SingletonObject
     { 
         $data = array(
             'features' => array(
-                'read_only' => $this->isReadOnly(),
+                'read_only' => $this->getReadOnly(),
                 'enabled' => $this->isEnabled()
             )
         );

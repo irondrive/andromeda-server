@@ -92,7 +92,8 @@ class Native extends BaseFileFS
         
         $storage = $this->GetStorage();
         
-        $storage->CreateFolder($path);
+        if (!$storage->isFolder($path))
+            $storage->CreateFolder($path);
         
         return $path.'/'.substr($id, $len); 
     }

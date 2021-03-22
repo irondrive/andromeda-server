@@ -482,6 +482,8 @@ abstract class BaseObject
      */
     protected function SetScalar(string $field, $value, bool $temp = false) : self
     {    
+        if (!$temp && $this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        
         if (!array_key_exists($field, $this->scalars))
         {
             if ($value === null) return $this;
@@ -503,6 +505,8 @@ abstract class BaseObject
      */
     protected function DeltaCounter(string $field, int $delta) : self
     {
+        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        
         if ($delta === 0) return $this;
         
         if (!array_key_exists($field, $this->scalars)) throw new KeyNotFoundException($field);
@@ -527,6 +531,8 @@ abstract class BaseObject
      */
     protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
     {
+        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+
         if (!array_key_exists($field, $this->objects)) 
         {
             if ($object === null) return $this;
@@ -585,6 +591,8 @@ abstract class BaseObject
      */
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
+        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();        
+        
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
         
         $fieldobj = $this->objectrefs[$field];        
@@ -607,6 +615,8 @@ abstract class BaseObject
      */
     protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
     {
+        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
         
         $fieldobj = $this->objectrefs[$field];        
