@@ -114,7 +114,7 @@ class Config extends SingletonObject
     /** Allow write queries but always rollback at the end */
     const RUN_DRYRUN = 1;
     
-    /** Fail when any writes queries are attempted */
+    /** Fail when any write queries are attempted */
     const RUN_READONLY = 2;
     
     const RUN_TYPES = array('norm'=>0, 'dryrun'=>self::RUN_DRYRUN, 'readonly'=>self::RUN_READONLY);

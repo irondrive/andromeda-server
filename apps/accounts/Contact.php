@@ -166,7 +166,7 @@ class Contact extends ContactBase
         
         if ($verify)
         {
-            $contact->InitAuthKey(); $key = $contact->GetFullKey();
+            $key = $contact->InitAuthKey()->GetFullKey();
             
             $subject = "Andromeda Email Validation Code";
             $body = "Your validation code is: $key";
