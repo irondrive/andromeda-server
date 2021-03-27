@@ -94,15 +94,16 @@ class Database implements Transactions
             $config['PASSWORD'] ?? null, 
             array(
                 PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_EMULATE_PREPARES => false
         ));
         
         if ($this->connection->inTransaction())
-            $this->connection->rollBack();
+            $this->connection->rollback();
     }
 
     /** Returns a string with the primary CLI usage for Install() */
-    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile text]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile fspath]"; }
     
     /** 
      * Returns the CLI usages specific to each driver 
@@ -111,9 +112,9 @@ class Database implements Transactions
     public static function GetInstallUsages() : array
     {
         return array(
-            "\t --driver mysql --dbname alphanum (--unix_socket text | (--host text [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "\t --driver pgsql --dbname alphanum --host text [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "\t --driver sqlite --dbpath text"
+            "\t --driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "\t --driver pgsql --dbname alphanum --host hostname [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "\t --driver sqlite --dbpath fspath"
         );
     }
     
@@ -142,7 +143,7 @@ class Database implements Transactions
             {
                 $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
                 
-                $port = $input->GetOptParam('port',SafeParam::TYPE_INT);
+                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT);
                 if ($port !== null) $connect .= ";port=$port";
             }
             
@@ -163,12 +164,13 @@ class Database implements Transactions
         
         $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_TEXT) ?? self::CONFIG_FILE;
+        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_FILE;
         
         $tmpnam = "$outnam.tmp.php";
         file_put_contents($tmpnam, $output);
         
-        try { new Database($tmpnam); } catch (\Throwable $e) {
+        try { new Database($tmpnam); } 
+        catch (\Throwable $e) {
             unlink($tmpnam); throw $e; }
         
         rename($tmpnam, $outnam);
@@ -176,7 +178,7 @@ class Database implements Transactions
     
     /** 
      * returns the array of config that was loaded from the config file 
-     * @return array<string, mixed> {driver:string, connect:string, ?username:string, ?password:true, ?persistent:bool}
+     * @return array<string, mixed> `{driver:string, connect:string, ?username:string, ?password:true, ?persistent:bool}`
      */
     public function GetClientObject() : array
     {
@@ -189,7 +191,7 @@ class Database implements Transactions
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array<string, mixed> {driver:string, version:string, info:string}
+     * @return array<string, mixed> `{driver:string, version:string, info:string}`
      */
     public function getInfo() : array
     {
@@ -242,7 +244,7 @@ class Database implements Transactions
     /** Whether or not the DB expects using public. as a prefix for table names */
     protected function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
     
-    /** Returns the operator used for concatenating two strings in a query */
+    /** Returns the given arguments concatenated in SQL */
     public function SQLConcat(string ...$args) : string
     {
         if ($this->getDriver() === self::DRIVER_MYSQL)
@@ -264,6 +266,9 @@ class Database implements Transactions
      */
     public function query(string $sql, int $type, ?array $data = null) 
     {
+        if (!$this->connection->inTransaction())
+            $this->beginTransaction();
+            
         $this->logQuery($sql, $data);
         
         if ($type & self::QUERY_WRITE && $this->read_only) 
@@ -271,9 +276,6 @@ class Database implements Transactions
 
         $this->startTimingQuery();
             
-        if (!$this->connection->inTransaction()) 
-            $this->beginTransaction();
-        
         $doSavepoint = false;
         
         try 
@@ -338,9 +340,11 @@ class Database implements Transactions
             foreach ($data as $key=>$val)
             {
                 try { Utilities::JSONEncode(array($val)); }
-                catch (JSONEncodingException $e) { $val = base64_encode($val); }
+                catch (JSONEncodingException $e) { $val = "(base64)".base64_encode($val); }
                 
-                $sql = str_replace(":$key", ($val===null)?'NULL':"'$val'", $sql);
+                if ($val !== null && is_string($val)) $val = "'$val'";
+                
+                $sql = Utilities::replace_first(":$key", ($val===null)?'NULL':$val, $sql);
             }
         }
         
@@ -377,7 +381,7 @@ class Database implements Transactions
     }
 
     /** Rolls back the current database transaction */
-    public function rollBack() : void
+    public function rollback() : void
     { 
         if ($this->connection->inTransaction())
         {
@@ -430,7 +434,7 @@ class Database implements Transactions
     
     /** 
      * Returns the array of query history 
-     * @return string[]
+     * @return string[] string array
      */
     public function getAllQueries() : array
     {

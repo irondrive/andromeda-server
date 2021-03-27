@@ -68,14 +68,14 @@ abstract class BaseFileFS extends FSImpl
  */
 class Native extends BaseFileFS
 {
-    /** no-op */ public function RefreshFile(File $file) : self { return $this; }
-    /** no-op */ public function RefreshFolder(Folder $folder) : self { return $this; }    
-    /** no-op */ public function CreateFolder(Folder $folder) : self { return $this; }
-    /** no-op */ public function DeleteFolder(Folder $folder) : self { return $this; }    
-    /** no-op */ public function RenameFile(File $file, string $name) : self { return $this; }
-    /** no-op */ public function RenameFolder(Folder $folder, string $name) : self { return $this; }    
-    /** no-op */ public function MoveFile(File $file, Folder $parent) : self { return $this; }
-    /** no-op */ public function MoveFolder(Folder $folder, Folder $parent) : self { return $this; }
+    /** no-op */ public function RefreshFile(File $file) : self                     { return $this; }
+    /** no-op */ public function RefreshFolder(Folder $folder) : self               { return $this; }    
+    /** no-op */ public function CreateFolder(Folder $folder) : self                { return $this; }
+    /** no-op */ public function DeleteFolder(Folder $folder) : self                { return $this; }    
+    /** no-op */ public function RenameFile(File $file, string $name) : self        { return $this; }
+    /** no-op */ public function RenameFolder(Folder $folder, string $name) : self  { return $this; }    
+    /** no-op */ public function MoveFile(File $file, Folder $parent) : self        { return $this; }
+    /** no-op */ public function MoveFolder(Folder $folder, Folder $parent) : self  { return $this; }
     
     /** @see BaseFileFS::ManualCopyFolder() */
     public function CopyFolder(Folder $folder, Folder $dest) : self
@@ -87,12 +87,14 @@ class Native extends BaseFileFS
     protected function GetFilePath(File $file) : string 
     {
         $id = $file->ID();
-
-        $len = 2; $path = substr($id, 0, $len);
         
         $storage = $this->GetStorage();
         
-        if (!$storage->isFolder($path))
+        if (!$storage->supportsFolders()) return $id;
+
+        $len = 2; $path = substr($id, 0, $len);
+        
+         if (!$storage->isFolder($path))
             $storage->CreateFolder($path);
         
         return $path.'/'.substr($id, $len); 

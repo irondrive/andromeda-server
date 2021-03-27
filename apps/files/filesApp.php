@@ -181,12 +181,6 @@ class FilesApp extends AppBase
     /** database reference */ private ObjectDatabase $database;
     
     /** Authenticator for the current Run() */ private ?Authenticator $authenticator;
-    
-    /** function to be called when crypto unlock is required */
-    private static $providesCrypto;
-
-    /** informs the files app that account crypto needs to be available */
-    public static function needsCrypto(){ $func = static::$providesCrypto; $func(); }
      
     public function __construct(Main $api)
     {
@@ -217,8 +211,6 @@ class FilesApp extends AppBase
         
         $this->authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
-        
-        static::$providesCrypto = function(){ $this->authenticator->RequireCrypto(); };
 
         switch($input->GetAction())
         {
@@ -445,7 +437,7 @@ class FilesApp extends AppBase
      */
     protected function DownloadFile(Input $input) : void
     {
-        // TODO CLIENT - since this is not AJAX, we might want to redirect to a page when doing a 404, etc. - better than plaintext
+        // TODO CLIENT - since this is not AJAX, we might want to redirect to a page when doing a 404, etc. - better than plaintext - use appurl config
         
         $iface = $this->API->GetInterface();
         $oldmode = $iface->GetOutputMode();
@@ -458,8 +450,8 @@ class FilesApp extends AppBase
 
         // first determine the byte range to read
         $fsize = $file->GetSize();
-        $fstart = $input->GetNullParam('fstart',SafeParam::TYPE_INT) ?? 0;
-        $flast  = $input->GetNullParam('flast',SafeParam::TYPE_INT) ?? $fsize-1;
+        $fstart = $input->GetNullParam('fstart',SafeParam::TYPE_UINT) ?? 0;
+        $flast  = $input->GetNullParam('flast',SafeParam::TYPE_UINT) ?? $fsize-1;
         
         if (isset($_SERVER['HTTP_RANGE']))
         {
@@ -564,7 +556,7 @@ class FilesApp extends AppBase
 
         $filepath = $input->GetFile('data')->GetPath();
         
-        $wstart = $input->GetNullParam('offset',SafeParam::TYPE_INT) ?? 0;
+        $wstart = $input->GetNullParam('offset',SafeParam::TYPE_UINT) ?? 0;
         $wlength = filesize($filepath); $wlast = $wstart + $wlength - 1;
         
         $file->CountBandwidth($wlength);        
@@ -580,6 +572,7 @@ class FilesApp extends AppBase
         
         $overwrite = (!$wstart && $wlength >= $file->GetSize());        
 
+        // allow appending and overwriting without randomWrite permission
         if (!$overwrite && $wstart != $file->GetSize() && !$file->GetAllowRandomWrite($account))
             throw new RandomWriteDisabledException();
             
@@ -598,7 +591,8 @@ class FilesApp extends AppBase
             $align = ($fschunksize !== null);
             if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
             
-            $inhandle = fopen($filepath, 'rb');
+            if (!($inhandle = fopen($filepath, 'rb')))
+                throw new FileReadFailedException();
             
             for ($wbyte = $wstart; $wbyte <= $wlast; )
             {
@@ -610,8 +604,11 @@ class FilesApp extends AppBase
                 
                 $wlen = min($nbyte - $wbyte, $wlength - $rstart);
                 
-                fseek($inhandle, $rstart);
-                $data = fread($inhandle, $wlen);
+                if (fseek($inhandle, $rstart) !== 0)
+                    throw new FileReadFailedException();
+                
+                if (($data = fread($inhandle, $wlen)) === false)
+                    throw new FileReadFailedException();
                 
                 if (strlen($data) != $wlen) throw new FileReadFailedException();
                 
@@ -627,7 +624,6 @@ class FilesApp extends AppBase
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws RandomWriteDisabledException if random writes are not enabled on the file
      * @throws ItemAccessDeniedException if access via share and share does not allow modify
-     * @throws InvalidFileRangeException if the given size is < 0
      * @return array File
      * @see File::GetClientObject()
      */
@@ -646,11 +642,7 @@ class FilesApp extends AppBase
             
         if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
 
-        $size = $input->GetParam('size',SafeParam::TYPE_INT);
-        
-        if ($size < 0) throw new InvalidFileRangeException();
-        
-        $file->SetSize($size);
+        $file->SetSize($input->GetParam('size',SafeParam::TYPE_UINT));
         
         return $file->GetClientObject();
     }
@@ -712,8 +704,8 @@ class FilesApp extends AppBase
         $folders = $input->GetOptParam('folders',SafeParam::TYPE_BOOL) ?? true;
         $recursive = $input->GetOptParam('recursive',SafeParam::TYPE_BOOL) ?? false;
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
         $details = $input->GetOptParam('details',SafeParam::TYPE_BOOL) ?? false;
         
         $public = isset($share) && $share !== null;
@@ -1314,8 +1306,8 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
         
         $comments = $item->GetComments($limit, $offset);
 
@@ -1353,8 +1345,8 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
         
         $likes = $item->GetLikes($limit, $offset);
         
@@ -1585,9 +1577,9 @@ class FilesApp extends AppBase
         
         if ($filesystem === null) throw new UnknownFilesystemException();
         
-        $isadmin = $this->authenticator->isAdmin() || $account === $filesystem->GetOwner();
+        $ispriv = $this->authenticator->isAdmin() || ($account === $filesystem->GetOwner());
         
-        return $filesystem->GetClientObject($isadmin);
+        return $filesystem->GetClientObject($ispriv);
     }
     
     /**
@@ -1603,8 +1595,8 @@ class FilesApp extends AppBase
 
         if ($this->authenticator->isAdmin() && $input->GetOptParam('everyone',SafeParam::TYPE_BOOL))
         {
-            $limit = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+            $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
             
             $filesystems = FSManager::LoadAll($this->database, $limit, $offset);
         }
@@ -1770,8 +1762,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
             return array_map(function(Limits\Total $obj)use($isadmin){ 
                 return $obj->GetClientObject($isadmin); },$lims);
@@ -1798,8 +1790,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
         }
 
@@ -1820,13 +1812,13 @@ class FilesApp extends AppBase
         $obj = $this->GetLimitObject($input, true, false, true);
         $class = $obj['class']; $obj = $obj['obj'];
         
-        $period = $input->GetParam('timeperiod',SafeParam::TYPE_INT);
+        $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
         $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
         
         if ($lim === null) return null;
 
-        $count = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+        $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
         
         return array_map(function(Limits\TimedStats $stats){ return $stats->GetClientObject(); },
             Limits\TimedStats::LoadAllByLimit($this->database, $lim, $count, $offset));        
@@ -1842,8 +1834,8 @@ class FilesApp extends AppBase
     {
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         
-        $period = $input->GetParam('timeperiod',SafeParam::TYPE_INT);
-        $attime = $input->GetParam('matchtime',SafeParam::TYPE_INT);
+        $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
+        $attime = $input->GetParam('matchtime',SafeParam::TYPE_UINT);
         
         $obj = $this->GetLimitObject($input, false, true, true);
         $class = $obj['class']; $obj = $obj['obj'];
@@ -1858,8 +1850,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_INT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_INT);
+            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
             
             $retval = array(); 
             
@@ -1938,7 +1930,7 @@ class FilesApp extends AppBase
         $obj = $this->GetLimitObject($input, false, false, true);
         $class = $obj['class']; $obj = $obj['obj'];
         
-        $period = $input->GetParam('period', SafeParam::TYPE_INT);
+        $period = $input->GetParam('period', SafeParam::TYPE_UINT);
         $class::DeleteClientAndPeriod($this->database, $obj, $period);
     }
 }

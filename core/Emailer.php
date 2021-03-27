@@ -115,7 +115,7 @@ class Emailer extends StandardObject
     private static function BuildHostFromParams(SafeParams $input) : string
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
-        $port = $input->GetOptParam('port',SafeParam::TYPE_INT);
+        $port = $input->GetOptParam('port',SafeParam::TYPE_UINT);
         $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,
             function($d){ return in_array($d,array('tls','ssl')); });
         

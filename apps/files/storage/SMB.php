@@ -5,9 +5,9 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/storage/FWrapper.php");
-require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 /** Exception indicating that the libsmbclient extension is missing */
 class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
@@ -22,16 +22,14 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 
 FSManager::RegisterStorageType(SMB::class);
 
-abstract class SMBCredCrypt extends FWrapper { use CredCrypt; }
-
 /**
  * Allows using an SMB/CIFS server for backend storage
  * 
  * Uses PHP libsmbclient.  Mostly uses the PHP fwrapper
  * functions but some manual workarounds are needed.
- * Uses credcrypt to allow encrypting the username/password.
+ * Uses fieldcrypt to allow encrypting the username/password.
  */
-class SMB extends SMBCredCrypt
+class SMB extends StandardFWrapper
 {    
     public static function GetFieldTemplate() : array
     {
@@ -86,14 +84,18 @@ class SMB extends SMBCredCrypt
     
     public function Activate() : self
     {
-        $this->state = smbclient_state_new();
-        if ($this->state === false) throw new SMBStateInitException();
+        if (isset($this->state)) return $this;
         
-        if (smbclient_state_init($this->state) === 1)
+        $state = smbclient_state_new();
+        if ($state === false) throw new SMBStateInitException();
+        
+        if (smbclient_state_init($state) === 1)
             throw new SMBStateInitException();
         
         if (!is_readable($this->GetFullURL()))
             throw new SMBConnectException();
+        
+        $this->state = $state;
         
         return $this; 
     }    
@@ -115,8 +117,8 @@ class SMB extends SMBCredCrypt
     }
     
     // WORKAROUND: php-smbclient does not support b fopen flag
-    protected function GetReadHandle(string $path) { return fopen($path,'r'); }
-    protected function GetWriteHandle(string $path) { return fopen($path,'r+'); }
+    protected function OpenReadHandle(string $path){ return fopen($this->GetFullURL($path),'r'); }
+    protected function OpenWriteHandle(string $path){ return fopen($this->GetFullURL($path),'r+'); }
     
     // WORKAROUND: php-smbclient <= 3.0.5 does not implement stream ftruncate
     protected function SubTruncate(string $path, int $length) : self
@@ -124,7 +126,7 @@ class SMB extends SMBCredCrypt
         $this->ClosePath($path); // close existing handles
         
         $handle = smbclient_open($this->state, $this->GetFullURL($path), 'r+');
-        if ($handle === false) throw new FileWriteFailedException();
+        if (!$handle) throw new FileWriteFailedException();
             
         if (!smbclient_ftruncate($this->state, $handle, $length))
             throw new FileWriteFailedException();

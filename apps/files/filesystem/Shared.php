@@ -85,7 +85,7 @@ class Shared extends BaseFileFS
         $stat = $storage->ItemStat($path);
         if ($stat->atime) $folder->SetAccessed($stat->atime);
         if ($stat->ctime) $folder->SetCreated($stat->ctime);
-        if ($stat->mtime) $folder->SetModified($stat->mtime); 
+        if ($stat->mtime) $folder->SetModified($stat->mtime);
 
         if ($doContents) 
         {

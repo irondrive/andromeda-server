@@ -568,7 +568,7 @@ class Account extends AuthEntity
         
         $date = $this->getPasswordDate(); $max = $this->GetMaxPasswordAge();
         
-        if ($date < 0) return false; else return 
+        if ($date <= 0) return false; else return 
             ($max === null || Main::GetInstance()->GetTime() - $date < $max);
     }
     

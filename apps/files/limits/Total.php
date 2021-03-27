@@ -108,9 +108,9 @@ abstract class Total extends Base
         if ($input->HasParam('itemsharing')) $lim->SetFeature('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
         if ($input->HasParam('shareeveryone')) $lim->SetFeature('shareeveryone', $input->GetNullParam('shareeveryone', SafeParam::TYPE_BOOL));
         
-        if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_INT));
-        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_INT));
-        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_UINT));
+        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT));
+        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_UINT));
 
         if ($lim->isCreated()) $lim->Initialize();
         

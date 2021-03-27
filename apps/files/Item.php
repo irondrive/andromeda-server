@@ -40,7 +40,7 @@ abstract class Item extends StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
             'description' => null,
-            'dates__modified' => null,
+            'dates__modified' => new FieldTypes\Scalar(null, true),
             'dates__accessed' => new FieldTypes\Scalar(null, true),         
             'counters__bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
             'counters__pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
@@ -184,13 +184,14 @@ abstract class Item extends StandardObject
     
     /** 
      * Returns the filesystem manager's implementor that stores this object 
+     * @param bool $allowDeleted if true the item must already exist on disk
      * 
      * Refreshes the item from storage first to make sure it's ready to use.
      * @throws DeletedByStorageException if the item is deleted on storage
      */
-    protected function GetFSImpl() : FSImpl 
+    protected function GetFSImpl(bool $requireExist = true) : FSImpl 
     { 
-        $this->Refresh(); if ($this->isDeleted()) 
+        $this->Refresh(); if ($this->isDeleted() && $requireExist) 
             throw new DeletedByStorageException();
         
         return $this->GetFilesystem()->GetFSImpl(); 
@@ -271,7 +272,7 @@ abstract class Item extends StandardObject
     }
     
     /** Counts the given bandwidth on the item and its parents */
-    protected function CountBandwidth(int $bytes) : self 
+    public function CountBandwidth(int $bytes) : self 
     {        
         $parent = $this->GetParent();
         if ($parent !== null) $parent->CountBandwidth($bytes);

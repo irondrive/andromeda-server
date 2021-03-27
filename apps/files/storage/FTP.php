@@ -8,7 +8,6 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/storage/FWrapper.php");
-require_once(ROOT."/apps/files/storage/CredCrypt.php");
 
 /** Exception indicating that the FTP extension is not installed */
 class FTPExtensionException extends ActivateException    { public $message = "FTP_EXTENSION_MISSING"; }
@@ -20,23 +19,14 @@ class FTPConnectionFailure extends ActivateException     { public $message = "FT
 class FTPAuthenticationFailure extends ActivateException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
 
 /** Exception indicating that a random write was requested (FTP does not support it) */
-class FTPWriteUnsupportedException extends Exceptions\ClientErrorException { public $message = "FTP_WRITE_APPEND_ONLY"; }
+class FTPAppendOnlyException extends Exceptions\ClientErrorException { public $message = "FTP_WRITE_APPEND_ONLY"; }
+
+/** Exception indicating that FTP does not support file copy */
+class FTPCopyFileException extends Exceptions\ClientErrorException { public $message = "FTP_NO_COPY_SUPPORT"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
 
 FSManager::RegisterStorageType(FTP::class);
-
-class FTPHandle
-{
-    public $handle;
-    public int $offset;
-    public bool $isAppend;
-    
-    public function __construct($handle, int $offset, bool $isAppend){
-        $this->handle = $handle; $this->offset = $offset; $this->isAppend = $isAppend; }
-}
-
-abstract class FTPCredCrypt extends FWrapper { use CredCrypt; }
 
 /**
  * Allows FTP to be used as a backend storage
@@ -44,9 +34,9 @@ abstract class FTPCredCrypt extends FWrapper { use CredCrypt; }
  * The FTP extension's methods are mostly used rather than the fwrapper
  * functions, since the fwrapper functions create a new connection for
  * every call.  fwrapper functions are still used as fallbacks where needed.
- * Uses the credcrypt trait for optionally encrypting server credentials.
+ * Uses the fieldcrypt trait for optionally encrypting server credentials.
  */
-class FTP extends FTPCredCrypt
+class FTP extends StandardFWrapper
 {    
     public static function GetFieldTemplate() : array
     {
@@ -71,13 +61,13 @@ class FTP extends FTPCredCrypt
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?int] [--implssl bool]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT))
+            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
@@ -87,7 +77,7 @@ class FTP extends FTPCredCrypt
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_INT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
         
         return parent::Edit($input);
     }
@@ -110,26 +100,18 @@ class FTP extends FTPCredCrypt
         $pass = $this->TryGetPassword() ?? "";
         
         if ($this->GetScalar('implssl')) 
-            $this->ftp = ftp_ssl_connect($host, $port);
-        else $this->ftp = ftp_connect($host, $port);
+            $ftp = ftp_ssl_connect($host, $port);
+        else $ftp = ftp_connect($host, $port);
         
-        if (!$this->ftp) throw new FTPConnectionFailure();
+        if (!$ftp) throw new FTPConnectionFailure();
         
-        if (!ftp_login($this->ftp, $user, $pass)) throw new FTPAuthenticationFailure();
+        if (!ftp_login($ftp, $user, $pass)) throw new FTPAuthenticationFailure();
         
-        ftp_pasv($this->ftp, true);
+        ftp_pasv($ftp, true);
         
-        return $this;
+        $this->ftp = $ftp; return $this;
     }
 
-    public function __destruct()
-    {
-       parent::__destruct();
-        
-       foreach (array_keys($this->handles) as $path) 
-           $this->CloseFTPHandle($path);
-    }
-    
     protected function GetFullURL(string $path = "") : string
     {
         $port = $this->TryGetScalar('port') ?? "";
@@ -168,9 +150,9 @@ class FTP extends FTPCredCrypt
     }
     
     // WORKAROUND - is_writeable does not work on directories
-    public function isWriteable() : bool { return $this->TestWriteable(); }
+    protected function assertWriteable() : void { $this->TestWriteable(); }
     
-    public function ReadFolder(string $path) : array
+    protected function SubReadFolder(string $path) : array
     {        
         $list = ftp_nlist($this->ftp, $this->GetPath($path));
         if ($list === false) throw new FolderReadFailedException();
@@ -186,102 +168,72 @@ class FTP extends FTPCredCrypt
     
     protected function SubCreateFile(string $path) : self
     {
-        $handle = fopen($this->GetFullURL($path),'w');
-        if (!$handle) throw new FileCreateFailedException();
-        fclose($handle); return $this;
+        $this->ClosePath($path);
+        
+        if (!($handle = fopen($this->GetFullURL($path),'w'))) 
+            throw new FileCreateFailedException();
+        
+        if (!fclose($handle)) throw new FileCreateFailedException(); 
+        
+        return $this;
     }
     
     protected function SubImportFile(string $src, string $dest): self
     {
+        $this->ClosePath($dest);
+        
         if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
             throw new FileCreateFailedException();
         return $this;
     }
     
-    /** @var array[path:FTPHandle] array of read/write handles */
-    private $handles = array();
+    protected static function supportsReadWrite() : bool { return false; }
+    protected static function supportsSeekReuse() : bool { return false; }
     
-    private function CloseFTPHandle(string $path) : void
-    {
-        if (array_key_exists($path, $this->handles))
-        {
-            try { fclose($this->handles[$path]); } catch (\Throwable $e) { }
-            
-            unset($this->handles[$path]);
-        }
-    }
+    protected function OpenReadHandle(string $path){ throw new FileOpenFailedException(); }
+    protected function OpenWriteHandle(string $path){  throw new FileOpenFailedException(); }
     
-    private function GetFTPHandle(string $path, int $start, bool $isAppend, callable $create)
-    {
-        $handle = (array_key_exists($path, $this->handles)) ? $this->handles[$path] : null;
-        
-        if ($handle !== null && ($handle->isAppend != $isAppend || $handle->offset != $start))
-        {
-            $this->CloseFTPHandle($path); $handle = null;
-        }
-        
-        $handle ??= new FTPHandle($create(), $start, $isAppend);
-
-        $this->handles[$path] = $handle;
-        
-        return $handle;
-    }
+    protected static function SeekContext(FileContext $context, int $offset) : void { throw new FileSeekFailedException(); }    
     
-    private function GetFTPReadHandle(string $path, int $start)
+    protected function OpenContextAt(string $path, int $offset, bool $isWrite) : FileContext
     {
-        return $this->GetFTPHandle($path, $start, false, function()use($start,$path)
-        {
-            $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$start)));
-            return fopen($this->GetFullURL($path), 'rb', null, $stropt);
-        });
-    }
-    
-    private function GetFTPWriteHandle(string $path, int $start)
-    {
-        return $this->GetFTPHandle($path, $start, true, function()use($start,$path)
+        if ($isWrite)
         {
             $fsize = ftp_size($this->ftp, $this->GetPath($path));
-            if ($start != $fsize) throw new FTPWriteUnsupportedException();
             
-            return fopen($this->GetFullURL($path),'a');
-        });
+            if ($offset !== $fsize) throw new FTPAppendOnlyException();
+            
+            $handle = fopen($this->GetFullURL($path), 'a');
+        }
+        else
+        {
+            $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$offset)));
+            
+            $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
+        }
+        
+        if (!$handle) throw new FileOpenFailedException();
+        
+        return new FileContext($handle, $offset, $isWrite);
     }
     
-    public function ReadBytes(string $path, int $start, int $length) : string
-    {
-        $handle = $this->GetFTPReadHandle($path, $start);
-        
-        $data = $this->ReadHandle($handle->handle, $length);
-        
-        $handle->offset += strlen($data);
-        
-        return $data;
-    }    
-    
-    /**
-     * FTP can only append ($start must equal the length of the file)
-     * @throws FTPWriteUnsupportedException if not appending
-     * @see FWrapper::WriteBytes()
-     */
-    protected function SubWriteBytes(string $path, int $start, string $data) : self
-    {        
-        $handle = $this->GetFTPWriteHandle($path, $start);
-        
-        $this->WriteHandle($handle->handle, $data);
-        
-        $handle->offset += strlen($data);
-        
-        return $this;
-    }
-
-    /** @throws FTPWriteUnsupportedException */
+    /** @throws FTPAppendOnlyException */
     protected function SubTruncate(string $path, int $length) : self
     {
         if (!$length) $this->DeleteFile($path)->CreateFile($path);
         else if (ftp_size($this->ftp, $this->GetPath($path)) !== $length)
-            throw new FTPWriteUnsupportedException();
+            throw new FTPAppendOnlyException();
         return $this;
     }    
+    
+    protected function SubDeleteFile(string $path) : self
+    {
+        $this->ClosePath($path);
+        
+        if (!ftp_delete($this->ftp, $this->GetPath($path)))
+            throw new FileDeleteFailedException();
+            else return $this;
+    }
     
     protected function SubDeleteFolder(string $path) : self
     {
@@ -289,16 +241,11 @@ class FTP extends FTPCredCrypt
             throw new FolderDeleteFailedException();
         else return $this;
     }
-    
-    protected function SubDeleteFile(string $path) : self
-    {
-        if (!ftp_delete($this->ftp, $this->GetPath($path)))
-            throw new FileDeleteFailedException();
-        else return $this;
-    }
-    
+
     protected function SubRenameFile(string $old, string $new) : self
     {
+        $this->ClosePath($old); $this->ClosePath($new);
+        
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FileRenameFailedException();
         return $this;
@@ -313,6 +260,8 @@ class FTP extends FTPCredCrypt
         
     protected function SubMoveFile(string $old, string $new) : self
     {
+        $this->ClosePath($old); $this->ClosePath($new);
+        
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FileMoveFailedException();
         return $this;
@@ -323,5 +272,10 @@ class FTP extends FTPCredCrypt
         if (!ftp_rename($this->ftp, $this->GetPath($old), $this->GetPath($new)))
             throw new FolderMoveFailedException();
         return $this;
+    }
+    
+    protected function SubCopyFile(string $old, string $new) : self
+    {
+        throw new FTPCopyFileException();
     }
 }

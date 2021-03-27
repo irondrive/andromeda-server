@@ -49,6 +49,8 @@ class Authenticator
     private Input $input;
     
     private ObjectDatabase $database; 
+    
+    private static array $instances = array();
    
     /** Returns the authenticated user account */
     public function GetAccount() : Account { return $this->account; }
@@ -100,9 +102,11 @@ class Authenticator
             
         $account = $session->GetAccount(); $client = $session->GetClient();
         
+        $this->input = $input;
+        $this->database = $database;
         $this->realaccount = $account; 
-        $this->session = $session; $this->client = $client;
-        $this->database = $database; $this->input = $input;
+        $this->session = $session; 
+        $this->client = $client;
 
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
@@ -117,6 +121,8 @@ class Authenticator
         }
         
         $this->account = $account;
+        
+        array_push(self::$instances, $this);
     }
     
     /**
@@ -244,4 +250,9 @@ class Authenticator
         else throw new CryptoKeyRequiredException();
     }
   
+    /** Runs TryRequireCrypto() on all instantiated authenticators */
+    public static function AllRequireCrypto() : void
+    {
+        foreach (self::$instances as $auth) $auth->TryRequireCrypto();
+    }
 }

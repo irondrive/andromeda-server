@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -106,7 +108,7 @@ abstract class Folder extends Item
     }
     
     /** Asserts that this folder is not the given folder, or any of its parents */
-    private function CheckIsNotChildOrSelf(Folder $folder) : void
+    protected function CheckIsNotChildOrSelf(Folder $folder) : void
     {
         do { if ($folder === $this)
                 throw new InvalidDestinationException(); }
@@ -166,10 +168,10 @@ abstract class Folder extends Item
     
     protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
     
-    private bool $refreshed = false;
-    private bool $subrefreshed = false;
+    protected bool $refreshed = false;
+    protected bool $subrefreshed = false;
     
-    private static bool $skiprefresh = false;
+    protected static bool $skiprefresh = false;
     
     /**
      * Refreshes the folder's metadata from disk
@@ -188,7 +190,7 @@ abstract class Folder extends Item
         return $this;
     }
     
-    private bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
+    protected bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
     
     /** Deletes all subfiles and subfolders, refresh if not isNotify */
     public function DeleteChildren(bool $isNotify) : void
@@ -284,7 +286,9 @@ abstract class Folder extends Item
     public function TryGetClientObject(bool $files = false, bool $folders = false, bool $recursive = false, 
         ?int $limit = null, ?int $offset = null, bool $details = false) : ?array
     {
-        $this->Refresh(); if ($this->isDeleted()) return null;
+        $this->Refresh($files || $folders); 
+        
+        if ($this->isDeleted()) return null;
         
         $this->SetAccessed();
 

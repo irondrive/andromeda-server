@@ -34,7 +34,7 @@ class ErrorManager extends Singleton
     /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
     private function HandleClientException(ClientException $e) : Output
     {
-        if ($this->API !== null) $this->API->rollBack(false);
+        if ($this->API !== null) $this->API->rollback(false);
             
         $debug = null; if ($this->GetDebugState(Config::LOG_DEVELOPMENT)) 
             $debug = ErrorLogEntry::GetDebugData($this->API, $e);
@@ -45,7 +45,7 @@ class ErrorManager extends Singleton
     /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
     private function HandleThrowable(\Throwable $e) : Output
     {
-        if ($this->API !== null) $this->API->rollBack(true);
+        if ($this->API !== null) $this->API->rollback(true);
 
         try { $debug = $this->Log($e, false); }
         catch (\Throwable $e) { $debug = null; }

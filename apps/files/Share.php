@@ -206,8 +206,8 @@ class Share extends AuthObject
         if ($f_keepown !== null) $this->SetFeature('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
                 
         if ($input->HasParam('spassword')) $this->SetPassword($input->GetNullParam('spassword',SafeParam::TYPE_RAW));
-        if ($input->HasParam('expires')) $this->SetDate('expires',$input->GetNullParam('expires',SafeParam::TYPE_INT));
-        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->GetNullParam('maxaccess',SafeParam::TYPE_INT));
+        if ($input->HasParam('expires')) $this->SetDate('expires',$input->GetNullParam('expires',SafeParam::TYPE_UINT));
+        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->GetNullParam('maxaccess',SafeParam::TYPE_UINT));
         
         return $this;
     }

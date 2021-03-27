@@ -31,10 +31,10 @@ class NativeCrypt extends Native
     private function GetAuthString(File $file, int $index) { return $file->ID().":$index"; }
 
     /** Returns the chunk index storing the given byte offset */
-    public function GetChunkIndex(int $byte) : int { return intdiv($byte, $this->chunksize); }
+    protected function GetChunkIndex(int $byte) : int { return intdiv($byte, $this->chunksize); }
     
     /** Returns the number of chunks required to store the given number of bytes */
-    public function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
+    protected function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
     
     public function ImportFile(File $file, string $oldpath) : self
     {
@@ -45,17 +45,28 @@ class NativeCrypt extends Native
         
         $this->GetStorage()->CreateFile($newpath);
 
-        $handle = fopen($oldpath,'rb');
+        if (!($handle = fopen($oldpath,'rb')))
+            throw new FileReadFailedException();
         
         for ($chunk = 0; $chunk < $chunks; $chunk++)
         {
             $offset = $chunk * $this->chunksize;
-            fseek($handle, $offset);
-            $data = fread($handle, $this->chunksize);
+            
+            if (fseek($handle, $offset) !== 0)
+                throw new FileReadFailedException();
+            
+            $rbytes = min($this->chunksize, $length-$offset);
+            
+            $data = fread($handle, $rbytes);
+            
+            if ($data === false || strlen($data) !== $rbytes)
+                throw new FileReadFailedException();
+            
             $this->WriteChunk($file, $chunk, $data);
         }
         
         fclose($handle);
+        
         return $this;
     }
     
