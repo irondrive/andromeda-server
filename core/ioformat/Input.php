@@ -67,17 +67,21 @@ class Input
         $this->params->AddParam($key, $value); return $this; }
     
     /** @see SafeParams::GetParam() */
-    public function GetParam(string $key, int $type, ?callable $usrfunc = null) { 
+    public function GetParam(string $key, int $type, ?callable $usrfunc = null) {
         return $this->params->GetParam($key, $type, $usrfunc); }
-        
+    
     /** @see SafeParams::GetOptParam() */
     public function GetOptParam(string $key, int $type, ?callable $usrfunc = null) {
         return $this->params->GetOptParam($key, $type, $usrfunc); }
-        
+    
     /** @see SafeParams::GetNullParam() */
     public function GetNullParam(string $key, int $type, ?callable $usrfunc = null) {
-        return $this->params->GetNullParam($key, $type, $usrfunc); }      
-        
+        return $this->params->GetNullParam($key, $type, $usrfunc); }
+    
+    /** @see SafeParams::GetOptNullParam() */
+    public function GetOptNullParam(string $key, int $type, ?callable $usrfunc = null) {
+        return $this->params->GetOptNullParam($key, $type, $usrfunc); }
+    
     /** @see Input::GetFiles() */
     private array $files;
 

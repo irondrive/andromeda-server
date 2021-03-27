@@ -59,7 +59,7 @@ class Manager extends BaseObject
         $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
             function($val){ return array_key_exists($val, self::$auth_types); });
         
-        $descr = $input->GetNullParam('description', SafeParam::TYPE_TEXT);
+        $descr = $input->GetOptNullParam('description', SafeParam::TYPE_TEXT);
         
         try { $authsource = self::$auth_types[$type]::Create($database, $input)->Activate(); }
         catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }

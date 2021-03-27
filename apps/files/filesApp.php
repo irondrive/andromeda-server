@@ -450,8 +450,8 @@ class FilesApp extends AppBase
 
         // first determine the byte range to read
         $fsize = $file->GetSize();
-        $fstart = $input->GetNullParam('fstart',SafeParam::TYPE_UINT) ?? 0;
-        $flast  = $input->GetNullParam('flast',SafeParam::TYPE_UINT) ?? $fsize-1;
+        $fstart = $input->GetOptNullParam('fstart',SafeParam::TYPE_UINT) ?? 0;
+        $flast  = $input->GetOptNullParam('flast',SafeParam::TYPE_UINT) ?? $fsize-1;
         
         if (isset($_SERVER['HTTP_RANGE']))
         {
@@ -556,7 +556,7 @@ class FilesApp extends AppBase
 
         $filepath = $input->GetFile('data')->GetPath();
         
-        $wstart = $input->GetNullParam('offset',SafeParam::TYPE_UINT) ?? 0;
+        $wstart = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT) ?? 0;
         $wlength = filesize($filepath); $wlast = $wstart + $wlength - 1;
         
         $file->CountBandwidth($wlength);        
@@ -704,8 +704,8 @@ class FilesApp extends AppBase
         $folders = $input->GetOptParam('folders',SafeParam::TYPE_BOOL) ?? true;
         $recursive = $input->GetOptParam('recursive',SafeParam::TYPE_BOOL) ?? false;
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+        $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
         $details = $input->GetOptParam('details',SafeParam::TYPE_BOOL) ?? false;
         
         $public = isset($share) && $share !== null;
@@ -1306,8 +1306,8 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+        $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
         
         $comments = $item->GetComments($limit, $offset);
 
@@ -1345,8 +1345,8 @@ class FilesApp extends AppBase
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         
-        $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+        $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
         
         $likes = $item->GetLikes($limit, $offset);
         
@@ -1595,8 +1595,8 @@ class FilesApp extends AppBase
 
         if ($this->authenticator->isAdmin() && $input->GetOptParam('everyone',SafeParam::TYPE_BOOL))
         {
-            $limit = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+            $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             
             $filesystems = FSManager::LoadAll($this->database, $limit, $offset);
         }
@@ -1762,8 +1762,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+            $count = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
             return array_map(function(Limits\Total $obj)use($isadmin){ 
                 return $obj->GetClientObject($isadmin); },$lims);
@@ -1790,8 +1790,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+            $count = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
         }
 
@@ -1817,8 +1817,8 @@ class FilesApp extends AppBase
         
         if ($lim === null) return null;
 
-        $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-        $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+        $count = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+        $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
         
         return array_map(function(Limits\TimedStats $stats){ return $stats->GetClientObject(); },
             Limits\TimedStats::LoadAllByLimit($this->database, $lim, $count, $offset));        
@@ -1850,8 +1850,8 @@ class FilesApp extends AppBase
         }
         else
         {
-            $count = $input->GetNullParam('limit',SafeParam::TYPE_UINT);
-            $offset = $input->GetNullParam('offset',SafeParam::TYPE_UINT);
+            $count = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
+            $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             
             $retval = array(); 
             
