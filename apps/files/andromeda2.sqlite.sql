@@ -209,6 +209,24 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
 ,  `path` text NOT NULL
 ,  PRIMARY KEY (`id`)
 );
+CREATE TABLE `a2_objects_apps_files_storage_s3` (
+  `id` char(12) NOT NULL
+,  `dates__created` double NOT NULL
+,  `filesystem` char(12) NOT NULL
+,  `import_chunksize` integer DEFAULT NULL
+,  `endpoint` text NOT NULL
+,  `path_style` integer DEFAULT NULL
+,  `port` integer DEFAULT NULL
+,  `usetls` integer DEFAULT NULL
+,  `region` varchar(64) NOT NULL
+,  `bucket` varchar(64) NOT NULL
+,  `accesskey` varbinary(144) NOT NULL
+,  `accesskey_nonce` binary(24) DEFAULT NULL
+,  `secretkey` varbinary(56) DEFAULT NULL
+,  `secretkey_nonce` binary(24) DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`id`)
+);
 CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
@@ -246,8 +264,7 @@ CREATE TABLE `a2_objects_apps_files_storage_webdav` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `baseurl` text NOT NULL
-,  `path` text NOT NULL
+,  `endpoint` text NOT NULL
 ,  `username` varbinary(255) NOT NULL
 ,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL

@@ -64,19 +64,15 @@ class ServerApp extends AppBase
     }
   
     private ?ObjectDatabase $database;
-    
-    /** if true, the Accounts app is installed and should be used */
-    private bool $useAuth;
-    
+
     /** if true, the user has admin access (via the accounts app or if not installed, a privileged interface) */
     private bool $isAdmin;
     
     public function __construct(Main $api)
     {
         parent::__construct($api);
-        $this->database = $api->GetDatabase();
         
-        $this->useAuth = array_key_exists('accounts',$this->API->GetApps());
+        $this->database = $api->GetDatabase();
     }
 
     /**
@@ -101,13 +97,16 @@ class ServerApp extends AppBase
         if (isset($this->isAdmin)) $oldadmin = $this->isAdmin;
         if (isset($this->authenticator)) $oldauth = $this->authenticator;
         
+        $useAuth = array_key_exists('accounts',$this->API->GetApps());
+        
         // if the Accounts app is installed, use it for authentication, else check interface privilege
-        if ($this->useAuth && $this->database)
+        if ($useAuth && $this->database)
         {
             require_once(ROOT."/apps/accounts/Authenticator.php");
             
             $this->authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
+            
             $this->isAdmin = $this->authenticator !== null && $this->authenticator->isAdmin();
         }
         else $this->isAdmin = $this->API->GetInterface()->isPrivileged();
@@ -208,27 +207,21 @@ class ServerApp extends AppBase
     /**
      * Installs the server by importing its SQL template and creating config
      * @throws UnknownActionException if config already exists
-     * @return array `{apps:[string]}` list of registered apps
      */
-    public function Install(Input $input) : array
+    public function Install(Input $input) : void
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/core");        
         
-        $apps = array_filter(scandir(ROOT."/apps"),function($e){ return !in_array($e,array('.','..')); });
-        
-        $config = Config::Create($this->database);
-        foreach ($apps as $app) $config->EnableApp($app);
+        $config = Config::Create($this->database)->EnableApp('server');
         
         $enable = $input->GetOptParam('enable', SafeParam::TYPE_BOOL);        
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
-        
-        return array('apps'=>array_filter($apps,function($e){ return $e !== 'server'; }));
     }
     
     /**
-     * Runs Install() on all registered apps
+     * Runs Install() on all apps in the FS
      * @throws AuthFailedException if not admin
      * @return array [string:mixed]
      */
@@ -236,6 +229,11 @@ class ServerApp extends AppBase
     {
         if (!$this->isAdmin) throw new AuthFailedException();
         
+        $apps = array_filter(scandir(ROOT."/apps"),function($e){
+            return !in_array($e,array('.','..')); });            
+        
+        foreach ($apps as $app) $this->API->LoadApp($app)->GetConfig()->EnableApp($app);
+    
         return array_map(function(AppBase $app)use($input){ 
             try { return $app->Install($input); }
             catch (UnknownActionException $e){ return null; }

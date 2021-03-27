@@ -274,6 +274,27 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_apps_files_storage_s3` (
+  `id` char(12) NOT NULL,
+  `dates__created` double NOT NULL,
+  `filesystem` char(12) NOT NULL,
+  `import_chunksize` int(11) DEFAULT NULL,
+  `endpoint` text NOT NULL,
+  `path_style` tinyint(1) DEFAULT NULL,
+  `port` smallint(6) DEFAULT NULL,
+  `usetls` tinyint(1) DEFAULT NULL,
+  `region` varchar(64) NOT NULL,
+  `bucket` varchar(64) NOT NULL,
+  `accesskey` varbinary(144) NOT NULL,
+  `accesskey_nonce` binary(24) DEFAULT NULL,
+  `secretkey` varbinary(56) DEFAULT NULL,
+  `secretkey_nonce` binary(24) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
@@ -317,8 +338,7 @@ CREATE TABLE `a2_objects_apps_files_storage_webdav` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
-  `baseurl` text NOT NULL,
-  `path` text NOT NULL,
+  `endpoint` text NOT NULL,
   `username` varbinary(255) NOT NULL,
   `password` tinyblob DEFAULT NULL,
   `username_nonce` binary(24) DEFAULT NULL,
