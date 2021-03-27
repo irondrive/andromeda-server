@@ -1009,8 +1009,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $limit = $input->GetNullParam("limit", SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam("offset", SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam("limit", SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam("offset", SafeParam::TYPE_UINT);
         
         $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL) ?? false;
         $type = $full ? Account::OBJECT_ADMIN : 0;
@@ -1030,8 +1030,8 @@ class AccountsApp extends AppBase
         if ($this->authenticator === null) throw new AuthenticationFailedException();
         $this->authenticator->RequireAdmin();
         
-        $limit = $input->GetNullParam("limit", SafeParam::TYPE_INT);
-        $offset = $input->GetNullParam("offset", SafeParam::TYPE_INT);
+        $limit = $input->GetNullParam("limit", SafeParam::TYPE_UINT);
+        $offset = $input->GetNullParam("offset", SafeParam::TYPE_UINT);
         
         $groups = Group::LoadAll($this->database, $limit, $offset);
         return array_map(function(Group $group){ return $group->GetClientObject(Group::OBJECT_ADMIN); }, $groups);

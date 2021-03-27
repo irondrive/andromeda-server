@@ -78,7 +78,7 @@ class Scalar
     }
     
     /** Gives the field its value loaded from the database */
-    public function InitValue(?string $value) : void
+    public function InitValue($value) : void
     {
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -124,10 +124,7 @@ class Scalar
     {
         $this->tempvalue = $value;
 
-        // only update the realvalue if the value has changed - use loose comparison (!=)
-        // so strings/numbers match, but we don't want 0/false to == null (which they do)
-        $nulls = (($value === null) xor ($this->realvalue === null)); 
-        if (!$temp && ($value != $this->realvalue || $nulls))
+        if (!$temp && $value !== $this->realvalue)
         {
             $this->realvalue = $value; $this->delta++; return true;
         }
@@ -163,9 +160,9 @@ class Counter extends Scalar
     }
     
     /** Gives the counter its value from the DB, or 0 if null */
-    public function InitValue(?string $value) : void
-    {
-        parent::InitValue($value ?? 0);
+    public function InitValue($value) : void
+    {        
+        parent::InitValue(intval($value ?? 0));
     }        
     
     /** Increments the counter by the given delta */
@@ -185,7 +182,7 @@ class Counter extends Scalar
 class JSON extends Scalar
 {
     /** Initializes the value of this field by decoding the given JSON string */
-    public function InitValue(?string $value) : void
+    public function InitValue($value) : void
     {
         parent::InitValue($value);
         if ($value) $value = Utilities::JSONDecode($value);
@@ -293,7 +290,7 @@ class ObjectPoly extends ObjectRef
     }
     
     /** Initializes the poly reference using the DB string with the reference's ID and class */
-    public function InitValue(?string $value) : void
+    public function InitValue($value) : void
     {
         parent::InitValue($value);
         if ($value === null) return;

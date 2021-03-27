@@ -6,7 +6,6 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 

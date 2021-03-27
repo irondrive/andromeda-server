@@ -82,7 +82,7 @@ class CLI extends IOInterface
                 
                 case '--debug':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->debug = (new SafeParam('debug',$argv[++$i]))->GetValue(SafeParam::TYPE_INT);
+                    $this->debug = (new SafeParam('debug',$argv[++$i]))->GetValue(SafeParam::TYPE_UINT);
                     break;
                     
                 case '--dbconf':

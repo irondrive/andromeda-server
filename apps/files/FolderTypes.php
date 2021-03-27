@@ -37,7 +37,9 @@ class RootFolder extends Folder
      */
     public function Refresh(bool $doContents = false) : self 
     {
-        try { parent::Refresh($doContents); } catch (StorageException $e) { }
+        if ($doContents) parent::Refresh($doContents);
+        
+        else try { parent::Refresh($doContents); } catch (StorageException $e) { }
         
         return $this;
     }
@@ -250,7 +252,7 @@ class SubFolder extends Folder
 
         $folder = static::NotifyCreate($database, $parent, $account, $name);
         
-        $folder->GetFSImpl()->CreateFolder($folder); return $folder;
+        $folder->GetFSImpl(false)->CreateFolder($folder); return $folder;
     }
     
     /** Deletes the folder and its contents from DB and disk */
@@ -260,7 +262,7 @@ class SubFolder extends Folder
         
         $this->DeleteChildren($isNotify);
         
-        if (!$isNotify) $this->GetFSImpl()->DeleteFolder($this);
+        if (!$isNotify) $this->GetFSImpl(false)->DeleteFolder($this);
             
         parent::Delete();
     }    

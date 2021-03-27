@@ -31,8 +31,8 @@ class Config extends SingletonObject
     {
         if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW));
         
-        if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_INT));
-        if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_INT));
+        if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT));
+        if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT));
         if ($input->HasParam('timedstats')) $this->SetFeature('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
                     
         return $this;

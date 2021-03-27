@@ -45,8 +45,8 @@ class ErrorLogEntry extends BaseObject
     {
         $q = new QueryBuilder(); $criteria = array();
         
-        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_INT));        
-        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_INT));
+        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_UINT));        
+        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_UINT));
         
         if ($input->HasParam('code')) $criteria[] = $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW));
         if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));  
@@ -60,8 +60,8 @@ class ErrorLogEntry extends BaseObject
         
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
-        if ($input->HasParam('limit')) $q->Limit($input->GetParam('limit',SafeParam::TYPE_INT));
-        if ($input->HasParam('offset')) $q->Limit($input->GetParam('offset',SafeParam::TYPE_INT));
+        if ($input->HasParam('limit')) $q->Limit($input->GetParam('limit',SafeParam::TYPE_UINT));
+        if ($input->HasParam('offset')) $q->Limit($input->GetParam('offset',SafeParam::TYPE_UINT));
         
         return static::LoadByQuery($database, $q->Where($or ? $q->OrArr($criteria) : $q->AndArr($criteria)));
     }

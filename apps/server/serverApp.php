@@ -158,7 +158,7 @@ class ServerApp extends AppBase
             !$this->API->GetInterface()->isPrivileged())
             throw new UnknownActionException();
         
-        $length = $input->GetOptParam("length", SafeParam::TYPE_INT);
+        $length = $input->GetOptParam("length", SafeParam::TYPE_UINT);
     
         return Utilities::Random($length ?? 16);
     }

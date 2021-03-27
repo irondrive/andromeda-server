@@ -10,12 +10,14 @@ class LocalNonAdminException extends ActivateException { public $message = "LOCA
 
 FSManager::RegisterStorageType(Local::class);
 
+abstract class LocalBase extends FWrapper { use BasePath; }
+
 /** 
  * A storage on local-disk on the server
  * 
  * Only admin can add storages of this type!
  */
-class Local extends FWrapper
+class Local extends LocalBase
 {
     public function Activate() : self { return $this; }
     

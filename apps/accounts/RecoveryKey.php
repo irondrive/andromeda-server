@@ -2,7 +2,6 @@
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 require_once(ROOT."/apps/accounts/KeySource.php");
 
@@ -46,12 +45,10 @@ class RecoveryKey extends RecoveryKeyBase
     
     private bool $codeused = false;  
     
-    /** Overrides Save(), calling Delete() instead if the code was used */
-    public function Save(bool $isRollback = false) : self
+    /** Calls Delete() if the code was used */
+    protected function SubSave() : void
     {
-        if ($this->codeused) { $this->Delete(); return $this; }
-        
-        return parent::Save($isRollback);
+        if ($this->codeused) $this->Delete();
     }
     
     protected static function GetFullKeyPrefix() : string { return "rk"; }

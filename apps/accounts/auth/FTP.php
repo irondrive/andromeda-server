@@ -1,12 +1,10 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
--require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
@@ -33,7 +31,7 @@ class FTP extends External
     {
         return parent::Create($database, $input)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT))
+            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
@@ -41,7 +39,7 @@ class FTP extends External
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_INT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
         
         return $this;
     }
@@ -77,7 +75,7 @@ class FTP extends External
         if ($this->GetScalar('implssl')) $this->ftp = ftp_ssl_connect($host, $port);
         else $this->ftp = ftp_connect($host, $port);
         
-        if ($this->ftp === false) throw new FTPConnectionFailure();
+        if (!$this->ftp) throw new FTPConnectionFailure();
         
         return $this;
     }

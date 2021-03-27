@@ -46,5 +46,5 @@ abstract class AppBase implements Transactions
     public function commit() { }
     
     /** Tells the app to rollback any changes made outside the database */
-    public function rollBack() { }
+    public function rollback() { }
 }

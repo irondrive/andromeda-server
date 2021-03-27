@@ -32,6 +32,9 @@ class FailedAppLoadException extends Exceptions\ServerException  { public $messa
 /** Exception indicating that the configured data directory is invalid */
 class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
 
+/** Exception indicating that writing to the data file failed */
+class DataWriteFailedException extends Exceptions\ServerException { public $message = "DATA_WRITE_FAILED"; }
+
 /** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
 class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
 
@@ -137,7 +140,7 @@ class Main extends Singleton
         }
         
         register_shutdown_function(function(){
-            if ($this->dirty) $this->rollBack(false); });        
+            if ($this->dirty) $this->rollback(false); });
     }
     
     /** Loads the main include file for an app */
@@ -237,7 +240,9 @@ class Main extends Singleton
             throw new InvalidDataDirException();
         
         $this->writes[] = $path;
-        file_put_contents($path, $data);
+        
+        if (file_put_contents($path, $data) === false)
+            throw new DataWriteFailedException();
     }
     
     /**
@@ -246,7 +251,7 @@ class Main extends Singleton
      * First rolls back each app, then the database, then saves mandatorySave objects if not a server error
      * @param bool $serverError true if this rollback is due to a server error
      */
-    public function rollBack(bool $serverError) : void
+    public function rollback(bool $serverError) : void
     {
         $this->rollback = true;
         
@@ -268,7 +273,7 @@ class Main extends Singleton
                     
                     $rollback = $this->config && $this->config->getReadOnly();
                     
-                    if ($rollback) $this->database->rollBack(); else $this->database->commit(); 
+                    if ($rollback) $this->database->rollback(); else $this->database->commit(); 
                 }
                 catch (\Throwable $e) { $this->error_manager->Log($e); }
             }

@@ -1,7 +1,7 @@
 <?php define('Andromeda',true); 
 
 /** 
- * An Andromeda API is a pure-PHP transactional REST API.
+ * An Andromeda API is a pure-PHP transactional REST-ish API.
  * Functionality is divided between the main framework core
  * and apps that implement the desired domain-specific functions.
  * Requests are given as an app name, action, and optional parameters.

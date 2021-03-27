@@ -72,7 +72,7 @@ class FSManager extends StandardObject
     public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
     
     /** Returns true if the data is encrypted before sending to the filesystem */
-    public function isSecure() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
+    public function isEncrypted() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
     
     /** Returns true if the filesystem is read-only */
     public function isReadOnly() : bool { return $this->TryGetScalar('readonly') ?? false; }
@@ -207,11 +207,11 @@ class FSManager extends StandardObject
             ->SetOwner($owner)->SetName($name)
             ->SetType($fstype)->SetReadOnly($readonly);
         
-        if ($filesystem->isSecure())
+        if ($filesystem->isEncrypted())
         {
             if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
             {
-                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_INT,function($v){
+                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,function($v){
                     return $v >= 4*1024 && $v <= 1*1024*1024; });
             }
             
@@ -328,27 +328,28 @@ class FSManager extends StandardObject
     /**
      * Gets a printable client object of this filesystem
      * @param bool $admin if true, show details for the owner
-     * @return array `{id:id, name:?string, owner:?id, shared:bool, secure:bool, readonly:bool, storagetype:string}` \  
-        if admin, add `{storage:Storage, chunksize:?int}`
+     * @return array `{id:id, name:?string, owner:?id, shared:bool, encrypted:bool, readonly:bool, sttype:string}` \  
+        if priv, add `{storage:Storage}` - if isEncrypted, add `{chunksize:int}`
      * @see Storage::GetClientObject()
      */
-    public function GetClientObject(bool $admin = false) : array
+    public function GetClientObject(bool $priv = false) : array
     {
         $data = array(
             'id' => $this->ID(),
             'name' => $this->GetName(),
             'owner' => $this->GetOwnerID(),
             'shared' => $this->isShared(),
-            'secure' => $this->isSecure(),
+            'encrypted' => $this->isEncrypted(),
             'readonly' => $this->isReadOnly(),
-            'storagetype' => Utilities::ShortClassName($this->GetStorageType())
+            'sttype' => Utilities::ShortClassName($this->GetStorageType())
         );
         
-        if ($admin) 
+        if ($this->isEncrypted()) $data['chunksize'] = $this->GetScalar('crypto_chunksize');
+        
+        if ($priv) 
         {
             $data['dates'] = $this->GetAllDates();
             $data['storage'] = $this->GetStorage()->GetClientObject();
-            $data['chunksize'] = $this->TryGetScalar('crypto_chunksize');
         }
         
         return $data;
@@ -367,3 +368,4 @@ require_once(ROOT."/apps/files/storage/Local.php");
 require_once(ROOT."/apps/files/storage/FTP.php");
 require_once(ROOT."/apps/files/storage/SFTP.php");
 require_once(ROOT."/apps/files/storage/SMB.php");
+require_once(ROOT."/apps/files/storage/S3.php");

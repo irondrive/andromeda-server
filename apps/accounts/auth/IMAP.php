@@ -6,7 +6,6 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
@@ -41,7 +40,7 @@ class IMAP extends External
 
         return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_INT))
+            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false)
             ->SetScalar('secauth', $input->GetOptParam('secauth', SafeParam::TYPE_BOOL) ?? false);
     }
@@ -51,7 +50,7 @@ class IMAP extends External
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));       
         if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));        
         if ($input->HasParam('secauth')) $this->SetScalar('secauth',$input->GetParam('secauth', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_INT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
         
         return $this;
     }

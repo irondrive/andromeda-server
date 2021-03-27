@@ -57,13 +57,13 @@ class JSONEncodingException extends JSONException { public $message = "JSON_ENCO
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
 
 /** 
- * Simple interface with rollBack() and commit() 
+ * Simple interface with rollback() and commit() 
  * 
  * The Andromeda transaction model is that there is always a global commit
  * or rollback at the end of the request. A rollback may follow a bad commit.
  * There will NEVER be a rollback followed by a commit. There may be > 1 commit.
  */
-interface Transactions { public function rollBack(); public function commit(); }
+interface Transactions { public function rollback(); public function commit(); }
 
 /** Abstract with some global static utility functions */
 abstract class Utilities
@@ -151,5 +151,14 @@ abstract class Utilities
             case 'M': $num *= 1024;
             case 'K': $num *= 1024;
         }; return $num;
-    } 
+    }
+    
+    /** Equivalent to str_replace but only does one replacement */
+    public static function replace_first(string $search, string $replace, string $subject) : string
+    {
+        if (($pos = strpos($subject, $search)) !== false)
+            $subject = substr_replace($subject, $replace, $pos, strlen($search));
+        
+        return $subject;
+    }
 }

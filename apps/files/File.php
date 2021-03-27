@@ -215,7 +215,7 @@ class File extends Item
     {
         $this->SetSize(filesize($path),true);
         
-        $this->GetFSImpl()->ImportFile($this, $path); return $this;  
+        $this->GetFSImpl(false)->ImportFile($this, $path); return $this;  
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
@@ -268,7 +268,7 @@ class File extends Item
     public function Delete() : void
     {
         if (!$this->GetParent()->isNotifyDeleted()) 
-            $this->GetFSImpl()->DeleteFile($this);
+            $this->GetFSImpl(false)->DeleteFile($this);
         
         $this->NotifyDelete();
     }    

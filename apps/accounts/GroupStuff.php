@@ -76,16 +76,16 @@ abstract class AuthEntity extends StandardObject
     public function SetProperties(Input $input) : self
     {
         foreach (array('session_timeout','max_password_age') as $prop)
-            if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_INT));
+            if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
         
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
-            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_INT));
+            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT));
         
         foreach (array('admin','disabled','forcetf','allowcrypto','userdelete') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_BOOL));
         
         foreach (array('accountsearch','groupsearch') as $prop)
-            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_INT));
+            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
             
         return $this->SetDate('modified');
     }
