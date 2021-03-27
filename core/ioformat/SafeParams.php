@@ -36,7 +36,7 @@ class SafeParams
     }
     
     /**
-     * Gets the requested parameter
+     * Gets the requested parameter (present and not null)
      * @param string $key the name of the parameter
      * @param int $type the type of the parameter
      * @param callable $usrfunc optional function for custom validation
@@ -63,10 +63,19 @@ class SafeParams
         else throw new SafeParamNullValueException($key);
     }
     
-    /** Same as GetParam() but returns null if the param is not present, or is present and null */
+    /** Same as GetParam() but returns null if the param is present and null */
     public function GetNullParam(string $key, int $type, ?callable $usrfunc = null)
     {
+        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
+        
+        return $this->params[$key]->GetValue($type, $usrfunc);
+    }
+    
+    /** Same as GetParam() but returns null if the param is not present, or is present and null */
+    public function GetOptNullParam(string $key, int $type, ?callable $usrfunc = null)
+    {
         if (!$this->HasParam($key)) return null;
+        
         return $this->params[$key]->GetValue($type, $usrfunc);
     }
     

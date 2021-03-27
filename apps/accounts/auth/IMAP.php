@@ -40,7 +40,7 @@ class IMAP extends External
 
         return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT))
+            ->SetScalar('port', $input->GetOptNullParam('port', SafeParam::TYPE_UINT))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false)
             ->SetScalar('secauth', $input->GetOptParam('secauth', SafeParam::TYPE_BOOL) ?? false);
     }

@@ -33,7 +33,7 @@ class LDAP extends External
         return parent::Create($database, $input)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('secure', $input->GetOptParam('secure', SafeParam::TYPE_BOOL) ?? false)
-            ->SetScalar('userprefix', $input->GetNullParam('userprefix', SafeParam::TYPE_TEXT));
+            ->SetScalar('userprefix', $input->GetOptNullParam('userprefix', SafeParam::TYPE_TEXT));
     }
     
     public function Edit(Input $input) : self
