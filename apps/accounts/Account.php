@@ -26,7 +26,7 @@ class CryptoUnlockRequiredException extends Exceptions\ServerException { public 
 /** Exception indicating that crypto cannot be unlocked because it does not exist */
 class CryptoNotInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_NOT_INITIALIZED"; }
 
-/** Exception indicating that crypto already exists */
+/** Exception indicating that crypto cannot be initialized because it already exists */
 class CryptoAlreadyInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_ALREADY_INITIALIZED"; }
 
 /** Exception indicating that the given recovery key is not valid */

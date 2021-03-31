@@ -157,7 +157,7 @@ class S3 extends S3Base4
         
         $params['endpoint'] = $endpoint;
         
-        $params['scheme'] = $this->getUseTLS() ? 'https' : 'httpx';
+        $params['scheme'] = $this->getUseTLS() ? 'https' : 'http';
         
         if (($pathstyle = $this->TryGetScalar('path_style')) !== null)
             $params['use_path_style_endpoint'] = boolval($pathstyle);
@@ -272,7 +272,7 @@ class S3 extends S3Base4
 
     protected static function SeekContext(FileContext $context, int $offset) : void { throw new FileSeekFailedException(); }
     
-    protected function OpenContextAt(string $path, int $offset, bool $isWrite) : FileContext
+    protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {
         if (!$isWrite) throw new FileReadFailedException();
         

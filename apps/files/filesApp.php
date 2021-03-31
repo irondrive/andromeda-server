@@ -43,6 +43,9 @@ use Andromeda\Apps\Accounts\UnknownGroupException;
 /** Exception indicating that the requested item does not exist */
 class UnknownItemException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_ITEM"; }
 
+/** Exception indicating that the requested file does not exist */
+class UnknownFileException extends Exceptions\ClientNotFoundException       { public $message = "UNKNOWN_FILE"; }
+
 /** Exception indicating that the requested folder does not exist */
 class UnknownFolderException extends Exceptions\ClientNotFoundException     { public $message = "UNKNOWN_FOLDER"; }
 
@@ -313,18 +316,29 @@ class FilesApp extends AppBase
         return $this->TryAuthenticateItemAccess($input, Folder::class, $id);
     }    
     
+    private static function UnknownItemException(string $class) : void
+    {
+        switch ($class)
+        {
+            case File::class: throw new UnknownFileException();
+            case Folder::class: throw new UnknownFolderException();
+            default: throw new UnknownItemException();
+        }
+    }
+    
     /** Returns an ItemAccess authenticating the given item class/ID, throws exceptions on failure */
     private function AuthenticateItemAccess(Input $input, string $class, ?string $id) : ItemAccess 
     {
         $item = null; if ($id !== null)
         {
             $item = $class::TryLoadByID($this->database, $id);
-            if ($item === null) throw new UnknownItemException();
+            
+            if ($item === null) static::UnknownItemException($class);
         }
         
         $access = ItemAccess::Authenticate($this->database, $input, $this->authenticator, $item); 
 
-        if (!is_a($access->GetItem(), $class)) throw new UnknownItemException();
+        if (!is_a($access->GetItem(), $class)) static::UnknownItemException($class);
         
         return $access;
     }
@@ -335,7 +349,8 @@ class FilesApp extends AppBase
         $item = null; if ($id !== null)
         {
             $item = $class::TryLoadByID($this->database, $id);
-            if ($item === null) throw new UnknownItemException();
+            
+            if ($item === null) static::UnknownItemException($class);
         }
         
         $access = ItemAccess::TryAuthenticate($this->database, $input, $this->authenticator, $item); 
@@ -408,8 +423,8 @@ class FilesApp extends AppBase
     {
         $account = ($this->authenticator === null) ? null : $this->authenticator->GetAccount();
         
-        $access = $this->AuthenticateFolderAccess($input, $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR));
-        $parent = $access->GetItem(); $share = $access->GetShare();
+        $paccess = $this->AuthenticateFolderAccess($input, $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR));
+        $parent = $paccess->GetItem(); $share = $paccess->GetShare();
         
         if (!$this->authenticator && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
@@ -843,7 +858,7 @@ class FilesApp extends AppBase
         
         $id = $input->GetParam('file',SafeParam::TYPE_RANDSTR);
         $file = File::TryLoadByID($this->database, $id);
-        if ($file === null) throw new UnknownItemException();
+        if ($file === null) throw new UnknownFileException();
         
         if ($file->isWorldAccess() || $file->GetParent()->GetOwner() !== $account)
             throw new ItemAccessDeniedException();
@@ -863,7 +878,7 @@ class FilesApp extends AppBase
         
         $id = $input->GetParam('folder',SafeParam::TYPE_RANDSTR);
         $folder = Folder::TryLoadByID($this->database, $id);
-        if ($folder === null) throw new UnknownItemException();
+        if ($folder === null) throw new UnknownFolderException();
         
         if ($folder->isWorldAccess()) throw new ItemAccessDeniedException();
         

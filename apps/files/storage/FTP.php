@@ -195,7 +195,7 @@ class FTP extends StandardFWrapper
     
     protected static function SeekContext(FileContext $context, int $offset) : void { throw new FileSeekFailedException(); }    
     
-    protected function OpenContextAt(string $path, int $offset, bool $isWrite) : FileContext
+    protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {
         if ($isWrite)
         {

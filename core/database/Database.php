@@ -191,13 +191,14 @@ class Database implements Transactions
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array<string, mixed> `{driver:string, version:string, info:string}`
+     * @return array<string, mixed> `{driver:string, cversion:string, sversion:string, info:string}`
      */
     public function getInfo() : array
     {
         return array(
             'driver' => $this->connection->getAttribute(PDO::ATTR_DRIVER_NAME),
-            'version' => $this->connection->getAttribute(PDO::ATTR_SERVER_VERSION),
+            'cversion' => $this->connection->getAttribute(PDO::ATTR_CLIENT_VERSION),
+            'sversion' => $this->connection->getAttribute(PDO::ATTR_SERVER_VERSION),
             'info' => $this->connection->getAttribute(PDO::ATTR_SERVER_INFO)
         );
     }

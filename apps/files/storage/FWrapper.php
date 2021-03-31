@@ -259,7 +259,7 @@ abstract class FWrapper extends Storage
      * @throws FileSeekFailedException if seeking fails
      * @return FileContext new file context
      */
-    protected function OpenContextAt(string $path, int $offset, bool $isWrite) : FileContext
+    protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {
         $handle = $isWrite ? $this->OpenWriteHandle($path) : $this->OpenReadHandle($path);
         
@@ -304,7 +304,7 @@ abstract class FWrapper extends Storage
             if ($close) { $this->ClosePath($path); $context = null; }
         }
 
-        $context ??= $this->OpenContextAt($path, $offset, $isWrite);
+        $context ??= $this->OpenContext($path, $offset, $isWrite);
         
         if ($context->offset !== $offset) static::SeekContext($context, $offset);
         
