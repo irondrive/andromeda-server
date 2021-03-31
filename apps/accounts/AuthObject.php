@@ -123,7 +123,7 @@ abstract class AuthObject extends StandardObject
 trait FullAuthKey
 {    
     /**
-     * Tries to load an AuthObject
+     * Tries to load an AuthObject by the full serialized key
      * @param ObjectDatabase $database database reference
      * @param string $code the full user/serialized code
      * @param Account $account the owner of the authObject or null for any

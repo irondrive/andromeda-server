@@ -35,7 +35,7 @@ class InvalidNameException extends Exceptions\ClientErrorException { public $mes
 class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; }
 
 /**
- * An object that manages and points to filesystems
+ * An object that manages and points to a filesystem manager
  *
  * Filesystems are composed of a manager, which has an implementation, which has a storage.
  * Filesystems are generally referred to by the manager (the storage is internal only).

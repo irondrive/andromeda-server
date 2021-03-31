@@ -372,12 +372,19 @@ class Main extends Singleton
         if ($this->GetDebugLevel() < Config::LOG_DEVELOPMENT) return null;
         
         $retval = array(
+            
+            'includes' => get_included_files(),
+            'objects' => $this->database->getLoadedObjects(),
+            
             'construct_stats' => $this->construct_stats,
             'run_stats' => $this->run_stats,
             'commit_stats' => $this->commit_stats,
             'stats_total' => $this->sum_stats->getStats(),
+            
             'peak_memory' => memory_get_peak_usage(),
-            'objects' => $this->database->getLoadedObjects(),
+            'gcstats' => gc_status(),
+            'rusage' => getrusage(),
+            
             'queries' => $this->database->getAllQueries()
         );
 

@@ -255,22 +255,21 @@ class ServerApp extends AppBase
     /**
      * Gets miscellaneous server identity information
      * @throws AuthFailedException if not admin-level access
-     * @return array `{uname:string, os:string, software:string, signature:string, name:string, addr:string, port:string, file:string, db:Database::getInfo()}`
+     * @return array `{uname:string, server:[various], db:Database::getInfo()}`
      * @see Database::getInfo()
      */
     protected function ServerInfo(Input $input) : array
     {
         if (!$this->isAdmin) throw new AuthFailedException();
         
+        $server = array_filter($_SERVER, function($key){ 
+            return strpos($key, 'andromeda_') !== 0;; }, ARRAY_FILTER_USE_KEY);
+        
+        unset($server['argv']); unset($server['argc']);
+        
         return array(
             'uname' => php_uname(),
-            'os' => $_SERVER['OPERATING_SYSTEM'] ?? "",
-            'software' => $_SERVER['SERVER_SOFTWARE'] ?? "",
-            'signature' => $_SERVER['SERVER_SIGNATURE'] ?? "",
-            'name' => $_SERVER['SERVER_NAME'] ?? "",
-            'addr' => $_SERVER['SERVER_ADDR'] ?? "",
-            'port' => $_SERVER['SERVER_PORT'] ?? "",
-            'file' => $_SERVER['SCRIPT_FILENAME'],
+            'server' => $server,
             'db' => $this->database->getInfo()
         );
     }
