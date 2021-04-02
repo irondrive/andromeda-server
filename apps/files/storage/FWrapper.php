@@ -269,15 +269,6 @@ abstract class FWrapper extends Storage
         
         return new FileContext($handle, $offset, false);
     }
-    
-    /** Seeks the given context to the given offset */
-    protected static function SeekContext(FileContext $context, int $offset) : void
-    {
-        if (fseek($context->handle, $offset) !== 0)
-            throw new FileSeekFailedException();
-        
-        $context->offset = $offset;
-    }  
 
     /**
      * Returns a context for the given file
@@ -306,7 +297,13 @@ abstract class FWrapper extends Storage
 
         $context ??= $this->OpenContext($path, $offset, $isWrite);
         
-        if ($context->offset !== $offset) static::SeekContext($context, $offset);
+        if ($context->offset !== $offset)
+        {
+            if (fseek($context->handle, $offset) !== 0)
+                throw new FileSeekFailedException();
+                
+            $context->offset = $offset;
+        }
         
         $this->contexts[$path] = $context; return $context;
     }
