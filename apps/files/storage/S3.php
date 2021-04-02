@@ -269,8 +269,6 @@ class S3 extends S3Base4
     
     protected function OpenReadHandle(string $path){ throw new FileOpenFailedException(); }
     protected function OpenWriteHandle(string $path){  throw new FileOpenFailedException(); }
-
-    protected static function SeekContext(FileContext $context, int $offset) : void { throw new FileSeekFailedException(); }
     
     protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {
