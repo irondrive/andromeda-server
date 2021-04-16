@@ -15,6 +15,9 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 /** Exception indicating that the app or action parameters are missing */
 class NoAppActionException extends Exceptions\ClientErrorException { public $message = "APP_OR_ACTION_MISSING"; }
 
+/** Exception indicating the given batch sequence has too many actions */
+class LargeBatchException extends Exceptions\ClientErrorException { public $message = "BATCH_TOO_LARGE"; }
+
 /** Exception indicating that the remote response is invalid */
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
@@ -68,6 +71,9 @@ class AJAX extends IOInterface
                 
                 $inputs[$i] = static::GetInput($get, $files, $request);
             }
+            
+            if (count($inputs) > 65535) throw new LargeBatchException();
+            
             return $inputs;
         }
         else return array(static::GetInput($_GET, $_FILES, $_REQUEST));

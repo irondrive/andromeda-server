@@ -92,7 +92,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_logging_requestlog` (
   `id` char(16) NOT NULL,
-  `actions` int(11) NOT NULL DEFAULT 0,
+  `actions` smallint(6) NOT NULL DEFAULT 0,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
