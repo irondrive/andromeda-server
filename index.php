@@ -48,7 +48,7 @@ $main->commit();
 
 if ($interface->UserOutput($output)) $main->commit();
 
-$output->SetMetrics($main->GetMetrics());
+$main->FinalizeOutput($output);
 
 $interface->FinalOutput($output);
 

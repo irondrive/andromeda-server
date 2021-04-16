@@ -4,13 +4,20 @@ require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
+/** Exception indicating that the LDAP extension does not exist */
 class LDAPExtensionException extends Exceptions\ServerException   { public $message = "LDAP_EXTENSION_MISSING"; }
+
+/** Exception indicating that the LDAP connection failed */
 class LDAPConnectionFailure extends Exceptions\ServerException    { public $message = "LDAP_CONNECTION_FAILURE"; }
+
+/** Exception indicating that LDAP encountered an error */
+class LDAPErrorException extends Exceptions\ServerException       { public $message = "LDAP_EXTENSION_ERROR"; }
 
 Manager::RegisterAuthType(LDAP::class);
 
@@ -98,8 +105,19 @@ class LDAP extends External
         $prefix = $this->GetUserPrefix(); 
         if ($prefix !== null) $username = "$prefix\\$username";
         
-        try { return ldap_bind($this->ldap, $username, $password); }
-        catch (Exceptions\PHPError $e) {
-            Main::GetInstance()->PrintDebug(ldap_error()); return false; } 
+        try 
+        {
+            $success = ldap_bind($this->ldap, $username, $password); 
+            
+            ldap_close($this->ldap); unset($this->ldap); return $success;
+        }
+        catch (Exceptions\PHPError $e) 
+        {
+            $errman = ErrorManager::GetInstance(); $errman->LogException($e);
+            
+            if ($lerr = ldap_error()) $errman->LogException(new LDAPErrorException($lerr));
+            
+            return false; 
+        } 
     }
 }

@@ -51,7 +51,7 @@ class CLI extends IOInterface
         {
             pcntl_signal(SIGTERM, function()
             {
-                try { Main::GetInstance()->rollback(false); }
+                try { Main::GetInstance()->rollback(); }
                 catch (MissingSingletonException $e) { }
             });
         }
@@ -252,7 +252,7 @@ class CLI extends IOInterface
         foreach ($this->tmpfiles as $path) 
         {
             try { if (is_file($path)) unlink($path); }
-            catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
+            catch (\Throwable $e) { ErrorManager::GetInstance()->LogException($e); }
         }            
     }
     
@@ -280,6 +280,6 @@ class CLI extends IOInterface
             echo Utilities::JSONEncode($outdata)."\n";
         }
 
-        exit($output->GetOK() ? 0 : 1);
+        exit($output->isOK() ? 0 : $output->GetHTTPCode());
     }
 }

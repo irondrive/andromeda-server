@@ -11,8 +11,13 @@ require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 class InheritedProperty
 {
     private $value; private ?BaseObject $source;
+    
+    /** Returns the value of the inherited property */
     public function GetValue() { return $this->value; }
+    
+    /** Returns the source object of the inherited property */
     public function GetSource() : ?BaseObject { return $this->source; }
+    
     public function __construct($value, ?BaseObject $source){
         $this->value = $value; $this->source = $source; }
 }
@@ -20,13 +25,31 @@ class InheritedProperty
 /** Class representing a group membership, joining an account and a group */
 class GroupJoin extends JoinObject
 {
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'accounts' => new FieldTypes\ObjectRef(Account::class, 'groups'),
-            'groups' => new FieldTypes\ObjectRef(Group::class, 'accounts')
-        ));
-    }
+    /** 
+     * Return the column name of the left side of the join
+     * 
+     * Must match the name of the column in the right-side object that refers to this join
+     */
+    protected static function GetLeftField() : string { return 'accounts'; }
+    
+    /**
+     * Return the column name of the right side of the join
+     *
+     * Must match the name of the column in the left-side object that refers to this join
+     */
+    protected static function GetLeftClass() : string { return Account::class; }
+    
+    /** Return the column name of the right side of the join */
+    protected static function GetRightField() : string { return 'groups'; }
+    
+    /** Return the object class referred to by the right side of the join */
+    protected static function GetRightClass() : string { return Group::class; }
+    
+    /** Returns the joined account */
+    public function GetAccount() : Account { return $this->GetObject('accounts'); }
+    
+    /** Returns the joined group */
+    public function GetGroup() : Group { return $this->GetObject('groups'); }
     
     /**
      * Returns a printable client object of this group membership

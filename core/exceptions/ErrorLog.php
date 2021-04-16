@@ -15,7 +15,7 @@ require_once(ROOT."/core/exceptions/ErrorManager.php");
 use Andromeda\Core\JSONEncodingException;
 
 /** Represents an error log entry in the database */
-class ErrorLogEntry extends BaseObject
+class ErrorLog extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -38,15 +38,16 @@ class ErrorLogEntry extends BaseObject
     }
     
     /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--mintime int] [--maxtime int] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--logic and|or] [--limit int] [--offset int]"; }
+    public static function GetLoadUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] ".
+                                                            "[--logic and|or] [--limit int] [--offset int] [--desc bool]"; }
     
     /** Returns all error log entries matching the given input */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
     {
         $q = new QueryBuilder(); $criteria = array();
         
-        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_UINT));        
-        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_UINT));
+        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));        
+        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_FLOAT));
         
         if ($input->HasParam('code')) $criteria[] = $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW));
         if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));  
@@ -60,8 +61,11 @@ class ErrorLogEntry extends BaseObject
         
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
-        if ($input->HasParam('limit')) $q->Limit($input->GetParam('limit',SafeParam::TYPE_UINT));
-        if ($input->HasParam('offset')) $q->Limit($input->GetParam('offset',SafeParam::TYPE_UINT));
+        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 1000);
+        
+        if ($input->HasParam('offset')) $q->Offset($input->GetParam('offset',SafeParam::TYPE_UINT));
+        
+        $q->OrderBy('time', $input->GetOptParam('desc',SafeParam::TYPE_BOOL));
         
         return static::LoadByQuery($database, $q->Where($or ? $q->OrArr($criteria) : $q->AndArr($criteria)));
     }
@@ -73,22 +77,19 @@ class ErrorLogEntry extends BaseObject
     }
     
     /**
-     * Creates a new error log entry object
-     * @param Main $api reference to the main API to get debug data
+     * Creates a new error log entry object from GetDebugData()
      * @param ObjectDatabase $database referene to the database
-     * @param \Throwable $e reference to the exception this is created for
-     * @return ErrorLogEntry
+     * @param array $debugdata the data from GetDebugData()
+     * @return ErrorLog created object
      */
-    public static function Create(?Main $api, ObjectDatabase $database, \Throwable $e) : ErrorLogEntry
+    public static function LogDebugData(ObjectDatabase $database, array $debugdata) : ErrorLog
     {
-        $base = parent::BaseCreate($database);
+        $obj = parent::BaseCreate($database);
         
-        $data = static::GetDebugData($api, $e);
+        foreach ($debugdata as $key=>$value)
+            $obj->SetScalar($key, $value);
         
-        array_walk($data, function($value, $key) use($base) { 
-            $base->SetScalar($key, $value); });
-        
-        return $base;
+        return $obj;
     }
     
     private static function stringArray(array &$data) : void
@@ -112,14 +113,14 @@ class ErrorLogEntry extends BaseObject
      * What is logged depends on the configured debug level
      * @param Main $api reference to the main API
      * @param \Throwable $e the exception being debugged
+     * @param ?array $debuglog the custom debug log
      * @return array<string, string|mixed> array of debug data
      */
-    public static function GetDebugData(?Main $api, \Throwable $e) : array
+    public static function GetDebugData(?Main $api, \Throwable $e, ?array $debuglog) : array
     {
         try
         {
-            $data = array(
-                
+            $data = array(                
                 'time'=>    $api ? $api->GetTime() : microtime(true),
                 
                 'addr'=>    $api ? $api->GetInterface()->GetAddress() : "",
@@ -128,17 +129,22 @@ class ErrorLogEntry extends BaseObject
                 'code'=>    $e->getCode(),
                 'file'=>    $e->getFile()."(".$e->getLine().")",
                 'message'=> $e->getMessage(),
-                
-                'app'=>     ($api && $api->GetInput() !== null) ? $api->GetInput()->GetApp() : "",
-                'action'=>  ($api && $api->GetInput() !== null) ? $api->GetInput()->GetAction() : "",
             );
+            
+            $input = ($api && ($context = $api->GetContext()) !== null) ? $context->GetInput() : null;
+            
+            if ($input !== null)
+            {
+                $data['app'] = $input->GetApp();
+                $data['action'] = $input->GetAction();
+            }
     
             $extended = $api && $api->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
             $sensitive = $api && $api->GetDebugLevel() >= Config::LOG_SENSITIVE;
             
             if ($extended)
             {                
-                if ($api) { $log = $api->GetDebugLog(); if ($log !== null) $data['log'] = $log; }
+                if ($debuglog !== null) $data['log'] = $debuglog;
                 
                 $data['objects'] = ($api && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjects() : "";
                 $data['queries'] = ($api && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
@@ -146,7 +152,7 @@ class ErrorLogEntry extends BaseObject
             
             if ($sensitive)
             {
-                $data['params'] = ($api && $api->GetInput() !== null) ? $api->GetInput()->GetParams()->GetClientObject() : "";   
+                $data['params'] = ($input !== null) ? $input->GetParams()->GetClientObject() : "";   
             }
             
             $data['trace_basic'] = explode("\n",$e->getTraceAsString());
@@ -166,6 +172,6 @@ class ErrorLogEntry extends BaseObject
             
             return $data;
         } 
-        catch (\Throwable $e2) { return array('message'=>'ErrorLogEntry failed: '.$e2->getMessage()); }       
+        catch (\Throwable $e2) { return array('message'=>'ErrorLog failed: '.$e2->getMessage().' in '.$e2->getFile()."(".$e2->getLine().")"); }
     }   
 }

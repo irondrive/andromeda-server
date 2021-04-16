@@ -29,7 +29,7 @@ class ObjectDatabase extends Database
                 return get_class($obj); },$cobjs);
         }, $this->objects);
     }
-    
+
     /**
      * Loops through every objects and saves them to the DB
      * @return $this
@@ -73,8 +73,8 @@ class ObjectDatabase extends Database
                 $output[$id] = $this->objects[$dbclass][$id];
             else 
             {
-                $class = $class::GetObjClass($row);
-                $object = new $class($this, $row);
+                $oclass = $class::GetObjClass($row);
+                $object = new $oclass($this, $row);
                 
                 $output[$id] = $object; 
                 
@@ -133,8 +133,23 @@ class ObjectDatabase extends Database
     }    
     
     /**
+     * Counts objects using the given query
+     * @param string $class the class of the objects
+     * @param QueryBuilder $query the query used to match objects
+     * @return int count of objects
+     */
+    public function CountObjectsByQuery(string $class, QueryBuilder $query) : int
+    {
+        $table = $this->GetClassTableName($class);
+        
+        $querystr = "SELECT COUNT($table.id) FROM $table ".$query->GetText();
+        
+        return array_values($this->query($querystr, Database::QUERY_READ, $query->GetData())[0])[0];
+    }
+    
+    /**
      * Loads an array of objects using the given query
-     * @param string $class the desired class of the objects
+     * @param string $class the class of the objects
      * @param QueryBuilder $query the query used to match objects
      * @return array<string, BaseObject> array of objects indexed by their IDs
      */
@@ -157,14 +172,16 @@ class ObjectDatabase extends Database
      * The objects will be loaded when deleted and their Delete() will run
      * @param string $class the class of the objects to delete
      * @param QueryBuilder $query the query used to match objects
-     * @return $this
+     * @return int number of deleted objects
      */
-    public function DeleteObjectsByQuery(string $class, QueryBuilder $query) : self
+    public function DeleteObjectsByQuery(string $class, QueryBuilder $query) : int
     {
         if (!$this->SupportsRETURNING())
         {
-            foreach ($this->LoadObjectsByQuery($class, $query) as $obj) $obj->Delete();            
-            return $this; // if we can't use RETURNING, just load the objects and delete individually
+            // if we can't use RETURNING, just load the objects and delete individually
+            $objs = $this->LoadObjectsByQuery($class, $query);
+            
+            foreach ($objs as $obj) $obj->Delete(); return count($objs);
         }
         
         $table = $this->GetClassTableName($class);
@@ -174,12 +191,12 @@ class ObjectDatabase extends Database
         $qtype = Database::QUERY_WRITE | Database::QUERY_READ;
         $result = $this->query($querystr, $qtype, $query->GetData());
         
-        foreach ($this->Rows2Objects($result, $class) as $obj) 
-        {
-            $obj->setDeleted()->Delete(); // notify object of deletion
-        }
+        $objs = $this->Rows2Objects($result, $class);
         
-        return $this;
+        // notify all objects of deletion
+        foreach ($objs as $obj) $obj->setDeleted()->Delete();
+        
+        return count($objs);
     }
     
     /**

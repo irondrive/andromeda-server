@@ -1,15 +1,19 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/auth/External.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
+/** Exception indicating the IMAP extension does not exist */
 class IMAPExtensionException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_MISSING"; }
+
+/** Exception indicating IMAP encountered an error */
+class IMAPErrorException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_ERROR"; }
 
 Manager::RegisterAuthType(IMAP::class);
 
@@ -89,14 +93,20 @@ class IMAP extends External
         
         $connectstr = implode("/",array_filter(array($hostname, $this->GetProtocol(), $implssl, $secauth)));
 
-        try { $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); }
-        catch (Exceptions\PHPError $e) { 
-            foreach (imap_errors() as $err) Main::GetInstance()->PrintDebug($err); return false; }            
-        
-        $success = boolval($imap);
+        try 
+        { 
+            $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); 
             
-        try { imap_close($imap); } catch (Exceptions\PHPError $e) { return false; } 
-        
-        return $success;
+            $retval = boolval($imap); imap_close($imap); return $retval;
+        }
+        catch (Exceptions\PHPError $e) 
+        {
+            $errman = ErrorManager::GetInstance(); $errman->LogException($e);
+            
+            foreach (imap_errors() as $err) 
+                $errman->LogException(new IMAPErrorException($err)); 
+            
+            return false; 
+        }
     }
 }

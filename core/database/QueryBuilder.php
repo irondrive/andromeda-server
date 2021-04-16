@@ -14,20 +14,29 @@ class QueryBuilder
     /** Returns the compiled query as a string */
     public function GetText() : string 
     { 
-        return ($this->fromalias ?? "").
-               ($this->joinstr!==null ?"JOIN ".$this->joinstr:"").
-               ($this->where!==null ?" WHERE ".$this->where:"").
-               ($this->limit!==null ?" LIMIT ".$this->limit:"").
-               ($this->offset!==null ?" OFFSET ".$this->offset:"").
-               ($this->orderby!==null ?" ORDER BY ".$this->orderby:"");
+        $query = $this->fromalias ?? "";
+        
+        if (count($this->joins)) $query .= implode(array_map(function($str){ 
+            return " JOIN $str "; }, $this->joins));
+        
+        if ($this->where !== null) $query .= " WHERE ".$this->where;
+        if ($this->orderby !== null) $query .= " ORDER BY ".$this->orderby;
+        
+        if ($this->orderdesc !== null) $query .= $this->orderdesc ? " DESC " : " ASC ";
+        
+        if ($this->limit !== null) $query .= " LIMIT ".$this->limit;
+        if ($this->offset !== null) $query .= " OFFSET ".$this->offset;
+        
+        return $query;
     }
     
     public function __toString() : string { return $this->GetText(); }
     
     private ?string $fromalias = null;
-    private ?string $joinstr = null;
+    private array $joins = array();
     private ?string $where = null;
     private ?string $orderby = null;
+    private ?bool $orderdesc = null;
     private ?string $join = null;
     private ?int $limit = null;
     private ?int $offset = null;
@@ -37,7 +46,7 @@ class QueryBuilder
      * @param string $val the actual data value
      * @return string the placeholder to go in the query
      */
-    public function AddData(string $val) : string
+    public function AddData($val) : string
     {
         $idx = "d".count($this->data);
         $this->data[$idx] = $val;
@@ -45,7 +54,7 @@ class QueryBuilder
     }
     
     /** Base function for safely comparing columns to values */
-    private function BaseCompare(string $key, string $val, string $symbol) : string 
+    private function BaseCompare(string $key, $val, string $symbol) : string 
     {
         return "$key $symbol ".$this->AddData($val);
     }    
@@ -74,23 +83,23 @@ class QueryBuilder
     }
     
     /** Returns a query string asserting the given column is less than the given value */
-    public function LessThan(string $key, string $val) : string { return $this->BaseCompare($key,$val,'<'); }
+    public function LessThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'<'); }
     
     /** Returns a query string asserting the given column is greater than the given value */
-    public function GreaterThan(string $key, string $val) : string { return $this->BaseCompare($key,$val,'>'); }
+    public function GreaterThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'>'); }
     
     /** Returns a query string asserting the given column is "true" (greater than zero) */
     public function IsTrue(string $key) : string { return $this->GreaterThan($key,0); }
     
     /** Returns a query string asserting the given column is equal to the given value */
-    public function Equals(string $key, ?string $val) : string 
+    public function Equals(string $key, $val) : string 
     { 
         if ($val === null) return $this->IsNull($key);
         return $this->BaseCompare($key,$val,'='); 
     }
     
     /** Returns a query string asserting the given column is not equal to the given value */
-    public function NotEquals(string $key, ?string $val) : string 
+    public function NotEquals(string $key, $val) : string 
     { 
         if ($val === null) return $this->Not($this->IsNull($key));
         return $this->BaseCompare($key,$val,'!='); 
@@ -144,7 +153,8 @@ class QueryBuilder
     public function GetWhere() : ?string { return $this->where; }
     
     /** Assigns an ORDER BY clause to the query */
-    public function OrderBy(string $orderby) : self { $this->orderby = $orderby; return $this; }
+    public function OrderBy(string $orderby, ?bool $desc = null) : self { 
+        $this->orderby = $orderby; $this->orderdesc = $desc; return $this; }
     
     /** Assigns a LIMIT clause to the query */
     public function Limit(?int $limit) : self { if ($limit < 0) $limit = 0; $this->limit = $limit; return $this; }
@@ -153,16 +163,17 @@ class QueryBuilder
     public function Offset(?int $offset) : self { if ($offset < 0) $offset = 0; $this->offset = $offset; return $this; }
     
     /**
-     * Assigns a JOIN clause to the query
+     * Adds a JOIN clause to the query (can have > 1)
      * @param ObjectDatabase $database reference to the database
      * @param string $joinclass the class of the objects that join us to the destination class
      * @param string $joinprop the column name of the join table that matches the destprop
      * @param string $destclass the class of the destination object
      * @param string $destprop the column name of the destination object that matches the joinprop
-     * @param string $destpoly if not null, the destprop is a polymorphic reference matching this class
+     * @param string $destpoly if not null, the destprop is a polymorphic reference to this class
+     * @param string $joinpoly if not null, the joinprop is a polymorphic reference to this class
      * @return $this
      */
-    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop, ?string $destpoly = null) : self
+    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop, ?string $destpoly = null, ?string $joinpoly = null) : self
     {
         $joinclass = $database->GetClassTableName($joinclass); 
         $destclass = $database->GetClassTableName($destclass);
@@ -173,7 +184,13 @@ class QueryBuilder
             $joinstr = $database->SQLConcat($joinstr, $classsym);
         }
         
-        $this->joinstr = "$joinclass ON $joinstr = $destclass.$destprop"; return $this;
+        $deststr = "$destclass.$destprop"; if ($joinpoly !== null)
+        {
+            $classsym = $this->AddData(FieldTypes\ObjectPoly::GetIDTypeDBValue("",$joinpoly));
+            $deststr = $database->SQLConcat($deststr, $classsym);
+        }
+        
+        $this->joins[] = "$joinclass ON $joinstr = $deststr"; return $this;
     }
     
     /**

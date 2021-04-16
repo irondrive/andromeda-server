@@ -6,6 +6,7 @@ require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
 use \PHPMailer\PHPMailer; // via autoloader
@@ -160,9 +161,10 @@ class Emailer extends StandardObject
             default: throw new InvalidMailTypeException();
         }
         
-        $api = Main::GetInstance();
-        $mailer->SMTPDebug = $api->GetDebugLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;        
-        $mailer->Debugoutput = function($str, $level)use($api){ $api->PrintDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
+        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
+        
+        $mailer->Debugoutput = function($str, $level){ 
+            ErrorManager::GetInstance()->LogDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');
         

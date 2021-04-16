@@ -7,6 +7,7 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
@@ -176,7 +177,7 @@ class S3 extends S3Base4
         
         if ($debug >= Config::LOG_SENSITIVE)
             $params['debug'] = array('logfn'=>function(string $str){
-                Main::GetInstance()->PrintDebug("S3 SDK: $str"); });
+                ErrorManager::GetInstance()->LogDebug("S3 SDK: $str"); });
                 
         $this->s3 = new \Aws\S3\S3Client($params);
         
@@ -255,7 +256,7 @@ class S3 extends S3Base4
         
         if (strlen($data) !== $length)
         {
-            Main::GetInstance()->PrintDebug(array(
+            ErrorManager::GetInstance()->LogDebug(array(
                 'read'=>strlen($data), 'wanted'=>$length));
             
             throw new FileReadFailedException();
