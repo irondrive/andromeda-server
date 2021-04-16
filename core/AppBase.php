@@ -42,6 +42,9 @@ abstract class AppBase implements Transactions
     /** Returns the app's version information */
     public abstract static function getVersion() : string;
     
+    /** Return this app's BaseAppLog class name, if used (or null) */
+    public static function getLogClass() : ?string { return null; }
+    
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }
     

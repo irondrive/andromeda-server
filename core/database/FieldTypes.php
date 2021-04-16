@@ -221,7 +221,7 @@ class ObjectRef extends Scalar
     {
         $this->refclass = $refclass; $this->reffield = $reffield; $this->refmany = $refmany;
     }
-    
+
     /** Returns the base class that the referenced object must be */
     public function GetBaseClass() : string { return $this->refclass; }
     
@@ -239,7 +239,9 @@ class ObjectRef extends Scalar
     {        
         $id = $this->GetValue(); if ($id === null) return null;
         
-        if (!isset($this->object)) $this->object = $this->GetRefClass()::TryLoadByID($this->database, $id);
+        $class = $this->GetRefClass(); if (!class_exists($class)) return null;
+        
+        if (!isset($this->object)) $this->object = $class::TryLoadByID($this->database, $id);
         
         return $this->object;
     }
@@ -262,6 +264,8 @@ class ObjectRef extends Scalar
     {
         $id = $this->GetValue(); if ($id === null) return;        
         $this->GetRefClass()::DeleteByID($this->database, $id);
+        
+        // in case the object was set but not saved to DB, delete manually
         if (isset($this->object) && $this->object) $this->object->Delete();
     }
 }
@@ -394,8 +398,8 @@ class ObjectRefs extends Counter
     /** Returns RETURN_OBJECTS as the basic type of value stored in this field */
     public static function GetReturnType(){ return RETURN_OBJECTS; }
     
-    /** Returns REFSTYPE_SINGLE as the type of reference the referenced objects have to us */
-    public static function GetRefsType(){ return REFSTYPE_SINGLE; }
+    /** return false - referenced objects refer to us as a single object */
+    public static function GetIsRefsMany(){ return false; }
     
     /**
      * Creates a new object reference array field
@@ -428,7 +432,15 @@ class ObjectRefs extends Counter
         
         else return array_slice($this->objects, $offset??0, $limit);
     }
- 
+    
+    /** Gives the counter its value from the DB, or 0 if null */
+    public function InitValue($value) : void
+    {
+        parent::InitValue(intval($value ?? 0));
+
+        if (!$this->GetValue()) { $this->isLoaded = true; $this->objects = array(); }
+    }
+    
     /** Populate the objects array, merging with changes */
     protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
     {
@@ -479,17 +491,19 @@ class ObjectRefs extends Counter
     /**
      * Add the given object to this field's object array
      * @param BaseObject $object the object to add
-     * @param bool $notification if true, this is a notification from another object that references us
      * @return bool true if this field was modified
      */
-    public function AddObject(BaseObject $object, bool $notification) : bool
-    {
+    public function AddObject(BaseObject $object) : bool
+    {        
+        if (!is_a($object, $this->GetRefClass()))
+            throw new ObjectTypeException();
+        
         $modified = false;
         
         if (($idx = array_search($object, $this->refs_deleted, true)) !== false)
         {
             unset($this->refs_deleted[$idx]);
-            parent::Delta(1); $modified = true;
+            parent::Delta(); $modified = true;
         }
 
         if (!in_array($object, $this->refs_added, true))
@@ -497,7 +511,7 @@ class ObjectRefs extends Counter
             $this->refs_added[] = $object; 
             parent::Delta(); $modified = true;
         }
-                
+        
         if (isset($this->objects))
             $this->objects[$object->ID()] = $object; 
 
@@ -507,10 +521,9 @@ class ObjectRefs extends Counter
     /**
      * Deletes the given object from this field's object array
      * @param BaseObject $object the object to remove
-     * @param bool $notification if true, this is a notification from another object that references us
      * @return bool true if this field was modified
      */
-    public function RemoveObject(BaseObject $object, bool $notification) : bool
+    public function RemoveObject(BaseObject $object) : bool
     {
         $modified = false;
 
@@ -547,8 +560,14 @@ class ObjectJoin extends ObjectRefs
     /** The name of the class that we are joined to */
     protected string $joinclass;
     
-    /** Returns REFSTYPE_MANY as the type of reference the referenced objects have to us */
-    public static function GetRefsType(){ return REFSTYPE_MANY; }
+    /**
+     * array cache of join objects
+     * @var array<string, JoinObject>
+     */
+    protected array $joinobjs = array(); 
+    
+    /** return true - referenced objects refer to us in an array */
+    public static function GetIsRefsMany(){ return true; }
     
     /** @see ObjectJoin::$joinclass */
     public function GetJoinClass() : string { return $this->joinclass; }
@@ -567,7 +586,8 @@ class ObjectJoin extends ObjectRefs
      */
     public function __construct(string $refclass, string $joinclass, string $reffield)
     {
-        parent::__construct($refclass, $reffield);    
+        parent::__construct($refclass, $reffield);
+        
         $this->joinclass = $joinclass;
     }
     
@@ -585,32 +605,39 @@ class ObjectJoin extends ObjectRefs
     /** Return the actual join object used to join us to the given object */
     public function GetJoinObject(BaseObject $object) : ?JoinObject
     {
-        return ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
+        if (!array_key_exists($object->ID(), $this->joinobjs)) 
+        {
+            $this->joinobjs[$object->ID()] = ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
+        }
+            
+        return $this->joinobjs[$object->ID()];
     }
     
     /**
      * Also creates a new join object joining us to the given object
+     * @param bool $notification if true this is a notification from another object
      * @see ObjectRefs::AddObject()
      */
-    public function AddObject(BaseObject $object, bool $notification) : bool
+    public function AddObject(BaseObject $object, bool $notification = false) : bool
     {
-        if ($notification) return parent::AddObject($object, $notification);
+        if ($notification) return parent::AddObject($object);
         
-        ($this->joinclass)::CreateJoin($this->database, $this, $object); return false;
+        $obj = ($this->joinclass)::CreateJoin($this->database, $this, $object);
+        
+        $this->joinobjs[$object->ID()] = $obj; return false;
     }
     
     /**
      * Also deletes the join object joining us to the given object
+     * @param bool $notification if true this is a notification from another object
      * @see ObjectRefs::RemoveObject()
      */
-    public function RemoveObject(BaseObject $object, bool $notification) : bool
+    public function RemoveObject(BaseObject $object, bool $notification = false) : bool
     {
-        if ($notification) return parent::RemoveObject($object, $notification);
+        if ($notification) return parent::RemoveObject($object);       
         
-        $joinobj = ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
+        ($this->joinclass)::TryDeleteJoin($this->database, $this, $object);
         
-        if ($joinobj !== null) $joinobj->Delete();
-        
-        return false;
+        unset($this->joinobjs[$object->ID()]); return false;
     }
 }

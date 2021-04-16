@@ -556,7 +556,7 @@ abstract class Storage extends StandardObject implements Transactions
     public function rollback() 
     {
         foreach (array_reverse($this->onRollback) as $func) try { $func(); } 
-            catch (\Throwable $e) { ErrorManager::GetInstance()->Log($e); }
+            catch (\Throwable $e) { ErrorManager::GetInstance()->LogException($e); }
     }
     
     /** Rolls back all instantiated filesystems */
@@ -565,7 +565,7 @@ abstract class Storage extends StandardObject implements Transactions
         foreach (self::$instances as $fs)
         {
             try { $fs->rollback(); } catch (\Throwable $e) {
-                ErrorManager::GetInstance()->Log($e); }
+                ErrorManager::GetInstance()->LogException($e); }
         }
     }    
 }

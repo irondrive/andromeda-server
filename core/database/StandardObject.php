@@ -157,7 +157,7 @@ abstract class StandardObject extends BaseObject
      * @throws CounterOverLimitException if the limit exists and is exceeded
      * @see BaseObject::AddObjectRef()
      */
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : BaseObject
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {        
         if (($limit = $this->TryGetCounterLimit($field)) !== null)
         {
@@ -173,7 +173,7 @@ abstract class StandardObject extends BaseObject
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllDates(callable $vfunc = null) : array { 
-        return array_map(function($v){ return (float)$v; }, 
+        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (float)$v; },
             $this->GetAllScalars('dates',$vfunc)); }    
         
     /**
@@ -181,7 +181,7 @@ abstract class StandardObject extends BaseObject
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllFeatures(callable $vfunc = null) : array {
-        return array_map(function($v){ return (int)$v; },
+        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
             $this->GetAllScalars('features',$vfunc)); }   
     
     /**
@@ -190,7 +190,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function GetAllCounters(callable $vfunc = null) : array
     { 
-        $counters = array_map(function($v){ return (int)$v; },
+        $counters = array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
             $this->GetAllScalars('counters',$vfunc));
         
         foreach (array_keys($this->objectrefs) as $refskey) 
@@ -204,8 +204,8 @@ abstract class StandardObject extends BaseObject
      * @see StandardObject::GetAllScalars
      */
     protected function GetAllCounterLimits(callable $vfunc = null) : array { 
-        return array_map(function($v){ return (int)$v; },
-        $this->GetAllScalars('counters_limits',$vfunc)); }   
+        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
+            $this->GetAllScalars('counters_limits',$vfunc)); }   
 
     /**
      * Gets an array of the values of all fields matching a prefix

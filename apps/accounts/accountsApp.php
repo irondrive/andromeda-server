@@ -8,6 +8,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
+require_once(ROOT."/apps/accounts/AccessLog.php");
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/Authenticator.php");
 require_once(ROOT."/apps/accounts/AuthObject.php");
@@ -128,6 +129,8 @@ class AccountsApp extends AppBase
     
     public static function getVersion() : string { return "2.0.0-alpha"; } 
     
+    public static function getLogClass() : ?string { return AccessLog::class; }
+    
     public static function getUsage() : array 
     { 
         return array(
@@ -210,6 +213,8 @@ class AccountsApp extends AppBase
         
         $this->authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
+        
+        AccessLog::Create($this->database, $this->authenticator);
         
         switch($input->GetAction())
         {

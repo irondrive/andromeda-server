@@ -16,6 +16,8 @@ CREATE TABLE `a2_objects_core_config` (
   `datadir` text DEFAULT NULL,
   `apps` text NOT NULL,
   `dates__created` double NOT NULL,
+  `features__requestlog_db` tinyint(2) NOT NULL,
+  `features__requestlog_file` tinyint(1) NOT NULL,
   `features__debug` tinyint(2) NOT NULL,
   `features__debug_http` tinyint(1) NOT NULL,
   `features__debug_dblog` tinyint(1) NOT NULL,
@@ -47,13 +49,13 @@ CREATE TABLE `a2_objects_core_emailer` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
+CREATE TABLE `a2_objects_core_exceptions_errorlog` (
   `id` char(12) NOT NULL,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
-  `app` varchar(255) NOT NULL,
-  `action` varchar(255) NOT NULL,
+  `app` varchar(255) DEFAULT NULL,
+  `action` varchar(255) DEFAULT NULL,
   `code` varchar(255) NOT NULL,
   `file` text NOT NULL,
   `message` text NOT NULL,
@@ -70,6 +72,33 @@ CREATE TABLE `a2_objects_core_exceptions_errorlogentry` (
   KEY `app` (`app`(191)),
   KEY `action` (`action`(191)),
   KEY `addr` (`addr`(191))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_core_logging_actionlog` (
+  `id` char(16) NOT NULL,
+  `request` char(16) NOT NULL,
+  `app` varchar(255) NOT NULL,
+  `action` varchar(255) NOT NULL,
+  `applog` varchar(64) DEFAULT NULL,
+  `extra` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `request` (`request`),
+  KEY `applog` (`applog`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_core_logging_requestlog` (
+  `id` char(16) NOT NULL,
+  `actions` int(11) NOT NULL DEFAULT 0,
+  `time` double NOT NULL,
+  `addr` varchar(255) NOT NULL,
+  `agent` text NOT NULL,
+  `errcode` smallint(6) DEFAULT NULL,
+  `errtext` text DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

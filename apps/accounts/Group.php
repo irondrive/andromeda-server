@@ -78,10 +78,10 @@ class Group extends AuthEntity
     public function GetMyAccounts() : array { return $this->GetObjectRefs('accounts'); }
     
     /** Adds a new account to this group */
-    public function AddAccount(Account $account) : self { return $this->AddObjectRef('accounts', $account); }
+    public function AddAccount(Account $account) : self { $this->AddObjectRef('accounts', $account); return $this; }
     
     /** Removes an account from this group */
-    public function RemoveAccount(Account $account) : self { return $this->RemoveObjectRef('accounts', $account); }
+    public function RemoveAccount(Account $account) : self { $this->RemoveObjectRef('accounts', $account); return $this; }
     
     /** Gets the date that an account became a member of this group (or null) */
     public function GetAccountAddedDate(Account $account) : ?float

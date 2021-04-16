@@ -3,7 +3,7 @@
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Singleton,Utilities};
-require_once(ROOT."/core/exceptions/ErrorLogEntry.php");
+require_once(ROOT."/core/exceptions/ErrorLog.php");
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
@@ -13,7 +13,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
  * The main error handler/manager 
  * 
  * This class handles uncaught exceptions, logging them and converting to a client Output object.
- * Application code can use Log() when an exception is caught but still needs to be logged.
+ * Application code can use LogException() when an exception is caught but still needs to be logged.
  */
 class ErrorManager extends Singleton
 {
@@ -21,8 +21,6 @@ class ErrorManager extends Singleton
     
     private IOInterface $interface;
 
-    public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
-    
     /** Returns true if the configured debug state is >= the requested level */
     private function GetDebugState(int $minlevel) : bool
     {
@@ -34,10 +32,10 @@ class ErrorManager extends Singleton
     /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
     private function HandleClientException(ClientException $e) : Output
     {
-        if ($this->API !== null) $this->API->rollback(false);
+        if ($this->API !== null) $this->API->rollback($e);
             
         $debug = null; if ($this->GetDebugState(Config::LOG_DEVELOPMENT)) 
-            $debug = ErrorLogEntry::GetDebugData($this->API, $e);
+            $debug = ErrorLog::GetDebugData($this->API, $e, $this->GetDebugLog());
             
         return Output::ClientException($e, $debug);
     }
@@ -45,20 +43,20 @@ class ErrorManager extends Singleton
     /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
     private function HandleThrowable(\Throwable $e) : Output
     {
-        if ($this->API !== null) $this->API->rollback(true);
+        if ($this->API !== null) $this->API->rollback($e);
 
-        try { $debug = $this->Log($e, false); }
+        try { $debug = $this->LogException($e, false); }
         catch (\Throwable $e) { $debug = null; }
 
         return Output::ServerException($debug);
     }
     
     /** Registers PHP error and exception handlers */
-    public function __construct(IOInterface $interface)
+    public function __construct(Main $api, IOInterface $interface)
     {
         parent::__construct();        
         
-        $this->interface = $interface;
+        $this->API = $api; $this->interface = $interface;
         
         set_error_handler( function($code,$string,$file,$line){
            throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
@@ -89,13 +87,13 @@ class ErrorManager extends Singleton
      * @param bool $mainlog if true, display this in the API's message log
      * @return array<string, mixed>|NULL array of debug data or null if not logged
      */
-    public function Log(\Throwable $e, bool $mainlog = true) : ?array
+    public function LogException(\Throwable $e, bool $mainlog = true) : ?array
     {
         if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;
+
+        $debug = ErrorLog::GetDebugData($this->API, $e, !$mainlog ? $this->GetDebugLog() : null);
         
-        $debug = ErrorLogEntry::GetDebugData($this->API, $e);
-        
-        if ($this->API !== null && $mainlog) $this->API->PrintDebug($debug);
+        if ($this->API !== null && $mainlog) $this->LogDebug($debug);
         
         if ($e instanceof ClientException) return $debug;
         
@@ -111,7 +109,7 @@ class ErrorManager extends Singleton
                 }
             }
         }
-        catch (\Throwable $e2) { $this->filelogok = false; $this->Log($e2); }
+        catch (\Throwable $e2) { $this->filelogok = false; $this->LogException($e2); }
         
         try
         {
@@ -123,15 +121,26 @@ class ErrorManager extends Singleton
                 if ($dblog)
                 {
                     $db = new ObjectDatabase();
-                    ErrorLogEntry::Create($this->API, $db, $e);
-                    $db->saveObjects()->commit();
+
+                    $log = ErrorLog::LogDebugData($db, $debug);
+                    
+                    $log->Save(); $db->commit();
                 }
             }
         }
-        catch (\Throwable $e2) { $this->dblogok = false; $this->Log($e2); }
+        catch (\Throwable $e2) { $this->dblogok = false; $this->LogException($e2); }
 
-        if (($e = $e->getPrevious()) instanceof \Throwable) $this->Log($e);
+        if (($e = $e->getPrevious()) instanceof \Throwable) $this->LogException($e);
         
         return $debug;
-    }   
+    }
+    
+    private static array $debuglog = array();
+    
+    /** Adds an entry to the custom debug log, saved with exceptions */
+    public static function LogDebug($data){ self::$debuglog[] = $data; }
+    
+    /** Returns the debug log if allowed by the debug state, else null */
+    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::LOG_DEVELOPMENT) ? self::$debuglog : null; }
+    
 }

@@ -14,6 +14,9 @@ class EmailUnavailableException extends Exceptions\ClientErrorException { public
 /** Exception indicating that the configured data directory is not valid */
 class UnwriteableDatadirException extends Exceptions\ClientErrorException { public $message = "DATADIR_NOT_WRITEABLE"; }
 
+/** Exception indicating an invalid app name was given */
+class InvalidAppException extends Exceptions\ClientErrorException { public $message = "INVALID_APPNAME"; }
+
 /** The global framework config stored in the database */
 class Config extends SingletonObject
 {
@@ -21,6 +24,8 @@ class Config extends SingletonObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
+            'features__requestlog_db' => new FieldTypes\Scalar(true),
+            'features__requestlog_file' => new FieldTypes\Scalar(false),
             'features__debug' => new FieldTypes\Scalar(self::LOG_ERRORS),
             'features__debug_http' => new FieldTypes\Scalar(false),
             'features__debug_dblog' => new FieldTypes\Scalar(true),
@@ -36,7 +41,8 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
+    public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] ".
+                                                                 "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
                                                                  "[--read_only ".implode('|',array_keys(self::RUN_TYPES))."] [--enabled bool] [--email bool] [--datadir ?text]"; }
     
     /**
@@ -54,6 +60,9 @@ class Config extends SingletonObject
                 throw new UnwriteableDatadirException();
             $this->SetScalar('datadir', $datadir);
         }
+        
+        if ($input->HasParam('requestlog_db')) $this->SetFeature('requestlog_db',$input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('requestlog_file')) $this->SetFeature('requestlog_file',$input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
 
         if ($input->HasParam('debug'))
         {
@@ -92,16 +101,28 @@ class Config extends SingletonObject
     /** Registers the specified app name */
     public function EnableApp(string $app) : self
     {
+        if ($app === 'server') throw new InvalidAppException();
+        
+        Main::GetInstance()->LoadApp($app);
+        
         $apps = $this->GetApps();
         if (!in_array($app, $apps)) $apps[] = $app;
+        
         return $this->SetScalar('apps', $apps);
     }
     
     /** Unregisters the specified app name */
     public function DisableApp(string $app) : self
     {
+        if ($app === 'server') throw new InvalidAppException();
+        
         $apps = $this->GetApps();
-        if (($key = array_search($app, $apps)) !== false) unset($apps[$key]);
+        
+        if (($key = array_search($app, $apps)) === false) 
+            throw new InvalidAppException();
+        
+        unset($apps[$key]);
+        
         return $this->SetScalar('apps', array_values($apps));
     }
     
@@ -138,7 +159,16 @@ class Config extends SingletonObject
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
-
+    
+    /** Returns true if request logging to DB is enabled */
+    public function GetEnableRequestLogDB() : bool { return $this->GetFeature('requestlog_db'); }
+    
+    /** Returns true if request logging to data dir file is enabled */
+    public function GetEnableRequestLogFile() : bool { return $this->GetFeature('requestlog_file'); }
+    
+    /** Returns true if request logging is enabled */
+    public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
+    
     /** show a basic back trace */ 
     const LOG_ERRORS = 1; 
     
@@ -188,8 +218,8 @@ class Config extends SingletonObject
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
      * @return array `{features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, features:{ debug:string, 
-         debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
+         if admin, add: `{datadir:?string, features:{ requestlog_file:bool, requestlog_db:bool, 
+            debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
     { 

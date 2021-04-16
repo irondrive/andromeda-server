@@ -152,18 +152,22 @@ abstract class Folder extends Item
         return $this->DeltaCounter('subshares', $count ? 1 : -1);
     }
 
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
-        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, true);
+        $modified = parent::AddObjectRef($field, $object, $notification);
         
-        return parent::AddObjectRef($field, $object, $notification);
+        if ($modified && ($field === 'files' || $field === 'folders')) $this->AddItemCounts($object, true);
+        
+        return $modified;
     }
     
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
-    {        
-        if ($field === 'files' || $field === 'folders') $this->AddItemCounts($object, false);
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
+    {
+        $modified = parent::RemoveObjectRef($field, $object, $notification);
         
-        return parent::RemoveObjectRef($field, $object, $notification);
+        if ($modified && ($field === 'files' || $field === 'folders')) $this->AddItemCounts($object, false);
+        
+        return $modified;
     }
     
     protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }

@@ -13,26 +13,28 @@ class InvalidParseException extends Exceptions\ServerException { public $message
 class Output
 {
     private bool $ok; 
-    private int $code; 
-    private $data; 
+    private int $code;
+    
+    private string $message;
+    private $appdata; 
     
     private ?array $metrics = null; 
     private ?array $debug = null;
     
     /** Returns whether or not the request succeeded */
-    public function GetOK() : bool { return $this->ok; }
+    public function isOK() : bool { return $this->ok; }
     
     /** Returns the HTTP response code for the request */
     public function GetHTTPCode() : int { return $this->code; }
     
-    /** Returns the response body to be returned */
-    public function GetData() { return $this->data; }
+    /** Returns the error message string (only if not isOK) */
+    public function GetMessage() : string { return $this->message; }
+    
+    /** Returns the response body to be returned (only if isOK) */
+    public function GetAppdata() { return $this->appdata; }
     
     /** Sets performance metrics to be returned */
     public function SetMetrics(?array $metrics) : void { $this->metrics = $metrics; }
-    
-    /** Sets debugging information to be returned */
-    public function SetDebug(?array $debug) : void { $this->debug = $debug; }
     
     /** 
      * Returns the Output object as a client array 
@@ -43,7 +45,9 @@ class Output
     {
         $array = array('ok'=>$this->ok, 'code'=>$this->code);
         
-        $array[($this->ok ? 'appdata' : 'message')] = $this->data;
+        if ($this->ok) 
+             $array['appdata'] = $this->appdata;
+        else $array['message'] = $this->message;
         
         if ($this->metrics !== null) $array['metrics'] = $this->metrics;
         if ($this->debug !== null) $array['debug'] = $this->debug;
@@ -51,38 +55,40 @@ class Output
         return $array; 
     }
     
-    /**
-     * Returns the Output object as a single string (or null if it's more than a string)
-     */
+    /** Returns the appdata as a single string (or null if not possible) */
     public function GetAsString() : ?string
     {
         $extras = $this->debug !== null || $this->metrics !== null;
         
-        if (!is_string($this->data) || $extras) return null;
+        $data = $this->ok ? $this->appdata : $this->message;
         
-        return $this->data;
+        if (!is_string($data) || $extras) return null;
+        
+        return $data;
     }
     
-    private function __construct(bool $ok, int $code, $data)
+    private function __construct(bool $ok, int $code)
     {
-        // if we only ran a single input, make the output array be that result
-        if (is_array($data) && count($data) === 1 && array_key_exists(0,$data)) $data = $data[0];
-        
-        $this->ok = $ok; $this->code = $code; $this->data = $data;      
+        $this->ok = $ok; $this->code = $code;   
     }
     
     /** Constructs an Output object representing a success response */
-    public static function Success($data) : Output
+    public static function Success($appdata) : Output
     {
-        return new Output(true, 200, $data);
+        // if we only ran a single input, make the output array be that result
+        if (is_array($appdata) && count($appdata) === 1 && array_key_exists(0,$appdata)) $appdata = $appdata[0];
+        
+        $output = new Output(true, 200); $output->appdata = $appdata; return $output;
     }
     
     /** Constructs an Output object representing a client error, showing the exception and possibly extra debug */
     public static function ClientException(\Throwable $e, ?array $debug = null) : Output
     {
-        $output = new Output(false, $e->getCode(), $e->getMessage());
+        $output = new Output(false, $e->getCode());
         
-        if ($debug !== null) $output->SetDebug($debug);
+        $output->message = $e->getMessage();
+        
+        if ($debug !== null) $output->debug = $debug;
         
         return $output;
     }
@@ -90,9 +96,11 @@ class Output
     /** Constructs an Output object representing a generic server error, possibly with debug */
     public static function ServerException(?array $debug = null) : Output
     {
-        $output = new Output(false, 500, 'SERVER_ERROR');
+        $output = new Output(false, 500);
         
-        if ($debug !== null) $output->SetDebug($debug);
+        $output->message = 'SERVER_ERROR';
+        
+        if ($debug !== null) $output->debug = $debug;
         
         return $output;
     }
@@ -106,23 +114,25 @@ class Output
     public static function ParseArray(array $data) : Output
     {
         if (!array_key_exists('ok',$data) || !array_key_exists('code',$data)) throw new InvalidParseException();
+        
+        if (!is_bool($data['ok']) || !is_int($data['code'])) throw new InvalidParseException();
 
-        $ok = $data['ok']; $code = $data['code'];
+        $ok = (bool)$data['ok']; $code = (int)$data['code'];
 
         if ($ok === true)
         {
             if (!array_key_exists('appdata',$data)) throw new InvalidParseException();
 
-            return new Output($ok, $code, $data['appdata']);
+            $output = new Output($ok, $code); $output->appdata = $data['appdata']; return $output;
         }
         else
         {
-            if (!array_key_exists('code',$data) || !array_key_exists('message',$data)) throw new InvalidParseException();
+            if (!array_key_exists('message',$data)) throw new InvalidParseException();
             
-            throw Exceptions\ClientException::Create($data['code'], $data['message']);
+            if (!is_string($data['message'])) throw new InvalidParseException();
+            
+            throw Exceptions\ClientException::Create($code, (string)$data['message']);
         }
-    }
-    
+    }   
 }
-
 

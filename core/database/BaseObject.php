@@ -58,6 +58,17 @@ abstract class BaseObject
     public static function GetObjClass(array $row) : string { return static::class; }
     
     /**
+     * Counts objects in the DB matching the given query
+     * @param ObjectDatabase $database Reference to the database
+     * @param QueryBuilder $query The query to use for matching objects
+     * @return int count of matched objects
+     */
+    public static function CountByQuery(ObjectDatabase $database, QueryBuilder $query) : int
+    {
+        return $database->CountObjectsByQuery(static::class, $query);
+    }
+    
+    /**
      * Loads an array of objects from the DB matching the given query
      * @param ObjectDatabase $database Reference to the database
      * @param QueryBuilder $query The query to use for matching objects
@@ -74,10 +85,11 @@ abstract class BaseObject
      * The objects are loaded when they are deleted and their Delete()s are run
      * @param ObjectDatabase $database Reference to the database
      * @param QueryBuilder $query The query to use for matching objects
+     * @return int number of objects deleted
      */
-    public static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : void
+    public static function DeleteByQuery(ObjectDatabase $database, QueryBuilder $query) : int
     {
-        $database->DeleteObjectsByQuery(static::class, $query);
+        return $database->DeleteObjectsByQuery(static::class, $query);
     }
     
     /**
@@ -138,10 +150,11 @@ abstract class BaseObject
     /**
      * Deletes all objects of this type from the database
      * @param ObjectDatabase $database Reference to the database
+     * @return int number of deleted objects
      */
-    public static function DeleteAll(ObjectDatabase $database) : void
+    public static function DeleteAll(ObjectDatabase $database) : int
     {
-        static::DeleteByQuery($database, (new QueryBuilder()));
+        return static::DeleteByQuery($database, new QueryBuilder());
     }
     
     /**
@@ -218,11 +231,12 @@ abstract class BaseObject
      * @param string $field The name of the field to check
      * @param BaseObject $object the object referenced by the field
      * @param bool $isPoly whether or not this field is polymorphic
+     * @return int number of deleted objects
      */
-    public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : void
+    public static function DeleteByObject(ObjectDatabase $database, string $field, BaseObject $object, bool $isPoly = false) : int
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
-        $q = new QueryBuilder(); static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
+        $q = new QueryBuilder(); return static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
     }
     
     /**
@@ -527,9 +541,9 @@ abstract class BaseObject
      * @param BaseObject $object the object for the field to reference
      * @param bool $notification true if this is a notification from another object that cross-references this one (internal only!)
      * @throws KeyNotFoundException if the property name is invalid
-     * @return $this
+     * @return bool true if this object was modified
      */
-    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
+    protected function CheckSetObject(string $field, ?BaseObject $object, bool $notification = false) : bool
     {
         if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
 
@@ -565,18 +579,36 @@ abstract class BaseObject
             }
         }
 
-        $this->modified |= $this->objects[$field]->SetObject($object); 
+        $modified = $this->objects[$field]->SetObject($object); 
 
-        return $this;
+        $this->modified |= $modified; return $modified;
     } 
 
     /**  
-     * Same as SetObject(), but sets the reference to null 
-     * @see BaseObject::SetObject()
+     * Same as CheckSetObject(), but sets the reference to null 
+     * @see BaseObject::CheckSetObject()
      */
-    protected function UnsetObject(string $field, bool $notification = false) : self 
+    protected function CheckUnsetObject(string $field, bool $notification = false) : bool
     { 
-        return $this->SetObject($field, null, $notification); 
+        return $this->CheckSetObject($field, null, $notification); 
+    }
+    
+    /**
+     * Same as CheckSetObject() but returns $this
+     * @see BaseObject::CheckSetObject()
+     */
+    protected function SetObject(string $field, ?BaseObject $object, bool $notification = false) : self
+    {
+        $this->CheckSetObject($field, $object, $notification); return $this;
+    }
+    
+    /**
+     * Same as CheckUnsetObject() but returns $this
+     * @see BaseObject::CheckUnsetObject()
+     */
+    protected function UnsetObject(string $field, bool $notification = false) : self
+    { 
+        $this->CheckUnsetObject($field, $notification); return $this;
     }
     
     /**
@@ -587,22 +619,28 @@ abstract class BaseObject
      * @param BaseObject $object the object to add to the collection
      * @param bool $notification true if this is a notification from another object that cross-references this one (internal only!)
      * @throws KeyNotFoundException if the property name is invalid
-     * @return $this
+     * @return bool true if this object was modified
      */
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();        
         
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
         
-        $fieldobj = $this->objectrefs[$field];        
+        $fieldobj = $this->objectrefs[$field];
         
-        $this->modified |= $fieldobj->AddObject($object, $notification);
+        if ($fieldobj->GetIsRefsMany())
+        {
+            $modified = $fieldobj->AddObject($object, $notification);
+        }
+        else
+        {
+            $update = $notification || $object->CheckSetObject($fieldobj->GetRefField(), $this, true);
+            
+            $modified = $update ? $fieldobj->AddObject($object, $notification) : false;
+        }
         
-        if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE) 
-            $object->SetObject($fieldobj->GetRefField(), $this, true);
-        
-        return $this;
+        $this->modified |= $modified; return $modified;
     }
     
     /**
@@ -611,22 +649,28 @@ abstract class BaseObject
      * @param BaseObject $object the object to add to the collection
      * @param bool $notification true if this is a notification from another object that cross-references this one (internal only!)
      * @throws KeyNotFoundException if the property name is invalid
-     * @return $this
+     * @return bool true if this object was modified
      */
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
         
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
         
-        $fieldobj = $this->objectrefs[$field];        
+        $fieldobj = $this->objectrefs[$field];
+            
+        if ($fieldobj->GetIsRefsMany())
+        {
+            $modified = $fieldobj->RemoveObject($object, $notification);            
+        }
+        else
+        {
+            $update = $notification || $object->CheckUnsetObject($fieldobj->GetRefField(), true);
+            
+            $modified = $update ? $fieldobj->RemoveObject($object, $notification) : false;
+        }
         
-        $this->modified |= $this->objectrefs[$field]->RemoveObject($object, $notification);
-
-        if (!$notification && $fieldobj->GetRefsType() === FieldTypes\REFSTYPE_SINGLE)
-            $object->UnsetObject($fieldobj->GetRefField(), true);
-        
-        return $this;
+        $this->modified |= $modified; return $modified;
     }
     
     /**
@@ -756,8 +800,9 @@ abstract class BaseObject
     {
         $obj = $database->CreateObject(static::class); 
         
-        $obj->modified = true;        
-        $obj->created = true;
+        $obj->modified = true; $obj->created = true;
+        
+        foreach ($obj->objectrefs as $refs) $refs->InitValue(0);
         
         return $obj;
     }

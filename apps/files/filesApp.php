@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/apps/files/AccessLog.php");
 require_once(ROOT."/apps/files/Config.php");
 require_once(ROOT."/apps/files/ItemAccess.php");
 require_once(ROOT."/apps/files/Item.php");
@@ -110,6 +111,8 @@ class FilesApp extends AppBase
 {
     public static function getVersion() : string { return "2.0.0-alpha"; } 
     
+    public static function getLogClass() : ?string { return AccessLog::class; }
+    
     public static function getUsage() : array 
     { 
         return array(
@@ -214,6 +217,8 @@ class FilesApp extends AppBase
         
         $this->authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
+        
+        AccessLog::Create($this->database, $this->authenticator);
 
         switch($input->GetAction())
         {

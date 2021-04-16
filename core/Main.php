@@ -8,7 +8,8 @@ require_once(ROOT."/core/database/ObjectDatabase.php");
 use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
-use Andromeda\Core\Exceptions\ErrorManager;
+require_once(ROOT."/core/exceptions/Exceptions.php");
+use Andromeda\Core\Exceptions\{ErrorManager, ClientException};
 
 require_once(ROOT."/core/ioformat/IOInterface.php");
 require_once(ROOT."/core/ioformat/Input.php");
@@ -16,6 +17,10 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\AJAX;
+
+require_once(ROOT."/core/logging/RequestLog.php");
+require_once(ROOT."/core/logging/ActionLog.php");
+use Andromeda\Core\Logging\{RequestLog, ActionLog};
 
 /** Exception indicating that the requested app is invalid */
 class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
@@ -38,13 +43,23 @@ class DataWriteFailedException extends Exceptions\ServerException { public $mess
 /** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
 class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
 
-class Context { public Input $input; public function __construct(Input $input){ $this->input = $input; }}
+class RunContext 
+{ 
+    private Input $input;     
+    private ?ActionLog $actionlog;
+    
+    public function GetInput() : Input { return $this->input; }
+    public function GetActionLog() : ?ActionLog { return $this->actionlog; }
+    
+    public function __construct(Input $input, ?ActionLog $actionlog){ 
+        $this->input = $input; $this->actionlog = $actionlog; }
+}
 
 /**
  * The main container class managing API singletons and running apps
  * 
  * Main is also a Singleton so it can be fetched anywhere with GetInstance().
- * A large portion of the code is dedicated to gathering performance metrics.
+ * A Main handles a single request, with an arbitrary number of appruns.
  */
 class Main extends Singleton
 { 
@@ -53,10 +68,12 @@ class Main extends Singleton
     private array $commit_stats = array();
     private DBStats $sum_stats;
     
+    private RequestLog $reqlog;
+    
     private float $time;
     private array $apps = array(); 
     
-    /** @var Context[] stack frames for nested Run() calls */
+    /** @var RunContext[] stack frames for nested Run() calls */
     private array $stack = array(); 
     
     private ?Config $config = null; 
@@ -72,7 +89,7 @@ class Main extends Singleton
     
     /**
      * Gets an array of instantiated apps
-     * @return array<string, BaseApp>
+     * @return array<string, AppBase>
      */
     public function GetApps() : array { return $this->apps; }
     
@@ -85,12 +102,11 @@ class Main extends Singleton
     /** Returns the interface used for the current request */
     public function GetInterface() : IOInterface { return $this->interface; }
     
-    /** Returns the Input that is currently being executed */
-    public function GetInput() : ?Input 
-    { 
-        $context = Utilities::array_last($this->stack); 
-        return ($context !== null) ? $context->input : null;
-    }
+    /** Returns a reference to the global error manager */
+    public function GetErrorManager() : ErrorManager { return $this->error_manager; }
+    
+    /** Returns the RunContext that is currently being executed */
+    public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
 
     /**
      * Initializes the Main API
@@ -103,7 +119,7 @@ class Main extends Singleton
      */
     public function __construct(IOInterface $interface)
     {
-        $this->error_manager = (new ErrorManager($interface))->SetAPI($this);
+        $this->error_manager = new ErrorManager($this, $interface);
         
         parent::__construct();
         
@@ -112,6 +128,8 @@ class Main extends Singleton
         $this->sum_stats = new DBStats();
         
         $interface->Initialize();
+
+        $apps = file_exists(ROOT."/apps/server/serverApp.php") ? array('server') : array();
         
         try 
         {
@@ -126,21 +144,25 @@ class Main extends Singleton
             if ($this->config->isReadOnly()) 
                 $this->database->setReadOnly();    
 
-            $apps = $this->config->GetApps();
+            $apps = array_merge($apps, $this->config->GetApps());
         }
-        catch (DatabaseException $e) { $apps = array('server'); }
+        catch (DatabaseException $e) { }
         
         foreach ($apps as $app) $this->LoadApp($app);
 
         if ($this->database)
         {
+            if ($this->config !== null && !$this->config->isReadOnly()
+                    && $this->config->GetEnableRequestLog())
+                $this->reqlog = RequestLog::Create($this);
+            
             $construct_stats = $this->database->popStatsContext();
             $this->sum_stats->Add($construct_stats);
             $this->construct_stats = $construct_stats->getStats();
         }
         
         register_shutdown_function(function(){
-            if ($this->dirty) $this->rollback(false); });
+            if ($this->dirty) $this->rollback(); });
     }
     
     /** Loads the main include file for an app */
@@ -175,13 +197,15 @@ class Main extends Singleton
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $this->stack[] = new Context($input);
-        
         $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
         
         if ($dbstats && $this->database) 
             $this->database->pushStatsContext();
-
+        
+        $actionlog = isset($this->reqlog) ? $this->reqlog->LogAction($input) : null;
+            
+        $this->stack[] = new RunContext($input, $actionlog);
+            
         $this->dirty = true;
         
         $data = $this->apps[$app]->Run($input);
@@ -221,7 +245,7 @@ class Main extends Singleton
             );
         }  
 
-        return Output::ParseArray($data)->GetData();
+        return Output::ParseArray($data)->GetAppdata();
     }
     
     private array $writes = array();
@@ -249,33 +273,35 @@ class Main extends Singleton
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
      * First rolls back each app, then the database, then saves mandatorySave objects if not a server error
-     * @param bool $serverError true if this rollback is due to a server error
+     * @param ?\Throwable $e the exception that caused the rollback (or null)
      */
-    public function rollback(bool $serverError) : void
+    public function rollback(?\Throwable $e = null) : void
     {
         $this->rollback = true;
         
         foreach ($this->apps as $app) try { $app->rollback(); }
-        catch (\Throwable $e) { $this->error_manager->Log($e); }
+        catch (\Throwable $e) { $this->error_manager->LogException($e); }
         
         foreach ($this->writes as $path) try { unlink($path); } 
-        catch (\Throwable $e) { $this->error_manager->Log($e); }
+        catch (\Throwable $e) { $this->error_manager->LogException($e); }
         
         if ($this->database) 
         {
             $this->database->rollback();
             
-            if (!$serverError)
+            if ($e instanceof ClientException)
             {
                 try 
-                { 
+                {                    
+                    if (isset($this->reqlog)) $this->reqlog->SetError($e)->Save(); 
+                    
                     $this->database->saveObjects(true);
                     
                     $rollback = $this->config && $this->config->getReadOnly();
                     
                     if ($rollback) $this->database->rollback(); else $this->database->commit(); 
                 }
-                catch (\Throwable $e) { $this->error_manager->Log($e); }
+                catch (\Throwable $e) { $this->error_manager->LogException($e); }
             }
         }
         
@@ -299,9 +325,9 @@ class Main extends Singleton
         {          
             if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
                 $this->database->pushStatsContext();
-            
-            $this->database->saveObjects();
                 
+            $this->database->saveObjects();
+            
             $rollback = $this->config && $this->config->getReadOnly();
             
             foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
@@ -353,21 +379,9 @@ class Main extends Singleton
         }
         catch (\Throwable $e) { return $this->interface->GetDebugLevel(); }
     }
-    
-    private static array $debuglog = array();
-    
-    /** Adds an entry to the custom debug log */
-    public static function PrintDebug($data){ self::$debuglog[] = $data; }
-    
-    /** Returns the custom debug log, if allowed by config */
-    public function GetDebugLog() : ?array 
-    {
-        return $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT && 
-            count(self::$debuglog) ? self::$debuglog : null; 
-    }
 
     /** Returns an array of performance metrics, if allowed by config */
-    public function GetMetrics() : ?array
+    protected function GetMetrics() : ?array
     {
         if ($this->GetDebugLevel() < Config::LOG_DEVELOPMENT) return null;
         
@@ -385,13 +399,17 @@ class Main extends Singleton
             'gcstats' => gc_status(),
             'rusage' => getrusage(),
             
-            'queries' => $this->database->getAllQueries()
+            'queries' => $this->database->getAllQueries(),
+            
+            'debuglog' => $this->error_manager->GetDebugLog()
         );
-
-        $log = $this->GetDebugLog();
-        if ($log !== null) $retval['log'] = $log;
         
         return $retval;
     }
     
+    /** Do any final touches to the output object */
+    public function FinalizeOutput(Output $output) : void
+    {
+        $output->SetMetrics($this->GetMetrics());
+    }
 }

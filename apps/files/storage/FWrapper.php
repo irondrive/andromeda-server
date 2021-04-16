@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/apps/accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
 
@@ -192,7 +192,7 @@ abstract class FWrapper extends Storage
         
         if ($data === false || strlen($data) !== $length)
         {
-            Main::GetInstance()->PrintDebug(array(
+            ErrorManager::GetInstance()->LogDebug(array(
                 'read'=>strlen($data), 'wanted'=>$length));
             
             throw new FileReadFailedException();
@@ -224,7 +224,7 @@ abstract class FWrapper extends Storage
         
         if ($written !== strlen($data))
         {
-            Main::GetInstance()->PrintDebug(array(
+            ErrorManager::GetInstance()->LogDebug(array(
                 'wrote'=>$written, 'wanted'=>strlen($data)));
             
             throw new FileWriteFailedException();

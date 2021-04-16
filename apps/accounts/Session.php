@@ -35,6 +35,7 @@ class Session extends KeySource
     public static function DeleteByAccountExcept(ObjectDatabase $database, Account $account, Session $session) : void
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
+        
         parent::DeleteByQuery($database, $q->Where($w));
     }
     

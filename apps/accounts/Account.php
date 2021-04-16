@@ -131,10 +131,10 @@ class Account extends AuthEntity
     public function GetMyGroups() : array { return $this->GetObjectRefs('groups'); }
     
     /** Adds the account to the given group */
-    public function AddGroup(Group $group) : self    { return $this->AddObjectRef('groups', $group); }
+    public function AddGroup(Group $group) : self    { $this->AddObjectRef('groups', $group); return $this; }
     
     /** Removes the account from the given group */
-    public function RemoveGroup(Group $group) : self { return $this->RemoveObjectRef('groups', $group); }
+    public function RemoveGroup(Group $group) : self { $this->RemoveObjectRef('groups', $group); return $this; }
     
     /** Returns true if the account is a member of the given group */
     public function HasGroup(Group $group) : bool { return in_array($group, $this->GetGroups(), true); }
@@ -143,23 +143,27 @@ class Account extends AuthEntity
     
     /** Registers a function to be run when the account is added to or removed from a group */
     public static function RegisterGroupChangeHandler(callable $func){ static::$group_handlers[] = $func; }
-    
+
     /** Runs all functions registered to handle the account being added to or removed from a group */
     public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
         { foreach (static::$group_handlers as $func) $func($database, $account, $group, $added); }
 
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
-        if ($field === 'groups') static::RunGroupChangeHandlers($this->database, $this, $object, true);
+        $modified = parent::AddObjectRef($field, $object, $notification);
         
-        return parent::AddObjectRef($field, $object, $notification);
+        if ($field === 'groups' && $modified) static::RunGroupChangeHandlers($this->database, $this, $object, true);
+        
+        return $modified;
     }
     
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : self
+    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
-        if ($field === 'groups') static::RunGroupChangeHandlers($this->database, $this, $object, false);
+        $modified = parent::RemoveObjectRef($field, $object, $notification);
         
-        return parent::RemoveObjectRef($field, $object, $notification);
+        if ($field === 'groups' && $modified) static::RunGroupChangeHandlers($this->database, $this, $object, false);
+        
+        return $modified;
     }
     
     /** Returns the object joining this account to the given group */
@@ -505,8 +509,8 @@ class Account extends AuthEntity
                 'groups' => array_keys($this->GetGroups()),
                 'limits_from' => $this->ToInheritsScalarFromClient([$this,'GetAllCounterLimits']),
                 'features_from' => $this->ToInheritsScalarFromClient([$this,'GetAllFeatures']),
-                'session_timeout_from' => self::toIDType($this->TryGetInheritsScalarFrom('session_timeout')),
-                'max_password_age_from' => self::toIDType($this->TryGetInheritsScalarFrom('max_password_age'))
+                'session_timeout_from' => static::toIDType($this->TryGetInheritsScalarFrom('session_timeout')),
+                'max_password_age_from' => static::toIDType($this->TryGetInheritsScalarFrom('max_password_age'))
             ));
         }
         else
@@ -871,7 +875,7 @@ trait GroupInherit
     /** Runs the given function through ToInheritsScalarFrom() and then maps to its ID and class name */
     protected function ToInheritsScalarFromClient(callable $getdata) : array
     {
-        return array_map(['self','toIDType'], $this->ToInheritsScalarFrom($getdata));
+        return array_map(function($obj){ return static::toIDType($obj); }, $this->ToInheritsScalarFrom($getdata));
     }
 }
 

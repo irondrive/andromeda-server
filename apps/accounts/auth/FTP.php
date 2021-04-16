@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/auth/External.php");
@@ -84,7 +85,15 @@ class FTP extends External
     {
         $this->Activate();
 
-        try { return ftp_login($this->ftp, $username, $password); }
-        catch (Exceptions\PHPError $e) { return false; }
+        try 
+        { 
+            $success = ftp_login($this->ftp, $username, $password); 
+            
+            ftp_close($this->ftp); unset($this->ftp); return $success;
+        }
+        catch (Exceptions\PHPError $e) 
+        { 
+            ErrorManager::GetInstance()->LogException($e); return false; 
+        }
     }
 }
