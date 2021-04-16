@@ -52,9 +52,6 @@ class NativeCrypt extends Native
         {
             $offset = $chunk * $this->chunksize;
             
-            if (fseek($handle, $offset) !== 0)
-                throw new FileReadFailedException();
-            
             $rbytes = min($this->chunksize, $length-$offset);
             
             $data = fread($handle, $rbytes);

@@ -53,7 +53,11 @@ class Database implements Transactions
     private array $queries = array();
     
     /** the default path for storing the config file */
-    private const CONFIG_FILE = ROOT."/core/database/Config.php";    
+    private const CONFIG_PATHS = array(
+        ROOT."/core/database/Config.php",
+        '/usr/local/etc/andromeda2/Config.php',
+        '/etc/andromeda2/Config.php'
+    );    
     
     public const DRIVER_MYSQL = 1; 
     public const DRIVER_SQLITE = 2; 
@@ -75,9 +79,16 @@ class Database implements Transactions
      */
     public function __construct(?string $config = null)
     {
-        $config ??= self::CONFIG_FILE;
+        if ($config !== null)
+        {
+            if (!file_exists($config)) $config = null;
+        }
+        else foreach (self::CONFIG_PATHS as $path)
+        {
+            if (file_exists($path)) { $config = $path; break; }
+        } 
         
-        if (file_exists($config)) $config = require($config);
+        if ($config !== null) $config = require($config);
         else throw new DatabaseConfigException();
         
         $this->config = $config;
@@ -164,7 +175,7 @@ class Database implements Transactions
         
         $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_FILE;
+        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_PATHS[0];
         
         $tmpnam = "$outnam.tmp.php";
         file_put_contents($tmpnam, $output);

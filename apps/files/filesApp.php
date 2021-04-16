@@ -616,16 +616,11 @@ class FilesApp extends AppBase
             
             for ($wbyte = $wstart; $wbyte <= $wlast; )
             {
-                $rstart = $wbyte - $wstart;
-                
                 // the next write should begin on a chunk boundary if aligned
                 if (!$align) $nbyte = $wbyte + $chunksize;
                 else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
-                
-                $wlen = min($nbyte - $wbyte, $wlength - $rstart);
-                
-                if (fseek($inhandle, $rstart) !== 0)
-                    throw new FileReadFailedException();
+                                
+                $wlen = min($nbyte - $wbyte, $wlength - $wbyte + $wstart);
                 
                 if (($data = fread($inhandle, $wlen)) === false)
                     throw new FileReadFailedException();
