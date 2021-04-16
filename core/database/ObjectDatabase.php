@@ -10,6 +10,9 @@ class ObjectTypeException extends DatabaseException         { public $message = 
 /** Exception indicating that multiple objects were loaded for by unique query */
 class DuplicateUniqueKeyException extends DatabaseException { public $message = "MULTIPLE_UNIQUE_OBJECTS"; }
 
+/** Exception indicating that the desired row was not written to */
+class RowWriteFailedException extends DatabaseException { public $message = "ROW_WRITE_FAILED"; }
+
 /**
  * Provides the basic interfaces between BaseObject and the underlying PDO database
  *
@@ -212,7 +215,9 @@ class ObjectDatabase extends Database
         
         $table = $this->GetClassTableName(get_class($object));        
         $querystr = "DELETE FROM $table ".$q->GetText();
-        $this->query($querystr, Database::QUERY_WRITE, $q->GetData());
+        
+        if ($this->query($querystr, Database::QUERY_WRITE, $q->GetData()) !== 1)
+            throw new RowWriteFailedException();
         
         return $this;
     }
@@ -245,7 +250,9 @@ class ObjectDatabase extends Database
         $criteria_string = implode(', ',$criteria);
         $table = $this->GetClassTableName(get_class($object));            
         $query = "UPDATE $table SET $criteria_string WHERE id=:id";    
-        $this->query($query, Database::QUERY_WRITE, $data);    
+        
+        if ($this->query($query, Database::QUERY_WRITE, $data) !== 1)
+            throw new RowWriteFailedException();
         
         return $this;
     }
@@ -271,7 +278,9 @@ class ObjectDatabase extends Database
         $table = $this->GetClassTableName(get_class($object));
         $columns_string = implode(',',$columns); $indexes_string = implode(',',$indexes);
         $query = "INSERT INTO $table ($columns_string) VALUES ($indexes_string)";
-        $this->query($query, Database::QUERY_WRITE, $data);
+        
+        if ($this->query($query, Database::QUERY_WRITE, $data) !== 1)
+            throw new RowWriteFailedException();
         
         return $this;
     }
