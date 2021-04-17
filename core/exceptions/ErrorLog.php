@@ -116,7 +116,7 @@ class ErrorLog extends BaseObject
      * @param ?array $debuglog the custom debug log
      * @return array<string, string|mixed> array of debug data
      */
-    public static function GetDebugData(?Main $api, \Throwable $e, ?array $debuglog) : array
+    public static function GetDebugData(?Main $api, \Throwable $e, ?array $debuglog = null) : array
     {
         try
         {

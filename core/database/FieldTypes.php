@@ -253,20 +253,27 @@ class ObjectRef extends Scalar
         
         if ($object !== null && !is_a($object, $this->GetBaseClass())) 
             throw new ObjectTypeException();
-
-        $this->SetValue( ($object !== null) ? $object->ID() : null );
         
-        $this->object = $object; $this->delta++; return true;
+        $this->object = $object; 
+
+        return $this->SetValue( ($object !== null) ? $object->ID() : null );
     }
     
-    /** Deletes the object referenced by this field */
-    public function DeleteObject() : void
+    /** 
+     * Deletes the object referenced by this field 
+     * @return bool true if an object was deleted
+     */
+    public function DeleteObject() : bool
     {
-        $id = $this->GetValue(); if ($id === null) return;        
-        $this->GetRefClass()::DeleteByID($this->database, $id);
+        $id = $this->GetValue(); if ($id === null) return false;        
         
-        // in case the object was set but not saved to DB, delete manually
-        if (isset($this->object) && $this->object) $this->object->Delete();
+        if (!$this->GetRefClass()::DeleteByID($this->database, $id))
+        {
+            // if the object is set but doesn't exist in the DB,
+            // it must have just been set. Delete manually.
+            $this->object->Delete();
+        }        
+        return true;
     }
 }
 
@@ -359,8 +366,6 @@ class ObjectPoly extends ObjectRef
         return true;
     }
 }
-
-const REFSTYPE_SINGLE = 0; const REFSTYPE_MANY = 1;
 
 /** 
  * Represents a collection of (non-polymorphic) objects that reference this one.

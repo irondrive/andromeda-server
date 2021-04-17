@@ -9,6 +9,9 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
+/** Internal-only exception used for getting a backtrace */
+class BreakpointException extends Exceptions\ServerException { public $message = "BREAKPOINT_EXCEPTION"; }
+
 /** 
  * The main error handler/manager 
  * 
@@ -135,12 +138,15 @@ class ErrorManager extends Singleton
         return $debug;
     }
     
-    private static array $debuglog = array();
+    private array $debuglog = array();
     
     /** Adds an entry to the custom debug log, saved with exceptions */
-    public static function LogDebug($data){ self::$debuglog[] = $data; }
+    public function LogDebug($data) : self { $this->debuglog[] = $data; return $this; }
     
     /** Returns the debug log if allowed by the debug state, else null */
-    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::LOG_DEVELOPMENT) ? self::$debuglog : null; }
+    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::LOG_DEVELOPMENT) ? $this->debuglog : null; }
+    
+    /** Creates an exception and logs it to the main error log (to get a backtrace) */
+    public function LogBreakpoint() : self { return $this->LogDebug((new BreakpointException())->getTraceAsString()); }
     
 }
