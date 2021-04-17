@@ -129,9 +129,8 @@ abstract class BaseObject
      * Deletes a unique object by its ID
      * @param ObjectDatabase $database Reference to the database
      * @param string $id the ID of the object
-     * @return bool true if an object was deleted
      */
-    public static function DeleteByID(ObjectDatabase $database, string $id) : bool
+    public static function DeleteByID(ObjectDatabase $database, string $id) : void
     {
         if (!static::TryDeleteByUniqueKey($database,'id',$id))
             throw new ObjectNotFoundException();
