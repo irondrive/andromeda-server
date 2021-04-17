@@ -246,7 +246,10 @@ class ObjectRef extends Scalar
         return $this->object;
     }
     
-    /** Sets the value of this field to reference the given object */
+    /** 
+     * Sets the value of this field to reference the given object 
+     * @return bool true if this field was modified
+     */
     public function SetObject(?BaseObject $object) : bool
     {        
         if (isset($this->object) && $object === $this->object) return false;
@@ -259,21 +262,13 @@ class ObjectRef extends Scalar
         return $this->SetValue( ($object !== null) ? $object->ID() : null );
     }
     
-    /** 
-     * Deletes the object referenced by this field 
-     * @return bool true if an object was deleted
-     */
-    public function DeleteObject() : bool
+    /** Deletes the object referenced by this field */
+    public function DeleteObject() : void
     {
-        $id = $this->GetValue(); if ($id === null) return false;        
+        $id = $this->GetValue(); if ($id === null) return;
         
-        if (!$this->GetRefClass()::DeleteByID($this->database, $id))
-        {
-            // if the object is set but doesn't exist in the DB,
-            // it must have just been set. Delete manually.
-            $this->object->Delete();
-        }        
-        return true;
+        if (isset($this->object)) $this->object->Delete();
+        else $this->GetRefClass()::DeleteByID($this->database, $id);
     }
 }
 
