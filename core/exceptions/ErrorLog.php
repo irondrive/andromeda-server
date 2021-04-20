@@ -37,29 +37,41 @@ class ErrorLog extends BaseObject
          );
     }
     
-    /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] ".
-                                                            "[--logic and|or] [--limit int] [--offset int] [--desc bool]"; }
+    /** Returns the common command usage for LoadByInput() and CountByInput() */
+    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum]"; }
     
-    /** Returns all error log entries matching the given input */
-    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
+    /** Returns the command usage for LoadByInput() */
+    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit int] [--offset int] [--desc bool]"; }
+    
+    /** Returns the command usage for CountByInput() */
+    public static function GetCountUsage() : string { return "[--logic and|or]"; }
+    
+    protected static function GetWhereQuery(ObjectDatabase $database, Input $input) : QueryBuilder
     {
         $q = new QueryBuilder(); $criteria = array();
         
-        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));        
+        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));
         if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_FLOAT));
         
         if ($input->HasParam('code')) $criteria[] = $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW));
-        if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));  
+        if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));
         if ($input->HasParam('agent')) $criteria[] = $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW));
         
         if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM));
         if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM));
-                
+        
         $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
-        
+            
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
+        
+        return $q->Where($or ? $q->OrArr($criteria) : $q->AndArr($criteria));
+    }
+    
+    /** Returns all error log entries matching the given input */
+    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
+    {
+        $q = static::GetWhereQuery($database, $input);
         
         $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 1000);
         
@@ -67,7 +79,13 @@ class ErrorLog extends BaseObject
         
         $q->OrderBy('time', $input->GetOptParam('desc',SafeParam::TYPE_BOOL));
         
-        return static::LoadByQuery($database, $q->Where($or ? $q->OrArr($criteria) : $q->AndArr($criteria)));
+        return static::LoadByQuery($database, $q);
+    }
+    
+    /** Counts error log entries matching the given input */
+    public static function CountByInput(ObjectDatabase $database, Input $input) : int
+    {
+        return static::CountByQuery($database, static::GetWhereQuery($database, $input));
     }
     
     /** Returns the values of all fields of this error log entry */

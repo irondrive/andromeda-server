@@ -44,7 +44,7 @@ abstract class BaseLog extends BaseObject
      * @param Input $input input with user filter params
      * @return QueryBuilder built query with WHERE set
      */
-    protected static function GetSelectQuery(ObjectDatabase $database, Input $input) : QueryBuilder
+    protected static function GetWhereQuery(ObjectDatabase $database, Input $input) : QueryBuilder
     {
         $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $input);
         
@@ -64,7 +64,7 @@ abstract class BaseLog extends BaseObject
      */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
     {
-        $q = static::GetSelectQuery($database, $input);
+        $q = static::GetWhereQuery($database, $input);
         
         $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 1000);
         
@@ -81,6 +81,6 @@ abstract class BaseLog extends BaseObject
      */
     public static function CountByInput(ObjectDatabase $database, Input $input) : int
     {
-        return static::CountByQuery($database, static::GetSelectQuery($database, $input));
+        return static::CountByQuery($database, static::GetWhereQuery($database, $input));
     }
 }

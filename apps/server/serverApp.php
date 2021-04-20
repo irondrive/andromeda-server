@@ -74,7 +74,8 @@ class ServerApp extends AppBase
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
             ...array_map(function($s){ return "\t $s"; },Emailer::GetCreateUsages()),
             'deletemailer --mailid id',
-            'geterrors '.ErrorLog::GetLoadUsage(),
+            'geterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetLoadUsage(),
+            'counterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetCountUsage(),
             'getrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetLoadUsage().' [--expand bool] [--applogs bool]',
             'countrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetCountUsage(),
             'getallactions '.ActionLog::GetPropUsage().' '.ActionLog::GetLoadUsage().' [--expand bool] [--applogs bool]',
@@ -175,6 +176,8 @@ class ServerApp extends AppBase
             case 'deletemailer': return $this->DeleteMailer($input);
             
             case 'geterrors':     return $this->GetErrors($input);
+            case 'counterrors':   return $this->CountErrors($input);
+            
             case 'getrequests':   return $this->GetRequests($input);
             case 'countrequests': return $this->CountRequests($input);
             
@@ -481,8 +484,19 @@ class ServerApp extends AppBase
     }
     
     /**
+     * Counts server error log entries, possibly filtered
+     * @throws AuthFailedException if not an admin
+     * @return int error log entry count
+     */
+    protected function CountErrors(Input $input) : int
+    {
+        if (!$this->isAdmin) throw new AuthFailedException();
+        
+        return ErrorLog::CountByInput($this->database, $input);
+    }
+    
+    /**
      * Returns all request logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @return array RequestLog
      * @see RequestLog::GetFullClientObject()
@@ -506,7 +520,6 @@ class ServerApp extends AppBase
     
     /**
      * Counts all request logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @return int log entry count
      */
@@ -519,7 +532,6 @@ class ServerApp extends AppBase
     
     /**
      * Returns all action logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @return array ActionLog
      * @see ActionLog::GetFullClientObject()
@@ -543,7 +555,6 @@ class ServerApp extends AppBase
     
     /**
      * Counts all action logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @return int log entry count
      */
@@ -556,7 +567,6 @@ class ServerApp extends AppBase
     
     /**
      * Returns all app action logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @throws InvalidAppException if the given app is invalid
      * @return array BaseAppLog
@@ -588,7 +598,6 @@ class ServerApp extends AppBase
     
     /**
      * Counts all app action logs matching the given input
-     * @param Input $input input to filter logs with
      * @throws AuthFailedException if not admin
      * @throws InvalidAppException if the given app is invalid
      * @return int log entry count
