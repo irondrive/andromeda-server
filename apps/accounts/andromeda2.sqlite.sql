@@ -145,7 +145,7 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 );
 CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `accounts` char(12) NOT NULL
 ,  `groups` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
@@ -194,7 +194,7 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 );
 CREATE TABLE `a2_objects_apps_accounts_whitelist` (
   `id` char(12) NOT NULL
-,  `dates__created` integer NOT NULL
+,  `dates__created` double NOT NULL
 ,  `type` integer NOT NULL
 ,  `value` varchar(127) NOT NULL
 ,  PRIMARY KEY (`id`)

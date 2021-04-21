@@ -193,7 +193,7 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL,
-  `dates__created` int(11) NOT NULL,
+  `dates__created` double NOT NULL,
   `accounts` char(12) NOT NULL,
   `groups` char(12) NOT NULL,
   PRIMARY KEY (`id`),
@@ -265,7 +265,7 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_accounts_whitelist` (
   `id` char(12) NOT NULL,
-  `dates__created` bigint(20) NOT NULL,
+  `dates__created` double NOT NULL,
   `type` smallint(6) NOT NULL,
   `value` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
