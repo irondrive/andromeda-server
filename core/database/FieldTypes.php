@@ -185,7 +185,7 @@ class JSON extends Scalar
     public function InitValue($value) : void
     {
         parent::InitValue($value);
-        if ($value) $value = Utilities::JSONDecode($value);
+        if ($value !== null) $value = Utilities::JSONDecode($value);
         $this->realvalue = $value; $this->tempvalue = $value;
     }
     

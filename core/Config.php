@@ -138,7 +138,7 @@ class Config extends SingletonObject
     /** Fail when any write queries are attempted */
     const RUN_READONLY = 2;
     
-    const RUN_TYPES = array('norm'=>0, 'dryrun'=>self::RUN_DRYRUN, 'readonly'=>self::RUN_READONLY);
+    const RUN_TYPES = array('off'=>0, 'dryrun'=>self::RUN_DRYRUN, 'readonly'=>self::RUN_READONLY);
         
     /** Returns the enum for whether the server is set to read-only (or dry run) */
     public function getReadOnly() : int { return $this->GetFeature('read_only'); }
