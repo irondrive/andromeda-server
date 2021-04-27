@@ -65,7 +65,7 @@ class Like extends StandardObject
         return array(
             'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
-            'value' => $this->GetScalar('value'),
+            'value' => (bool)$this->GetScalar('value'),
             'dates' => $this->GetAllDates()
         );
     }

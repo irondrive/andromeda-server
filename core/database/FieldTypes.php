@@ -46,10 +46,10 @@ class Scalar
     protected BaseObject $parent;
     
     /** Returns OPERATOR_SETEQUAL as the operator used to update this field a DB query */
-    public static function GetOperatorType(){ return OPERATOR_SETEQUAL; }
+    public static function GetOperatorType() : int { return OPERATOR_SETEQUAL; }
     
     /** Returns RETURN_SCALAR as the basic type of value stored in this field */
-    public static function GetReturnType(){ return RETURN_SCALAR; }
+    public static function GetReturnType() : int { return RETURN_SCALAR; }
     
     /**
      * Declares a new scalar fieldtype (use this in object templates)
@@ -147,7 +147,7 @@ class Scalar
 class Counter extends Scalar
 {
     /** Returns OPERATOR_INCREMENT as the operator used to update this field a DB query */
-    public static function GetOperatorType(){ return OPERATOR_INCREMENT; }
+    public static function GetOperatorType() : int { return OPERATOR_INCREMENT; }
     
     /**
      * Constructs a new counter with a default value of zero
@@ -208,8 +208,11 @@ class ObjectRef extends Scalar
     /** if true and reffield is null, the referenced object's reffield is an array of objects rather than a single reference */
     protected bool $refmany;
     
+    /** if true, delete the linked object when deleting our parent */
+    protected bool $autoDelete = false;
+    
     /** Returns RETURN_OBJECT as the basic type of value stored in this field */
-    public static function GetReturnType(){ return RETURN_OBJECT; }
+    public static function GetReturnType() : int { return RETURN_OBJECT; }
 
     /**
      * Creates a new object reference field
@@ -233,6 +236,12 @@ class ObjectRef extends Scalar
     
     /** @see ObjectRef::$refmany */
     public function GetRefIsMany() : bool { return $this->refmany; }
+    
+    /** @see ObjectRef::$autoDelete */
+    public function isAutoDelete() : bool { return $this->autoDelete; }
+    
+    /** @see ObjectRef::$autoDelete */
+    public function setAutoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
 
     /** Returns the object referenced by this field, possibly loading it from the DB */
     public function GetObject() : ?BaseObject
@@ -389,6 +398,9 @@ class ObjectRefs extends Counter
     /** True if our object is referenced as a polymorphic field */
     protected bool $parentPoly;
     
+    /** if true, delete the linked object when deleting our parent */
+    protected bool $autoDelete = false;
+    
     /** @var BaseObject[] array of references that have been added */
     protected array $refs_added = array();
     
@@ -396,10 +408,16 @@ class ObjectRefs extends Counter
     protected array $refs_deleted = array();
     
     /** Returns RETURN_OBJECTS as the basic type of value stored in this field */
-    public static function GetReturnType(){ return RETURN_OBJECTS; }
+    public static function GetReturnType() : int { return RETURN_OBJECTS; }
     
     /** return false - referenced objects refer to us as a single object */
-    public static function GetIsRefsMany(){ return false; }
+    public static function GetIsRefsMany() : bool { return false; }    
+    
+    /** @see ObjectRefs::$autoDelete */
+    public function isAutoDelete() : bool { return $this->autoDelete; }
+    
+    /** @see ObjectRefs::$autoDelete */
+    public function setAutoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
     
     /**
      * Creates a new object reference array field
@@ -567,7 +585,10 @@ class ObjectJoin extends ObjectRefs
     protected array $joinobjs = array(); 
     
     /** return true - referenced objects refer to us in an array */
-    public static function GetIsRefsMany(){ return true; }
+    public static function GetIsRefsMany() : bool { return true; }
+    
+    /** @see ObjectRefs::$autoDelete - returns false */
+    public function isAutoDelete() : bool { return false; }
     
     /** @see ObjectJoin::$joinclass */
     public function GetJoinClass() : string { return $this->joinclass; }

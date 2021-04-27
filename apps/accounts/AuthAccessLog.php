@@ -51,11 +51,7 @@ abstract class AuthAccessLog extends BaseAppLog
     }
     
     /** Returns whether or not the Authenticator had admin status, or null auth was null */
-    public function isAdmin() : ?bool 
-    { 
-        $val = $this->TryGetScalar('admin'); 
-        return ($val !== null) ? (bool)$val : null; 
-    }    
+    public function isAdmin() : ?bool { return $this->TryGetScalar('admin'); }
     
     public static function GetPropUsage() : string { return "[--admin bool] [--account id] [--sudouser id] [--client id]"; }
     

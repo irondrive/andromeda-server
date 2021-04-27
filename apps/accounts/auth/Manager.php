@@ -28,8 +28,8 @@ class Manager extends BaseObject
     {
         return array(
             'description' => null,
-            'authsource' => new FieldTypes\ObjectPoly(External::class, 'manager', false),
-            'default_group' => new FieldTypes\ObjectRef(Group::class)
+            'authsource' => (new FieldTypes\ObjectPoly(External::class, 'manager', false))->setAutoDelete(),
+            'default_group' => (new FieldTypes\ObjectRef(Group::class))->setAutoDelete()
         );
     }
     
@@ -87,9 +87,6 @@ class Manager extends BaseObject
     public function Delete() : void
     {
         Account::DeleteByAuthSource($this->database, $this);
-        
-        $this->DeleteObject('default_group');
-        $this->DeleteObject('authsource');
         
         $config = Config::GetInstance($this->database);
         if ($config->GetDefaultAuthID() === $this->ID())

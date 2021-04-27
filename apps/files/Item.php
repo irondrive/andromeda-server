@@ -46,12 +46,12 @@ abstract class Item extends StandardObject
             'counters__pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
             'owner' => new FieldTypes\ObjectRef(Account::class),
             'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
-            'likes' => new FieldTypes\ObjectRefs(Like::class, 'item', true), // links to like objects
+            'likes' => (new FieldTypes\ObjectRefs(Like::class, 'item', true))->setAutoDelete(), // links to like objects
             'counters__likes' => new FieldTypes\Counter(),      // recursive total # of likes
             'counters__dislikes' => new FieldTypes\Counter(),   // recursive total # of dislikes
-            'tags' => new FieldTypes\ObjectRefs(Tag::class, 'item', true),
-            'comments' => new FieldTypes\ObjectRefs(Comment::class, 'item', true),
-            'shares' => new FieldTypes\ObjectRefs(Share::class, 'item', true)
+            'tags' => (new FieldTypes\ObjectRefs(Tag::class, 'item', true))->setAutoDelete(),
+            'comments' => (new FieldTypes\ObjectRefs(Comment::class, 'item', true))->setAutoDelete(),
+            'shares' => (new FieldTypes\ObjectRefs(Share::class, 'item', true))->setAutoDelete()
         ));
     }
     
@@ -413,12 +413,7 @@ abstract class Item extends StandardObject
     
     /** Deleting an item also deletes all of its component objects (likes, tags, comments, shares) */
     public function Delete() : void
-    {
-        $this->DeleteObjectRefs('likes');
-        $this->DeleteObjectRefs('tags');
-        $this->DeleteObjectRefs('comments');
-        $this->DeleteObjectRefs('shares');
-        
+    {        
         if (!$this->deleted)
             $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); });
         
