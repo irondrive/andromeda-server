@@ -55,11 +55,11 @@ class Account extends AuthEntity
             'dates__loggedon' => null,
             'dates__active' => new FieldTypes\Scalar(null, true),
             'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
-            'sessions'      => new FieldTypes\ObjectRefs(Session::class, 'account'),
-            'contacts'      => new FieldTypes\ObjectRefs(Contact::class, 'account'),
-            'clients'       => new FieldTypes\ObjectRefs(Client::class, 'account'),
-            'twofactors'    => new FieldTypes\ObjectRefs(TwoFactor::class, 'account'),
-            'recoverykeys'  => new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'),
+            'sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->setAutoDelete(),
+            'contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->setAutoDelete(),
+            'clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->setAutoDelete(),
+            'twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->setAutoDelete(),
+            'recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->setAutoDelete(),
             'groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
         ));
     }
@@ -438,12 +438,6 @@ class Account extends AuthEntity
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
         
         foreach (static::$delete_handlers as $func) $func($this->database, $this);
-        
-        $this->DeleteObjectRefs('sessions');
-        $this->DeleteObjectRefs('clients');
-        $this->DeleteObjectRefs('twofactors');
-        $this->DeleteObjectRefs('contacts');
-        $this->DeleteObjectRefs('recoverykeys');
         
         parent::Delete();
     }

@@ -560,23 +560,27 @@ abstract class BaseObject
             if ($object === null) return $this;
             else throw new KeyNotFoundException($field);
         }
+        
+        $fieldobj = $this->objects[$field];
 
         if (!$notification)
-        {
-            if (($reffield = $this->objects[$field]->GetRefField()) !== null) 
-                $oldref = $this->objects[$field]->GetObject();
+        {            
+            if (($reffield = $fieldobj->GetRefField()) !== null) 
+                $oldref = $fieldobj->GetObject();
             
-            $modified = $this->objects[$field]->SetObject($object);
+            $modified = $fieldobj->SetObject($object);
             
             if ($modified && $reffield !== null)
             {
-                $usemany = $this->objects[$field]->GetRefIsMany();
+                $usemany = $fieldobj->GetRefIsMany();
                 
                 if ($oldref !== null)
                 {
                     if ($usemany)
                          $oldref->RemoveObjectRef($reffield, $this, true);
                     else $oldref->UnsetObject($reffield, true);
+                    
+                    if ($fieldobj->isAutoDelete()) $oldref->Delete();
                 }
                 
                 if ($object !== null)
@@ -587,7 +591,7 @@ abstract class BaseObject
                 }
             }
         } 
-        else $modified = $this->objects[$field]->SetObject($object);
+        else $modified = $fieldobj->SetObject($object);
 
         $this->modified |= $modified; return $modified;
     } 
@@ -602,8 +606,8 @@ abstract class BaseObject
     }
     
     /**
-     * Same as BoolUnsetObject() but returns $this
-     * @see BaseObject::BoolUnsetObject()
+     * Same as BoolSetObject() but sets to null and returns $this
+     * @see BaseObject::BoolSetObject()
      */
     protected function UnsetObject(string $field, bool $notification = false) : self
     { 
@@ -660,14 +664,16 @@ abstract class BaseObject
             
         if ($fieldobj->GetIsRefsMany())
         {
-            $modified = $fieldobj->RemoveObject($object, $notification);            
+            $modified = $fieldobj->RemoveObject($object, $notification);
         }
         else
         {
-            $update = $notification || $object->BoolUnsetObject($fieldobj->GetRefField(), true);
+            $update = $notification || $object->BoolSetObject($fieldobj->GetRefField(), null, true);
             
             $modified = $update ? $fieldobj->RemoveObject($object, $notification) : false;
         }
+        
+        if ($fieldobj->isAutoDelete()) $object->Delete();
         
         $this->modified |= $modified; return $modified;
     }
@@ -780,7 +786,7 @@ abstract class BaseObject
             if (!$refs->GetValue()) continue;
             
             foreach ($refs->GetObjects() as $object) 
-            {                
+            {
                 $this->RemoveObjectRef($field, $object);
             }
         }

@@ -32,7 +32,7 @@ abstract class Timed extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'stats' => new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true),
+            'stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->setAutoDelete(),
             'timeperiod' => null, // in seconds
             'max_stats_age' => null,
             'counters_limits__pubdownloads' => null,
@@ -183,13 +183,5 @@ abstract class Timed extends Base
         $data['timeperiod'] = $this->GetTimePeriod();
         
         return $data;
-    }
-    
-    /** Deletes the timed limit and all stored stats */
-    public function Delete() : void
-    {
-        $this->DeleteObjectRefs('stats');
-
-        parent::Delete();
     }
 }

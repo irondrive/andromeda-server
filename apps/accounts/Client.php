@@ -31,7 +31,7 @@ class Client extends AuthObject
             'dates__loggedon' => null,            
             'dates__active' => new FieldTypes\Scalar(null, true),
             'account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
-            'session' => new FieldTypes\ObjectRef(Session::class, 'client', false)
+            'session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->setAutoDelete()
         ));
     }
     
@@ -101,14 +101,6 @@ class Client extends AuthObject
         $this->SetScalar('lastaddr', $interface->GetAddress());  
         
         return true;
-    }
-
-    /** Deletes this client and its session */
-    public function Delete() : void
-    {
-        $this->DeleteSession();
-        
-        parent::Delete();
     }
     
     /**
