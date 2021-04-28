@@ -55,11 +55,11 @@ class Account extends AuthEntity
             'dates__loggedon' => null,
             'dates__active' => new FieldTypes\Scalar(null, true),
             'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
-            'sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->setAutoDelete(),
-            'contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->setAutoDelete(),
-            'clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->setAutoDelete(),
-            'twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->setAutoDelete(),
-            'recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->setAutoDelete(),
+            'sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(),
+            'contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
+            'clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
+            'twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->autoDelete(),
+            'recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->autoDelete(),
             'groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
         ));
     }

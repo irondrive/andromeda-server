@@ -10,13 +10,27 @@ require_once(ROOT."/core/logging/BaseLog.php");
 require_once(ROOT."/core/logging/ActionLog.php");
 
 /**
- * Base class for extended app action logs
+ * Base class for extended app action logs, supplementing ActionLog
  * 
  * Performs a join with ActionLog when loading so that the user can
  * filter by app-specific and common action parameters simulataneously.
  */
 abstract class BaseAppLog extends BaseLog
-{    
+{
+    protected ActionLog $actionlog; // cached link to the parent log
+    
+    /** Returns the ActionLog parent for this entry */
+    protected function GetActionLog() : ActionLog
+    {
+        return ($this->actionlog ??= ActionLog::LoadByApplog($this->database, $this));
+    }
+    
+    /** @see ActionLog::LogExtra() */
+    public function LogExtra($data, ?string $key = null) : self 
+    { 
+        $this->GetActionLog()->LogExtra($data, $key); return $this; 
+    }
+    
     /**
      * Creates a new empty applog object and binds it to the current action log
      * @param ObjectDatabase $database database reference
@@ -28,7 +42,7 @@ abstract class BaseAppLog extends BaseLog
         {
             $obj = parent::BaseCreate($database);
             
-            $actlog->SetApplog($obj); return $obj;
+            $obj->actionlog = $actlog->SetApplog($obj); return $obj;
         }
         else return null;
     }
@@ -69,8 +83,7 @@ abstract class BaseAppLog extends BaseLog
     {
         $retval = $this->GetClientObject($expand);
         
-        $action = ActionLog::LoadByApplog($this->database, $this);
-        $retval['action'] = $action->GetReqClientObject($expand);
+        $retval['action'] = $this->GetActionLog()->GetReqClientObject($expand);
         
         return $retval;
     }
