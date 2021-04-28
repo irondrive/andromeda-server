@@ -28,8 +28,8 @@ class Manager extends BaseObject
     {
         return array(
             'description' => null,
-            'authsource' => (new FieldTypes\ObjectPoly(External::class, 'manager', false))->setAutoDelete(),
-            'default_group' => (new FieldTypes\ObjectRef(Group::class))->setAutoDelete()
+            'authsource' => (new FieldTypes\ObjectPoly(External::class, 'manager', false))->autoDelete(),
+            'default_group' => (new FieldTypes\ObjectRef(Group::class))->autoDelete()
         );
     }
     

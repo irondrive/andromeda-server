@@ -31,7 +31,7 @@ class Client extends AuthObject
             'dates__loggedon' => null,            
             'dates__active' => new FieldTypes\Scalar(null, true),
             'account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
-            'session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->setAutoDelete()
+            'session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->autoDelete()
         ));
     }
     

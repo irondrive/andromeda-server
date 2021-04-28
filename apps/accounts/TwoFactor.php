@@ -58,7 +58,7 @@ class TwoFactor extends StandardObject
             'valid' => null,
             'dates__used' => null,
             'account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
-            'usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->setAutoDelete()
+            'usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->autoDelete()
         ));
     }
     

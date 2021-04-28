@@ -32,7 +32,7 @@ abstract class Timed extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->setAutoDelete(),
+            'stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->autoDelete(),
             'timeperiod' => null, // in seconds
             'max_stats_age' => null,
             'counters_limits__pubdownloads' => null,

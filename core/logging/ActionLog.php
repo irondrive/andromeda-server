@@ -53,12 +53,17 @@ class ActionLog extends BaseLog
      * 
      * This should be used for data that doesn't make sense to have its own DB column.
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
+     * 
+     * @param mixed $data the data value to log
+     * @param ?string $key the array key name to log with
      */
-    public function LogExtra($data) : self
+    public function LogExtra($data, ?string $key = null) : self
     {
         $extra = $this->TryGetScalar('extra') ?? array();
         
-        $extra[] = $data; return $this->SetScalar('extra', $extra);            
+        if ($key !== null) $extra[$key] = $data; else $extra[] = $data;
+        
+        return $this->SetScalar('extra', $extra);
     }
     
     public function Save(bool $onlyMandatory = false) : self

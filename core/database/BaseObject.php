@@ -673,7 +673,7 @@ abstract class BaseObject
             $modified = $update ? $fieldobj->RemoveObject($object, $notification) : false;
         }
         
-        if ($fieldobj->isAutoDelete()) $object->Delete();
+        if (!$notification && $fieldobj->isAutoDelete()) $object->Delete();
         
         $this->modified |= $modified; return $modified;
     }

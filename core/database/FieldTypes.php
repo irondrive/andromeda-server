@@ -208,7 +208,7 @@ class ObjectRef extends Scalar
     /** if true and reffield is null, the referenced object's reffield is an array of objects rather than a single reference */
     protected bool $refmany;
     
-    /** if true, delete the linked object when deleting our parent */
+    /** if true, delete the linked object when unsetting our reference to it */
     protected bool $autoDelete = false;
     
     /** Returns RETURN_OBJECT as the basic type of value stored in this field */
@@ -241,7 +241,7 @@ class ObjectRef extends Scalar
     public function isAutoDelete() : bool { return $this->autoDelete; }
     
     /** @see ObjectRef::$autoDelete */
-    public function setAutoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
+    public function autoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
 
     /** Returns the object referenced by this field, possibly loading it from the DB */
     public function GetObject() : ?BaseObject
@@ -398,7 +398,7 @@ class ObjectRefs extends Counter
     /** True if our object is referenced as a polymorphic field */
     protected bool $parentPoly;
     
-    /** if true, delete the linked object when deleting our parent */
+    /** if true, delete the linked object when removing our reference to it */
     protected bool $autoDelete = false;
     
     /** @var BaseObject[] array of references that have been added */
@@ -417,7 +417,7 @@ class ObjectRefs extends Counter
     public function isAutoDelete() : bool { return $this->autoDelete; }
     
     /** @see ObjectRefs::$autoDelete */
-    public function setAutoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
+    public function autoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
     
     /**
      * Creates a new object reference array field
