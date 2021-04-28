@@ -37,21 +37,6 @@ class AuthFailedException extends Exceptions\ClientDeniedException { public $mes
 class ServerApp extends AppBase
 {
     public static function getVersion() : string { return "2.0.0-alpha"; } 
-    
-    public static function getLogClass() : ?string 
-    { 
-        if (static::useAuth())
-             require_once(ROOT."/apps/server/FullAccessLog.php");
-        else require_once(ROOT."/apps/server/AccessLog.php");
-        
-        return AccessLog::class;
-    }
-    
-    /** Returns true if we should use the accounts app for auth */
-    protected static function useAuth() : bool
-    {
-        return array_key_exists('accounts', Main::GetInstance()->GetApps());
-    }
 
     public static function getUsage() : array
     {
@@ -131,12 +116,13 @@ class ServerApp extends AppBase
         else if (!$this->API->GetConfig() && !in_array($input->GetAction(), array('install','usage')))
             throw new UnknownConfigException(static::class);
         
-        $useAuth = static::useAuth();
+        $useAuth = array_key_exists('accounts', Main::GetInstance()->GetApps());
         
         // if the Accounts app is installed, use it for authentication, else check interface privilege
         if ($useAuth && $this->database)
         {
             require_once(ROOT."/apps/accounts/Authenticator.php");
+            require_once(ROOT."/apps/server/FullAccessLog.php");
             
             $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
@@ -145,14 +131,12 @@ class ServerApp extends AppBase
         }
         else // not using the accounts app
         {
-            $authenticator = null;
+            require_once(ROOT."/apps/server/AccessLog.php");
             
-            $isAdmin = $this->API->GetInterface()->isPrivileged();
+            $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
         
-        $accesslog = $useAuth
-             ? (static::getLogClass())::Create($this->database, $authenticator, $isAdmin)
-             : (static::getLogClass())::Create($this->database, $isAdmin);
+        $accesslog = AccessLog::Create($this->database, $authenticator, $isAdmin); $input->SetLogger($accesslog);
                 
         switch ($input->GetAction())
         {
@@ -168,17 +152,17 @@ class ServerApp extends AppBase
             case 'phpinfo':    return $this->PHPInfo($input, $isAdmin);
             case 'serverinfo': return $this->ServerInfo($input, $isAdmin);
             
-            case 'testmail':   return $this->TestMail($input, $authenticator);
+            case 'testmail':   return $this->TestMail($input, $authenticator, $accesslog);
             
-            case 'enableapp':  return $this->EnableApp($input, $isAdmin);
-            case 'disableapp': return $this->DisableApp($input, $isAdmin);
+            case 'enableapp':  return $this->EnableApp($input, $isAdmin, $accesslog);
+            case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
             
             case 'getconfig':  return $this->GetConfig($input, $isAdmin);
-            case 'setconfig':  return $this->SetConfig($input, $isAdmin);
+            case 'setconfig':  return $this->SetConfig($input, $isAdmin, $accesslog);
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
-            case 'createmailer': return $this->CreateMailer($input, $isAdmin);
-            case 'deletemailer': return $this->DeleteMailer($input, $isAdmin);
+            case 'createmailer': return $this->CreateMailer($input, $isAdmin, $accesslog);
+            case 'deletemailer': return $this->DeleteMailer($input, $isAdmin, $accesslog);
             
             case 'geterrors':     return $this->GetErrors($input, $isAdmin);
             case 'counterrors':   return $this->CountErrors($input, $isAdmin);
@@ -207,7 +191,7 @@ class ServerApp extends AppBase
             !$this->API->GetInterface()->isPrivileged())
             throw new UnknownActionException();
         
-        $length = $input->GetOptParam("length", SafeParam::TYPE_UINT);
+        $length = $input->GetOptParam("length", SafeParam::TYPE_UINT, null,true);
 
         return Utilities::Random($length ?? 16);
     }
@@ -331,13 +315,13 @@ class ServerApp extends AppBase
      * @throws UnknownMailerException if the given mailer is invalid
      * @throws MailSendFailException if sending the email fails
      */
-    protected function TestMail(Input $input, $authenticator) : void
+    protected function TestMail(Input $input, $authenticator, ?AccessLog $accesslog) : void
     {
         if (!$authenticator || $authenticator->isAdmin()) throw new AuthFailedException();
         
         if (!$authenticator)
-            $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL);
-        else $dest = $input->GetOptParam('dest',SafeParam::TYPE_EMAIL);
+            $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL,null,true);
+        else $dest = $input->GetOptParam('dest',SafeParam::TYPE_EMAIL,null,true);
     
         if ($dest) $dests = array(new EmailRecipient($dest));
         else $dests = $authenticator->GetAccount()->GetContactEmails();
@@ -351,7 +335,9 @@ class ServerApp extends AppBase
             if ($mailer === null) throw new UnknownMailerException();
             else $mailer->Activate();
         }
-        else $mailer = $this->API->GetConfig()->GetMailer();
+        else $mailer = $this->API->GetConfig()->GetMailer();       
+        
+        if ($accesslog) $accesslog->LogExtra('mailer',$mailer->GetClientObject());
         
         try { $mailer->SendMail($subject, $body, false, $dests, false); }
         catch (MailSendException $e) { throw MailSendFailException::Copy($e); }
@@ -362,11 +348,11 @@ class ServerApp extends AppBase
      * @throws AuthFailedException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function EnableApp(Input $input, bool $isAdmin) : array
+    protected function EnableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
         if (!$isAdmin) throw new AuthFailedException();
         
-        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM);
+        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM,null,true);
         
         try { $this->API->GetConfig()->EnableApp($app); }
         catch (FailedAppLoadException $e){ throw new InvalidAppException(); }
@@ -379,11 +365,11 @@ class ServerApp extends AppBase
      * @throws AuthFailedException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function DisableApp(Input $input, bool $isAdmin) : array
+    protected function DisableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
         if (!$isAdmin) throw new AuthFailedException();
         
-        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM);
+        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM,null,true);
         
         $this->API->GetConfig()->DisableApp($app);
         
@@ -413,7 +399,7 @@ class ServerApp extends AppBase
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function SetConfig(Input $input, bool $isAdmin) : array
+    protected function SetConfig(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
         if (!$isAdmin) throw new AuthFailedException();
         
@@ -440,7 +426,7 @@ class ServerApp extends AppBase
      * @return array Emailer
      * @see Emailer::GetClientObject()
      */
-    protected function CreateMailer(Input $input, bool $isAdmin) : array
+    protected function CreateMailer(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
         if (!$isAdmin) throw new AuthFailedException();
         
@@ -448,12 +434,12 @@ class ServerApp extends AppBase
         
         if (($dest = $input->GetOptParam('test',SafeParam::TYPE_EMAIL)) !== null)
         {
-            $input->GetParams()->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
-            
-            $this->TestMail($input);
+            $this->TestMail($input->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest));
         }
 
-        return $emailer->GetClientObject();
+        if ($accesslog) $accesslog->LogExtra('mailer',$emailer->ID()); 
+        
+        return $emailer->GetClientObject();;
     }
     
     /**
@@ -461,13 +447,15 @@ class ServerApp extends AppBase
      * @throws AuthFailedException if not an admin 
      * @throws UnknownMailerException if given an invalid emailer
      */
-    protected function DeleteMailer(Input $input, bool $isAdmin) : void
+    protected function DeleteMailer(Input $input, bool $isAdmin, ?AccessLog $accesslog) : void
     {
         if (!$isAdmin) throw new AuthFailedException();
         
         $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR);
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
+        
+        if ($accesslog) $accesslog->LogExtra('mailer', $mailer->GetClientObject());
         
         $mailer->Delete();
     }

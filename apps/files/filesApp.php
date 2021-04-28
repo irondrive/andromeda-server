@@ -213,7 +213,7 @@ class FilesApp extends AppBase
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
         
-        $accesslog = AccessLog::Create($this->database, $authenticator);
+        $accesslog = AccessLog::Create($this->database, $authenticator); $input->SetLogger($accesslog);
 
         switch($input->GetAction())
         {

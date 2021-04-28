@@ -23,9 +23,11 @@ class AccessLog extends BaseAppLog
     
     /** 
      * Creates a new log object that logs whether or not the request was done as admin - may return null
+     * 
+     * $auth is unused - just to retain signature compatibility with FullAccessLog::Create()
      * @see BaseAppLog::BaseRunCreate()
      */
-    public static function Create(ObjectDatabase $database, bool $isAdmin) : ?self
+    public static function Create(ObjectDatabase $database, $auth, bool $isAdmin) : ?self
     {
         return parent::BaseRunCreate($database)->SetScalar('admin', $isAdmin);
     }
