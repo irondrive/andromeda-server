@@ -26,9 +26,9 @@ abstract class BaseAppLog extends BaseLog
     }
     
     /** @see ActionLog::LogExtra() */
-    public function LogExtra($data, ?string $key = null) : self 
+    public function LogExtra(string $key, $data) : self 
     { 
-        $this->GetActionLog()->LogExtra($data, $key); return $this; 
+        $this->GetActionLog()->LogExtra($key, $data); return $this; 
     }
     
     /**
