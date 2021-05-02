@@ -974,6 +974,9 @@ class FilesApp extends AppBase
             throw new AuthenticationFailedException();
         
         if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+        
+        if ($accesslog && AccessLog::isFullDetails()) 
+            $accesslog->LogDetails('item', $itemobj->TryGetClientObject());
 
         $itemobj->Delete();
     }
