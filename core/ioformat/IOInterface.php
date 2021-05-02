@@ -64,20 +64,25 @@ abstract class IOInterface extends Singleton
     /** Sets the output mode to plain text */
     public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
     
-    private static $retfuncs = array();
+    private static $retfunc;
     
     /** Registers a user output handler function to run after the initial commit */
-    public function RegisterOutputHandler(callable $f) : self 
+    public function SetOutputHandler(callable $f) : self 
     {
-        self::$retfuncs[] = $f; return $this; 
+        self::$retfunc = $f; return $this; 
     }
     
-    /** Tells the interface to run the custom user output functions */
+    /** 
+     * Tells the interface to run the custom user output function
+     * @return bool true if a custom function was run
+     */
     public function UserOutput(Output $output) : bool
-    {
-        foreach (self::$retfuncs as $f) $f($output);
+    {       
+        $retval = isset(self::$retfunc);
         
-        return count(self::$retfuncs) > 0;
+        if ($retval) (self::$retfunc)($output);
+        
+        return $retval;
     }
     
     /** Tells the interface to print its final output */

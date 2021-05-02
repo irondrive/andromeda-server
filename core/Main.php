@@ -165,7 +165,7 @@ class Main extends Singleton
             if ($this->dirty) $this->rollback(); });
     }
     
-    /** Loads the main include file for an app */
+    /** Loads the main include file for an app and constructs it */
     public function LoadApp(string $app) : self
     {
         $path = ROOT."/apps/$app/$app"."App.php";
@@ -197,7 +197,7 @@ class Main extends Singleton
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $dbstats = $this->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
+        $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
         
         if ($dbstats && $this->database) 
             $this->database->pushStatsContext();
@@ -238,7 +238,7 @@ class Main extends Singleton
 
         $data = AJAX::RemoteRequest($url, $input);
 
-        if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT)
+        if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT)
         {
             $this->run_stats[] = array(
                 'remote_time' => (hrtime(true)-$start)/1e9,
@@ -323,7 +323,7 @@ class Main extends Singleton
         
         if ($this->database)
         {          
-            if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
                 $this->database->pushStatsContext();
                 
             $this->database->saveObjects();
@@ -334,7 +334,7 @@ class Main extends Singleton
             
             if ($rollback) $this->database->rollback(); else $this->database->commit();
                     
-            if ($this->GetDebugLevel() >= Config::LOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
                 $this->commit_stats[] = $commit_stats->getStats();
@@ -383,7 +383,7 @@ class Main extends Singleton
     /** Returns an array of performance metrics, if allowed by config */
     protected function GetMetrics() : ?array
     {
-        if ($this->GetDebugLevel() < Config::LOG_DEVELOPMENT) return null;
+        if ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) return null;
         
         $retval = array(
             

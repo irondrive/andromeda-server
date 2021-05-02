@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# uses https://github.com/dumblob/mysql2sqlite
-PATH=$PATH:tools/mysql2sqlite
+cd tools; if [ ! -d mysql2sqlite ]; then
+   git clone https://github.com/dumblob/mysql2sqlite.git
+fi; cd ..
 
 tools/pgtransfer
 
@@ -15,7 +16,7 @@ for i in apps/* core; do if [ -f $i/andromeda2.mysql.sql ]; then
       --host localhost --username postgres --no-owner > $i/andromeda2.pgsql.sql
    sed -i "s/DEFAULT '\\\x4e554c4c'::bytea/DEFAULT NULL::bytea/" $i/andromeda2.pgsql.sql
 
-   mysql2sqlite "$i"/andromeda2.mysql.sql \
+   tools/mysql2sqlite/mysql2sqlite "$i"/andromeda2.mysql.sql \
       | grep -v TRANSACTION | grep -v "PRAGMA synchronous" > $i/andromeda2.sqlite.sql
 
 fi; done

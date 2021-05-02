@@ -52,12 +52,23 @@ class Input
     /** The basic authentication to be used */
     public function GetAuth() : ?InputAuth { return $this->auth; }
     
-    /** BaseAppLog to log input params to */
-    private ?BaseAppLog $logger;
+    public const LoggerKey = 'input';
     
     /** Sets the optional param logger to the given BaseAppLog */
-    public function SetLogger(?BaseAppLog $logger) : self { $this->logger = $logger; return $this; }
-        
+    public function SetLogger(?BaseAppLog $logger) : self 
+    { 
+        if ($logger !== null && ($level = $logger::GetDetailsLevel()))
+        {
+            $logref = &$logger->GetDetailsRef(); 
+            
+            $logref[self::LoggerKey] ??= array();
+            
+            $this->GetParams()->SetLogRef(
+                $logref[self::LoggerKey], $level);
+        }        
+        return $this; 
+    }
+    
     /** @see Input::GetParams() */
     private SafeParams $params;
     
@@ -72,57 +83,21 @@ class Input
     public function AddParam(string $key, $value) : self { 
         $this->params->AddParam($key, $value); return $this; }
     
-    /** 
-     * @param bool $log if true, log to the given logger
-     * @see SafeParams::GetParam() 
-     */
-    public function GetParam(string $key, int $type, ?callable $usrfunc = null, bool $log = false) 
-    {
-        $retval = $this->params->GetParam($key, $type, $usrfunc); 
-        
-        if ($log && $this->logger) $this->logger->LogExtra($key, $retval);
-        
-        return $retval;
-    }
+    /** @see SafeParams::GetParam() */
+    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
+        return $this->params->GetParam($key, $type, $minlog, ...$valfuncs); }
     
-    /**
-     * @param bool $log if true, log to the given logger
-     * @see SafeParams::GetOptParam()
-     */
-    public function GetOptParam(string $key, int $type, ?callable $usrfunc = null, bool $log = false) 
-    {
-        $retval = $this->params->GetOptParam($key, $type, $usrfunc);
-        
-        if ($log && $this->logger) $this->logger->LogExtra($key, $retval);
-        
-        return $retval;
-    }
+    /** @see SafeParams::GetOptParam() */
+    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
+        return $this->params->GetOptParam($key, $type, $minlog, ...$valfuncs); }
+
+    /** @see SafeParams::GetNullParam() */
+    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
+        return $this->params->GetNullParam($key, $type, $minlog, ...$valfuncs); }
     
-    /**
-     * @param bool $log if true, log to the given logger
-     * @see SafeParams::GetNullParam()
-     */
-    public function GetNullParam(string $key, int $type, ?callable $usrfunc = null, bool $log = false) 
-    {
-        $retval = $this->params->GetNullParam($key, $type, $usrfunc);
-        
-        if ($log && $this->logger) $this->logger->LogExtra($key, $retval);
-        
-        return $retval;
-    }
-    
-    /**
-     * @param bool $log if true, log to the given logger
-     * @see SafeParams::GetOptNullParam()
-     */
-    public function GetOptNullParam(string $key, int $type, ?callable $usrfunc = null, bool $log = false) 
-    {
-        $retval = $this->params->GetOptNullParam($key, $type, $usrfunc);
-        
-        if ($log && $this->logger) $this->logger->LogExtra($key, $retval);
-        
-        return $retval;
-    }
+    /** @see SafeParams::GetOptNullParam() */
+    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
+        return $this->params->GetOptNullParam($key, $type, $minlog, ...$valfuncs); }
     
     /** @see Input::GetFiles() */
     private array $files;

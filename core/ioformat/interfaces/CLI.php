@@ -18,7 +18,7 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
     public $message = "general usage: php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
-                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file, optionally with a new name\n\n".
+                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file (optionally with a new name)\n\n".
                       "batch usage:   php index.php batch myfile.txt\n".
                       "get version:   php index.php version\n".
                       "get actions:   php index.php server usage"; }
@@ -106,7 +106,7 @@ class CLI extends IOInterface
     }
     
     private ?int $debug = null;
-    public function GetDebugLevel() : int { return $this->debug ?? Config::LOG_ERRORS; }
+    public function GetDebugLevel() : int { return $this->debug ?? Config::ERRLOG_ERRORS; }
     
     private ?string $dbconf = null;
     public function GetDBConfigFile() : ?string { return $this->dbconf; }

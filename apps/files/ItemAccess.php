@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 use Andromeda\Apps\Accounts\{Account, Authenticator, AuthenticationFailedException};
@@ -48,7 +49,7 @@ class ItemAccess
      */
     public static function Authenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?Item $item = null) : self
     {
-        if (($shareid = $input->GetOptParam('sid',SafeParam::TYPE_RANDSTR)) !== null)
+        if (($shareid = $input->GetOptParam('sid',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER)) !== null)
         {
             $share = Share::TryLoadByID($database, $shareid);
             if ($share === null) throw new UnknownItemException();
@@ -57,7 +58,7 @@ class ItemAccess
             
             if ($input->HasParam('skey'))
             {
-                $sharekey = $input->GetParam('skey',SafeParam::TYPE_RANDSTR);
+                $sharekey = $input->GetParam('skey',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
                 
                 if (!$share->AuthenticateByLink($sharekey, $item)) 
                     throw new ItemAccessDeniedException();            
@@ -71,7 +72,8 @@ class ItemAccess
                     throw new ItemAccessDeniedException();
             }
 
-            if ($share->NeedsPassword() && !$share->CheckPassword($input->GetParam('spassword',SafeParam::TYPE_RAW)))
+            if ($share->NeedsPassword() && !$share->CheckPassword($input->GetParam(
+                    'spassword',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER)))
                 throw new InvalidSharePasswordException();
         }
         else if ($item !== null)

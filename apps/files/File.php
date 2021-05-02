@@ -71,7 +71,7 @@ class File extends Item
     /**
      * Checks if the given total size would exceed the limit
      * @param int $size the new size of the file
-     * @see Limits\Base::CheckBandwidth()
+     * @see Limits\Base::CheckSize()
      * @return $this
      */
     public function CheckSize(int $size) : self

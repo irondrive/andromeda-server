@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamException};
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -85,8 +86,8 @@ class Authenticator
      */
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {        
-        $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR);
-        $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR);
+        $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+        $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
         
         if (($auth = $input->GetAuth()) !== null)
         {
@@ -115,7 +116,7 @@ class Authenticator
         if ($input->HasParam('auth_sudouser') && $account->isAdmin())
         {
             $this->issudouser = true;
-            $sudouser = $input->GetParam('auth_sudouser', SafeParam::TYPE_RANDSTR);
+            $sudouser = $input->GetParam('auth_sudouser', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
             $account = Account::TryLoadByID($database, $sudouser);
             if ($account === null) throw new UnknownAccountException();     
         }
@@ -173,7 +174,8 @@ class Authenticator
         
         static::StaticTryRequireCrypto($input, $account, $session);
         
-        $twofactor = $input->GetOptParam('auth_twofactor', SafeParam::TYPE_ALPHANUM); // not an int (leading zeroes)
+        $twofactor = $input->GetOptParam('auth_twofactor', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_NEVER); // not an int (leading zeroes)
+        
         if ($twofactor === null) throw new TwoFactorRequiredException();
         else if (!$account->CheckTwoFactor($twofactor)) throw new AuthenticationFailedException();
     }
@@ -185,7 +187,8 @@ class Authenticator
      */
     public function RequirePassword() : self
     {
-        $password = $this->input->GetOptParam('auth_password',SafeParam::TYPE_RAW);
+        $password = $this->input->GetOptParam('auth_password',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+        
         if ($password === null) throw new PasswordRequiredException();
 
         if (!$this->realaccount->VerifyPassword($password))
@@ -229,8 +232,8 @@ class Authenticator
     {
         if ($account->CryptoAvailable()) return;
         
-        $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW);
-        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_RAW);
+        $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         
         if ($session !== null && $session->hasCrypto())
         {

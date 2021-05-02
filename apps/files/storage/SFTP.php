@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -92,7 +93,7 @@ class SFTP extends StandardFWrapper
         $obj = parent::Create($database, $input, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT))
-            ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW));         
+            ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));         
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey(file_get_contents($input->GetFile('privkey')));
         
@@ -106,7 +107,7 @@ class SFTP extends StandardFWrapper
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
         
-        if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW));
+        if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
         if ($input->HasFile('privkey')) $this->SetPrivkey(file_get_contents($input->GetFile('privkey')));
         
         if ($input->GetOptParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
