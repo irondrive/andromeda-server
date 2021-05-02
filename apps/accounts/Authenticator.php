@@ -145,16 +145,19 @@ class Authenticator
         catch (AuthenticationFailedException | SafeParamException | DatabaseException $e) { return null; }
     }
     
+    /** Returns true if the account used for the request is an admin */
+    public function isAdmin() : bool { return $this->account->isAdmin(); }
+    
     /** Returns true if the real account used for the request is an admin */
-    public function isAdmin() : bool { return $this->realaccount->isAdmin(); }
+    public function isRealAdmin() : bool { return $this->realaccount->isAdmin(); }
     
     /**
-     * Requires that the user is an administrator
+     * Requires that the real user is an administrator
      * @throws AdminRequiredException if not an admin
      */
     public function RequireAdmin() : self
     {
-        if (!$this->isAdmin()) throw new AdminRequiredException(); return $this;
+        if (!$this->isRealAdmin()) throw new AdminRequiredException(); return $this;
     }
     
     /**

@@ -296,9 +296,7 @@ class AccountsApp extends AppBase
      */
     protected function GetConfig(Input $input, ?Authenticator $authenticator) : array
     {
-        $account = $authenticator ? $authenticator->GetAccount() : null;
-        
-        $admin = $account !== null && $account->isAdmin();
+        $admin = $authenticator !== null && $authenticator->isAdmin();
 
         return $this->config->GetClientObject($admin);
     }
@@ -351,7 +349,7 @@ class AccountsApp extends AppBase
         }
         else $account = $authenticator->GetAccount();
         
-        $admin = $authenticator->isAdmin();
+        $admin = $authenticator->isRealAdmin();
         
         $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL) && ($self || $admin);
 
@@ -837,11 +835,12 @@ class AccountsApp extends AppBase
      */
     protected function DeleteAccount(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : void
     {
-        if ($authenticator === null) throw new AuthenticationFailedException();        
+        if ($authenticator === null) throw new AuthenticationFailedException();
+        
         $account = $authenticator->GetAccount();
         
-        if (!$account->GetAllowUserDelete()) throw new AccountDeleteDeniedException();
-        // TODO will not work for admin deleting accounts
+        if (!$authenticator->isRealAdmin() && !$account->GetAllowUserDelete()) 
+            throw new AccountDeleteDeniedException();
         
         $authenticator->RequirePassword();
         
