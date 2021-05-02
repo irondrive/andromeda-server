@@ -6,6 +6,7 @@ require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Data
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
 /** Exception indicating that a mailer was requested but none are configured (or it is disabled) */
@@ -67,7 +68,7 @@ class Config extends SingletonObject
 
         if ($input->HasParam('requestlog_details'))
         {
-            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM,
+            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
                 function($v){ return array_key_exists($v, self::RQLOG_DETAILS_TYPES); });
             
             $this->SetFeature('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
@@ -75,7 +76,7 @@ class Config extends SingletonObject
         
         if ($input->HasParam('debug'))
         {
-            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM,
+            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
                 function($v){ return array_key_exists($v, self::DEBUG_TYPES); });
             
             $this->SetFeature('debug', self::DEBUG_TYPES[$param]);
@@ -89,7 +90,7 @@ class Config extends SingletonObject
         {
             $this->overrideReadOnly();
             
-            $param = $input->GetParam('read_only',SafeParam::TYPE_ALPHANUM,
+            $param = $input->GetParam('read_only',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
                 function($v){ return array_key_exists($v, self::RUN_TYPES); });
             
             $this->SetFeature('read_only', self::RUN_TYPES[$param]);

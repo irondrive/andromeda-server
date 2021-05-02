@@ -5,6 +5,7 @@ require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -56,7 +57,7 @@ class Manager extends BaseObject
     /** Creates and tests a new external authentication backend, creating a manager and optionally, a default group for it */
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($val){ return array_key_exists($val, self::$auth_types); });
         
         $descr = $input->GetOptNullParam('description', SafeParam::TYPE_TEXT);
