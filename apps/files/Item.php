@@ -485,5 +485,6 @@ abstract class Item extends StandardObject
         return $data;
     }
     
-    public abstract function GetClientObject() : ?array;
+    public abstract function GetClientObject() : array;
+    public abstract function TryGetClientObject() : ?array;
 }
