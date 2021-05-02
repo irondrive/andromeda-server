@@ -91,7 +91,8 @@ class FilesystemTimed extends Timed
     
     protected function SetTimedLimits(Input $input) : void
     {
-        if ($input->HasParam('max_stats_age') || $this->isCreated()) $this->SetScalar('max_stats_age', $input->GetParam('max_stats_age', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_stats_age') || $this->isCreated()) 
+            $this->SetScalar('max_stats_age', $input->GetParam('max_stats_age', SafeParam::TYPE_INT));
     }
 }
 

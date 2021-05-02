@@ -85,7 +85,7 @@ class Emailer extends StandardObject
     {
         $mailer = parent::BaseCreate($database);
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM,
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($type){ return array_key_exists($type, self::MAIL_TYPES); });
         
         $type = self::MAIL_TYPES[$type];
@@ -117,7 +117,7 @@ class Emailer extends StandardObject
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
         $port = $input->GetOptParam('port',SafeParam::TYPE_UINT);
-        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,
+        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,SafeParams::PARAMLOG_ONLYFULL,
             function($d){ return in_array($d,array('tls','ssl')); });
         
         if ($port) $host .= ":$port";

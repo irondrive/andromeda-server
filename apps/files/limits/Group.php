@@ -5,6 +5,7 @@ require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -74,7 +75,7 @@ trait GroupCommon
     
     protected static function GetTrackParam(Input $input, string $name) : ?int
     {
-        $param = $input->GetNullParam($name,SafeParam::TYPE_ALPHANUM,
+        $param = $input->GetNullParam($name, SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($v){ return array_key_exists($v, self::TRACK_TYPES); });
         
         return ($param !== null) ? self::TRACK_TYPES[$param] : null;

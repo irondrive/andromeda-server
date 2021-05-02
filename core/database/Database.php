@@ -138,7 +138,7 @@ class Database implements Transactions
      */
     public static function Install(Input $input) : void
     {
-        $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM,
+        $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($arg){ return array_key_exists($arg, self::DRIVERS); });
         
         $params = array('DRIVER'=>$driver);

@@ -192,10 +192,10 @@ class FSManager extends StandardObject
         
         $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
         
-        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM,
+        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($sttype){ return array_key_exists($sttype, self::$storage_types); });
         
-        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM,
+        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($fstype){ return in_array($fstype, array('native','crypt','shared')); });        
         
         switch ($fstype ?? 'native')
@@ -213,8 +213,8 @@ class FSManager extends StandardObject
         {
             if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
             {
-                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,function($v){
-                    return $v >= 4*1024 && $v <= 1*1024*1024; });
+                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_ONLYFULL,
+                    function($v){ return $v >= 4*1024 && $v <= 1*1024*1024; });
             }
             
             if (!($chunksize ?? false)) $chunksize = Config::GetInstance($database)->GetCryptoChunkSize();

@@ -5,6 +5,7 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 /** 
@@ -48,7 +49,7 @@ abstract class BaseLog extends BaseObject
     {
         $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $input);
         
-        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
+        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,SafeParams::PARAMLOG_ONLYFULL,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
             
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");

@@ -8,6 +8,7 @@ require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Data
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
 class Config extends SingletonObject
@@ -39,7 +40,7 @@ class Config extends SingletonObject
     {
         if ($input->HasParam('createaccount')) 
         {
-            $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, 
+            $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, 
                 function($v){ return array_key_exists($v, self::CREATE_TYPES); });
 
             $this->SetFeature('createaccount', self::CREATE_TYPES[$param]);
@@ -47,7 +48,7 @@ class Config extends SingletonObject
         
         if ($input->HasParam('requirecontact')) 
         {
-            $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM,
+            $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
                 function($v){ return array_key_exists($v, self::CONTACT_TYPES); });
 
             $this->SetFeature('requirecontact', self::CONTACT_TYPES[$param]);

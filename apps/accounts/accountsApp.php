@@ -783,6 +783,7 @@ class AccountsApp extends AppBase
         $authenticator->TryRequireCrypto();
         
         $account = $authenticator->GetAccount();
+        
         $code = $input->GetParam("auth_twofactor", SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_NEVER); // not an int (leading zeroes)
         
         if (!$account->CheckTwoFactor($code, true)) 

@@ -241,8 +241,8 @@ trait ManualImport
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
-            ->SetScalar('import_chunksize', $input->GetOptParam('import_chunksize', SafeParam::TYPE_UINT,
-                function($v){ return static::isValidSize($v); }));
+            ->SetScalar('import_chunksize', $input->GetOptParam('import_chunksize', SafeParam::TYPE_UINT, 
+                SafeParams::PARAMLOG_ONLYFULL, function($v){ return static::isValidSize($v); }));
     }
     
     /** Returns the command usage for Edit() */
@@ -253,7 +253,7 @@ trait ManualImport
     {
         if ($input->HasParam('import_chunksize')) $this->SetScalar('import_chunksize', 
             $input->GetNullParam('import_chunksize', SafeParam::TYPE_UINT,
-                function($v){ return static::isValidSize($v); }));
+                SafeParams::PARAMLOG_ONLYFULL, function($v){ return static::isValidSize($v); }));
         
         return parent::Edit($input);
     }
