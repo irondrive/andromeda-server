@@ -7,6 +7,7 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transac
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** Base class representing a database exception */
 abstract class DatabaseException extends Exceptions\ServerException { }
@@ -162,9 +163,10 @@ class Database implements Transactions
             
             $params['CONNECT'] = $connect;
             
-            $params['USERNAME'] = $input->GetOptParam('dbuser',SafeParam::TYPE_NAME);
-            $params['PASSWORD'] = $input->GetOptParam('dbpass',SafeParam::TYPE_RAW);
             $params['PERSISTENT'] = $input->GetOptParam('persistent',SafeParam::TYPE_BOOL);
+            
+            $params['USERNAME'] = $input->GetOptParam('dbuser',SafeParam::TYPE_NAME);
+            $params['PASSWORD'] = $input->GetOptParam('dbpass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         }
         else if ($driver === 'sqlite')
         {
@@ -347,7 +349,7 @@ class Database implements Transactions
     /** Logs a query to the internal query history, logging the actual data values if debug allows */
     private function logQuery(string $sql, ?array $data) : void
     {
-        if ($data !== null && Main::GetInstance()->GetDebugLevel() >= Config::LOG_SENSITIVE)
+        if ($data !== null && Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_SENSITIVE)
         {            
             foreach ($data as $key=>$val)
             {

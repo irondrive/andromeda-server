@@ -5,6 +5,7 @@ require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -110,8 +111,8 @@ class S3 extends S3Base4
             ->SetScalar('usetls', $input->GetOptParam('usetls', SafeParam::TYPE_BOOL))
             ->SetScalar('region', $input->GetParam('region', SafeParam::TYPE_ALPHANUM))
             ->SetScalar('bucket', $input->GetParam('bucket', SafeParam::TYPE_ALPHANUM))
-            ->SetAccessKey($input->GetOptParam('accesskey', SafeParam::TYPE_RANDSTR))
-            ->SetSecretKey($input->GetOptParam('secretkey', SafeParam::TYPE_RANDSTR));
+            ->SetAccessKey($input->GetOptParam('accesskey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER))
+            ->SetSecretKey($input->GetOptParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--endpoint fspath] [--bucket alphanum] [--region alphanum] [--path_style ?bool]".
@@ -128,8 +129,8 @@ class S3 extends S3Base4
         if ($input->HasParam('usetls')) $this->SetScalar('usetls', $input->GetNullParam('usetls', SafeParam::TYPE_BOOL));
         if ($input->HasParam('path_style')) $this->SetScalar('path_style', $input->GetNullParam('path_style', SafeParam::TYPE_BOOL));
         
-        if ($input->HasParam('accesskey')) $this->SetScalar('accesskey', $input->GetNullParam('accesskey', SafeParam::TYPE_RANDSTR));
-        if ($input->HasParam('secretkey')) $this->SetScalar('secretkey', $input->GetNullParam('secretkey', SafeParam::TYPE_RANDSTR));
+        if ($input->HasParam('accesskey')) $this->SetScalar('accesskey', $input->GetNullParam('accesskey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
+        if ($input->HasParam('secretkey')) $this->SetScalar('secretkey', $input->GetNullParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
         
         return parent::Edit($input);
     }
@@ -175,7 +176,7 @@ class S3 extends S3Base4
 
         $api = Main::GetInstance(); $debug = $api->GetDebugLevel();
         
-        if ($debug >= Config::LOG_SENSITIVE)
+        if ($debug >= Config::ERRLOG_SENSITIVE)
             $params['debug'] = array('logfn'=>function(string $str){
                 ErrorManager::GetInstance()->LogDebug("S3 SDK: $str"); });
                 

@@ -9,6 +9,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -205,7 +206,8 @@ class Share extends AuthObject
         if ($f_reshare !== null) $this->SetFeature('reshare', $f_reshare && ($access === null || $access->CanReshare()));
         if ($f_keepown !== null) $this->SetFeature('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
                 
-        if ($input->HasParam('spassword')) $this->SetPassword($input->GetNullParam('spassword',SafeParam::TYPE_RAW));
+        if ($input->HasParam('spassword')) $this->SetPassword($input->GetNullParam('spassword',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
+        
         if ($input->HasParam('expires')) $this->SetDate('expires',$input->GetNullParam('expires',SafeParam::TYPE_UINT));
         if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->GetNullParam('maxaccess',SafeParam::TYPE_UINT));
         

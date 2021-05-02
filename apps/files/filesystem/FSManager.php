@@ -8,6 +8,7 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -187,7 +188,8 @@ class FSManager extends StandardObject
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
-        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, SafeParam::MaxLength(127));
+        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
+        
         $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
         
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM,

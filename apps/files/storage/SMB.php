@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -57,7 +58,8 @@ class SMB extends StandardFWrapper
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
-            ->SetScalar('workgroup', $input->GetOptParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)))
+            ->SetScalar('workgroup', $input->GetOptParam('workgroup', 
+                SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)))            
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
@@ -65,7 +67,9 @@ class SMB extends StandardFWrapper
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
+        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', 
+            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
+        
         if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         
         return parent::Edit($input);

@@ -157,8 +157,8 @@ class ErrorLog extends BaseObject
                 $data['action'] = $input->GetAction();
             }
     
-            $extended = $api && $api->GetDebugLevel() >= Config::LOG_DEVELOPMENT;
-            $sensitive = $api && $api->GetDebugLevel() >= Config::LOG_SENSITIVE;
+            $extended = $api && $api->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
+            $sensitive = $api && $api->GetDebugLevel() >= Config::ERRLOG_SENSITIVE;
             
             if ($extended)
             {                

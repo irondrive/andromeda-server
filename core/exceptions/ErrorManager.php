@@ -37,7 +37,7 @@ class ErrorManager extends Singleton
     {
         if ($this->API !== null) $this->API->rollback($e);
             
-        $debug = null; if ($this->GetDebugState(Config::LOG_DEVELOPMENT)) 
+        $debug = null; if ($this->GetDebugState(Config::ERRLOG_DEVELOPMENT)) 
             $debug = ErrorLog::GetDebugData($this->API, $e, $this->GetDebugLog());
             
         return Output::ClientException($e, $debug);
@@ -92,7 +92,7 @@ class ErrorManager extends Singleton
      */
     public function LogException(\Throwable $e, bool $mainlog = true) : ?array
     {
-        if (!$this->GetDebugState(Config::LOG_ERRORS)) return null;
+        if (!$this->GetDebugState(Config::ERRLOG_ERRORS)) return null;
 
         $debug = ErrorLog::GetDebugData($this->API, $e, !$mainlog ? $this->GetDebugLog() : null);
         
@@ -144,7 +144,7 @@ class ErrorManager extends Singleton
     public function LogDebug($data) : self { $this->debuglog[] = $data; return $this; }
     
     /** Returns the debug log if allowed by the debug state, else null */
-    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::LOG_DEVELOPMENT) ? $this->debuglog : null; }
+    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::ERRLOG_DEVELOPMENT) ? $this->debuglog : null; }
     
     /** Creates an exception and logs it to the main error log (to get a backtrace) */
     public function LogBreakpoint() : self { return $this->LogDebug((new BreakpointException())->getTraceAsString()); }

@@ -6,6 +6,7 @@ CREATE TABLE `a2_objects_core_config` (
 ,  `dates__created` double NOT NULL
 ,  `features__requestlog_db` integer NOT NULL
 ,  `features__requestlog_file` integer NOT NULL
+,  `features__requestlog_details` integer NOT NULL
 ,  `features__debug` integer NOT NULL
 ,  `features__debug_http` integer NOT NULL
 ,  `features__debug_dblog` integer NOT NULL
@@ -54,7 +55,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
 ,  `applog` varchar(64) DEFAULT NULL
-,  `extra` text DEFAULT NULL
+,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2_objects_core_logging_requestlog` (

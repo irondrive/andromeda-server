@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -39,7 +40,7 @@ class IMAP extends External
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
-        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM,
+        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($val){ return array_key_exists($val, self::PROTOCOLS); });
 
         return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])

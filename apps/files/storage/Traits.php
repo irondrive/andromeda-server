@@ -3,6 +3,7 @@
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
 
@@ -94,8 +95,8 @@ trait UserPass
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
-            ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW))
-            ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
+            ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER))
+            ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
     }
     
     /** Returns the command usage for Edit() */
@@ -104,8 +105,8 @@ trait UserPass
     /** Performs cred-crypt level edit on an existing storage */
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW));
-        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParam::MaxLength(255)));
+        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
+        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
 
         return parent::Edit($input);
     }

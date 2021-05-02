@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -25,11 +26,37 @@ abstract class BaseAppLog extends BaseLog
         return ($this->actionlog ??= ActionLog::LoadByApplog($this->database, $this));
     }
     
-    /** @see ActionLog::LogExtra() */
-    public function LogExtra(string $key, $data) : self 
-    { 
-        $this->GetActionLog()->LogExtra($key, $data); return $this; 
-    }
+    /**
+     * Returns the configured details log detail level
+     *
+     * If 0, details logs will be discarded, else see Config enum
+     * @see \Andromeda\Core\Config::GetRequestLogDetails()
+     */
+    public static function GetDetailsLevel() : int { return Main::GetInstance()->GetConfig()->GetRequestLogDetails(); }
+    
+    /**
+     * Returns true if the configured details log detail level is >= full
+     * @see \Andromeda\Core\Config::GetRequestLogDetails()
+     */
+    public static function isFullDetails() : bool { return static::GetDetailsLevel() >= Config::RQLOG_DETAILS_FULL; }
+    
+    /** cached array of details log so we can set it once only in Save() */
+    protected array $details = array();
+    
+    /**
+     * Adds the given arbitrary data to the log's "details" field
+     *
+     * @param string $key the array key name to log with
+     * @param mixed $data the data value to log
+     * @see ActionLog::SetDetails()
+     */
+    public function LogDetails(string $key, $data) : self
+    {
+        $this->details[$key] = $data; return $this;
+    }    
+    
+    /** Returns a direct reference to the "details" log */
+    public function &GetDetailsRef() : array { return $this->details; }
     
     /**
      * Creates a new empty applog object and binds it to the current action log
@@ -49,10 +76,11 @@ abstract class BaseAppLog extends BaseLog
     
     public function Save(bool $onlyMandatory = false) : self
     {
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
-        {
-            parent::Save($onlyMandatory);
-        }
+        $k = Input::LoggerKey; if (isset($this->details[$k]) && empty($this->details[$k])) unset($this->details[$k]);
+        
+        if (!empty($this->details) && static::GetDetailsLevel()) $this->GetActionLog()->SetDetails($this->details);
+        
+        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) parent::Save($onlyMandatory);
         
         return $this;
     }

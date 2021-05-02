@@ -310,6 +310,7 @@ abstract class BaseObject
     protected function GetScalar(string $field, bool $allowTemp = true)
     {
         if (!array_key_exists($field, $this->scalars)) throw new KeyNotFoundException($field);
+        
         $value = $this->scalars[$field]->GetValue($allowTemp);
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
@@ -320,7 +321,8 @@ abstract class BaseObject
      */
     protected function TryGetScalar(string $field, bool $allowTemp = true)
     {
-        if (!array_key_exists($field, $this->scalars)) return null;
+        if (!array_key_exists($field, $this->scalars)) throw new KeyNotFoundException($field);
+        
         return $this->scalars[$field]->GetValue($allowTemp);
     }
     
@@ -333,6 +335,7 @@ abstract class BaseObject
     protected function GetScalarDelta(string $field) : int
     {
         if (!array_key_exists($field, $this->scalars)) throw new KeyNotFoundException($field);
+        
         return $this->scalars[$field]->GetDelta();
     }
     
@@ -346,6 +349,7 @@ abstract class BaseObject
     protected function GetObject(string $field) : self
     {
         if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         $value = $this->objects[$field]->GetObject();
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
@@ -356,7 +360,8 @@ abstract class BaseObject
      */
     protected function TryGetObject(string $field) : ?self
     {
-        if (!array_key_exists($field, $this->objects)) return null;
+        if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         return $this->objects[$field]->GetObject();
     }
     
@@ -369,6 +374,7 @@ abstract class BaseObject
     protected function HasObject(string $field) : bool
     {
         if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         return boolval($this->objects[$field]->GetValue());
     }
     
@@ -382,6 +388,7 @@ abstract class BaseObject
     protected function GetObjectID(string $field) : string
     {
         if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         $value = $this->objects[$field]->GetValue();
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
@@ -392,7 +399,8 @@ abstract class BaseObject
      */
     protected function TryGetObjectID(string $field) : ?string
     {
-        if (!array_key_exists($field, $this->objects)) return null;
+        if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         return $this->objects[$field]->GetValue();
     }
     
@@ -405,6 +413,7 @@ abstract class BaseObject
     protected function GetObjectType(string $field) : string
     {
         if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         $value = $this->objects[$field]->GetRefClass();
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
@@ -417,7 +426,8 @@ abstract class BaseObject
      */
     protected function TryGetObjectType(string $field) : ?string
     {
-        if (!array_key_exists($field, $this->objects)) return null;
+        if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         return $this->objects[$field]->GetRefClass();
     }
     
@@ -428,7 +438,8 @@ abstract class BaseObject
      */
     protected function DeleteObject(string $field) : self
     {
-        if (!array_key_exists($field, $this->objects)) return $this;
+        if (!array_key_exists($field, $this->objects)) throw new KeyNotFoundException($field);
+        
         $this->objects[$field]->DeleteObject(); return $this;
     }
     
@@ -443,6 +454,7 @@ abstract class BaseObject
     protected function GetObjectRefs(string $field, ?int $limit = null, ?int $offset = null) : array
     {
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
+        
         return $this->objectrefs[$field]->GetObjects($limit, $offset);
     }
     
@@ -455,6 +467,7 @@ abstract class BaseObject
     protected function CountObjectRefs(string $field) : int
     {
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
+        
         return $this->objectrefs[$field]->GetValue() ?? 0;
     }
     
@@ -469,6 +482,7 @@ abstract class BaseObject
     protected function GetJoinObject(string $field, self $obj) : StandardObject
     {
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
+        
         $value = $this->objectrefs[$field]->GetJoinObject($obj);
         if ($value !== null) return $value; else throw new NullValueException($field);
     }
@@ -479,7 +493,8 @@ abstract class BaseObject
      */
     protected function TryGetJoinObject(string $field, self $obj) : ?StandardObject
     {
-        if (!array_key_exists($field, $this->objectrefs)) return null;
+        if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
+        
         return $this->objectrefs[$field]->GetJoinObject($obj);
     }
     
@@ -490,7 +505,8 @@ abstract class BaseObject
      */
     protected function DeleteObjectRefs(string $field) : self
     {
-        if (!array_key_exists($field, $this->objectrefs)) return $this;
+        if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
+        
         $this->objectrefs[$field]->DeleteObjects(); return $this;
     }
     
@@ -578,7 +594,7 @@ abstract class BaseObject
                 {
                     if ($usemany)
                          $oldref->RemoveObjectRef($reffield, $this, true);
-                    else $oldref->UnsetObject($reffield, true);
+                    else $oldref->SetObject($reffield, null, true);
                     
                     if ($fieldobj->isAutoDelete()) $oldref->Delete();
                 }
@@ -604,16 +620,7 @@ abstract class BaseObject
     {
         $this->BoolSetObject($field, $object, $notification); return $this;
     }
-    
-    /**
-     * Same as BoolSetObject() but sets to null and returns $this
-     * @see BaseObject::BoolSetObject()
-     */
-    protected function UnsetObject(string $field, bool $notification = false) : self
-    { 
-        $this->BoolSetObject($field, null, $notification); return $this;
-    }
-    
+
     /**
      * Adds the given object to a collection of referenced objects
      * 
@@ -778,7 +785,7 @@ abstract class BaseObject
     {        
         foreach ($this->objects as $field=>$ref)
         {            
-            if ($ref->GetValue()) $this->UnsetObject($field);
+            if ($ref->GetValue()) $this->SetObject($field, null);
         }
         
         foreach ($this->objectrefs as $field=>$refs)

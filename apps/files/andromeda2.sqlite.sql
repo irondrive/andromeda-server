@@ -5,6 +5,12 @@ CREATE TABLE `a2_objects_apps_files_accesslog` (
 ,  `account` char(12) DEFAULT NULL
 ,  `sudouser` char(12) DEFAULT NULL
 ,  `client` char(12) DEFAULT NULL
+,  `file` char(16) DEFAULT NULL
+,  `folder` char(16) DEFAULT NULL
+,  `parent` char(16) DEFAULT NULL
+,  `file_share` char(16) DEFAULT NULL
+,  `folder_share` char(16) DEFAULT NULL
+,  `parent_share` char(16) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_comment` (

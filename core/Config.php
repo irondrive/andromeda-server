@@ -24,9 +24,10 @@ class Config extends SingletonObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
-            'features__requestlog_db' => new FieldTypes\Scalar(true),
+            'features__requestlog_db' => new FieldTypes\Scalar(false),
             'features__requestlog_file' => new FieldTypes\Scalar(false),
-            'features__debug' => new FieldTypes\Scalar(self::LOG_ERRORS),
+            'features__requestlog_details' => new FieldTypes\Scalar(self::RQLOG_DETAILS_BASIC),
+            'features__debug' => new FieldTypes\Scalar(self::ERRLOG_ERRORS),
             'features__debug_http' => new FieldTypes\Scalar(false),
             'features__debug_dblog' => new FieldTypes\Scalar(true),
             'features__debug_filelog' => new FieldTypes\Scalar(false),
@@ -41,7 +42,7 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] ".
+    public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."]".
                                                                  "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
                                                                  "[--read_only ".implode('|',array_keys(self::RUN_TYPES))."] [--enabled bool] [--email bool] [--datadir ?text]"; }
     
@@ -64,6 +65,14 @@ class Config extends SingletonObject
         if ($input->HasParam('requestlog_db')) $this->SetFeature('requestlog_db',$input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
         if ($input->HasParam('requestlog_file')) $this->SetFeature('requestlog_file',$input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
 
+        if ($input->HasParam('requestlog_details'))
+        {
+            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM,
+                function($v){ return array_key_exists($v, self::RQLOG_DETAILS_TYPES); });
+            
+            $this->SetFeature('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
+        }
+        
         if ($input->HasParam('debug'))
         {
             $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM,
@@ -169,16 +178,27 @@ class Config extends SingletonObject
     /** Returns true if request logging is enabled */
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
     
+    /** log basic details params and object IDs */
+    const RQLOG_DETAILS_BASIC = 1;
+    
+    /** log more detailed info, and full objects when deleted */
+    const RQLOG_DETAILS_FULL = 2;
+    
+    const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
+    
+    /** Returns the configured request log details detail level */
+    public function GetRequestLogDetails() : int { return $this->GetFeature('requestlog_details'); }
+    
     /** show a basic back trace */ 
-    const LOG_ERRORS = 1; 
+    const ERRLOG_ERRORS = 1; 
     
     /** show a full back trace, loaded objects, SQL queries, performance metrics */
-    const LOG_DEVELOPMENT = 2;
+    const ERRLOG_DEVELOPMENT = 2;
     
     /** also show input params, function arguments, SQL values */ 
-    const LOG_SENSITIVE = 3;
+    const ERRLOG_SENSITIVE = 3;
     
-    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::LOG_ERRORS, 'development'=>self::LOG_DEVELOPMENT, 'sensitive'=>self::LOG_SENSITIVE);
+    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'development'=>self::ERRLOG_DEVELOPMENT, 'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->GetFeature('debug'); }
@@ -218,12 +238,14 @@ class Config extends SingletonObject
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
      * @return array `{features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, features:{ requestlog_file:bool, requestlog_db:bool, 
+         if admin, add: `{datadir:?string, features:{ requestlog_file:bool, requestlog_db:bool, requestlog_details:string,
             debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
     { 
         $data = array('features' => $this->GetAllFeatures());
+        
+        $data['features']['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()];
         
         $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
         $data['features']['read_only'] = array_flip(self::RUN_TYPES)[$this->getReadOnly()];

@@ -93,7 +93,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function TryGetCounter(string $name) : ?int { 
         return $this->TryGetScalar("counters__$name"); }
-    
+
     /**
      * Gets the value of the given counter limit field
      * @see BaseObject::GetScalar()
@@ -105,8 +105,12 @@ abstract class StandardObject extends BaseObject
      * Gets the value of the given counter limit field
      * @see BaseObject::TryGetScalar()
      */
-    protected function TryGetCounterLimit(string $name) : ?int { 
-        return $this->TryGetScalar("counters_limits__$name"); }
+    protected function TryGetCounterLimit(string $name) : ?int 
+    { 
+        $field = "counters_limits__$name";        
+        return array_key_exists($field, $this->scalars) 
+            ? $this->TryGetScalar($field) : null;
+    }
     
     /**
      * Sets the value of the given counter limit field

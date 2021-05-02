@@ -98,7 +98,7 @@ class Emailer extends StandardObject
         if ($type == self::TYPE_SMTP)
         {
             $mailer->SetScalar('username',$input->GetOptParam('username',SafeParam::TYPE_TEXT));
-            $mailer->SetScalar('password',$input->GetOptParam('password',SafeParam::TYPE_RAW));
+            $mailer->SetScalar('password',$input->GetOptParam('password',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
             
             if (($hosts = $input->GetParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY)) !== null)
             {
@@ -161,7 +161,7 @@ class Emailer extends StandardObject
             default: throw new InvalidMailTypeException();
         }
         
-        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::LOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
+        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
         
         $mailer->Debugoutput = function($str, $level){ 
             ErrorManager::GetInstance()->LogDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };

@@ -35,8 +35,11 @@ class SafeParamUnknownTypeException extends SafeParamException
  */
 class SafeParam
 {
-    private $key; private $value;
-
+    private $key; private $value;    
+    
+    /** A raw value that does no sanitizing or validating */
+    public const TYPE_RAW      = 0;
+    
     /** A boolean value, see FILTER_VALIDATE_BOOLEAN */
     public const TYPE_BOOL     = 1;
     
@@ -87,17 +90,15 @@ class SafeParam
     /** A string value with a max length of 65535, HTML-escapes special characters, see FILTER_SANITIZE_SPECIAL_CHARS */
     public const TYPE_TEXT     = 13;
     
-    /** A raw value that does no sanitizing or validating */
-    public const TYPE_RAW      = 14;
-    
     /** A value that itself is a collection of SafeParams (an associative array) */
-    public const TYPE_OBJECT   = 15;
+    public const TYPE_OBJECT   = 14;
 
     /** can be combined with any type to indicate an array of that type */
     public const TYPE_ARRAY = 128;
 
     const TYPE_STRINGS = array(
         null => 'custom',
+        self::TYPE_RAW => 'raw',
         self::TYPE_BOOL => 'bool',
         self::TYPE_INT => 'int',
         self::TYPE_UINT => 'uint',
@@ -111,7 +112,6 @@ class SafeParam
         self::TYPE_HOSTNAME => 'hostname',
         self::TYPE_URL => 'url',
         self::TYPE_TEXT => 'text',
-        self::TYPE_RAW => 'raw',
         self::TYPE_OBJECT => 'object',
         self::TYPE_ARRAY => 'array'
     );
@@ -159,17 +159,21 @@ class SafeParam
      * If the parameter is an object type, a SafeParams object will be returned
      * If the parameter is an array type, returns an array of SafeParams
      * @param int $type the requested type of the parameter
-     * @param callable $usrfunc if not null, check the value against this custom function
+     * @param callable $valfunc if not null, check the value against this custom function
      * @throws SafeParamInvalidException if the value fails validation
      * @throws SafeParamUnknownTypeException if an unknown type was requested
      * @return NULL|mixed|SafeParam[]|SafeParams the value of the SafeParam
      */
-    public function GetValue(int $type, ?callable $usrfunc = null)
+    public function GetValue(int $type, callable ...$valfuncs)
     {
         $key = $this->key; $value = $this->value;
         
-        if ($value === 'null' || !strlen($value)) $value = null; 
+        if ($value === 'null' || !strlen($value)) $value = null;        
         
+        if ($type === self::TYPE_RAW)
+        {
+            // don't do any validation for raw params
+        }
         else if ($type === self::TYPE_BOOL)
         {
             if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
@@ -244,10 +248,6 @@ class SafeParam
             if (($value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS)) === false)
                 throw new SafeParamInvalidException($key, $type);
         }
-        else if ($type === self::TYPE_RAW) 
-        { 
-
-        }
         else if ($type === self::TYPE_OBJECT)
         {
             if (!is_array($value)) 
@@ -280,8 +280,8 @@ class SafeParam
         }
         else throw new SafeParamUnknownTypeException($type);
         
-        if ($value !== null && $usrfunc !== null && !$usrfunc($value)) 
-            throw new SafeParamInvalidException($key, null);
+        if ($value !== null) foreach ($valfuncs as $valfunc)
+            if (!$valfunc($value)) throw new SafeParamInvalidException($key, null);
         
         return $value;
     }

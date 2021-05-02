@@ -12,6 +12,7 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -185,8 +186,12 @@ class Contact extends ContactBase
      */
    public static function FetchInfoFromInput(Input $input) : ContactInfo
     {
-        if ($input->HasParam('email')) { $type = self::TYPE_EMAIL;
-            $info = $input->GetParam('email',SafeParam::TYPE_EMAIL); }
+        if ($input->HasParam('email')) 
+        { 
+            $type = self::TYPE_EMAIL;
+            
+            $info = $input->GetParam('email',SafeParam::TYPE_EMAIL, SafeParams::PARAMLOG_ALWAYS); 
+        }
         
         else throw new ContactNotGivenException();
         

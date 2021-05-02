@@ -28,7 +28,7 @@ class ActionLog extends BaseLog
             'applog' => new FieldTypes\ObjectPoly(BaseAppLog::class),
             'app' => null,
             'action' => null,
-            'extra' => new FieldTypes\JSON()
+            'details' => new FieldTypes\JSON()
         );
     }
     
@@ -49,30 +49,24 @@ class ActionLog extends BaseLog
     public function SetApplog(BaseAppLog $applog) : self { return $this->SetObject('applog', $applog); }
     
     /** 
-     * Adds the given arbitrary data to the log's "extra" field
+     * Sets the log's app-specific "details" field
      * 
      * This should be used for data that doesn't make sense to have its own DB column.
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
      * 
-     * @param string $key the array key name to log with
-     * @param mixed $data the data value to log
+     * @param array $details the data values to log
      */
-    public function LogExtra(string $key, $data) : self
+    public function SetDetails(array $details) : self
     {
-        $extra = $this->TryGetScalar('extra') ?? array();
-        
-        $extra[$key] = $data; return $this->SetScalar('extra', $extra);
+        return $this->SetScalar('details', $details);
     }
     
     public function Save(bool $onlyMandatory = false) : self
     {
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) 
-        {
-            parent::Save($onlyMandatory);
-            
-            // make sure the applog is saved also in case of rollback
-            if (($applog = $this->TryGetObject('applog')) !== null) $applog->Save();
-        }
+        // make sure the applog is saved also in case of rollback
+        if (($applog = $this->TryGetObject('applog')) !== null) $applog->Save();
+        
+        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) parent::Save($onlyMandatory);
 
         return $this;
     }
@@ -95,14 +89,14 @@ class ActionLog extends BaseLog
     /**
      * Returns the printable client object of this action log
      * @return array `{app:string, action:string}`
-        if extra, add: `{extra:array}`
+        if details, add: `{details:array}`
      */
-    protected function GetBaseClientObject(bool $extra = false) : array
+    protected function GetBaseClientObject(bool $details = false) : array
     {
         $retval = array_map(function(FieldTypes\Scalar $e){
             return $e->GetValue(); }, $this->scalars);
         
-        if (!$extra || !$retval['extra']) unset($retval['extra']);
+        if (!$details || !$retval['details']) unset($retval['details']);
         
         return $retval;
     }
