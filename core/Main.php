@@ -293,7 +293,7 @@ class Main extends Singleton
             {
                 try 
                 {                    
-                    if (isset($this->reqlog)) $this->reqlog->SetError($e)->Save(); 
+                    if (isset($this->reqlog)) $this->reqlog->SetError($e);
                     
                     $this->database->saveObjects(true);
                     

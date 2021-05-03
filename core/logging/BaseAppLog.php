@@ -41,7 +41,7 @@ abstract class BaseAppLog extends BaseLog
     public static function isFullDetails() : bool { return static::GetDetailsLevel() >= Config::RQLOG_DETAILS_FULL; }
     
     /** cached array of details log so we can set it once only in Save() */
-    protected array $details = array();
+    protected array $details;
     
     /**
      * Adds the given arbitrary data to the log's "details" field
@@ -69,18 +69,29 @@ abstract class BaseAppLog extends BaseLog
         {
             $obj = parent::BaseCreate($database);
             
-            $obj->actionlog = $actlog->SetApplog($obj); return $obj;
+            $obj->actionlog = $actlog->SetApplog($obj);
+            $obj->details = $actlog->GetDetails();
+            
+            return $obj;
         }
         else return null;
     }
     
-    public function Save(bool $onlyMandatory = false) : self
+    /** Send the cached details log to the action log */
+    public function SaveDetails() : self
     {
         $k = Input::LoggerKey; if (isset($this->details[$k]) && empty($this->details[$k])) unset($this->details[$k]);
         
-        if (!empty($this->details) && static::GetDetailsLevel()) $this->GetActionLog()->SetDetails($this->details);
+        if (!empty($this->details) && static::GetDetailsLevel())
+            $this->GetActionLog()->SetDetails($this->details);
         
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) parent::Save($onlyMandatory);
+        return $this;
+    }
+    
+    public function Save(bool $onlyMandatory = false) : self
+    {        
+        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) 
+            parent::Save(); // ignore $onlyMandatory
         
         return $this;
     }

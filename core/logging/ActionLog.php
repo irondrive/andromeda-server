@@ -48,6 +48,9 @@ class ActionLog extends BaseLog
     /** Sets an extended BaseAppLog to accompany this ActionLog */
     public function SetApplog(BaseAppLog $applog) : self { return $this->SetObject('applog', $applog); }
     
+    /** Returns the log's app-specific "details" field */
+    public function GetDetails() : array { return $this->TryGetScalar('details') ?? array(); }
+    
     /** 
      * Sets the log's app-specific "details" field
      * 
@@ -63,11 +66,16 @@ class ActionLog extends BaseLog
     
     public function Save(bool $onlyMandatory = false) : self
     {
-        // make sure the applog is saved also in case of rollback
-        if (($applog = $this->TryGetObject('applog')) !== null) $applog->Save();
+        $applog = $this->TryGetObject('applog');
         
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) parent::Save($onlyMandatory);
-
+        if ($applog !== null) $applog->SaveDetails();
+        
+        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) 
+            parent::Save(); // ignore $onlyMandatory
+        
+        // make sure the applog is saved also in case of rollback
+        if ($applog !== null) $applog->Save();
+        
         return $this;
     }
 
