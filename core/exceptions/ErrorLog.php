@@ -111,7 +111,7 @@ class ErrorLog extends BaseObject
         return $obj;
     }
     
-    private static function stringArray(array &$data) : void
+    private static function arrayStrings(array &$data) : void
     {
         foreach ($data as &$val)
         {
@@ -119,7 +119,7 @@ class ErrorLog extends BaseObject
             {
                 $val = method_exists($val,'__toString') ? (string)$val : get_class($val);
             }
-            else if (is_array($val)) static::stringArray($val);
+            else if (is_array($val)) static::arrayStrings($val);
             
             try { Utilities::JSONEncode(array($val)); }
             catch (JSONEncodingException $e) { $val = base64_encode($val); }
@@ -185,7 +185,7 @@ class ErrorLog extends BaseObject
                     if (!array_key_exists('args', $data['trace_full'][$key])) continue;
                     if (!$sensitive) { unset($data['trace_full'][$key]['args']); continue; }
                     
-                    static::stringArray($data['trace_full'][$key]['args']);
+                    static::arrayStrings($data['trace_full'][$key]['args']);
                 }
             }
             

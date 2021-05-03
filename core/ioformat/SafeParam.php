@@ -242,10 +242,8 @@ class SafeParam
         }
         else if ($type === self::TYPE_TEXT)
         {
-            if (strlen($value) >= 65536) 
-                throw new SafeParamInvalidException($key, $type);
-            
-            if (($value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS)) === false)
+            if (strlen($value) >= 65536 || !preg_match('//u',$value) /* UTF-8 */ ||
+                ($value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS)) === false)
                 throw new SafeParamInvalidException($key, $type);
         }
         else if ($type === self::TYPE_OBJECT)

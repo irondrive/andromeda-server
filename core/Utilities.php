@@ -105,15 +105,6 @@ abstract class Utilities
         return $data;
     }
     
-    /**
-     * Strips not printable characters (00-1F and 7F) from the given ASCII string
-     * @param string $str an ASCII string
-     */
-    public static function MakePrintable(string $str) : string
-    {
-        return preg_replace('/[\x00-\x1F\x7F]/u', '', $str); 
-    }
-    
     /** Returns the best password_hash algorithm available */
     public static function GetHashAlgo()
     {
