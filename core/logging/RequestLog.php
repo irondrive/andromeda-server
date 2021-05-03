@@ -68,7 +68,7 @@ class RequestLog extends BaseLog
         
         if ($config->GetEnableRequestLogDB())
         {            
-            parent::Save($onlyMandatory);
+            parent::Save(); // ignore $onlyMandatory
             
             // make sure every action log is saved also in case of rollback
             foreach ($this->GetObjectRefs('actions') as $apprun) $apprun->Save();            
