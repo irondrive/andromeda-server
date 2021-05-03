@@ -205,7 +205,7 @@ class ServerApp extends AppBase
      */
     protected function GetUsages(Input $input) : array
     {            
-        $want = $input->GetOptParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
+        $want = $input->GetOptParam('appname',SafeParam::TYPE_ALPHANUM);
         
         $output = array(); foreach ($this->API->GetApps() as $name=>$app)
         {

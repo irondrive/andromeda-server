@@ -40,15 +40,15 @@ class SafeParams
     private ?array $logref = null; private int $loglevel;
     
     /** Takes an array reference for logging fetched parameters */
-    public function SetLogRef(?array &$logref, int $loglevel) : self { 
+    public function SetLogRef(?array &$logref, int $loglevel) : self {
         $this->logref = &$logref; $this->loglevel = $loglevel; return $this; }
     
     /** Logs the given $data as $key or sets a sub-log reference if it's a SafeParams */
     protected function LogData(?int $minlog, int $type, string $key, $data) : void
     {
-        if ($type === SafeParam::TYPE_RAW) return;
-        
-        if (!$minlog || !$this->logref || $minlog > $this->loglevel) return;
+        if ($type === SafeParam::TYPE_RAW || $this->logref === null) return;
+
+        if (!$minlog || $minlog > $this->loglevel) return;
         
         if ($data instanceof self)
         {

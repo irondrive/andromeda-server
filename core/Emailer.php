@@ -164,7 +164,8 @@ class Emailer extends StandardObject
         $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
         
         $mailer->Debugoutput = function($str, $level){ 
-            ErrorManager::GetInstance()->LogDebug("PHPMailer $level: ".Utilities::MakePrintable($str)); };
+            if (!preg_match('//u', $str)) $str = base64_encode($str); // check UTF-8
+            ErrorManager::GetInstance()->LogDebug("PHPMailer $level: $str"); };
         
         $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');
         
