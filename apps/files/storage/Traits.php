@@ -26,7 +26,7 @@ trait OptFieldCrypt
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--fieldcrypt bool]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
         $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL) ?? false;
         
@@ -37,7 +37,7 @@ trait OptFieldCrypt
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--fieldcrypt bool]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function Edit(Input $input) : self
+    public function Edit(Input $input) : Storage
     {
         $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL);
         if ($fieldcrypt !== null) $this->SetEncrypted($fieldcrypt);
@@ -92,7 +92,7 @@ trait UserPass
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--username alphanum] [--password raw]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
         return parent::Create($database, $input, $filesystem)
             ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER))
@@ -103,7 +103,7 @@ trait UserPass
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--username ?alphanum] [--password ?raw]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function Edit(Input $input) : self
+    public function Edit(Input $input) : Storage
     {
         if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
         if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
@@ -144,17 +144,17 @@ trait NoFolders
         return !count(array_filter(explode('/',$path)));
     }
     
-    protected function SubCreateFolder(string $path) : self { throw new FoldersUnsupportedException(); }
+    protected function SubCreateFolder(string $path) : Storage { throw new FoldersUnsupportedException(); }
     
-    protected function SubDeleteFolder(string $path) : self { throw new FoldersUnsupportedException(); }
+    protected function SubDeleteFolder(string $path) : Storage { throw new FoldersUnsupportedException(); }
     
-    protected function SubRenameFolder(string $old, string $new) : self { throw new FoldersUnsupportedException(); }
+    protected function SubRenameFolder(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }
     
-    protected function SubMoveFile(string $old, string $new) : self { throw new FoldersUnsupportedException(); }
+    protected function SubMoveFile(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }
     
-    protected function SubMoveFolder(string $old, string $new) : self { throw new FoldersUnsupportedException(); }
+    protected function SubMoveFolder(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }
     
-    protected function SubCopyFolder(string $old, string $new) : self { throw new FoldersUnsupportedException(); }  
+    protected function SubCopyFolder(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }  
 }
 
 /** A storage that has a base path */
@@ -176,7 +176,7 @@ trait BasePath
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --path fspath"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
         $path = $input->GetParam('path', SafeParam::TYPE_FSPATH);
         return parent::Create($database, $input, $filesystem)->SetPath($path);
@@ -184,7 +184,7 @@ trait BasePath
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--path fspath]"; }
     
-    public function Edit(Input $input) : self
+    public function Edit(Input $input) : Storage
     {
         $path = $input->GetOptParam('path', SafeParam::TYPE_FSPATH);
         if ($path !== null) $this->SetPath($path);
@@ -238,7 +238,7 @@ trait ManualImport
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--import_chunksize int]"; }
 
     /** Performs cred-crypt level initialization on a new storage */
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
+    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
         return parent::Create($database, $input, $filesystem)
             ->SetScalar('import_chunksize', $input->GetOptParam('import_chunksize', SafeParam::TYPE_UINT, 
@@ -249,7 +249,7 @@ trait ManualImport
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--import_chunksize ?int]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function Edit(Input $input) : self
+    public function Edit(Input $input) : Storage
     {
         if ($input->HasParam('import_chunksize')) $this->SetScalar('import_chunksize', 
             $input->GetNullParam('import_chunksize', SafeParam::TYPE_UINT,
@@ -258,7 +258,7 @@ trait ManualImport
         return parent::Edit($input);
     }
     
-    protected function SubImportFile(string $src, string $dest) : self
+    protected function SubImportFile(string $src, string $dest) : Storage
     {
         if (!($handle = fopen($src, 'rb')))
             throw new FileCopyFailedException();
