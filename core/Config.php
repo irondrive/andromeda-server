@@ -112,13 +112,18 @@ class Config extends SingletonObject
      */
     public function GetApps() : array { return $this->GetScalar('apps'); }
     
+    /** List all installable app folders that exist in the filesystem */
+    public static function ListApps() : array
+    {
+        return array_filter(scandir(ROOT."/apps"),function($app){
+            if (in_array($app,array('.','..'))) return false;
+            return file_exists(ROOT."/apps/$app/metadata.json"); });
+    }
+    
     /** Registers the specified app name */
     public function EnableApp(string $app) : self
-    {
-        if ($app === 'server') throw new InvalidAppException();        
-        
-        $apps = array_keys(Main::GetInstance()->GetApps());
-        
+    {        
+        $apps = array_keys(Main::GetInstance()->GetApps());        
         foreach (AppBase::getRequires($app) as $tapp)
         {
             if (!in_array($tapp, $apps))
@@ -127,32 +132,28 @@ class Config extends SingletonObject
         
         Main::GetInstance()->LoadApp($app);
         
-        $apps = $this->GetApps();
+        $capps = $this->GetApps();
         
-        if (!in_array($app, $apps)) $apps[] = $app;
+        if (!in_array($app, $capps)) $capps[] = $app;
         
-        return $this->SetScalar('apps', $apps);
+        return $this->SetScalar('apps', $capps);
     }
     
     /** Unregisters the specified app name */
     public function DisableApp(string $app) : self
     {
-        if ($app === 'server') throw new InvalidAppException();
-        
-        if (($key = array_search($app, $this->GetApps())) === false) 
-            throw new InvalidAppException();          
-            
-        $apps = array_keys(Main::GetInstance()->GetApps());
-            
-        foreach ($apps as $tapp)
+        if (($key = array_search($app, $this->GetApps())) === false)
+            throw new InvalidAppException();
+    
+        foreach (array_keys(Main::GetInstance()->GetApps()) as $tapp)
         {
             if (in_array($app, AppBase::getRequires($tapp)))
                 throw new AppDependencyException($tapp);
         }            
         
-        $apps = $this->GetApps(); unset($apps[$key]);
+        $capps = $this->GetApps(); unset($capps[$key]);
         
-        return $this->SetScalar('apps', array_values($apps));
+        return $this->SetScalar('apps', array_values($capps));
     }
     
     /** Returns whether the server is allowed to respond to requests */

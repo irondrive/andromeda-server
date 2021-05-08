@@ -385,9 +385,12 @@ class Main extends Singleton
     {
         if ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) return null;
         
+        if (!$this->database) return null;
+        
         $retval = array(
             
             'includes' => get_included_files(),
+            
             'objects' => $this->database->getLoadedObjects(),
             
             'construct_stats' => $this->construct_stats,

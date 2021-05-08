@@ -518,6 +518,7 @@ class AccountsApp extends AppBase
     {
         $admin = $authenticator !== null; 
         if ($admin) $authenticator->RequireAdmin();
+        
         $admin = $admin || $this->API->GetInterface()->isPrivileged();
         
         $allowCreate = $this->config->GetAllowCreateAccount();
