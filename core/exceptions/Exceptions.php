@@ -14,7 +14,10 @@ abstract class BaseException extends \Exception
 
 /** Base class for errors caused by the client's request */
 abstract class ClientException extends BaseException 
-{ 
+{    
+    public function __construct(string $details = null) { 
+        if ($details) $this->message .= ": $details"; }
+    
     public static function Create(int $code, string $message) 
     {
         $e = new self(); $e->code = $code; $e->message = $message; return $e;
@@ -38,7 +41,8 @@ abstract class ServerException extends BaseException
 {     
     public $code = 0; public $message = "GENERIC_SERVER_ERROR";
     
-    public function __construct(string $details = null) { if ($details) $this->message .= ": $details"; }
+    public function __construct(string $details = null) { 
+        if ($details) $this->message .= ": $details"; }
 }
 
 /** Represents an non-exception error from PHP */

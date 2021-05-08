@@ -36,9 +36,7 @@ class AuthFailedException extends Exceptions\ClientDeniedException { public $mes
  * Handles DB config, install, and getting/setting config/logs.
  */
 class ServerApp extends AppBase
-{
-    public static function getVersion() : string { return "2.0.0-alpha"; }
-    
+{    
     public static function getLogClass() : ?string { return AccessLog::class; }
 
     public static function getUsage() : array

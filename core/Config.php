@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Emailer.php");
+require_once(ROOT."/core/AppBase.php");
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -17,6 +18,9 @@ class UnwriteableDatadirException extends Exceptions\ClientErrorException { publ
 
 /** Exception indicating an invalid app name was given */
 class InvalidAppException extends Exceptions\ClientErrorException { public $message = "INVALID_APPNAME"; }
+
+/** Exception indicating that an app dependency was not met */
+class AppDependencyException extends Exceptions\ClientErrorException { public $message = "APP_DEPENDENCY_FAILURE"; }
 
 /** The global framework config stored in the database */
 class Config extends SingletonObject
@@ -111,11 +115,20 @@ class Config extends SingletonObject
     /** Registers the specified app name */
     public function EnableApp(string $app) : self
     {
-        if ($app === 'server') throw new InvalidAppException();
+        if ($app === 'server') throw new InvalidAppException();        
+        
+        $apps = array_keys(Main::GetInstance()->GetApps());
+        
+        foreach (AppBase::getRequires($app) as $tapp)
+        {
+            if (!in_array($tapp, $apps))
+                throw new AppDependencyException($tapp);
+        }
         
         Main::GetInstance()->LoadApp($app);
         
         $apps = $this->GetApps();
+        
         if (!in_array($app, $apps)) $apps[] = $app;
         
         return $this->SetScalar('apps', $apps);
@@ -126,12 +139,18 @@ class Config extends SingletonObject
     {
         if ($app === 'server') throw new InvalidAppException();
         
-        $apps = $this->GetApps();
+        if (($key = array_search($app, $this->GetApps())) === false) 
+            throw new InvalidAppException();          
+            
+        $apps = array_keys(Main::GetInstance()->GetApps());
+            
+        foreach ($apps as $tapp)
+        {
+            if (in_array($app, AppBase::getRequires($tapp)))
+                throw new AppDependencyException($tapp);
+        }            
         
-        if (($key = array_search($app, $apps)) === false) 
-            throw new InvalidAppException();
-        
-        unset($apps[$key]);
+        $apps = $this->GetApps(); unset($apps[$key]);
         
         return $this->SetScalar('apps', array_values($apps));
     }
@@ -251,10 +270,13 @@ class Config extends SingletonObject
         $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
         $data['features']['read_only'] = array_flip(self::RUN_TYPES)[$this->getReadOnly()];
         
-        $data['apps'] = array_map(function($app)use($admin){ 
-            return $admin ? $app::getVersion() : 
-                implode('.',array_slice(explode('.',$app::getVersion()),0,2));
-        }, Main::GetInstance()->GetApps());
+        $data['apps'] = array();
+        
+        foreach (array_keys(Main::GetInstance()->GetApps()) as $appname)
+        {
+            $data['apps'][$appname] = $admin ? AppBase::getVersion($appname) :
+                implode('.',array_slice(explode('.',AppBase::getVersion($appname)),0,2));
+        }
                 
         if ($admin) $data['datadir'] = $this->GetDataDir();
         else

@@ -149,7 +149,7 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {                
-                case 'version': die("Andromeda ".ServerApp::getVersion()."\n"); break;
+                case 'version': die("Andromeda ".a2_version."\n"); break;
                 
                 case 'batch':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();

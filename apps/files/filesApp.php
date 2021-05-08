@@ -109,9 +109,7 @@ class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { 
  * gathering and limiting for accounts/groups/filesystems.
  */
 class FilesApp extends AppBase
-{
-    public static function getVersion() : string { return "2.0.0-alpha"; } 
-    
+{    
     public static function getLogClass() : ?string { return AccessLog::class; }
     
     public static function getUsage() : array 
