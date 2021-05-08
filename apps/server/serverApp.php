@@ -45,10 +45,10 @@ class ServerApp extends AppBase
             'random [--length int]',
             'usage [--appname alphanum]', 
             'runtests',
-            'install [--enable bool]',
-            'installapps',
             'dbconf '.Database::GetInstallUsage(),
             ...Database::GetInstallUsages(),
+            'install [--enable bool]',
+            'listapps',
             'phpinfo',
             'serverinfo',
             'testmail [--mailid id] [--dest email]',
@@ -137,7 +137,10 @@ class ServerApp extends AppBase
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
         
-        $accesslog = AccessLog::Create($this->database, $authenticator, $isAdmin); $input->SetLogger($accesslog);
+        $accesslog = !$this->database ? null : 
+            AccessLog::Create($this->database, $authenticator, $isAdmin); 
+        
+        $input->SetLogger($accesslog);
                 
         switch ($input->GetAction())
         {
@@ -147,8 +150,7 @@ class ServerApp extends AppBase
             
             case 'dbconf':  return $this->ConfigDB($input);
             case 'install': return $this->Install($input);
-            
-            case 'installapps': return $this->InstallApps($input, $isAdmin);
+            case 'listapps': return $this->ListApps($input, $isAdmin);
             
             case 'phpinfo':    return $this->PHPInfo($input, $isAdmin);
             case 'serverinfo': return $this->ServerInfo($input, $isAdmin);
@@ -241,9 +243,12 @@ class ServerApp extends AppBase
     
     /**
      * Installs the server by importing its SQL template and creating config
+     * 
+     * Also enables all installable apps that exist (retval)
      * @throws UnknownActionException if config already exists
+     * @return array[string] list of apps that were enabled
      */
-    public function Install(Input $input) : void
+    public function Install(Input $input) : array
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
@@ -254,26 +259,14 @@ class ServerApp extends AppBase
         $enable = $input->GetOptParam('enable', SafeParam::TYPE_BOOL);
         
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
+        
+        $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); return $apps;
     }
     
-    /**
-     * Runs Install() on all apps in the FS
-     * @throws AuthFailedException if not admin
-     * @return array [string:mixed]
-     */
-    protected function InstallApps(Input $input, bool $isAdmin) : array
+    /** @see Config::ListApps() */
+    public function ListApps(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
-        
-        $apps = array_filter(scandir(ROOT."/apps"),function($e){
-            return !in_array($e,array('.','..')); });            
-        
-        foreach ($apps as $app) $this->API->GetConfig()->EnableApp($app);
-    
-        return array_map(function(AppBase $app)use($input){ 
-            try { return $app->Install($input); }
-            catch (UnknownActionException $e){ return null; }
-        }, $this->API->GetApps());
+        if (!$isAdmin) throw new AuthFailedException(); return Config::ListApps();
     }
     
     /**

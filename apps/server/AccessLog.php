@@ -29,7 +29,11 @@ class AccessLog extends BaseAppLog
      */
     public static function Create(ObjectDatabase $database, $auth, bool $isAdmin) : ?self
     {
-        return parent::BaseRunCreate($database)->SetScalar('admin', $isAdmin);
+        $obj = parent::BaseRunCreate($database);
+        
+        if ($obj !== null) $obj->SetScalar('admin', $isAdmin);
+        
+        return $obj;
     }
 
     public static function GetPropUsage() : string { return "[--admin bool]"; }
