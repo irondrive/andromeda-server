@@ -31,6 +31,7 @@ abstract class AppBase implements Transactions
     
     public function Test(Input $input) { }
     
+    /** Tells the app to perform its initial setup */
     public function Install(Input $input) { }
     
     /**
@@ -39,11 +40,39 @@ abstract class AppBase implements Transactions
      */
     public abstract static function getUsage() : array;
     
-    /** Returns the app's version information */
-    public abstract static function getVersion() : string;
-    
     /** Return this app's BaseAppLog class name, if used (or null) */
     public static function getLogClass() : ?string { return null; }
+    
+    private static array $metadata = array();
+    
+    /** 
+     * Loads a metadata for the given app with the given key
+     * 
+     * Loads the app's JSON metadata file but not its code
+     */
+    protected static function getMetadata(string $app, string $key)
+    {
+        if (!array_key_exists($app, self::$metadata))
+        {
+            $data = file_get_contents(ROOT."/apps/$app/metadata.json");
+            
+            self::$metadata[$app] = Utilities::JSONDecode($data);
+        }
+        
+        return self::$metadata[$app][$key] ?? null;
+    }
+    
+    /** Returns the app's version information */
+    public static function getVersion(string $app) : string
+    {
+        return self::getMetadata($app,'version');
+    }
+    
+    /** Returns the list of apps this app depends on */
+    public static function getRequires(string $app) : array 
+    { 
+        return self::getMetadata($app,'requires') ?? array();
+    }
     
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }

@@ -1,4 +1,4 @@
-<?php define('Andromeda',true); 
+<?php define('Andromeda',true); define('a2_version','2.0.0-alpha');
 
 /** 
  * An Andromeda API is a pure-PHP transactional REST-ish API.
