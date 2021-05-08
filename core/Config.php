@@ -115,9 +115,9 @@ class Config extends SingletonObject
     /** List all installable app folders that exist in the filesystem */
     public static function ListApps() : array
     {
-        return array_filter(scandir(ROOT."/apps"),function($app){
+        return array_values(array_filter(scandir(ROOT."/apps"),function($app){
             if (in_array($app,array('.','..'))) return false;
-            return file_exists(ROOT."/apps/$app/metadata.json"); });
+            return file_exists(ROOT."/apps/$app/metadata.json"); }));
     }
     
     /** Registers the specified app name */
