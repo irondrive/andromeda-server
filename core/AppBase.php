@@ -59,6 +59,12 @@ abstract class AppBase implements Transactions
         return self::$metadata[$app][$key] ?? null;
     }
     
+    /** Returns the API version this app is compatible with */
+    public static function getReqVersion(string $app) : int
+    {
+        return self::getMetadata($app,'api-version');
+    }
+    
     /** Returns the app's version information */
     public static function getVersion(string $app) : string
     {
@@ -69,7 +75,7 @@ abstract class AppBase implements Transactions
     public static function getRequires(string $app) : array 
     { 
         return self::getMetadata($app,'requires') ?? array();
-    }
+    }    
     
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }
