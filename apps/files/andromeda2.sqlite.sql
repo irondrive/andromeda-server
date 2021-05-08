@@ -1,6 +1,6 @@
 PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2_objects_apps_files_accesslog` (
-  `id` char(16) NOT NULL
+  `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL
 ,  `account` char(12) DEFAULT NULL
 ,  `sudouser` char(12) DEFAULT NULL
