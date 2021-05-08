@@ -50,8 +50,8 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
 ,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_core_logging_actionlog` (
-  `id` char(16) NOT NULL
-,  `request` char(16) NOT NULL
+  `id` char(20) NOT NULL
+,  `request` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
 ,  `applog` varchar(64) DEFAULT NULL
@@ -59,7 +59,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2_objects_core_logging_requestlog` (
-  `id` char(16) NOT NULL
+  `id` char(20) NOT NULL
 ,  `actions` integer NOT NULL DEFAULT 0
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL

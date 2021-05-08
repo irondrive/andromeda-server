@@ -17,7 +17,7 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
  */
 abstract class BaseLog extends BaseObject
 {
-    public const IDLength = 16;
+    public const IDLength = 20;
     
     /** Returns the CLI usage string for loading objects by properties */
     public static abstract function GetPropUsage() : string;

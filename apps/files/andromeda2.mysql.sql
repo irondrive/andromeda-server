@@ -12,7 +12,7 @@
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_files_accesslog` (
-  `id` char(16) NOT NULL,
+  `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   `account` char(12) DEFAULT NULL,
   `sudouser` char(12) DEFAULT NULL,

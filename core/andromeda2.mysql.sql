@@ -78,8 +78,8 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_logging_actionlog` (
-  `id` char(16) NOT NULL,
-  `request` char(16) NOT NULL,
+  `id` char(20) NOT NULL,
+  `request` char(20) NOT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
   `applog` varchar(64) DEFAULT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_logging_requestlog` (
-  `id` char(16) NOT NULL,
+  `id` char(20) NOT NULL,
   `actions` smallint(6) NOT NULL DEFAULT 0,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
