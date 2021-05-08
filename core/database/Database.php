@@ -327,8 +327,6 @@ class Database implements Transactions
                 }                    
                 else $result = $query->rowCount();
                 
-                $query->closeCursor();
-                
                 if ($doSavepoint)
                     $this->connection->query("RELEASE SAVEPOINT mysave");
             }
