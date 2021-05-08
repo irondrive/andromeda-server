@@ -2,6 +2,7 @@
 
 require_once(ROOT."/core/Emailer.php");
 require_once(ROOT."/core/AppBase.php");
+require_once(ROOT."/core/Utilities.php");
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -21,6 +22,9 @@ class InvalidAppException extends Exceptions\ClientErrorException { public $mess
 
 /** Exception indicating that an app dependency was not met */
 class AppDependencyException extends Exceptions\ClientErrorException { public $message = "APP_DEPENDENCY_FAILURE"; }
+
+/** Exception indicating that the app is not compatible with this framework version */
+class AppVersionException extends Exceptions\ClientErrorException { public $message = "APP_VERSION_MISMATCH"; }
 
 /** The global framework config stored in the database */
 class Config extends SingletonObject
@@ -129,6 +133,10 @@ class Config extends SingletonObject
             if (!in_array($tapp, $apps))
                 throw new AppDependencyException($tapp);
         }
+        
+        $reqver = AppBase::getReqVersion($app);
+        if ($reqver != (new VersionInfo())->major)
+            throw new AppVersionException($reqver);
         
         Main::GetInstance()->LoadApp($app);
         

@@ -65,6 +65,24 @@ class JSONDecodingException extends JSONException { public $message = "JSON_DECO
  */
 interface Transactions { public function rollback(); public function commit(); }
 
+/** Class for parsing a version string into components */
+class VersionInfo
+{
+    public int $major; public int $minor; public int $patch; public string $extra;
+    
+    public function __construct(string $version = a2_version)
+    {
+        $version = explode('-',$version,2);
+        $this->extra = $version[1] ?? null;
+        
+        $version = explode('.',$version[0],3);
+        
+        $this->major = $version[0];
+        $this->minor = $version[1] ?? null;
+        $this->patch = $version[2] ?? null;
+    }
+}
+
 /** Abstract with some global static utility functions */
 abstract class Utilities
 {   
