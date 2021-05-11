@@ -10,6 +10,9 @@ class UnknownActionException extends Exceptions\ClientErrorException { public $m
 /** An exception indicating that the app is missing its config */
 class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
 
+/** An exception indicating that the metadata file is missing */
+class MissingMetadataException extends Exceptions\ServerException { public $message = "METADATA_MISSING"; }
+
 /** The base class from which apps must inherit */
 abstract class AppBase implements Transactions
 {
@@ -51,9 +54,11 @@ abstract class AppBase implements Transactions
     {
         if (!array_key_exists($app, self::$metadata))
         {
-            $data = file_get_contents(ROOT."/apps/$app/metadata.json");
+            $path = ROOT."/apps/$app/metadata.json";
             
-            self::$metadata[$app] = Utilities::JSONDecode($data);
+            if (!file_exists($path)) throw new MissingMetadataException();
+
+            self::$metadata[$app] = Utilities::JSONDecode(file_get_contents($path));
         }
         
         return self::$metadata[$app][$key] ?? null;
