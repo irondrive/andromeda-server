@@ -126,13 +126,12 @@ class Config extends SingletonObject
     
     /** Registers the specified app name */
     public function EnableApp(string $app) : self
-    {        
-        $apps = array_keys(Main::GetInstance()->GetApps());        
+    {
+        $apps = array_keys(Main::GetInstance()->GetApps()); 
+        
         foreach (AppBase::getRequires($app) as $tapp)
-        {
             if (!in_array($tapp, $apps))
                 throw new AppDependencyException($tapp);
-        }
         
         $reqver = AppBase::getReqVersion($app);
         if ($reqver != (new VersionInfo())->major)
@@ -140,10 +139,8 @@ class Config extends SingletonObject
         
         Main::GetInstance()->LoadApp($app);
         
-        $capps = $this->GetApps();
-        
-        if (!in_array($app, $capps)) $capps[] = $app;
-        
+        $capps = $this->GetApps();        
+        if (!in_array($app, $capps)) $capps[] = $app;        
         return $this->SetScalar('apps', $capps);
     }
     

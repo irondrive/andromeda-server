@@ -2,7 +2,7 @@
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
-require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Config, InvalidAppException};
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Config, InvalidAppException, MissingMetadataException};
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -349,7 +349,8 @@ class ServerApp extends AppBase
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
         try { $this->API->GetConfig()->EnableApp($app); }
-        catch (FailedAppLoadException $e){ throw new InvalidAppException(); }
+        catch (FailedAppLoadException | MissingMetadataException $e){ 
+            throw new InvalidAppException(); }
 
         return $this->API->GetConfig()->GetApps();
     }
