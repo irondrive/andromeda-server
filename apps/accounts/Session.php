@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -17,6 +19,7 @@ class Session extends KeySource
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
+            'dates__active' => null,
             'account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
             'client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
         ));
@@ -37,6 +40,35 @@ class Session extends KeySource
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
         
         parent::DeleteByQuery($database, $q->Where($w));
+    }
+        
+    /** Gets the last timestamp this client was active */
+    public function getActiveDate() : float { return $this->GetDate('active'); }
+    
+    /** Sets the timestamp this client was active to now */
+    public function setActiveDate() : self
+    {
+        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        
+        return $this->SetDate('active');
+    }
+        
+    /**
+     * Authenticates the given info claiming to be this session and checks the timeout
+     * @param string $key the session authentication key
+     * @return bool true if success, false if invalid
+     * @see AuthObject::CheckKeyMatch()
+     */
+    public function CheckMatch(string $key) : bool
+    {
+        if (!$this->CheckKeyMatch($key)) return false;
+        
+        $time = Main::GetInstance()->GetTime();
+        $maxage = $this->GetAccount()->GetSessionTimeout(); 
+        
+        if ($maxage !== null && $time - $this->getActiveDate() > $maxage) return false;
+        
+        return true;
     }
     
     /**

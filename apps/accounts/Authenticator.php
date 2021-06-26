@@ -99,7 +99,7 @@ class Authenticator
 
         $session = Session::TryLoadByID($database, $sessionid);
         
-        if ($session === null || !$session->CheckKeyMatch($sessionkey)) throw new InvalidSessionException();
+        if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
             
         $account = $session->GetAccount(); $client = $session->GetClient();
         
@@ -111,7 +111,7 @@ class Authenticator
 
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
-        $account->setActiveDate(); $client->setActiveDate();
+        $account->setActiveDate(); $client->setActiveDate(); $session->setActiveDate();
         
         if ($input->HasParam('auth_sudouser') && $account->isAdmin())
         {

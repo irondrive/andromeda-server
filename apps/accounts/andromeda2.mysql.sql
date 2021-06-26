@@ -32,6 +32,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `dates__active` double DEFAULT NULL,
   `dates__modified` double DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
+  `client_timeout` bigint(20) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
   `features__admin` tinyint(1) DEFAULT NULL,
   `features__disabled` tinyint(2) DEFAULT NULL,
@@ -182,6 +183,7 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `counters_limits__contacts` tinyint(4) DEFAULT NULL,
   `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
+  `client_timeout` bigint(11) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
   `accounts` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
@@ -223,6 +225,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
 CREATE TABLE `a2_objects_apps_accounts_session` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
+  `dates__active` double DEFAULT NULL,
   `dates__created` double NOT NULL DEFAULT 0,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
