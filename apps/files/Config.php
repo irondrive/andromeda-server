@@ -16,7 +16,7 @@ class Config extends SingletonObject
             'apiurl' => null,
             'rwchunksize' => new FieldTypes\Scalar(4*1024*1024),
             'crchunksize' => new FieldTypes\Scalar(128*1024),
-            'upload_maxsize' => new FieldTypes\Scalar(),
+            'upload_maxsize' => null,
             'features__timedstats' => new FieldTypes\Scalar(false)
         ));
     }

@@ -84,13 +84,14 @@ abstract class AuthEntity extends StandardObject
             'counters_limits__contacts' => null, // maximum number of contacts for the account
             'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
             'session_timeout' => null, // server-side timeout - max time for a session to be inactive
+            'client_timeout' => null, // server-side timeout - max time for a client to be inactive
             'max_password_age' => null, // max time since the account's password changed
             'dates__modified' => null // last timestamp these properties were modified
         ));
     }
     
     /** defines command usage for SetProperties() */
-    public static function GetPropUsage() : string { return "[--session_timeout ?int] [--max_password_age ?int] ".
+    public static function GetPropUsage() : string { return "[--session_timeout ?int] [--client_timeout ?int] [--max_password_age ?int] ".
                                                             "[--max_sessions ?int] [--max_contacts ?int] [--max_recoverykeys ?int] ".
                                                             "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
                                                             "[--accountsearch ?int] [--groupsearch ?int] [--userdelete ?bool]"; }
@@ -98,7 +99,7 @@ abstract class AuthEntity extends StandardObject
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
     {
-        foreach (array('session_timeout','max_password_age') as $prop)
+        foreach (array('session_timeout','client_timeout','max_password_age') as $prop)
             if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
         
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)

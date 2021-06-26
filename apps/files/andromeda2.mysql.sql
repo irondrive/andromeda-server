@@ -48,6 +48,7 @@ CREATE TABLE `a2_objects_apps_files_config` (
   `apiurl` text DEFAULT NULL,
   `rwchunksize` int(11) NOT NULL,
   `crchunksize` int(11) NOT NULL,
+  `upload_maxsize` bigint(20) DEFAULT NULL,
   `features__timedstats` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

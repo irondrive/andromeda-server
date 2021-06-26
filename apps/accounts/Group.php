@@ -213,6 +213,7 @@ class Group extends AuthEntity
                 'counters' => $this->GetAllCounters(),
                 'limits' => $this->GetAllCounterLimits(),
                 'session_timeout' => $this->TryGetScalar('session_timeout'),
+                'client_timeout' => $this->TryGetScalar('client_timeout'),
                 'max_password_age' => $this->TryGetScalar('max_password_age')
             ));
         }            

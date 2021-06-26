@@ -28,6 +28,7 @@ CREATE TABLE `a2_objects_apps_files_config` (
 ,  `apiurl` text DEFAULT NULL
 ,  `rwchunksize` integer NOT NULL
 ,  `crchunksize` integer NOT NULL
+,  `upload_maxsize` integer DEFAULT NULL
 ,  `features__timedstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );

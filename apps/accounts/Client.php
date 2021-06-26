@@ -84,16 +84,18 @@ class Client extends AuthObject
     }
 
     /**
-     * Authenticates the given info claiming to be this client
+     * Authenticates the given info claiming to be this client and checks the timeout
      * @param IOInterface $interface the interface used for the request
      * @param string $key the client authentication key
      * @return bool true if success, false if invalid
+     * @see AuthObject::CheckKeyMatch()
      */
     public function CheckMatch(IOInterface $interface, string $key) : bool
     {        
         if (!$this->CheckKeyMatch($key)) return false;
         
-        $maxage = $this->GetAccount()->GetSessionTimeout(); $time = Main::GetInstance()->GetTime();
+        $time = Main::GetInstance()->GetTime();
+        $maxage = $this->GetAccount()->GetClientTimeout(); 
         
         if ($maxage !== null && $time - $this->getActiveDate() > $maxage) return false;
 
