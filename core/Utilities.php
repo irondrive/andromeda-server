@@ -150,10 +150,10 @@ abstract class Utilities
      */
     public static function return_bytes(string $val) : int
     {
-        $val = trim($val); if (!$val) return 0; 
+        $val = trim($val); 
+        if (!$val) return 0;
         
-        $num = substr($val, 0, -1);
-        
+        $num = intval($val);        
         switch (substr($val, -1)) {
             case 'T': $num *= 1024;
             case 'G': $num *= 1024;

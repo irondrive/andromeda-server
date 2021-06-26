@@ -16,6 +16,7 @@ class Config extends SingletonObject
             'apiurl' => null,
             'rwchunksize' => new FieldTypes\Scalar(4*1024*1024),
             'crchunksize' => new FieldTypes\Scalar(128*1024),
+            'upload_maxsize' => new FieldTypes\Scalar(),
             'features__timedstats' => new FieldTypes\Scalar(false)
         ));
     }
@@ -24,7 +25,8 @@ class Config extends SingletonObject
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database); }
     
     /** Returns the command usage for SetConfig() */
-    public static function GetSetConfigUsage() : string { return "[--rwchunksize int] [--crchunksize int] [--timedstats bool] [--apiurl ?string]"; }
+    public static function GetSetConfigUsage() : string { return "[--rwchunksize uint] [--crchunksize uint] [--upload_maxsize ?uint] ".
+        "[--timedstats bool] [--apiurl ?string]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self
@@ -33,6 +35,9 @@ class Config extends SingletonObject
         
         if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT));
         if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT));
+        
+        if ($input->HasParam('upload_maxsize')) $this->SetScalar('upload_maxsize',$input->GetNullParam('upload_maxsize',SafeParam::TYPE_UINT));
+            
         if ($input->HasParam('timedstats')) $this->SetFeature('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
                     
         return $this;
@@ -53,19 +58,23 @@ class Config extends SingletonObject
     /**
      * Returns a printable client object for this config
      * @param bool $admin if true, show admin-only values
-     * @return array `{uploadmax:int, maxfiles:int, features:{timedstats:bool}}` \
-        if admin, add `{rwchunksize:int, crchunksize:int, apiurl:?string}`
+     * @return array `{uploadmax:{bytes:int, files:int}, features:{timedstats:bool}}` \
+        if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, apiurl:?string}`
      */
     public function GetClientObject(bool $admin) : array
     {
         $postmax = Utilities::return_bytes(ini_get('post_max_size'));
         $uploadmax = Utilities::return_bytes(ini_get('upload_max_size'));
+        
         if (!$postmax) $postmax = PHP_INT_MAX;
         if (!$uploadmax) $uploadmax = PHP_INT_MAX;
         
+        $adminmax = $this->TryGetScalar('upload_maxsize') ?? PHP_INT_MAX;
+
         $retval = array(
-            'uploadmax' => min($postmax, $uploadmax),
-            'maxfiles' => ini_get('max_file_uploads'),
+            'uploadmax' => array(
+                'bytes' => min($postmax, $uploadmax, $adminmax),
+                'files' => ini_get('max_file_uploads')),
             'features' => $this->GetAllFeatures()
         );
         
@@ -74,7 +83,8 @@ class Config extends SingletonObject
             $retval = array_merge($retval,array(
                 'apiurl' => $this->GetAPIUrl(),
                 'rwchunksize' => $this->GetRWChunkSize(),
-                'crchunksize' => $this->GetCryptoChunkSize()
+                'crchunksize' => $this->GetCryptoChunkSize(),
+                'upload_maxsize' => $this->TryGetScalar('upload_maxsize')
             ));
         }
         
