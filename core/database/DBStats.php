@@ -57,8 +57,7 @@ class DBStats
             'db_writes' => $this->writes,
             'db_write_time' => $this->write_time,
             'code_time' => $codetime,
-            'total_time' => $totaltime,
-            'queries' => $this->queries
+            'total_time' => $totaltime
         );
     }
     

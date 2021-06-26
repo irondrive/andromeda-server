@@ -67,8 +67,12 @@ class ErrorManager extends Singleton
         set_exception_handler(function(\Throwable $e)
         {
             if ($e instanceof Exceptions\ClientException) 
+            {
                 $output = $this->HandleClientException($e);
-            else $output = $this->HandleThrowable($e);
+                
+                $this->API->TrySetMetrics($output);
+            }
+            else $output = $this->HandleThrowable($e);           
             
             $this->interface->FinalOutput($output); die();  
         });

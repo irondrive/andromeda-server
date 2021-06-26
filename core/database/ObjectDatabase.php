@@ -24,12 +24,11 @@ class ObjectDatabase extends Database
     /** @var array<class, <id, BaseObject>> array of loaded objects */
     private array $objects = array();
 
-    /** returns an array mapping each loaded object ID to its class string, for debugging */
+    /** @return array <class, [id]> */
     public function getLoadedObjects() : array
     { 
-        return array_map(function(array $cobjs){ 
-            return array_map(function(BaseObject $obj){
-                return get_class($obj); },$cobjs);
+        return array_map(function(array $cobjs){
+            return array_keys($cobjs);
         }, $this->objects);
     }
 

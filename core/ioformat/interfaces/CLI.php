@@ -17,7 +17,7 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
+    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
                       " - param@ puts the content of the file in the parameter, param% uploads the file as a file (optionally with a new name)\n\n".
                       "batch usage:   php index.php batch myfile.txt\n".
                       "get version:   php index.php version\n".
@@ -85,6 +85,11 @@ class CLI extends IOInterface
                     $this->debug = (new SafeParam('debug',$argv[++$i]))->GetValue(SafeParam::TYPE_UINT);
                     break;
                     
+                case '--metrics':
+                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
+                    $this->metrics = (new SafeParam('metrics',$argv[++$i]))->GetValue(SafeParam::TYPE_UINT);
+                    break;
+                    
                 case '--dbconf':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
                     $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_FSPATH);
@@ -108,6 +113,8 @@ class CLI extends IOInterface
     private ?int $debug = null;
     public function GetDebugLevel() : int { return $this->debug ?? Config::ERRLOG_ERRORS; }
     
+    private ?int $metrics = null;
+    
     private ?string $dbconf = null;
     public function GetDBConfigFile() : ?string { return $this->dbconf; }
     
@@ -120,9 +127,10 @@ class CLI extends IOInterface
         {
             if ($this->debug !== null)
                 $config->SetDebugLevel($this->debug, true);
-            else $this->debug = $config->GetDebugLevel();
+            
+            if ($this->metrics !== null)
+                $config->SetMetricsLevel($this->metrics, true);
         }
-        else $this->debug = $this->GetDebugLevel();
         
         global $argv;
         
@@ -136,6 +144,7 @@ class CLI extends IOInterface
                 case '--json': break;
                 case '--printr': break;
                 case '--debug': $i++; break;
+                case '--metrics': $i++; break;
                 case '--dbconf': $i++; break;
                     
                 case '--dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;

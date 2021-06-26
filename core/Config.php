@@ -40,6 +40,9 @@ class Config extends SingletonObject
             'features__debug_http' => new FieldTypes\Scalar(false),
             'features__debug_dblog' => new FieldTypes\Scalar(true),
             'features__debug_filelog' => new FieldTypes\Scalar(false),
+            'features__metrics' => new FieldTypes\Scalar(0),
+            'features__metrics_dblog' => new FieldTypes\Scalar(false),
+            'features__metrics_filelog' => new FieldTypes\Scalar(false),
             'features__read_only' => new FieldTypes\Scalar(0),
             'features__enabled' => new FieldTypes\Scalar(true),
             'features__email' => new FieldTypes\Scalar(true),
@@ -53,6 +56,7 @@ class Config extends SingletonObject
     /** Returns the string detailing the CLI usage for SetConfig */
     public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."]".
                                                                  "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
+                                                                 "[--metrics ".implode('|',array_keys(self::METRICS_TYPES))."] [--metrics_dblog bool] [--metrics_filelog bool] ".
                                                                  "[--read_only ".implode('|',array_keys(self::RUN_TYPES))."] [--enabled bool] [--email bool] [--datadir ?text]"; }
     
     /**
@@ -94,6 +98,17 @@ class Config extends SingletonObject
         if ($input->HasParam('debug_dblog')) $this->SetFeature('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
         if ($input->HasParam('debug_filelog')) $this->SetFeature('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
 
+        if ($input->HasParam('metrics'))
+        {
+            $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
+                function($v){ return array_key_exists($v, self::METRICS_TYPES); });
+            
+            $this->SetFeature('metrics', self::METRICS_TYPES[$param]);
+        }
+        
+        if ($input->HasParam('metrics_dblog')) $this->SetFeature('metrics_dblog',$input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('metrics_filelog')) $this->SetFeature('metrics_filelog',$input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
+        
         if ($input->HasParam('read_only'))
         {
             $this->overrideReadOnly();
@@ -242,7 +257,30 @@ class Config extends SingletonObject
     public function GetDebugLog2File() : bool { return $this->GetFeature('debug_filelog'); } 
     
     /** Gets whether debug should be allowed over a non-privileged interface */
-    public function GetDebugOverHTTP() : bool { return $this->GetFeature('debug_http'); }       
+    public function GetDebugOverHTTP() : bool { return $this->GetFeature('debug_http'); }    
+    
+    /** Show basic performance metrics */
+    const METRICS_BASIC = 1;
+    
+    /** Show extended performance metrics */
+    const METRICS_EXTENDED = 2;
+    
+    const METRICS_TYPES = array('none'=>0, 'basic'=>1, 'extended'=>2);
+    
+    /** Returns the current metrics log level */
+    public function GetMetricsLevel() : int { return $this->GetFeature('metrics'); }
+    
+    /**
+     * Sets the current metrics log level
+     * @param bool $temp if true, only for this request
+     */
+    public function SetMetricsLevel(int $data, bool $temp = true) : self { return $this->SetFeature('metrics', $data, $temp); }
+    
+    /** Gets whether the server should log metrics to the database */
+    public function GetMetricsLog2DB()   : bool { return $this->GetFeature('metrics_dblog'); }
+    
+    /** Gets whether the server should log errors to a log file in the datadir */
+    public function GetMetricsLog2File() : bool { return $this->GetFeature('metrics_filelog'); } 
     
     /** Gets whether using configured emailers is currently allowed */
     public function GetEnableEmail() : bool { return $this->GetFeature('email'); }
@@ -264,8 +302,10 @@ class Config extends SingletonObject
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
      * @return array `{features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, features:{ requestlog_file:bool, requestlog_db:bool, requestlog_details:string,
-            debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool, email:bool }}`
+         if admin, add: `{datadir:?string, features:{ \
+            requestlog_file:bool, requestlog_db:bool, requestlog_details:string, \
+            metrics:string, metrics_dblog:bool, metrics_filelog:bool, email:bool
+            debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
     { 
@@ -273,8 +313,9 @@ class Config extends SingletonObject
         
         $data['features']['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()];
         
-        $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
         $data['features']['read_only'] = array_flip(self::RUN_TYPES)[$this->getReadOnly()];
+        $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
+        $data['features']['metrics'] = array_flip(self::METRICS_TYPES)[$this->GetMetricsLevel()];
         
         $data['apps'] = array();
         

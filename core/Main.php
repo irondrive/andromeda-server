@@ -20,7 +20,8 @@ use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 require_once(ROOT."/core/logging/RequestLog.php");
 require_once(ROOT."/core/logging/ActionLog.php");
-use Andromeda\Core\Logging\{RequestLog, ActionLog};
+require_once(ROOT."/core/logging/RequestMetrics.php");
+use Andromeda\Core\Logging\{RequestLog, ActionLog, RequestMetrics};
 
 /** Exception indicating that the requested app is invalid */
 class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
@@ -63,10 +64,10 @@ class RunContext
  */
 class Main extends Singleton
 { 
-    private array $construct_stats; 
+    private DBStats $construct_stats; 
     private array $run_stats = array(); 
     private array $commit_stats = array();
-    private DBStats $sum_stats;
+    private DBStats $total_stats;
     
     private RequestLog $reqlog;
     
@@ -125,7 +126,7 @@ class Main extends Singleton
         
         $this->time = microtime(true);
         $this->interface = $interface;
-        $this->sum_stats = new DBStats();
+        $this->total_stats = new DBStats();
         
         $interface->Initialize();
 
@@ -156,9 +157,8 @@ class Main extends Singleton
                     && $this->config->GetEnableRequestLog())
                 $this->reqlog = RequestLog::Create($this);
             
-            $construct_stats = $this->database->popStatsContext();
-            $this->sum_stats->Add($construct_stats);
-            $this->construct_stats = $construct_stats->getStats();
+            $this->construct_stats = $this->database->popStatsContext();
+            $this->total_stats->Add($this->construct_stats);
         }
         
         register_shutdown_function(function(){
@@ -217,8 +217,8 @@ class Main extends Singleton
         if ($dbstats && $this->database)
         {
             $stats = $this->database->popStatsContext();
-            $this->sum_stats->add($stats);
-            $this->run_stats[] = $stats->getStats();
+            $this->total_stats->Add($stats);
+            $this->run_stats[] = $stats;
         }
         
         return $data;
@@ -234,16 +234,7 @@ class Main extends Singleton
      */
     public function RunRemote(string $url, Input $input)
     {
-        $start = hrtime(true); 
-
         $data = AJAX::RemoteRequest($url, $input);
-
-        if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT)
-        {
-            $this->run_stats[] = array(
-                'remote_time' => (hrtime(true)-$start)/1e9,
-            );
-        }  
 
         return Output::ParseArray($data)->GetAppdata();
     }
@@ -337,8 +328,8 @@ class Main extends Singleton
             if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
             {
                 $commit_stats = $this->database->popStatsContext();
-                $this->commit_stats[] = $commit_stats->getStats();
-                $this->sum_stats->Add($commit_stats);
+                $this->commit_stats[] = $commit_stats;
+                $this->total_stats->Add($commit_stats);
             }
         }
         else foreach ($this->apps as $app) $app->commit();
@@ -374,45 +365,35 @@ class Main extends Singleton
         try
         {
             $debug = $this->config->GetDebugLevel();
-            if (!$this->config->GetDebugOverHTTP() && !$this->interface->isPrivileged()) $debug = 0;
+            
+            if (!$this->config->GetDebugOverHTTP() && 
+                !$this->interface->isPrivileged()) $debug = 0;
+            
             return $debug;
         }
         catch (\Throwable $e) { return $this->interface->GetDebugLevel(); }
     }
-
-    /** Returns an array of performance metrics, if allowed by config */
-    protected function GetMetrics() : ?array
-    {
-        if ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) return null;
-        
-        if (!$this->database) return null;
-        
-        $retval = array(
-            
-            'includes' => get_included_files(),
-            
-            'objects' => $this->database->getLoadedObjects(),
-            
-            'construct_stats' => $this->construct_stats,
-            'run_stats' => $this->run_stats,
-            'commit_stats' => $this->commit_stats,
-            'stats_total' => $this->sum_stats->getStats(),
-            
-            'peak_memory' => memory_get_peak_usage(),
-            'gcstats' => gc_status(),
-            'rusage' => getrusage(),
-            
-            'queries' => $this->database->getAllQueries(),
-            
-            'debuglog' => $this->error_manager->GetDebugLog()
-        );
-        
-        return $retval;
-    }
     
-    /** Do any final touches to the output object */
-    public function FinalizeOutput(Output $output) : void
+    /**
+     * Compiles performance metrics and adds them to the given output
+     * 
+     * Guaranteed not to throw an exception
+     * @param Output $output the output object to add metrics to
+     */
+    public function TrySetMetrics(Output $output) : void
     {
-        $output->SetMetrics($this->GetMetrics());
+        try
+        {
+            if ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) return;
+
+            if (!$this->config || !($level = $this->config->GetMetricsLevel())) return;
+            
+            $metrics = RequestMetrics::Create($level, 
+                $this->database, $this->reqlog,
+                $this->construct_stats, $this->total_stats);
+            
+            $output->SetMetrics($metrics->GetClientObject());
+        }
+        catch (\Throwable $e) { $this->error_manager->LogException($e, false); }
     }
 }
