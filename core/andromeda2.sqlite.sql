@@ -11,6 +11,9 @@ CREATE TABLE `a2_objects_core_config` (
 ,  `features__debug_http` integer NOT NULL
 ,  `features__debug_dblog` integer NOT NULL
 ,  `features__debug_filelog` integer NOT NULL
+,  `features__metrics` integer NOT NULL
+,  `features__metrics_dblog` integer NOT NULL
+,  `features__metrics_filelog` integer NOT NULL
 ,  `features__read_only` integer NOT NULL
 ,  `features__enabled` integer NOT NULL
 ,  `features__email` integer NOT NULL
@@ -66,6 +69,35 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
 ,  `agent` text NOT NULL
 ,  `errcode` integer DEFAULT NULL
 ,  `errtext` text DEFAULT NULL
+,  PRIMARY KEY (`id`)
+);
+CREATE TABLE `a2_objects_core_logging_requestmetrics` (
+  `id` char(20) NOT NULL
+,  `actions` integer NOT NULL
+,  `request` char(20) NOT NULL
+,  `dates__created` double NOT NULL
+,  `peak_memory` integer NOT NULL
+,  `nincludes` integer NOT NULL
+,  `nobjects` integer NOT NULL
+,  `construct__db_reads` integer NOT NULL
+,  `construct__db_read_time` double NOT NULL
+,  `construct__db_writes` integer NOT NULL
+,  `construct__db_write_time` double NOT NULL
+,  `construct__code_time` double NOT NULL
+,  `construct__total_time` double NOT NULL
+,  `construct__queries` text DEFAULT NULL
+,  `total__db_reads` integer NOT NULL
+,  `total__db_read_time` double NOT NULL
+,  `total__db_writes` integer NOT NULL
+,  `total__db_write_time` double NOT NULL
+,  `total__code_time` double NOT NULL
+,  `total__total_time` double NOT NULL
+,  `gcstats` text DEFAULT NULL
+,  `rusage` text DEFAULT NULL
+,  `includes` text DEFAULT NULL
+,  `objects` longtext DEFAULT NULL
+,  `queries` longtext DEFAULT NULL
+,  `debuglog` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_time" ON "a2_objects_core_exceptions_errorlog" (`time`);

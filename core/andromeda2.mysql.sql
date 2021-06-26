@@ -23,6 +23,9 @@ CREATE TABLE `a2_objects_core_config` (
   `features__debug_http` tinyint(1) NOT NULL,
   `features__debug_dblog` tinyint(1) NOT NULL,
   `features__debug_filelog` tinyint(1) NOT NULL,
+  `features__metrics` tinyint(2) NOT NULL,
+  `features__metrics_dblog` tinyint(1) NOT NULL,
+  `features__metrics_filelog` tinyint(1) NOT NULL,
   `features__read_only` tinyint(2) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
   `features__email` tinyint(1) NOT NULL,
@@ -99,6 +102,38 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
   `agent` text NOT NULL,
   `errcode` smallint(6) DEFAULT NULL,
   `errtext` text DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_core_logging_requestmetrics` (
+  `id` char(20) NOT NULL,
+  `actions` smallint(6) NOT NULL,
+  `request` char(20) NOT NULL,
+  `dates__created` double NOT NULL,
+  `peak_memory` int(11) NOT NULL,
+  `nincludes` smallint(6) NOT NULL,
+  `nobjects` int(11) NOT NULL,
+  `construct__db_reads` int(11) NOT NULL,
+  `construct__db_read_time` double NOT NULL,
+  `construct__db_writes` int(11) NOT NULL,
+  `construct__db_write_time` double NOT NULL,
+  `construct__code_time` double NOT NULL,
+  `construct__total_time` double NOT NULL,
+  `construct__queries` text DEFAULT NULL,
+  `total__db_reads` int(11) NOT NULL,
+  `total__db_read_time` double NOT NULL,
+  `total__db_writes` int(11) NOT NULL,
+  `total__db_write_time` double NOT NULL,
+  `total__code_time` double NOT NULL,
+  `total__total_time` double NOT NULL,
+  `gcstats` text DEFAULT NULL,
+  `rusage` text DEFAULT NULL,
+  `includes` text DEFAULT NULL,
+  `objects` longtext DEFAULT NULL,
+  `queries` longtext DEFAULT NULL,
+  `debuglog` longtext DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
