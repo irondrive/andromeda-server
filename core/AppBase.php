@@ -11,7 +11,7 @@ class UnknownActionException extends Exceptions\ClientErrorException { public $m
 class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
 
 /** An exception indicating that the metadata file is missing */
-class MissingMetadataException extends Exceptions\ServerException { public $message = "METADATA_MISSING"; }
+class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
 
 /** The base class from which apps must inherit */
 abstract class AppBase implements Transactions
