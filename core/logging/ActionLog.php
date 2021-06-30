@@ -70,8 +70,7 @@ class ActionLog extends BaseLog
         
         if ($applog !== null) $applog->SaveDetails();
         
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB()) 
-            parent::Save(); // ignore $onlyMandatory
+        parent::Save(); // ignore $onlyMandatory
         
         // make sure the applog is saved also in case of rollback
         if ($applog !== null) $applog->Save();

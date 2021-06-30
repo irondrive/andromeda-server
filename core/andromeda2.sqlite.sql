@@ -61,6 +61,34 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
+CREATE TABLE `a2_objects_core_logging_actionmetrics` (
+  `id` char(20) NOT NULL
+,  `request` char(20) NOT NULL
+,  `actionlog` char(20) NOT NULL
+,  `app` varchar(255) NOT NULL
+,  `action` varchar(255) NOT NULL
+,  `dates__created` double NOT NULL
+,  `stats__db_reads` integer NOT NULL
+,  `stats__db_read_time` double NOT NULL
+,  `stats__db_writes` integer NOT NULL
+,  `stats__db_write_time` double NOT NULL
+,  `stats__code_time` double NOT NULL
+,  `stats__total_time` double NOT NULL
+,  `stats__queries` longtext DEFAULT NULL
+,  PRIMARY KEY (`id`)
+);
+CREATE TABLE `a2_objects_core_logging_commitmetrics` (
+  `id` char(20) NOT NULL
+,  `request` char(20) NOT NULL
+,  `dates__created` double NOT NULL
+,  `stats__db_reads` integer NOT NULL
+,  `stats__db_read_time` double NOT NULL
+,  `stats__db_writes` integer NOT NULL
+,  `stats__db_write_time` double NOT NULL
+,  `stats__code_time` double NOT NULL
+,  `stats__total_time` double NOT NULL
+,  PRIMARY KEY (`id`)
+);
 CREATE TABLE `a2_objects_core_logging_requestlog` (
   `id` char(20) NOT NULL
 ,  `actions` integer NOT NULL DEFAULT 0
@@ -73,8 +101,9 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
 );
 CREATE TABLE `a2_objects_core_logging_requestmetrics` (
   `id` char(20) NOT NULL
-,  `actions` integer NOT NULL
-,  `request` char(20) NOT NULL
+,  `actions` integer NOT NULL DEFAULT 0
+,  `commits` integer NOT NULL DEFAULT 0
+,  `requestlog` char(20) DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  `peak_memory` integer NOT NULL
 ,  `nincludes` integer NOT NULL

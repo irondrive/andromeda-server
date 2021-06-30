@@ -114,6 +114,7 @@ class CLI extends IOInterface
     public function GetDebugLevel() : int { return $this->debug ?? Config::ERRLOG_ERRORS; }
     
     private ?int $metrics = null;
+    public function GetMetricsLevel() : int { return $this->metrics ?? 0; }
     
     private ?string $dbconf = null;
     public function GetDBConfigFile() : ?string { return $this->dbconf; }
@@ -267,7 +268,7 @@ class CLI extends IOInterface
     
     private $output_json = false;
     
-    public function FinalOutput(Output $output)
+    public function WriteOutput(Output $output)
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {

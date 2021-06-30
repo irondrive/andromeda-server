@@ -46,6 +46,9 @@ abstract class IOInterface extends Singleton
     /** Returns the debugging level requested by the interface */
     public function GetDebugLevel() : int { return 0; }
     
+    /** Returns the perf metrics level requested by the interface */
+    public function GetMetricsLevel() : int { return 0; }
+    
     /** Returns the path to the DB config file requested by the interface */
     public function GetDBConfigFile() : ?string { return null; }
     
@@ -86,5 +89,5 @@ abstract class IOInterface extends Singleton
     }
     
     /** Tells the interface to print its final output */
-    public abstract function FinalOutput(Output $output);
+    public abstract function WriteOutput(Output $output);
 }

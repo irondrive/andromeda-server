@@ -70,11 +70,11 @@ class ErrorManager extends Singleton
             {
                 $output = $this->HandleClientException($e);
                 
-                $this->API->TrySetMetrics($output);
+                $this->API->FinalizeOutput($output, true);
             }
             else $output = $this->HandleThrowable($e);           
             
-            $this->interface->FinalOutput($output); die();  
+            $this->interface->WriteOutput($output); die();  
         });
     }
     

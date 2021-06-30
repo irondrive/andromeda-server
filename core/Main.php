@@ -44,16 +44,23 @@ class DataWriteFailedException extends Exceptions\ServerException { public $mess
 /** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
 class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
 
+/** FinalizeOutput requires the database to not already be undergoing a transaction */
+class FinalizeTransactionException extends Exceptions\ServerException { public $message = "FINALIZE_OUTPUT_IN_TRANSACTION"; }
+
 class RunContext 
 { 
     private Input $input;     
     private ?ActionLog $actionlog;
+    private ?DBStats $metrics;
     
     public function GetInput() : Input { return $this->input; }
     public function GetActionLog() : ?ActionLog { return $this->actionlog; }
     
     public function __construct(Input $input, ?ActionLog $actionlog){ 
         $this->input = $input; $this->actionlog = $actionlog; }
+        
+    public function GetMetrics() : ?DBStats { return $this->metrics; }
+    public function SetMetrics(DBStats $metrics) { $this->metrics = $metrics; }
 }
 
 /**
@@ -65,7 +72,7 @@ class RunContext
 class Main extends Singleton
 { 
     private DBStats $construct_stats; 
-    private array $run_stats = array(); 
+    private array $action_stats = array(); 
     private array $commit_stats = array();
     private DBStats $total_stats;
     
@@ -79,6 +86,7 @@ class Main extends Singleton
     
     private ?Config $config = null; 
     private ?ObjectDatabase $database = null; 
+    
     private ErrorManager $error_manager;
     private IOInterface $interface;
     
@@ -204,9 +212,8 @@ class Main extends Singleton
         
         $actionlog = isset($this->reqlog) ? $this->reqlog->LogAction($input) : null;
             
-        $this->stack[] = new RunContext($input, $actionlog);
-            
-        $this->dirty = true;
+        $context = new RunContext($input, $actionlog);
+        $this->stack[] = $context; $this->dirty = true;
         
         $data = $this->apps[$app]->Run($input);
 
@@ -218,7 +225,9 @@ class Main extends Singleton
         {
             $stats = $this->database->popStatsContext();
             $this->total_stats->Add($stats);
-            $this->run_stats[] = $stats;
+            
+            $context->SetMetrics($stats);
+            $this->action_stats[] = $context;
         }
         
         return $data;
@@ -239,27 +248,6 @@ class Main extends Singleton
         return Output::ParseArray($data)->GetAppdata();
     }
     
-    private array $writes = array();
-    
-    /**
-     * Helper function for apps to write data to the global data directory
-     * @param string $path the path (within the data directory) to write to
-     * @param string $data the data to place in the file
-     * @throws InvalidDataDirException if the datadir is invalid or not set
-     * @return $this
-     */
-    public function WriteDataFile(string $path, string $data) : self
-    {
-        $datadir = $this->GetConfig()->GetDataDir();
-        if (!$datadir || !is_writeable($datadir))
-            throw new InvalidDataDirException();
-        
-        $this->writes[] = $path;
-        
-        if (file_put_contents($path, $data) === false)
-            throw new DataWriteFailedException();
-    }
-    
     /**
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
@@ -271,9 +259,6 @@ class Main extends Singleton
         $this->rollback = true;
         
         foreach ($this->apps as $app) try { $app->rollback(); }
-        catch (\Throwable $e) { $this->error_manager->LogException($e); }
-        
-        foreach ($this->writes as $path) try { unlink($path); } 
         catch (\Throwable $e) { $this->error_manager->LogException($e); }
         
         if ($this->database) 
@@ -362,8 +347,8 @@ class Main extends Singleton
     /** Returns the configured debug level, or the interface's default */
     public function GetDebugLevel() : int
     {
-        try
-        {
+        if ($this->config)
+        {            
             $debug = $this->config->GetDebugLevel();
             
             if (!$this->config->GetDebugOverHTTP() && 
@@ -371,29 +356,43 @@ class Main extends Singleton
             
             return $debug;
         }
-        catch (\Throwable $e) { return $this->interface->GetDebugLevel(); }
+        else return $this->interface->GetDebugLevel();
     }
     
     /**
      * Compiles performance metrics and adds them to the given output
-     * 
-     * Guaranteed not to throw an exception
      * @param Output $output the output object to add metrics to
+     * @param bool $isError if true, the output is an error response
      */
-    public function TrySetMetrics(Output $output) : void
+    public function FinalizeOutput(Output $output, bool $isError = false) : void
     {
+        $mlevel = $this->config ? $this->config->GetMetricsLevel() : $this->interface->GetMetricsLevel();
+        
+        if (!$this->database || !$mlevel) return;
+        
+        if  ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT &&
+             !$this->interface->isPrivileged()) return;
+        
+        if ($this->database->inTransaction())
+            throw new FinalizeTransactionException();
+            
         try
         {
-            if ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) return;
-
-            if (!$this->config || !($level = $this->config->GetMetricsLevel())) return;
+            $metrics = RequestMetrics::Create(
+                $mlevel, $this->database, $this->reqlog ?? null,
+                $this->construct_stats, $this->action_stats,
+                $this->commit_stats, $this->total_stats);
             
-            $metrics = RequestMetrics::Create($level, 
-                $this->database, $this->reqlog,
-                $this->construct_stats, $this->total_stats);
+            $output->SetMetrics($metrics->GetClientObject($isError));
             
-            $output->SetMetrics($metrics->GetClientObject());
+            $metrics->Save(); $this->database->commit();
         }
-        catch (\Throwable $e) { $this->error_manager->LogException($e, false); }
+        catch (\Throwable $e)
+        {
+            $this->database->rollback();
+
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) throw $e;
+            else $this->error_manager->LogException($e, false);
+        }
     }
 }

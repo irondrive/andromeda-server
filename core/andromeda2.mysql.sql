@@ -94,6 +94,40 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_core_logging_actionmetrics` (
+  `id` char(20) NOT NULL,
+  `request` char(20) NOT NULL,
+  `actionlog` char(20) NOT NULL,
+  `app` varchar(255) NOT NULL,
+  `action` varchar(255) NOT NULL,
+  `dates__created` double NOT NULL,
+  `stats__db_reads` int(11) NOT NULL,
+  `stats__db_read_time` double NOT NULL,
+  `stats__db_writes` int(11) NOT NULL,
+  `stats__db_write_time` double NOT NULL,
+  `stats__code_time` double NOT NULL,
+  `stats__total_time` double NOT NULL,
+  `stats__queries` longtext DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2_objects_core_logging_commitmetrics` (
+  `id` char(20) NOT NULL,
+  `request` char(20) NOT NULL,
+  `dates__created` double NOT NULL,
+  `stats__db_reads` int(11) NOT NULL,
+  `stats__db_read_time` double NOT NULL,
+  `stats__db_writes` int(11) NOT NULL,
+  `stats__db_write_time` double NOT NULL,
+  `stats__code_time` double NOT NULL,
+  `stats__total_time` double NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_logging_requestlog` (
   `id` char(20) NOT NULL,
   `actions` smallint(6) NOT NULL DEFAULT 0,
@@ -109,8 +143,9 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_core_logging_requestmetrics` (
   `id` char(20) NOT NULL,
-  `actions` smallint(6) NOT NULL,
-  `request` char(20) NOT NULL,
+  `actions` smallint(6) NOT NULL DEFAULT 0,
+  `commits` smallint(6) NOT NULL DEFAULT 0,
+  `requestlog` char(20) DEFAULT NULL,
   `dates__created` double NOT NULL,
   `peak_memory` int(11) NOT NULL,
   `nincludes` smallint(6) NOT NULL,

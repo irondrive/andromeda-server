@@ -48,7 +48,6 @@ $main->commit();
 
 if ($interface->UserOutput($output)) $main->commit();
 
-$main->TrySetMetrics($output);
+$main->FinalizeOutput($output);
 
-$interface->FinalOutput($output);
-
+$interface->WriteOutput($output);
