@@ -268,6 +268,9 @@ class Database implements Transactions
         else return implode(' || ',$args);
     }
     
+    /** Returns true if the DB is currently in a transaction */
+    public function inTransaction() : bool { return $this->connection->inTransaction(); }
+    
     const QUERY_READ = 1; const QUERY_WRITE = 2;
 
     /**

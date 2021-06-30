@@ -126,7 +126,7 @@ class AJAX extends IOInterface
         return parent::UserOutput($output);
     }
     
-    public function FinalOutput(Output $output)
+    public function WriteOutput(Output $output)
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {

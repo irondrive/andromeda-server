@@ -46,7 +46,10 @@ class DBStats
      */
     public function getQueries() : array { return $this->queries; }
     
-    /** Returns an array of statistics collected */
+    /** 
+     * Returns an array of statistics collected 
+     * @return array `{db_reads:int,db_read_time:double,db_writes:int,db_write_time:double,code_time:double,total_time:double}`
+     */
     public function getStats() : array
     {
         $totaltime = (hrtime(true)-$this->start_time)/1e9;
