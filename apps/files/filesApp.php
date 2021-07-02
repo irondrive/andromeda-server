@@ -554,6 +554,9 @@ class FilesApp extends AppBase
     
     /**
      * Writes new data to an existing file - data is posted as a file
+     * 
+     * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback writes.
+     * The FS will restore the original size of the file but writes within the original size are permanent.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws RandomWriteDisabledException if random write is not allowed on the file
      * @throws ItemAccessDeniedException if acessing via share and share doesn't allow modify
@@ -634,6 +637,9 @@ class FilesApp extends AppBase
     
     /**
      * Truncates (resizes a file)
+     * 
+     * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback truncates.
+     * The FS will restore the original size of the file but if the file was shrunk, data will be zeroed.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws RandomWriteDisabledException if random writes are not enabled on the file
      * @throws ItemAccessDeniedException if access via share and share does not allow modify
@@ -954,6 +960,10 @@ class FilesApp extends AppBase
     
     /**
      * Deletes an item.
+     * 
+     * DO NOT use this in a multi-action transaction as the underlying FS cannot rollback deletes.
+     * If you delete an item and then do another action that results in an error, the content
+     * will still be deleted on disk though the database objects will remain.
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify is not allowed

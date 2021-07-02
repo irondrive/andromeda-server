@@ -332,7 +332,7 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubReadBytes(string $path, int $start, int $length) : string;
 
     /**
-     * Writes data to a file - NO ROLLBACK
+     * Writes data to a file - NO ROLLBACK within existing bounds
      * @param string $path file to write
      * @param int $start byte offset to write
      * @param string $data data to write
@@ -344,6 +344,14 @@ abstract class Storage extends StandardObject implements Transactions
         
         if ($this->isDryRun()) return $this;
         
+        $oldsize = $this->getSize($path);
+        
+        if ($start + strlen($data) > $oldsize)
+        {
+            array_push($this->onRollback, function()use($path,$oldsize){
+                $this->SubTruncate($path, $oldsize); });
+        }
+        
         return $this->SubWriteBytes($path, $start, $data);
     }
     
@@ -354,7 +362,7 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubWriteBytes(string $path, int $start, string $data) : self;
     
     /**
-     * Truncates the file (changes size) - ROLLBACK + SHRINK = lost data!
+     * Truncates the file (changes size) - SHRINK + ROLLBACK = lost data!
      * @param string $path file to resize
      * @param int $length new length of file
      * @return $this
@@ -545,11 +553,14 @@ abstract class Storage extends StandardObject implements Transactions
     /** array of functions to run for commit */
     protected array $onCommit = array();
     
-    public function commit() { foreach ($this->onCommit as $func) $func(); }
-    
-    /** Commits all instantiated filesystems */
-    public static function commitAll() { foreach (self::$instances as $fs) $fs->commit(); }
-    
+    public function commit() 
+    { 
+        foreach ($this->onCommit as $func) $func();
+        
+        $this->onCommit = array();
+        $this->onRollback = array();
+    }
+
     /** array of functions to run for rollback */
     protected array $onRollback = array();
     
@@ -557,7 +568,13 @@ abstract class Storage extends StandardObject implements Transactions
     {
         foreach (array_reverse($this->onRollback) as $func) try { $func(); } 
             catch (\Throwable $e) { ErrorManager::GetInstance()->LogException($e); }
+            
+        $this->onCommit = array();
+        $this->onRollback = array();
     }
+    
+    /** Commits all instantiated filesystems */
+    public static function commitAll() { foreach (self::$instances as $fs) $fs->commit(); }
     
     /** Rolls back all instantiated filesystems */
     public static function rollbackAll()

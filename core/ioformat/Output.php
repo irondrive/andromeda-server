@@ -73,10 +73,10 @@ class Output
     }
     
     /** Constructs an Output object representing a success response */
-    public static function Success($appdata) : Output
+    public static function Success(array $appdata) : Output
     {
         // if we only ran a single input, make the output array be that result
-        if (is_array($appdata) && count($appdata) === 1 && array_key_exists(0,$appdata)) $appdata = $appdata[0];
+        if (count($appdata) === 1 && array_key_exists(0,$appdata)) $appdata = $appdata[0];
         
         $output = new Output(true, 200); $output->appdata = $appdata; return $output;
     }

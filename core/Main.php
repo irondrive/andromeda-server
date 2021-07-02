@@ -271,11 +271,9 @@ class Main extends Singleton
                 {                    
                     if (isset($this->reqlog)) $this->reqlog->SetError($e);
                     
-                    $this->database->saveObjects(true);
+                    $this->database->saveObjects(true); 
                     
-                    $rollback = $this->config && $this->config->getReadOnly();
-                    
-                    if ($rollback) $this->database->rollback(); else $this->database->commit(); 
+                    $this->commitInner();
                 }
                 catch (\Throwable $e) { $this->error_manager->LogException($e); }
             }
@@ -304,11 +302,7 @@ class Main extends Singleton
                 
             $this->database->saveObjects();
             
-            $rollback = $this->config && $this->config->getReadOnly();
-            
-            foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
-            
-            if ($rollback) $this->database->rollback(); else $this->database->commit();
+            $this->commitInner(true);
                     
             if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
             {
@@ -322,6 +316,19 @@ class Main extends Singleton
         set_time_limit($tl); ignore_user_abort($ua);
         
         $this->dirty = false;
+    }
+    
+    /**
+     * Commits the database or does a rollback if readOnly/dryrun
+     * @param bool $apps if true, commit/rollback apps also
+     */
+    protected function commitInner(bool $apps = false) : void
+    {
+        $rollback = $this->config && $this->config->getReadOnly();
+        
+        if ($apps) foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
+        
+        if ($rollback) $this->database->rollback(); else $this->database->commit();
     }
 
     /** if false, requests are not allowed (always true for privileged interfaces) */
@@ -385,7 +392,7 @@ class Main extends Singleton
             
             $output->SetMetrics($metrics->GetClientObject($isError));
             
-            $metrics->Save(); $this->database->commit();
+            $metrics->Save(); $this->commitInner();
         }
         catch (\Throwable $e)
         {
