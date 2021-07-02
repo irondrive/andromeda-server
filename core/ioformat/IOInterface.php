@@ -9,9 +9,22 @@ require_once(ROOT."/core/ioformat/interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
 
-/**
- * Describes an abstract PHP I/O interface abstraction
- */
+/** Class for custom app output routines */
+class OutputHandler
+{
+    private $getbytes; private $output;
+    
+    public function __construct(callable $getbytes, callable $output){
+        $this->getbytes = $getbytes; $this->output = $output; }
+    
+    /** Return the number of bytes that will be output */
+    public function GetBytes() : int { return ($this->getbytes)(); }
+    
+    /** Do the actual output routine */
+    public function Output(Output $output) : void { ($this->output)($output); }
+}
+
+/** Describes an abstract PHP I/O interface abstraction */
 abstract class IOInterface extends Singleton
 {
     /** Constructs and returns a singleton of the appropriate interface type */
@@ -60,32 +73,60 @@ abstract class IOInterface extends Singleton
     protected ?int $outmode;
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
-    
-    /** Gets the output mode in use currently */
-    public function GetOutputMode() : ?int { return $this->outmode; }
 
-    /** Sets the output mode to plain text */
+    /** Sets the output mode to the given mode or null (none) - NOT USED in "multi-output" mode! */
     public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
     
-    private static $retfunc;
+    private $retfuncs = array();
+    private int $numretfuncs = 0;
     
-    /** Registers a user output handler function to run after the initial commit */
-    public function SetOutputHandler(callable $f) : self 
+    /** 
+     * Registers a user output handler function to run after the initial commit 
+     * 
+     * Will cause "multi-output" mode to be used if > 1 function that return > 0 bytes are defined
+     * @see IOInterface::isMultiOutput()
+     */
+    public function RegisterOutputHandler(OutputHandler $f) : self 
     {
-        self::$retfunc = $f; return $this; 
+        if ($f->GetBytes()) { $this->outmode = null; $this->numretfuncs++; }
+        
+        $this->retfuncs[] = $f; return $this; 
     }
     
     /** 
-     * Tells the interface to run the custom user output function
+     * Returns true if the output is using multi-output mode 
+     * 
+     * Multi-output mode is used when more than one user output function wants to run.
+     * To accomodate this, each section will be prefaced with the number of bytes written.
+     * In multi-output mode, the requested global output mode is ignored and the request
+     * is always finished with JSON output (also with the # of bytes prefixed)
+     * @see IOInterface::formatSize()
+     */
+    protected function isMultiOutput() : bool { return $this->numretfuncs > 1; }
+    
+    /** 
+     * Returns the binary-packed version of the given integer size 
+     * 
+     * unsigned long long (always 64 bit, little endian byte order)
+     */
+    protected static function formatSize(int $size) : string { return pack("P", $size); }
+    
+    /** 
+     * Tells the interface to run the custom user output functions
      * @return bool true if a custom function was run
      */
     public function UserOutput(Output $output) : bool
-    {       
-        $retval = isset(self::$retfunc);
+    {
+        $multi = $this->isMultiOutput();
         
-        if ($retval) (self::$retfunc)($output);
+        foreach ($this->retfuncs as $handler) 
+        { 
+            if ($multi) echo static::formatSize($handler->GetBytes());
+            
+            $handler->Output($output); flush();
+        }
         
-        return $retval;
+        return count($this->retfuncs) > 0;
     }
     
     /** Tells the interface to print its final output */

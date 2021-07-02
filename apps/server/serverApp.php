@@ -10,8 +10,10 @@ require_once(ROOT."/core/exceptions/ErrorLog.php"); use Andromeda\Core\Exception
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException, DatabaseConfigException};
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
 require_once(ROOT."/core/logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
 require_once(ROOT."/core/logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/core/logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
@@ -275,10 +277,15 @@ class ServerApp extends AppBase
      */
     protected function PHPInfo(Input $input, bool $isAdmin) : void
     {
+        $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
+        
         if (!$isAdmin) throw new AuthFailedException();
-
-        $this->API->GetInterface()->SetOutputHandler(function(){
-            $this->API->GetInterface()->SetOutputMode(null); phpinfo(); });
+        
+        ob_start(); phpinfo(); $retval = ob_get_contents(); ob_end_clean();
+        
+        $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
+            function()use($retval){ return strlen($retval); }, 
+            function(Output $output)use($retval){ echo $retval; }));
     }
     
     /**

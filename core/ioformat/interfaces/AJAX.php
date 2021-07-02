@@ -128,7 +128,9 @@ class AJAX extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        if ($this->outmode === self::OUTPUT_PLAIN)
+        $multi = $this->isMultiOutput();
+        
+        if (!$multi && $this->outmode === self::OUTPUT_PLAIN)
         {
             if (!headers_sent())
             {
@@ -142,7 +144,7 @@ class AJAX extends IOInterface
             else $this->outmode = self::OUTPUT_JSON;
         }        
         
-        if ($this->outmode === self::OUTPUT_PRINTR) 
+        if (!$multi && $this->outmode === self::OUTPUT_PRINTR) 
         {
             if (!headers_sent())
             {
@@ -154,7 +156,7 @@ class AJAX extends IOInterface
             echo print_r($outdata, true);
         }        
         
-        if ($this->outmode === self::OUTPUT_JSON)
+        if ($multi || $this->outmode === self::OUTPUT_JSON)
         {
             if (!headers_sent()) 
             {
@@ -163,7 +165,12 @@ class AJAX extends IOInterface
             }
             
             $outdata = $output->GetAsArray();
-            echo Utilities::JSONEncode($outdata);
+            
+            $outdata = Utilities::JSONEncode($outdata);
+            
+            if ($multi) echo static::formatSize(strlen($outdata));
+            
+            echo $outdata;
         }
     }
     

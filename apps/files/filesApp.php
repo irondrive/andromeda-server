@@ -28,7 +28,7 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php"); use Andromeda\Core\IOFormat\Interfaces\AJAX;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -120,7 +120,7 @@ class FilesApp extends AppBase
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey alphanum] [--spassword raw]',
             'upload --file% path [name] --parent id [--overwrite bool]',
-            'download --file id [--fstart int] [--flast int]',
+            'download --file id [--fstart int] [--flast int] [--debugdl bool]',
             'ftruncate --file id --size int',
             'writefile --data% path --file id [--offset int]',
             'getfilelikes --file id [--limit int] [--offset int]',
@@ -454,9 +454,11 @@ class FilesApp extends AppBase
     {
         // TODO CLIENT - since this is not AJAX, we might want to redirect to a page when doing a 404, etc. - better than plaintext - use appurl config
         
-        $iface = $this->API->GetInterface();
-        $oldmode = $iface->GetOutputMode();
-        $iface->SetOutputMode(IOInterface::OUTPUT_PLAIN);
+        $debugdl = ($input->GetOptParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
+            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::ERRLOG_DEVELOPMENT;
+        
+        // debugdl disables file output printing and instead does a normal JSON return
+        if (!$debugdl) $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog); 
         $file = $access->GetItem(); $share = $access->GetShare();
@@ -498,9 +500,7 @@ class FilesApp extends AppBase
         // transfer chunk size must be an integer multiple of the FS chunk size
         if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
         
-        $debugdl = ($input->GetOptParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
-            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::ERRLOG_DEVELOPMENT;
-        
+
         $partial = $fstart != 0 || $flast != $fsize-1;
 
         if (!$partial) $file->CountDownload((isset($share) && $share !== null));
@@ -508,8 +508,6 @@ class FilesApp extends AppBase
         // send necessary headers
         if (!$debugdl)
         {
-            $iface->SetOutputMode(null);
-            
             if ($partial)
             {
                 http_response_code(206);
@@ -523,12 +521,12 @@ class FilesApp extends AppBase
             header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
             header('Content-Transfer-Encoding: binary');
         }
-        else $iface->SetOutputMode($oldmode);
         
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
-        $this->API->GetInterface()->SetOutputHandler(function(Output $output) 
-            use($file,$fstart,$flast,$chunksize,$align,$debugdl)
+        $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
+            function() use($flast,$fstart,$debugdl){ return $debugdl ? 0 : $flast-$fstart+1; },
+            function(Output $output) use($file,$fstart,$flast,$chunksize,$align,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
 
@@ -551,7 +549,7 @@ class FilesApp extends AppBase
                 
                 if (!$debugdl) { echo $data; flush(); }
             }
-        });
+        }));
     }
     
     /**
