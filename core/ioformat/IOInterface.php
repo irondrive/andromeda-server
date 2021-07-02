@@ -21,7 +21,7 @@ class OutputHandler
     public function GetBytes() : int { return ($this->getbytes)(); }
     
     /** Do the actual output routine */
-    public function Output(Output $output) : void { ($this->output)($output); }
+    public function DoOutput(Output $output) : void { ($this->output)($output); }
 }
 
 /** Describes an abstract PHP I/O interface abstraction */
@@ -83,12 +83,17 @@ abstract class IOInterface extends Singleton
     /** 
      * Registers a user output handler function to run after the initial commit 
      * 
-     * Will cause "multi-output" mode to be used if > 1 function that return > 0 bytes are defined
+     * Will cause "multi-output" mode to be used if > 1 
+     * functions that return > 0 bytes are defined
      * @see IOInterface::isMultiOutput()
      */
     public function RegisterOutputHandler(OutputHandler $f) : self 
     {
-        if ($f->GetBytes()) { $this->outmode = null; $this->numretfuncs++; }
+        if ($f->GetBytes()) 
+        { 
+            $this->outmode = null; 
+            $this->numretfuncs++;
+        }
         
         $this->retfuncs[] = $f; return $this; 
     }
@@ -123,7 +128,7 @@ abstract class IOInterface extends Singleton
         { 
             if ($multi) echo static::formatSize($handler->GetBytes());
             
-            $handler->Output($output); flush();
+            $handler->DoOutput($output); flush();
         }
         
         return count($this->retfuncs) > 0;
