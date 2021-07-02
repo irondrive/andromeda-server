@@ -270,7 +270,9 @@ class CLI extends IOInterface
     
     public function WriteOutput(Output $output)
     {
-        if ($this->outmode === self::OUTPUT_PLAIN)
+        $multi = $this->isMultiOutput();
+        
+        if (!$multi && $this->outmode === self::OUTPUT_PLAIN)
         {
             // try echoing as a string, switch to printr if it fails
             $outstr = $output->GetAsString();
@@ -278,16 +280,21 @@ class CLI extends IOInterface
             else $this->outmode = self::OUTPUT_PRINTR;
         }
 
-        if ($this->outmode === self::OUTPUT_PRINTR)
+        if (!$multi && $this->outmode === self::OUTPUT_PRINTR)
         {
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true)."\n";
         }        
         
-        if ($this->outmode === self::OUTPUT_JSON)
+        if ($multi || $this->outmode === self::OUTPUT_JSON)
         {
             $outdata = $output->GetAsArray();
-            echo Utilities::JSONEncode($outdata)."\n";
+            
+            $outdata = Utilities::JSONEncode($outdata)."\n";
+            
+            if ($multi) echo static::formatSize(strlen($outdata));
+            
+            echo $outdata;
         }
 
         exit($output->isOK() ? 0 : $output->GetHTTPCode());
