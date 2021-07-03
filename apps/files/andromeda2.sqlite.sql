@@ -24,6 +24,7 @@ CREATE TABLE `a2_objects_apps_files_comment` (
 );
 CREATE TABLE `a2_objects_apps_files_config` (
   `id` char(12) NOT NULL
+,  `version` varchar(255) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `apiurl` text DEFAULT NULL
 ,  `rwchunksize` integer NOT NULL

@@ -143,11 +143,11 @@ class RequestMetrics extends StandardObject
             'construct_stats' => $this->GetAllScalars('construct'),
         );
         
-        $retval['action_stats'] = array_map(function(ActionMetrics $o){ 
-            return $o->GetClientObject(); }, $this->GetObjectRefs('actions'));
+        $retval['action_stats'] = array_values(array_map(function(ActionMetrics $o){ 
+            return $o->GetClientObject(); }, $this->GetObjectRefs('actions')));
             
-        $retval['commit_stats'] = array_map(function(CommitMetrics $o){
-            return $o->GetClientObject(); }, $this->GetObjectRefs('commits'));
+        $retval['commit_stats'] = array_values(array_map(function(CommitMetrics $o){
+            return $o->GetClientObject(); }, $this->GetObjectRefs('commits')));
             
         $retval['total_stats'] = $this->GetAllScalars('total');
             

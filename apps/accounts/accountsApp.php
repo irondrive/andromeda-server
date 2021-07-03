@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -119,17 +120,21 @@ class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException
  * authentication, multi-client/session management, authentication via external
  * sources, and granular per-account/per-group config.
  */
-class AccountsApp extends AppBase
+class AccountsApp extends UpgradableApp
 {   
     private Config $config;
     
     private ObjectDatabase $database;
     
-    public static function getLogClass() : ?string { return AccessLog::class; }
+    public static function getName() : string { return 'accounts'; }
+    
+    protected static function getLogClass() : ?string { return AccessLog::class; }
+    
+    protected function getDBVersion() : DBVersion { return $this->config; }
     
     public static function getUsage() : array 
     { 
-        return array(
+        return array_merge(parent::getUsage(),array(
             'install',
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
@@ -179,7 +184,7 @@ class AccountsApp extends AppBase
             'addwhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
             'removewhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
             'getwhitelist'
-        );
+        ));
     }
     
     public function __construct(Main $api)
@@ -203,7 +208,9 @@ class AccountsApp extends AppBase
     {
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new UnknownConfigException(static::class);
+            throw new UnknownConfigException('accounts');
+        
+        if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
         
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
@@ -286,7 +293,7 @@ class AccountsApp extends AppBase
         
         Config::Create($this->database)->Save();
     }
-    
+
     /**
      * Gets config for this app
      * @return array Config

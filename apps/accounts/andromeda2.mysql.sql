@@ -134,6 +134,7 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL,
+  `version` varchar(255) NOT NULL,
   `features__createaccount` smallint(1) NOT NULL,
   `features__usernameiscontact` tinyint(1) NOT NULL,
   `features__requirecontact` tinyint(2) NOT NULL,

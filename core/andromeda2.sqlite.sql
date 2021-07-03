@@ -1,6 +1,7 @@
 PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2_objects_core_config` (
   `id` char(12) NOT NULL
+,  `version` varchar(255) NOT NULL
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
 ,  `dates__created` double NOT NULL

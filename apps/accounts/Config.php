@@ -3,15 +3,15 @@
 require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/auth/Manager.php");
 
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/core/database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
-class Config extends SingletonObject
+class Config extends DBVersion
 {
     public static function GetFieldTemplate() : array
     {
@@ -27,7 +27,7 @@ class Config extends SingletonObject
     /** Creates a new Config singleton */
     public static function Create(ObjectDatabase $database) : self 
     { 
-        return parent::BaseCreate($database);
+        return parent::BaseCreate($database)->setVersion(AccountsApp::getVersion());
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */

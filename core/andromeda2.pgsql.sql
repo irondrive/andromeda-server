@@ -26,6 +26,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.a2_objects_core_config (
     id character(12) NOT NULL,
+    version character varying(255) NOT NULL,
     datadir text,
     apps text NOT NULL,
     dates__created double precision NOT NULL,
@@ -219,67 +220,67 @@ ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlogentry
 
 
 --
--- Name: a2_objects_core_config idx_68875_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_config idx_74801_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_config
-    ADD CONSTRAINT idx_68875_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74801_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_emailer idx_68881_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_emailer idx_74807_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_emailer
-    ADD CONSTRAINT idx_68881_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74807_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_exceptions_errorlog idx_68889_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_exceptions_errorlog idx_74815_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlog
-    ADD CONSTRAINT idx_68889_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74815_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_actionlog idx_68897_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_logging_actionlog idx_74823_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_logging_actionlog
-    ADD CONSTRAINT idx_68897_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74823_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_actionmetrics idx_68904_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_logging_actionmetrics idx_74830_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_logging_actionmetrics
-    ADD CONSTRAINT idx_68904_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74830_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_commitmetrics idx_68910_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_logging_commitmetrics idx_74836_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_logging_commitmetrics
-    ADD CONSTRAINT idx_68910_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74836_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_requestlog idx_68913_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_logging_requestlog idx_74839_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_logging_requestlog
-    ADD CONSTRAINT idx_68913_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74839_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_requestmetrics idx_68920_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2_objects_core_logging_requestmetrics idx_74846_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.a2_objects_core_logging_requestmetrics
-    ADD CONSTRAINT idx_68920_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_74846_primary PRIMARY KEY (id);
 
 
 --
@@ -325,87 +326,87 @@ CREATE INDEX idx_56396_time ON public.a2_objects_core_exceptions_errorlogentry U
 
 
 --
--- Name: idx_68875_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74801_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_68875_id ON public.a2_objects_core_config USING btree (id);
-
-
---
--- Name: idx_68875_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_68875_id_2 ON public.a2_objects_core_config USING btree (id);
+CREATE UNIQUE INDEX idx_74801_id ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_68881_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74801_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_68881_id ON public.a2_objects_core_emailer USING btree (id);
-
-
---
--- Name: idx_68881_id_2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_68881_id_2 ON public.a2_objects_core_emailer USING btree (id);
+CREATE INDEX idx_74801_id_2 ON public.a2_objects_core_config USING btree (id);
 
 
 --
--- Name: idx_68889_action; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74807_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_68889_action ON public.a2_objects_core_exceptions_errorlog USING btree (action);
-
-
---
--- Name: idx_68889_addr; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_68889_addr ON public.a2_objects_core_exceptions_errorlog USING btree (addr);
+CREATE UNIQUE INDEX idx_74807_id ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_68889_app; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74807_id_2; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_68889_app ON public.a2_objects_core_exceptions_errorlog USING btree (app);
-
-
---
--- Name: idx_68889_code; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_68889_code ON public.a2_objects_core_exceptions_errorlog USING btree (code);
+CREATE INDEX idx_74807_id_2 ON public.a2_objects_core_emailer USING btree (id);
 
 
 --
--- Name: idx_68889_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74815_action; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_68889_id ON public.a2_objects_core_exceptions_errorlog USING btree (id);
-
-
---
--- Name: idx_68889_time; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_68889_time ON public.a2_objects_core_exceptions_errorlog USING btree ("time");
+CREATE INDEX idx_74815_action ON public.a2_objects_core_exceptions_errorlog USING btree (action);
 
 
 --
--- Name: idx_68897_applog; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74815_addr; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_68897_applog ON public.a2_objects_core_logging_actionlog USING btree (applog);
+CREATE INDEX idx_74815_addr ON public.a2_objects_core_exceptions_errorlog USING btree (addr);
 
 
 --
--- Name: idx_68897_request; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_74815_app; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_68897_request ON public.a2_objects_core_logging_actionlog USING btree (request);
+CREATE INDEX idx_74815_app ON public.a2_objects_core_exceptions_errorlog USING btree (app);
+
+
+--
+-- Name: idx_74815_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_74815_code ON public.a2_objects_core_exceptions_errorlog USING btree (code);
+
+
+--
+-- Name: idx_74815_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_74815_id ON public.a2_objects_core_exceptions_errorlog USING btree (id);
+
+
+--
+-- Name: idx_74815_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_74815_time ON public.a2_objects_core_exceptions_errorlog USING btree ("time");
+
+
+--
+-- Name: idx_74823_applog; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_74823_applog ON public.a2_objects_core_logging_actionlog USING btree (applog);
+
+
+--
+-- Name: idx_74823_request; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_74823_request ON public.a2_objects_core_logging_actionlog USING btree (request);
 
 
 --

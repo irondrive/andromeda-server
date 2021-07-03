@@ -8,6 +8,7 @@ require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php");
+require_once(ROOT."/apps/accounts/Config.php");
 require_once(ROOT."/apps/accounts/Client.php");
 require_once(ROOT."/apps/accounts/Group.php");
 require_once(ROOT."/apps/accounts/Session.php");
@@ -85,7 +86,10 @@ class Authenticator
      * @throws UnknownAccountException if the given sudo account is not valid
      */
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
-    {        
+    {
+        if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
+            throw new \Andromeda\Core\UpgradeRequiredException('accounts');            
+            
         $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
         $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
         

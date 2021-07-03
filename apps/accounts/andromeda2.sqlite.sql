@@ -97,6 +97,7 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 );
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL
+,  `version` varchar(255) NOT NULL
 ,  `features__createaccount` integer NOT NULL
 ,  `features__usernameiscontact` integer NOT NULL
 ,  `features__requirecontact` integer NOT NULL
