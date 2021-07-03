@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Config.php");
 require_once(ROOT."/core/Utilities.php");
 require_once(ROOT."/core/exceptions/Exceptions.php");
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -40,8 +41,11 @@ abstract class AppBase implements Transactions
      */
     public abstract static function getUsage() : array;
     
+    /** @return string the name of the app */
+    public abstract static function getName() : string;
+    
     /** Return this app's BaseAppLog class name, if used (or null) */
-    public static function getLogClass() : ?string { return null; }
+    protected static function getLogClass() : ?string { return null; }
     
     private static array $metadata = array();
     
@@ -64,27 +68,88 @@ abstract class AppBase implements Transactions
         return self::$metadata[$app][$key] ?? null;
     }
     
-    /** Returns the API version this app is compatible with */
-    public static function getReqVersion(string $app) : int
+    /** @return array<string> Returns the list of apps this app depends on */
+    public static function getAppRequires(string $app) : array
+    {
+        return self::getMetadata($app,'requires') ?? array();
+    }
+    
+    /** @return int Returns the major API version this app is compatible with */
+    public static function getAppReqVersion(string $app) : int
     {
         return self::getMetadata($app,'api-version');
     }
     
-    /** Returns the app's version information */
-    public static function getVersion(string $app) : string
+    /** @return string Returns the app's version information */
+    public static function getAppVersion(string $app) : string
     {
         return self::getMetadata($app,'version');
     }
     
-    /** Returns the list of apps this app depends on */
-    public static function getRequires(string $app) : array 
-    { 
-        return self::getMetadata($app,'requires') ?? array();
-    }    
-    
+    /** @return string the app's version information */
+    public static function getVersion() : string { return self::getAppVersion(static::getName()); }
+
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }
     
     /** Tells the app to rollback any changes made outside the database */
     public function rollback() { }
 }
+
+/** 
+ * Trait that describes an app that stores database versions
+ * and has upgrade scripts for upgrading the database
+ */
+abstract class UpgradableApp extends AppBase
+{    
+    public static function getUsage() : array { return array('upgrade'); }
+    
+    /** @return DBVersion that database object that stores the app version */
+    protected abstract function getDBVersion() : DBVersion;
+    
+    /** @return array<version,callable> the array of upgrade scripts */
+    protected static function getUpgradeScripts() : array
+    {
+        return require_once(ROOT."/apps/".static::getName()."/_upgrade/scripts.php");
+    }
+    
+    /**
+     * Iterates over the list of upgrade scripts, running them
+     * sequentially until the DB is up to date with the code
+     */
+    public function doUpgrade() : void
+    {        
+        $oldVersion = $this->getDBVersion()->getVersion();
+        
+        foreach (static::getUpgradeScripts() as $newVersion=>$script)
+        {
+            if (version_compare($newVersion, $oldVersion) === 1 &&
+                version_compare($newVersion, static::getVersion()) <= 0)
+            {
+                $script(); $this->getDBVersion()->setVersion($newVersion);
+            }
+        }
+        
+        $this->getDBVersion()->setVersion(static::getVersion());
+    }
+    
+    /**
+     * Complements Run() with checking if upgrade is required and running it
+     * @param Input $input the app action input object
+     * @throws UpgradeRequiredException if the DB version does not match
+     * @return bool true if the upgrade action was performed
+     */
+    protected function CheckUpgrade(Input $input) : bool
+    {
+        if ($this->getDBVersion()->getVersion() !== static::getVersion())
+        {
+            if ($input->GetAction() === 'upgrade')
+            {
+                $this->doUpgrade(); return true;
+            }
+            else throw new UpgradeRequiredException(static::getName());
+        }
+        return false;
+    }
+}
+

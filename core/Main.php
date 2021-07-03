@@ -47,6 +47,9 @@ class CommitAfterRollbackException extends Exceptions\ServerException { public $
 /** FinalizeOutput requires the database to not already be undergoing a transaction */
 class FinalizeTransactionException extends Exceptions\ServerException { public $message = "FINALIZE_OUTPUT_IN_TRANSACTION"; }
 
+/** Exception indicating that the database upgrade scripts must be run */
+class UpgradeRequiredException extends Exceptions\ClientDeniedException { public $message = "UPGRADE_REQUIRED"; }
+
 class RunContext 
 { 
     private Input $input;     
@@ -70,27 +73,44 @@ class RunContext
  * A Main handles a single request, with an arbitrary number of appruns.
  */
 class Main extends Singleton
-{ 
+{
+    /** @var DBStats performance metrics for construction */
     private DBStats $construct_stats; 
+    
+    /** @var array<RunContext> logged actions w/ stats */
     private array $action_stats = array(); 
+    
+    /** @var array<DBStats> commit stats */
     private array $commit_stats = array();
+    
+    /** @var DBStats total request time */
     private DBStats $total_stats;
     
+    /** @var RequestLog */
     private RequestLog $reqlog;
     
+    /** @var float time of request */
     private float $time;
+    
+    /** @var array<name,AppBase> apps */
     private array $apps = array(); 
     
     /** @var RunContext[] stack frames for nested Run() calls */
     private array $stack = array(); 
     
+    /** @var ?Config */
     private ?Config $config = null; 
+    
+    /** @var ?ObjectDatabase */
     private ?ObjectDatabase $database = null; 
     
+    /** @var ErrorManager */
     private ErrorManager $error_manager;
+    
+    /** @var IOInterface */
     private IOInterface $interface;
     
-    /** true if Run() has been called since the last commit or rollback */
+    /** @var bool true if Run() has been called since the last commit or rollback */
     private bool $dirty = false;
     
     /** Gets the timestamp of when the request was started */
@@ -116,6 +136,10 @@ class Main extends Singleton
     
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
+    
+    private static string $serverApp = 'server';
+    
+    private bool $requireUpgrade = false;
 
     /**
      * Initializes the Main API
@@ -137,8 +161,9 @@ class Main extends Singleton
         $this->total_stats = new DBStats();
         
         $interface->Initialize();
-
-        $apps = file_exists(ROOT."/apps/server/serverApp.php") ? array('server') : array();
+        
+        $sapppath = ROOT."/apps/".self::$serverApp.'/'.self::$serverApp.'App.php';
+        $apps = file_exists($sapppath) ? array(self::$serverApp) : array();
         
         try 
         {
@@ -151,9 +176,12 @@ class Main extends Singleton
             if (!$this->isEnabled()) throw new MaintenanceException();
             
             if ($this->config->isReadOnly()) 
-                $this->database->setReadOnly();    
-
+                $this->database->setReadOnly();
+            
             $apps = array_merge($apps, $this->config->GetApps());
+            
+            if ($this->config->getVersion() !== a2_version)
+                $this->requireUpgrade = true;                
         }
         catch (DatabaseException $e) { }
         
@@ -176,6 +204,13 @@ class Main extends Singleton
     /** Loads the main include file for an app and constructs it */
     public function LoadApp(string $app) : self
     {
+        if ($app !== self::$serverApp)
+        {
+            $reqver = AppBase::getAppReqVersion($app);
+            if ($reqver != (new VersionInfo())->major)
+                throw new AppVersionException($reqver);
+        }
+        
         $path = ROOT."/apps/$app/$app"."App.php";
         $app_class = "Andromeda\\Apps\\$app\\$app".'App';
         
@@ -204,6 +239,9 @@ class Main extends Singleton
         $app = $input->GetApp();
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
+        
+        if ($app !== self::$serverApp && $this->requireUpgrade)
+            throw new UpgradeRequiredException(self::$serverApp);            
         
         $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
         
@@ -273,7 +311,7 @@ class Main extends Singleton
                     
                     $this->database->saveObjects(true); 
                     
-                    $this->commitInner();
+                    $this->innerCommit();
                 }
                 catch (\Throwable $e) { $this->error_manager->LogException($e); }
             }
@@ -302,7 +340,7 @@ class Main extends Singleton
                 
             $this->database->saveObjects();
             
-            $this->commitInner(true);
+            $this->innerCommit(true);
                     
             if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
             {
@@ -322,7 +360,7 @@ class Main extends Singleton
      * Commits the database or does a rollback if readOnly/dryrun
      * @param bool $apps if true, commit/rollback apps also
      */
-    protected function commitInner(bool $apps = false) : void
+    private function innerCommit(bool $apps = false) : void
     {
         $rollback = $this->config && $this->config->getReadOnly();
         
@@ -332,7 +370,7 @@ class Main extends Singleton
     }
 
     /** if false, requests are not allowed (always true for privileged interfaces) */
-    protected function isEnabled() : bool
+    private function isEnabled() : bool
     {
         if ($this->config === null) return true;
         
@@ -392,7 +430,7 @@ class Main extends Singleton
             
             $output->SetMetrics($metrics->GetClientObject($isError));
             
-            $metrics->Save(); $this->commitInner();
+            $metrics->Save(); $this->innerCommit();
         }
         catch (\Throwable $e)
         {

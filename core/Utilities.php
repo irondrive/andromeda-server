@@ -68,10 +68,13 @@ interface Transactions { public function rollback(); public function commit(); }
 /** Class for parsing a version string into components */
 class VersionInfo
 {
-    public int $major; public int $minor; public int $patch; public string $extra;
+    public int $major; public int $minor; public int $patch; 
+    public string $version; public string $extra;
     
     public function __construct(string $version = a2_version)
     {
+        $this->version = $version;
+        
         $version = explode('-',$version,2);
         $this->extra = $version[1] ?? null;
         
@@ -81,6 +84,8 @@ class VersionInfo
         $this->minor = $version[1] ?? null;
         $this->patch = $version[2] ?? null;
     }
+    
+    public function __toString(){ return $this->version; }
 }
 
 /** Abstract with some global static utility functions */

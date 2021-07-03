@@ -26,8 +26,23 @@ class AppDependencyException extends Exceptions\ClientErrorException { public $m
 /** Exception indicating that the app is not compatible with this framework version */
 class AppVersionException extends Exceptions\ClientErrorException { public $message = "APP_VERSION_MISMATCH"; }
 
+/** A singleton object that stores a version field */
+class DBVersion extends SingletonObject
+{
+    public static function GetFieldTemplate() : array
+    {
+        return array_merge(parent::GetFieldTemplate(), array( 'version'=>null ));
+    }
+    
+    /** Returns the database schema version */
+    public function getVersion() : string { return $this->GetScalar('version'); }
+    
+    /** Sets the database schema version to the given value */
+    public function setVersion(string $version) : self { return $this->SetScalar('version',$version); }
+}
+
 /** The global framework config stored in the database */
-class Config extends SingletonObject
+class Config extends DBVersion
 {
     public static function GetFieldTemplate() : array
     {
@@ -51,7 +66,7 @@ class Config extends SingletonObject
     }
     
     /** Creates a new config singleton with default values */
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array()); }
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array())->setVersion(a2_version); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
     public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".
@@ -144,13 +159,9 @@ class Config extends SingletonObject
     {
         $apps = array_keys(Main::GetInstance()->GetApps()); 
         
-        foreach (AppBase::getRequires($app) as $tapp)
+        foreach (AppBase::getAppRequires($app) as $tapp)
             if (!in_array($tapp, $apps))
                 throw new AppDependencyException($tapp);
-        
-        $reqver = AppBase::getReqVersion($app);
-        if ($reqver != (new VersionInfo())->major)
-            throw new AppVersionException($reqver);
         
         Main::GetInstance()->LoadApp($app);
         
@@ -167,7 +178,7 @@ class Config extends SingletonObject
     
         foreach (array_keys(Main::GetInstance()->GetApps()) as $tapp)
         {
-            if (in_array($app, AppBase::getRequires($tapp)))
+            if (in_array($app, AppBase::getAppRequires($tapp)))
                 throw new AppDependencyException($tapp);
         }            
         
@@ -321,8 +332,8 @@ class Config extends SingletonObject
         
         foreach (array_keys(Main::GetInstance()->GetApps()) as $appname)
         {
-            $data['apps'][$appname] = $admin ? AppBase::getVersion($appname) :
-                implode('.',array_slice(explode('.',AppBase::getVersion($appname)),0,2));
+            $data['apps'][$appname] = $admin ? AppBase::getAppVersion($appname) :
+                implode('.',array_slice(explode('.',AppBase::getAppVersion($appname)),0,2));
         }
                 
         if ($admin) $data['datadir'] = $this->GetDataDir();

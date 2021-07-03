@@ -20,7 +20,9 @@ use Andromeda\Apps\Files\Storage\FileReadFailedException;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, Main};
+require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -108,13 +110,17 @@ class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { 
  * configurable rules per-account or per-filesystem, and granular statistics
  * gathering and limiting for accounts/groups/filesystems.
  */
-class FilesApp extends AppBase
+class FilesApp extends UpgradableApp
 {    
-    public static function getLogClass() : ?string { return AccessLog::class; }
+    public static function getName() : string { return 'files'; }
+    
+    protected static function getLogClass() : ?string { return AccessLog::class; }    
+    
+    protected function getDBVersion() : DBVersion { return $this->config; }
     
     public static function getUsage() : array 
     { 
-        return array(
+        return array_merge(parent::getUsage(),array(
             'install',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -178,7 +184,7 @@ class FilesApp extends AppBase
             "\t --filesystem id ".Limits\FilesystemTimed::GetConfigUsage(),
             'purgelimits (--account id | --group id | --filesystem id)',
             'purgetimedlimits (--account id | --group id | --filesystem id) --period int',
-        ); 
+        )); 
     }
     
     /** files app config */ private Config $config;
@@ -207,7 +213,9 @@ class FilesApp extends AppBase
     {
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new UnknownConfigException(static::class);
+            throw new UnknownConfigException('files');
+        
+        if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
 
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
@@ -378,7 +386,7 @@ class FilesApp extends AppBase
         $this->database->importTemplate(ROOT."/apps/files");
         
         Config::Create($this->database)->Save();
-    }        
+    }
     
     /**
      * Gets config for this app

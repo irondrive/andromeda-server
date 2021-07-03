@@ -1,8 +1,8 @@
 <?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\AppBase;
-require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Config, InvalidAppException, MissingMetadataException};
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
+require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Config, DBVersion, InvalidAppException, MissingMetadataException};
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -37,13 +37,15 @@ class AuthFailedException extends Exceptions\ClientDeniedException { public $mes
  * 
  * Handles DB config, install, and getting/setting config/logs.
  */
-class ServerApp extends AppBase
+class ServerApp extends UpgradableApp
 {    
-    public static function getLogClass() : ?string { return AccessLog::class; }
-
+    public static function getName() : string { return 'server'; }
+    
+    protected static function getLogClass() : ?string { return AccessLog::class; }
+    
     public static function getUsage() : array
     {
-        $retval = array(
+        $retval = array_merge(parent::getUsage(),array(
             'random [--length int]',
             'usage [--appname alphanum]', 
             'runtests',
@@ -68,7 +70,7 @@ class ServerApp extends AppBase
             'countrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetCountUsage(),
             'getallactions '.ActionLog::GetPropUsage().' '.ActionLog::GetLoadUsage().' [--expand bool] [--applogs bool]',
             'countallactions '.ActionLog::GetPropUsage().' '.ActionLog::GetCountUsage()
-        );
+        ));
         
         $logGet = array(); $logCount = array(); $logApps = array();
         
@@ -109,16 +111,21 @@ class ServerApp extends AppBase
      */
     public function Run(Input $input)
     {
-        // if the database is not installed, require configuring it
-        if (!$this->database)
+        if ($input->GetAction() !== 'usage')
         {
-            if (!in_array($input->GetAction(), array('dbconf','usage')))
-                throw new DatabaseConfigException();
+            // if the database is not installed, require configuring it
+            if (!$this->database)
+            {
+                if ($input->GetAction() !== 'dbconf')
+                    throw new DatabaseConfigException();
+            }
+            // if config is not available, require installing it
+            else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
+                    throw new UnknownConfigException('server');
         }
-        // if config is not available, require installing it
-        else if (!$this->API->GetConfig() && !in_array($input->GetAction(), array('install','usage')))
-            throw new UnknownConfigException(static::class);
         
+        if ($this->API->GetConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
+
         $useAuth = array_key_exists('accounts', Main::GetInstance()->GetApps());
         
         // if the Accounts app is installed, use it for authentication, else check interface privilege
@@ -263,6 +270,27 @@ class ServerApp extends AppBase
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
         
         $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); return $apps;
+    }
+    
+    public static function getVersion() : string { return a2_version; }
+
+    protected function getDBVersion() : DBVersion { return $this->API->GetConfig(); }
+    
+    protected static function getUpgradeScripts() : array
+    {
+        return require_once(ROOT."/core/_upgrade/scripts.php");
+    }
+    
+    public function doUpgrade() : void
+    {
+        parent::doUpgrade();
+        
+        // upgrade all installed apps also
+        foreach ($this->API->GetApps() as $name=>$app)
+        {            
+            if ($app instanceof UpgradableApp && 
+                $name !== self::getName()) $app->doUpgrade();
+        }
     }
     
     /** @see Config::ListApps() */
