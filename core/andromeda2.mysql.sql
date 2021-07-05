@@ -30,9 +30,7 @@ CREATE TABLE `a2_objects_core_config` (
   `features__read_only` tinyint(2) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
   `features__email` tinyint(1) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `id_2` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -47,9 +45,7 @@ CREATE TABLE `a2_objects_core_emailer` (
   `from_name` varchar(255) DEFAULT NULL,
   `features__reply` tinyint(1) DEFAULT NULL,
   `dates__created` double NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `id_2` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -64,14 +60,13 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
   `code` varchar(255) NOT NULL,
   `file` text NOT NULL,
   `message` text NOT NULL,
-  `trace_basic` text DEFAULT NULL,
-  `trace_full` text DEFAULT NULL,
-  `objects` text DEFAULT NULL,
-  `queries` text DEFAULT NULL,
-  `params` text DEFAULT NULL,
-  `log` text DEFAULT NULL,
+  `trace_basic` longtext DEFAULT NULL,
+  `trace_full` longtext DEFAULT NULL,
+  `objects` longtext DEFAULT NULL,
+  `queries` longtext DEFAULT NULL,
+  `params` longtext DEFAULT NULL,
+  `log` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
   KEY `time` (`time`),
   KEY `code` (`code`(191)),
   KEY `app` (`app`(191)),
@@ -90,7 +85,8 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
   `details` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `request` (`request`),
-  KEY `applog` (`applog`)
+  KEY `applog` (`applog`),
+  KEY `app_action` (`app`,`action`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -109,7 +105,9 @@ CREATE TABLE `a2_objects_core_logging_actionmetrics` (
   `stats__code_time` double NOT NULL,
   `stats__total_time` double NOT NULL,
   `stats__queries` longtext DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `app_action` (`app`,`action`),
+  KEY `request` (`request`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -124,7 +122,8 @@ CREATE TABLE `a2_objects_core_logging_commitmetrics` (
   `stats__db_write_time` double NOT NULL,
   `stats__code_time` double NOT NULL,
   `stats__total_time` double NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `request` (`request`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -166,7 +165,7 @@ CREATE TABLE `a2_objects_core_logging_requestmetrics` (
   `total__total_time` double NOT NULL,
   `gcstats` text DEFAULT NULL,
   `rusage` text DEFAULT NULL,
-  `includes` text DEFAULT NULL,
+  `includes` longtext DEFAULT NULL,
   `objects` longtext DEFAULT NULL,
   `queries` longtext DEFAULT NULL,
   `debuglog` longtext DEFAULT NULL,

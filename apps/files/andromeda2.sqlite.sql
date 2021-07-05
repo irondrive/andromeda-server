@@ -53,6 +53,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
 ,  `comments` integer NOT NULL DEFAULT 0
 ,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
+,  UNIQUE (`name`,`parent`)
 );
 CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL
@@ -93,6 +94,7 @@ CREATE TABLE `a2_objects_apps_files_folder` (
 ,  `comments` integer NOT NULL DEFAULT 0
 ,  `shares` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
+,  UNIQUE (`name`,`parent`)
 );
 CREATE TABLE `a2_objects_apps_files_like` (
   `id` char(16) NOT NULL
@@ -216,7 +218,6 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` tinyblob DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_storage_local` (
   `id` char(12) NOT NULL
@@ -241,7 +242,6 @@ CREATE TABLE `a2_objects_apps_files_storage_s3` (
 ,  `secretkey` varbinary(56) DEFAULT NULL
 ,  `secretkey_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `id` char(12) NOT NULL
@@ -260,7 +260,6 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
 ,  `privkey_nonce` binary(24) DEFAULT NULL
 ,  `keypass_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `id` char(12) NOT NULL
@@ -274,7 +273,6 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_storage_webdav` (
   `id` char(12) NOT NULL
@@ -286,7 +284,6 @@ CREATE TABLE `a2_objects_apps_files_storage_webdav` (
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_files_tag` (
   `id` char(16) NOT NULL
@@ -297,19 +294,29 @@ CREATE TABLE `a2_objects_apps_files_tag` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`item`,`tag`)
 );
+CREATE INDEX "idx_a2_objects_apps_files_storage_webdav_filesystem" ON "a2_objects_apps_files_storage_webdav" (`filesystem`);
+CREATE INDEX "idx_a2_objects_apps_files_like_item" ON "a2_objects_apps_files_like" (`item`);
 CREATE INDEX "idx_a2_objects_apps_files_share_owner" ON "a2_objects_apps_files_share" (`owner`);
+CREATE INDEX "idx_a2_objects_apps_files_share_item" ON "a2_objects_apps_files_share" (`item`);
 CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_owner" ON "a2_objects_apps_files_filesystem_fsmanager" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_name" ON "a2_objects_apps_files_filesystem_fsmanager" (`name`);
+CREATE INDEX "idx_a2_objects_apps_files_filesystem_fsmanager_storage" ON "a2_objects_apps_files_filesystem_fsmanager" (`storage`);
+CREATE INDEX "idx_a2_objects_apps_files_storage_s3_filesystem" ON "a2_objects_apps_files_storage_s3" (`filesystem`);
 CREATE INDEX "idx_a2_objects_apps_files_tag_owner" ON "a2_objects_apps_files_tag" (`owner`);
-CREATE INDEX "idx_a2_objects_apps_files_tag_item_2" ON "a2_objects_apps_files_tag" (`item`);
-CREATE INDEX "idx_a2_objects_apps_files_comment_owner" ON "a2_objects_apps_files_comment" (`owner`);
+CREATE INDEX "idx_a2_objects_apps_files_tag_item" ON "a2_objects_apps_files_tag" (`item`);
+CREATE INDEX "idx_a2_objects_apps_files_storage_sftp_filesystem" ON "a2_objects_apps_files_storage_sftp" (`filesystem`);
+CREATE INDEX "idx_a2_objects_apps_files_storage_ftp_filesystem" ON "a2_objects_apps_files_storage_ftp" (`filesystem`);
 CREATE INDEX "idx_a2_objects_apps_files_comment_item" ON "a2_objects_apps_files_comment" (`item`);
+CREATE INDEX "idx_a2_objects_apps_files_comment_owner_item" ON "a2_objects_apps_files_comment" (`owner`,`item`);
+CREATE INDEX "idx_a2_objects_apps_files_storage_local_filesystem" ON "a2_objects_apps_files_storage_local" (`filesystem`);
 CREATE INDEX "idx_a2_objects_apps_files_limits_timed_object" ON "a2_objects_apps_files_limits_timed" (`object`);
+CREATE INDEX "idx_a2_objects_apps_files_storage_smb_filesystem" ON "a2_objects_apps_files_storage_smb" (`filesystem`);
 CREATE INDEX "idx_a2_objects_apps_files_folder_parent" ON "a2_objects_apps_files_folder" (`parent`);
 CREATE INDEX "idx_a2_objects_apps_files_folder_owner" ON "a2_objects_apps_files_folder" (`owner`);
-CREATE INDEX "idx_a2_objects_apps_files_folder_id" ON "a2_objects_apps_files_folder" (`id`);
 CREATE INDEX "idx_a2_objects_apps_files_folder_filesystem" ON "a2_objects_apps_files_folder" (`filesystem`);
-CREATE INDEX "idx_a2_objects_apps_files_file_id" ON "a2_objects_apps_files_file" (`id`);
 CREATE INDEX "idx_a2_objects_apps_files_file_owner" ON "a2_objects_apps_files_file" (`owner`);
 CREATE INDEX "idx_a2_objects_apps_files_file_parent" ON "a2_objects_apps_files_file" (`parent`);
 CREATE INDEX "idx_a2_objects_apps_files_file_filesystem" ON "a2_objects_apps_files_file" (`filesystem`);
+CREATE INDEX "idx_a2_objects_apps_files_accesslog_account" ON "a2_objects_apps_files_accesslog" (`account`);
+CREATE INDEX "idx_a2_objects_apps_files_accesslog_file" ON "a2_objects_apps_files_accesslog" (`file`);
+CREATE INDEX "idx_a2_objects_apps_files_accesslog_folder" ON "a2_objects_apps_files_accesslog" (`folder`);

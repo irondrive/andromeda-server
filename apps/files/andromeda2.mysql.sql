@@ -23,7 +23,10 @@ CREATE TABLE `a2_objects_apps_files_accesslog` (
   `file_share` char(16) DEFAULT NULL,
   `folder_share` char(16) DEFAULT NULL,
   `parent_share` char(16) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `account` (`account`),
+  KEY `file` (`file`),
+  KEY `folder` (`folder`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -36,8 +39,8 @@ CREATE TABLE `a2_objects_apps_files_comment` (
   `dates__created` double NOT NULL,
   `dates__modified` double NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `owner` (`owner`),
-  KEY `item` (`item`)
+  KEY `item` (`item`),
+  KEY `owner_item` (`owner`,`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -76,7 +79,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
   `comments` int(11) NOT NULL DEFAULT 0,
   `shares` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `id` (`id`),
+  UNIQUE KEY `name` (`name`,`parent`),
   KEY `owner` (`owner`),
   KEY `parent` (`parent`),
   KEY `filesystem` (`filesystem`)
@@ -95,9 +98,10 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
   `crypto_masterkey` binary(32) DEFAULT NULL,
   `crypto_chunksize` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `owner_2` (`owner`,`name`),
+  UNIQUE KEY `owner_name` (`owner`,`name`),
   KEY `owner` (`owner`),
-  KEY `name` (`name`)
+  KEY `name` (`name`),
+  KEY `storage` (`storage`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -128,9 +132,9 @@ CREATE TABLE `a2_objects_apps_files_folder` (
   `comments` int(11) NOT NULL DEFAULT 0,
   `shares` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `name_parent` (`name`,`parent`),
   KEY `parent` (`parent`),
   KEY `owner` (`owner`),
-  KEY `id` (`id`),
   KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -143,7 +147,8 @@ CREATE TABLE `a2_objects_apps_files_like` (
   `dates__created` double NOT NULL,
   `value` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `owner` (`owner`,`item`)
+  UNIQUE KEY `owner_item` (`owner`,`item`),
+  KEY `item` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -216,7 +221,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
   `counters_limits__pubdownloads` int(11) DEFAULT NULL,
   `counters_limits__bandwidth` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `object_2` (`object`,`timeperiod`),
+  UNIQUE KEY `object_timeperiod` (`object`,`timeperiod`),
   KEY `object` (`object`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -234,8 +239,8 @@ CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
   `counters__pubdownloads` int(11) NOT NULL DEFAULT 0,
   `counters__bandwidth` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `limitobj` (`limitobj`,`dates__timestart`),
-  UNIQUE KEY `limitobj_2` (`limitobj`,`iscurrent`) USING BTREE
+  UNIQUE KEY `limitobj_timestart` (`limitobj`,`dates__timestart`),
+  UNIQUE KEY `limitobj_iscurrent` (`limitobj`,`iscurrent`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -259,8 +264,9 @@ CREATE TABLE `a2_objects_apps_files_share` (
   `features__reshare` tinyint(1) NOT NULL,
   `features__keepowner` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `item` (`item`,`owner`,`dest`),
-  KEY `owner` (`owner`)
+  UNIQUE KEY `item_owner_dest` (`item`,`owner`,`dest`),
+  KEY `owner` (`owner`),
+  KEY `item` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -278,7 +284,7 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` tinyblob DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -288,7 +294,8 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
   `path` text NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -309,7 +316,7 @@ CREATE TABLE `a2_objects_apps_files_storage_s3` (
   `secretkey` varbinary(56) DEFAULT NULL,
   `secretkey_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -331,7 +338,7 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
   `privkey_nonce` binary(24) DEFAULT NULL,
   `keypass_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -348,7 +355,7 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -363,7 +370,7 @@ CREATE TABLE `a2_objects_apps_files_storage_webdav` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `filesystem` (`filesystem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -375,9 +382,9 @@ CREATE TABLE `a2_objects_apps_files_tag` (
   `tag` varchar(127) NOT NULL,
   `dates__created` double NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `item` (`item`,`tag`),
+  UNIQUE KEY `item_tag` (`item`,`tag`),
   KEY `owner` (`owner`),
-  KEY `item_2` (`item`)
+  KEY `item` (`item`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

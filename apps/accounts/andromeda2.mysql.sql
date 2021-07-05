@@ -17,7 +17,8 @@ CREATE TABLE `a2_objects_apps_accounts_accesslog` (
   `account` char(12) DEFAULT NULL,
   `sudouser` char(12) DEFAULT NULL,
   `client` char(12) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `account` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -58,7 +59,8 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
   `recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
-  KEY `fullname` (`fullname`)
+  KEY `fullname` (`fullname`),
+  KEY `authsource` (`authsource`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -69,8 +71,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
   `manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -83,8 +84,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `implssl` tinyint(1) NOT NULL,
   `secauth` tinyint(1) NOT NULL,
   `manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -95,8 +95,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
   `manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -107,8 +106,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `description` text DEFAULT NULL,
   `default_group` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `authsource*objectpoly*Apps\Accounts\Auth\Source` (`authsource`)
+  KEY `authsource` (`authsource`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -125,9 +123,8 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
   `account` char(12) NOT NULL,
   `session` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `account*object*Apps\Accounts\Account*clients` (`account`),
-  KEY `session*object*Apps\Accounts\Session` (`session`)
+  KEY `account` (`account`),
+  KEY `session` (`session`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -141,8 +138,7 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
   `default_group` char(12) DEFAULT NULL,
   `default_auth` char(12) DEFAULT NULL,
   `dates__created` double NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -158,7 +154,7 @@ CREATE TABLE `a2_objects_apps_accounts_contact` (
   `dates__created` double NOT NULL,
   `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `type_2` (`type`,`info`),
+  UNIQUE KEY `type_info` (`type`,`info`),
   UNIQUE KEY `prefer` (`usefrom`,`account`),
   KEY `info` (`info`),
   KEY `account` (`account`)
@@ -188,7 +184,6 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
   `max_password_age` bigint(20) DEFAULT NULL,
   `accounts` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -200,10 +195,9 @@ CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
   `accounts` char(12) NOT NULL,
   `groups` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `account` (`accounts`,`groups`),
-  KEY `accounts*object*Apps\Accounts\Account*groups` (`accounts`),
-  KEY `groups*object*Apps\Accounts\Group*accounts` (`groups`),
-  KEY `id` (`id`)
+  UNIQUE KEY `pair` (`accounts`,`groups`),
+  KEY `accounts` (`accounts`),
+  KEY `groups` (`groups`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -217,8 +211,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
   `master_salt` binary(16) DEFAULT NULL,
   `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `id` (`id`),
-  KEY `account*object*Apps\Accounts\Account*recoverykeys` (`account`)
+  KEY `account` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -251,7 +244,7 @@ CREATE TABLE `a2_objects_apps_accounts_twofactor` (
   `account` char(12) NOT NULL,
   `usedtokens` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `account*object*Apps\Accounts\Account` (`account`)
+  KEY `account` (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -262,7 +255,8 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
   `dates__created` double NOT NULL,
   `twofactor` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  KEY `dates__created` (`dates__created`),
+  KEY `twofactor` (`twofactor`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
