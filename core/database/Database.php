@@ -114,7 +114,7 @@ class Database implements Transactions
             $this->connection->rollback();
         
         if ($this->driver === self::DRIVER_SQLITE)
-            $this->query("PRAGMA foreign-keys = ON");
+            $this->connection->query("PRAGMA foreign_keys = ON");
     }
 
     /** Returns a string with the primary CLI usage for Install() */
