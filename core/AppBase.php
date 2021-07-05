@@ -107,7 +107,7 @@ abstract class UpgradableApp extends AppBase
     /** @return DBVersion that database object that stores the app version */
     protected abstract function getDBVersion() : DBVersion;
     
-    /** @return array<version,callable> the array of upgrade scripts */
+    /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
     protected static function getUpgradeScripts() : array
     {
         return require(ROOT."/apps/".static::getName()."/_upgrade/scripts.php");
