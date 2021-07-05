@@ -37,9 +37,9 @@ class RootFolder extends Folder
      */
     public function Refresh(bool $doContents = false) : self 
     {
-        if ($doContents) parent::Refresh($doContents);
+        if ($doContents) parent::Refresh(true);
         
-        else try { parent::Refresh($doContents); } catch (StorageException $e) { }
+        else try { parent::Refresh(); } catch (StorageException $e) { }
         
         return $this;
     }
