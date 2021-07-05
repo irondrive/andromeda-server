@@ -68,21 +68,12 @@ abstract class BaseFileFS extends FSImpl
  */
 class Native extends BaseFileFS
 {
-    public function RefreshFile(File $file) : self
-    {
-        $storage = $this->GetStorage();
-        $path = $this->GetFilePath($file);
-        
-        if (!$storage->isFile($path)) $file->NotifyDelete(); 
-        
-        return $this;
-    }
-    
-    /** no-op */ public function RefreshFolder(Folder $folder) : self               { return $this; }    
+    /** no-op */ public function RefreshFile(File $file) : self                     { return $this; }
+    /** no-op */ public function RefreshFolder(Folder $folder) : self               { return $this; }
     /** no-op */ public function CreateFolder(Folder $folder) : self                { return $this; }
-    /** no-op */ public function DeleteFolder(Folder $folder) : self                { return $this; }    
+    /** no-op */ public function DeleteFolder(Folder $folder) : self                { return $this; }
     /** no-op */ public function RenameFile(File $file, string $name) : self        { return $this; }
-    /** no-op */ public function RenameFolder(Folder $folder, string $name) : self  { return $this; }    
+    /** no-op */ public function RenameFolder(Folder $folder, string $name) : self  { return $this; }
     /** no-op */ public function MoveFile(File $file, Folder $parent) : self        { return $this; }
     /** no-op */ public function MoveFolder(Folder $folder, Folder $parent) : self  { return $this; }
     

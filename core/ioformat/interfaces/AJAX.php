@@ -51,7 +51,7 @@ class AJAX extends IOInterface
      * Requests can put multiple requests to be run in a single 
      * transaction by using the batch paramter as an array
      */
-    public function GetInputs(?Config $config) : array
+    protected function subGetInputs(?Config $config) : array
     {
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {            

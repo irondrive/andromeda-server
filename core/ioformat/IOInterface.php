@@ -2,12 +2,17 @@
 
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Singleton;
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 require_once(ROOT."/core/ioformat/interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
+
+/** Exception indicating that an app action does not allow batches */
+class BatchNotAllowedException extends Exceptions\ClientErrorException { public $message = "METHOD_DISALLOWS_BATCH"; }
 
 /** Class for custom app output routines */
 class OutputHandler
@@ -44,12 +49,29 @@ abstract class IOInterface extends Singleton
     /** Called during API construction to initialize the interface, e.g. to gather global arguments */
     public function Initialize() : void { }
     
+    /** @var array<Input> */
+    protected array $inputs;
+
     /** 
      * Retrieves an array of input objects to run 
      * @return Input[]
      */
-    abstract public function GetInputs(?Config $config) : array;
+    public function GetInputs(?Config $config) : array
+    {
+        if (isset($this->inputs)) return $this->inputs;
+        else return ($this->inputs = $this->subGetInputs($config));
+    }
     
+    /** @see self::GetInputs() */
+    abstract protected function subGetInputs(?Config $config) : array;
+    
+    /** Asserts that only one output was given */
+    public function DisallowBatch() : void
+    {
+        if (isset($this->inputs) && count($this->inputs) > 1)
+            throw new BatchNotAllowedException();
+    }
+        
     /** Returns the address of the user on the interface */
     abstract public function getAddress() : string;    
     

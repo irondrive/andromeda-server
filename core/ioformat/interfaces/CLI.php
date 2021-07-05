@@ -122,7 +122,7 @@ class CLI extends IOInterface
     /** @return int plain text output by default */
     public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
-    public function GetInputs(?Config $config) : array
+    protected function subGetInputs(?Config $config) : array
     {
         if ($config)
         {
