@@ -19,7 +19,6 @@ CREATE TABLE `a2_objects_core_config` (
 ,  `features__enabled` integer NOT NULL
 ,  `features__email` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_core_emailer` (
   `id` char(12) NOT NULL
@@ -32,7 +31,6 @@ CREATE TABLE `a2_objects_core_emailer` (
 ,  `features__reply` integer DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_core_exceptions_errorlog` (
   `id` char(12) NOT NULL
@@ -44,14 +42,13 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
 ,  `code` varchar(255) NOT NULL
 ,  `file` text NOT NULL
 ,  `message` text NOT NULL
-,  `trace_basic` text DEFAULT NULL
-,  `trace_full` text DEFAULT NULL
-,  `objects` text DEFAULT NULL
-,  `queries` text DEFAULT NULL
-,  `params` text DEFAULT NULL
-,  `log` text DEFAULT NULL
+,  `trace_basic` longtext DEFAULT NULL
+,  `trace_full` longtext DEFAULT NULL
+,  `objects` longtext DEFAULT NULL
+,  `queries` longtext DEFAULT NULL
+,  `params` longtext DEFAULT NULL
+,  `log` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_core_logging_actionlog` (
   `id` char(20) NOT NULL
@@ -124,7 +121,7 @@ CREATE TABLE `a2_objects_core_logging_requestmetrics` (
 ,  `total__total_time` double NOT NULL
 ,  `gcstats` text DEFAULT NULL
 ,  `rusage` text DEFAULT NULL
-,  `includes` text DEFAULT NULL
+,  `includes` longtext DEFAULT NULL
 ,  `objects` longtext DEFAULT NULL
 ,  `queries` longtext DEFAULT NULL
 ,  `debuglog` longtext DEFAULT NULL
@@ -137,5 +134,7 @@ CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_action" ON "a2_objects_cor
 CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_addr" ON "a2_objects_core_exceptions_errorlog" (`addr`);
 CREATE INDEX "idx_a2_objects_core_logging_actionlog_request" ON "a2_objects_core_logging_actionlog" (`request`);
 CREATE INDEX "idx_a2_objects_core_logging_actionlog_applog" ON "a2_objects_core_logging_actionlog" (`applog`);
-CREATE INDEX "idx_a2_objects_core_config_id_2" ON "a2_objects_core_config" (`id`);
-CREATE INDEX "idx_a2_objects_core_emailer_id_2" ON "a2_objects_core_emailer" (`id`);
+CREATE INDEX "idx_a2_objects_core_logging_actionlog_app_action" ON "a2_objects_core_logging_actionlog" (`app`,`action`);
+CREATE INDEX "idx_a2_objects_core_logging_actionmetrics_app_action" ON "a2_objects_core_logging_actionmetrics" (`app`,`action`);
+CREATE INDEX "idx_a2_objects_core_logging_actionmetrics_request" ON "a2_objects_core_logging_actionmetrics" (`request`);
+CREATE INDEX "idx_a2_objects_core_logging_commitmetrics_request" ON "a2_objects_core_logging_commitmetrics" (`request`);

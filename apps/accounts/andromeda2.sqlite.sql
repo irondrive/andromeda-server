@@ -51,7 +51,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
 ,  `implssl` integer NOT NULL
 ,  `manager` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
   `id` char(12) NOT NULL
@@ -62,7 +61,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
 ,  `secauth` integer NOT NULL
 ,  `manager` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
   `id` char(12) NOT NULL
@@ -71,7 +69,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
 ,  `userprefix` varchar(255) NOT NULL
 ,  `manager` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL
@@ -79,7 +76,6 @@ CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
 ,  `description` text DEFAULT NULL
 ,  `default_group` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_client` (
   `id` char(12) NOT NULL
@@ -93,7 +89,6 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 ,  `account` char(12) NOT NULL
 ,  `session` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_config` (
   `id` char(12) NOT NULL
@@ -105,7 +100,6 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
 ,  `default_auth` char(12) DEFAULT NULL
 ,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_contact` (
   `id` char(12) NOT NULL
@@ -143,7 +137,6 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 ,  `max_password_age` integer DEFAULT NULL
 ,  `accounts` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 ,  UNIQUE (`name`)
 );
 CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
@@ -194,7 +187,6 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 ,  `dates__created` double NOT NULL
 ,  `twofactor` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`id`)
 );
 CREATE TABLE `a2_objects_apps_accounts_whitelist` (
   `id` char(12) NOT NULL
@@ -204,17 +196,19 @@ CREATE TABLE `a2_objects_apps_accounts_whitelist` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`type`,`value`)
 );
-CREATE INDEX "idx_a2_objects_apps_accounts_auth_manager_authsource*objectpoly*Apps\Accounts\Auth\Source" ON "a2_objects_apps_accounts_auth_manager" (`authsource`);
-CREATE INDEX "idx_a2_objects_apps_accounts_twofactor_account*object*Apps\Accounts\Account" ON "a2_objects_apps_accounts_twofactor" (`account`);
-CREATE INDEX "idx_a2_objects_apps_accounts_recoverykey_id" ON "a2_objects_apps_accounts_recoverykey" (`id`);
-CREATE INDEX "idx_a2_objects_apps_accounts_recoverykey_account*object*Apps\Accounts\Account*recoverykeys" ON "a2_objects_apps_accounts_recoverykey" (`account`);
-CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_accounts*object*Apps\Accounts\Account*groups" ON "a2_objects_apps_accounts_groupjoin" (`accounts`);
-CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_groups*object*Apps\Accounts\Group*accounts" ON "a2_objects_apps_accounts_groupjoin" (`groups`);
-CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_id" ON "a2_objects_apps_accounts_groupjoin" (`id`);
+CREATE INDEX "idx_a2_objects_apps_accounts_auth_manager_authsource" ON "a2_objects_apps_accounts_auth_manager" (`authsource`);
+CREATE INDEX "idx_a2_objects_apps_accounts_accesslog_account" ON "a2_objects_apps_accounts_accesslog" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_usedtoken_dates__created" ON "a2_objects_apps_accounts_usedtoken" (`dates__created`);
+CREATE INDEX "idx_a2_objects_apps_accounts_usedtoken_twofactor" ON "a2_objects_apps_accounts_usedtoken" (`twofactor`);
+CREATE INDEX "idx_a2_objects_apps_accounts_twofactor_account" ON "a2_objects_apps_accounts_twofactor" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_recoverykey_account" ON "a2_objects_apps_accounts_recoverykey" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_accounts" ON "a2_objects_apps_accounts_groupjoin" (`accounts`);
+CREATE INDEX "idx_a2_objects_apps_accounts_groupjoin_groups" ON "a2_objects_apps_accounts_groupjoin" (`groups`);
 CREATE INDEX "idx_a2_objects_apps_accounts_contact_info" ON "a2_objects_apps_accounts_contact" (`info`);
 CREATE INDEX "idx_a2_objects_apps_accounts_contact_account" ON "a2_objects_apps_accounts_contact" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_account_fullname" ON "a2_objects_apps_accounts_account" (`fullname`);
+CREATE INDEX "idx_a2_objects_apps_accounts_account_authsource" ON "a2_objects_apps_accounts_account" (`authsource`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_aid" ON "a2_objects_apps_accounts_session" (`account`);
 CREATE INDEX "idx_a2_objects_apps_accounts_session_cid" ON "a2_objects_apps_accounts_session" (`client`);
-CREATE INDEX "idx_a2_objects_apps_accounts_client_account*object*Apps\Accounts\Account*clients" ON "a2_objects_apps_accounts_client" (`account`);
-CREATE INDEX "idx_a2_objects_apps_accounts_client_session*object*Apps\Accounts\Session" ON "a2_objects_apps_accounts_client" (`session`);
+CREATE INDEX "idx_a2_objects_apps_accounts_client_account" ON "a2_objects_apps_accounts_client" (`account`);
+CREATE INDEX "idx_a2_objects_apps_accounts_client_session" ON "a2_objects_apps_accounts_client" (`session`);
