@@ -56,8 +56,8 @@ class Database implements Transactions
     /** the default path for storing the config file */
     private const CONFIG_PATHS = array(
         ROOT."/core/database/Config.php",
-        '/usr/local/etc/andromeda2/Config.php',
-        '/etc/andromeda2/Config.php'
+        '/usr/local/etc/andromeda/Config.php',
+        '/etc/andromeda/Config.php'
     );    
     
     public const DRIVER_MYSQL = 1; 
@@ -233,7 +233,7 @@ class Database implements Transactions
      * Imports the appropriate SQL template file for an app
      * @param string $path the base path containing the templates
      */
-    public function importTemplate(string $path) : void { $this->importFile("$path/andromeda2.".$this->config['DRIVER'].".sql"); }
+    public function importTemplate(string $path) : void { $this->importFile("$path/andromeda.".$this->config['DRIVER'].".sql"); }
     
     /**
      * Parses and imports an SQL file into the database

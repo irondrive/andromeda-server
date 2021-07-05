@@ -11,7 +11,7 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_config` (
+CREATE TABLE `a2obj_core_config` (
   `id` char(12) NOT NULL,
   `version` varchar(255) NOT NULL,
   `datadir` text DEFAULT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE `a2_objects_core_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_emailer` (
+CREATE TABLE `a2obj_core_emailer` (
   `id` char(12) NOT NULL,
   `type` tinyint(4) NOT NULL,
   `hosts` text DEFAULT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE `a2_objects_core_emailer` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_exceptions_errorlog` (
+CREATE TABLE `a2obj_core_exceptions_errorlog` (
   `id` char(12) NOT NULL,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_logging_actionlog` (
+CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL,
   `request` char(20) NOT NULL,
   `app` varchar(255) NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_logging_actionmetrics` (
+CREATE TABLE `a2obj_core_logging_actionmetrics` (
   `id` char(20) NOT NULL,
   `request` char(20) NOT NULL,
   `actionlog` char(20) NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE `a2_objects_core_logging_actionmetrics` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_logging_commitmetrics` (
+CREATE TABLE `a2obj_core_logging_commitmetrics` (
   `id` char(20) NOT NULL,
   `request` char(20) NOT NULL,
   `dates__created` double NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE `a2_objects_core_logging_commitmetrics` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_logging_requestlog` (
+CREATE TABLE `a2obj_core_logging_requestlog` (
   `id` char(20) NOT NULL,
   `actions` smallint(6) NOT NULL DEFAULT 0,
   `time` double NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_core_logging_requestmetrics` (
+CREATE TABLE `a2obj_core_logging_requestmetrics` (
   `id` char(20) NOT NULL,
   `actions` smallint(6) NOT NULL DEFAULT 0,
   `commits` smallint(6) NOT NULL DEFAULT 0,

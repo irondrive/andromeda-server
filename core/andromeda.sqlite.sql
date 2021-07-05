@@ -1,5 +1,5 @@
 PRAGMA journal_mode = MEMORY;
-CREATE TABLE `a2_objects_core_config` (
+CREATE TABLE `a2obj_core_config` (
   `id` char(12) NOT NULL
 ,  `version` varchar(255) NOT NULL
 ,  `datadir` text DEFAULT NULL
@@ -20,7 +20,7 @@ CREATE TABLE `a2_objects_core_config` (
 ,  `features__email` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_emailer` (
+CREATE TABLE `a2obj_core_emailer` (
   `id` char(12) NOT NULL
 ,  `type` integer NOT NULL
 ,  `hosts` text DEFAULT NULL
@@ -32,7 +32,7 @@ CREATE TABLE `a2_objects_core_emailer` (
 ,  `dates__created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_exceptions_errorlog` (
+CREATE TABLE `a2obj_core_exceptions_errorlog` (
   `id` char(12) NOT NULL
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
@@ -50,7 +50,7 @@ CREATE TABLE `a2_objects_core_exceptions_errorlog` (
 ,  `log` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_logging_actionlog` (
+CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL
 ,  `request` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
@@ -59,7 +59,7 @@ CREATE TABLE `a2_objects_core_logging_actionlog` (
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_logging_actionmetrics` (
+CREATE TABLE `a2obj_core_logging_actionmetrics` (
   `id` char(20) NOT NULL
 ,  `request` char(20) NOT NULL
 ,  `actionlog` char(20) NOT NULL
@@ -75,7 +75,7 @@ CREATE TABLE `a2_objects_core_logging_actionmetrics` (
 ,  `stats__queries` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_logging_commitmetrics` (
+CREATE TABLE `a2obj_core_logging_commitmetrics` (
   `id` char(20) NOT NULL
 ,  `request` char(20) NOT NULL
 ,  `dates__created` double NOT NULL
@@ -87,7 +87,7 @@ CREATE TABLE `a2_objects_core_logging_commitmetrics` (
 ,  `stats__total_time` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_logging_requestlog` (
+CREATE TABLE `a2obj_core_logging_requestlog` (
   `id` char(20) NOT NULL
 ,  `actions` integer NOT NULL DEFAULT 0
 ,  `time` double NOT NULL
@@ -97,7 +97,7 @@ CREATE TABLE `a2_objects_core_logging_requestlog` (
 ,  `errtext` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2_objects_core_logging_requestmetrics` (
+CREATE TABLE `a2obj_core_logging_requestmetrics` (
   `id` char(20) NOT NULL
 ,  `actions` integer NOT NULL DEFAULT 0
 ,  `commits` integer NOT NULL DEFAULT 0
@@ -127,14 +127,14 @@ CREATE TABLE `a2_objects_core_logging_requestmetrics` (
 ,  `debuglog` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_time" ON "a2_objects_core_exceptions_errorlog" (`time`);
-CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_code" ON "a2_objects_core_exceptions_errorlog" (`code`);
-CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_app" ON "a2_objects_core_exceptions_errorlog" (`app`);
-CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_action" ON "a2_objects_core_exceptions_errorlog" (`action`);
-CREATE INDEX "idx_a2_objects_core_exceptions_errorlog_addr" ON "a2_objects_core_exceptions_errorlog" (`addr`);
-CREATE INDEX "idx_a2_objects_core_logging_actionlog_request" ON "a2_objects_core_logging_actionlog" (`request`);
-CREATE INDEX "idx_a2_objects_core_logging_actionlog_applog" ON "a2_objects_core_logging_actionlog" (`applog`);
-CREATE INDEX "idx_a2_objects_core_logging_actionlog_app_action" ON "a2_objects_core_logging_actionlog" (`app`,`action`);
-CREATE INDEX "idx_a2_objects_core_logging_actionmetrics_app_action" ON "a2_objects_core_logging_actionmetrics" (`app`,`action`);
-CREATE INDEX "idx_a2_objects_core_logging_actionmetrics_request" ON "a2_objects_core_logging_actionmetrics" (`request`);
-CREATE INDEX "idx_a2_objects_core_logging_commitmetrics_request" ON "a2_objects_core_logging_commitmetrics" (`request`);
+CREATE INDEX "idx_a2obj_core_logging_actionmetrics_app_action" ON "a2obj_core_logging_actionmetrics" (`app`,`action`);
+CREATE INDEX "idx_a2obj_core_logging_actionmetrics_request" ON "a2obj_core_logging_actionmetrics" (`request`);
+CREATE INDEX "idx_a2obj_core_exceptions_errorlog_time" ON "a2obj_core_exceptions_errorlog" (`time`);
+CREATE INDEX "idx_a2obj_core_exceptions_errorlog_code" ON "a2obj_core_exceptions_errorlog" (`code`);
+CREATE INDEX "idx_a2obj_core_exceptions_errorlog_app" ON "a2obj_core_exceptions_errorlog" (`app`);
+CREATE INDEX "idx_a2obj_core_exceptions_errorlog_action" ON "a2obj_core_exceptions_errorlog" (`action`);
+CREATE INDEX "idx_a2obj_core_exceptions_errorlog_addr" ON "a2obj_core_exceptions_errorlog" (`addr`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_request" ON "a2obj_core_logging_actionlog" (`request`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_applog" ON "a2obj_core_logging_actionlog" (`applog`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_app_action" ON "a2obj_core_logging_actionlog" (`app`,`action`);
+CREATE INDEX "idx_a2obj_core_logging_commitmetrics_request" ON "a2obj_core_logging_commitmetrics" (`request`);

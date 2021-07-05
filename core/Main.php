@@ -180,7 +180,7 @@ class Main extends Singleton
             
             $apps = array_merge($apps, $this->config->GetApps());
             
-            if ($this->config->getVersion() !== a2_version)
+            if ($this->config->getVersion() !== andromeda_version)
                 $this->requireUpgrade = true;                
         }
         catch (DatabaseException $e) { }

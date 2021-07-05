@@ -11,7 +11,7 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_accesslog` (
+CREATE TABLE `a2obj_apps_accounts_accesslog` (
   `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   `account` char(12) DEFAULT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE `a2_objects_apps_accounts_accesslog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_account` (
+CREATE TABLE `a2obj_apps_accounts_account` (
   `id` char(12) NOT NULL,
   `username` varchar(127) NOT NULL,
   `fullname` varchar(255) DEFAULT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE `a2_objects_apps_accounts_account` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
+CREATE TABLE `a2obj_apps_accounts_auth_ftp` (
   `id` char(12) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ftp` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
+CREATE TABLE `a2obj_apps_accounts_auth_imap` (
   `id` char(12) NOT NULL,
   `protocol` tinyint(2) NOT NULL,
   `hostname` varchar(255) NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_imap` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
+CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
   `id` char(12) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_ldap` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
+CREATE TABLE `a2obj_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL,
   `authsource` varchar(64) NOT NULL,
   `description` text DEFAULT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE `a2_objects_apps_accounts_auth_manager` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_client` (
+CREATE TABLE `a2obj_apps_accounts_client` (
   `id` char(12) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `authkey` text NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE `a2_objects_apps_accounts_client` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_config` (
+CREATE TABLE `a2obj_apps_accounts_config` (
   `id` char(12) NOT NULL,
   `version` varchar(255) NOT NULL,
   `features__createaccount` smallint(1) NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE `a2_objects_apps_accounts_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_contact` (
+CREATE TABLE `a2obj_apps_accounts_contact` (
   `id` char(12) NOT NULL,
   `type` tinyint(2) NOT NULL,
   `info` varchar(127) NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE `a2_objects_apps_accounts_contact` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_group` (
+CREATE TABLE `a2obj_apps_accounts_group` (
   `id` char(12) NOT NULL,
   `name` varchar(127) NOT NULL,
   `comment` text DEFAULT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE `a2_objects_apps_accounts_group` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
+CREATE TABLE `a2obj_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `accounts` char(12) NOT NULL,
@@ -202,7 +202,7 @@ CREATE TABLE `a2_objects_apps_accounts_groupjoin` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
+CREATE TABLE `a2obj_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `dates__created` double NOT NULL DEFAULT 0,
@@ -216,7 +216,7 @@ CREATE TABLE `a2_objects_apps_accounts_recoverykey` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_session` (
+CREATE TABLE `a2obj_apps_accounts_session` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `dates__active` double DEFAULT NULL,
@@ -233,7 +233,7 @@ CREATE TABLE `a2_objects_apps_accounts_session` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_twofactor` (
+CREATE TABLE `a2obj_apps_accounts_twofactor` (
   `id` char(12) NOT NULL,
   `comment` text DEFAULT NULL,
   `secret` varbinary(48) NOT NULL,
@@ -249,7 +249,7 @@ CREATE TABLE `a2_objects_apps_accounts_twofactor` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
+CREATE TABLE `a2obj_apps_accounts_usedtoken` (
   `id` char(12) NOT NULL,
   `code` char(6) NOT NULL,
   `dates__created` double NOT NULL,
@@ -261,7 +261,7 @@ CREATE TABLE `a2_objects_apps_accounts_usedtoken` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_accounts_whitelist` (
+CREATE TABLE `a2obj_apps_accounts_whitelist` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `type` smallint(6) NOT NULL,

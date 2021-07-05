@@ -159,7 +159,7 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {                
-                case 'version': die("Andromeda ".a2_version."\n"); break;
+                case 'version': die("Andromeda ".andromeda_version."\n"); break;
                 
                 case 'batch':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -241,7 +241,7 @@ class CLI extends IOInterface
                 
                 if (!is_readable($val)) throw new InvalidFileException();
                 
-                $tmpfile = tempnam(sys_get_temp_dir(),'a2_'); copy($val, $tmpfile);
+                $tmpfile = tempnam(sys_get_temp_dir(),'andromeda_'); copy($val, $tmpfile);
                 
                 $filename = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : $val;       
                 
