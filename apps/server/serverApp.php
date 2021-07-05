@@ -272,7 +272,7 @@ class ServerApp extends UpgradableApp
         $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); return $apps;
     }
     
-    public static function getVersion() : string { return a2_version; }
+    public static function getVersion() : string { return andromeda_version; }
 
     protected function getDBVersion() : DBVersion { return $this->API->GetConfig(); }
     

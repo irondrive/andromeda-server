@@ -48,7 +48,7 @@ class ObjectDatabase extends Database
     public function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class::GetDBClass()); unset($class[0]);
-        $retval = "a2_objects_".strtolower(implode('_', $class));
+        $retval = "a2obj_".strtolower(implode('_', $class));
         if ($this->UsePublicSchema()) $retval = "public.$retval";
         return $retval;
     }

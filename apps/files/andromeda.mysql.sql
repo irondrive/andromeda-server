@@ -11,7 +11,7 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_accesslog` (
+CREATE TABLE `a2obj_apps_files_accesslog` (
   `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   `account` char(12) DEFAULT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE `a2_objects_apps_files_accesslog` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_comment` (
+CREATE TABLE `a2obj_apps_files_comment` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE `a2_objects_apps_files_comment` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_config` (
+CREATE TABLE `a2obj_apps_files_config` (
   `id` char(12) NOT NULL,
   `version` varchar(255) NOT NULL,
   `dates__created` double NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE `a2_objects_apps_files_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_file` (
+CREATE TABLE `a2obj_apps_files_file` (
   `id` char(16) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE `a2_objects_apps_files_file` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
+CREATE TABLE `a2obj_apps_files_filesystem_fsmanager` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `type` tinyint(2) NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE `a2_objects_apps_files_filesystem_fsmanager` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_folder` (
+CREATE TABLE `a2obj_apps_files_folder` (
   `id` char(16) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
   `description` text DEFAULT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE `a2_objects_apps_files_folder` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_like` (
+CREATE TABLE `a2obj_apps_files_like` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,
@@ -153,7 +153,7 @@ CREATE TABLE `a2_objects_apps_files_like` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_limits_authentitytotal` (
+CREATE TABLE `a2obj_apps_files_limits_authentitytotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `dates__created` double NOT NULL,
@@ -182,7 +182,7 @@ CREATE TABLE `a2_objects_apps_files_limits_authentitytotal` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
+CREATE TABLE `a2obj_apps_files_limits_filesystemtotal` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `dates__created` double NOT NULL,
@@ -209,7 +209,7 @@ CREATE TABLE `a2_objects_apps_files_limits_filesystemtotal` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_limits_timed` (
+CREATE TABLE `a2obj_apps_files_limits_timed` (
   `id` char(12) NOT NULL,
   `object` varchar(64) NOT NULL,
   `stats` int(11) NOT NULL DEFAULT 0,
@@ -227,7 +227,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timed` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
+CREATE TABLE `a2obj_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL,
   `limitobj` varchar(64) NOT NULL,
   `dates__created` double NOT NULL,
@@ -245,7 +245,7 @@ CREATE TABLE `a2_objects_apps_files_limits_timedstats` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_share` (
+CREATE TABLE `a2obj_apps_files_share` (
   `id` char(16) NOT NULL,
   `item` varchar(64) NOT NULL,
   `owner` char(12) NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE `a2_objects_apps_files_share` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_ftp` (
+CREATE TABLE `a2obj_apps_files_storage_ftp` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -289,7 +289,7 @@ CREATE TABLE `a2_objects_apps_files_storage_ftp` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_local` (
+CREATE TABLE `a2obj_apps_files_storage_local` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -300,7 +300,7 @@ CREATE TABLE `a2_objects_apps_files_storage_local` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_s3` (
+CREATE TABLE `a2obj_apps_files_storage_s3` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE `a2_objects_apps_files_storage_s3` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_sftp` (
+CREATE TABLE `a2obj_apps_files_storage_sftp` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -343,7 +343,7 @@ CREATE TABLE `a2_objects_apps_files_storage_sftp` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_smb` (
+CREATE TABLE `a2obj_apps_files_storage_smb` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -360,7 +360,7 @@ CREATE TABLE `a2_objects_apps_files_storage_smb` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_storage_webdav` (
+CREATE TABLE `a2obj_apps_files_storage_webdav` (
   `id` char(12) NOT NULL,
   `dates__created` double NOT NULL,
   `filesystem` char(12) NOT NULL,
@@ -375,7 +375,7 @@ CREATE TABLE `a2_objects_apps_files_storage_webdav` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2_objects_apps_files_tag` (
+CREATE TABLE `a2obj_apps_files_tag` (
   `id` char(16) NOT NULL,
   `owner` char(12) NOT NULL,
   `item` varchar(64) NOT NULL,

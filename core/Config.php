@@ -66,7 +66,7 @@ class Config extends DBVersion
     }
     
     /** Creates a new config singleton with default values */
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array())->setVersion(a2_version); }
+    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array())->setVersion(andromeda_version); }
     
     /** Returns the string detailing the CLI usage for SetConfig */
     public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".

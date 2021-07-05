@@ -71,7 +71,7 @@ class VersionInfo
     public int $major; public int $minor; public int $patch; 
     public string $version; public string $extra;
     
-    public function __construct(string $version = a2_version)
+    public function __construct(string $version = andromeda_version)
     {
         $this->version = $version;
         
