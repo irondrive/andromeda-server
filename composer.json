@@ -12,8 +12,6 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-sodium": "*",
-        "ext-ftp": "*",
-        "ext-smbclient": "*",
         "phpmailer/phpmailer": "~6",
         "clue/arguments": "~2",
         "phpgangsta/googleauthenticator": "dev-master",
@@ -25,9 +23,10 @@
         "ext-pdo_sqlite": "For SQLite databases",
         "ext-pdo_pgsql": "For Postgresql databases",
         "ext-pgsql": "For Postgresql databases",
-        "ext-ftp": "For FTP authentication",
         "ext-imap": "For IMAP authentication",
-        "ext-ldap": "For LDAP authentication"
+        "ext-ldap": "For LDAP authentication",
+        "ext-ftp": "For FTP authentication and the FTP storage backend",
+        "ext-smbclient": "For the SMB storage backend"
     },
     "require-dev": {
         "phpmetrics/phpmetrics": "~2"

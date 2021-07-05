@@ -17,6 +17,9 @@ require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/Traits.php");
 
+/** Exception indicating that the libsmbclient extension is missing */
+class S3AwsSdkException extends ActivateException { public $message = "S3_AWS_SDK_MISSING"; }
+
 /** Exception that wraps S3 SDK exceptions */
 class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCEPTION"; }
 
@@ -135,10 +138,16 @@ class S3 extends S3Base4
         return parent::Edit($input);
     }
     
-    /** s3 connection resource */ private \Aws\S3\S3Client $s3;
+    /** s3 connection resource */ private $s3;
     
     /** The stream wrapper ID */ private string $streamID;
-
+    
+    /** Checks for the SMB client extension */
+    public function SubConstruct() : void
+    {
+        if (!class_exists('\\Aws\\S3\\S3Client')) throw new S3AwsSdkException();
+    }
+    
     public function Activate() : self
     {
         if (isset($this->s3)) return $this;
