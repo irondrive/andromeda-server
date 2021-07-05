@@ -68,7 +68,7 @@ class RequestMetrics extends StandardObject
         
         $obj->SetScalar('peak_memory', memory_get_peak_usage())
             ->SetScalar('nincludes', count(get_included_files()))
-            ->SetScalar('nobjects', count($database->getLoadedObjects()));
+            ->SetScalar('nobjects', count($database->getLoadedObjectIDs()));
         
         foreach ($construct->getStats() as $statkey=>$statval)
             $obj->SetScalar("construct__$statkey", $statval);
@@ -81,7 +81,7 @@ class RequestMetrics extends StandardObject
             $obj->SetScalar('construct__queries', $construct->getQueries())
                 ->SetScalar('gcstats',gc_status())->SetScalar('rusage',getrusage())
                 ->SetScalar('includes',get_included_files())
-                ->SetScalar('objects',$database->getLoadedObjects())
+                ->SetScalar('objects',$database->getLoadedObjectIDs())
                 ->SetScalar('queries',$database->getAllQueries())
                 ->SetScalar('debuglog',ErrorManager::GetInstance()->GetDebugLog());
         }

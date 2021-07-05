@@ -21,11 +21,11 @@ class RowWriteFailedException extends DatabaseException { public $message = "ROW
  */
 class ObjectDatabase extends Database
 {
-    /** @var array<string, <string, BaseObject>> array of loaded objects indexed by class then ID */
+    /** @var array<string, array<string, BaseObject>> array of loaded objects indexed by class then ID */
     private array $objects = array();
 
     /** @return array<string, [id]> indexed by class */
-    public function getLoadedObjects() : array
+    public function getLoadedObjectIDs() : array
     { 
         return array_map(function(array $cobjs){
             return array_keys($cobjs);
