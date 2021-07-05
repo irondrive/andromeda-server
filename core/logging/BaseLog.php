@@ -29,7 +29,7 @@ abstract class BaseLog extends BaseObject
      * @param ObjectDatabase $database database reference
      * @param QueryBuilder $q query to create params with
      * @param Input $input input with user supplied criteria
-     * @return array array of WHERE strings
+     * @return array<string> array of WHERE strings
      */
     public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array;
     
@@ -61,7 +61,7 @@ abstract class BaseLog extends BaseObject
      * Loads log entries the given input
      * @param ObjectDatabase $database database reference
      * @param Input $input user input with selectors
-     * @return array<id, BaseLog> loaded log entries
+     * @return array<string, BaseLog> loaded log entries indexed by ID
      */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
     {

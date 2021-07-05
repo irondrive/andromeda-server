@@ -92,7 +92,7 @@ class Main extends Singleton
     /** @var float time of request */
     private float $time;
     
-    /** @var array<name,AppBase> apps */
+    /** @var array<string,AppBase> apps indexed by name */
     private array $apps = array(); 
     
     /** @var RunContext[] stack frames for nested Run() calls */
