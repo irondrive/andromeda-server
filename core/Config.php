@@ -330,10 +330,10 @@ class Config extends DBVersion
         
         $data['apps'] = array();
         
-        foreach (array_keys(Main::GetInstance()->GetApps()) as $appname)
+        foreach (Main::GetInstance()->GetApps() as $appname=>$app)
         {
-            $data['apps'][$appname] = $admin ? AppBase::getAppVersion($appname) :
-                implode('.',array_slice(explode('.',AppBase::getAppVersion($appname)),0,2));
+            $data['apps'][$appname] = $admin ? $app::getVersion() :
+                implode('.',array_slice(explode('.',$app::getVersion()),0,2));
         }
                 
         if ($admin) $data['datadir'] = $this->GetDataDir();

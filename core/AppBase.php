@@ -80,14 +80,11 @@ abstract class AppBase implements Transactions
         return self::getMetadata($app,'api-version');
     }
     
-    /** @return string Returns the app's version information */
-    public static function getAppVersion(string $app) : string
-    {
-        return self::getMetadata($app,'version');
-    }
-    
     /** @return string the app's version information */
-    public static function getVersion() : string { return self::getAppVersion(static::getName()); }
+    public static function getVersion() : string 
+    { 
+        return self::getMetadata(static::getName(),'version'); 
+    }
 
     /** Tells the app to commit any changes made outside the database */
     public function commit() { }
