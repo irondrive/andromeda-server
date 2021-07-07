@@ -8,8 +8,8 @@ tools/pgtransfer
 
 for i in apps/* core; do if [ -f $i/andromeda.mysql.sql ]; then
 
-   TABLES=$(mysql -D andromeda2 -u root -p -se "SHOW TABLES LIKE 'a2obj_${i//\//_}%'")
-   mysqldump andromeda2 $TABLES --skip-comments --no-create-db --no-data \
+   TABLES=$(mysql -D andromeda -u root -p -se "SHOW TABLES LIKE 'a2obj_${i//\//_}%'")
+   mysqldump andromeda $TABLES --skip-comments --no-create-db --no-data \
       --skip-add-drop-table -h localhost -u root -p > $i/andromeda.mysql.sql
 
    pg_dump --schema-only --table public.a2_objects_${i//\//_}"*" --dbname andromeda \
