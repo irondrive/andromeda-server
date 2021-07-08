@@ -27,7 +27,7 @@ class AppDependencyException extends Exceptions\ClientErrorException { public $m
 class AppVersionException extends Exceptions\ClientErrorException { public $message = "APP_VERSION_MISMATCH"; }
 
 /** A singleton object that stores a version field */
-abstract class DBVersion extends SingletonObject
+class DBVersion extends SingletonObject
 {
     public static function GetFieldTemplate() : array
     {

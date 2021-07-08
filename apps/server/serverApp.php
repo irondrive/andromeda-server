@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp, InstallableApp, InstallRequiredException};
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Config, DBVersion, InvalidAppException, MissingMetadataException};
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
@@ -18,7 +18,7 @@ require_once(ROOT."/core/logging/RequestLog.php"); use Andromeda\Core\Logging\Re
 require_once(ROOT."/core/logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/core/logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
 
-use Andromeda\Core\{UnknownActionException, MailSendException};
+use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
 
 /** Exception indicating that the specified mailer object does not exist */
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
@@ -32,14 +32,12 @@ class DatabaseFailException extends Exceptions\ClientErrorException { public $me
 /** Client error indicating authentication failed */
 class AuthFailedException extends Exceptions\ClientDeniedException { public $message = "ACCESS_DENIED"; }
 
-abstract class ServerAppBase extends AppBase { use UpgradableApp; }
-
 /**
  * Server management/info app included with the framework.
  * 
  * Handles DB config, install, and getting/setting config/logs.
  */
-class ServerApp extends ServerAppBase
+class ServerApp extends UpgradableApp
 {    
     public static function getName() : string { return 'server'; }
     
@@ -107,7 +105,7 @@ class ServerApp extends ServerAppBase
     /**
      * {@inheritDoc}
      * @throws DatabaseConfigException if the database needs to be configured
-     * @throws InstallRequiredException if config needs to be initialized
+     * @throws UnknownConfigException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
@@ -123,7 +121,7 @@ class ServerApp extends ServerAppBase
             }
             // if config is not available, require installing it
             else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
-                throw new InstallRequiredException('server');
+                    throw new UnknownConfigException('server');
         }
         
         if ($this->API->GetConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
@@ -260,7 +258,7 @@ class ServerApp extends ServerAppBase
      * @return array[string] list of apps that were enabled
      */
     public function Install(Input $input) : array
-    {        
+    {
         if ($this->API->GetConfig()) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/core");
@@ -271,16 +269,7 @@ class ServerApp extends ServerAppBase
         
         $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
         
-        $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); 
-        
-        // install all newly enabled apps also
-        foreach ($this->API->GetApps() as $name=>$app)
-        {
-            if (method_exists($app,'Install') &&
-                $name !== self::getName()) $app->Install();
-        }
-        
-        return $apps;
+        $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); return $apps;
     }
     
     public static function getVersion() : string { return andromeda_version; }
@@ -292,15 +281,15 @@ class ServerApp extends ServerAppBase
         return require_once(ROOT."/core/_upgrade/scripts.php");
     }
     
-    public function Upgrade() : void
+    public function doUpgrade() : void
     {
-        parent::Upgrade();
+        parent::doUpgrade();
         
         // upgrade all installed apps also
         foreach ($this->API->GetApps() as $name=>$app)
         {            
-            if (method_exists($app,'Upgrade') && 
-                $name !== self::getName()) $app->Upgrade();
+            if ($app instanceof UpgradableApp && 
+                $name !== self::getName()) $app->doUpgrade();
         }
     }
     

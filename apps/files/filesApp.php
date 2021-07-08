@@ -22,7 +22,7 @@ require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\S
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, InstallableApp, UpgradableApp};
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -38,6 +38,7 @@ require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group
 require_once(ROOT."/apps/accounts/Authenticator.php"); use Andromeda\Apps\Accounts\{Authenticator, AuthenticationFailedException};
 
 use Andromeda\Core\UnknownActionException;
+use Andromeda\Core\UnknownConfigException;
 
 use Andromeda\Core\Database\DatabaseException;
 use Andromeda\Apps\Accounts\UnknownAccountException;
@@ -97,9 +98,6 @@ class ShareGroupDisabledException extends Exceptions\ClientDeniedException    { 
 /** Exception indicating that sharing to everyone is not allowed */
 class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
 
-abstract class FilesAppBase1 extends AppBase { use InstallableApp; }
-abstract class FilesAppBase2 extends FilesAppBase1 { use UpgradableApp; }
-
 /**
  * App that provides user-facing filesystem services.
  * 
@@ -112,21 +110,18 @@ abstract class FilesAppBase2 extends FilesAppBase1 { use UpgradableApp; }
  * configurable rules per-account or per-filesystem, and granular statistics
  * gathering and limiting for accounts/groups/filesystems.
  */
-class FilesApp extends FilesAppBase2
+class FilesApp extends UpgradableApp
 {    
     public static function getName() : string { return 'files'; }
     
-    protected static function getLogClass() : ?string { return AccessLog::class; }
-    
-    protected static function getConfigClass() : string { return Config::class; }
-    
-    protected function isInstalled() : bool { return isset($this->config); }
+    protected static function getLogClass() : ?string { return AccessLog::class; }    
     
     protected function getDBVersion() : DBVersion { return $this->config; }
     
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
+            'install',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey alphanum] [--spassword raw]',
@@ -192,9 +187,9 @@ class FilesApp extends FilesAppBase2
         )); 
     }
     
-    protected Config $config;
+    /** files app config */ private Config $config;
     
-    protected ObjectDatabase $database;
+    /** database reference */ private ObjectDatabase $database;
      
     public function __construct(Main $api)
     {
@@ -210,12 +205,16 @@ class FilesApp extends FilesAppBase2
     
     /**
      * {@inheritDoc}
+     * @throws UnknownConfigException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
     public function Run(Input $input)
     {
-        if (!isset($this->config) && ($retval = $this->CheckInstall($input))) return $retval;
+        // if config is not available, require installing it
+        if (!isset($this->config) && $input->GetAction() !== 'install')
+            throw new UnknownConfigException('files');
+        
         if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
 
         $authenticator = Authenticator::TryAuthenticate(
@@ -224,7 +223,9 @@ class FilesApp extends FilesAppBase2
         $accesslog = AccessLog::Create($this->database, $authenticator); $input->SetLogger($accesslog);
 
         switch($input->GetAction())
-        {            
+        {
+            case 'install':  return $this->Install($input);
+            
             case 'getconfig': return $this->GetConfig($input, $authenticator);
             case 'setconfig': return $this->SetConfig($input, $authenticator);
             
@@ -372,6 +373,19 @@ class FilesApp extends FilesAppBase2
         if ($accesslog) $accesslog->LogAccess($access->GetItem(), $access->GetShare(), $isParent);
         
         return $access;
+    }
+
+    /**
+     * Installs the app by importing its SQL file and creating config
+     * @throws UnknownActionException if config already exists
+     */
+    public function Install(Input $input) : void
+    {
+        if (isset($this->config)) throw new UnknownActionException();
+        
+        $this->database->importTemplate(ROOT."/apps/files");
+        
+        Config::Create($this->database)->Save();
     }
     
     /**

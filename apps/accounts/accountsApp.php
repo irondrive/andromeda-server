@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, InstallableApp, UpgradableApp};
+require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -32,6 +32,7 @@ require_once(ROOT."/apps/accounts/auth/IMAP.php");
 require_once(ROOT."/apps/accounts/auth/FTP.php");
 
 use Andromeda\Core\UnknownActionException;
+use Andromeda\Core\UnknownConfigException;
 use Andromeda\Core\DecryptionFailedException;
 
 use Andromeda\Core\Database\DatabaseException;
@@ -111,9 +112,6 @@ class UnknownContactException extends Exceptions\ClientNotFoundException { publi
 /** Exception indicating that the group membership does not exist */
 class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_GROUPMEMBERSHIP"; }
 
-abstract class AccountsAppBase1 extends AppBase { use InstallableApp; }
-abstract class AccountsAppBase2 extends AccountsAppBase1 { use UpgradableApp; }
-
 /**
  * App for managing accounts and authenticating users.
  *
@@ -122,25 +120,22 @@ abstract class AccountsAppBase2 extends AccountsAppBase1 { use UpgradableApp; }
  * authentication, multi-client/session management, authentication via external
  * sources, and granular per-account/per-group config.
  */
-class AccountsApp extends AccountsAppBase2
+class AccountsApp extends UpgradableApp
 {   
-    protected Config $config;
+    private Config $config;
     
-    protected ObjectDatabase $database;
+    private ObjectDatabase $database;
     
     public static function getName() : string { return 'accounts'; }
     
     protected static function getLogClass() : ?string { return AccessLog::class; }
-    
-    protected static function getConfigClass() : string { return Config::class; }
-    
-    protected function isInstalled() : bool { return isset($this->config); }
     
     protected function getDBVersion() : DBVersion { return $this->config; }
     
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
+            'install',
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -205,12 +200,16 @@ class AccountsApp extends AccountsAppBase2
 
     /**
      * {@inheritDoc}
+     * @throws UnknownConfigException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
     public function Run(Input $input)
-    {        
-        if (!isset($this->config) && ($retval = $this->CheckInstall($input))) return $retval;
+    {
+        // if config is not available, require installing it
+        if (!isset($this->config) && $input->GetAction() !== 'install')
+            throw new UnknownConfigException('accounts');
+        
         if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
         
         $authenticator = Authenticator::TryAuthenticate(
@@ -219,7 +218,9 @@ class AccountsApp extends AccountsAppBase2
         $accesslog = AccessLog::Create($this->database, $authenticator); $input->SetLogger($accesslog);
         
         switch($input->GetAction())
-        {            
+        {
+            case 'install':             return $this->Install($input); 
+            
             case 'getconfig':           return $this->GetConfig($input, $authenticator);
             case 'setconfig':           return $this->SetConfig($input, $authenticator);
             
@@ -278,6 +279,19 @@ class AccountsApp extends AccountsAppBase2
             
             default: throw new UnknownActionException();
         }
+    }
+
+    /**
+     * Installs the app by importing its SQL file, creating config, and creating an admin account
+     * @throws UnknownActionException if config already exists
+     */
+    public function Install(Input $input) : void
+    {
+        if (isset($this->config)) throw new UnknownActionException();
+        
+        $this->database->importTemplate(ROOT."/apps/accounts");
+        
+        Config::Create($this->database)->Save();
     }
 
     /**
