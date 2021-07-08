@@ -4,6 +4,10 @@ cd tools; if [ ! -f phpDocumentor.phar ]; then
    wget https://phpdoc.org/phpDocumentor.phar
 fi; cd ..
 
-rm -Rf ./docs; php7.4 tools/phpDocumentor.phar -d . -t ./docs --ignore "/vendor/" --sourcecode
+rm -Rf ./docs; php tools/phpDocumentor.phar -d . -t ./docs --ignore "/vendor/" --sourcecode
 
-php index.php --debug 0 server usage > docs/USAGE
+TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
+./andromeda server dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB
+./andromeda --dbconf $TEMPCONF server install
+./andromeda --dbconf $TEMPCONF server usage > docs/USAGE
+rm $TEMPDB $TEMPCONF
