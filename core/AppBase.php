@@ -8,8 +8,8 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 /** An exception indicating that the requested action is invalid for this app */
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
 
-/** An exception indicating that the app is not installed and needs to be */
-class InstallRequiredException extends Exceptions\ServerException { public $message = "APP_INSTALL_REQUIRED"; }
+/** An exception indicating that the app is missing its config */
+class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
 
 /** An exception indicating that the metadata file is missing */
 class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
@@ -93,56 +93,17 @@ abstract class AppBase implements Transactions
     public function rollback() { }
 }
 
-/** Describes an app that needs to have database tables installed */
-trait InstallableApp
-{
-    public static function getUsage() : array { return array('install'); }
-    
-    /** @return string the class name of the config implementation */
-    protected abstract static function getConfigClass() : string;
-    
-    /** @return bool true iff the app is installed */
-    protected abstract function isInstalled() : bool;    
-    
-    /** Install the app by importing the DB template and creating config */
-    public function Install() : void
-    {
-        $this->database->importTemplate(ROOT."/apps/".static::getName());
-        
-        (static::getConfigClass())::Create($this->database)->Save();
-    }
-    
-    /**
-     * Complements Run() with checking if install is required and running it
-     * @param Input $input the app action input object
-     * @throws InstallRequiredException if install is required but not done
-     * @return null if nothing was done else the output of the app Install
-     */
-    protected function CheckInstall(Input $input) : bool
-    {
-        if (!$this->isInstalled())
-        {
-            if ($input->GetAction() === 'install')
-            {
-                $this->Install(); return true;
-            }
-            else throw new InstallRequiredException(static::getName());
-        }
-        return false;
-    }
-}
-
 /** 
- * Describes an app that stores database versions
+ * Trait that describes an app that stores database versions
  * and has upgrade scripts for upgrading the database
  */
-trait UpgradableApp
+abstract class UpgradableApp extends AppBase
 {    
     public static function getUsage() : array { return array('upgrade'); }
     
     /** @return DBVersion that database object that stores the app version */
     protected abstract function getDBVersion() : DBVersion;
-
+    
     /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
     protected static function getUpgradeScripts() : array
     {
@@ -153,7 +114,7 @@ trait UpgradableApp
      * Iterates over the list of upgrade scripts, running them
      * sequentially until the DB is up to date with the code
      */
-    public function Upgrade() : void
+    public function doUpgrade() : void
     {        
         $oldVersion = $this->getDBVersion()->getVersion();
         
@@ -181,7 +142,7 @@ trait UpgradableApp
         {
             if ($input->GetAction() === 'upgrade')
             {
-                $this->Upgrade(); return true;
+                $this->doUpgrade(); return true;
             }
             else throw new UpgradeRequiredException(static::getName());
         }
