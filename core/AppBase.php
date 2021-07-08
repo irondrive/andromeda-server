@@ -8,8 +8,8 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 /** An exception indicating that the requested action is invalid for this app */
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
 
-/** An exception indicating that the app is missing its config */
-class UnknownConfigException extends Exceptions\ServerException { public $message = "MISSING_CONFIG"; }
+/** An exception indicating that the app is not installed and needs to be */
+class InstallRequiredException extends Exceptions\ServerException { public $message = "APP_INSTALL_REQUIRED"; }
 
 /** An exception indicating that the metadata file is missing */
 class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
@@ -94,7 +94,7 @@ abstract class AppBase implements Transactions
 }
 
 /** 
- * Trait that describes an app that stores database versions
+ * Describes an app that stores database versions
  * and has upgrade scripts for upgrading the database
  */
 abstract class UpgradableApp extends AppBase
@@ -114,7 +114,7 @@ abstract class UpgradableApp extends AppBase
      * Iterates over the list of upgrade scripts, running them
      * sequentially until the DB is up to date with the code
      */
-    public function doUpgrade() : void
+    public function Upgrade() : void
     {        
         $oldVersion = $this->getDBVersion()->getVersion();
         
@@ -142,7 +142,7 @@ abstract class UpgradableApp extends AppBase
         {
             if ($input->GetAction() === 'upgrade')
             {
-                $this->doUpgrade(); return true;
+                $this->Upgrade(); return true;
             }
             else throw new UpgradeRequiredException(static::getName());
         }

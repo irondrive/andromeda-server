@@ -15,6 +15,9 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 /** Exception indicating that the app or action parameters are missing */
 class NoAppActionException extends Exceptions\ClientErrorException { public $message = "APP_OR_ACTION_MISSING"; }
 
+/** Exception indicating that the parameter cannot be part of $_GET */
+class IllegalGetFieldException extends Exceptions\ClientErrorException { public $message = "ILLEGAL_GET_FIELD"; }
+
 /** Exception indicating the given batch sequence has too many actions */
 class LargeBatchException extends Exceptions\ClientErrorException { public $message = "BATCH_TOO_LARGE"; }
 
@@ -83,17 +86,23 @@ class AJAX extends IOInterface
      * Fetches an input object from the HTTP request 
      * 
      * App and Action must be part of $_GET, everything else
-     * can be interchangeably in $_GET or $_POST
+     * can be interchangeably in $_GET or $_POST - except
+     * 'password' and 'auth_' which cannot be in $_GET
      */
     private function GetInput(array $get, array $files, array $request) : Input
     {
-        
         if (empty($get['app'])) throw new NoAppActionException();
         $app = $get['app']; unset($request['app']);
         
         if (empty($get['action'])) throw new NoAppActionException();
         $action = $get['action']; unset($request['action']);
-
+        
+        foreach (array_keys($get) as $key)
+        {
+            if (strpos($key,'password') !== false || strpos($key,'auth_') === 0)
+                throw new IllegalGetFieldException($key);
+        }
+        
         $params = new SafeParams();
         
         foreach (array_keys($request) as $key)

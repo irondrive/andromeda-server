@@ -32,7 +32,7 @@ require_once(ROOT."/apps/accounts/auth/IMAP.php");
 require_once(ROOT."/apps/accounts/auth/FTP.php");
 
 use Andromeda\Core\UnknownActionException;
-use Andromeda\Core\UnknownConfigException;
+use Andromeda\Core\InstallRequiredException;
 use Andromeda\Core\DecryptionFailedException;
 
 use Andromeda\Core\Database\DatabaseException;
@@ -135,7 +135,7 @@ class AccountsApp extends UpgradableApp
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
-            'install',
+            'install [--username alphanum --password raw]',
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -200,7 +200,7 @@ class AccountsApp extends UpgradableApp
 
     /**
      * {@inheritDoc}
-     * @throws UnknownConfigException if config needs to be initialized
+     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
@@ -208,7 +208,7 @@ class AccountsApp extends UpgradableApp
     {
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new UnknownConfigException('accounts');
+            throw new InstallRequiredException('accounts');
         
         if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
         
@@ -282,16 +282,33 @@ class AccountsApp extends UpgradableApp
     }
 
     /**
-     * Installs the app by importing its SQL file, creating config, and creating an admin account
+     * Installs the app by importing its SQL file and creating config
+     * 
+     * Optionally creates an initial administrator account
      * @throws UnknownActionException if config already exists
+     * @return ?array Account if admin was created
+     * @see Account::GetClientObject()
      */
-    public function Install(Input $input) : void
+    public function Install(Input $input) : ?array
     {
         if (isset($this->config)) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/apps/accounts");
         
-        Config::Create($this->database)->Save();
+        $this->config = Config::Create($this->database)->Save();
+        
+        if ($input->HasParam('username'))
+        {
+            $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, SafeParam::MaxLength(127));
+            
+            $password = $input->GetParam("password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+            
+            $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password)->setAdmin(true);
+            
+            return $account->GetClientObject();
+        }
+        
+        return null;
     }
 
     /**

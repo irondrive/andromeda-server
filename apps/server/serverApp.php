@@ -18,7 +18,7 @@ require_once(ROOT."/core/logging/RequestLog.php"); use Andromeda\Core\Logging\Re
 require_once(ROOT."/core/logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/core/logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
 
-use Andromeda\Core\{UnknownActionException, UnknownConfigException, MailSendException};
+use Andromeda\Core\{UnknownActionException, InstallRequiredException, MailSendException};
 
 /** Exception indicating that the specified mailer object does not exist */
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
@@ -105,7 +105,7 @@ class ServerApp extends UpgradableApp
     /**
      * {@inheritDoc}
      * @throws DatabaseConfigException if the database needs to be configured
-     * @throws UnknownConfigException if config needs to be initialized
+     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
@@ -121,7 +121,7 @@ class ServerApp extends UpgradableApp
             }
             // if config is not available, require installing it
             else if (!$this->API->GetConfig() && $input->GetAction() !== 'install')
-                    throw new UnknownConfigException('server');
+                    throw new InstallRequiredException('server');
         }
         
         if ($this->API->GetConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
@@ -246,6 +246,8 @@ class ServerApp extends UpgradableApp
      */
     protected function ConfigDB(Input $input) : void
     {
+        $this->API->GetInterface()->DisallowBatch();
+        
         try { Database::Install($input); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
@@ -260,6 +262,8 @@ class ServerApp extends UpgradableApp
     public function Install(Input $input) : array
     {
         if ($this->API->GetConfig()) throw new UnknownActionException();
+        
+        $this->API->GetInterface()->DisallowBatch();
         
         $this->database->importTemplate(ROOT."/core");
         
@@ -281,15 +285,15 @@ class ServerApp extends UpgradableApp
         return require_once(ROOT."/core/_upgrade/scripts.php");
     }
     
-    public function doUpgrade() : void
+    public function Upgrade() : void
     {
-        parent::doUpgrade();
+        parent::Upgrade();
         
         // upgrade all installed apps also
         foreach ($this->API->GetApps() as $name=>$app)
         {            
             if ($app instanceof UpgradableApp && 
-                $name !== self::getName()) $app->doUpgrade();
+                $name !== self::getName()) $app->Upgrade();
         }
     }
     

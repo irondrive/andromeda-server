@@ -38,7 +38,7 @@ require_once(ROOT."/apps/accounts/Group.php"); use Andromeda\Apps\Accounts\Group
 require_once(ROOT."/apps/accounts/Authenticator.php"); use Andromeda\Apps\Accounts\{Authenticator, AuthenticationFailedException};
 
 use Andromeda\Core\UnknownActionException;
-use Andromeda\Core\UnknownConfigException;
+use Andromeda\Core\InstallRequiredException;
 
 use Andromeda\Core\Database\DatabaseException;
 use Andromeda\Apps\Accounts\UnknownAccountException;
@@ -205,7 +205,7 @@ class FilesApp extends UpgradableApp
     
     /**
      * {@inheritDoc}
-     * @throws UnknownConfigException if config needs to be initialized
+     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
      * @see AppBase::Run()
      */
@@ -213,7 +213,7 @@ class FilesApp extends UpgradableApp
     {
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new UnknownConfigException('files');
+            throw new InstallRequiredException('files');
         
         if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
 
@@ -385,7 +385,7 @@ class FilesApp extends UpgradableApp
         
         $this->database->importTemplate(ROOT."/apps/files");
         
-        Config::Create($this->database)->Save();
+        $this->config = Config::Create($this->database)->Save();
     }
     
     /**
