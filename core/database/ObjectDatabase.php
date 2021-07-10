@@ -24,7 +24,7 @@ class ObjectDatabase extends Database
     /** @var array<string, array<string, BaseObject>> array of loaded objects indexed by class then ID */
     private array $objects = array();
 
-    /** @return array<string, [id]> indexed by class */
+    /** @return array<string, string> list of ID arrays indexed by class */
     public function getLoadedObjectIDs() : array
     { 
         return array_map(function(array $cobjs){
