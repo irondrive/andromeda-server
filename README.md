@@ -18,9 +18,13 @@ See the wiki for more app-specific information.
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface.  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
-Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Note that app and action are implicit and do not require --app or --action.
+Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
 
-The `server usage` output is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+
+### Common Exceptions
+
+"SafeParam" related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
