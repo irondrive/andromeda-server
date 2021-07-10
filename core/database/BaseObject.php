@@ -513,7 +513,7 @@ abstract class BaseObject
     /**
      * Sets a scalar field to the given value
      * @param string $field the name of the field
-     * @param mixed the value of the scalar to set
+     * @param mixed $value the value of the scalar to set
      * @param bool $temp if true, the value is temporary and will not be saved
      * @throws KeyNotFoundException if the property name is invalid
      * @return $this

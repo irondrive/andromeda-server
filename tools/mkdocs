@@ -1,10 +1,17 @@
 #!/bin/bash
 
 cd tools; if [ ! -f phpDocumentor.phar ]; then
-   wget https://phpdoc.org/phpDocumentor.phar
+    wget https://phpdoc.org/phpDocumentor.phar
 fi; cd ..
 
-rm -Rf ./docs/*; php tools/phpDocumentor.phar -d . -t ./docs --ignore "/vendor/" --sourcecode
+cd tools; if [ ! -f doctum.phar ]; then
+    wget https://doctum.long-term.support/releases/latest/doctum.phar
+fi; cd ..
+
+php tools/phpDocumentor.phar -d . -t ./docs/phpdoc --sourcecode \
+    --ignore 'docs' --ignore 'tools' --ignore 'vendor' --ignore 'Config.php'
+
+php tools/doctum.phar update tools/doctum-conf.php -v
 
 TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
 ./andromeda server dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB

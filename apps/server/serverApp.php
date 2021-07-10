@@ -257,7 +257,7 @@ class ServerApp extends UpgradableApp
      * 
      * Also enables all installable apps that exist (retval)
      * @throws UnknownActionException if config already exists
-     * @return array[string] list of apps that were enabled
+     * @return array<string> list of apps that were enabled
      */
     public function Install(Input $input) : array
     {

@@ -14,3 +14,4 @@ core/database/Config.php
 
 tools/mysql2sqlite
 tools/phpDocumentor.phar
+tools/doctum.phar
