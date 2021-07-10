@@ -20,6 +20,8 @@ Andromeda and *all* its API calls can be run either through an HTTP webserver, o
 
 Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Note app and action are implicit and do not require --app or --action.
 
+The `server usage` output is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
 * `--json`/`--printr` use JSON or PHP printr() for output (default printr)
