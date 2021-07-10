@@ -62,7 +62,9 @@ Use the `server usage` command to see all available commands.
 From here you will probably want to create and use a session with your new account.  See the accounts app wiki for more information.
 
 #### Database Config
-`server dbconf` will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.
+`server dbconf` will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
+
+For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments.
 
 ### Upgrading
 When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported.
