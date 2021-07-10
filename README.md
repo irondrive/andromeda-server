@@ -18,7 +18,7 @@ See the wiki for more app-specific information.
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface.  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
-Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Command using showing `[--name value]` with brackets indicates an optional parameter. Note that app and action are implicit and do not require --app or --action.
+Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Note that app and action are implicit and do not require --app or --action.
 
 The `server usage` output is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
 
