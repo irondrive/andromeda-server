@@ -16,6 +16,7 @@ cd api; git checkout $TAG || exit 3
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
+rm composer.json composer.lock
 
 find . -iname ".git*" | while read -r i; do rm -rf $i; done
 
