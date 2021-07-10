@@ -62,7 +62,7 @@ class AJAX extends IOInterface
             $global_files = $_FILES; unset($global_files['batch']);
             $global_request = $_REQUEST; unset($global_request['batch']);
             
-            $inputs = array(); foreach($_REQUEST['batch'] as $i)
+            $inputs = array(); foreach(array_keys($_REQUEST['batch']) as $i)
             {
                 $get = is_array($_GET['batch'][$i] ?? null) ? $_GET['batch'][$i] : array();
                 $files = is_array($_FILES['batch'][$i] ?? null) ? $_FILES['batch'][$i] : array();
@@ -76,10 +76,10 @@ class AJAX extends IOInterface
             }
             
             if (count($inputs) > 65535) throw new LargeBatchException();
-            
-            return $inputs;
         }
-        else return array(static::GetInput($_GET, $_FILES, $_REQUEST));
+        else $inputs = array(static::GetInput($_GET, $_FILES, $_REQUEST));
+        
+        return $inputs;
     }
     
     /** 
