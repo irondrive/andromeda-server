@@ -1,6 +1,6 @@
 # Overview
 
-Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server API.  It is a pure-PHP REST-ish transactional API divided into a core framework and component "apps" which implement the actual domain-specific calls.
+Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server API.  It is a pure-PHP REST-ish transactional API divided into a core framework and component "apps" which implement the actual API calls.
 
 ### Core Framework
 The framework is independent of the apps built for Andromeda and can be used for other projects.  The core principally provides safe input/output handling and formatting, error handling and logging, and an object-oriented transactional database abstraction.  The related "server" app is used for server configuration, enabling/disabling apps, and other core-specific tasks.  
