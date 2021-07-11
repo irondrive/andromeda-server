@@ -7,7 +7,9 @@ vendor/
 
 data/
 docs/
+wiki/
 metrics/
+
 combined.php
 
 core/database/Config.php

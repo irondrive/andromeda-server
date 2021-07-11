@@ -8,6 +8,9 @@ use Andromeda\Core\JSONDecodingException;
 /** Base exception indicating a problem with a client parameter */
 abstract class SafeParamException extends Exceptions\ClientErrorException { }
 
+/** Exception indicating that an invalid type was requested */
+class SafeParamUnknownTypeException extends SafeParamException { public $message = "SAFEPARAM_TYPE_UNKNOWN"; }
+
 /** Exception indicating that the parameter failed sanitization or validation */
 class SafeParamInvalidException extends SafeParamException 
 {
@@ -15,15 +18,6 @@ class SafeParamInvalidException extends SafeParamException
     { 
         $type = SafeParam::GetTypeString($type); 
         $this->message = "SAFEPARAM_INVALID_DATA: $type $key"; 
-    } 
-}
-
-/** Exception indicating that an invalid type was requested */
-class SafeParamUnknownTypeException extends SafeParamException 
-{ 
-    public function __construct(string $type) 
-    { 
-        $this->message = "SAFEPARAM_TYPE_UNKNOWN: $type"; 
     } 
 }
 
