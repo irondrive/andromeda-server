@@ -293,7 +293,7 @@ class File extends Item
     }
     
     /**
-     * @see File::TryGetClientObjects()
+     * @see File::TryGetClientObject()
      * @throws DeletedByStorageException if the item is deleted
      */
     public function GetClientObject(bool $details = false) : array

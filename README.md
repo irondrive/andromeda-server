@@ -24,7 +24,11 @@ The `server usage` output that documents all API calls is also tracked as USAGE.
 
 ### Common Exceptions
 
-"SafeParam" related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  
+`SAFEPARAM_*` related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  
+
+### Parameter Types
+
+All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
@@ -66,13 +70,13 @@ Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON, mbstring, PDO and
 
 ### Install Steps
 
-Use the `server usage` command to see all available commands.
+Use the `server usage` command to see options for all available commands.
 
 1. Run `server dbconf` to generate a database configuration file.
-2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them (step 3).
-3. Install all apps that require it.  Generally this will be `accounts install` and `files install`.  Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).
+2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
+3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-From here you will probably want to create and use a session with your new account.  See the accounts app wiki for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account.  See the accounts app wiki for more information.
 
 #### Database Config
 The `server dbconf` command will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
