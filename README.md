@@ -76,7 +76,7 @@ Use the `server usage` command to see options for all available commands.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
 3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App) for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
 The `server dbconf` command will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
