@@ -12,7 +12,7 @@ In pursuit of being a cloud storage solution, Andromeda principally includes the
 
 The server app will use the accounts app if it is enabled. Otherwise it will assume that CLI is privileged and HTTP is not, since running Andromeda from the CLI entails having access to the database config file and thus full database access.
 
-See the wiki for more app-specific information.
+See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app-specific information.
 
 # General Usage
 
@@ -76,7 +76,7 @@ Use the `server usage` command to see options for all available commands.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
 3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account.  See the accounts app wiki for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App) for more information.
 
 #### Database Config
 The `server dbconf` command will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
@@ -89,5 +89,5 @@ When the code being run does not match the version stored in the database, runni
 
 # License
 
-Andromeda including this readme, the wiki, and any documentation are copyrighted by the author.  Use of this repository and source code is licensed under the AGPLv3.  Commercial licenses can be obtained separately.
+Andromeda including all source code and any documentation are copyrighted by the author.  Use of this repository and source code is licensed under the AGPLv3.  Commercial licenses can be obtained separately.
 
