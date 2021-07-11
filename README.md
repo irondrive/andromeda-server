@@ -84,7 +84,7 @@ The `server dbconf` command will store the new configuration file (Config.php) b
 For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments.
 
 ### Upgrading
-When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported.
+When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda server usage | grep upgrade`.
 
 
 # License
