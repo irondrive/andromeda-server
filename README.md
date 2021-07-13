@@ -10,13 +10,11 @@ The framework can log accesses and errors to the database, or to log files if a 
 ### Primary Apps
 In pursuit of being a cloud storage solution, Andromeda principally includes the "accounts" and "files" apps.  Accounts implements the account management and authentication/session-management tasks.  Files app provides the filesystem interface and related features.  The files app requires the accounts app.
 
-The server app will use the accounts app if it is enabled. Otherwise it will assume that CLI is privileged and HTTP is not, since running Andromeda from the CLI entails having access to the database config file and thus full database access.
-
 See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app-specific information.
 
 # General Usage
 
-Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface.  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
+Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
 Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
 
