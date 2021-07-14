@@ -64,7 +64,9 @@ From the CLI, files can be included in two ways.  The file's contents can be dum
 For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  For production, download a release tarball with dependencies included.
 
 ### Basic Requirements
-Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON, mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite.  Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.
+Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON, mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
+
+Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.
 
 ### Install Steps
 
