@@ -26,7 +26,7 @@ The `server usage` output that documents all API calls is also tracked as USAGE.
 
 ### Parameter Types
 
-All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  
+All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. ?int) indicates that the parameter can be null (e.g. `... --myparam null`).  
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
