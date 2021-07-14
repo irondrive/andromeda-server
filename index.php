@@ -1,4 +1,4 @@
-<?php define('Andromeda',true); define('andromeda_version','2.0.0-alpha');
+<?php require_once(__DIR__.'/a2init.php');
 
 /** 
  * An Andromeda API is a pure-PHP transactional REST-ish API.
@@ -11,21 +11,12 @@
  * Multiple commands can be given to run in a single request/transaction.
  */
 
-define("ROOT",__DIR__.'/');
-
-require_once(ROOT."/vendor/autoload.php");
-
-if (!version_compare(phpversion(),'7.4.0','>='))
-    die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.")\n");
-
-if (!function_exists('mb_internal_encoding')) 
-    die("PHP mbstring Extension Required\n");
-else mb_internal_encoding("UTF-8");
-
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
+
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 /** 
  * The basic procedure is to create the Main application, parse an array 
@@ -35,7 +26,7 @@ require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Outp
 
 $interface = IOInterface::TryGet() or die('Unknown Interface');
 
-$main = new Main($interface); 
+$main = new Main($interface, new ErrorManager($interface)); 
 
 $inputs = $interface->GetInputs($main->GetConfig());
 

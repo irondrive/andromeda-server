@@ -55,11 +55,11 @@ class ErrorManager extends Singleton
     }
     
     /** Registers PHP error and exception handlers */
-    public function __construct(Main $api, IOInterface $interface)
+    public function __construct(IOInterface $interface)
     {
         parent::__construct();        
         
-        $this->API = $api; $this->interface = $interface;
+        $this->interface = $interface;
         
         set_error_handler( function($code,$string,$file,$line){
            throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
@@ -79,6 +79,8 @@ class ErrorManager extends Singleton
     }
     
     public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
+    
+    public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
     /** if false, the file-based log encountered an error on the last entry */
     private bool $filelogok = true;
