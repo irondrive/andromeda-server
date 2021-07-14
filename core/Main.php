@@ -326,6 +326,7 @@ class Main extends Singleton
      * 
      * First commits each app, then the database.  Does a rollback 
      * instead if the request was specified as a dry run.
+     * @throws CommitAfterRollbackException if a rollback was previously performed
      */
     public function commit() : void
     {
