@@ -147,12 +147,13 @@ class Main extends Singleton
      * Creates the error manager, initializes the interface, initializes the
      * database, loads global config, loads and constructs registered apps 
      * @param IOInterface $interface the interface that began the request
+     * @param ErrorManager $errorman the error manager instance
      * @throws MaintenanceException if the server is not enabled
      * @throws FailedAppLoadException if a registered app fails to load
      */
-    public function __construct(IOInterface $interface)
+    public function __construct(IOInterface $interface, ErrorManager $errorman)
     {
-        $this->error_manager = new ErrorManager($this, $interface);
+        $this->error_manager = $errorman->SetAPI($this);
         
         parent::__construct();
         

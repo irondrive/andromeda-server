@@ -244,7 +244,7 @@ class Config extends DBVersion
     /** show a basic back trace */ 
     const ERRLOG_ERRORS = 1; 
     
-    /** show a full back trace, loaded objects, SQL queries, performance metrics */
+    /** show a full back trace, loaded objects, SQL queries */
     const ERRLOG_DEVELOPMENT = 2;
     
     /** also show input params, function arguments, SQL values */ 

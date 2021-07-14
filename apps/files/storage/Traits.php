@@ -203,8 +203,7 @@ trait BasePath
 
 /** A storage with no specific ImportFile function, using CreateFile/WriteBytes instead */
 trait ManualImport
-{
-    
+{    
     /** Gets the extra DB fields required for this trait */
     public static function GetFieldTemplate() : array
     {
