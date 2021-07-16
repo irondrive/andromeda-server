@@ -66,7 +66,7 @@ For development, simply clone the repo and use `composer install` to download an
 ### Basic Requirements
 Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON, mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
-Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.
+Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  However, it is strongly recommended to make sure that Andromeda's subdirectories (apps, core, ...) are not accessible over the web.  .htaccess files are included to accomplish this with Apache 2.4, but manual configuration is needed for nginx or others.  Exposing the subdirectories is not required, but it will reveal information including exact app patch versions (metadata.json), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).
 
 ### Install Steps
 
