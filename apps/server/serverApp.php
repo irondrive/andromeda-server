@@ -47,8 +47,7 @@ class ServerApp extends UpgradableApp
     {
         $retval = array_merge(parent::getUsage(),array(
             'random [--length int]',
-            'usage [--appname alphanum]', 
-            'runtests',
+            'usage [--appname alphanum]',
             'dbconf '.Database::GetInstallUsage(),
             ...Database::GetInstallUsages(),
             'install [--enable bool]',
@@ -155,7 +154,6 @@ class ServerApp extends UpgradableApp
         {
             case 'usage':   return $this->GetUsages($input);
             case 'random':  return $this->Random($input);
-            case 'runtests': return $this->RunTests($input);
             
             case 'dbconf':  return $this->ConfigDB($input);
             case 'install': return $this->Install($input);
@@ -223,21 +221,6 @@ class ServerApp extends UpgradableApp
             array_push($output, ...array_map(function($line)use($name){ return "$name $line"; }, $app::getUsage())); 
         }
         return $output;
-    }
-
-    /**
-     * Runs unit tests on every installed app
-     * @throws UnknownActionException if not debugging
-     * @return array<string, mixed> app names mapped to their output
-     */
-    protected function RunTests(Input $input) : array
-    {
-        if ($this->API->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT) 
-            throw new UnknownActionException();
-        
-        set_time_limit(0);
-            
-        return array_map(function($app)use($input){ return $app->Test($input); }, $this->API->GetApps());
     }
     
     /**

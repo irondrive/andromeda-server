@@ -1,0 +1,6 @@
+{
+    "ajax":"http://localhost/api/index.php",
+    "sqlite": {"dbpath":"/var/andromeda/integration.s3db"},
+    "mysql": { },
+    "pgsql": { }
+}

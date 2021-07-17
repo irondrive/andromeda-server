@@ -1514,50 +1514,5 @@ class AccountsApp extends UpgradableApp
 
         return array_map(function(Whitelist $w){ return $w->GetClientObject(); }, Whitelist::LoadAll($this->database));
     }
-
-    public function Test(Input $input)
-    {
-        $this->config->SetAllowCreateAccount(Config::CREATE_PUBLIC, true);
-        $this->config->SetRequireContact(Config::CONTACT_EXIST, true);
-        $this->config->SetUsernameIsContact(false, true);
-        
-        $results = array(); $app = "accounts";
-        
-        $email = Utilities::Random(8)."@unittest.com";
-        $user = Utilities::Random(8); 
-        $password = Utilities::Random(16);
-        
-        $test = $this->API->Run((new Input($app,'createaccount'))
-            ->AddParam('email',$email)
-            ->AddParam('username',$user)
-            ->AddParam('password',$password));
-        $results[] = $test;
-        
-        $test = $this->API->Run((new Input($app,'createsession'))
-            ->AddParam('username',$user)
-            ->AddParam('auth_password',$password));
-        $results[] = $test;
-        
-        $sessionid = $test['client']['session']['id'];
-        $sessionkey = $test['client']['session']['authkey'];
-        
-        $password2 = Utilities::Random(16);
-        $test = $this->API->Run((new Input($app,'changepassword'))
-            ->AddParam('auth_sessionid',$sessionid)
-            ->AddParam('auth_sessionkey',$sessionkey)
-            ->AddParam('getaccount',true)
-            ->AddParam('auth_password',$password)
-            ->AddParam('new_password',$password2));
-        $results[] = $test;
-        $password = $password2;
-        
-        $test = $this->API->Run((new Input($app,'deleteaccount'))
-            ->AddParam('auth_sessionid',$sessionid)
-            ->AddParam('auth_sessionkey',$sessionkey)
-            ->AddParam('auth_password',$password));
-        $results[] = $test;
-        
-        return $results;
-    }
 }
 
