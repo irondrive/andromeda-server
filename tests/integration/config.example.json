@@ -1,6 +1,20 @@
 {
+    "cli":true,
     "ajax":"http://localhost/api/index.php",
     "sqlite": {"dbpath":"/var/andromeda/integration.s3db"},
-    "mysql": { },
-    "pgsql": { }
+    "mysql":
+    {
+        "dbname": "a2test",
+        "unix_socket": "/run/mysqld/mysqld.sock",
+        "dbuser": "root", 
+        "dbpass": "password", 
+        "persistent": true
+    },
+    "pgsql":
+    {
+        "dbname": "a2test",
+        "host": "ubuntudev",
+        "dbuser": "postgres",
+        "dbpass": "password" 
+    }
 }

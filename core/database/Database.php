@@ -24,6 +24,9 @@ class DatabaseErrorException extends DatabaseException { public $message = "DATA
 /** Exception indicating that the a write was requested to a read-only database */
 class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
 
+/** Exception indicating that database config failed */
+class DatabaseConfigFailException extends Exceptions\ClientErrorException { }
+
 /**
  * This class implements the PDO database abstraction.
  * 
@@ -185,9 +188,8 @@ class Database implements Transactions
         $tmpnam = "$outnam.tmp.php";
         file_put_contents($tmpnam, $output);
         
-        try { new Database($tmpnam); } 
-        catch (\Throwable $e) {
-            unlink($tmpnam); throw $e; }
+        try { new Database($tmpnam); } catch (\Throwable $e) {
+            unlink($tmpnam); throw DatabaseConfigFailException::Copy($e); }
         
         rename($tmpnam, $outnam);
     }
@@ -233,17 +235,17 @@ class Database implements Transactions
      * Imports the appropriate SQL template file for an app
      * @param string $path the base path containing the templates
      */
-    public function importTemplate(string $path) : void { $this->importFile("$path/andromeda.".$this->config['DRIVER'].".sql"); }
+    public function importTemplate(string $path) : self { return $this->importFile("$path/andromeda.".$this->config['DRIVER'].".sql"); }
     
     /**
      * Parses and imports an SQL file into the database
      * @param string $path the path of the SQL file
      */
-    public function importFile(string $path) : void
+    public function importFile(string $path) : self
     {
         $lines = array_filter(file($path),function($line){ return mb_substr($line,0,2) != "--"; });
         $queries = array_filter(explode(";",preg_replace( "/\r|\n/", "", implode($lines))));
-        foreach ($queries as $query) $this->query(trim($query), 0);
+        foreach ($queries as $query) $this->query(trim($query), 0); return $this;
     }
     
     /** Whether or not the DB supports the RETURNING keyword */

@@ -14,13 +14,14 @@ git clone git@github.com:lightray22/andromeda-server.git api
 
 cd api; git checkout $TAG || exit 3
 
-rm -Rf tests apps/testApp
+rm -rf apps/testApp
+find . -name tests | while read -r i; do rm -rf $i; done
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
 rm composer.json composer.lock
 
-find . -iname ".git*" | while read -r i; do rm -rf $i; done
+find . -name ".git*" | while read -r i; do rm -rf $i; done
 
 chmod +x tools/mkdocs; tools/mkdocs
 mv docs ..; rm -rf tools .phpdoc
