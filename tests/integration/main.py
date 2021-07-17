@@ -37,6 +37,9 @@ class Main():
             interfaces.append(Interface.AJAX(
                 self.config['ajax'], self.verbose))
 
+        if not len(interfaces):
+            raise Exception("no interfaces configured")
+            
         databases = []
         if 'sqlite' in self.config:
             databases.append(Database.SQLite(self.config['sqlite']))
@@ -60,9 +63,9 @@ class Main():
                 atexit.register(database.deinstall)
                 database.install(interface)
                 CoreTests.runTests(self.phproot, interface)
-                database.deinstall()
                 atexit.unregister(database.deinstall)
-                os.remove(self.dbconfig); 
+                database.deinstall()
+                os.remove(self.dbconfig)
                 os.sync(); time.sleep(1)
     
     def restoreConfig(self):

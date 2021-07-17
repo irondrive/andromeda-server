@@ -44,7 +44,7 @@ class MySQL(Database):
 
     def deinstall(self):
         self.db.cursor().execute(
-            "DROP DATABASE IF EXISTS {}".format(self.config['dbname']))
+            "DROP DATABASE {}".format(self.config['dbname']))
         self.db.close()
 
 class PostgreSQL(Database):
@@ -69,6 +69,6 @@ class PostgreSQL(Database):
 
     def deinstall(self):
         self.db.cursor().execute(
-            "DROP DATABASE IF EXISTS {}".format(self.config['dbname']))
+            "DROP DATABASE {}".format(self.config['dbname']))
         self.db.close()
             
