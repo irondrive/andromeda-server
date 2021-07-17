@@ -13,6 +13,8 @@ metrics/
 combined.php
 
 core/database/Config.php
+tests/integration/config.json
+tests/integration/__pycache__
 
 tools/mysql2sqlite
 tools/phpDocumentor.phar

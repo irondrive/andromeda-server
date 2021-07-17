@@ -33,8 +33,6 @@ abstract class AppBase implements Transactions
      */
     public abstract function Run(Input $input);
     
-    public function Test(Input $input) { }
-    
     /**
      * Returns an array of strings showing the CLI usage of the app
      * @return array<string> possible commands

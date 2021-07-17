@@ -4,15 +4,17 @@ TAG=$1
 DIR=$(pwd)
 
 if [ -z "$TAG" ]; then
-    echo "tag required"; exit 2
+    echo "tag required"; exit 1
 fi
 
-rm -Rf release || exit 1
+rm -Rf release || exit 2
 mkdir release; cd release
 
 git clone git@github.com:lightray22/andromeda-server.git api
 
 cd api; git checkout $TAG || exit 3
+
+rm -Rf tests apps/testApp
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
