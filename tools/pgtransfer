@@ -3,6 +3,9 @@
 read -sp "MySQL password: " MYSQLPW
 read -sp "PGSQL password: " PGSQLPW
 
+dropdb -h localhost -U postgres andromeda
+createdb -h localhost -U postgres andromeda
+
 echo "LOAD DATABASE
     FROM mysql://root:$MYSQLPW@localhost/andromeda
     INTO pgsql://postgres:$PGSQLPW@localhost/andromeda

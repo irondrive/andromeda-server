@@ -4,21 +4,28 @@ import requests, subprocess, json
 class AJAX():
     def __str__(self):
         return __class__.__name__
-    def __init__(self, path, verbose=False):
-        self.path = path
+    def __init__(self, config, verbose=False):
+        self.url = config
         self.verbose = verbose
 
     def run(self, app, action, params={}, files={}):
         if self.verbose:
             print('running',app,action,params)
-        # TODO implement AJAX format
-        
+
+        urlparams = {'app':app,'action':action}
+        resp = requests.post(self.url,params=urlparams,data=params,files=files)
+
+        isJson = resp.headers.get('content-type') == 'application/json'
+        retval = resp.json() if isJson else resp.content
+        if self.verbose: print("\t", retval)
+        return retval        
 
 class CLI():
     def __str__(self):
         return __class__.__name__
-    def __init__(self, path, verbose=False):
+    def __init__(self, path, config, verbose=False):
         self.path = path
+        self.config = config
         self.verbose = verbose
 
     def run(self, app, action, params={}, files={}):
@@ -37,7 +44,9 @@ class CLI():
 
         for key, value in params.items():
             command.append("--{}".format(key))
-            command.append(value)
+            command.append(str(value))
+
+        #TODO handling files
 
         if self.verbose: print("\t"," ".join(command))
 

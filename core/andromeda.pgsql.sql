@@ -21,10 +21,10 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: a2_objects_core_config; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_config; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_config (
+CREATE TABLE public.a2obj_core_config (
     id character(12) NOT NULL,
     version character varying(255) NOT NULL,
     datadir text,
@@ -47,10 +47,10 @@ CREATE TABLE public.a2_objects_core_config (
 
 
 --
--- Name: a2_objects_core_emailer; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_emailer; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_emailer (
+CREATE TABLE public.a2obj_core_emailer (
     id character(12) NOT NULL,
     type smallint NOT NULL,
     hosts text,
@@ -64,10 +64,10 @@ CREATE TABLE public.a2_objects_core_emailer (
 
 
 --
--- Name: a2_objects_core_exceptions_errorlog; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_exceptions_errorlog; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_exceptions_errorlog (
+CREATE TABLE public.a2obj_core_exceptions_errorlog (
     id character(12) NOT NULL,
     "time" double precision NOT NULL,
     addr character varying(255) NOT NULL,
@@ -87,33 +87,10 @@ CREATE TABLE public.a2_objects_core_exceptions_errorlog (
 
 
 --
--- Name: a2_objects_core_exceptions_errorlogentry; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_logging_actionlog; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_exceptions_errorlogentry (
-    id character(12) NOT NULL,
-    "time" double precision NOT NULL,
-    addr character varying(255) NOT NULL,
-    agent text NOT NULL,
-    app character varying(255) NOT NULL,
-    action character varying(255) NOT NULL,
-    code character varying(255) NOT NULL,
-    file text NOT NULL,
-    message text NOT NULL,
-    trace_basic text,
-    trace_full text,
-    objects text,
-    queries text,
-    params text,
-    log text
-);
-
-
---
--- Name: a2_objects_core_logging_actionlog; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.a2_objects_core_logging_actionlog (
+CREATE TABLE public.a2obj_core_logging_actionlog (
     id character(20) NOT NULL,
     request character(20) NOT NULL,
     app character varying(255) NOT NULL,
@@ -124,10 +101,10 @@ CREATE TABLE public.a2_objects_core_logging_actionlog (
 
 
 --
--- Name: a2_objects_core_logging_actionmetrics; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_logging_actionmetrics; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_logging_actionmetrics (
+CREATE TABLE public.a2obj_core_logging_actionmetrics (
     id character(20) NOT NULL,
     request character(20) NOT NULL,
     actionlog character(20) NOT NULL,
@@ -145,10 +122,10 @@ CREATE TABLE public.a2_objects_core_logging_actionmetrics (
 
 
 --
--- Name: a2_objects_core_logging_commitmetrics; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_logging_commitmetrics; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_logging_commitmetrics (
+CREATE TABLE public.a2obj_core_logging_commitmetrics (
     id character(20) NOT NULL,
     request character(20) NOT NULL,
     dates__created double precision NOT NULL,
@@ -162,10 +139,10 @@ CREATE TABLE public.a2_objects_core_logging_commitmetrics (
 
 
 --
--- Name: a2_objects_core_logging_requestlog; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_logging_requestlog; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_logging_requestlog (
+CREATE TABLE public.a2obj_core_logging_requestlog (
     id character(20) NOT NULL,
     actions smallint DEFAULT '0'::smallint NOT NULL,
     "time" double precision NOT NULL,
@@ -177,10 +154,10 @@ CREATE TABLE public.a2_objects_core_logging_requestlog (
 
 
 --
--- Name: a2_objects_core_logging_requestmetrics; Type: TABLE; Schema: public; Owner: -
+-- Name: a2obj_core_logging_requestmetrics; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.a2_objects_core_logging_requestmetrics (
+CREATE TABLE public.a2obj_core_logging_requestmetrics (
     id character(20) NOT NULL,
     actions smallint DEFAULT '0'::smallint NOT NULL,
     commits smallint DEFAULT '0'::smallint NOT NULL,
@@ -212,194 +189,144 @@ CREATE TABLE public.a2_objects_core_logging_requestmetrics (
 
 
 --
--- Name: a2_objects_core_exceptions_errorlogentry idx_56396_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2obj_core_config idx_87610_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlogentry
-    ADD CONSTRAINT idx_56396_primary PRIMARY KEY (id);
-
-
---
--- Name: a2_objects_core_config idx_82722_primary; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.a2_objects_core_config
-    ADD CONSTRAINT idx_82722_primary PRIMARY KEY (id);
+ALTER TABLE ONLY public.a2obj_core_config
+    ADD CONSTRAINT idx_87610_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_emailer idx_82728_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2obj_core_emailer idx_87616_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.a2_objects_core_emailer
-    ADD CONSTRAINT idx_82728_primary PRIMARY KEY (id);
-
-
---
--- Name: a2_objects_core_exceptions_errorlog idx_82736_primary; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.a2_objects_core_exceptions_errorlog
-    ADD CONSTRAINT idx_82736_primary PRIMARY KEY (id);
+ALTER TABLE ONLY public.a2obj_core_emailer
+    ADD CONSTRAINT idx_87616_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_actionlog idx_82744_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2obj_core_exceptions_errorlog idx_87624_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.a2_objects_core_logging_actionlog
-    ADD CONSTRAINT idx_82744_primary PRIMARY KEY (id);
-
-
---
--- Name: a2_objects_core_logging_actionmetrics idx_82751_primary; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.a2_objects_core_logging_actionmetrics
-    ADD CONSTRAINT idx_82751_primary PRIMARY KEY (id);
+ALTER TABLE ONLY public.a2obj_core_exceptions_errorlog
+    ADD CONSTRAINT idx_87624_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_commitmetrics idx_82757_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2obj_core_logging_actionlog idx_87632_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.a2_objects_core_logging_commitmetrics
-    ADD CONSTRAINT idx_82757_primary PRIMARY KEY (id);
-
-
---
--- Name: a2_objects_core_logging_requestlog idx_82760_primary; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.a2_objects_core_logging_requestlog
-    ADD CONSTRAINT idx_82760_primary PRIMARY KEY (id);
+ALTER TABLE ONLY public.a2obj_core_logging_actionlog
+    ADD CONSTRAINT idx_87632_primary PRIMARY KEY (id);
 
 
 --
--- Name: a2_objects_core_logging_requestmetrics idx_82767_primary; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: a2obj_core_logging_actionmetrics idx_87639_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.a2_objects_core_logging_requestmetrics
-    ADD CONSTRAINT idx_82767_primary PRIMARY KEY (id);
-
-
---
--- Name: idx_56396_action; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_56396_action ON public.a2_objects_core_exceptions_errorlogentry USING btree (action);
+ALTER TABLE ONLY public.a2obj_core_logging_actionmetrics
+    ADD CONSTRAINT idx_87639_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_56396_addr; Type: INDEX; Schema: public; Owner: -
+-- Name: a2obj_core_logging_commitmetrics idx_87645_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_56396_addr ON public.a2_objects_core_exceptions_errorlogentry USING btree (addr);
-
-
---
--- Name: idx_56396_app; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_56396_app ON public.a2_objects_core_exceptions_errorlogentry USING btree (app);
+ALTER TABLE ONLY public.a2obj_core_logging_commitmetrics
+    ADD CONSTRAINT idx_87645_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_56396_code; Type: INDEX; Schema: public; Owner: -
+-- Name: a2obj_core_logging_requestlog idx_87648_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_56396_code ON public.a2_objects_core_exceptions_errorlogentry USING btree (code);
-
-
---
--- Name: idx_56396_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_56396_id ON public.a2_objects_core_exceptions_errorlogentry USING btree (id);
+ALTER TABLE ONLY public.a2obj_core_logging_requestlog
+    ADD CONSTRAINT idx_87648_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_56396_time; Type: INDEX; Schema: public; Owner: -
+-- Name: a2obj_core_logging_requestmetrics idx_87655_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_56396_time ON public.a2_objects_core_exceptions_errorlogentry USING btree ("time");
-
-
---
--- Name: idx_82736_action; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_82736_action ON public.a2_objects_core_exceptions_errorlog USING btree (action);
+ALTER TABLE ONLY public.a2obj_core_logging_requestmetrics
+    ADD CONSTRAINT idx_87655_primary PRIMARY KEY (id);
 
 
 --
--- Name: idx_82736_addr; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87624_action; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82736_addr ON public.a2_objects_core_exceptions_errorlog USING btree (addr);
-
-
---
--- Name: idx_82736_app; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_82736_app ON public.a2_objects_core_exceptions_errorlog USING btree (app);
+CREATE INDEX idx_87624_action ON public.a2obj_core_exceptions_errorlog USING btree (action);
 
 
 --
--- Name: idx_82736_code; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87624_addr; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82736_code ON public.a2_objects_core_exceptions_errorlog USING btree (code);
-
-
---
--- Name: idx_82736_time; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_82736_time ON public.a2_objects_core_exceptions_errorlog USING btree ("time");
+CREATE INDEX idx_87624_addr ON public.a2obj_core_exceptions_errorlog USING btree (addr);
 
 
 --
--- Name: idx_82744_app_action; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87624_app; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82744_app_action ON public.a2_objects_core_logging_actionlog USING btree (app, action);
-
-
---
--- Name: idx_82744_applog; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_82744_applog ON public.a2_objects_core_logging_actionlog USING btree (applog);
+CREATE INDEX idx_87624_app ON public.a2obj_core_exceptions_errorlog USING btree (app);
 
 
 --
--- Name: idx_82744_request; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87624_code; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82744_request ON public.a2_objects_core_logging_actionlog USING btree (request);
-
-
---
--- Name: idx_82751_app_action; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_82751_app_action ON public.a2_objects_core_logging_actionmetrics USING btree (app, action);
+CREATE INDEX idx_87624_code ON public.a2obj_core_exceptions_errorlog USING btree (code);
 
 
 --
--- Name: idx_82751_request; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87624_time; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82751_request ON public.a2_objects_core_logging_actionmetrics USING btree (request);
+CREATE INDEX idx_87624_time ON public.a2obj_core_exceptions_errorlog USING btree ("time");
 
 
 --
--- Name: idx_82757_request; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_87632_app_action; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_82757_request ON public.a2_objects_core_logging_commitmetrics USING btree (request);
+CREATE INDEX idx_87632_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
+
+
+--
+-- Name: idx_87632_applog; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_87632_applog ON public.a2obj_core_logging_actionlog USING btree (applog);
+
+
+--
+-- Name: idx_87632_request; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_87632_request ON public.a2obj_core_logging_actionlog USING btree (request);
+
+
+--
+-- Name: idx_87639_app_action; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_87639_app_action ON public.a2obj_core_logging_actionmetrics USING btree (app, action);
+
+
+--
+-- Name: idx_87639_request; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_87639_request ON public.a2obj_core_logging_actionmetrics USING btree (request);
+
+
+--
+-- Name: idx_87645_request; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_87645_request ON public.a2obj_core_logging_commitmetrics USING btree (request);
 
 
 --
