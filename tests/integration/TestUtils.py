@@ -5,6 +5,7 @@ def assertOk(result):
     assert('code' in result)
     assert(result['code'] == 200)
     assert('appdata' in result)
+    return result['appdata']
 
 def assertError(result, code, message):
     assert('ok' in result)
@@ -13,6 +14,4 @@ def assertError(result, code, message):
     assert(result['code'] == code)
     assert('message' in result)
     assert(result['message'] == message)
-
-def runTests(phproot, interface):
-    assertOk(interface.run('server','install'))
+    return result['message']

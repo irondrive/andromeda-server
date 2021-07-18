@@ -43,10 +43,10 @@ class CLI():
         command.append(action)
 
         for key, value in params.items():
-            command.append("--{}".format(key))
+            command.append("--"+key)
             command.append(str(value))
 
-        #TODO handling files
+        # TODO handling files
 
         if self.verbose: print("\t"," ".join(command))
 
