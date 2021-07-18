@@ -5,7 +5,7 @@
     "mysql":
     {
         "dbname": "a2test",
-        "unix_socket": "/run/mysqld/mysqld.sock",
+        "host": "localhost",
         "dbuser": "root", 
         "dbpass": "password", 
         "persistent": true
@@ -13,7 +13,7 @@
     "pgsql":
     {
         "dbname": "a2test",
-        "host": "ubuntudev",
+        "host": "localhost",
         "dbuser": "postgres",
         "dbpass": "password" 
     }

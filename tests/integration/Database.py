@@ -1,7 +1,7 @@
 
 import os, mysql.connector, psycopg2
 
-import CoreTests
+import TestUtils
 
 class Database():
     def __str__(self):
@@ -10,7 +10,7 @@ class Database():
         self.config = config
     def install(self, interface):
         result = interface.run('server','dbconf',self.config)
-        CoreTests.assertOk(result)
+        TestUtils.assertOk(result)
 
 class SQLite(Database):
     def install(self, interface):        
