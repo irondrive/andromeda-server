@@ -130,9 +130,9 @@ class Database implements Transactions
     public static function GetInstallUsages() : array
     {
         return array(
-            "\t --driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "\t --driver pgsql --dbname alphanum --host hostname [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "\t --driver sqlite --dbpath fspath"
+            "--driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "--driver pgsql --dbname alphanum --host hostname [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "--driver sqlite --dbpath fspath"
         );
     }
     

@@ -3,7 +3,6 @@
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -147,8 +146,8 @@ class AccountsApp extends UpgradableApp
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
             'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource ?id] [--old_password raw] [--new_password raw]',
-                "\t [--recoverykey text | --auth_twofactor int] [--name name]",
-                "\t --auth_clientid id --auth_clientkey alphanum",
+            '(createsession) [--recoverykey text | --auth_twofactor int] [--name name]',
+            '(createsession) --auth_clientid id --auth_clientkey alphanum',
             'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
             'createtwofactor --auth_password raw [--comment text]',
             'verifytwofactor --auth_twofactor int',
@@ -174,7 +173,7 @@ class AccountsApp extends UpgradableApp
             'getmembership --account id --group id',
             'getauthsources',
             'createauthsource --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
-            ...Auth\Manager::GetPropUsages(),
+            ...array_map(function($u){ return "(createauthsource) $u"; }, Auth\Manager::GetPropUsages()),
             'testauthsource --manager id [--test_username text --test_password raw]',
             'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',

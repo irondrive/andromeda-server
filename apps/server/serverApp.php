@@ -49,7 +49,7 @@ class ServerApp extends UpgradableApp
             'random [--length int]',
             'usage [--appname alphanum]',
             'dbconf '.Database::GetInstallUsage(),
-            ...Database::GetInstallUsages(),
+            ...array_map(function($u){ return "(dbconf) $u"; }, Database::GetInstallUsages()),
             'install [--enable bool]',
             'listapps',
             'phpinfo',
@@ -61,7 +61,7 @@ class ServerApp extends UpgradableApp
             'setconfig '.Config::GetSetConfigUsage(),
             'getmailers',
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
-            ...array_map(function($s){ return "\t $s"; },Emailer::GetCreateUsages()),
+            ...array_map(function($u){ return "(createmailer) $u"; },Emailer::GetCreateUsages()),
             'deletemailer --mailid id',
             'geterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetLoadUsage(),
             'counterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetCountUsage(),
@@ -72,14 +72,13 @@ class ServerApp extends UpgradableApp
         ));
         
         $logGet = array(); $logCount = array(); $logApps = array();
-        
-        $apps = Main::GetInstance()->GetApps(); foreach ($apps as $appname=>$app)
+        foreach (Main::GetInstance()->GetApps() as $appname=>$app)
         {
             if (($class = $app::getLogClass()) !== null)
             {
                 $logApps[] = $appname;
-                $logGet[] = "\t --appname $appname ".$class::GetPropUsage();
-                $logCount[] = "\t --appname $appname ".$class::GetPropUsage();
+                $logGet[] = "(getactions) --appname $appname ".$class::GetPropUsage();
+                $logCount[] = "(countactions) --appname $appname ".$class::GetPropUsage();
             }
         }
         
