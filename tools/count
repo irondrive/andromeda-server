@@ -8,4 +8,7 @@ getfiles() {
     find $1 -name '*'$2 | grep -v "/data/\|/docs/\|/tools/\|/vendor/"
 }
 
-for i in . apps/* core; do echo DIR $i; echo $(getfiles $i $1 | wc -l) files; getfiles $i $1 | xargs -d '\n' wc -l | sort -r; done
+for i in . apps/* core; do 
+    echo DIR $i; echo $(getfiles $i $1 | wc -l) files
+    getfiles $i $1 | xargs -d '\n' wc -l | sort -r
+done
