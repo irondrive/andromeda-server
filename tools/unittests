@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd tools; if [ ! -f phpunit-9.phar ]; then
+    wget https://phar.phpunit.de/phpunit-9.phar
+fi; cd ..
+
+for i in . $(ls apps); do
+    DIR=$i/tests/phpunit
+    if [ -d $DIR ]; then
+        echo "executing tests at $DIR"
+        php tools/phpunit-9.phar $i/tests/phpunit || exit
+    fi
+done

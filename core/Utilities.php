@@ -136,7 +136,7 @@ abstract class Utilities
         else return PASSWORD_DEFAULT;
     }
     
-    /** Returns the last element of an array of null if it's empty */
+    /** Returns the last element of an array or null if it's empty */
     public static function array_last(?array $arr)
     {
         if ($arr === null) return null;
@@ -170,9 +170,17 @@ abstract class Utilities
     /** Equivalent to str_replace but only does one replacement */
     public static function replace_first(string $search, string $replace, string $subject) : string
     {
+        if (!$search || !$subject) return $subject;
+        
         if (($pos = strpos($subject, $search)) !== false)
             $subject = substr_replace($subject, $replace, $pos, strlen($search));
         
         return $subject;
+    }
+    
+    /** Captures and returns any echoes or prints in the given function */
+    public static function CaptureOutput(callable $func) : string
+    {
+        ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); return $retval;
     }
 }

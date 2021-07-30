@@ -294,8 +294,8 @@ class ServerApp extends UpgradableApp
         $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
         if (!$isAdmin) throw new AuthFailedException();
-        
-        ob_start(); phpinfo(); $retval = ob_get_contents(); ob_end_clean();
+
+        $retval = Utilities::CaptureOutput(function(){ phpinfo(); });
         
         $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
             function()use($retval){ return strlen($retval); }, 
