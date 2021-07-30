@@ -2,7 +2,7 @@
 
 require_once(ROOT."/core/database/ObjectDatabase.php");
 
-/** Minimalistic class for building prepared SQL query strings */
+/** Minimalistic class for building prepared post-FROM SQL query strings */
 class QueryBuilder
 {
     /** @var array<string, string> variables to be substituted in the query */
@@ -22,12 +22,12 @@ class QueryBuilder
         if ($this->where !== null) $query .= " WHERE ".$this->where;
         if ($this->orderby !== null) $query .= " ORDER BY ".$this->orderby;
         
-        if ($this->orderdesc !== null) $query .= $this->orderdesc ? " DESC " : " ASC ";
+        if ($this->orderdesc !== null) $query .= $this->orderdesc ? " DESC" : " ASC";
         
         if ($this->limit !== null) $query .= " LIMIT ".$this->limit;
         if ($this->offset !== null) $query .= " OFFSET ".$this->offset;
         
-        return $query;
+        return trim($query);
     }
     
     public function __toString() : string { return $this->GetText(); }
@@ -46,7 +46,7 @@ class QueryBuilder
      * @param string $val the actual data value
      * @return string the placeholder to go in the query
      */
-    public function AddData($val) : string
+    protected function AddData($val) : string
     {
         $idx = "d".count($this->data);
         $this->data[$idx] = $val;
@@ -59,14 +59,14 @@ class QueryBuilder
         return "$key $symbol ".$this->AddData($val);
     }    
     
-    /** Returns a string asserting the given column is null */
-    public function IsNull(string $key) : string { return "$key IS NULL"; }
-    
     /** Returns the given string with escaped SQL wildcard characters */
     public static function EscapeWildcards(string $query) : string
     {
         return str_replace('%','\%',str_replace('_','\_',$query));
     }
+    
+    /** Returns a string asserting the given column is null */
+    public function IsNull(string $key) : string { return "$key IS NULL"; }
     
     /**
      * Returns a string comparing the given column to a value using LIKE
@@ -108,17 +108,11 @@ class QueryBuilder
     /** Returns a query string that inverts the logic of the given query */
     public function Not(string $arg) : string { return "(NOT $arg)"; }
     
-    /** Returns a query string that combines the given array of arguments using OR */
-    public function OrArr(array $args) : string { return "(".implode(' OR ',$args).")"; }
-    
-    /** Returns a query string that combines the given array of arguments using AND */
-    public function AndArr(array $args) : string { return "(".implode(' AND ',$args).")"; }
-    
     /** Returns a query string that combines the given arguments using OR */
-    public function Or(string ...$args) : string { return $this->OrArr($args); }
+    public function Or(string ...$args) : string { return "(".implode(' OR ',$args).")"; }
     
     /** Returns a query string that combines the given arguments using AND */
-    public function And(string ...$args) : string { return $this->AndArr($args); }
+    public function And(string ...$args) : string { return "(".implode(' AND ',$args).")"; }
 
     /**
      * Syntactic sugar function to check many OR conditions at once
@@ -129,7 +123,7 @@ class QueryBuilder
      */
     public function ManyOr(string $key, array $vals, string $func='Equals') 
     { 
-        return $this->OrArr(array_map(function($val)use($key,$func){ 
+        return $this->Or(...array_map(function($val)use($key,$func){ 
             return $this->$func($key,$val); },$vals)); 
     }    
     
@@ -143,7 +137,7 @@ class QueryBuilder
     {
         $retval = array(); foreach($pairs as $key=>$val){ 
             $retval[] = $this->$func($key, $val); }
-        return $this->AndArr($retval);
+        return $this->And(...$retval);
     }
     
     /** Assigns a WHERE clause to the query */

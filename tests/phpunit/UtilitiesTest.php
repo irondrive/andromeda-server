@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core; 
 
-define('a2test',true); require_once("a2init.php");
+if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
 require_once(ROOT."/core/Crypto.php");
 require_once(ROOT."/core/Utilities.php");
@@ -38,7 +38,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
     */
    public function testSingletonFetch(MySingleton $singleton) : void
    {
-       $this->assertEquals($singleton, MySingleton::GetInstance());
+       $this->assertSame($singleton, MySingleton::GetInstance());
    }
    
    /**
@@ -55,11 +55,11 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    {
        $version = new VersionInfo("3.2.1-alpha");
        
-       $this->assertEquals($version->major, 3);
-       $this->assertEquals($version->minor, 2);
-       $this->assertEquals($version->patch, 1);
-       $this->assertEquals($version->extra, 'alpha');
-       $this->assertEquals((string)$version, "3.2.1-alpha");
+       $this->assertSame($version->major, 3);
+       $this->assertSame($version->minor, 2);
+       $this->assertSame($version->patch, 1);
+       $this->assertSame($version->extra, 'alpha');
+       $this->assertSame((string)$version, "3.2.1-alpha");
    }
    
    public function testBadJSONEncode() : void
@@ -78,48 +78,48 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testArrayLast() : void
    {
-       $this->assertEquals(Utilities::array_last(null), null);
-       $this->assertEquals(Utilities::array_last(array()), null);
-       $this->assertEquals(Utilities::array_last(array(5)), 5);
-       $this->assertEquals(Utilities::array_last(array(1,2,3)), 3);
+       $this->assertSame(Utilities::array_last(null), null);
+       $this->assertSame(Utilities::array_last(array()), null);
+       $this->assertSame(Utilities::array_last(array(5)), 5);
+       $this->assertSame(Utilities::array_last(array(1,2,3)), 3);
    }
    
    public function testShortClassName() : void
    {
-       $this->assertEquals(Utilities::ShortClassName(Utilities::class),"Utilities");
+       $this->assertSame(Utilities::ShortClassName(Utilities::class),"Utilities");
    }
    
    public function testReturnBytes() : void
    {
-       $this->assertEquals(Utilities::return_bytes(""), 0);       
-       $this->assertEquals(Utilities::return_bytes("0"), 0);
+       $this->assertSame(Utilities::return_bytes(""), 0);       
+       $this->assertSame(Utilities::return_bytes("0"), 0);
        
-       $this->assertEquals(Utilities::return_bytes(0), 0);
-       $this->assertEquals(Utilities::return_bytes(75), 75);
+       $this->assertSame(Utilities::return_bytes(0), 0);
+       $this->assertSame(Utilities::return_bytes(75), 75);
        
-       $this->assertEquals(Utilities::return_bytes("0B"), 0);
-       $this->assertEquals(Utilities::return_bytes("0 B"), 0);
+       $this->assertSame(Utilities::return_bytes("0B"), 0);
+       $this->assertSame(Utilities::return_bytes("0 B"), 0);
        
-       $this->assertEquals(Utilities::return_bytes("27"), 27);
+       $this->assertSame(Utilities::return_bytes("27"), 27);
        
-       $this->assertEquals(Utilities::return_bytes("1K"), 1024);
-       $this->assertEquals(Utilities::return_bytes("1 K"), 1024);
+       $this->assertSame(Utilities::return_bytes("1K"), 1024);
+       $this->assertSame(Utilities::return_bytes("1 K"), 1024);
        
-       $this->assertEquals(Utilities::return_bytes("10G"), 10*1024*1024*1024);
-       $this->assertEquals(Utilities::return_bytes("10 G"), 10*1024*1024*1024);
+       $this->assertSame(Utilities::return_bytes("10G"), 10*1024*1024*1024);
+       $this->assertSame(Utilities::return_bytes("10 G"), 10*1024*1024*1024);
    }
    
    public function testReplaceFirst() : void
    {
-       $this->assertEquals(Utilities::replace_first("","",""), "");
-       $this->assertEquals(Utilities::replace_first("test","test2",""), "");
-       $this->assertEquals(Utilities::replace_first("test","test2","test"), "test2");
-       $this->assertEquals(Utilities::replace_first("test","test2","3testtest5"), "3test2test5");      
+       $this->assertSame(Utilities::replace_first("","",""), "");
+       $this->assertSame(Utilities::replace_first("test","test2",""), "");
+       $this->assertSame(Utilities::replace_first("test","test2","test"), "test2");
+       $this->assertSame(Utilities::replace_first("test","test2","3testtest5"), "3test2test5");      
    }
    
    public function testCaptureOutput() : void
    {
-       $this->assertEquals(Utilities::CaptureOutput(function(){ }), "");
-       $this->assertEquals(Utilities::CaptureOutput(function(){ echo "test"; }), "test");       
+       $this->assertSame(Utilities::CaptureOutput(function(){ }), "");
+       $this->assertSame(Utilities::CaptureOutput(function(){ echo "test"; }), "test");       
    }
 }

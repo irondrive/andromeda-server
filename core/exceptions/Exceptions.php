@@ -17,8 +17,12 @@ abstract class ClientException extends BaseException
 {    
     public function __construct(string $details = null) { 
         if ($details) $this->message .= ": $details"; }
-    
-    public static function Create(int $code, string $message) 
+}
+
+/** Class for errors caused by the client's request (custom) */
+class CustomClientException extends BaseException
+{
+    public static function Create(int $code, string $message)
     {
         $e = new self(); $e->code = $code; $e->message = $message; return $e;
     }

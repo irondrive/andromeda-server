@@ -161,12 +161,10 @@ class SafeParam
     public function GetValue(int $type, callable ...$valfuncs)
     {
         $key = $this->key; $value = $this->value;
-        
-        if ($value === 'null' || !strlen($value)) $value = null;        
-        
-        if ($type === self::TYPE_RAW)
+
+        if ($value === null || $type === self::TYPE_RAW)
         {
-            // don't do any validation for raw params
+            // do nothing for null or raw params
         }
         else if ($type === self::TYPE_BOOL)
         {
@@ -211,7 +209,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_FSNAME)
         {
-            if (mb_strlen($value) >= 256 || preg_match("%[\\/?*:;{}]+%",$value) ||
+            if (mb_strlen($value) >= 256 || preg_match("%[\\\\/?*:;{}]+%",$value) ||
                 basename($value) !== $value || in_array($value, array('.','..')) ||
                ($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)) === false)
                     throw new SafeParamInvalidException($key, $type);
