@@ -54,7 +54,7 @@ abstract class BaseLog extends BaseObject
             
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
-        return $q->Where($or ? $q->OrArr($criteria) : $q->AndArr($criteria));
+        return $q->Where($or ? $q->Or(...$criteria) : $q->And(...$criteria));
     }
     
     /**

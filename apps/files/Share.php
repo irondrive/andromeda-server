@@ -242,7 +242,7 @@ class Share extends AuthObject
         
         $q = new QueryBuilder(); 
         
-        $defgroups = $q->OrArr(array_map(function(Group $group)use($q){ 
+        $defgroups = $q->Or(...array_map(function(Group $group)use($q){ 
             return $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($group));
         }, $account->GetDefaultGroups()));
 

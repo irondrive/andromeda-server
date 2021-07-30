@@ -7,7 +7,7 @@ fi; cd ..
 for i in . $(ls apps); do
     DIR=$i/tests/phpunit
     if [ -d $DIR ]; then
-        echo "executing tests at $DIR"
-        php tools/phpunit-9.phar $i/tests/phpunit || exit
+        CMD="php tools/phpunit-9.phar $i/tests/phpunit $@"
+        echo "$CMD"; $CMD || exit
     fi
 done

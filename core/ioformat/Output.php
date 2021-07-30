@@ -34,7 +34,7 @@ class Output
     public function GetAppdata() { return $this->appdata; }
     
     /** Sets performance metrics to be returned */
-    public function SetMetrics(?array $metrics) : void { $this->metrics = $metrics; }
+    public function SetMetrics(?array $metrics) : self { $this->metrics = $metrics; return $this; }
     
     /** 
      * Returns the Output object as a client array 
@@ -131,7 +131,7 @@ class Output
             
             if (!is_string($data['message'])) throw new InvalidParseException();
             
-            throw Exceptions\ClientException::Create($code, (string)$data['message']);
+            throw Exceptions\CustomClientException::Create($code, (string)$data['message']);
         }
     }   
 }
