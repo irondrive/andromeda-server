@@ -14,8 +14,8 @@ class AppTests(BaseAppTests):
         self.password = ''.join(main.random.choice(string.printable) for _ in range(16))
 
     def install(self):
-        self.account = assertOk(self.interface.run('accounts','install',
+        self.admin = assertOk(self.interface.run('accounts','install',
             {'username':self.username,'password':self.password}))
 
     def runTests(self):
-        pass
+        admin = self.admin

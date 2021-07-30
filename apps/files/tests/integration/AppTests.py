@@ -10,4 +10,4 @@ class AppTests(BaseAppTests):
         assertOk(self. interface.run('files','install'))
 
     def runTests(self):
-        self.account = self.main.appMap['accounts'].account
+        admin = self.main.appMap['accounts'].admin

@@ -29,6 +29,7 @@
         "ext-smbclient": "For the SMB storage backend"
     },
     "require-dev": {
-        "phpmetrics/phpmetrics": "~2"
+        "phpmetrics/phpmetrics": "~2",
+        "phpunit/phpunit": "^9"
     }
 }
