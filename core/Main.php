@@ -72,7 +72,7 @@ class RunContext
  * Main is also a Singleton so it can be fetched anywhere with GetInstance().
  * A Main handles a single request, with an arbitrary number of appruns.
  */
-class Main extends Singleton
+final class Main extends Singleton
 {
     /** @var DBStats performance metrics for construction */
     private DBStats $construct_stats; 
