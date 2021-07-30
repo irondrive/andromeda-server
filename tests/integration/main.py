@@ -16,6 +16,9 @@ class Main():
 
     appMap = { }
 
+    interfaces = [ ]
+    databases = [ ]
+
     def __init__(self):
 
         shortargs = "uvp:s:"
@@ -40,27 +43,25 @@ class Main():
 
         self.random = random.Random()
         self.random.seed(self.randseed)
-
-        interfaces = []        
+  
         if 'cli' in self.config:
-            interfaces.append(Interface.CLI(
+            self.interfaces.append(Interface.CLI(
                 self.phproot, self.config['cli'], self.verbose))
         if 'ajax' in self.config:
-            interfaces.append(Interface.AJAX(
+            self.interfaces.append(Interface.AJAX(
                 self.config['ajax'], self.verbose))
 
-        if not len(interfaces):
+        if not len(self.interfaces):
             raise Exception("no interfaces configured")
 
-        databases = []
         if 'sqlite' in self.config:
-            databases.append(Database.SQLite(self.config['sqlite']))
+            self.databases.append(Database.SQLite(self.config['sqlite']))
         if 'mysql' in self.config:
-            databases.append(Database.MySQL(self.config['mysql']))
+            self.databases.append(Database.MySQL(self.config['mysql']))
         if 'pgsql' in self.config:
-            databases.append(Database.PostgreSQL(self.config['pgsql']))
+            self.databases.append(Database.PostgreSQL(self.config['pgsql']))
 
-        if not len(databases):
+        if not len(self.databases):
             raise Exception("no databases configured")
 
         self.dbconfig = self.phproot+'/core/Database/Config.php'
@@ -68,8 +69,8 @@ class Main():
             os.rename(self.dbconfig, self.dbconfig+'.old')
         atexit.register(self.restoreConfig)
 
-        for database in databases:
-            for interface in interfaces:
+        for database in self.databases:
+            for interface in self.interfaces:
                 print("\n--- TEST SUITE -",interface,database,'---')
 
                 atexit.register(database.deinstall)
@@ -83,7 +84,7 @@ class Main():
                 os.remove(self.dbconfig)
                 os.sync(); time.sleep(1) # TODO why???
         
-        print("\nALL TESTS COMPLETE!")
+        print("\n!ALL TESTS COMPLETE!")
 
     def runTests(self, interface):
         
@@ -92,12 +93,14 @@ class Main():
             if not os.path.exists(path): continue
 
             spec = importlib.util.spec_from_file_location('AppTests', path+'/AppTests.py')
-            module = importlib.util.module_from_spec(spec)        
+            module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
+
             self.appMap[app] = module.AppTests(self, interface)
 
         if self.verbose: print("APPS FOUND:", list(self.appMap.keys()))
 
+        print(" -- BEGIN INSTALLS -- ")
         appNames = TestUtils.assertOk(interface.run('server','install',{'enable':True}))
         assert(set(app for app in self.appMap if app != 'server') == set(appNames))      
         
@@ -106,8 +109,11 @@ class Main():
 
         for app in appTests: app.install()
 
+        print(" -- BEGIN", interface, "TESTS --")
+        interface.runTests()
+
         for app in appTests: 
-            print(" -- BEGIN",app,"TESTS -- ")
+            print(" -- BEGIN APP TESTS -", app)
             app.runTests()
     
     def restoreConfig(self):

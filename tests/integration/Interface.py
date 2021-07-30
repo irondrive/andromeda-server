@@ -10,15 +10,19 @@ class AJAX():
 
     def run(self, app, action, params={}, files={}):
         if self.verbose:
-            print('running',app,action,params)
+            print('API <-',app,action,params)
 
         urlparams = {'app':app,'action':action}
         resp = requests.post(self.url,params=urlparams,data=params,files=files)
 
         isJson = resp.headers.get('content-type') == 'application/json'
         retval = resp.json() if isJson else resp.content
-        if self.verbose: print("\t", retval)
+        if self.verbose: print("\tAPI ->", retval)
         return retval        
+
+    def runTests(self):
+        pass
+
 
 class CLI():
     def __str__(self):
@@ -30,7 +34,7 @@ class CLI():
 
     def run(self, app, action, params={}, files={}):
         if self.verbose:
-            print('running',app,action,params)
+            print('API <-',app,action,params)
 
         command = ["php", self.path+'/index.php']
 
@@ -48,12 +52,14 @@ class CLI():
 
         # TODO handling files
 
-        if self.verbose: print("\t"," ".join(command))
+        if self.verbose: print("\t(CLI)"," ".join(command))
 
         process = subprocess.run(command, capture_output=True)
         stdout = process.stdout.decode('utf-8')        
         jsonout = json.loads(stdout)
 
-        if self.verbose: print("\t",jsonout)
+        if self.verbose: print("\tAPI ->",jsonout)
         return jsonout
         
+    def runTests(self):
+        pass
