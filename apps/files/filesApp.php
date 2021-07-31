@@ -750,6 +750,7 @@ class FilesApp extends UpgradableApp
      * 
      * This is the primary helper routine for the FUSE client - the first
      * component of the path (if not using a root folder) is the filesystem name
+     * NOTE that /. and /.. have no special meaning - no traversal allowed
      * @throws ItemAccessDeniedException if access via share and read is not allowed
      * @throws AuthenticationFailedException if public access and no root is given
      * @throws UnknownFilesystemException if the given filesystem is not found

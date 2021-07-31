@@ -46,7 +46,6 @@ class ServerApp extends UpgradableApp
     public static function getUsage() : array
     {
         $retval = array_merge(parent::getUsage(),array(
-            'random [--length int]',
             'usage [--appname alphanum]',
             'dbconf '.Database::GetInstallUsage(),
             ...array_map(function($u){ return "(dbconf) $u"; }, Database::GetInstallUsages()),
@@ -152,7 +151,6 @@ class ServerApp extends UpgradableApp
         switch ($input->GetAction())
         {
             case 'usage':   return $this->GetUsages($input);
-            case 'random':  return $this->Random($input);
             
             case 'dbconf':  return $this->ConfigDB($input);
             case 'install': return $this->Install($input);
@@ -187,22 +185,6 @@ class ServerApp extends UpgradableApp
             
             default: throw new UnknownActionException();
         }
-    }
-
-    /**
-     * Generates a random value, usually for dev sanity checking
-     * @throws UnknownActionException if not debugging or using CLI
-     * @return string random value
-     */
-    protected function Random(Input $input) : string
-    {
-        if ($this->API->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT &&
-            !$this->API->GetInterface()->isPrivileged())
-            throw new UnknownActionException();
-        
-        $length = $input->GetOptParam("length", SafeParam::TYPE_UINT);
-
-        return Utilities::Random($length ?? 16);
     }
         
     /**

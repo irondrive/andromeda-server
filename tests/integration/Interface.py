@@ -1,65 +1,74 @@
 
-import requests, subprocess, json
+import requests, subprocess, json, TestUtils
 
-class AJAX():
+from coretests import AJAXTests, CLITests
+
+class Interface():
     def __str__(self):
-        return __class__.__name__
-    def __init__(self, config, verbose=False):
+        return self.__class__.__name__
+
+    count = 0
+    def run(self):
+        self.count += 1
+
+
+class AJAX(Interface):
+        
+    def __init__(self, main, config, verbose=False):
+        self.main = main
         self.url = config
         self.verbose = verbose
 
-    def run(self, app, action, params={}, files={}):
+    def run(self, app, action, params={}, files={}, isJson=True):
+        super().run()
         if self.verbose:
             print('API <-',app,action,params)
 
         urlparams = {'app':app,'action':action}
         resp = requests.post(self.url,params=urlparams,data=params,files=files)
+        TestUtils.assertEquals(isJson, (resp.headers.get('content-type') == 'application/json'))
 
-        isJson = resp.headers.get('content-type') == 'application/json'
         retval = resp.json() if isJson else resp.content
         if self.verbose: print("\tAPI ->", retval)
         return retval        
 
     def runTests(self):
-        pass
+        AJAXTests.AJAXTests(self).runTests()
 
 
-class CLI():
-    def __str__(self):
-        return __class__.__name__
-    def __init__(self, path, config, verbose=False):
+class CLI(Interface):    
+
+    def __init__(self, main, path, config, verbose=False):
+        self.main = main
         self.path = path
         self.config = config
         self.verbose = verbose
 
-    def run(self, app, action, params={}, files={}):
+    def run(self, app, action, params={}, files={}, isJson=True):
+        flags = ['--debug','9']
+        if isJson: flags.append('--json')
+        return self.cliRun(app, action, params, files, flags)
+
+    def cliRun(self, app, action, params={}, files={}, flags=[]):
+        super().run()
         if self.verbose:
             print('API <-',app,action,params)
 
-        command = ["php", self.path+'/index.php']
-
-        # TODO not always the case!
-        opts = "--json --debug 2"
-        for opt in opts.split(' '):
-            command.append(opt)
-
-        command.append(app)
-        command.append(action)
+        command = ["php", self.path+'/index.php'] + flags + [app, action]
 
         for key, value in params.items():
-            command.append("--"+key)
-            command.append(str(value))
+            command += ["--"+key, str(value)]
 
-        # TODO handling files
+        # TODO handling files - input names or handles or what?
 
         if self.verbose: print("\t(CLI)"," ".join(command))
 
         process = subprocess.run(command, capture_output=True)
-        stdout = process.stdout.decode('utf-8')        
-        jsonout = json.loads(stdout)
+        retval = process.stdout.decode('utf-8')
 
-        if self.verbose: print("\tAPI ->",jsonout)
-        return jsonout
+        if '--json' in flags: retval = json.loads(retval)
+        if self.verbose: print("\tAPI ->", retval)
+        return retval
         
     def runTests(self):
-        pass
+        CLITests.CLITests(self).runTests()

@@ -14,19 +14,20 @@ class Main():
     random = None
     randseed = 0
 
-    appMap = { }
+    appMap = { } # map of app name to test object
+    servApps = [ ] # array of apps enabled on the server
 
     interfaces = [ ]
     databases = [ ]
 
     def __init__(self):
 
-        shortargs = "uvp:s:"
-        longargs = ["usage","verbose","phproot=","seed="]
+        shortargs = "hvp:s:"
+        longargs = ["help","verbose","phproot=","seed="]
         opts, args = getopt.getopt(sys.argv[1:],shortargs,longargs)
 
         for opt,arg in opts:
-            if opt in ('-u','--usage'):
+            if opt in ('-h','--help'):
                 print(longargs); sys.exit(1)
             if opt in ('-p','--phproot'):
                 self.phproot = arg
@@ -46,10 +47,10 @@ class Main():
   
         if 'cli' in self.config:
             self.interfaces.append(Interface.CLI(
-                self.phproot, self.config['cli'], self.verbose))
+                self, self.phproot, self.config['cli'], self.verbose))
         if 'ajax' in self.config:
             self.interfaces.append(Interface.AJAX(
-                self.config['ajax'], self.verbose))
+                self, self.config['ajax'], self.verbose))
 
         if not len(self.interfaces):
             raise Exception("no interfaces configured")
@@ -71,7 +72,9 @@ class Main():
 
         for database in self.databases:
             for interface in self.interfaces:
-                print("\n--- TEST SUITE -",interface,database,'---')
+                print("\n------------------------------------")
+                print("--- TEST SUITE -",interface,database,'---')
+                print("------------------------------------")
 
                 atexit.register(database.deinstall)
                 database.install(interface)
@@ -87,8 +90,12 @@ class Main():
         print("\n!ALL TESTS COMPLETE!")
 
     def runTests(self, interface):
-        
-        for app in os.listdir('./apps'):        
+
+        for app in os.listdir('./apps'): 
+            path = './apps/'+app+'/'+app+'App.php'
+            if not os.path.exists(path): continue 
+            else: self.servApps.append(app)
+
             path = './apps/'+app+'/tests/integration'
             if not os.path.exists(path): continue
 
@@ -96,13 +103,15 @@ class Main():
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
-            self.appMap[app] = module.AppTests(self, interface)
+            self.appMap[app] = module.AppTests(interface)
 
         if self.verbose: print("APPS FOUND:", list(self.appMap.keys()))
 
+        interface.count = 0
         print(" -- BEGIN INSTALLS -- ")
         appNames = TestUtils.assertOk(interface.run('server','install',{'enable':True}))
-        assert(set(app for app in self.appMap if app != 'server') == set(appNames))      
+
+        TestUtils.assertEquals(set(app for app in self.servApps if app != 'server'), set(appNames))
         
         appTests = list(self.appMap.values())
         self.random.shuffle(appTests)
@@ -115,6 +124,8 @@ class Main():
         for app in appTests: 
             print(" -- BEGIN APP TESTS -", app)
             app.runTests()
+
+        print(" -- DONE! RAN {} COMMANDS --".format(interface.count))
     
     def restoreConfig(self):
         if os.path.exists(self.dbconfig+'.old'):

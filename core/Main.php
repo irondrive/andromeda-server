@@ -5,7 +5,7 @@ require_once(ROOT."/core/Utilities.php");
 
 require_once(ROOT."/core/database/DBStats.php");
 require_once(ROOT."/core/database/ObjectDatabase.php");
-use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException};
+use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException, DatabaseConfigException};
 
 require_once(ROOT."/core/exceptions/ErrorManager.php");
 require_once(ROOT."/core/exceptions/Exceptions.php");
@@ -184,6 +184,7 @@ final class Main extends Singleton
             if ($this->config->getVersion() !== andromeda_version)
                 $this->requireUpgrade = true;                
         }
+        catch (DatabaseConfigException $e) { if (isset($dbconf)) throw $e; }
         catch (DatabaseException $e) { }
         
         foreach ($apps as $app) $this->LoadApp($app);
