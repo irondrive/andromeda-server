@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/files/filesystem/Native.php");
 
@@ -11,6 +12,24 @@ require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFo
 
 /** Exception indicating that the scanned folder item is not a file or folder (not readable) */
 class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_UNREADABLE"; }
+
+/** Wrapper around $itemclass::NotifyCreate() for unit testing */
+class ItemCreator
+{
+    public function __construct(ObjectDatabase $database, FSManager $fsmanager)
+    {
+        $this->database = $database; $this->fsmanager = $fsmanager;
+    }
+    
+    public function createItem(Folder $parent, bool $isfile, string $name) : Item
+    {
+        $itemclass = $isfile ? File::class : SubFolder::class;
+
+        $dbitem = $itemclass::NotifyCreate($this->database, $parent, $this->fsmanager->GetOwner(), $name);
+        
+        return $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
+    }
+}
 
 /**
  * A shared Andromeda filesystem is "shared" outside Andromeda
@@ -40,7 +59,7 @@ class Shared extends BaseFileFS
     }
     
     /** Get the root-relative path of the given file */
-    public function GetFilePath(File $file) : string { return $this->GetItemPath($file); }    
+    protected function GetFilePath(File $file) : string { return $this->GetItemPath($file); }
 
     /**
      * Updates the given DB file from disk
@@ -66,14 +85,14 @@ class Shared extends BaseFileFS
     /**
      * Updates the given DB folder (and contents) from disk
      *
-     * Checks that it exists, then updates stat metadata
-     * For contents, the folder listing will be compared to the DB.
-     * New items not in the DB will be added, and existing things in the
-     * DB that no longer exist on disk will be removed.
+     * Checks that it exists, then updates stat metadata.
+     * Also scans for new items and creates objects for them.
      * @param bool $doContents if true, recurse, else just this folder
+     * @param ?ItemCreator $itemCreator MUST BE NULL (unit testing only)
      */
-    public function RefreshFolder(Folder $folder, bool $doContents = true) : self
+    public function RefreshFolder(Folder $folder, bool $doContents = true, ?ItemCreator $itemCreator = null) : self
     {
+        $itemCreator ??= new ItemCreator();
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
         
@@ -111,18 +130,11 @@ class Shared extends BaseFileFS
                         $dbitem = $dbitemtmp; unset($dbitems[$dbitemid]); break;
                     }
                     // dbitems are sorted so if we're past fsitem, it's not there
+                    // only add items for now - stale dbitems will be deleted later when accessed!
                     else if ($dbitemtmp->GetName() > $fsitem) break;
                 }
                 
-                if ($dbitem === null)
-                {
-                    $itemclass = $isfile ? File::class : SubFolder::class;
-                    $owner = $this->GetFSManager()->GetOwner();
-                    
-                    $dbitem = $itemclass::NotifyCreate($this->GetDatabase(), $folder, $owner, $fsitem);
-                    
-                    $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
-                }
+                if ($dbitem === null) $itemCreator->createItem($folder, $isfile, $fsitem);
             }
         }
         

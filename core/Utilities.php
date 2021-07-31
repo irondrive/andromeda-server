@@ -144,6 +144,12 @@ abstract class Utilities
         $size = count($arr); return $size ? $arr[$size-1] : null;
     }
     
+    /** Deletes any of the given value from the given array reference */
+    public static function delete_value(array &$arr, $value) : array
+    {
+        return $arr = array_filter($arr, function($val)use($value){ return $val !== $value; });
+    }
+    
     /** Returns a class name with the namespace stripped */
     public static function ShortClassName(?string $class) : ?string { 
         return $class ? self::array_last(explode("\\",$class)) : null; }

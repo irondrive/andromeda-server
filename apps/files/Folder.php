@@ -313,6 +313,7 @@ abstract class Folder extends Item
             {
                 $subfolders = array_filter($this->GetFolders($limit,$offset), 
                     function(Folder $folder){ return !$folder->Refresh()->isDeleted(); });
+                    // check isDeleted early so we have an accurate count for files
             
                 $numitems = count($subfolders);
                 if ($offset !== null) $offset = max(0, $offset-$numitems);
