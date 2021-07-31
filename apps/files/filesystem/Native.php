@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/apps/files/filesystem/FSImpl.php");
-require_once(ROOT."/apps/files/filesystem/FSManager.php");
 
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;

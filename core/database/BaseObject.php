@@ -2,6 +2,7 @@
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
+require_once(ROOT."/core/database/Database.php");
 require_once(ROOT."/core/database/FieldTypes.php");
 require_once(ROOT."/core/database/QueryBuilder.php");
 

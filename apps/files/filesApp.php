@@ -14,11 +14,8 @@ require_once(ROOT."/apps/files/Share.php");
 require_once(ROOT."/apps/files/limits/Filesystem.php");
 require_once(ROOT."/apps/files/limits/Account.php");
 
-require_once(ROOT."/apps/files/storage/Storage.php"); 
-use Andromeda\Apps\Files\Storage\FileReadFailedException;
-
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, FileReadFailedException};
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;

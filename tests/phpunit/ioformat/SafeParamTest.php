@@ -65,9 +65,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     public function testNull() : void
     {
-        $this->testGoodMatch("", SafeParam::TYPE_BOOL, null);
-        $this->testGoodMatch("\0", SafeParam::TYPE_INT, null);
-        
+        $this->testGoodMatch("", SafeParam::TYPE_BOOL, null);        
         $this->testGoodMatch("null", SafeParam::TYPE_ALPHANUM, null);
     }
     
