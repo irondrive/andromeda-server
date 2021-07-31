@@ -24,14 +24,16 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     {        
         $storage = $this->createMock(Storage::class);
         
-        $storage->method('CreateFile')->will($this->returnCallback(function(string $path)use($storage)
+        $storage->method('CreateFile')->will($this->returnCallback(
+            function(string $path)use($storage)
         {
             $this->paths[$path] = fopen("php://memory",'rb+');
             
             return $storage;
         }));
         
-        $storage->method('ReadBytes')->will($this->returnCallback(function(string $path, int $start, int $length)
+        $storage->method('ReadBytes')->will($this->returnCallback(
+            function(string $path, int $start, int $length)
         {
             $handle = $this->paths[$path];            
             fseek($handle, $start);
@@ -39,7 +41,8 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
             return fread($handle, $length);
         }));
         
-        $storage->method('WriteBytes')->will($this->returnCallback(function(string $path, int $start, string $data)use($storage)
+        $storage->method('WriteBytes')->will($this->returnCallback(
+            function(string $path, int $start, string $data)use($storage)
         {
             $handle = $this->paths[$path];
             fseek($handle, $start);            
@@ -48,7 +51,8 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
             return $storage;
         }));
         
-        $storage->method('Truncate')->will($this->returnCallback(function(string $path, int $length)use($storage)
+        $storage->method('Truncate')->will($this->returnCallback(
+            function(string $path, int $length)use($storage)
         {
             $handle = $this->paths[$path];            
             ftruncate($handle, $length);  
@@ -64,8 +68,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
 
     public function tearDown() : void
     {
-        foreach ($this->paths as $handle) fclose($handle);
-        
+        foreach ($this->paths as $handle) fclose($handle);        
         foreach ($this->files as $file) unlink($file);
     }    
     
@@ -85,17 +88,16 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         
         $path = self::getTmpFile(); file_put_contents($path, $data);
         
-        $file->method('SetSize')->will($this->returnCallback(function(int $size,bool $notify)use($file)
+        $file->method('SetSize')->will($this->returnCallback(
+            function(int $size,bool $notify)use($file)
         {
             if (!$notify) $this->fsimpl->Truncate($file, $size);
             
             $this->sizes[$file->ID()] = $size; return $file;
         }));
         
-        $file->method('GetSize')->will($this->returnCallback(function()use($file)
-        {
-            return $this->sizes[$file->ID()];
-        }));
+        $file->method('GetSize')->will($this->returnCallback(
+            function()use($file) { return $this->sizes[$file->ID()]; }));
         
         $this->fsimpl->ImportFile($file->SetSize(strlen($data),true), $path);
         
@@ -121,7 +123,8 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $wdata = Utilities::Random($wlen);
         
         $data = substr($data, 0, $offset).$wdata.substr($data, $offset+$wlen);        
-        $this->fsimpl->WriteBytes($file, $offset, $wdata); $file->SetSize($size,true);
+        $this->fsimpl->WriteBytes($file, $offset, $wdata); 
+        $file->SetSize($size,true);
 
         $ret = $this->fsimpl->ReadBytes($file, 0, $size);
         $this->assertSame($data, $ret);
@@ -129,7 +132,8 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         if ($size > $size0) // test shrinking back to size0
         {
             $data = substr($data, 0, $size0);
-            $this->fsimpl->Truncate($file, $size0); $file->SetSize($size0, true);
+            $this->fsimpl->Truncate($file, $size0); 
+            $file->SetSize($size0, true);
             
             $ret = $this->fsimpl->ReadBytes($file, 0, $size0);
             $this->assertSame($data, $ret);
@@ -138,9 +142,9 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     
     protected function tryWritingPair(int $size0, int $size) : void
     {
-        $this->tryWriting($size, intval($size-$size0)/2, $size0);   // import, write inside file
-        $this->tryWriting($size, $size0, $size);                    // import, write from inside EOF, shrink
-        $this->tryWriting($size0, $size, $size0);                   // import, extend, write at EOF, shrink
+        $this->tryWriting($size, intval($size-$size0)/2, $size0); // import, write inside file
+        $this->tryWriting($size, $size0, $size);                  // import, write from inside EOF, shrink
+        $this->tryWriting($size0, $size, $size);                  // import, extend, write at EOF, shrink
     }   
     
     const CHUNK_SIZE = 10; // bytes
@@ -161,21 +165,24 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     
     public function testTruncateWithinChunk() : void
     {
-        $this->tryWritingPair(3, 7);
+        $this->tryWritingPair(3, 3);
+        $this->tryWritingPair(3, 8);
+        $this->tryWritingPair(3, 10);
+        $this->tryWritingPair(9, 10);
         $this->tryWritingPair(43, 46);
         $this->tryWritingPair(11, 18);
-        $this->tryWritingPair(14, 20);
         $this->tryWritingPair(11, 20);
+        $this->tryWritingPair(14, 20);
     }
     
     public function testTruncateOneChunk() : void
     {
-        $this->tryWritingPair(3, 10);
-        $this->tryWritingPair(9, 10);
-        $this->tryWritingPair(10, 25);
+        $this->tryWritingPair(8, 11);
+        $this->tryWRitingPair(10, 16);
+        $this->tryWritingPair(11, 25);
         $this->tryWritingPair(14, 25);
         $this->tryWritingPair(19, 25);
-        $this->tryWritingPair(40, 59);
+        $this->tryWritingPair(20, 25);
         $this->tryWritingPair(41, 59);
         $this->tryWritingPair(47, 59);
         $this->tryWritingPair(49, 59);
@@ -188,6 +195,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $this->tryWritingPair(10, 77);
         $this->tryWritingPair(14, 77);
         $this->tryWritingPair(19, 77);
+        $this->tryWritingPair(40, 59);
         $this->tryWritingPair(40, 99);
         $this->tryWritingPair(41, 99);
         $this->tryWritingPair(47, 99);
