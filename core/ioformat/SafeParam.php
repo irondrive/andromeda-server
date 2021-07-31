@@ -126,9 +126,7 @@ class SafeParam
     
     /** Construct a new SafeParam with the given key and value */
     public function __construct(string $key, $value)
-    {
-        if (is_string($value)) $value = trim($value);
-        
+    {        
         if ($value === null || $value === "" || $value === "null") $value = null;
         
         if (!preg_match("%^[a-zA-Z0-9_.]+$%", $key))
@@ -161,6 +159,8 @@ class SafeParam
     public function GetValue(int $type, callable ...$valfuncs)
     {
         $key = $this->key; $value = $this->value;
+        
+        if ($type === self::TYPE_RAW && is_string($value)) $value = trim($value);
 
         if ($value === null || $type === self::TYPE_RAW)
         {

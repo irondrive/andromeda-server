@@ -4,10 +4,14 @@ cd tools; if [ ! -f phpunit-9.phar ]; then
     wget https://phar.phpunit.de/phpunit-9.phar
 fi; cd ..
 
-for i in . $(ls apps); do
-    DIR=$i/tests/phpunit
-    if [ -d $DIR ]; then
-        CMD="php tools/phpunit-9.phar $i/tests/phpunit $@"
-        echo "$CMD"; $CMD || exit
-    fi
+runtests() {
+    CMD="php tools/phpunit-9.phar $@"
+    echo "$CMD"; $CMD || exit
+}
+
+runtests ./tests/phpunit $@
+
+for i in $(ls apps); do
+    DIR=apps/$i/tests/phpunit
+    if [ -d $DIR ]; then runtests $DIR $@; fi
 done

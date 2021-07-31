@@ -111,11 +111,8 @@ abstract class IOInterface extends Singleton
      */
     public function RegisterOutputHandler(OutputHandler $f) : self 
     {
-        if ($f->GetBytes() > 0) 
-        { 
-            $this->outmode = null; 
-            $this->numretfuncs++;
-        }
+        $this->outmode = null; 
+        $this->numretfuncs++;
         
         $this->retfuncs[] = $f; return $this; 
     }

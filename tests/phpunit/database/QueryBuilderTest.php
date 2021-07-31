@@ -83,7 +83,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     
     public function testJoins()
     {
-        $database = $this->getMockBuilder(ObjectDatabase::class)->disableOriginalConstructor()->getMock();
+        $database = $this->createStub(ObjectDatabase::class);
         
         $database->method('GetClassTableName')->will($this->returnArgument(0));
         
