@@ -6,8 +6,11 @@ use Symfony\Component\Finder\Finder;
 
 $iterator = Finder::create()
     ->files()->name('*.php')->in('.')
-    ->exclude('docs')->exclude('tools')
-    ->exclude('vendor')->exclude('Config.php');
+    ->exclude('docs')
+    ->exclude('tests')
+    ->exclude('tools')
+    ->exclude('vendor')
+    ->exclude('core/database/Config.php');
 
 $doctum = new Doctum($iterator, [
     'title' => 'Andromeda Server API',

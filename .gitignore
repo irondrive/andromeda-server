@@ -20,4 +20,5 @@ __pycache__
 tools/mysql2sqlite
 tools/phpDocumentor.phar
 tools/doctum.phar
-tools/*phpunit*
+tools/phpunit-9.phar
+tools/.phpunit*

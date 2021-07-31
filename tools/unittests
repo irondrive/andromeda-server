@@ -6,7 +6,7 @@ fi; cd ..
 
 runtests() {
     CMD="php tools/phpunit-9.phar $@"
-    echo "$CMD"; $CMD || exit
+    echo; echo "$CMD"; $CMD || exit
 }
 
 runtests ./tests/phpunit $@
