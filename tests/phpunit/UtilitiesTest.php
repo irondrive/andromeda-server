@@ -84,6 +84,33 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(Utilities::array_last(array(1,2,3)), 3);
    }
    
+   public function testDeleteValue() : void
+   {
+       $arr = array(); $this->assertEquals(array(), Utilities::delete_value($arr, 0));
+       
+       $arr = array(0); $this->assertEquals(array(),Utilities::delete_value($arr, 0)); // not found
+       $arr = array(0); $this->assertEquals(array(0), Utilities::delete_value($arr, 1)); // not found
+       
+       $arr = array(1,2); $this->assertEquals(array(1), array_values(Utilities::delete_value($arr, 2))); // delete last
+       $arr = array(1,2); $this->assertEquals(array(2), array_values(Utilities::delete_value($arr, 1))); // delete first
+       $arr = array(1,2,3); $this->assertEquals(array(1,3), array_values(Utilities::delete_value($arr, 2))); // delete middle
+       
+       $arr = array(1,2,3); $this->assertEquals(array(0=>1, 2=>3), Utilities::delete_value($arr, 2)); // preserve keys
+       
+       $arr = array('a'=>1, 'b'=>2, 'c'=>3, 'd'=>2); 
+       $this->assertEquals(array('a'=>1, 'c'=>3), 
+           Utilities::delete_value($arr, 2)); // associative
+       
+       $arr = array(2,1,2,3,2,3,2,2,2,3,4,5,2,7,2); 
+       $this->assertEquals(array(1,3,3,3,4,5,7), 
+           array_values(Utilities::delete_value($arr, 2))); // delete many
+       
+       // test doing by reference
+       $arr = array(5,6,7,8);
+       Utilities::delete_value($arr, 7);
+       $this->assertSame(array_values($arr), array(5,6,8));
+   }
+   
    public function testShortClassName() : void
    {
        $this->assertSame(Utilities::ShortClassName(Utilities::class),"Utilities");
