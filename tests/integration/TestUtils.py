@@ -43,3 +43,5 @@ class BaseTest():
         for attr in (getattr(self, name) for name in dir(self)):
             if inspect.ismethod(attr) and attr.__name__.startswith("test"):
                 attr() # run the test* method
+                if not self.main.verbose: print('.',end='')
+        if not self.main.verbose: print()
