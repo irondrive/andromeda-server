@@ -31,7 +31,7 @@ class NativeCrypt extends Native
     private function GetAuthString(File $file, int $index) { return $file->ID().":$index"; }
 
     /** Returns the chunk index storing the given byte offset */
-    protected function GetChunkIndex(int $byte) : int { return intdiv($byte, $this->chunksize); }
+    protected function GetChunkIndex(int $byte) : int { return ($byte < 0) ? -1 : intdiv($byte, $this->chunksize); }
     
     /** Returns the number of chunks required to store the given number of bytes */
     protected function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
@@ -97,13 +97,14 @@ class NativeCrypt extends Native
     
     public function WriteBytes(File $file, int $start, string $data) : self
     {
+        // the algorithm does not work when starting beyond EOF
         if ($start > $file->GetSize()) $file->SetSize($start);
         
         $chunk0 = $this->GetChunkIndex($start);
         $chunkn = $this->GetChunkIndex($start+strlen($data)-1);
         
         for ($chunk = $chunk0; $chunk <= $chunkn; $chunk++)
-        {            
+        {
             $cstart = $this->chunksize * $chunk; $cdata = null;
             
             // maybe need to trim down the input data
@@ -183,7 +184,7 @@ class NativeCrypt extends Native
      * @return string decrypted chunk
      */
     protected function ReadChunk(File $file, int $index) : string
-    {
+    {        
         $noncesize = CryptoSecret::NonceLength();
         $overhead = $noncesize + CryptoSecret::OutputOverhead();
         
@@ -196,8 +197,6 @@ class NativeCrypt extends Native
         // make sure we don't read beyond the end of the file
         $foverhead = $overhead * ($this->GetNumChunks($file->GetSize()));
         $datasize = min($datasize, $file->GetSize() + $foverhead - $dataoffset);
-        
-        if ($datasize <= 0) return ""; // empty chunk
 
         // a chunk is stored as [nonce,data]
         $nonce = parent::ReadBytes($file, $nonceoffset, $noncesize);
@@ -219,7 +218,7 @@ class NativeCrypt extends Native
      * @return $this
      */
     protected function WriteChunk(File $file, int $index, string $data) : self
-    {
+    {        
         $noncesize = CryptoSecret::NonceLength();
         
         $blocksize = $noncesize + $this->chunksize + CryptoSecret::OutputOverhead();
