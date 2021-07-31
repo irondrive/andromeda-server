@@ -1,3 +1,3 @@
 #!/bin/bash
 
-vendor/bin/phpmetrics --report-html=metrics --exclude=vendor/ --exclude tests/ .
+vendor/bin/phpmetrics --report-html=metrics --exclude="docs","tests","tools","vendor" .
