@@ -9,7 +9,7 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/interfaces/AJAX.php");
 require_once(ROOT."/core/ioformat/interfaces/CLI.php");
 
-if (!function_exists('json_encode')) die("PHP JSON Extension Required\n");
+if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
 
 /** Exception indicating that an app action does not allow batches */
 class BatchNotAllowedException extends Exceptions\ClientErrorException { public $message = "METHOD_DISALLOWS_BATCH"; }

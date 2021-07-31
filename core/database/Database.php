@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-if (!class_exists('PDO')) die("PHP PDO Extension Required\n"); use \PDO;
+if (!class_exists('PDO')) die("PHP PDO Extension Required".PHP_EOL); use \PDO;
 
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\{Main, Config};
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions, JSONEncodingException};

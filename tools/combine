@@ -10,4 +10,4 @@ getfiles() {
 
 getfiles . $1 | grep -v combined.php | xargs cat > combined.$1
 
-ls -lh combined.$i
+ls -lh combined.$1

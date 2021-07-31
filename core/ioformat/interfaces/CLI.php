@@ -17,10 +17,10 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]\n".
-                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file (optionally with a new name)\n\n".
-                      "batch usage:   php index.php batch myfile.txt\n".
-                      "get version:   php index.php version\n".
+    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]".PHP_EOL.
+                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file (optionally with a new name)".PHP_EOL.PHP_EOL.
+                      "batch usage:   php index.php batch myfile.txt".PHP_EOL.
+                      "get version:   php index.php version".PHP_EOL.
                       "get actions:   php index.php server usage"; }
 
 /** Exception indicating that the given batch file is not valid */
@@ -159,7 +159,7 @@ class CLI extends IOInterface
         {
             switch($argv[$i])
             {                
-                case 'version': die("Andromeda ".andromeda_version."\n"); break;
+                case 'version': die("Andromeda ".andromeda_version.PHP_EOL); break;
                 
                 case 'batch':
                     if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
@@ -276,21 +276,21 @@ class CLI extends IOInterface
         {
             // try echoing as a string, switch to printr if it fails
             $outstr = $output->GetAsString();
-            if ($outstr !== null) echo "$outstr\n";
+            if ($outstr !== null) echo $outstr.PHP_EOL;
             else $this->outmode = self::OUTPUT_PRINTR;
         }
 
         if (!$multi && $this->outmode === self::OUTPUT_PRINTR)
         {
             $outdata = $output->GetAsArray();
-            echo print_r($outdata, true)."\n";
+            echo print_r($outdata, true).PHP_EOL;
         }        
         
         if ($multi || $this->outmode === self::OUTPUT_JSON)
         {
             $outdata = $output->GetAsArray();
             
-            $outdata = Utilities::JSONEncode($outdata)."\n";
+            $outdata = Utilities::JSONEncode($outdata).PHP_EOL;
             
             if ($multi) echo static::formatSize(strlen($outdata));
             

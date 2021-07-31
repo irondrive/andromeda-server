@@ -82,7 +82,7 @@ class Native extends BaseFileFS
         return $this->ManualCopyFolder($folder, $dest);
     }
 
-    /** The path to a file is simply its ID, broken into prefixes */
+    /** The path to a file is simply its ID, broken into a prefix */
     protected function GetFilePath(File $file) : string 
     {
         $id = $file->ID();
@@ -93,7 +93,7 @@ class Native extends BaseFileFS
 
         $len = 2; $path = substr($id, 0, $len);
         
-         if (!$storage->isFolder($path))
+        if (!$storage->isFolder($path))
             $storage->CreateFolder($path);
         
         return $path.'/'.substr($id, $len); 
