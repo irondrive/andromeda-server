@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-if (!function_exists('sodium_memzero')) die("PHP Sodium Extension Required\n");
+if (!function_exists('sodium_memzero')) die("PHP Sodium Extension Required".PHP_EOL);
 
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
