@@ -1,13 +1,13 @@
 
-from BaseAppTests import *
 from TestUtils import *
 
-class AppTests(BaseAppTests):
+class AppTests(BaseTest):
     def __str__(self):
         return "FILES"
 
     def install(self):
-        assertOk(self. interface.run('files','install'))
+        assertOk(self.interface.run('files','install'))
+        assertIn('accounts', self.main.appMap)
 
-    def runTests(self):
-        admin = self.main.appMap['accounts'].admin
+    def getAdmin(self):
+        return self.main.appMap['accounts'].admin

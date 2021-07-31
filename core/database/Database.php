@@ -13,7 +13,7 @@ require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\
 abstract class DatabaseException extends Exceptions\ServerException { }
 
 /** Exception indicating that the database is not configured */
-class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_NOT_CONFIGURED"; }
+class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_CONFIG_MISSING"; }
 
 /** Exception indicating that the database was requested to use an unknkown driver */
 class InvalidDriverException extends DatabaseException { public $message = "PDO_UNKNOWN_DRIVER"; }
@@ -90,7 +90,7 @@ class Database implements Transactions
         else foreach (self::CONFIG_PATHS as $path)
         {
             if (file_exists($path)) { $config = $path; break; }
-        } 
+        }
         
         if ($config !== null) $config = require($config);
         else throw new DatabaseConfigException();
