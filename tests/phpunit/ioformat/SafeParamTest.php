@@ -69,11 +69,13 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGoodMatch("null", SafeParam::TYPE_ALPHANUM, null);
     }
     
-    public function testSpacing() : void
+    public function testTrimming() : void
     {
-        $this->testGoodMatch("  true", SafeParam::TYPE_BOOL, true);
-        $this->testGoodMatch("true  ", SafeParam::TYPE_BOOL, true);
-        $this->testGoodMatch(" true ", SafeParam::TYPE_BOOL, true);
+        $this->testGoodMatch("  true", SafeParam::TYPE_ALPHANUM, "true");
+        $this->testGoodMatch("true  ", SafeParam::TYPE_ALPHANUM, "true");
+        
+        $this->testGoodMatch(" true ", SafeParam::TYPE_ALPHANUM, "true");
+        $this->testGoodMatch(" true ", SafeParam::TYPE_RAW, " true ");
     }
     
     public function testUnknown() : void

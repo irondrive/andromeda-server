@@ -160,7 +160,7 @@ class SafeParam
     {
         $key = $this->key; $value = $this->value;
         
-        if ($type === self::TYPE_RAW && is_string($value)) $value = trim($value);
+        if ($type !== self::TYPE_RAW && is_string($value)) $value = trim($value);
 
         if ($value === null || $type === self::TYPE_RAW)
         {
