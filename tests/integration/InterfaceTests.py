@@ -34,7 +34,7 @@ class CLITests(BaseTest):
         assertInstance(rval, object)
         assert(not rval['ok'])
 
-        rval = self.fullCliRun(format=None).decode('utf-8')
+        rval = self.fullCliRun(format=None,debug=0,metrics=0).decode('utf-8')
         assertEquals(rval.strip(),"UNKNOWN_APP")
 
         rval = self.fullCliRun(format="printr").decode('utf-8')
