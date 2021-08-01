@@ -11,8 +11,7 @@ wiki/
 metrics/
 
 combined.php
-
-core/database/Config.php
+/Config.php
 tests/integration/config.json
 
 __pycache__

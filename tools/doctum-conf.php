@@ -11,7 +11,7 @@ $iterator = Finder::create()
     ->exclude('tools')
     ->exclude('vendor')
     ->exclude('apps/test')
-    ->exclude('core/database/Config.php');
+    ->exclude('/Config.php');
 
 $doctum = new Doctum($iterator, [
     'title' => 'Andromeda Server API',
