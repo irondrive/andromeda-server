@@ -1,5 +1,5 @@
 {
-    "cli":true,
+    "cli": true,
     "ajax":"http://localhost/api/index.php",
     "sqlite": {"dbpath":"/tmp/integration.s3db"},
     "mysql":

@@ -9,8 +9,8 @@ class Database():
     def __init__(self, config):
         self.config = config
     def install(self, interface):
-        result = interface.run('server','dbconf',self.config)
-        TestUtils.assertOk(result)
+        TestUtils.assertOk(interface.run(
+            app='server',action='dbconf',params=self.config))
 
 
 class SQLite(Database):

@@ -43,7 +43,7 @@ class CLI(Interface):
         self.verbose = verbose
 
     def run(self, app, action, params={}, files={}, isJson=True):
-        flags = ['--debug', '3']
+        flags = ['--debug','3']
         if isJson: flags.append('--json')
         return self.cliRun(app, action, params, files, flags)
 

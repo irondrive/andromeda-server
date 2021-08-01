@@ -184,8 +184,11 @@ final class Main extends Singleton
             if ($this->config->getVersion() !== andromeda_version)
                 $this->requireUpgrade = true;                
         }
-        catch (DatabaseConfigException $e) { if (isset($dbconf)) throw $e; }
-        catch (DatabaseException $e) { }
+        catch (DatabaseException $e) 
+        { 
+            $this->error_manager->LogException($e);
+            if ($e instanceof DatabaseConfigException && isset($dbconf)) throw $e;
+        }
         
         foreach ($apps as $app) $this->LoadApp($app);
 

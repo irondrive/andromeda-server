@@ -94,14 +94,13 @@ class Main():
                     atexit.unregister(database.deinstall)
                     database.deinstall()
                     os.remove(self.dbconfig)
-                
-                os.sync(); time.sleep(1) # TODO why???
         
-        print("\n!ALL TESTS COMPLETE!")
+        count = 0
+        for iface in self.interfaces: count += iface.count
+        print("\n!ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
+
 
     def runTests(self, interface):
-
-        interface.count = 0
 
         if self.doInstall:
             for app in os.listdir('./apps'): 
@@ -109,7 +108,7 @@ class Main():
                 if not os.path.exists(path): continue 
                 else: self.servApps.append(app)
         else:
-            config = TestUtils.assertOk(interface.run('server','getconfig'))
+            config = TestUtils.assertOk(interface.run(app='server',action='getconfig'))
             self.servApps = config['config']['apps'].keys()
 
         for app in self.servApps:
@@ -120,7 +119,9 @@ class Main():
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
-            self.appMap[app] = module.AppTests(interface)
+            appConfig = None
+            if app in self.config: appConfig = self.config[app]
+            self.appMap[app] = module.AppTests(interface, appConfig)
 
         if self.verbose: print("APPS FOUND:", list(self.appMap.keys()))
         
@@ -129,15 +130,12 @@ class Main():
 
         if self.doInstall:
             print(" -- BEGIN INSTALLS -- ")
-            appNames = TestUtils.assertOk(interface.run('server','install',{'enable':True}))
-            TestUtils.assertEquals(set(app for app in self.servApps if app != 'server'), set(appNames))
+            appNames = TestUtils.assertOk(interface.run(app='server',action='install',params={'enable':True}))
+            TestUtils.assertEquals(set(self.servApps), set(appNames))
             for app in appTests: app.install()
 
         print(" -- BEGIN", interface, "TESTS --"); interface.runTests()
-
-        for app in appTests: print(" -- BEGIN APP TESTS -", app); app.runTests()
-
-        print(" -- DONE! RAN {} COMMANDS --".format(interface.count))
+        for app in appTests: print(" -- BEGIN", app, "TESTS --"); app.runTests()
     
     def restoreConfig(self):
         if os.path.exists(self.dbconfig+'.old'):
