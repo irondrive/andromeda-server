@@ -8,6 +8,7 @@ class Main():
 
     phproot = '.'
     verbose = False
+    doInstall = True
 
     random = None
     randseed = 0
@@ -22,8 +23,8 @@ class Main():
 
     def __init__(self, config):
 
-        shortargs = "hvp:s:t:"
-        longargs = ["help","verbose","phproot=","seed=","test="]
+        shortargs = "hvp:s:t:n"
+        longargs = ["help","verbose","phproot=","seed=","test=","noinst"]
         opts, args = getopt.getopt(sys.argv[1:],shortargs,longargs)
 
         for opt,arg in opts:
@@ -37,6 +38,8 @@ class Main():
                 self.randseed = arg
             if opt in ('-t','--test'):
                 self.testMatch = arg
+            if opt in ('-n','--noinst'):
+                self.doInstall = False
 
         if not os.path.exists(self.phproot+'/index.php'):
             raise Exception("cannot find index.php")            
@@ -54,20 +57,23 @@ class Main():
         if not len(self.interfaces):
             raise Exception("no interfaces configured")
 
-        if 'sqlite' in self.config:
+        if self.doInstall and 'sqlite' in self.config:
             self.databases.append(Database.SQLite(self.config['sqlite']))
-        if 'mysql' in self.config:
+        if self.doInstall and 'mysql' in self.config:
             self.databases.append(Database.MySQL(self.config['mysql']))
-        if 'pgsql' in self.config:
+        if self.doInstall and 'pgsql' in self.config:
             self.databases.append(Database.PostgreSQL(self.config['pgsql']))
+
+        if not self.doInstall: self.databases.append(None)
 
         if not len(self.databases):
             raise Exception("no databases configured")
 
-        self.dbconfig = self.phproot+'/Config.php'
-        if os.path.exists(self.dbconfig):
-            os.rename(self.dbconfig, self.dbconfig+'.old')
-        atexit.register(self.restoreConfig)
+        if self.doInstall:
+            self.dbconfig = self.phproot+'/Config.php'
+            if os.path.exists(self.dbconfig):
+                os.rename(self.dbconfig, self.dbconfig+'.old')
+            atexit.register(self.restoreConfig)
 
         self.random = random.Random()
         self.random.seed(self.randseed)
@@ -78,26 +84,35 @@ class Main():
                 print("--- TEST SUITE -",interface,database,'---')
                 print("------------------------------------")
 
-                atexit.register(database.deinstall)
-                database.install(interface)
+                if self.doInstall:
+                    atexit.register(database.deinstall)
+                    database.install(interface)
 
                 self.runTests(interface)
 
-                atexit.unregister(database.deinstall)
-                database.deinstall()
-
-                os.remove(self.dbconfig)
+                if self.doInstall:
+                    atexit.unregister(database.deinstall)
+                    database.deinstall()
+                    os.remove(self.dbconfig)
+                
                 os.sync(); time.sleep(1) # TODO why???
         
         print("\n!ALL TESTS COMPLETE!")
 
     def runTests(self, interface):
 
-        for app in os.listdir('./apps'): 
-            path = './apps/'+app+'/'+app+'App.php'
-            if not os.path.exists(path): continue 
-            else: self.servApps.append(app)
+        interface.count = 0
 
+        if self.doInstall:
+            for app in os.listdir('./apps'): 
+                path = './apps/'+app+'/'+app+'App.php'
+                if not os.path.exists(path): continue 
+                else: self.servApps.append(app)
+        else:
+            config = TestUtils.assertOk(interface.run('server','getconfig'))
+            self.servApps = config['config']['apps'].keys()
+
+        for app in self.servApps:
             path = './apps/'+app+'/tests/integration'
             if not os.path.exists(path): continue
 
@@ -108,24 +123,19 @@ class Main():
             self.appMap[app] = module.AppTests(interface)
 
         if self.verbose: print("APPS FOUND:", list(self.appMap.keys()))
-
-        interface.count = 0
-        print(" -- BEGIN INSTALLS -- ")
-        appNames = TestUtils.assertOk(interface.run('server','install',{'enable':True}))
-
-        TestUtils.assertEquals(set(app for app in self.servApps if app != 'server'), set(appNames))
         
         appTests = list(self.appMap.values())
         self.random.shuffle(appTests)
 
-        for app in appTests: app.install()
+        if self.doInstall:
+            print(" -- BEGIN INSTALLS -- ")
+            appNames = TestUtils.assertOk(interface.run('server','install',{'enable':True}))
+            TestUtils.assertEquals(set(app for app in self.servApps if app != 'server'), set(appNames))
+            for app in appTests: app.install()
 
-        print(" -- BEGIN", interface, "TESTS --")
-        interface.runTests()
+        print(" -- BEGIN", interface, "TESTS --"); interface.runTests()
 
-        for app in appTests: 
-            print(" -- BEGIN APP TESTS -", app)
-            app.runTests()
+        for app in appTests: print(" -- BEGIN APP TESTS -", app); app.runTests()
 
         print(" -- DONE! RAN {} COMMANDS --".format(interface.count))
     

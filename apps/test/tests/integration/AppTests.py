@@ -7,4 +7,3 @@ class AppTests(BaseTest):
 
     def install(self):
         pass # no install routine
-     
