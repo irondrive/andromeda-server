@@ -1,5 +1,5 @@
 
-import inspect
+import inspect, re
 
 def assertEquals(left, right):
     assert (left == right), (left, right)
@@ -15,7 +15,7 @@ def assertInstance(obj, want):
 
 def assertOk(result):
     assertIn('ok', result)
-    assert(result['ok'])
+    assert(result['ok'] is True)
     assertIn('code', result)
     assertEquals(result['code'], 200)
     assertIn('appdata', result)
@@ -23,7 +23,7 @@ def assertOk(result):
 
 def assertError(result, code, message):
     assertIn('ok', result)
-    assert(not result['ok'])
+    assert(result['ok'] is False)
     assertIn('code', result)
     assertEquals(result['code'], code)
     assertIn('message', result)
@@ -42,6 +42,9 @@ class BaseTest():
     def runTests(self):
         for attr in (getattr(self, name) for name in dir(self)):
             if inspect.ismethod(attr) and attr.__name__.startswith("test"):
-                attr() # run the test* method
-                if not self.main.verbose: print('.',end='')
+                if self.main.testMatch is None or re.search(self.main.testMatch, attr.__name__) is not None:
+                    if self.main.verbose: print('RUNNING',attr.__name__+'()')
+                    rval = attr() # run all test* methods
+                    if not self.main.verbose: print('S' if rval is False else '.',end='')
+                    elif rval is False: print('SKIPPED',attr.__name__+'()')
         if not self.main.verbose: print()

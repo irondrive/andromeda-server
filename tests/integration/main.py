@@ -20,10 +20,12 @@ class Main():
     interfaces = [ ]
     databases = [ ]
 
+    testMatch = None
+
     def __init__(self):
 
-        shortargs = "hvp:s:"
-        longargs = ["help","verbose","phproot=","seed="]
+        shortargs = "hvp:s:t:"
+        longargs = ["help","verbose","phproot=","seed=","test="]
         opts, args = getopt.getopt(sys.argv[1:],shortargs,longargs)
 
         for opt,arg in opts:
@@ -35,15 +37,14 @@ class Main():
                 self.verbose = True
             if opt in ('-s','--seed'):
                 self.randseed = arg
+            if opt in ('-t','--test'):
+                self.testMatch = arg
 
         if not os.path.exists(self.phproot+'/index.php'):
             raise Exception("cannot find index.php")            
 
         with open(ROOT+"config.json") as file:
             self.config = json.load(file)
-
-        self.random = random.Random()
-        self.random.seed(self.randseed)
   
         if 'cli' in self.config:
             self.interfaces.append(Interface.CLI(
@@ -69,6 +70,9 @@ class Main():
         if os.path.exists(self.dbconfig):
             os.rename(self.dbconfig, self.dbconfig+'.old')
         atexit.register(self.restoreConfig)
+
+        self.random = random.Random()
+        self.random.seed(self.randseed)
 
         for database in self.databases:
             for interface in self.interfaces:

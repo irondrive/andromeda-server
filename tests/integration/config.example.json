@@ -1,7 +1,7 @@
 {
     "cli":true,
     "ajax":"http://localhost/api/index.php",
-    "sqlite": {"dbpath":"/var/andromeda/integration.s3db"},
+    "sqlite": {"dbpath":"/tmp/integration.s3db"},
     "mysql":
     {
         "dbname": "a2test",

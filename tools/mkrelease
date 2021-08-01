@@ -1,7 +1,6 @@
 #!/bin/bash
 
 TAG=$1
-DIR=$(pwd)
 
 if [ -z "$TAG" ]; then
     echo "tag required"; exit 1
@@ -24,6 +23,8 @@ rm composer.json composer.lock
 find . -name ".git*" | while read -r i; do rm -rf $i; done
 
 chmod +x tools/mkdocs; tools/mkdocs
+rm -rf docs/doctum_cache
+
 mv docs ..; rm -rf tools .phpdoc
 
 cd ..

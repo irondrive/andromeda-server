@@ -17,5 +17,5 @@ TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
 ./andromeda server dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB > /dev/null
 ./andromeda --dbconf $TEMPCONF server install > /dev/null
 ./andromeda --dbconf $TEMPCONF server usage | grep "=>" | 
-    grep -v "\[ok\]\|\[code\]\|\[appdata\]" | sed 's/.*=> //g' > docs/USAGE.txt    
+    grep -v "\[ok\]\|\[code\]\|\[appdata\]" | sed 's/.*=> //g' | grep -v "^test" > docs/USAGE.txt    
 rm $TEMPDB $TEMPCONF

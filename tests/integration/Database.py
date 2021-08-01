@@ -12,6 +12,7 @@ class Database():
         result = interface.run('server','dbconf',self.config)
         TestUtils.assertOk(result)
 
+
 class SQLite(Database):
     def install(self, interface):        
         self.config['driver'] = 'sqlite'
@@ -20,6 +21,7 @@ class SQLite(Database):
     def deinstall(self):
         if os.path.exists(self.config['dbpath']):
             os.remove(self.config['dbpath'])
+
 
 class MySQL(Database):
     def install(self, interface):
@@ -46,6 +48,7 @@ class MySQL(Database):
         self.db.cursor().execute(
             "DROP DATABASE {}".format(self.config['dbname']))
         self.db.close()
+
 
 class PostgreSQL(Database):
     def install(self, interface):
