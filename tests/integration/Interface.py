@@ -63,10 +63,10 @@ class CLI(Interface):
 
         if self.verbose: print("\t(CLI)"," ".join(command))
 
-        process = subprocess.run(command, capture_output=True)
-        retval = process.stdout.decode('utf-8')
+        retval = subprocess.run(command, capture_output=True).stdout
 
-        if '--json' in flags: retval = json.loads(retval)
+        if '--json' in flags: 
+            retval = json.loads(retval.decode('utf-8'))
         if self.verbose: print("\tAPI ->", retval)
         return retval
         

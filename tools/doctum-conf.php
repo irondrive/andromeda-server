@@ -10,6 +10,7 @@ $iterator = Finder::create()
     ->exclude('tests')
     ->exclude('tools')
     ->exclude('vendor')
+    ->exclude('apps/test')
     ->exclude('core/database/Config.php');
 
 $doctum = new Doctum($iterator, [

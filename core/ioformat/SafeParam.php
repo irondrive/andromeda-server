@@ -138,13 +138,13 @@ class SafeParam
     /** Returns the key name of the SafeParam */
     public function GetKey() : string { return $this->key; }
     
+    /** Returns the raw value of the SafeParam - caution! */
+    public function GetRawValue() { return $this->value; }
+    
     /** Returns a function that checks the max length of the value, for use with GetValue */
     public static function MaxLength(int $len) : callable { 
         return function($val)use($len){ return mb_strlen($val) <= $len; }; }
         
-    /** Returns the raw value of the SafeParam */
-    public function GetRawValue() { return $this->value; }
-    
     /**
      * Gets the value of the parameter, doing filtering/validation, and JSON decoding for objects/arrays
      * 

@@ -15,11 +15,25 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         new SafeParam("", null);
     }
     
-    public function testBadKey() : void
+    public function testBadKey1() : void
     {
         $this->expectException(SafeParamInvalidException::class);
         
         new SafeParam("test\0", null);
+    }
+    
+    public function testBadKey2() : void
+    {
+        $this->expectException(SafeParamInvalidException::class);
+        
+        new SafeParam("--test", null);
+    }
+    
+    public function testBadKey3() : void
+    {
+        $this->expectException(SafeParamInvalidException::class);
+        
+        new SafeParam("test 0", null);
     }
     
     public function testGetKey() : void
