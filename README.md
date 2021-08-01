@@ -79,7 +79,7 @@ Use the `server usage` command to see options for all available commands.
 Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
-The `server dbconf` command will store the new configuration file (Config.php) by default in the core/database folder.  When Andromeda runs it checks `core/database`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
+The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
 
 For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments.
 

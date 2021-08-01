@@ -58,7 +58,7 @@ class Database implements Transactions
     
     /** the default path for storing the config file */
     private const CONFIG_PATHS = array(
-        ROOT."/core/database/Config.php",
+        ROOT."/Config.php",
         '/usr/local/etc/andromeda/Config.php',
         '/etc/andromeda/Config.php'
     );    
