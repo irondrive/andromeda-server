@@ -4,12 +4,13 @@ if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, StaticWrapper};
 
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, ItemStat};
 
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
+require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
 
 class SharedTest extends \PHPUnit\Framework\TestCase
 {
@@ -38,7 +39,7 @@ class SharedTest extends \PHPUnit\Framework\TestCase
         $folder = $this->getMockRoot($rpath);
         
         $dbfiles = array_map(function($name)use($folder,$dbfiles){ return $this->getMockItem(File::class, $name, $folder); }, $dbfiles);
-        $dbfolders = array_map(function($name)use($folder,$dbfolders){ return $this->getMockItem(Folder::class, $name, $folder); }, $dbfolders);
+        $dbfolders = array_map(function($name)use($folder,$dbfolders){ return $this->getMockItem(SubFolder::class, $name, $folder); }, $dbfolders);
         
         $fsfiles = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfiles);
         $fsfolders = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfolders);
@@ -75,25 +76,26 @@ class SharedTest extends \PHPUnit\Framework\TestCase
         $folder->method('GetFiles')->will($this->returnCallback(function()use($dbfiles){ return $dbfiles; }));
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
         
-        $itemcreator = $this->createMock(ItemCreator::class);
-        
-        $itemcreator->method('createItem')->will($this->returnCallback(
-            function(Folder $parent, bool $isfile, string $name)use(&$dbfiles, &$dbfolders)
+        $fileSw = (new StaticWrapper(File::class))->_override('NotifyCreate',function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
         {
-            if ($isfile) $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles)));
-            else $this->assertFalse(in_array($name, array_map(function(Folder $folder){ return $folder->GetName(); }, $dbfolders)));
+            $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles),true));
+
+            return $dbfiles[] = $this->getMockItem(File::class, $name, $parent);
+        });
+        
+        $folderSw = (new StaticWrapper(SubFolder::class))->_override('NotifyCreate',function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
+        {
+            $this->assertFalse(in_array($name, array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders),true));
             
-            if ($isfile)
-                 return $dbfiles[] = $this->getMockItem(File::class, $name, $parent);
-            else return $dbfolders[] = $this->getMockItem(Folder::class, $name, $parent);
-        }));
-                 
-        $fsimpl->RefreshFolder($folder, true, $itemcreator);
+            return $dbfolders[] = $this->getMockItem(SubFolder::class, $name, $parent);
+        });
+
+        $fsimpl->RefreshFolder($folder, true, $fileSw, $folderSw);        
         
         $fsfiles = array_map(function($path){ return basename($path); }, $fsfiles);
         $fsfolders = array_map(function($path){ return basename($path); }, $fsfolders);
         $dbfiles = array_map(function(File $file){ return $file->GetName(); }, $dbfiles);
-        $dbfolders = array_map(function(Folder $folder){ return $folder->GetName(); }, $dbfolders);
+        $dbfolders = array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders);
         
         // prune extras from fsfiles (pretend Refresh())
         foreach ($dbfiles as $dbfile) { if (!in_array($dbfile, $fsfiles)) 
@@ -131,6 +133,9 @@ class SharedTest extends \PHPUnit\Framework\TestCase
         
         $this->testFolderSync($root, array('1','2','3','4','5','6','7'), array(), array('2','3','5'), array());
         $this->testFolderSync($root, array(), array('2','3','5'), array(), array('1','2','3','4','5','6','7'));
+        
+        $this->testFolderSync($root, array('3','4','29','8','1','5'), array('2','7','6'), array('22','27','26'), array('23','24','9','0','00','25'));
+        $this->testFolderSync($root, array('22','27','26'), array('23','24','9','0','00','25'), array('3','4','29','8','1','5'), array('2','7','6'));
     }
     
     public function testFolderSyncs1(){ $this->TestFolderSyncs(""); }

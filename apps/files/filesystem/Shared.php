@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\StaticWrapper;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/apps/files/filesystem/Native.php");
 
@@ -12,24 +12,6 @@ require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFo
 
 /** Exception indicating that the scanned folder item is not a file or folder (not readable) */
 class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_UNREADABLE"; }
-
-/** Wrapper around $itemclass::NotifyCreate() for unit testing */
-class ItemCreator
-{
-    public function __construct(ObjectDatabase $database, FSManager $fsmanager)
-    {
-        $this->database = $database; $this->fsmanager = $fsmanager;
-    }
-    
-    public function createItem(Folder $parent, bool $isfile, string $name) : Item
-    {
-        $itemclass = $isfile ? File::class : SubFolder::class;
-
-        $dbitem = $itemclass::NotifyCreate($this->database, $parent, $this->fsmanager->GetOwner(), $name);
-        
-        return $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
-    }
-}
 
 /**
  * A shared Andromeda filesystem is "shared" outside Andromeda
@@ -88,11 +70,12 @@ class Shared extends BaseFileFS
      * Checks that it exists, then updates stat metadata.
      * Also scans for new items and creates objects for them.
      * @param bool $doContents if true, recurse, else just this folder
-     * @param ?ItemCreator $itemCreator MUST BE NULL (unit testing only)
+     * @param ?StaticWrapper $fileSw MUST BE NULL (unit testing only)
+     * @param ?StaticWrapper $folderSw MUST BE NULL (unit testing only)
      */
-    public function RefreshFolder(Folder $folder, bool $doContents = true, ?ItemCreator $itemCreator = null) : self
-    {
-        $itemCreator ??= new ItemCreator();
+    public function RefreshFolder(Folder $folder, bool $doContents = true, 
+        ?StaticWrapper $fileSw = null, ?StaticWrapper $folderSw = null) : self
+    {       
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
         
@@ -134,7 +117,17 @@ class Shared extends BaseFileFS
                     else if ($dbitemtmp->GetName() > $fsitem) break;
                 }
                 
-                if ($dbitem === null) $itemCreator->createItem($folder, $isfile, $fsitem);
+                if ($dbitem === null) 
+                {
+                    if ($isfile) { $sw = ($fileSw ??= new StaticWrapper(File::class)); }
+                    else { $sw = ($folderSw ??= new StaticWrapper(SubFolder::class)); }
+                    
+                    $owner = $this->GetFSManager()->GetOwner();
+                    
+                    $dbitem = $sw->NotifyCreate($this->GetDatabase(), $folder, $owner, $fsitem);
+                    
+                    $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
+                }
             }
         }
         

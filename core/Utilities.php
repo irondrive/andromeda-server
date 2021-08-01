@@ -190,3 +190,26 @@ abstract class Utilities
         ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); return $retval;
     }
 }
+
+/** A class for overriding static methods for unit testing */
+class StaticWrapper
+{
+    private $overrides = array();
+    
+    public function __construct(string $class){ $this->class = $class; }
+    
+    public function _override(string $fname, callable $func) : self
+    {        
+        $this->overrides[$fname] = $func; return $this;
+    }
+    
+    public function __call($fname, $args)
+    {        
+        if (method_exists($this, $fname)) return $this->$fname(...$args);
+        
+        if (array_key_exists($fname, $this->overrides))
+            return $this->overrides[$fname](...$args);
+        
+        return ($this->class)::$fname(...$args);
+    }
+}
