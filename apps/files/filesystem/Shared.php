@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\StaticWrapper;
-require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/files/filesystem/Native.php");
 
@@ -9,9 +8,6 @@ require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
-
-/** Exception indicating that the scanned folder item is not a file or folder (not readable) */
-class InvalidScannedItemException extends Exceptions\ServerException { public $message = "SCANNED_ITEM_UNREADABLE"; }
 
 /**
  * A shared Andromeda filesystem is "shared" outside Andromeda
@@ -102,8 +98,7 @@ class Shared extends BaseFileFS
             {
                 $fspath = $path.'/'.$fsitem;
                 $isfile = $storage->isFile($fspath);
-                if (!$isfile && !$storage->isFolder($fspath))
-                    throw new InvalidScannedItemException($fspath);
+                if (!$isfile && !$storage->isFolder($fspath)) continue;
                     
                 $dbitem = null;
                 foreach ($dbitems as $dbitemid => $dbitemtmp)
@@ -119,12 +114,12 @@ class Shared extends BaseFileFS
                 
                 if ($dbitem === null) 
                 {
-                    if ($isfile) { $sw = ($fileSw ??= new StaticWrapper(File::class)); }
-                    else { $sw = ($folderSw ??= new StaticWrapper(SubFolder::class)); }
+                    $database = $this->GetDatabase(); $owner = $this->GetFSManager()->GetOwner();
                     
-                    $owner = $this->GetFSManager()->GetOwner();
+                    $sw = $isfile ? $fileSw : $folderSw; $class = $isfile ? File::class : SubFolder::class;
                     
-                    $dbitem = $sw->NotifyCreate($this->GetDatabase(), $folder, $owner, $fsitem);
+                    if ($sw !== null) $dbitem = $sw->NotifyCreate($database, $folder, $owner, $fsitem);
+                    else $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsitem);
                     
                     $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
                 }
