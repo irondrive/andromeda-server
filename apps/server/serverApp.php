@@ -376,19 +376,18 @@ class ServerApp extends UpgradableApp
     
     /**
      * Loads server config
-     * @return array if admin, `{config:Config, database:Database}` \
-         if not admin, `Config`
+     * @return array `{config:Config}` \
+         if admin add, `{database:Database}`
      * @see Config::GetClientObject() 
      * @see Database::GetClientObject()
      */
     protected function GetConfig(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) return $this->API->GetConfig()->GetClientObject();
+        $retval = array('config'=> $this->API->GetConfig()->GetClientObject($isAdmin));
         
-        return array(
-            'config' => $this->API->GetConfig()->GetClientObject(true),
-            'database' => $this->database->GetClientObject()
-        );
+        if ($isAdmin) $retval['database'] = $this->database->GetClientObject();
+        
+        return $retval;
     }
 
     /**

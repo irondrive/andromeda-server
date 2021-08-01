@@ -1,7 +1,7 @@
 
 from TestUtils import *
 
-class AppTests(BaseTest):
+class AppTests(BaseAppTest):
     def __str__(self):
         return "FILES"
 

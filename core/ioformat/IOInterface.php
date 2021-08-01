@@ -131,9 +131,9 @@ abstract class IOInterface extends Singleton
     /** 
      * Returns the binary-packed version of the given integer size 
      * 
-     * unsigned long long (always 64 bit, little endian byte order)
+     * unsigned long long (always 64 bit, big-endian byte order)
      */
-    protected static function formatSize(int $size) : string { return pack("P", $size); }
+    protected static function formatSize(int $size) : string { return pack("J", $size); }
     
     /** 
      * Tells the interface to run the custom user output functions
@@ -144,7 +144,7 @@ abstract class IOInterface extends Singleton
         $multi = $this->isMultiOutput();
         
         foreach ($this->retfuncs as $handler) 
-        { 
+        {
             if ($multi) echo static::formatSize($handler->GetBytes());
             
             $handler->DoOutput($output); flush();

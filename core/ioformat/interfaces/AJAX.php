@@ -167,7 +167,7 @@ class AJAX extends IOInterface
         
         if ($multi || $this->outmode === self::OUTPUT_JSON)
         {
-            if (!headers_sent()) 
+            if (!$multi && !headers_sent()) 
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: application/json");
