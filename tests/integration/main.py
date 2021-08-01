@@ -4,8 +4,6 @@ import os, sys, json, getopt, atexit, time, random, importlib
 
 import Interface, Database, TestUtils
 
-ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))+'/'
-
 class Main():
 
     phproot = '.'
@@ -22,7 +20,7 @@ class Main():
 
     testMatch = None
 
-    def __init__(self):
+    def __init__(self, config):
 
         shortargs = "hvp:s:t:"
         longargs = ["help","verbose","phproot=","seed=","test="]
@@ -43,7 +41,7 @@ class Main():
         if not os.path.exists(self.phproot+'/index.php'):
             raise Exception("cannot find index.php")            
 
-        with open(ROOT+"config.json") as file:
+        with open(config) as file:
             self.config = json.load(file)
   
         if 'cli' in self.config:
@@ -66,7 +64,7 @@ class Main():
         if not len(self.databases):
             raise Exception("no databases configured")
 
-        self.dbconfig = self.phproot+'/core/Database/Config.php'
+        self.dbconfig = self.phproot+'/Config.php'
         if os.path.exists(self.dbconfig):
             os.rename(self.dbconfig, self.dbconfig+'.old')
         atexit.register(self.restoreConfig)
@@ -135,4 +133,4 @@ class Main():
         if os.path.exists(self.dbconfig+'.old'):
             os.rename(self.dbconfig+'.old', self.dbconfig)
 
-if __name__ == "__main__": Main()
+if __name__ == "__main__": Main(config=os.path.dirname(os.path.realpath(sys.argv[0]))+'/config.json')
