@@ -3,6 +3,9 @@ import tempfile
 
 from TestUtils import *
 
+class AJAXTests(BaseTest):
+    pass
+
 class CLITests(BaseTest):
 
     def fullCliRun(self, app='none', action='none', params={}, files={},

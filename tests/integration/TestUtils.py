@@ -40,11 +40,14 @@ class BaseTest():
         self.main = interface.main
 
     def runTests(self):
-        for attr in (getattr(self, name) for name in dir(self)):
+        for attr in (getattr(self, name) for name in dir(self)): # run all test* methods
             if inspect.ismethod(attr) and attr.__name__.startswith("test"):
                 if self.main.testMatch is None or re.search(self.main.testMatch, attr.__name__) is not None:
-                    if self.main.verbose: print('RUNNING',attr.__name__+'()')
-                    rval = attr() # run all test* methods
-                    if not self.main.verbose: print('S' if rval is False else '.',end='')
-                    elif rval is False: print('SKIPPED',attr.__name__+'()')
+                    if self.main.verbose: 
+                        print('RUNNING',attr.__name__+'()')
+                    rval = attr()
+                    if not self.main.verbose: 
+                        print('S' if rval is False else '.',end='')
+                    elif rval is False: 
+                        print('SKIPPED',attr.__name__+'()')
         if not self.main.verbose: print()

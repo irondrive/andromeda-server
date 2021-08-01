@@ -1,7 +1,5 @@
 
-import requests, subprocess, json, TestUtils
-
-from coretests import AJAXTests, CLITests
+import requests, subprocess, json, TestUtils, InterfaceTests
 
 class Interface():
     def __str__(self):
@@ -33,7 +31,7 @@ class AJAX(Interface):
         return retval        
 
     def runTests(self):
-        AJAXTests.AJAXTests(self).runTests()
+        InterfaceTests.AJAXTests(self).runTests()
 
 
 class CLI(Interface):    
@@ -45,7 +43,7 @@ class CLI(Interface):
         self.verbose = verbose
 
     def run(self, app, action, params={}, files={}, isJson=True):
-        flags = ['--debug','9']
+        flags = ['--debug','99']
         if isJson: flags.append('--json')
         return self.cliRun(app, action, params, files, flags)
 
@@ -71,4 +69,4 @@ class CLI(Interface):
         return retval
         
     def runTests(self):
-        CLITests.CLITests(self).runTests()
+        InterfaceTests.CLITests(self).runTests()
