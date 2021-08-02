@@ -16,22 +16,22 @@ See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
-Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and app-action to run.  Use `server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
+Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
 
 The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
 
 ### Common Exceptions
 
-`SAFEPARAM_*` related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  
+`SAFEPARAM_*` related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  `UNKNOWN_APP` and `UNKNOWN_ACTION` indicate that the requested app or action are invalid.
 
 ### Parameter Types
 
-All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. ?int) indicates that the parameter can be null (e.g. `... --myparam null`).  
+All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. `?int`) indicates that the parameter can be null (e.g. `... --myparam null`).  This can have a different meaning than just omitting the parameter.
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
 * `--json`/`--printr` use JSON or PHP printr() for output (default printr)
-* `--debug` change the debug output level (default 1 - errors only)
+* `--debug int` change the debug output level (default 1 - errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
 
@@ -39,7 +39,7 @@ CLI-specific global flags must come *before* the app/action.
 To ease command line usage for commands that may involve repeated parameters (e.g. a session key), environment variables prefixed with `andromeda_` can be set that will always be included in a request.  For example, `export andromeda_mykey=myvalue` is equivalent to adding `--mykey=myvalue` to all future commands.
 
 ### Response Format
-Every request will return an object with `ok` and `code`.  `ok` denotes whether the transaction was successful, and `code` returns the corresponding HTTP error code. If the request was successful (200), the `appdata` field will have the output from the app-action.  If there was an error, the `message` field will have a string describing the error.  For simpler CLI usage, if `appdata` or `message` are just a string, only that string will be output to CLI (not the whole object).  
+Every request will return an object with `ok` and `code`.  `ok` denotes whether the transaction was successful, and `code` returns the corresponding HTTP error code. If the request was successful (200), the `appdata` field will have the output from the app-action.  If there was an error, the `message` field will have a string describing the error.  For simpler CLI usage, if `appdata` or `message` are just a string and there is no debug to output, only that string will be output to CLI (not the whole object).  
 
 ### HTTP Differences
 
@@ -50,13 +50,13 @@ Andromeda also allows making requests that run multiple actions as a single tran
 
 ### HTTP Batching
 
-Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=server&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length 5 `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`.
+Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=server&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
 
 ### Arrays and Objects
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
 
 ### File Inputs
-From the CLI, files can be included in two ways.  The file's contents can be dumped into the variable itself via @ `--myparam@ myfile.txt` or the file's path can be sent to the app directly via % `--myparam% myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things like passwords) while % is for app actions that specifically require files.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
+From the CLI, files can be included in two ways.  The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`. If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things like passwords) while % is for app actions that require files.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
 
 
 # Installation
@@ -76,12 +76,12 @@ Use the `server usage` command to see options for all available commands.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
 3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  This is required to run admin-specific commands post-install.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
-The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  
+The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  Placing it outside the index.php root is probably a good idea for production, just in case.
 
-For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments.
+For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments as it only supports one access at a time.
 
 ### Upgrading
 When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda server usage | grep upgrade`.

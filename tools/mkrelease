@@ -10,7 +10,6 @@ rm -Rf release || exit 2
 mkdir release; cd release
 
 git clone git@github.com:lightray22/andromeda-server.git api
-
 cd api; git checkout $TAG || exit 3
 
 rm -rf tools
@@ -24,6 +23,8 @@ rm composer.json composer.lock
 cd ..
 
 git clone git@github.com:lightray22/andromeda-server-docs.git docs
+cd docs; git checkout $TAG || exit 4; cd ..
+
 git clone git@github.com:lightray22/andromeda-server.wiki.git docs/wiki
 
 find . -name ".git*" | while read -r i; do rm -rf $i; done
