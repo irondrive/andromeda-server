@@ -414,7 +414,7 @@ abstract class Item extends StandardObject
     /** Deleting an item also deletes all of its component objects (likes, tags, comments, shares) */
     public function Delete() : void
     {        
-        if (!$this->deleted)
+        if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); });
         
         parent::Delete();

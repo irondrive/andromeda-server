@@ -196,7 +196,7 @@ class ObjectDatabase extends Database
         $objs = $this->Rows2Objects($result, $class);
         
         // notify all objects of deletion
-        foreach ($objs as $obj) $obj->setDeleted()->Delete();
+        foreach ($objs as $obj) $obj->NotifyDeleted();
         
         return count($objs);
     }

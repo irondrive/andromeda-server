@@ -140,6 +140,9 @@ final class Main extends Singleton
     private static string $serverApp = 'server';
     
     private bool $requireUpgrade = false;
+    
+    /** Returns the path of the given app's main code */
+    protected static function getAppMain(string $app) : string { return ROOT."/apps/$app/$app"."App.php"; }
 
     /**
      * Initializes the Main API
@@ -163,7 +166,7 @@ final class Main extends Singleton
         
         $interface->Initialize();
         
-        $sapppath = ROOT."/apps/".self::$serverApp.'/'.self::$serverApp.'App.php';
+        $sapppath = static::getAppMain(self::$serverApp);
         $apps = file_exists($sapppath) ? array(self::$serverApp) : array();
         
         try 
@@ -216,7 +219,7 @@ final class Main extends Singleton
                 throw new AppVersionException($reqver);
         }
         
-        $path = ROOT."/apps/$app/$app"."App.php";
+        $path = static::getAppMain($app);
         $app_class = "Andromeda\\Apps\\$app\\$app".'App';
         
         if (is_file($path)) require_once($path);

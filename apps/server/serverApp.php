@@ -199,7 +199,8 @@ class ServerApp extends UpgradableApp
         {
             if ($want !== null && $want !== $name) continue;
             
-            array_push($output, ...array_map(function($line)use($name){ return "$name $line"; }, $app::getUsage())); 
+            array_push($output, ...array_map(function($line)use($name){ 
+                return "$name $line"; }, $app::getUsage())); 
         }
         return $output;
     }

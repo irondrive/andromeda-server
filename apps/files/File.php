@@ -133,14 +133,13 @@ class File extends Item
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
     public function Refresh() : self
     {
-        if ($this->isCreated()) return $this;
+        if ($this->refreshed) return $this;
         
-        if ($this->deleted) return $this;
-        else if (!$this->refreshed)
-        {
-            $this->refreshed = true;
-            $this->GetFSImpl()->RefreshFile($this);
-        }
+        if ($this->isCreated() || $this->isDeleted()) return $this;
+
+        $this->refreshed = true;
+        $this->GetFSImpl()->RefreshFile($this);
+        
         return $this;
     }
 
@@ -257,7 +256,7 @@ class File extends Item
     /** Deletes the file from the DB only */
     public function NotifyDelete() : void 
     { 
-        if (!$this->deleted)
+        if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){
                 if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
 
