@@ -185,8 +185,9 @@ abstract class Folder extends Item
     {
         if ($this->isCreated()) return $this;
         
-        if ($this->deleted || static::$skiprefresh) return $this;
-        else if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
+        if ($this->isDeleted() || static::$skiprefresh) return $this;
+        
+        if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true; $this->subrefreshed = $doContents;
             $this->GetFSImpl()->RefreshFolder($this, $doContents);   

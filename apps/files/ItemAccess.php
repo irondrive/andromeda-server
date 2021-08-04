@@ -106,11 +106,8 @@ class ItemAccess
     {
         if ($item->isWorldAccess()) return true;
         
-        do
-        {
-            $owner = $item->GetOwnerID();
-            
-            if ($owner === $account->ID()) return true;
+        do {
+            if ($item->GetOwnerID() === $account->ID()) return true;
         }
         while (($item = $item->GetParent()) !== null); return false;
     }

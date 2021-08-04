@@ -778,8 +778,8 @@ abstract class BaseObject
      */
     public function isDeleted() : bool { return $this->deleted; }
     
-    /** marks this object as deleted from the DB - internal only! */
-    public function setDeleted() : self { $this->deleted = true; return $this; }
+    /** Unsets all object links but does not actually call DELETE on the DB object */
+    public function NotifyDeleted() : void { $this->deleted = true; $this->Delete(); }
     
     /** Deletes this object from the DB */
     public function Delete() : void
