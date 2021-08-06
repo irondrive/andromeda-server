@@ -24,7 +24,11 @@ class TestApp extends AppBase
     public static function getUsage() : array
     {
         $retval = array(
-            'random [--length int]'
+            'random [--length int]',
+            'getinput',
+            'exception',
+            'check-dryrun',
+            'binoutput --data raw [--times int]'
         );
 
         return $retval;
