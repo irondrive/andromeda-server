@@ -58,7 +58,7 @@ abstract class Item extends StandardObject
     /** Updates the metadata of this item by scanning the object in the filesystem */
     public abstract function Refresh() : self;
     
-    /** Returns the owner of this item, or null if it's on a shared FS */
+    /** Returns the owner of this item, or null if it's on an external FS */
     public function GetOwner() : ?Account { return $this->TryGetObject('owner'); }
     
     /** Returns the ID of the owner of this item (or null) */
@@ -202,7 +202,7 @@ abstract class Item extends StandardObject
     { 
         $fs = $this->GetFilesystem();
         
-        return $fs->isShared() && !$fs->isUserOwned();
+        return $fs->isExternal() && !$fs->isUserOwned();
     }
     
     /** Sets the item's access time to the given value or now if null */

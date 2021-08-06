@@ -17,7 +17,7 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/apps/files/storage/Storage.php"); 
 use Andromeda\Apps\Files\Storage\{Storage, ActivateException};
 
-require_once(ROOT."/apps/files/filesystem/Shared.php");
+require_once(ROOT."/apps/files/filesystem/External.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
@@ -52,7 +52,7 @@ class InvalidStorageException extends Exceptions\ClientErrorException { public $
  */
 class FSManager extends StandardObject
 {
-    const TYPE_NATIVE = 0; const TYPE_NATIVE_CRYPT = 1; const TYPE_SHARED = 2;
+    const TYPE_NATIVE = 0; const TYPE_NATIVE_CRYPT = 1; const TYPE_EXTERNAL = 2;
     
     public static function GetFieldTemplate() : array
     {
@@ -69,8 +69,8 @@ class FSManager extends StandardObject
     
     public const DEFAULT_NAME = "Default";
 
-    /** Returns true if the data in this filesystem is shared with the filesystem itself, false if Andromeda owns it */
-    public function isShared() : bool { return $this->GetType() === self::TYPE_SHARED; }
+    /** Returns true if the data in this filesystem is external, false if Andromeda owns it */
+    public function isExternal() : bool { return $this->GetType() === self::TYPE_EXTERNAL; }
     
     /** Returns true if the data is encrypted before sending to the filesystem */
     public function isEncrypted() : bool { return $this->GetType() === self::TYPE_NATIVE_CRYPT; }
@@ -148,9 +148,9 @@ class FSManager extends StandardObject
                 $chunksize = $this->GetScalar('crypto_chunksize');
                 $this->interface = new NativeCrypt($this, $masterkey, $chunksize);
             }
-            else if ($this->GetType() === self::TYPE_SHARED)
+            else if ($this->GetType() === self::TYPE_EXTERNAL)
             {
-                $this->interface = new Shared($this);
+                $this->interface = new External($this);
             }
             else throw new InvalidFSTypeException();
         }
@@ -168,7 +168,7 @@ class FSManager extends StandardObject
     
     /** Returns the common command usage of Create() */
     public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types)).
-        " [--fstype native|crypt|shared] [--name name] [--global bool] [--readonly bool] [--chunksize int]"; }
+        " [--fstype native|crypt|external] [--name name] [--global bool] [--readonly bool] [--chunksize int]"; }
     
     /** Returns the command usage of Create() specific to each storage type */
     public static function GetCreateUsages() : array 
@@ -196,13 +196,13 @@ class FSManager extends StandardObject
             function($sttype){ return array_key_exists($sttype, self::$storage_types); });
         
         $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($fstype){ return in_array($fstype, array('native','crypt','shared')); });        
+            function($fstype){ return in_array($fstype, array('native','crypt','external')); });        
         
         switch ($fstype ?? 'native')
         {
             case 'native': $fstype = self::TYPE_NATIVE; break;
             case 'crypt':  $fstype = self::TYPE_NATIVE_CRYPT; break;
-            case 'shared': $fstype = self::TYPE_SHARED; break;
+            case 'external': $fstype = self::TYPE_EXTERNAL; break;
         }
         
         $filesystem = parent::BaseCreate($database)
@@ -330,7 +330,7 @@ class FSManager extends StandardObject
     /**
      * Gets a printable client object of this filesystem
      * @param bool $admin if true, show details for the owner
-     * @return array `{id:id, name:?string, owner:?id, shared:bool, encrypted:bool, readonly:bool, sttype:string}` \  
+     * @return array `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:string}` \  
         if priv, add `{storage:Storage}` - if isEncrypted, add `{chunksize:int}`
      * @see Storage::GetClientObject()
      */
@@ -340,7 +340,7 @@ class FSManager extends StandardObject
             'id' => $this->ID(),
             'name' => $this->GetName(),
             'owner' => $this->GetOwnerID(),
-            'shared' => $this->isShared(),
+            'external' => $this->isExternal(),
             'encrypted' => $this->isEncrypted(),
             'readonly' => $this->isReadOnly(),
             'sttype' => Utilities::ShortClassName($this->GetStorageType())

@@ -65,7 +65,7 @@ class RootFolder extends Folder
         if ($loaded) return $loaded;
         else
         {
-            $owner = $filesystem->isShared() ? $filesystem->GetOwner() : $account;
+            $owner = $filesystem->isExternal() ? $filesystem->GetOwner() : $account;
             
             return parent::BaseCreate($database)
                 ->SetObject('filesystem',$filesystem)
@@ -99,10 +99,10 @@ class RootFolder extends Folder
         return static::LoadByQuery($database, $q->Where($where));
     }
     
-    /** Deletes all root folders on the given filesystem - if the FS is shared or $unlink, only remove DB objects */
+    /** Deletes all root folders on the given filesystem - if the FS is external or $unlink, only remove DB objects */
     public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $unlink = false) : void
     {
-        $unlink = $filesystem->isShared() || $unlink;
+        $unlink = $filesystem->isExternal() || $unlink;
         if ($unlink) static::$skiprefresh = true;
         
         $roots = static::LoadRootsByFSManager($database, $filesystem);
@@ -115,12 +115,12 @@ class RootFolder extends Folder
         }
     }
     
-    /** Deletes all root folders for the given owner - if the FS is shared, only remove DB objects */
+    /** Deletes all root folders for the given owner - if the FS is external, only remove DB objects */
     public static function DeleteRootsByAccount(ObjectDatabase $database, Account $account) : void
     {
         foreach (static::LoadRootsByAccount($database, $account) as $folder)
         {
-            if ($folder->GetFilesystem()->isShared()) $folder->NotifyDelete(); else $folder->Delete();
+            if ($folder->GetFilesystem()->isExternal()) $folder->NotifyDelete(); else $folder->Delete();
         }
     }
     

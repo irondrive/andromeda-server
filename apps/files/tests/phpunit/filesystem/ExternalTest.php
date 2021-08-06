@@ -12,7 +12,7 @@ require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
 
-class SharedTest extends \PHPUnit\Framework\TestCase
+class ExternalTest extends \PHPUnit\Framework\TestCase
 {
     protected function getMockItem(string $class, string $name, ?Folder $parent)
     {
@@ -71,7 +71,7 @@ class SharedTest extends \PHPUnit\Framework\TestCase
         $filesystem = $this->createMock(FSManager::class);
         $filesystem->method('GetStorage')->willReturn($storage);
         
-        $fsimpl = new Shared($filesystem);
+        $fsimpl = new External($filesystem);
         
         $folder->method('GetFiles')->will($this->returnCallback(function()use($dbfiles){ return $dbfiles; }));
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
