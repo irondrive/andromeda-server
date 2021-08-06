@@ -105,8 +105,8 @@ abstract class IOInterface extends Singleton
     /** 
      * Registers a user output handler function to run after the initial commit 
      * 
-     * Sets the output mode to null if bytes > 0 and will cause "multi-output" mode 
-     * to be used if > 1 functions that return > 0 bytes are defined
+     * Sets the output mode to null if bytes !== null and will cause "multi-output" 
+     * mode to be used if > 1 functions that return > 0 bytes are defined
      * @see IOInterface::isMultiOutput()
      */
     public function RegisterOutputHandler(OutputHandler $f) : self 
