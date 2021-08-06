@@ -3,6 +3,7 @@
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -425,8 +426,8 @@ class AccountsApp extends UpgradableApp
     /** Returns the given string with each character after a space capitalized */
     private static function capitalizeWords(string $str) : string 
     { 
-        return implode(" ",array_map(function($p){ 
-            return mb_strtoupper(mb_substr($p,0,1)).mb_substr($p,1); 
+        return implode(" ",array_map(function(string $p){ 
+            return Utilities::FirstUpper($p);
         }, explode(" ", trim($str)))); 
     }
     

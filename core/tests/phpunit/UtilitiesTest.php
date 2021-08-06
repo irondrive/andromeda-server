@@ -113,7 +113,15 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testShortClassName() : void
    {
-       $this->assertSame(Utilities::ShortClassName(Utilities::class),"Utilities");
+       $this->assertSame("Utilities",Utilities::ShortClassName(Utilities::class));
+   }
+   
+   public function testFirstUpper() : void
+   {
+       $this->assertSame("", Utilities::FirstUpper(""));
+       $this->assertSame("R", Utilities::FirstUpper("r"));
+       $this->assertSame("R", Utilities::FirstUpper("R"));
+       $this->assertSame("ArAaBbC", Utilities::FirstUpper("arAaBbC"));
    }
    
    public function testReturnBytes() : void

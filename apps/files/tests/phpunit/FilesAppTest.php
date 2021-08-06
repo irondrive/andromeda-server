@@ -2,12 +2,12 @@
 
 if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
-require_once(ROOT."/apps/files/filesApp.php");
+require_once(ROOT."/apps/files/FilesApp.php");
 require_once(ROOT."/apps/files/File.php");
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
-class filesAppTest extends \PHPUnit\Framework\TestCase
+class FilesAppTest extends \PHPUnit\Framework\TestCase
 {
     // protected static function ChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl) : void
     // protected static function ChunkedWrite($handle, File $file, int $wstart, int $wlength, int $chunksize, bool $align) : void
@@ -26,7 +26,7 @@ class filesAppTest extends \PHPUnit\Framework\TestCase
         $output = Utilities::CaptureOutput(function()use($file,$offset,$length,$chunksize,$align){ 
             FilesApp::ChunkedRead($file, $offset, $offset+$length-1, $chunksize, $align, false); });
         
-        $this->assertEquals($output, substr($data,$offset,$length));
+        $this->assertSame($output, substr($data,$offset,$length));
     }
     
     public function testChunkedRead() : void
@@ -85,7 +85,7 @@ class filesAppTest extends \PHPUnit\Framework\TestCase
         
         FilesApp::ChunkedWrite($whandle, $file, $offset, $length, $chunksize, $align); 
 
-        $this->assertEquals($fdata0, $fdata1);
+        $this->assertSame($fdata0, $fdata1);
     }
     
     public function testChunkedWrite() : void

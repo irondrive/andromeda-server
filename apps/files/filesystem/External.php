@@ -31,8 +31,10 @@ class External extends BaseFileFS
     protected function GetItemPath(Item $item, ?string $child = null) : string
     {
         $parent = $item->GetParent();
-        if ($parent === null) $path = "";
-        else $path = $this->GetItemPath($parent, $item->GetName());
+        
+        $path = ($parent === null) ? "" :
+            $this->GetItemPath($parent, $item->GetName());
+        
         return $path.($child !== null ? '/'.$child :"");
     }
     

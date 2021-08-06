@@ -9,7 +9,7 @@ runtests() {
     echo; echo "$CMD"; $CMD || exit
 }
 
-runtests ./tests/phpunit $@
+runtests core/tests/phpunit $@
 
 for i in $(ls apps); do
     DIR=apps/$i/tests/phpunit

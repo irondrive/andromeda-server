@@ -104,7 +104,7 @@ class Main():
 
         if self.doInstall:
             for app in os.listdir('./apps'): 
-                path = './apps/'+app+'/'+app+'App.php'
+                path = './apps/'+app+'/'+app.capitalize()+'App.php'
                 if not os.path.exists(path): continue 
                 else: self.servApps.append(app)
         else:

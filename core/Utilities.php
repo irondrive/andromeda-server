@@ -153,6 +153,10 @@ abstract class Utilities
     /** Returns a class name with the namespace stripped */
     public static function ShortClassName(?string $class) : ?string { 
         return $class ? self::array_last(explode("\\",$class)) : null; }
+        
+    /** Returns the given string with the first character capitalized */
+    public static function FirstUpper(string $str) : string {
+        return mb_strtoupper(mb_substr($str,0,1)).mb_substr($str,1); }
     
     /**
      * Returns a size string converted to bytes
@@ -178,8 +182,9 @@ abstract class Utilities
     {
         if (!$search || !$subject) return $subject;
         
-        if (($pos = strpos($subject, $search)) !== false)
-            $subject = substr_replace($subject, $replace, $pos, strlen($search));
+        if (($pos = mb_strpos($subject, $search)) !== false)
+            $subject = mb_substr($subject, 0, $pos).$replace.
+                mb_substr($subject, $pos+strlen($search));
         
         return $subject;
     }
