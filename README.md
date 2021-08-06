@@ -18,7 +18,7 @@ Andromeda and *all* its API calls can be run either through an HTTP webserver, o
 
 Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
 
-The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda` and will only specify the `app action` to run, e.g. `server usage`.  The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
 
 ### Common Exceptions
 
@@ -56,8 +56,10 @@ Via HTTP, this is done using the `batch` input variable.  Each entry in the `bat
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
 
 ### File Inputs
-From the CLI, files can be included in two ways.  The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`. If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things like passwords) while % is for app actions that require files.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
+From the CLI, files can be included in two ways.  The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`. If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things) while % is for app actions that require files.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
 
+### Interactive Input
+Using `!` at the end of a parameter name (e.g. `--myparam!`) will read the parameter value interactively from the console (or from STDIN).  This is a good way to input things like passwords.  Unfortunately PHP does not support silent input, so all input will be echoed to the console.
 
 # Installation
 
