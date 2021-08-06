@@ -475,8 +475,6 @@ class FilesApp extends UpgradableApp
         $fstart = $input->GetOptNullParam('fstart',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? 0;
         $flast  = $input->GetOptNullParam('flast',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? $fsize-1;
         
-        if ($accesslog) $accesslog->LogDetails('fstart',$fstart)->LogDetails('flast',$flast);
-        
         if (isset($_SERVER['HTTP_RANGE']))
         {
             $ranges = explode('=',$_SERVER['HTTP_RANGE']);
@@ -493,7 +491,9 @@ class FilesApp extends UpgradableApp
 
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new InvalidDLRangeException();
-                
+
+        if ($accesslog) $accesslog->LogDetails('fstart',$fstart)->LogDetails('flast',$flast);
+        
         // check required bandwidth ahead of time
         $length = $flast-$fstart+1;
         $file->CheckBandwidth($length);
@@ -504,16 +504,13 @@ class FilesApp extends UpgradableApp
         $align = ($fschunksize !== null);        
         // transfer chunk size must be an integer multiple of the FS chunk size
         if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
-        
 
-        $partial = $fstart != 0 || $flast != $fsize-1;
-
-        if (!$partial) $file->CountDownload((isset($share) && $share !== null));
+        if ($flast == $fsize-1) $file->CountDownload((isset($share) && $share !== null));
         
         // send necessary headers
         if (!$debugdl)
         {
-            if ($partial)
+            if ($fstart != 0 || $flast != $fsize-1)
             {
                 http_response_code(206);
                 header("Content-Range: bytes $fstart-$flast/$fsize");
@@ -530,31 +527,46 @@ class FilesApp extends UpgradableApp
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
-            function() use($flast,$fstart,$debugdl){ return $debugdl ? 0 : $flast-$fstart+1; },
+            function() use($length,$fstart,$debugdl){ return $debugdl ? 0 : $length; },
             function(Output $output) use($file,$fstart,$flast,$chunksize,$align,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
-
-            for ($byte = $fstart; $byte <= $flast; )
-            {
-                if (connection_aborted()) break;
-                
-                // the next read should begin on a chunk boundary if aligned
-                if (!$align) $nbyte = $byte + $chunksize;
-                else $nbyte = (intdiv($byte, $chunksize) + 1) * $chunksize;
-
-                $rlen = min($nbyte - $byte, $flast - $byte + 1); 
-                
-                $data = $file->ReadBytes($byte, $rlen); 
-                
-                if (strlen($data) != $rlen)
-                    throw new FileReadFailedException();
-
-                $byte += $rlen; $file->CountBandwidth($rlen);
-                
-                if (!$debugdl) { echo $data; flush(); }
-            }
+            
+            static::ChunkedRead($file,$fstart,$flast,$chunksize,$align,$debugdl);
         }));
+    }
+    
+    /**
+     * Performs a chunked download, echoing output
+     * @param File $file file to read from
+     * @param int $fstart first byte to read
+     * @param int $flast last byte to read (inclusive!)
+     * @param int $chunksize read chunk size
+     * @param bool $align if true, align reads to chunk size multiples
+     * @param bool $debugdl if true, don't actually echo anything
+     * @throws FileReadFailedException if reading the file fails
+     */
+    public static function ChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl = false) : void
+    {
+        for ($byte = $fstart; $byte <= $flast; )
+        {
+            if (connection_aborted()) break;
+            
+            // the next read should begin on a chunk boundary if aligned
+            if (!$align) $nbyte = $byte + $chunksize;
+            else $nbyte = (intdiv($byte, $chunksize) + 1) * $chunksize;
+            
+            $rlen = min($nbyte - $byte, $flast - $byte + 1);
+            
+            $data = $file->ReadBytes($byte, $rlen);
+            
+            if (strlen($data) != $rlen)
+                throw new FileReadFailedException();
+                
+            $file->CountBandwidth($rlen); $byte += $rlen;
+            
+            if (!$debugdl) { echo $data; flush(); }
+        }
     }
     
     /**
@@ -580,10 +592,9 @@ class FilesApp extends UpgradableApp
         $account = $authenticator ? $authenticator->GetAccount() : null;
 
         $filepath = $input->GetFile('data')->GetPath();
-        
+        $wlength = filesize($filepath);
+                
         $wstart = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? 0;
-        
-        $wlength = filesize($filepath); $wlast = $wstart + $wlength - 1;
         
         if ($accesslog) $accesslog->LogDetails('wstart',$wstart)->LogDetails('wlength',$wlength);
         
@@ -595,7 +606,7 @@ class FilesApp extends UpgradableApp
         if ($share !== null && !$share->CanModify()) 
             throw new ItemAccessDeniedException();        
 
-        if ($wstart < 0 || $wlast+1 < $wstart)
+        if ($wstart < 0 || $wstart+$wlength < $wstart)
             throw new InvalidFileRangeException();
         
         $overwrite = (!$wstart && $wlength >= $file->GetSize());        
@@ -619,26 +630,41 @@ class FilesApp extends UpgradableApp
             $align = ($fschunksize !== null);
             if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
             
-            if (!($inhandle = fopen($filepath, 'rb')))
+            if (!($handle = fopen($filepath, 'rb')))
                 throw new FileReadFailedException();
             
-            for ($wbyte = $wstart; $wbyte <= $wlast; )
-            {
-                // the next write should begin on a chunk boundary if aligned
-                if (!$align) $nbyte = $wbyte + $chunksize;
-                else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
-                                
-                $wlen = min($nbyte - $wbyte, $wlength - $wbyte + $wstart);
-                
-                if (($data = fread($inhandle, $wlen)) === false)
-                    throw new FileReadFailedException();
-                
-                if (strlen($data) != $wlen) throw new FileReadFailedException();
-                
-                $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
-            }
+            static::ChunkedWrite($handle, $file, $wstart, $wlength, $chunksize, $align);
             
             return $file->GetClientObject();
+        }
+    }
+    
+    /**
+     * Perform a chunked write to a file
+     * @param $handle input data handle
+     * @param File $file write destination
+     * @param int $wstart write offset
+     * @param int $wlength length of data
+     * @param int $chunksize write chunksize
+     * @param bool $align if true, align to chunksize multiples
+     * @throws FileReadFailedException if reading input fails
+     */
+    public static function ChunkedWrite($handle, File $file, int $wstart, int $wlength, int $chunksize, bool $align) : void
+    {
+        for ($wbyte = $wstart; $wbyte <= $wstart+$wlength-1; )
+        {
+            // the next write should begin on a chunk boundary if aligned
+            if (!$align) $nbyte = $wbyte + $chunksize;
+            else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
+            
+            $wlen = min($nbyte - $wbyte, $wlength - $wbyte + $wstart);
+            
+            if (($data = fread($handle, $wlen)) === false)
+                throw new FileReadFailedException();
+                
+            if (strlen($data) != $wlen) throw new FileReadFailedException();
+            
+            $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
         }
     }
     
