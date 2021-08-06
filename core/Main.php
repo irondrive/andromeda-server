@@ -142,7 +142,8 @@ final class Main extends Singleton
     private bool $requireUpgrade = false;
     
     /** Returns the path of the given app's main code */
-    protected static function getAppMain(string $app) : string { return ROOT."/apps/$app/$app"."App.php"; }
+    protected static function getAppMain(string $app) : string { 
+        return ROOT."/apps/$app/".Utilities::FirstUpper($app)."App.php"; }
 
     /**
      * Initializes the Main API
