@@ -79,8 +79,8 @@ class Main():
         self.random.seed(self.randseed)
 
         for database in self.databases:
-            for interface in self.interfaces:
-                print('',"------------------------------------")
+            for interface in self.interfaces: 
+                print();print("------------------------------------")
                 print("--- TEST SUITE -",interface,database,'---')
                 print("------------------------------------")
 
@@ -97,7 +97,7 @@ class Main():
         
         count = 0
         for iface in self.interfaces: count += iface.count
-        print('',"!ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
+        print();print("!! ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
 
 
     def runTests(self, interface):
