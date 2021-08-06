@@ -23,7 +23,7 @@ class OutputHandler
         $this->getbytes = $getbytes; $this->output = $output; }
     
     /** Return the number of bytes that will be output */
-    public function GetBytes() : int { return ($this->getbytes)(); }
+    public function GetBytes() : ?int { return ($this->getbytes)(); }
     
     /** Do the actual output routine */
     public function DoOutput(Output $output) : void { ($this->output)($output); }
@@ -111,8 +111,11 @@ abstract class IOInterface extends Singleton
      */
     public function RegisterOutputHandler(OutputHandler $f) : self 
     {
-        $this->outmode = null; 
-        $this->numretfuncs++;
+        if ($f->GetBytes() !== null)
+        {
+            $this->outmode = null; 
+            $this->numretfuncs++;
+        }
         
         $this->retfuncs[] = $f; return $this; 
     }
