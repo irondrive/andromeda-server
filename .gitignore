@@ -12,7 +12,8 @@ metrics/
 
 combined.php
 /Config.php
-tests/integration/config.json
+
+pytest-config.json
 
 __pycache__
 
