@@ -45,9 +45,9 @@ class CLI(Interface):
     def run(self, app, action, params={}, files={}, isJson=True):
         flags = ['--debug','3']
         if isJson: flags.append('--json')
-        return self.cliRun(app, action, params, files, flags)
+        return self.cliRun(app, action, params, files, flags, isJson)
 
-    def cliRun(self, app, action, params={}, files={}, flags=[]):
+    def cliRun(self, app, action, params={}, files={}, flags=[], isJson=True, stdin=None):
         super().run()
         if self.verbose:
             print('API <-',app,action,params)
@@ -55,16 +55,19 @@ class CLI(Interface):
         command = ["php", self.path+'/index.php'] + flags + [app, action]
 
         for key, value in params.items():
-            command += ["--"+key, str(value)]
+            command.append("--"+key)
+            if value is not None:
+                command.append(str(value))
 
         # TODO handling files - input names or handles or what?
 
         if self.verbose: print("\t(CLI)"," ".join(command))
 
-        retval = subprocess.run(command, capture_output=True).stdout
+        if stdin is not None: stdin = bytes(stdin,'utf-8')
 
-        if '--json' in flags: 
-            retval = json.loads(retval.decode('utf-8'))
+        retval = subprocess.run(command, input=stdin, capture_output=True).stdout
+
+        if isJson: retval = json.loads(retval.decode('utf-8'))
         if self.verbose: print("\tAPI ->", retval)
         return retval
         
