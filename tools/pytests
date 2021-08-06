@@ -1,2 +1,2 @@
 #!/bin/sh
-python3 tests/integration/main.py $@
+python3 core/tests/integration/main.py $@

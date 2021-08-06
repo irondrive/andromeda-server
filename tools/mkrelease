@@ -14,7 +14,9 @@ cd api; git checkout $TAG || exit 3
 
 rm -rf tools
 rm -rf apps/testApp
+
 find . -name tests | while read -r i; do rm -rf $i; done
+rm pytest-config.example.json
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
