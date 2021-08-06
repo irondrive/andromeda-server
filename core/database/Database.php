@@ -12,7 +12,7 @@ require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\
 /** Base class representing a database exception */
 abstract class DatabaseException extends Exceptions\ServerException { }
 
-/** Exception indicating that the database is not configured */
+/** Exception indicating that the database connection is not configured */
 class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_CONFIG_MISSING"; }
 
 /** Exception indicating that the database was requested to use an unknkown driver */

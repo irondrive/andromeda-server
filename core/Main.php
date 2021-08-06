@@ -173,7 +173,7 @@ final class Main extends Singleton
         try 
         {
             $dbconf = $interface->GetDBConfigFile();
-            $this->database = new ObjectDatabase($dbconf);        
+            $this->database = new ObjectDatabase($dbconf);
             $this->database->pushStatsContext();
 
             $this->config = Config::GetInstance($this->database);
@@ -189,9 +189,10 @@ final class Main extends Singleton
                 $this->requireUpgrade = true;                
         }
         catch (DatabaseException $e) 
-        { 
-            $this->error_manager->LogException($e);
-            if ($e instanceof DatabaseConfigException && isset($dbconf)) throw $e;
+        {
+            if ($e instanceof DatabaseConfigException && $dbconf !== null) throw $e;
+            
+            else $this->error_manager->LogException($e);
         }
         
         foreach ($apps as $app) $this->LoadApp($app);
