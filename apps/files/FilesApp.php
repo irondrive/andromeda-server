@@ -527,7 +527,7 @@ class FilesApp extends UpgradableApp
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
-            function() use($length,$fstart,$debugdl){ return $debugdl ? 0 : $length; },
+            function() use($length,$fstart,$debugdl){ return $debugdl ? null : $length; },
             function(Output $output) use($file,$fstart,$flast,$chunksize,$align,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
