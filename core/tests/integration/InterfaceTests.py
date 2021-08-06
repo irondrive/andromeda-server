@@ -1,5 +1,5 @@
 
-import tempfile
+import tempfile, json, os
 
 from TestUtils import *
 
@@ -8,8 +8,8 @@ class AJAXTests(BaseTest):
 
 class CLITests(BaseTest):
 
-    def fullCliRun(self, app='none', action='none', params={}, files={},
-        format="json", debug=None, metrics=None, dbconf=None, dryrun=False, flags=None):
+    def fullCliRun(self, app='none', action='none', params={}, files={}, stdin=None, flags=None, 
+        isJson=True, format="json", debug=None, metrics=None, dbconf=None, dryrun=False):
         
         if flags is None: flags = [] # don't want to modify default
         if format is not None: flags.append('--'+format)
@@ -18,7 +18,8 @@ class CLITests(BaseTest):
         if dbconf is not None: flags += ['--dbconf',str(dbconf)]
         if dryrun: flags.append('--dryrun')
 
-        return self.interface.cliRun(app, action, params, files, flags)
+        return self.interface.cliRun(app=app, action=action, params=params, files=files, 
+            flags=flags, isJson=isJson, stdin=stdin)
     
     def testDebugFlag(self):
         rval = self.fullCliRun(debug=0)
@@ -34,10 +35,10 @@ class CLITests(BaseTest):
         assertInstance(rval, object)
         assert(not rval['ok'])
 
-        rval = self.fullCliRun(format=None,debug=0,metrics=0).decode('utf-8')
+        rval = self.fullCliRun(isJson=False,format=None,debug=0,metrics=0).decode('utf-8')
         assertEquals(rval.strip(),"UNKNOWN_APP")
 
-        rval = self.fullCliRun(format="printr").decode('utf-8')
+        rval = self.fullCliRun(isJson=False,format="printr").decode('utf-8')
         assert(rval.startswith("Array")), rval
 
     def testMetricsFlag(self):
@@ -50,7 +51,8 @@ class CLITests(BaseTest):
         assertEquals(rval['debug']['message'], 'DATABASE_CONFIG_MISSING')
 
     def testVersionCommand(self):
-        rval = self.interface.cliRun('','',{},{},['version']).decode('utf-8')
+        rval = self.interface.cliRun(app='',action='',
+            flags=['version'],isJson=False).decode('utf-8')
         assert(rval.startswith('Andromeda')), rval
 
     def testDryrunFlag(self):
@@ -68,3 +70,16 @@ class CLITests(BaseTest):
                 app='test', action='getinput',
                 params={'myfile@': tmp.name}))
             assertEquals(val, rval['myfile'])
+
+    def testStdinInput(self):
+        key = "mystdin"
+        val = "myvalue"
+
+        rval = self.fullCliRun(
+            app='test', action='getinput', isJson=False,
+            params={key+'!':None}, stdin=val).decode('utf-8')
+        
+        expect = "enter {}...".format(key)+os.linesep
+        assertEquals(expect, rval[0:len(expect)])
+        rval = assertOk(json.loads(rval[len(expect):]))
+        assertEquals(val, rval[key])

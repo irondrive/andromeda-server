@@ -80,7 +80,7 @@ class Main():
 
         for database in self.databases:
             for interface in self.interfaces:
-                print("\n------------------------------------")
+                print('',"------------------------------------")
                 print("--- TEST SUITE -",interface,database,'---')
                 print("------------------------------------")
 
@@ -97,7 +97,7 @@ class Main():
         
         count = 0
         for iface in self.interfaces: count += iface.count
-        print("\n!ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
+        print('',"!ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
 
 
     def runTests(self, interface):
