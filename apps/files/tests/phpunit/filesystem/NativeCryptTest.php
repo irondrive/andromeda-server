@@ -122,7 +122,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         
         $wdata = Utilities::Random($wlen);
         
-        $data = substr($data, 0, $offset).$wdata.substr($data, $offset+$wlen);        
+        $data = substr_replace($data, $wdata, $offset, strlen($wdata));
         $this->fsimpl->WriteBytes($file, $offset, $wdata); 
         $file->SetSize($size,true);
 
