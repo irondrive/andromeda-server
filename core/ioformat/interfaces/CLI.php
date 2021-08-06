@@ -17,8 +17,11 @@ require_once(ROOT."/apps/server/serverApp.php"); use Andromeda\Apps\Server\Serve
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action [--\$param value] [--\$param@ file] [--\$param% file [name]]".PHP_EOL.
-                      " - param@ puts the content of the file in the parameter, param% uploads the file as a file (optionally with a new name)".PHP_EOL.PHP_EOL.
+    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action".
+                          "[--\$param!] [--\$param value] [--\$param@ file] [--\$param% file [name]]".PHP_EOL.
+                          "\t param! will prompt interactively for the value".PHP_EOL.
+                          "\t param@ puts the content of the file in the parameter".PHP_EOL.
+                          "\t param% uploads the file as a file (optionally with a new name)".PHP_EOL.PHP_EOL.
                       "batch usage:   php index.php batch myfile.txt".PHP_EOL.
                       "get version:   php index.php version".PHP_EOL.
                       "get actions:   php index.php server usage"; }
@@ -233,6 +236,16 @@ class CLI extends IOInterface
                 
                 $val = trim(file_get_contents($val));
             }
+            // optionally get a param value interactively
+            else if (mb_substr($param,-1) === '!')
+            {
+                $param = mb_substr($param,0,-1);
+                if (!$param) throw new IncorrectCLIUsageException();
+                
+                echo "enter $param...".PHP_EOL;
+                $val = trim(fgets(STDIN), PHP_EOL);
+            }
+            
             // optionally send the app a path/name of a file instead
             if (mb_substr($param,-1) === '%')
             {
@@ -247,7 +260,7 @@ class CLI extends IOInterface
                 
                 $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
 
-                $this->tmpfiles[] = $tmpfile;  
+                $this->tmpfiles[] = $tmpfile;
                 
                 $files[$param] = new InputFile($tmpfile, $filename);
             }
