@@ -116,6 +116,6 @@ class filesAppTest extends \PHPUnit\Framework\TestCase
         $this->tryChunkedWrite(100, 13, 35, 10, true, array([13,7],[20,10],[30,10],[40,8]));
         $this->tryChunkedWrite(100, 29, 31, 10, true, array([29,1],[30,10],[40,10],[50,10]));  
         $this->tryChunkedWrite(100, 30, 31, 10, true, array([30,10],[40,10],[50,10],[60,1]));  
-        $this->tryChunkedWrite(100, 29, 32, 10, true, array([29,1],[30,10],[40,10],[50,10],[60,1]));        
+        $this->tryChunkedWrite(100, 29, 32, 10, true, array([29,1],[30,10],[40,10],[50,10],[60,1]));
     }    
 }

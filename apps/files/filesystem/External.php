@@ -10,7 +10,7 @@ require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
 
 /**
- * A shared Andromeda filesystem is "shared" outside Andromeda
+ * An External Andromeda filesystem is accessible outside Andromeda
  * 
  * The filesystem is used "normally" so that the contents can be
  * viewed outside Andromeda.  This also means that the filesystem
@@ -20,7 +20,7 @@ require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFo
  * The files and folder on-disk are considered the authoritative
  * record of what exists, and the database is merely a metadata cache.
  */
-class Shared extends BaseFileFS
+class External extends BaseFileFS
 {
     /**
      * Returns the root-relative path of the given item
