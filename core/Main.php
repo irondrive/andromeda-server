@@ -137,12 +137,13 @@ final class Main extends Singleton
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
-    private static string $serverApp = 'server';
+    /** the name of the standard server app */
+    private const SERVERAPP = 'server';
     
     private bool $requireUpgrade = false;
     
     /** Returns the path of the given app's main code */
-    protected static function getAppMain(string $app) : string { 
+    private static function getAppMain(string $app) : string { 
         return ROOT."/apps/$app/".Utilities::FirstUpper($app)."App.php"; }
 
     /**
@@ -167,8 +168,8 @@ final class Main extends Singleton
         
         $interface->Initialize();
         
-        $sapppath = static::getAppMain(self::$serverApp);
-        $apps = file_exists($sapppath) ? array(self::$serverApp) : array();
+        $sapppath = static::getAppMain(self::SERVERAPP);
+        $apps = file_exists($sapppath) ? array(self::SERVERAPP) : array();
         
         try 
         {
@@ -214,7 +215,7 @@ final class Main extends Singleton
     /** Loads the main include file for an app and constructs it */
     public function LoadApp(string $app) : self
     {
-        if ($app !== self::$serverApp)
+        if ($app !== self::SERVERAPP)
         {
             $reqver = AppBase::getAppReqVersion($app);
             if ($reqver != (new VersionInfo())->major)
@@ -250,8 +251,8 @@ final class Main extends Singleton
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        if ($app !== self::$serverApp && $this->requireUpgrade)
-            throw new UpgradeRequiredException(self::$serverApp);            
+        if ($app !== self::SERVERAPP && $this->requireUpgrade)
+            throw new UpgradeRequiredException(self::SERVERAPP);
         
         $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
         
