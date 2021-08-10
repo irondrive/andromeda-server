@@ -67,7 +67,8 @@ abstract class Folder extends Item
      * @param int $offset the offset to start loading from
      * @return array<string, Folder> folders indexed by ID
      */
-    public function GetFolders(?int $limit = null, ?int $offset = null) : array { $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
+    public function GetFolders(?int $limit = null, ?int $offset = null) : array { 
+        $this->Refresh(true); return $this->GetObjectRefs('folders',$limit,$offset); }
     
     /** Returns the number of files in this folder (not recursive) (fast) */
     public function GetNumFiles() : int { return $this->GetCounter('subfiles'); }
