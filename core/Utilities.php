@@ -91,7 +91,7 @@ class VersionInfo
 /** Abstract with some global static utility functions */
 abstract class Utilities
 {   
-    private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_";
+    private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; // 36 (5 bits/char)
     
     /** Returns the number of possible characters for a digit in Random */
     public static function RandomRange() : int { return strlen(static::$chars); }
