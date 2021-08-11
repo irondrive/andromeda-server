@@ -230,7 +230,6 @@ CREATE TABLE `a2obj_apps_files_storage_s3` (
   `id` char(12) NOT NULL
 ,  `dates__created` double NOT NULL
 ,  `filesystem` char(12) NOT NULL
-,  `import_chunksize` integer DEFAULT NULL
 ,  `endpoint` text NOT NULL
 ,  `path_style` integer DEFAULT NULL
 ,  `port` integer DEFAULT NULL
