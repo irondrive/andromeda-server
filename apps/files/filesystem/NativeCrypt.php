@@ -1,10 +1,15 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
+
 require_once(ROOT."/apps/files/filesystem/Native.php");
+
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
+require_once(ROOT."/apps/files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\FileReadFailedException;
+require_once(ROOT."/apps/files/storage/Exceptions.php"); 
+use Andromeda\Apps\Files\Storage\FileReadFailedException;
 
 /**
  * Implements an encryption layer on top of the native filesystem.
@@ -36,28 +41,25 @@ class NativeCrypt extends Native
     /** Returns the number of chunks required to store the given number of bytes */
     protected function GetNumChunks(int $bytes) : int { return $bytes ? intdiv($bytes-1, $this->chunksize)+1 : 0; }
     
-    public function ImportFile(File $file, string $oldpath) : self
+    public function ImportFile(File $file, InputPath $infile) : self
     {
+        if (!($handle = $infile->GetHandle()))
+            throw new FileReadFailedException();
+        
         $newpath = parent::GetFilePath($file);
         
-        $length = filesize($oldpath);
+        $length = $infile->GetSize();
         $chunks = $this->GetNumChunks($length);
         
         $this->GetStorage()->CreateFile($newpath);
-
-        if (!($handle = fopen($oldpath,'rb')))
-            throw new FileReadFailedException();
-        
+            
         for ($chunk = 0; $chunk < $chunks; $chunk++)
         {
             $offset = $chunk * $this->chunksize;
             
             $rbytes = min($this->chunksize, $length-$offset);
             
-            $data = fread($handle, $rbytes);
-            
-            if ($data === false || strlen($data) !== $rbytes)
-                throw new FileReadFailedException();
+            $data = FileUtils::ReadStream($handle, $rbytes);
             
             $this->WriteChunk($file, $chunk, $data);
         }

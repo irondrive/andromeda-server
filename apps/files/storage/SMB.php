@@ -8,6 +8,7 @@ require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 /** Exception indicating that the libsmbclient extension is missing */

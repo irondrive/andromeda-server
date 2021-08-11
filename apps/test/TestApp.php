@@ -10,7 +10,8 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
+require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\OutputHandler;
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputStream;
 
 class TestServerException extends Exceptions\ServerException { public $message = "TEST_SERVER_EXCEPTION"; }
 
@@ -66,7 +67,11 @@ class TestApp extends AppBase
     
     protected function GetInput(Input $input) : array
     {
-        return $input->GetParams()->GetClientObject();
+        $params = $input->GetParams()->GetClientObject();
+        
+        $files = array_map(function(InputStream $file){ return $file->GetData(); }, $input->GetFiles());
+        
+        return array('params'=>$params, 'files'=>$files);
     }
     
     protected function ServerException() : void

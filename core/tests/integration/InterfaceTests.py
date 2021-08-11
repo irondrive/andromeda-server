@@ -69,7 +69,7 @@ class CLITests(BaseTest):
             rval = assertOk(self.fullCliRun(
                 app='test', action='getinput',
                 params={'myfile@': tmp.name}))
-            assertEquals(val, rval['myfile'])
+            assertEquals(val, rval['params']['myfile'])
 
     def testStdinInput(self):
         key = "mystdin"
@@ -82,4 +82,4 @@ class CLITests(BaseTest):
         expect = "enter {}...".format(key)+os.linesep
         assertEquals(expect, rval[0:len(expect)])
         rval = assertOk(json.loads(rval[len(expect):]))
-        assertEquals(val, rval[key])
+        assertEquals(val, rval['params'][key])

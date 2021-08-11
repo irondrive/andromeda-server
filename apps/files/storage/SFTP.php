@@ -8,6 +8,7 @@ require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 /** Exception indicating that the SSH connection failed */
@@ -86,7 +87,7 @@ class SFTP extends StandardFWrapper
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--privkey% path] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--privkey% path | --privkey-] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     { 
@@ -95,12 +96,12 @@ class SFTP extends StandardFWrapper
             ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT))
             ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));         
         
-        if ($input->HasFile('privkey')) $obj->SetPrivkey(file_get_contents($input->GetFile('privkey')));
+        if ($input->HasFile('privkey')) $obj->SetPrivkey($input->GetFile('privkey')->GetData());
         
         return $obj;
     }
 
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path] [--keypass ?raw] [--resethost bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path | --privkey-] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
@@ -108,7 +109,7 @@ class SFTP extends StandardFWrapper
         if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
         
         if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
-        if ($input->HasFile('privkey')) $this->SetPrivkey(file_get_contents($input->GetFile('privkey')));
+        if ($input->HasFile('privkey')) $this->SetPrivkey($input->GetFile('privkey')->GetData());
         
         if ($input->GetOptParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
         
@@ -168,7 +169,7 @@ class SFTP extends StandardFWrapper
         return "sftp://".$this->sftp."/".$this->GetPath($path);
     }
     
-    protected function SubImportFile(string $src, string $dest) : self
+    protected function SubImportFile(string $src, string $dest, bool $istemp) : self
     {
         $mode = \phpseclib3\Net\SFTP::SOURCE_LOCAL_FILE;
         

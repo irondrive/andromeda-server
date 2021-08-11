@@ -1,13 +1,17 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
-
+require_once(ROOT."/apps/files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+
+/** Exception indicating that this storage does not support folder functions */
+class FoldersUnsupportedException extends Exceptions\ClientErrorException { public $message = "STORAGE_FOLDERS_UNSUPPORTED"; }
 
 /**
  * Trait for storage classes that store a optionally-encrypted credential fields
@@ -203,71 +207,18 @@ trait BasePath
 
 /** A storage with no specific ImportFile function, using CreateFile/WriteBytes instead */
 trait ManualImport
-{    
-    /** Gets the extra DB fields required for this trait */
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'import_chunksize' => null
-        ));
-    }
-    
-    /**
-     * Returns the printable client object of this trait
-     * @return array `{import_chunksize:?int}`
-     */
-    public function GetClientObject() : array
-    {
-        return array_merge(parent::GetClientObject(), array(
-            'import_chunksize' => $this->TryGetScalar('import_chunksize')
-        ));
-    }
-    
-    /** Returns the chunk size to use for ImportFile() */
-    protected function GetImportChunkSize() : int 
-    { 
-        return $this->TryGetScalar('import_chunksize') ?? 
-            Config::GetInstance($this->database)->GetRWChunkSize(); 
-    }
-    
-    /** Returns true if the given size is >= 4K and <= 64M */
-    public static function isValidSize(int $v) : bool { return $v >= 4*1024 && $v <= 64*1024*1024; }
-    
-    /** Returns the command usage for Create() */
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--import_chunksize int]"; }
-
-    /** Performs cred-crypt level initialization on a new storage */
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
-    {
-        return parent::Create($database, $input, $filesystem)
-            ->SetScalar('import_chunksize', $input->GetOptParam('import_chunksize', SafeParam::TYPE_UINT, 
-                SafeParams::PARAMLOG_ONLYFULL, function($v){ return static::isValidSize($v); }));
-    }
-    
-    /** Returns the command usage for Edit() */
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--import_chunksize ?int]"; }
-    
-    /** Performs cred-crypt level edit on an existing storage */
-    public function Edit(Input $input) : Storage
-    {
-        if ($input->HasParam('import_chunksize')) $this->SetScalar('import_chunksize', 
-            $input->GetNullParam('import_chunksize', SafeParam::TYPE_UINT,
-                SafeParams::PARAMLOG_ONLYFULL, function($v){ return static::isValidSize($v); }));
-        
-        return parent::Edit($input);
-    }
-    
-    protected function SubImportFile(string $src, string $dest) : Storage
+{
+    protected function SubImportFile(string $src, string $dest, bool $istemp) : Storage
     {
         if (!($handle = fopen($src, 'rb')))
-            throw new FileCopyFailedException();
+            throw new FileOpenFailedException();
             
-        $this->CreateFile($dest);
+        $this->CreateFile($dest); $fsize = filesize($src);
         
-        $fsize = filesize($src);
+        $rwcsize = Config::GetInstance($this->database)->GetRWChunkSize();
+        $fscsize = $this->GetFilesystem()->GetFSImpl()->GetChunkSize();
+        $bsize = FileUtils::GetChunkSize($rwcsize, $fscsize);
         
-        $bsize = $this->GetImportChunkSize();
-
         $byte = 0; while (!feof($handle) && $byte < $fsize)
         {
             $rbytes = min($bsize, $fsize-$byte);

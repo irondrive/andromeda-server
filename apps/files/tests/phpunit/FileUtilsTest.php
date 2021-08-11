@@ -2,15 +2,36 @@
 
 if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
-require_once(ROOT."/apps/files/FilesApp.php");
+require_once(ROOT."/apps/files/FileUtils.php");
 require_once(ROOT."/apps/files/File.php");
 
 require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
-class FilesAppTest extends \PHPUnit\Framework\TestCase
+class FileUtilsTest extends \PHPUnit\Framework\TestCase
 {
-    // protected static function ChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl) : void
-    // protected static function ChunkedWrite($handle, File $file, int $wstart, int $wlength, int $chunksize, bool $align) : void
+    public function testChunkSize() : void
+    {
+        $this->assertSame(0, FileUtils::GetChunkSize(0, null));
+        $this->assertSame(100, FileUtils::GetChunkSize(100, null));
+        $this->assertSame(100, FileUtils::GetChunkSize(100, 100));
+        
+        // FS chunk size is bigger (unusual)
+        $this->assertSame(120, FileUtils::GetChunkSize(100, 120));
+        $this->assertSame(150, FileUtils::GetChunkSize(100, 150));
+        $this->assertSame(250, FileUtils::GetChunkSize(100, 250));
+        
+        // RW chunk size is bigger (normal) - output 2x
+        $this->assertSame(200, FileUtils::GetChunkSize(101, 100));
+        $this->assertSame(200, FileUtils::GetChunkSize(150, 100));
+        $this->assertSame(200, FileUtils::GetChunkSize(199, 100));
+        $this->assertSame(200, FileUtils::GetChunkSize(200, 100));
+        
+        // RW chunksize is bigger - output 3x-higher
+        $this->assertSame(300, FileUtils::GetChunkSize(201, 100));
+        $this->assertSame(300, FileUtils::GetChunkSize(300, 100));
+        $this->assertSame(600, FileUtils::GetChunkSize(501, 100));
+        $this->assertSame(600, FileUtils::GetChunkSize(600, 100));
+    }    
     
     protected function tryChunkedRead(int $datasize, int $offset, int $length, int $chunksize, bool $align, array $reads) : void
     {
@@ -24,7 +45,7 @@ class FilesAppTest extends \PHPUnit\Framework\TestCase
         $file->expects($this->exactly(count($reads)))->method('ReadBytes')->withConsecutive(...$reads);
         
         $output = Utilities::CaptureOutput(function()use($file,$offset,$length,$chunksize,$align){ 
-            FilesApp::ChunkedRead($file, $offset, $offset+$length-1, $chunksize, $align, false); });
+            FileUtils::ChunkedRead($file, $offset, $offset+$length-1, $chunksize, $align, false); });
         
         $this->assertSame($output, substr($data,$offset,$length));
     }
@@ -32,8 +53,8 @@ class FilesAppTest extends \PHPUnit\Framework\TestCase
     public function testChunkedRead() : void
     {
         // base zero cases
-        $this->tryChunkedRead(0, 0, 0, 0, false, array());    
-        $this->tryChunkedRead(0, 0, 0, 0, true, array());
+        $this->tryChunkedRead(0, 0, 0, 1, false, array());
+        $this->tryChunkedRead(0, 0, 0, 1, true, array());
         $this->tryChunkedRead(0, 0, 0, 100, false, array());
         $this->tryChunkedRead(0, 0, 0, 100, true, array());
         
@@ -83,16 +104,16 @@ class FilesAppTest extends \PHPUnit\Framework\TestCase
         
         $file->expects($this->exactly(count($writes)))->method('WriteBytes')->withConsecutive(...$writes);
         
-        FilesApp::ChunkedWrite($whandle, $file, $offset, $length, $chunksize, $align); 
-
+        $written = FileUtils::ChunkedWrite($whandle, $file, $offset, $chunksize, $align); 
+        
+        $this->assertSame($length, $written);
         $this->assertSame($fdata0, $fdata1);
     }
     
     public function testChunkedWrite() : void
     {
         // base zero cases
-        $this->tryChunkedWrite(0, 0, 0, 0, false, array());
-        $this->tryChunkedWrite(0, 0, 0, 10, true, array());        
+        $this->tryChunkedWrite(0, 0, 0, 1, true, array());
         
         // test single chunk, not aligned
         $this->tryChunkedWrite(0, 0, 5, 10, false, array([0,5]));

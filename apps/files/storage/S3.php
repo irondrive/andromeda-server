@@ -14,6 +14,7 @@ require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/apps/accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/Traits.php");
 

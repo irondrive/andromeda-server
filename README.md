@@ -56,7 +56,11 @@ Via HTTP, this is done using the `batch` input variable.  Each entry in the `bat
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
 
 ### File Inputs
-From the CLI, files can be included in two ways.  The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`. If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things) while % is for app actions that require files.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
+From the CLI, files can be included in several ways.  
+
+- The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things) while % is for app actions that require files.
+- If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
+- Instead of `%` with a path, the STDIN stream can be attached to the given file input with `-`.  With `echo "test" | ./andromeda app action --myparam-`,  the value of`myparam` will be `test`.
 
 ### Interactive Input
 Using `!` at the end of a parameter name (e.g. `--myparam!`) will read the parameter value interactively from the console (or from STDIN).  This is a good way to input things like passwords.  Unfortunately PHP does not support silent input, so all input will be echoed to the console.

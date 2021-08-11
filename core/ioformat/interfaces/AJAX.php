@@ -8,7 +8,7 @@ require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php"); 
 require_once(ROOT."/core/ioformat/SafeParam.php"); 
 require_once(ROOT."/core/ioformat/SafeParams.php"); 
-use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams,InputFile};
+use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams,InputPath};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -116,7 +116,7 @@ class AJAX extends IOInterface
             
             $fname = (new SafeParam('name',$file['name']))->GetValue(SafeParam::TYPE_FSNAME);
             
-            $pfiles[$key] = new InputFile($file['tmp_name'], $fname); 
+            $pfiles[$key] = new InputPath($file['tmp_name'], $fname, true); 
         }
         
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;

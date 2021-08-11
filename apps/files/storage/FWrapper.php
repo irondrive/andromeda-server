@@ -1,9 +1,9 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
-
 require_once(ROOT."/apps/accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
+require_once(ROOT."/apps/files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/Storage.php");
 require_once(ROOT."/apps/files/storage/Traits.php");
 
@@ -85,7 +85,7 @@ abstract class FWrapper extends Storage
         return $this;
     }
 
-    protected function SubImportFile(string $src, string $dest) : parent
+    protected function SubImportFile(string $src, string $dest, bool $istemp) : parent
     {
         $this->ClosePath($dest);
         
@@ -164,39 +164,13 @@ abstract class FWrapper extends Storage
         if (!copy($this->GetFullURL($old), $this->GetFullURL($new)))
             throw new FileCopyFailedException();
         return $this;
-    }    
-    
-    /** Returns true if fread() and fwrite() may need to be in chunks (network) */
-    protected function UseChunks() : bool { return true; }
+    }
     
     protected function SubReadBytes(string $path, int $start, int $length) : string
     {
         $context = $this->GetContext($path, $start, false);
         
-        if ($this->UseChunks())
-        {
-            $byte = 0; $data = array();
-            
-            while (!feof($context->handle) && $byte < $length)
-            {
-                $read = fread($context->handle, $length-$byte);
-                
-                if ($read === false) break;
-                
-                $data[] = $read; $byte += strlen($read);
-            }
-            
-            $data = implode($data);
-        }
-        else $data = fread($context->handle, $length);
-        
-        if ($data === false || strlen($data) !== $length)
-        {
-            ErrorManager::GetInstance()->LogDebug(array(
-                'read'=>strlen($data), 'wanted'=>$length));
-            
-            throw new FileReadFailedException();
-        }
+        $data = FileUtils::ReadStream($context->handle, $length);
         
         $context->offset += $length;
         
@@ -206,29 +180,8 @@ abstract class FWrapper extends Storage
     protected function SubWriteBytes(string $path, int $start, string $data) : self
     {        
         $context = $this->GetContext($path, $start, true);
-
-        if ($this->UseChunks())
-        {
-            $written = 0; while ($written < strlen($data))
-            {
-                $piece = $written ? substr($data, $written) : $data;
-                
-                $bytes = fwrite($context->handle, $piece);
-                
-                if ($bytes === false) break;
-                
-                $written += $bytes;
-            }
-        }
-        else $written = fwrite($context->handle, $data);
         
-        if ($written !== strlen($data))
-        {
-            ErrorManager::GetInstance()->LogDebug(array(
-                'wrote'=>$written, 'wanted'=>strlen($data)));
-            
-            throw new FileWriteFailedException();
-        }
+        FileUtils::WriteStream($context->handle, $data);
 
         $context->offset += strlen($data);        
         

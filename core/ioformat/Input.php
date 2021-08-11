@@ -2,6 +2,7 @@
 
 require_once(ROOT."/core/ioformat/SafeParam.php");
 require_once(ROOT."/core/ioformat/SafeParams.php");
+require_once(ROOT."/core/ioformat/InputFile.php");
 
 require_once(ROOT."/core/logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
 
@@ -15,15 +16,6 @@ class InputAuth
         $this->username = $username; $this->password = $password; }
     public function GetUsername() : string { return $this->username; }
     public function GetPassword() : string { return $this->password; }
-}
-
-/** A file path and name combination */
-class InputFile
-{
-    public function __construct(string $path, string $name) {
-        $this->path = $path; $this->name = $name; }
-    public function GetPath() : string { return $this->path; }
-    public function GetName() : string { return $this->name; }
 }
 
 /** 
@@ -101,6 +93,9 @@ class Input
     
     /** @see Input::GetFiles() */
     private array $files;
+    
+    /** Returns the array of input files */
+    public function GetFiles() : array { return $this->files; }
 
     /**
      * Determines whether or not the given key exists as an input file
@@ -111,21 +106,21 @@ class Input
         return array_key_exists($key, $this->files); }
         
     /**
-     * Adds the given InputFile to the file array
+     * Adds the given InputStream to the file array
      * @param string $key param name for file
-     * @param InputFile $file file name/path
+     * @param InputStream $file input file stream
      * @return $this
      */
-    public function AddFile(string $key, InputFile $file) : self {
+    public function AddFile(string $key, InputStream $file) : self {
         $this->files[$key] = $file; return $this; }
     
     /**
      * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
      * @throws SafeParamKeyMissingException if the key does not exist
-     * @return InputFile the temporary uploaded file
+     * @return InputStream the uploaded file
      */
-    public function GetFile(string $key) : InputFile
+    public function GetFile(string $key) : InputStream
     {
         if (!$this->HasFile($key)) 
             throw new InputFileMissingException($key);
@@ -136,7 +131,7 @@ class Input
      * Same as GetFile() but returns null rather than throwing an exception
      * @see Input::GetFile()
      */
-    public function TryGetFile(string $key) : ?InputFile
+    public function TryGetFile(string $key) : ?InputStream
     {
         if (!$this->HasFile($key)) return null;
         else return $this->files[$key];

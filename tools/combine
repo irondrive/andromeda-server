@@ -1,6 +1,6 @@
 #!/bin/bash
 
-(find $1 -iname '*.php'; find $1 -iname '*.py') | 
+(find $1 -iname '*.php'; find $1 -iname '*.py'; find $1 -iname '*.md') | 
     grep -v "/data/\|/docs/\|/tools/\|/vendor/" | 
     xargs cat > combined.txt
 

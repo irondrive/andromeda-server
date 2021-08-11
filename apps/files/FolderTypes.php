@@ -5,7 +5,7 @@ require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\StorageException;
+require_once(ROOT."/apps/files/storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\StorageException;
 require_once(ROOT."/apps/files/Folder.php");
 
 use Andromeda\Apps\Files\Filesystem\FSManager;

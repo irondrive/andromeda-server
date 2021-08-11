@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
 require_once(ROOT."/core/exceptions/Exceptions.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
@@ -57,10 +58,13 @@ abstract class FSImpl
     /**
      * Creates a new file and imports its content
      * @param File $file the database object
-     * @param string $path path to the file content
+     * @param InputPath $infile the file to import
      * @return $this
      */
-    public abstract function ImportFile(File $file, string $path) : self;
+    public abstract function ImportFile(File $file, InputPath $infile) : self;
+    
+    /** Creates an empty file on storage */
+    public abstract function CreateFile(File $file) : self;
     
     /** Deletes the given file from storage */
     public abstract function DeleteFile(File $file) : self;

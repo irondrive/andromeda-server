@@ -13,69 +13,10 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Main, Utilities, T
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 
 /** Client exception indicating that a write was attempted to a read-only storage */
 class ReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
-
-/** Exception indicating that this storage does not support folder functions */
-class FoldersUnsupportedException extends Exceptions\ClientErrorException { public $message = "STORAGE_FOLDERS_UNSUPPORTED"; }
-
-/** Base exception indicating a storage failure */
-abstract class StorageException extends Exceptions\ServerException { }
-
-/** Exception indicating that reading folder contents failed */
-class FolderReadFailedException extends StorageException { public $message = "FOLDER_READ_FAILED"; }
-
-/** Exception indicating that creating the folder failed */
-class FolderCreateFailedException extends StorageException  { public $message = "FOLDER_CREATE_FAILED"; }
-
-/** Exception indicating that deleting the folder failed */
-class FolderDeleteFailedException extends StorageException  { public $message = "FOLDER_DELETE_FAILED"; }
-
-/** Exception indicating that moving the folder failed */
-class FolderMoveFailedException extends StorageException    { public $message = "FOLDER_MOVE_FAILED"; }
-
-/** Exception indicating that renaming the folder failed */
-class FolderRenameFailedException extends StorageException  { public $message = "FOLDER_RENAME_FAILED"; }
-
-/** Exception indicating that copying the folder failed */
-class FolderCopyFailedException extends StorageException    { public $message = "FOLDER_COPY_FAILED"; }
-
-/** Exception indicating that creating the file failed */
-class FileCreateFailedException extends StorageException    { public $message = "FILE_CREATE_FAILED"; }
-
-/** Exception indicating that deleting the file failed */
-class FileDeleteFailedException extends StorageException    { public $message = "FILE_DELETE_FAILED"; }
-
-/** Exception indicating that moving the file failed */
-class FileMoveFailedException extends StorageException      { public $message = "FILE_MOVE_FAILED"; }
-
-/** Exception indicating that renaming the file failed */
-class FileRenameFailedException extends StorageException    { public $message = "FILE_RENAME_FAILED"; }
-
-/** Exception indicating that reading from the file failed */
-class FileReadFailedException extends StorageException      { public $message = "FILE_READ_FAILED"; }
-
-/** Exception indicating that writing to the file failed */
-class FileWriteFailedException extends StorageException     { public $message = "FILE_WRITE_FAILED"; }
-
-/** Exception indicating that copying the file failed */
-class FileCopyFailedException extends StorageException      { public $message = "FILE_COPY_FAILED"; }
-
-/** Exception indicating that stat failed */
-class ItemStatFailedException extends StorageException      { public $message = "ITEM_STAT_FAILED"; }
-
-/** Exception indicating that finding free space failed */
-class FreeSpaceFailedException extends StorageException     { public $message = "FREE_SPACE_FAILED"; }
-
-/** Exception indicating that activating the storage failed */
-abstract class ActivateException extends StorageException { }
-
-/** Exception indicating that the tested storage is not readable */
-class TestReadFailedException extends ActivateException { public $message = "STORAGE_TEST_READ_FAILED"; }
-
-/** Exception indicating that the tested storage is not writeable */
-class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; }
 
 /** Class representing a stat result */
 class ItemStat
@@ -293,13 +234,14 @@ abstract class Storage extends StandardObject implements Transactions
      * Imports a file into the storage
      * @param string $src file to import
      * @param string $dest path of new file
+     * @param bool $istemp true if we can move the src
      * @return $this
      */
-    public function ImportFile(string $src, string $dest) : self
+    public function ImportFile(string $src, string $dest, bool $istemp) : self
     {
         $this->AssertNotReadOnly();
         
-        $this->SubImportFile($src, $dest);
+        $this->SubImportFile($src, $dest, $istemp);
         
         array_push($this->onRollback, function()use($dest){
             $this->SubDeleteFile($dest); });
@@ -309,9 +251,9 @@ abstract class Storage extends StandardObject implements Transactions
     
     /**
      * The storage-specific ImportFile
-     * @see Storage::ReadBytes()
+     * @see Storage::ImportFile()
      */
-    protected abstract function SubImportFile(string $src, string $dest) : self;
+    protected abstract function SubImportFile(string $src, string $dest, bool $istemp) : self;
 
     /**
      * Reads data from a file
