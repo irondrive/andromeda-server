@@ -322,7 +322,7 @@ final class Main extends Singleton
                     
                     $this->database->saveObjects(true); 
                     
-                    $this->innerCommit();
+                    $this->innerCommit(false);
                 }
                 catch (\Throwable $e) { $this->error_manager->LogException($e); }
             }
@@ -372,7 +372,7 @@ final class Main extends Singleton
      * Commits the database or does a rollback if readOnly/dryrun
      * @param bool $apps if true, commit/rollback apps also
      */
-    private function innerCommit(bool $apps = false) : void
+    private function innerCommit(bool $apps) : void
     {
         $rollback = $this->config && $this->config->getReadOnly();
         
@@ -442,7 +442,7 @@ final class Main extends Singleton
             
             $output->SetMetrics($metrics->GetClientObject($isError));
             
-            $metrics->Save(); $this->innerCommit();
+            $metrics->Save(); $this->innerCommit(false);
         }
         catch (\Throwable $e)
         {

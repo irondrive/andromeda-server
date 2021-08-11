@@ -93,7 +93,7 @@ class FileUtils
     }
     
     /**
-     * Performs a chunked File read, echoing output and counting bandwidth     * 
+     * Performs a chunked File read, echoing output and counting bandwidth
      * @param File $file file to read from
      * @param int $fstart first byte to read
      * @param int $flast last byte to read (inclusive!)

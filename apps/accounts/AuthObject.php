@@ -23,7 +23,7 @@ abstract class AuthObject extends StandardObject
         ));
     }
     
-    protected const KEY_LENGTH = 32;
+    protected const KEY_LENGTH = 32; // ~160 bits
     
     /** a long random string doesn't need purposefully-slow hashing */
     private const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
