@@ -7,20 +7,22 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, Missing
 require_once(ROOT."/core/ioformat/Input.php");
 require_once(ROOT."/core/ioformat/Output.php");
 require_once(ROOT."/core/ioformat/IOInterface.php");
+require_once(ROOT."/core/ioformat/InputFile.php");
 require_once(ROOT."/core/ioformat/SafeParam.php");
 require_once(ROOT."/core/ioformat/SafeParams.php");
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,InputFile};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,InputPath,InputStream};
 
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/core/exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action".
-                          "[--\$param!] [--\$param value] [--\$param@ file] [--\$param% file [name]]".PHP_EOL.
-                          "\t param! will prompt interactively for the value".PHP_EOL.
+    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action ".
+                          "[--\$param value] [--\$param@ file] [--\$param!] [--\$param% file [name]] [--\$param-]".PHP_EOL.
                           "\t param@ puts the content of the file in the parameter".PHP_EOL.
-                          "\t param% uploads the file as a file (optionally with a new name)".PHP_EOL.PHP_EOL.
+                          "\t param! will prompt interactively or read stdin for the parameter value".PHP_EOL.
+                          "\t param% gives the file path as a direct file input (optionally with a new name)".PHP_EOL.
+                          "\t param- will attach the stdin stream as a direct file input".PHP_EOL.
+                          PHP_EOL.
                       "batch usage:   php index.php batch myfile.txt".PHP_EOL.
                       "get version:   php index.php version".PHP_EOL.
                       "get actions:   php index.php server usage"; }
@@ -57,6 +59,18 @@ class CLI extends IOInterface
                 catch (MissingSingletonException $e) { }
             });
         }
+    }  
+    
+    /** Strips -- off the given string and returns (or false if not found) */
+    private static function getKey(string $str)
+    {
+        if (mb_substr($str,0,2) !== "--") return false; else return mb_substr($str,2);
+    }
+    
+    /** Returns the next args value (or null if not found) and increments $i */
+    private static function getNextValue(array $args, int &$i) : ?string
+    {
+        return (isset($args[$i+1]) && !static::getKey($args[$i+1])) ? $args[++$i] : null;
     }
 
     /** 
@@ -73,28 +87,28 @@ class CLI extends IOInterface
         // pre-process params that may be needed before $config is available        
         for ($i = 1; $i < count($argv); $i++)
         {
-            if (mb_substr($argv[$i],0,2) !== "--") break;
+            $key = static::getKey($argv[$i]);
 
-            switch ($argv[$i])
+            if (!$key) break; else switch ($key)
             {
-                case '--dryrun': break;
+                case 'dryrun': break;
                 
-                case '--json': $this->outmode = static::OUTPUT_JSON; break;
-                case '--printr': $this->outmode = static::OUTPUT_PRINTR; break;
+                case 'json': $this->outmode = static::OUTPUT_JSON; break;
+                case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
                 
-                case '--debug':
-                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->debug = (new SafeParam('debug',$argv[++$i]))->GetValue(SafeParam::TYPE_UINT);
+                case 'debug':
+                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    $this->debug = (new SafeParam('debug',$val))->GetValue(SafeParam::TYPE_UINT);
                     break;
                     
-                case '--metrics':
-                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->metrics = (new SafeParam('metrics',$argv[++$i]))->GetValue(SafeParam::TYPE_UINT);
+                case 'metrics':
+                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    $this->metrics = (new SafeParam('metrics',$val))->GetValue(SafeParam::TYPE_UINT);
                     break;
                     
-                case '--dbconf':
-                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    $this->dbconf = (new SafeParam('dbfconf',$argv[++$i]))->GetValue(SafeParam::TYPE_FSPATH);
+                case 'dbconf':
+                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    $this->dbconf = (new SafeParam('dbfconf',$val))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
 
                 default: throw new IncorrectCLIUsageException();
@@ -140,17 +154,17 @@ class CLI extends IOInterface
         // process flags that are relevant for $config
         $i = 1; for (; $i < count($argv); $i++)
         {
-            if (mb_substr($argv[$i],0,2) !== "--") break;
-
-            switch($argv[$i])
+            $key = static::getKey($argv[$i]);
+            
+            if (!$key) break; else switch ($key)
             {
-                case '--json': break;
-                case '--printr': break;
-                case '--debug': $i++; break;
-                case '--metrics': $i++; break;
-                case '--dbconf': $i++; break;
+                case 'json': break;
+                case 'printr': break;
+                case 'debug': $i++; break;
+                case 'metrics': $i++; break;
+                case 'dbconf': $i++; break;
                     
-                case '--dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
+                case 'dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
 
                 default: throw new IncorrectCLIUsageException();
             }
@@ -164,8 +178,9 @@ class CLI extends IOInterface
                 case 'version': die("Andromeda ".andromeda_version.PHP_EOL); break;
                 
                 case 'batch':
-                    if (!isset($argv[$i+1])) throw new IncorrectCLIUsageException();
-                    return static::GetBatch($argv[$i+1]); break;
+                    if (($val = static::getNextValue($argv,$i)) === null) 
+                        throw new IncorrectCLIUsageException();
+                    return static::GetBatch($val); break;
                     
                 default: return array(static::GetInput(array_slice($argv, $i))); break;
             }
@@ -187,14 +202,6 @@ class CLI extends IOInterface
             
             return static::GetInput($args);
         }, $lines);
-    }
-    
-    private $tmpfiles = array();
-    
-    /** Strips -- off the given string and returns (or false if not found) */
-    private static function getKey(string $str)
-    { 
-        if (mb_substr($str,0,2) !== "--") return false; else return mb_substr($str,2);
     }
     
     /** Fetches an Input object by reading it from the command line */
@@ -223,20 +230,23 @@ class CLI extends IOInterface
             $param = static::getKey($argv[$i]); 
             if (!$param) throw new IncorrectCLIUsageException();
             
-            $val = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : true;
+            $special = mb_substr($param, -1);
             
             // optionally load a param value from a file instead
-            if (mb_substr($param,-1) === '@')
+            if ($special === '@')
             {
                 $param = mb_substr($param,0,-1); 
                 if (!$param) throw new IncorrectCLIUsageException();
+                
+                $val = static::getNextValue($argv,$i);
+                if ($val === null) throw new IncorrectCLIUsageException();
                 
                 if (!is_readable($val)) throw new InvalidFileException();
                 
                 $val = trim(file_get_contents($val));
             }
             // optionally get a param value interactively
-            else if (mb_substr($param,-1) === '!')
+            else if ($special === '!')
             {
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException();
@@ -244,38 +254,33 @@ class CLI extends IOInterface
                 echo "enter $param...".PHP_EOL;
                 $val = trim(fgets(STDIN), PHP_EOL);
             }
-            
+            else $val = static::getNextValue($argv,$i) ?? true;
+
             // optionally send the app a path/name of a file instead
-            if (mb_substr($param,-1) === '%')
+            if ($special === '%')
             {
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException();
                 
-                if (!is_readable($val)) throw new InvalidFileException();
+                if (!is_readable($val)) throw new InvalidFileException($val);
                 
-                $tmpfile = tempnam(sys_get_temp_dir(),'andromeda_'); copy($val, $tmpfile);
+                $filename = basename(static::getNextValue($argv,$i) ?? $val);
+                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME);
                 
-                $filename = (isset($argv[$i+1]) && !static::getKey($argv[$i+1])) ? $argv[++$i] : $val;       
+                $files[$param] = new InputPath($val, $filename, false);
+            }
+            // optionally attach stdin to a file instead
+            else if ($special === '-')
+            {
+                $param = mb_substr($param,0,-1);
+                if (!$param) throw new IncorrectCLIUsageException();
                 
-                $filename = (new SafeParam('name',basename($filename)))->GetValue(SafeParam::TYPE_FSNAME);
-
-                $this->tmpfiles[] = $tmpfile;
-                
-                $files[$param] = new InputFile($tmpfile, $filename);
+                $files[$param] = new InputStream(STDIN);
             }
             else $params->AddParam($param, $val);
         }
         
         return new Input($app, $action, $params, $files);
-    }
-    
-    public function __destruct()
-    {
-        foreach ($this->tmpfiles as $path) 
-        {
-            try { if (is_file($path)) unlink($path); }
-            catch (\Throwable $e) { ErrorManager::GetInstance()->LogException($e); }
-        }            
     }
     
     private $output_json = false;

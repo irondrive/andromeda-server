@@ -7,6 +7,7 @@ require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 /** Exception indicating that the FTP extension is not installed */
@@ -178,7 +179,7 @@ class FTP extends StandardFWrapper
         return $this;
     }
     
-    protected function SubImportFile(string $src, string $dest): self
+    protected function SubImportFile(string $src, string $dest, bool $istemp): self
     {
         $this->ClosePath($dest);
         

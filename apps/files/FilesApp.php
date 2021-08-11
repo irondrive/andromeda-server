@@ -10,12 +10,14 @@ require_once(ROOT."/apps/files/Comment.php");
 require_once(ROOT."/apps/files/Tag.php");
 require_once(ROOT."/apps/files/Like.php");
 require_once(ROOT."/apps/files/Share.php");
+require_once(ROOT."/apps/files/FileUtils.php");
 
 require_once(ROOT."/apps/files/limits/Filesystem.php");
 require_once(ROOT."/apps/files/limits/Account.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, FileReadFailedException};
+require_once(ROOT."/apps/files/storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\{FileReadFailedException, FileWriteFailedException};
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/Config.php"); use Andromeda\Core\DBVersion;
@@ -25,6 +27,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/core/ioformat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
@@ -64,12 +67,6 @@ class UnknownFilesystemException extends Exceptions\ClientNotFoundException  { p
 
 /** Exception indicating that the requested download byte range is invalid */
 class InvalidDLRangeException extends Exceptions\ClientException { public $code = 416; public $message = "INVALID_BYTE_RANGE"; }
-
-/** Exception indicating that the input file parameter format is incorrect */
-class InvalidFileWriteException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_PARAMS"; }
-
-/** Exception indicating that the requested byte range for file writing is invalid */
-class InvalidFileRangeException extends Exceptions\ClientErrorException     { public $message = "INVALID_FILE_WRITE_RANGE"; }
 
 /** Exception indicating that access to the requested item is denied */
 class ItemAccessDeniedException extends Exceptions\ClientDeniedException    { public $message = "ITEM_ACCESS_DENIED"; }
@@ -122,10 +119,10 @@ class FilesApp extends UpgradableApp
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey alphanum] [--spassword raw]',
-            'upload --file% path [name] --parent id [--overwrite bool]',
+            'upload (--file% path [name] | --file- --name fsname) --parent id [--overwrite bool]',
             'download --file id [--fstart int] [--flast int] [--debugdl bool]',
             'ftruncate --file id --size int',
-            'writefile --data% path --file id [--offset int]',
+            'writefile (--data% path | --data-) --file id [--offset int]',
             'getfilelikes --file id [--limit int] [--offset int]',
             'getfolderlikes --folder id [--limit int] [--offset int]',
             'getfilecomments --file id [--limit int] [--offset int]',
@@ -437,11 +434,24 @@ class FilesApp extends UpgradableApp
         
         $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
         
-        $file = $input->GetFile('file');
+        $infile = $input->GetFile('file');
         
-        $parent->CountBandwidth(filesize($file->GetPath()));
-        
-        $fileobj = File::Import($this->database, $parent, $owner, $file, $overwrite);
+        if ($infile instanceof InputPath)
+        {
+            $parent->CountBandwidth($infile->GetSize());
+            
+            $fileobj = File::Import($this->database, $parent, $owner, $infile, $overwrite);
+        }
+        else // can't import handles directly
+        {
+            $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
+            
+            if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
+            
+            $fileobj = File::Create($this->database, $parent, $owner, $name, $overwrite);
+            
+            FileUtils::WriteStreamToFile($this->database, $handle, $fileobj, 0); fclose($handle);
+        }
         
         if ($accesslog) $accesslog->LogDetails('file',$fileobj->ID()); 
         
@@ -497,15 +507,9 @@ class FilesApp extends UpgradableApp
         // check required bandwidth ahead of time
         $length = $flast-$fstart+1;
         $file->CheckBandwidth($length);
-        
-        $fschunksize = $file->GetChunkSize();
-        $chunksize = $this->config->GetRWChunkSize();
-        
-        $align = ($fschunksize !== null);        
-        // transfer chunk size must be an integer multiple of the FS chunk size
-        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
 
-        if ($flast == $fsize-1) $file->CountDownload((isset($share) && $share !== null));
+        if ($flast == $fsize-1) // the end of the file
+            $file->CountDownload((isset($share) && $share !== null));
         
         // send necessary headers
         if (!$debugdl)
@@ -523,62 +527,28 @@ class FilesApp extends UpgradableApp
             header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
             header('Content-Transfer-Encoding: binary');
         }
-        
+
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
             function() use($length,$fstart,$debugdl){ return $debugdl ? null : $length; },
-            function(Output $output) use($file,$fstart,$flast,$chunksize,$align,$debugdl)
+            function(Output $output) use($file,$fstart,$flast,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
             
-            static::ChunkedRead($file,$fstart,$flast,$chunksize,$align,$debugdl);
+            FileUtils::ReadFileToStdout($this->database,$file,$fstart,$flast,$debugdl);
         }));
     }
-    
-    /**
-     * Performs a chunked download, echoing output
-     * @param File $file file to read from
-     * @param int $fstart first byte to read
-     * @param int $flast last byte to read (inclusive!)
-     * @param int $chunksize read chunk size
-     * @param bool $align if true, align reads to chunk size multiples
-     * @param bool $debugdl if true, don't actually echo anything
-     * @throws FileReadFailedException if reading the file fails
-     */
-    public static function ChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl = false) : void
-    {
-        for ($byte = $fstart; $byte <= $flast; )
-        {
-            if (connection_aborted()) break;
-            
-            // the next read should begin on a chunk boundary if aligned
-            if (!$align) $nbyte = $byte + $chunksize;
-            else $nbyte = (intdiv($byte, $chunksize) + 1) * $chunksize;
-            
-            $rlen = min($nbyte - $byte, $flast - $byte + 1);
-            
-            $data = $file->ReadBytes($byte, $rlen);
-            
-            if (strlen($data) != $rlen)
-                throw new FileReadFailedException();
-                
-            $file->CountBandwidth($rlen); $byte += $rlen;
-            
-            if (!$debugdl) { echo $data; flush(); }
-        }
-    }
-    
+        
     /**
      * Writes new data to an existing file - data is posted as a file
      * 
+     * If no offset is given, the default is to append the file (offset = file size)
      * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback writes.
      * The FS will restore the original size of the file but writes within the original size are permanent.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws RandomWriteDisabledException if random write is not allowed on the file
      * @throws ItemAccessDeniedException if acessing via share and share doesn't allow modify
-     * @throws InvalidFileWriteException if not exactly one file was posted
-     * @throws InvalidFileRangeException if the given byte range is invalid
      * @return array File
      * @see File::GetClientObject()
      */
@@ -590,84 +560,51 @@ class FilesApp extends UpgradableApp
         $file = $access->GetItem(); $share = $access->GetShare();
         
         $account = $authenticator ? $authenticator->GetAccount() : null;
-
-        $filepath = $input->GetFile('data')->GetPath();
-        $wlength = filesize($filepath);
-                
-        $wstart = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? 0;
         
-        if ($accesslog) $accesslog->LogDetails('wstart',$wstart)->LogDetails('wlength',$wlength);
+        $wstart = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? $file->GetSize();
         
-        $file->CountBandwidth($wlength);        
+        if ($accesslog) $accesslog->LogDetails('wstart',$wstart);
+        
+        $infile = $input->GetFile('data');
+        
+        if ($infile instanceof InputPath)
+        {
+            $file->CountBandwidth($infile->GetSize());
+        }
         
         if (!$account && !$file->GetAllowPublicModify())
             throw new AuthenticationFailedException();
             
         if ($share !== null && !$share->CanModify()) 
-            throw new ItemAccessDeniedException();        
+            throw new ItemAccessDeniedException();   
 
-        if ($wstart < 0 || $wstart+$wlength < $wstart)
-            throw new InvalidFileRangeException();
-        
-        $overwrite = (!$wstart && $wlength >= $file->GetSize());        
-
-        // allow appending and overwriting without randomWrite permission
-        if (!$overwrite && $wstart != $file->GetSize() && !$file->GetAllowRandomWrite($account))
-            throw new RandomWriteDisabledException();
-            
-        if ($overwrite) 
+        if ($infile instanceof InputPath && !$wstart && $infile->GetSize() >= $file->GetSize())
         {
-            if ($share !== null && !$share->CanUpload()) 
+            // for a full overwrite, we can call SetContents for efficiency
+            if ($share !== null && !$share->CanUpload())
                 throw new ItemAccessDeniedException();
             
-            return $file->SetContents($filepath)->GetClientObject();
+            return $file->SetContents($infile)->GetClientObject();
         }
         else
         {
-            $fschunksize = $file->GetChunkSize();
-            $chunksize = $this->config->GetRWChunkSize();
+            // require randomWrite permission if not appending
+            if ($wstart != $file->GetSize() && !$file->GetAllowRandomWrite($account))
+                throw new RandomWriteDisabledException();
             
-            $align = ($fschunksize !== null);
-            if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
+            if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
             
-            if (!($handle = fopen($filepath, 'rb')))
-                throw new FileReadFailedException();
+            $wlength = FileUtils::WriteStreamToFile($this->database, $handle, $file, $wstart); fclose($handle);
             
-            static::ChunkedWrite($handle, $file, $wstart, $wlength, $chunksize, $align);
+            if ($infile instanceof InputPath && $wlength !== $infile->GetSize())
+                throw new FileWriteFailedException();
+            
+            if ($accesslog) $accesslog->LogDetails('wlength',$wlength);
             
             return $file->GetClientObject();
         }
     }
-    
-    /**
-     * Perform a chunked write to a file
-     * @param $handle input data handle
-     * @param File $file write destination
-     * @param int $wstart write offset
-     * @param int $wlength length of data
-     * @param int $chunksize write chunksize
-     * @param bool $align if true, align to chunksize multiples
-     * @throws FileReadFailedException if reading input fails
-     */
-    public static function ChunkedWrite($handle, File $file, int $wstart, int $wlength, int $chunksize, bool $align) : void
-    {
-        for ($wbyte = $wstart; $wbyte <= $wstart+$wlength-1; )
-        {
-            // the next write should begin on a chunk boundary if aligned
-            if (!$align) $nbyte = $wbyte + $chunksize;
-            else $nbyte = (intdiv($wbyte, $chunksize) + 1) * $chunksize;
-            
-            $wlen = min($nbyte - $wbyte, $wlength - $wbyte + $wstart);
-            
-            if (($data = fread($handle, $wlen)) === false)
-                throw new FileReadFailedException();
-                
-            if (strlen($data) != $wlen) throw new FileReadFailedException();
-            
-            $file->WriteBytes($wbyte, $data); $wbyte += $wlen;
-        }
-    }
-    
+
     /**
      * Truncates (resizes a file)
      * 

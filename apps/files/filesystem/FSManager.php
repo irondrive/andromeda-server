@@ -14,8 +14,8 @@ require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/apps/files/storage/Storage.php"); 
-use Andromeda\Apps\Files\Storage\{Storage, ActivateException};
+require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
+require_once(ROOT."/apps/files/storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\ActivateException;
 
 require_once(ROOT."/apps/files/filesystem/External.php");
 require_once(ROOT."/apps/files/filesystem/Native.php");

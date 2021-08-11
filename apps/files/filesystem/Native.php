@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
+
 require_once(ROOT."/apps/files/filesystem/FSImpl.php");
 
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
@@ -14,9 +16,14 @@ abstract class BaseFileFS extends FSImpl
 {
     protected abstract function GetFilePath(File $file) : string;
     
-    public function ImportFile(File $file, string $path) : self
+    public function CreateFile(File $file) : self
     {
-        $this->GetStorage()->ImportFile($path, $this->GetFilePath($file)); return $this;
+        $this->GetStorage()->CreateFile($this->GetFilePath($file)); return $this;
+    }
+    
+    public function ImportFile(File $file, InputPath $infile) : self
+    {
+        $this->GetStorage()->ImportFile($infile->GetPath(), $this->GetFilePath($file), $infile->isTemp()); return $this;
     }
     
     public function ReadBytes(File $file, int $start, int $length) : string

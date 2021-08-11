@@ -4,6 +4,7 @@ if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\CryptoSecret;
@@ -12,9 +13,9 @@ require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 
 class NativeCryptTest extends \PHPUnit\Framework\TestCase
 {
-    private array $files = array();
-    private array $paths = array();
-    private array $sizes = array();
+    private array $files = array(); /** array of temp files */
+    private array $paths = array(); /** array of FS path -> memory buffer */
+    private array $sizes = array(); /** array of file ID -> file size */
     
     private Storage $storage;
     private NativeCrypt $fsimpl;
@@ -67,8 +68,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     }
 
     public function tearDown() : void
-    {
-        foreach ($this->paths as $handle) fclose($handle);        
+    {     
         foreach ($this->files as $file) unlink($file);
     }    
     
@@ -99,7 +99,9 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $file->method('GetSize')->will($this->returnCallback(
             function()use($file) { return $this->sizes[$file->ID()]; }));
         
-        $this->fsimpl->ImportFile($file->SetSize(strlen($data),true), $path);
+        $infile = new InputPath($path, 'none', false);
+        
+        $this->fsimpl->ImportFile($file->SetSize(strlen($data),true), $infile);
         
         return $file;
     }

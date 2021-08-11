@@ -4,6 +4,7 @@ require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
+require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 
 class LocalNonAdminException extends ActivateException { public $message = "LOCAL_STORAGE_ADMIN_ONLY"; }
@@ -29,8 +30,6 @@ class Local extends LocalBase
         
         else return parent::Create($database, $input, $filesystem);
     }
-
-    protected function UseChunks() : bool { return false; }
     
     public function canGetFreeSpace() : bool { return true; }
     
@@ -49,11 +48,13 @@ class Local extends LocalBase
     }
     
     /**
-     * Import the file quickly by just renaming it
+     * Import the file quickly by just renaming it if allowed
      * @see FWrapper::ImportFile()
      */
-    protected function SubImportFile(string $src, string $dest) : self
+    protected function SubImportFile(string $src, string $dest, bool $istemp) : self
     {
+        if (!$istemp) return parent::SubImportFile($src, $dest, $istemp);
+        
         if (!rename($src, $this->GetFullURL($dest)))
             throw new FileCreateFailedException();
         return $this;

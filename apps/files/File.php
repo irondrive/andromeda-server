@@ -5,7 +5,7 @@ require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\InputFile;
+require_once(ROOT."/core/ioformat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
 
 require_once(ROOT."/apps/accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -187,34 +187,62 @@ class File extends Item
     }
     
     /**
-     * Creates a new file on disk and in the DB, copying its content from the given path
+     * Creates a new empty file in the DB and checks for duplicates
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the file's parent folder
      * @param Account $account the account owning this file
-     * @param InputFile the input file name and content path
+     * @param string $name the name for the file
      * @param bool $overwrite if true (reuses the same object)
      * @return self newly created object
      */
-    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputFile $infile, bool $overwrite = false) : self
+    protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
-        $file = static::TryLoadByParentAndName($database, $parent, $infile->GetName());
+        $file = static::TryLoadByParentAndName($database, $parent, $name);
         if ($file !== null && !$overwrite) throw new DuplicateItemException();
         
-        $file ??= static::NotifyCreate($database, $parent, $account, $infile->GetName());
+        return $file ?? static::NotifyCreate($database, $parent, $account, $name);
+    }
+    
+    /**
+     * Creates a new empty file on disk and in the DB
+     * @param ObjectDatabase $database database reference
+     * @param Folder $parent the file's parent folder
+     * @param Account $account the account owning this file
+     * @param string $name the name for the file
+     * @param bool $overwrite if true (reuses the same object)
+     * @return self newly created object
+     */
+    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
+    {
+        $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
         
-        return $file->SetContents($infile->GetPath());     
+        $file->SetSize(0,true)->GetFSImpl()->CreateFile($file); return $file;
+    }
+    
+    /**
+     * Creates a new file on disk and in the DB, importing content from the given path
+     * @param ObjectDatabase $database database reference
+     * @param Folder $parent the file's parent folder
+     * @param Account $account the account owning this file
+     * @param InputPath the input file name and content path
+     * @param bool $overwrite if true (reuses the same object)
+     * @return self newly created object
+     */
+    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : self
+    {
+        return static::BasicCreate($database, $parent, $account, $infile->GetName(), $overwrite)->SetContents($infile);
     }
     
     /**
      * Sets the file's contents to the file of the given path
-     * @param string $path file to load bytes from
+     * @param InputPath $infile file to load content from
      * @return $this
      */
-    public function SetContents(string $path) : self
+    public function SetContents(InputPath $infile) : self
     {
-        $this->SetSize(filesize($path),true);
+        $this->SetSize($infile->GetSize(), true);
         
-        $this->GetFSImpl(false)->ImportFile($this, $path); return $this;  
+        $this->GetFSImpl(false)->ImportFile($this, $infile); return $this;
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
