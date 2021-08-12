@@ -450,7 +450,7 @@ class FilesApp extends UpgradableApp
             
             $fileobj = File::Create($this->database, $parent, $owner, $name, $overwrite);
             
-            FileUtils::WriteStreamToFile($this->database, $handle, $fileobj, 0); fclose($handle);
+            FileUtils::ChunkedWrite($this->database, $handle, $fileobj, 0); fclose($handle);
         }
         
         if ($accesslog) $accesslog->LogDetails('file',$fileobj->ID()); 
@@ -536,7 +536,7 @@ class FilesApp extends UpgradableApp
         {            
             set_time_limit(0); ignore_user_abort(true);
             
-            FileUtils::ReadFileToStdout($this->database,$file,$fstart,$flast,$debugdl);
+            FileUtils::ChunkedRead($this->database,$file,$fstart,$flast,$debugdl);
         }));
     }
         
@@ -594,7 +594,7 @@ class FilesApp extends UpgradableApp
             
             if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
             
-            $wlength = FileUtils::WriteStreamToFile($this->database, $handle, $file, $wstart); fclose($handle);
+            $wlength = FileUtils::ChunkedWrite($this->database, $handle, $file, $wstart); fclose($handle);
             
             if ($infile instanceof InputPath && $wlength !== $infile->GetSize())
                 throw new FileWriteFailedException();

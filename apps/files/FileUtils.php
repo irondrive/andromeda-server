@@ -73,25 +73,7 @@ class FileUtils
             throw new FileWriteFailedException();
         }
     }
-    
-    /**
-     * Returns the chunk size to use for reading/writing a file
-     * 
-     * Based on the configured RW chunk size and the file's FS chunk size
-     * We want to use the RW size but MUST use a multiple of the FS size
-     * @param ?int $chunksize the configured RW chunk size
-     * @param ?int $fschunksize filesystem chunksize (or null)
-     * @return int chunk size in bytes
-     */
-    public static function GetChunkSize(int $chunksize, ?int $fschunksize = null) : int
-    {       
-        $align = ($fschunksize !== null);
-        // transfer chunk size must be an integer multiple of the FS chunk size
-        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
-        
-        return $chunksize;
-    }
-    
+
     /**
      * Performs a chunked File read, echoing output and counting bandwidth
      * @param File $file file to read from
@@ -102,7 +84,7 @@ class FileUtils
      * @param bool $debugdl if true, don't actually echo anything
      * @throws FileReadFailedException if reading the file fails
      */
-    public static function ChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl = false) : void
+    public static function DoChunkedRead(File $file, int $fstart, int $flast, int $chunksize, bool $align, bool $debugdl = false) : void
     {
         for ($byte = $fstart; $byte <= $flast; )
         {
@@ -124,24 +106,7 @@ class FileUtils
             if (!$debugdl) { echo $data; flush(); }
         }
     }
-    
-    /**
-     * Peform a chunked file read to stdout
-     * @param ObjectDatabase $database database reference
-     * @param File $file file to read
-     * @param int $fstart byte offset to start reading
-     * @param int $flast last byte to erad (inclusive)
-     * @see FileUtils::ChunkedRead()
-     */
-    public static function ReadFileToStdout(ObjectDatabase $database, File $file, int $fstart, int $flast, bool $debugdl = false) : void
-    {
-        $rwsize = Config::GetInstance($database)->GetRWChunkSize();
-        $fcsize = $file->GetChunkSize(); $align = ($fcsize !== null);
-        $chunksize = static::GetChunkSize($rwsize, $fcsize);
-        
-        self::ChunkedRead($file, $fstart, $flast, $chunksize, $align, $debugdl);
-    }
-    
+
     /**
      * Perform a chunked write to a file
      * @param resource $handle input data handle
@@ -152,7 +117,7 @@ class FileUtils
      * @throws FileReadFailedException if reading input fails
      * @return int number of bytes written
      */
-    public static function ChunkedWrite($handle, File $file, int $wstart, int $chunksize, bool $align) : int
+    public static function DoChunkedWrite($handle, File $file, int $wstart, int $chunksize, bool $align) : int
     {
         $wbyte = $wstart; while (!feof($handle))
         {
@@ -168,8 +133,43 @@ class FileUtils
         }
         
         return $wbyte-$wstart;
+    }    
+    
+    /**
+     * Returns the chunk size to use for reading/writing a file
+     *
+     * Based on the configured RW chunk size and the file's FS chunk size
+     * We want to use the RW size but MUST use a multiple of the FS size
+     * @param ?int $chunksize the configured RW chunk size
+     * @param ?int $fschunksize filesystem chunksize (or null)
+     * @return int chunk size in bytes
+     */
+    public static function GetChunkSize(int $chunksize, ?int $fschunksize = null) : int
+    {
+        $align = ($fschunksize !== null);
+        // transfer chunk size must be an integer multiple of the FS chunk size
+        if ($align) $chunksize = ceil($chunksize/$fschunksize)*$fschunksize;
+        
+        return $chunksize;
     }
-
+    
+    /**
+     * Peform a chunked file read to stdout
+     * @param ObjectDatabase $database database reference
+     * @param File $file file to read
+     * @param int $fstart byte offset to start reading
+     * @param int $flast last byte to read (inclusive)
+     * @see self::DoChunkedRead()
+     */
+    public static function ChunkedRead(ObjectDatabase $database, File $file, int $fstart, int $flast, bool $debugdl = false) : void
+    {
+        $rwsize = Config::GetInstance($database)->GetRWChunkSize();
+        $fcsize = $file->GetChunkSize(); $align = ($fcsize !== null);
+        $chunksize = self::GetChunkSize($rwsize, $fcsize);
+        
+        self::DoChunkedRead($file, $fstart, $flast, $chunksize, $align, $debugdl);
+    }
+    
     /**
      * Perform a chunked write to a file
      * @param ObjectDatabase database reference
@@ -177,14 +177,14 @@ class FileUtils
      * @param File $file write destination
      * @param int $wstart write offset
      * @return int number of bytes written
-     * @see FileUtils::ChunkedWrite()
+     * @see self::DoChunkedWrite()
      */
-    public static function WriteStreamToFile(ObjectDatabase $database, $handle, File $file, int $wstart) : int
+    public static function ChunkedWrite(ObjectDatabase $database, $handle, File $file, int $wstart) : int
     {
         $rwsize = Config::GetInstance($database)->GetRWChunkSize();
         $fcsize = $file->GetChunkSize(); $align = ($fcsize !== null);
-        $chunksize = static::GetChunkSize($rwsize, $fcsize);
+        $chunksize = self::GetChunkSize($rwsize, $fcsize);
         
-        return FileUtils::ChunkedWrite($handle, $file, $wstart, $chunksize, $align);
+        return self::DoChunkedWrite($handle, $file, $wstart, $chunksize, $align);
     }    
 }

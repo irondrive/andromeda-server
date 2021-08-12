@@ -215,9 +215,7 @@ trait ManualImport
             
         $this->CreateFile($dest); $fsize = filesize($src);
         
-        $rwcsize = Config::GetInstance($this->database)->GetRWChunkSize();
-        $fscsize = $this->GetFilesystem()->GetFSImpl()->GetChunkSize();
-        $bsize = FileUtils::GetChunkSize($rwcsize, $fscsize);
+        $bsize = Config::GetInstance($this->database)->GetRWChunkSize();
         
         $byte = 0; while (!feof($handle) && $byte < $fsize)
         {
