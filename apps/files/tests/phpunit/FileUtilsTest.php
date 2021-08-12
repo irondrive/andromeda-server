@@ -45,7 +45,7 @@ class FileUtilsTest extends \PHPUnit\Framework\TestCase
         $file->expects($this->exactly(count($reads)))->method('ReadBytes')->withConsecutive(...$reads);
         
         $output = Utilities::CaptureOutput(function()use($file,$offset,$length,$chunksize,$align){ 
-            FileUtils::ChunkedRead($file, $offset, $offset+$length-1, $chunksize, $align, false); });
+            FileUtils::DoChunkedRead($file, $offset, $offset+$length-1, $chunksize, $align, false); });
         
         $this->assertSame($output, substr($data,$offset,$length));
     }
@@ -104,7 +104,7 @@ class FileUtilsTest extends \PHPUnit\Framework\TestCase
         
         $file->expects($this->exactly(count($writes)))->method('WriteBytes')->withConsecutive(...$writes);
         
-        $written = FileUtils::ChunkedWrite($whandle, $file, $offset, $chunksize, $align); 
+        $written = FileUtils::DoChunkedWrite($whandle, $file, $offset, $chunksize, $align); 
         
         $this->assertSame($length, $written);
         $this->assertSame($fdata0, $fdata1);
