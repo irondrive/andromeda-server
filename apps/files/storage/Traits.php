@@ -204,33 +204,3 @@ trait BasePath
     /** Sets the path of the storage's root */
     private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
 }
-
-/** A storage with no specific ImportFile function, using CreateFile/WriteBytes instead */
-trait ManualImport
-{
-    protected function SubImportFile(string $src, string $dest, bool $istemp) : Storage
-    {
-        if (!($handle = fopen($src, 'rb')))
-            throw new FileOpenFailedException();
-            
-        $this->CreateFile($dest); $fsize = filesize($src);
-        
-        $bsize = Config::GetInstance($this->database)->GetRWChunkSize();
-        
-        $byte = 0; while (!feof($handle) && $byte < $fsize)
-        {
-            $rbytes = min($bsize, $fsize-$byte);
-            
-            $data = fread($handle, $rbytes);
-            
-            if ($data === false || strlen($data) !== $rbytes)
-                throw new FileReadFailedException();
-            
-            $this->WriteBytes($dest, $byte, $data);
-            
-            $byte += strlen($data);
-        }
-        
-        return $this;
-    }
-}
