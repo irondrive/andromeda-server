@@ -35,16 +35,15 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
 FSManager::RegisterStorageType(S3::class);
 
 abstract class S3Base1 extends FWrapper { use NoFolders; }
-abstract class S3Base2 extends S3Base1 { use ManualImport; }
-abstract class S3Base3 extends S3Base2 { use FieldCrypt; }
-abstract class S3Base4 extends S3Base3 { use OptFieldCrypt; }
+abstract class S3Base2 extends S3Base1 { use FieldCrypt; }
+abstract class S3Base3 extends S3Base2 { use OptFieldCrypt; }
 
 /**
  * Allows using an S3-compatible server for backend storage
  * 
  * Uses fieldcrypt to allow encrypting the keys.
  */
-class S3 extends S3Base4
+class S3 extends S3Base3
 {
     protected static function getEncryptedFields() : array { return array('accesskey','secretkey'); }
     

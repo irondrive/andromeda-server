@@ -26,7 +26,7 @@ class FileUtils
         {
             $read = fread($stream, $bytes-$byte);
             
-            if ($read === false)
+            if (!is_string($read))
                 throw new FileReadFailedException();
                 
             $data[] = $read; $byte += strlen($read);

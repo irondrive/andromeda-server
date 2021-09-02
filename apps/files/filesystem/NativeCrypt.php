@@ -64,9 +64,7 @@ class NativeCrypt extends Native
             $this->WriteChunk($file, $chunk, $data);
         }
         
-        fclose($handle);
-        
-        return $this;
+        fclose($handle); return $this;
     }
     
     public function ReadBytes(File $file, int $start, int $length) : string
