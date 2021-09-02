@@ -18,14 +18,14 @@ require_once(ROOT."/apps/files/storage/Exceptions.php");
 require_once(ROOT."/apps/files/storage/FWrapper.php");
 require_once(ROOT."/apps/files/storage/Traits.php");
 
-/** Exception indicating that the libsmbclient extension is missing */
+/** Exception indicating that the S3 SDK is missing */
 class S3AwsSdkException extends ActivateException { public $message = "S3_AWS_SDK_MISSING"; }
+
+/** Exception indicating that S3 failed to connect or read the base path */
+class S3ConnectException extends ActivateException { public $message = "S3_CONNECT_FAILED"; }
 
 /** Exception that wraps S3 SDK exceptions */
 class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCEPTION"; }
-
-/** Exception indicating that writes cannot seek (append only) */
-class S3WriteSeekException extends StorageException { public $message = "S3_CANNOT_SEEK_UPLOAD"; }
 
 /** Exception indicating that objects cannot be modified */
 class S3ModifyException extends Exceptions\ClientErrorException { public $message = "S3_OBJECTS_IMMUTABLE"; }
@@ -193,6 +193,9 @@ class S3 extends S3Base3
         
         $this->streamID = str_replace('_','-',$this->ID());        
         \Aws\S3\StreamWrapper::Register($this->s3, $this->streamID);
+        
+        if (!is_readable($this->GetFullURL()))
+            throw new S3ConnectException();
         
         return $this;
     }
