@@ -18,7 +18,7 @@ class SMBExtensionException extends ActivateException { public $message = "SMB_E
 class SMBStateInitException extends ActivateException { public $message = "SMB_STATE_INIT_FAILED"; }
 
 /** Exception indicating that SMB failed to connect or read the base path */
-class SMBConnectException extends ActivateException { public $message = "SMB_BASE_CONNECT_FAILED"; }
+class SMBConnectException extends ActivateException { public $message = "SMB_CONNECT_FAILED"; }
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
 
