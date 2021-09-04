@@ -22,7 +22,17 @@ export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
 rm composer.json composer.lock
 
-cd ..
+cd vendor/aws/aws-sdk-php
+
+mv src src2; mkdir src; cp -av src2/*.php src/; for dir in \
+    Api Arn ClientSideMonitoring Credentials data Endpoint EndpointDiscovery Exception Handler Retry S3 Signature
+    do cp -av "src2/$dir" src/; done; rm -rf src2
+
+cd src; mv data data2; mkdir data; cp -av data2/*.php data2/s3 data/; rm -rf data2
+
+cd ../../../.. # api
+
+cd .. # release
 
 git clone git@github.com:lightray22/andromeda-server-docs.git docs
 cd docs; git checkout $TAG || exit 4; cd ..
