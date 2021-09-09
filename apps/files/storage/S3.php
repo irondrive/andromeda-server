@@ -297,6 +297,10 @@ class S3 extends S3Base3
     
     protected function SubCreateFile(string $path) : self
     {
+        $this->ClosePath($path);
+        
+        if ($this->isFile($path)) $this->SubDeleteFile($path);
+        
         $this->GetContext($path, 0, true); return $this;
     }
     

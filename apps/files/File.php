@@ -138,6 +138,7 @@ class File extends Item
         if ($this->isCreated() || $this->isDeleted()) return $this;
 
         $this->refreshed = true;
+        
         $this->GetFSImpl()->RefreshFile($this);
         
         return $this;
@@ -197,6 +198,8 @@ class File extends Item
      */
     protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
+        $parent->Refresh(true);
+        
         $file = static::TryLoadByParentAndName($database, $parent, $name);
         if ($file !== null && !$overwrite) throw new DuplicateItemException();
         

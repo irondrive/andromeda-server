@@ -114,7 +114,8 @@ abstract class Item extends StandardObject
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?self
     {
-        $item = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
+        $item = static::TryLoadByParentAndName($this->database, 
+            $this->GetParent()->Refresh(true), $name);
         
         if ($item !== null)
         {
@@ -141,7 +142,8 @@ abstract class Item extends StandardObject
         if ($parent->GetFilesystemID() !== $this->GetFilesystemID())
             throw new CrossFilesystemException();
             
-        $item = static::TryLoadByParentAndName($this->database, $parent, $this->GetName());
+        $item = static::TryLoadByParentAndName($this->database, 
+            $parent->Refresh(true), $this->GetName());
         
         if ($item !== null)
         {
@@ -184,15 +186,18 @@ abstract class Item extends StandardObject
     
     /** 
      * Returns the filesystem manager's implementor that stores this object 
-     * @param bool $allowDeleted if true the item must already exist on disk
+     * @param bool $allowDeleted if true the item must not be deleted
      * 
      * Refreshes the item from storage first to make sure it's ready to use.
-     * @throws DeletedByStorageException if the item is deleted on storage
+     * @throws DeletedByStorageException if the item has been deleted
      */
     protected function GetFSImpl(bool $requireExist = true) : FSImpl 
-    { 
-        $this->Refresh(); if ($this->isDeleted() && $requireExist) 
-            throw new DeletedByStorageException();
+    {
+        if ($requireExist)
+        {
+            $this->Refresh(); if ($this->isDeleted())
+                throw new DeletedByStorageException();
+        }
         
         return $this->GetFilesystem()->GetFSImpl(); 
     }

@@ -236,7 +236,7 @@ abstract class FWrapper extends Storage
 
         if ($context !== null)
         {
-            // clsoe the stream if we want to write to a read stream
+            // close the stream if we want to write to a read stream
             $close = ($isWrite && !$context->isWrite);
             
             // close the stream if we want to read from a write stream and that's unsupported

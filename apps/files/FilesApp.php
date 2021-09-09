@@ -553,9 +553,7 @@ class FilesApp extends UpgradableApp
      * @see File::GetClientObject()
      */
     protected function WriteToFile(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
-    {
-        $this->API->GetInterface()->DisallowBatch();
-        
+    {        
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
         $file = $access->GetItem(); $share = $access->GetShare();
         
@@ -617,9 +615,7 @@ class FilesApp extends UpgradableApp
      * @see File::GetClientObject()
      */
     protected function TruncateFile(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
-    {
-        $this->API->GetInterface()->DisallowBatch();
-        
+    {        
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
         $file = $access->GetItem(); $share = $access->GetShare();
 
@@ -943,9 +939,7 @@ class FilesApp extends UpgradableApp
      * @throws ItemAccessDeniedException if access via share and share modify is not allowed
      */
     private function DeleteItem(string $class, string $key, Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : void
-    {
-        $this->API->GetInterface()->DisallowBatch();
-        
+    {        
         $item = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
 
         $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);

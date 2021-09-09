@@ -106,6 +106,7 @@ abstract class BaseObject
     }
     
     /**
+     * Asserts that the given object is not null
      * @param self $obj the object to check for null
      * @throws ObjectNotFoundException if the object is null
      * @return $this
@@ -764,9 +765,6 @@ abstract class BaseObject
     
     /** whether or not this object has been modified */
     protected bool $modified = false;
-    
-    /** whether or not this object has been modified */
-    public function isModified() : bool { return $this->modified; }
     
     /** whether or not this object has been deleted */
     protected bool $deleted = false; 
