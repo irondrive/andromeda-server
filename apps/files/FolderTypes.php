@@ -203,7 +203,6 @@ class SubFolder extends Folder
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
         $folder = parent::CheckName($name, $overwrite, true);
-        
         if ($folder !== null) $folder->DeleteChildren(false);
 
         $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
@@ -216,7 +215,6 @@ class SubFolder extends Folder
         $this->CheckIsNotChildOrSelf($parent);
         
         $folder = parent::CheckParent($parent, $overwrite, true);
-        
         if ($folder !== null) $folder->DeleteChildren(false);
     
         $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());

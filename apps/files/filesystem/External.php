@@ -126,6 +126,8 @@ class External extends BaseFileFS
                     $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
                 }
             }
+            
+            foreach ($dbitems as $dbitem) $dbitem->Delete();
         }
         
         return $this;        

@@ -4,6 +4,8 @@ cd tools; if [ ! -f doctum.phar ]; then
     wget https://doctum.long-term.support/releases/latest/doctum.phar
 fi; cd ..
 
+rm -rf docs/doctum_*
+
 php tools/doctum.phar update tools/doctum-conf.php -v
 
 TEMPDB=$(mktemp); TEMPCONF=$(mktemp)

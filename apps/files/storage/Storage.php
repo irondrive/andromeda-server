@@ -155,19 +155,27 @@ abstract class Storage extends StandardObject implements Transactions
      * Asserts that the storage is not read only
      * @throws ReadOnlyException if the filesystem or server are read only
      */
-    protected function AssertNotReadOnly() : void
+    protected function AssertNotReadOnly() : self
     {
         if ($this->GetFilesystem()->isReadOnly())
             throw new ReadOnlyException();
         
         if (Main::GetInstance()->GetConfig()->isReadOnly())
             throw new ReadOnlyException();
+        
+        return $this;
     }
     
     /** Returns true if the server is set to dry run mode */
     protected function isDryRun() : bool
     {
         return Main::GetInstance()->GetConfig()->isDryRun();
+    }
+    
+    /** Disallows running a batch transaction */
+    protected function disallowBatch() : self
+    {
+        Main::GetInstance()->GetInterface()->DisallowBatch(); return $this;
     }
     
     /** Returns an ItemStat object on the given path */
@@ -198,9 +206,11 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubReadFolder(string $path) : array;
     
-    /** Creates a folder with the given path */
+    /** Asserts that the folder with the given path exists */
     public function CreateFolder(string $path) : self
     {
+        if ($this->isFolder($path)) return $this;
+        
         $this->AssertNotReadOnly();
         
         $this->SubCreateFolder($path);
@@ -219,20 +229,30 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubCreateFolder(string $path) : self;    
     
-    /** Creates a new empty file at the given path */
+    /** 
+     * Creates a new empty file at the given path
+     * 
+     * If it already exists, overwrites + NO ROLLBACK
+     */
     public function CreateFile(string $path) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly();        
         
-        if ($this->isFile($path)) $this->SubDeleteFile($path);
+        if ($overwrite = $this->isFile($path))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
         
         $this->SubCreateFile($path);
+        
+        if ($overwrite) $this->deleteRollbacks($path);
         
         $this->createdItems[] = $path;
         
         $this->onRollback[] = new PathRollback($path, function()use($path){
             $this->SubDeleteFile($path); });
-        
+    
         return $this;
     }
     
@@ -243,7 +263,9 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubCreateFile(string $path) : self;
     
     /**
-     * Imports a file into the storage
+     * Imports an existing file into the storage
+     * 
+     * If it already exists, overwrites + NO ROLLBACK
      * @param string $src file to import
      * @param string $dest path of new file
      * @param bool $istemp true if we can move the src
@@ -253,7 +275,15 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFile($dest))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubImportFile($src, $dest, $istemp);
+        
+        if ($overwrite) $this->deleteRollbacks($dest);
         
         $this->createdItems[] = $dest;        
 
@@ -288,7 +318,9 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubReadBytes(string $path, int $start, int $length) : string;
 
     /**
-     * Writes data to a file - NO ROLLBACK within existing bounds
+     * Writes data to a file
+     * 
+     * NO ROLLBACK if within existing bounds
      * @param string $path file to write
      * @param int $start byte offset to write
      * @param string $data data to write
@@ -296,7 +328,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     public function WriteBytes(string $path, int $start, string $data) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly()->disallowBatch();
         
         if ($this->isDryRun()) return $this;
         
@@ -321,14 +353,16 @@ abstract class Storage extends StandardObject implements Transactions
     protected abstract function SubWriteBytes(string $path, int $start, string $data) : self;
     
     /**
-     * Truncates the file (changes size) - SHRINK + ROLLBACK = lost data!
+     * Truncates the file (changes size)
+     * 
+     * NO ROLLBACK if shrinking the file
      * @param string $path file to resize
      * @param int $length new length of file
      * @return $this
      */
     public function Truncate(string $path, int $length) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly()->disallowBatch();
         
         if ($this->isDryRun()) return $this;
 
@@ -354,7 +388,7 @@ abstract class Storage extends StandardObject implements Transactions
     /** Deletes the file with the given path - NO ROLLBACK */
     public function DeleteFile(string $path) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly()->disallowBatch();
         
         if ($this->isDryRun()) return $this;
         
@@ -369,10 +403,10 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubDeleteFile(string $path) : self;
     
-    /** Deletes the folder with the given path - NO ROLLBACK */
+    /** Deletes the empty folder with the given path - NO ROLLBACK */
     public function DeleteFolder(string $path) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly()->disallowBatch();
         
         if ($this->isDryRun()) return $this;
         
@@ -387,12 +421,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubDeleteFolder(string $path) : self;
 
-    /** Renames a file from $old to $new - path shall not change */
+    /** 
+     * Renames a file from $old to $new - path shall not change 
+     * 
+     * NO ROLLBACK if overwriting an existing file
+     */
     public function RenameFile(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFile($new))
+        {
+            $this->disallowBatch();            
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubRenameFile($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         if (!in_array($old, $this->createdItems))
         {   
@@ -409,12 +455,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubRenameFile(string $old, string $new) : self;
     
-    /** Renames a folder from $old to $new - path shall not change */
+    /** 
+     * Renames a folder from $old to $new - path shall not change 
+     * 
+     * The destination folder must not already exist
+     */
     public function RenameFolder(string $old, string $new) : self
     {
-        $this->AssertNotReadOnly();
+        $this->AssertNotReadOnly();                
+        
+        if ($overwrite = $this->isFolder($new))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
         
         $this->SubRenameFolder($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         if (!in_array($new, $this->createdItems))
         {   
@@ -431,12 +489,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubRenameFolder(string $old, string $new) : self;
     
-    /** Moves a file from $old to $new - name shall not change */
+    /**
+     * Moves a file from $old to $new - name shall not change
+     * 
+     * NO ROLLBACK if overwriting an existing file
+     */
     public function MoveFile(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFile($new))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubMoveFile($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         if (!in_array($new, $this->createdItems))
         {   
@@ -453,12 +523,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubMoveFile(string $old, string $new) : self;
     
-    /** Moves a folder from $old to $new - name shall not change */
+    /** 
+     * Moves a folder from $old to $new - name shall not change 
+     * 
+     * The destination folder must not already exist
+     */
     public function MoveFolder(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFolder($new))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubMoveFolder($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         if (!in_array($new, $this->createdItems))
         {
@@ -475,12 +557,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubMoveFolder(string $old, string $new) : self;
     
-    /** Copies a file from $old to $new (path and name can change) */
+    /** 
+     * Copies a file from $old to $new (path and name can change) 
+     * 
+     * NO ROLLBACK if overwriting an existing file
+     */
     public function CopyFile(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFile($new))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubCopyFile($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         $this->createdItems[] = $new;
         
@@ -496,12 +590,24 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubCopyFile(string $old, string $new) : self;
     
-    /** Copies a file from $old to $new (path and name can change) */
+    /** 
+     * Copies a folder from $old to $new (path and name can change) 
+     *
+     * The destination folder must not already exist
+     */
     public function CopyFolder(string $old, string $new) : self 
     { 
         $this->AssertNotReadOnly();
         
+        if ($overwrite = $this->isFolder($new))
+        {
+            $this->disallowBatch();
+            if ($this->isDryRun()) return $this;
+        }
+        
         $this->SubCopyFolder($old, $new);
+        
+        if ($overwrite) $this->deleteRollbacks($new);
         
         $this->createdItems[] = $new;
         
@@ -560,8 +666,7 @@ abstract class Storage extends StandardObject implements Transactions
         Utilities::delete_value($this->createdItems, $path);
         
         $this->onRollback = array_filter($this->onRollback, 
-            function(PathRollback $obj)use($path){ return $obj->path !== $path; }
-        );
+            function(PathRollback $obj)use($path){ return $obj->path !== $path; } );
         
         return $this;
     }

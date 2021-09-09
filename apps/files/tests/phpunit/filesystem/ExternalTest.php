@@ -41,6 +41,12 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $dbfiles = array_map(function($name)use($folder,$dbfiles){ return $this->getMockItem(File::class, $name, $folder); }, $dbfiles);
         $dbfolders = array_map(function($name)use($folder,$dbfolders){ return $this->getMockItem(SubFolder::class, $name, $folder); }, $dbfolders);
         
+        foreach ($dbfiles as $fname=>$dbfile)
+            $dbfile->method('Delete')->will($this->returnCallback(function()use(&$dbfiles,$fname){ unset($dbfiles[$fname]); }));
+        
+        foreach ($dbfolders as $fname=>$dbfolder)
+            $dbfolder->method('Delete')->will($this->returnCallback(function()use(&$dbfolders,$fname){ unset($dbfolders[$fname]); }));
+            
         $fsfiles = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfiles);
         $fsfolders = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfolders);
         
@@ -94,15 +100,9 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         
         $fsfiles = array_map(function($path){ return basename($path); }, $fsfiles);
         $fsfolders = array_map(function($path){ return basename($path); }, $fsfolders);
+        
         $dbfiles = array_map(function(File $file){ return $file->GetName(); }, $dbfiles);
         $dbfolders = array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders);
-        
-        // prune extras from fsfiles (pretend Refresh())
-        foreach ($dbfiles as $dbfile) { if (!in_array($dbfile, $fsfiles)) 
-            Utilities::delete_value($dbfiles, $dbfile); }
-        
-        foreach ($dbfolders as $dbfolder) { if (!in_array($dbfolder, $fsfolders)) 
-            Utilities::delete_value($dbfolders, $dbfolder); }
         
         sort($dbfiles); sort($dbfolders); 
         sort($fsfiles); sort($fsfolders);

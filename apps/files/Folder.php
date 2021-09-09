@@ -176,17 +176,13 @@ abstract class Folder extends Item
     protected bool $refreshed = false;
     protected bool $subrefreshed = false;
     
-    protected static bool $skiprefresh = false;
-    
     /**
      * Refreshes the folder's metadata from disk
      * @param bool $doContents if true, refresh all contents of the folder
      */
     public function Refresh(bool $doContents = false) : self
     {
-        if ($this->isCreated()) return $this;
-        
-        if ($this->isDeleted() || static::$skiprefresh) return $this;
+        if ($this->isCreated() || $this->isDeleted()) return $this;
         
         if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {

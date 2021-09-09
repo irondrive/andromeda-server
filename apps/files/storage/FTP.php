@@ -171,6 +171,8 @@ class FTP extends StandardFWrapper
     {
         $this->ClosePath($path);
         
+        if ($this->isFile($path)) $this->SubDeleteFile($path);
+        
         if (!($handle = fopen($this->GetFullURL($path),'w'))) 
             throw new FileCreateFailedException();
         
@@ -185,6 +187,7 @@ class FTP extends StandardFWrapper
         
         if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
             throw new FileCreateFailedException();
+        
         return $this;
     }
     

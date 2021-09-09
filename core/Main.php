@@ -35,12 +35,6 @@ class DisableRequiredException extends Exceptions\ClientErrorException { public 
 /** Exception indicating that the server failed to load a configured app */
 class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
 
-/** Exception indicating that the configured data directory is invalid */
-class InvalidDataDirException extends Exceptions\ServerException { public $message = "INVALID_DATA_DIRECTORY"; }
-
-/** Exception indicating that writing to the data file failed */
-class DataWriteFailedException extends Exceptions\ServerException { public $message = "DATA_WRITE_FAILED"; }
-
 /** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
 class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
 

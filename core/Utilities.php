@@ -203,6 +203,12 @@ class StaticWrapper
     
     public function __construct(string $class){ $this->class = $class; }
     
+    /**
+     * Overrides a static function on the class
+     * @param string $fname name of the static function
+     * @param callable $func function to replace with
+     * @return self
+     */
     public function _override(string $fname, callable $func) : self
     {        
         $this->overrides[$fname] = $func; return $this;
@@ -210,7 +216,8 @@ class StaticWrapper
     
     public function __call($fname, $args)
     {        
-        if (method_exists($this, $fname)) return $this->$fname(...$args);
+        if (method_exists($this, $fname)) 
+            return $this->$fname(...$args);
         
         if (array_key_exists($fname, $this->overrides))
             return $this->overrides[$fname](...$args);
