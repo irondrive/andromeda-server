@@ -57,6 +57,7 @@ class ServerApp extends UpgradableApp
             'enableapp --appname alphanum',
             'disableapp --appname alphanum',
             'getconfig',
+            'getdbconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'getmailers',
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
@@ -165,6 +166,7 @@ class ServerApp extends UpgradableApp
             case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
             
             case 'getconfig':  return $this->GetConfig($input, $isAdmin);
+            case 'getdbconfig': return $this->GetDBConfig($input, $isAdmin);
             case 'setconfig':  return $this->SetConfig($input, $isAdmin, $accesslog);
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
@@ -377,18 +379,24 @@ class ServerApp extends UpgradableApp
     
     /**
      * Loads server config
-     * @return array `{config:Config}` \
-         if admin add, `{database:Database}`
+     * @return array Config
      * @see Config::GetClientObject() 
-     * @see Database::GetClientObject()
      */
     protected function GetConfig(Input $input, bool $isAdmin) : array
     {
-        $retval = array('config'=> $this->API->GetConfig()->GetClientObject($isAdmin));
+        return $this->API->GetConfig()->GetClientObject($isAdmin);
+    }
+    
+    /**
+     * Loads server DB config
+     * @return array Database
+     * @see Database::GetClientObject()
+     */
+    protected function GetDBConfig(Input $input, bool $isAdmin) : array
+    {
+        if (!$isAdmin) throw new AuthFailedException();
         
-        if ($isAdmin) $retval['database'] = $this->database->GetClientObject();
-        
-        return $retval;
+        return $this->database->GetClientObject();
     }
 
     /**

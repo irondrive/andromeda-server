@@ -117,6 +117,9 @@ abstract class IOInterface extends Singleton
             $this->numretfuncs++;
         }
         
+        if ($this->isMultiOutput()) 
+            $this->outmode = self::OUTPUT_JSON;
+        
         $this->retfuncs[] = $f; return $this; 
     }
     

@@ -522,8 +522,6 @@ class FilesApp extends UpgradableApp
             
             header("Content-Length: $length");
             header("Accept-Ranges: bytes");
-            header("Cache-Control: max-age=0");
-            header("Content-Type: application/octet-stream");
             header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
             header('Content-Transfer-Encoding: binary');
         }

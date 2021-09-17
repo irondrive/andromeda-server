@@ -24,6 +24,9 @@ class LargeBatchException extends Exceptions\ClientErrorException { public $mess
 /** Exception indicating that the remote response is invalid */
 class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
 
+/** Exception indicating the HTTP method used is not allowed */
+class MethodNotAllowedException extends Exceptions\ClientException { public $code = 405; public $message = "METHOD_NOT_ALLOWED"; }
+
 /** The interface for using Andromeda over a web server */
 class AJAX extends IOInterface
 {
@@ -56,6 +59,10 @@ class AJAX extends IOInterface
      */
     protected function subGetInputs(?Config $config) : array
     {
+        if ($_SERVER['REQUEST_METHOD'] !== "GET" && 
+            $_SERVER['REQUEST_METHOD'] !== "POST")
+            throw new MethodNotAllowedException();
+            
         if (isset($_GET['batch']) && is_array($_GET['batch']))
         {            
             $global_get = $_GET; unset($global_get['batch']);
@@ -129,8 +136,15 @@ class AJAX extends IOInterface
     
     public function UserOutput(Output $output) : bool
     {
-        // need to send the HTTP response code before any output
-        if (!headers_sent()) http_response_code($output->GetHTTPCode());
+        // need to send the HTTP response code if no output      
+        if (!headers_sent())
+        {
+            header("Cache-Control: no-cache");
+            header("Content-Type: application/octet-stream");
+            
+            if ($this->outmode === null)
+                http_response_code($output->GetHTTPCode());
+        }
         
         return parent::UserOutput($output);
     }
@@ -139,12 +153,21 @@ class AJAX extends IOInterface
     {
         $multi = $this->isMultiOutput();
         
-        if (!$multi && $this->outmode === self::OUTPUT_PLAIN)
+        if (!headers_sent())
         {
-            if (!headers_sent())
+            header("Cache-Control: no-cache");
+            
+            if ($this->outmode === null)
+                http_response_code($output->GetHTTPCode());
+        }
+        
+        if ($this->outmode === self::OUTPUT_PLAIN)
+        {
+            if (!$multi && !headers_sent())
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
+                http_response_code($output->GetHTTPCode());
             }
             
             // try echoing as a string, switch to json if it fails
@@ -153,9 +176,9 @@ class AJAX extends IOInterface
             else $this->outmode = self::OUTPUT_JSON;
         }        
         
-        if (!$multi && $this->outmode === self::OUTPUT_PRINTR) 
+        if ($this->outmode === self::OUTPUT_PRINTR) 
         {
-            if (!headers_sent())
+            if (!$multi && !headers_sent())
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
@@ -165,7 +188,7 @@ class AJAX extends IOInterface
             echo print_r($outdata, true);
         }        
         
-        if ($multi || $this->outmode === self::OUTPUT_JSON)
+        if ($this->outmode === self::OUTPUT_JSON)
         {
             if (!$multi && !headers_sent()) 
             {
@@ -177,7 +200,8 @@ class AJAX extends IOInterface
             
             $outdata = Utilities::JSONEncode($outdata);
             
-            if ($multi) echo static::formatSize(strlen($outdata));
+            if ($this->isMultiOutput()) 
+                echo static::formatSize(strlen($outdata));
             
             echo $outdata;
         }

@@ -24,10 +24,10 @@ require_once(ROOT."/core/logging/RequestMetrics.php");
 use Andromeda\Core\Logging\{RequestLog, ActionLog, RequestMetrics};
 
 /** Exception indicating that the requested app is invalid */
-class UnknownAppException extends Exceptions\ClientErrorException   { public $message = "UNKNOWN_APP"; }
+class UnknownAppException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_APP"; }
 
 /** Exception indicating that the server is configured as disabled */
-class MaintenanceException extends Exceptions\ClientDeniedException { public $message = "SERVER_DISABLED"; }
+class MaintenanceException extends Exceptions\ClientException { public $code = 503; public $message = "SERVER_DISABLED"; }
 
 /** Exception indicating that the server must be disabled for this request */
 class DisableRequiredException extends Exceptions\ClientErrorException { public $message = "DISABLE_REQUIRED"; }
