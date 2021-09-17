@@ -58,8 +58,9 @@ class Config extends DBVersion
     /**
      * Returns a printable client object for this config
      * @param bool $admin if true, show admin-only values
-     * @return array `{uploadmax:{bytes:int, files:int}, features:{timedstats:bool}}` \
-        if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, apiurl:?string}`
+     * @return array `{uploadmax:{bytes:int, files:int}}` \
+        if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, \
+            apiurl:?string, features:{timedstats:bool}}`
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -74,8 +75,7 @@ class Config extends DBVersion
         $retval = array(
             'uploadmax' => array(
                 'bytes' => min($postmax, $uploadmax, $adminmax),
-                'files' => ini_get('max_file_uploads')),
-            'features' => $this->GetAllFeatures()
+                'files' => (int)ini_get('max_file_uploads'))
         );
         
         if ($admin)
@@ -84,7 +84,8 @@ class Config extends DBVersion
                 'apiurl' => $this->GetAPIUrl(),
                 'rwchunksize' => $this->GetRWChunkSize(),
                 'crchunksize' => $this->GetCryptoChunkSize(),
-                'upload_maxsize' => $this->TryGetScalar('upload_maxsize')
+                'upload_maxsize' => $this->TryGetScalar('upload_maxsize'),
+                'features' => $this->GetAllFeatures()
             ));
         }
         

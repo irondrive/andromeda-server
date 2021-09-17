@@ -312,7 +312,7 @@ class Config extends DBVersion
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
+     * @return array `{api:int, features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
          if admin, add: `{datadir:?string, features:{ \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:string, \
             metrics:string, metrics_dblog:bool, metrics_filelog:bool, email:bool
@@ -320,7 +320,8 @@ class Config extends DBVersion
      */
     public function GetClientObject(bool $admin = false) : array
     { 
-        $data = array('features' => $this->GetAllFeatures());
+        $data = array('api' => (new VersionInfo())->major, 
+                      'features' => $this->GetAllFeatures());
         
         $data['features']['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()];
         
