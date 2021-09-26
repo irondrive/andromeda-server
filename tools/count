@@ -10,5 +10,5 @@ getfiles() {
 
 for i in . apps/* core; do 
     echo DIR $i; echo $(getfiles $i $1 | wc -l) files
-    getfiles $i $1 | xargs -d '\n' wc -l | sort -r
+    getfiles $i $1 | xargs -d '\n' wc -l | sort -gr
 done

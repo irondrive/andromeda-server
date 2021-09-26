@@ -1783,6 +1783,8 @@ class FilesApp extends UpgradableApp
     
     /**
      * Loads the total limit object or objects for the given objects
+     * 
+     * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL Limit | [id:Limit]
      * @see Limits\Base::GetClientObject()
@@ -1812,6 +1814,8 @@ class FilesApp extends UpgradableApp
     
     /**
      * Loads the timed limit object or objects for the given objects
+     * 
+     * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL Limit | [id:Limit]
      * @see Limits\Base::GetClientObject()
@@ -1841,6 +1845,8 @@ class FilesApp extends UpgradableApp
     
     /**
      * Returns all stored time stats for an object
+     * 
+     * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL [id:TimedStats]
      * @see Limits\TimedStats::GetClientObject()
@@ -1866,6 +1872,8 @@ class FilesApp extends UpgradableApp
     
     /**
      * Returns timed stats for the given object or objects at the given time
+     * 
+     * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL TimedStats | [id:TimedStats]
      * @see Limits\TimedStats::GetClientObject()
@@ -1877,7 +1885,7 @@ class FilesApp extends UpgradableApp
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
         $attime = $input->GetParam('matchtime',SafeParam::TYPE_UINT);
         
-        $obj = $this->GetLimitObject($input, $authenticator, false, true, true);
+        $obj = $this->GetLimitObject($input, $authenticator, true, true, true);
         $class = $obj['class']; $obj = $obj['obj'];
         
         if ($obj !== null)

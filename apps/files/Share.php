@@ -244,7 +244,7 @@ class Share extends AuthObject
         
         $defgroups = $q->Or(...array_map(function(Group $group)use($q){ 
             return $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($group));
-        }, $account->GetDefaultGroups()));
+        }, array_values($account->GetDefaultGroups())));
 
         $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
                     $defgroups, $q->And($q->IsNull('authkey'),$q->IsNull('dest')));

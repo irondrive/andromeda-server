@@ -43,7 +43,7 @@ Every request will return an object with `ok` and `code`.  `ok` denotes whether 
 
 ### HTTP Differences
 
-App and action must be URL variables, but all other parameters can be freely placed in the URL, in the POST body, or in cookies.  Andromeda does not make use of the different HTTP methods or headers.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.
+Parameters can be placed in the URL query string, the POST body as `application/x-www-form-urlencoded` or similar (see PHP $_POST), or cookies.  The only restrictions are app and action must be URL variables, and any parameter starting with `auth_` cannot be in the URL.  Andromeda does not make use of the different HTTP methods, headers, or endpoints.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.
 
 ### CLI Batching
 Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  To run a batch, simply list each command on its own line in a plain text file, then run `./andromeda batch myfile.txt`.  The returned `appdata` will be an array, each entry for the corresponding action.
