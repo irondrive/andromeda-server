@@ -522,6 +522,7 @@ class FilesApp extends UpgradableApp
             
             header("Content-Length: $length");
             header("Accept-Ranges: bytes");
+            header("Content-Type: application/octet-stream");
             header('Content-Disposition: attachment; filename="'.$file->GetName().'"');
             header('Content-Transfer-Encoding: binary');
         }
@@ -994,7 +995,7 @@ class FilesApp extends UpgradableApp
         
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
-        if (!$item->GetParentID() && (!$account || $item->GetOwnerID() !== $account->ID())) 
+        if ($item instanceof RootFolder && (!$account || !$item->isFSOwnedBy($account)))
             throw new ItemAccessDeniedException();
         
         $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);

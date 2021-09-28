@@ -4,13 +4,13 @@ if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php");
 
-require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\{Utilities, StaticWrapper};
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\StaticWrapper;
 
 require_once(ROOT."/apps/files/storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, ItemStat};
 
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
-require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
+require_once(ROOT."/apps/files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
 
 class ExternalTest extends \PHPUnit\Framework\TestCase
 {

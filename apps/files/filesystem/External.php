@@ -7,7 +7,7 @@ require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
-require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\SubFolder;
+require_once(ROOT."/apps/files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
 
 /**
  * An External Andromeda filesystem is accessible outside Andromeda

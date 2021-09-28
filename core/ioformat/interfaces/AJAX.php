@@ -140,7 +140,6 @@ class AJAX extends IOInterface
         if (!headers_sent())
         {
             header("Cache-Control: no-cache");
-            header("Content-Type: application/octet-stream");
             
             if ($this->outmode === null)
                 http_response_code($output->GetHTTPCode());

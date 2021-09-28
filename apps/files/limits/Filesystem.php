@@ -5,7 +5,7 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
-require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\RootFolder;
+require_once(ROOT."/apps/files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
 
 require_once(ROOT."/apps/files/limits/Total.php");
 require_once(ROOT."/apps/files/limits/Timed.php");

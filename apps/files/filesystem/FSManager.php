@@ -22,7 +22,7 @@ require_once(ROOT."/apps/files/filesystem/Native.php");
 require_once(ROOT."/apps/files/filesystem/NativeCrypt.php");
 
 require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
-require_once(ROOT."/apps/files/FolderTypes.php"); use Andromeda\Apps\Files\RootFolder;
+require_once(ROOT."/apps/files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
 
 require_once(ROOT."/apps/files/limits/Account.php"); use Andromeda\Apps\Files\Limits;
 
