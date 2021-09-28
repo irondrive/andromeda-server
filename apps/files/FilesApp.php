@@ -992,7 +992,10 @@ class FilesApp extends UpgradableApp
         $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
         
-        if (!$item->GetParentID()) throw new ItemAccessDeniedException();
+        $account = ($authenticator === null) ? null : $authenticator->GetAccount();
+        
+        if (!$item->GetParentID() && (!$account || $item->GetOwnerID() !== $account->ID())) 
+            throw new ItemAccessDeniedException();
         
         $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
         $overwrite = $input->GetOptParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
@@ -1007,8 +1010,6 @@ class FilesApp extends UpgradableApp
                 throw new AuthenticationFailedException();
             
             if ($pshare !== null && !$pshare->CanUpload()) throw new ItemAccessDeniedException();           
-            
-            $account = ($authenticator === null) ? null : $authenticator->GetAccount();            
             
             $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;            
             
