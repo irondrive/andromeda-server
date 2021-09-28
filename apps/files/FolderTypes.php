@@ -20,7 +20,7 @@ class RootFolder extends Folder
     
     public function GetName() : string { return $this->GetFilesystem()->GetName(); }
     
-    public function SetName(string $name, bool $overwrite = false) : self { $this->GetFilesystem()->SetName($name); }
+    public function SetName(string $name, bool $overwrite = false) : self { $this->GetFilesystem()->SetName($name); return $this; }
     
     public function GetParent() : ?Folder { return null; }
     public function GetParentID() : ?string { return null; }
