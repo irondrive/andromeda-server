@@ -200,8 +200,8 @@ abstract class Folder extends Item
         if (!$isNotify) $this->Refresh(true);
         
         $this->notifyDeleted = $isNotify;
-        $this->DeleteObjectRefs('files');
-        $this->DeleteObjectRefs('folders');
+        $this->DeleteObjects('files');
+        $this->DeleteObjects('folders');
     }
     
     /** Deletes this folder and its contents from the DB only */
