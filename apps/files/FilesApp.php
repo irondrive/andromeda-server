@@ -129,7 +129,7 @@ class FilesApp extends UpgradableApp
             'getfoldercomments --folder id [--limit int] [--offset int]',
             'fileinfo --file id [--details bool]',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit int] [--offset int] [--details bool]',
-            'getitembypath --path fspath [--folder id] [--isfile bool]',
+            'getitembypath --path fspath [--folder id | --filesystem id] [--isfile bool]',
             'editfilemeta --file id [--description ?text]',
             'editfoldermeta --folder id [--description ?text]',
             'ownfile --file id',
@@ -704,10 +704,8 @@ class FilesApp extends UpgradableApp
     }
 
     /**
-     * Reads an item by a path (rather than by ID) - can specify a root folder
+     * Reads an item by a path (rather than by ID) - can specify a root folder or filesystem
      * 
-     * This is the primary helper routine for the FUSE client - the first
-     * component of the path (if not using a root folder) is the filesystem name
      * NOTE that /. and /.. have no special meaning - no traversal allowed
      * @throws ItemAccessDeniedException if access via share and read is not allowed
      * @throws AuthenticationFailedException if public access and no root is given
@@ -720,8 +718,6 @@ class FilesApp extends UpgradableApp
      */
     protected function GetItemByPath(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
-        $path = array_filter(explode('/', $input->GetParam('path',SafeParam::TYPE_FSPATH)));
-        
         if (($raccess = $this->TryAuthenticateFolderAccess($input, $authenticator, $accesslog)) !== null)
         {
             $folder = $raccess->GetItem(); $share = $raccess->GetShare();
@@ -732,26 +728,23 @@ class FilesApp extends UpgradableApp
             if ($authenticator === null) throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
             
-            if (!count($path)) 
+            $filesystem = $input->TryGetParam('filesystem',SafeParam::TYPE_RANDSTR);
+            
+            if ($filesystem !== null)
             {
-                $retval = RootFolder::GetSuperRootClientObject($this->database, $account);
-                
-                $retval['isfile'] = false; return $retval;
-            }
-            else
-            {
-                $filesystem = FSManager::TryLoadByAccountAndName($this->database, $account, array_shift($path));
+                $filesystem = FSManager::TryLoadByID($this->database, $filesystem);
                 if ($filesystem === null) throw new UnknownFilesystemException();
-                
-                $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesystem);
             }
             
+            $folder = Folder::GetRootByAccountAndFS($this->database, $account, $filesystem);
+
             if ($accesslog) $accesslog->LogAccess($folder, null);
         }        
         
         if ($folder === null) throw new UnknownFolderException();
         
-        $name = array_pop($path);
+        $path = $input->GetParam('path',SafeParam::TYPE_FSPATH);
+        $path = array_filter(explode('/',$path)); $name = array_pop($path);
 
         foreach ($path as $subfolder)
         {

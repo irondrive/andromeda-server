@@ -143,43 +143,4 @@ class RootFolder extends Folder
 
         parent::Delete();
     }
-    
-    /**
-     * Special function that returns a client object listing all root folders
-     * @param ObjectDatabase $database database reference
-     * @return array `{files:[], folders:[id:RootFolder],
-         dates:{created:float}, counters:{size:int, pubvisits:int, pubdownloads:int, bandwidth:int,
-            subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
-     * @see Folder::GetClientObject()
-     */
-    public static function GetSuperRootClientObject(ObjectDatabase $database, Account $account) : array
-    {
-        $filesystems = FSManager::LoadByAccount($database, $account);
-        
-        $roots = array(); foreach ($filesystems as $fs)
-        {
-            $root = RootFolder::GetRootByAccountAndFS($database, $account, $fs);
-            
-            $roots[$root->ID()] = $root;
-        }
-
-        $counters = array(); foreach (array_keys(Folder::GetFieldTemplate()) as $prop)
-        {
-            $prop = explode('__',$prop); if ($prop[0] !== 'counters') continue; else $prop = $prop[1];
-
-            $counters[$prop] = array_sum(array_map(function (RootFolder $folder)use ($prop){ return $folder->GetCounter($prop); }, $roots));
-        }
-        
-        $dates = array('created' => $account->GetDateCreated());
-        
-        $roots = array_map(function(RootFolder $fs){ return $fs->GetClientObject(); }, $roots);
-        
-        return array(
-            'id' => null,
-            'files' => array(),
-            'folders' => $roots,
-            'counters' => $counters,
-            'dates' => $dates
-        );
-    }
 }
