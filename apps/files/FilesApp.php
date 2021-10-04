@@ -483,7 +483,7 @@ class FilesApp extends UpgradableApp
         // first determine the byte range to read
         $fsize = $file->GetSize();
         $fstart = $input->GetOptNullParam('fstart',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? 0;
-        $flast  = $input->GetOptNullParam('flast',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_NEVER) ?? $fsize-1;
+        $flast  = $input->GetOptNullParam('flast',SafeParam::TYPE_INT,SafeParams::PARAMLOG_NEVER) ?? $fsize-1;
         
         if (isset($_SERVER['HTTP_RANGE']))
         {

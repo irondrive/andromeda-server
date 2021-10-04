@@ -505,7 +505,7 @@ abstract class BaseObject
      * @param string $field the field name of the collection
      * @return $this
      */
-    protected function DeleteObjectRefs(string $field) : self
+    protected function DeleteObjects(string $field) : self
     {
         if (!array_key_exists($field, $this->objectrefs)) throw new KeyNotFoundException($field);
         
