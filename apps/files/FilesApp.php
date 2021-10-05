@@ -86,11 +86,11 @@ class EmailShareDisabledException extends Exceptions\ClientDeniedException    { 
 /** Exception indicating that the absolute URL of a share cannot be determined */
 class ShareURLGenerateException extends Exceptions\ClientErrorException       { public $message = "CANNOT_OBTAIN_SHARE_URI"; }
 
-/** Exception indicating that sharing to groups is not allowed */
-class ShareGroupDisabledException extends Exceptions\ClientDeniedException    { public $message = "SHARE_GROUPS_DISABLED"; }
+/** Exception indicating invalid share target params were given */
+class InvalidShareTargetException extends Exceptions\ClientErrorException     { public $message = "INVALID_SHARE_TARGET_PARAMS"; }
 
-/** Exception indicating that sharing to everyone is not allowed */
-class ShareEveryoneDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_EVERYONE_DISABLED"; }
+/** Exception indicating that sharing to the given target is not allowed */
+class ShareTargetDisabledException extends Exceptions\ClientDeniedException { public $message = "SHARE_TARGET_DISABLED"; }
 
 /**
  * App that provides user-facing filesystem services.
@@ -1412,15 +1412,8 @@ class FilesApp extends UpgradableApp
         $everyone = $input->GetOptParam('everyone',SafeParam::TYPE_BOOL) ?? false;
         $islink = $input->GetOptParam('link',SafeParam::TYPE_BOOL) ?? false;
         
-        if ($destgroup !== null && !$account->GetAllowGroupSearch())
-            throw new ShareGroupDisabledException();
-            
-        $dest = null; if (!$islink)
-        {
-            if ($destacct !== null)       $dest = Account::TryLoadByID($this->database, $destacct);
-            else if ($destgroup !== null) $dest = Group::TryLoadByID($this->database, $destgroup);
-            if ($dest === null && !$everyone) throw new UnknownDestinationException();
-        }
+        if (count(array_filter(array($destacct,$destgroup,$everyone,$islink))) !== 1)
+            throw new InvalidShareTargetException(); // only one dest allowed
 
         $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
         
@@ -1430,12 +1423,30 @@ class FilesApp extends UpgradableApp
         
         if (!$item->GetAllowItemSharing($account))
             throw new ItemSharingDisabledException();
-            
-        if ($dest === null && !$item->GetAllowShareEveryone($account))
-            throw new ShareEveryoneDisabledException();
         
         if ($islink) $share = Share::CreateLink($this->database, $account, $item);
-        else $share = Share::Create($this->database, $account, $item, $dest);
+        else
+        {
+            $dest = null;
+            
+            if ($destacct !== null)
+            {
+                if (($dest = Account::TryLoadByID($this->database, $destacct)) === null)
+                    throw new UnknownAccountException();
+            }
+            else if ($destgroup !== null)
+            {
+                if (!$item->GetAllowShareToGroups($account))
+                    throw new ShareTargetDisabledException();
+                    
+                if (($dest = Group::TryLoadByID($this->database, $destgroup)) === null)
+                    throw new UnknownGroupException();
+            }
+            else if ($everyone && !$item->GetAllowShareToEveryone($account))
+                throw new ShareTargetDisabledException();
+            
+            $share = Share::Create($this->database, $account, $item, $dest);
+        }
         
         $share->SetShareOptions($input, $oldshare);
         

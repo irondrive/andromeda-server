@@ -25,8 +25,8 @@ class Config extends DBVersion
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->setVersion(FilesApp::getVersion()); }
     
     /** Returns the command usage for SetConfig() */
-    public static function GetSetConfigUsage() : string { return "[--rwchunksize uint] [--crchunksize uint] [--upload_maxsize ?uint] ".
-        "[--timedstats bool] [--apiurl ?string]"; }
+    public static function GetSetConfigUsage() : string { return "[--rwchunksize uint] [--crchunksize uint]".
+                                          " [--upload_maxsize ?uint] [--timedstats bool] [--apiurl ?string]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self

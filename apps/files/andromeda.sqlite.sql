@@ -112,7 +112,8 @@ CREATE TABLE `a2obj_apps_files_limits_authentitytotal` (
 ,  `dates__download` double DEFAULT NULL
 ,  `dates__upload` double DEFAULT NULL
 ,  `features__itemsharing` integer DEFAULT NULL
-,  `features__shareeveryone` integer DEFAULT NULL
+,  `features__share2everyone` integer DEFAULT NULL
+,  `features__share2groups` integer DEFAULT NULL
 ,  `features__emailshare` integer DEFAULT NULL
 ,  `features__publicupload` integer DEFAULT NULL
 ,  `features__publicmodify` integer DEFAULT NULL
@@ -138,7 +139,8 @@ CREATE TABLE `a2obj_apps_files_limits_filesystemtotal` (
 ,  `dates__download` double DEFAULT NULL
 ,  `dates__upload` double DEFAULT NULL
 ,  `features__itemsharing` integer DEFAULT NULL
-,  `features__shareeveryone` integer DEFAULT NULL
+,  `features__share2everyone` integer DEFAULT NULL
+,  `features__share2groups` integer DEFAULT NULL
 ,  `features__publicupload` integer DEFAULT NULL
 ,  `features__publicmodify` integer DEFAULT NULL
 ,  `features__randomwrite` integer DEFAULT NULL

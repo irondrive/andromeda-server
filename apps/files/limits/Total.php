@@ -27,7 +27,8 @@ abstract class Total extends Base
             'dates__download' => null,
             'dates__upload' => null,
             'features__itemsharing' => null,
-            'features__shareeveryone' => null,
+            'features__share2groups' => null,
+            'features__share2everyone' => null,
             'features__publicupload' => null,
             'features__publicmodify' => null,
             'features__randomwrite' => null,
@@ -79,8 +80,11 @@ abstract class Total extends Base
     /** Returns true if the limited object should allow sharing items */
     public function GetAllowItemSharing() : ?bool { return $this->TryGetFeature('itemsharing'); }
     
+    /** Returns true if the limited object should allow sharing to groups */
+    public function GetAllowShareToGroups() : ?bool { return $this->TryGetFeature('share2groups'); }
+    
     /** Returns true if the limited object should allow sharing to everyone */
-    public function GetAllowShareEveryone() : ?bool { return $this->TryGetFeature('shareeveryone'); }
+    public function GetAllowShareToEveryone() : ?bool { return $this->TryGetFeature('share2everyone'); }
     
     /** Creates and caches a new limit object for the given limited object */
     protected static function Create(ObjectDatabase $database, StandardObject $obj) : self
@@ -93,7 +97,7 @@ abstract class Total extends Base
     public static function GetConfigUsage() : string { return static::GetBaseUsage(); }
 
     public static function BaseConfigUsage() : string { return "[--randomwrite ?bool] [--publicmodify ?bool] [--publicupload ?bool] ".
-                                                               "[--itemsharing ?bool] [--shareeveryone ?bool] ".
+                                                               "[--itemsharing ?bool] [--share2groups ?bool] [--share2everyone ?bool] ".
                                                                "[--max_size ?int] [--max_items ?int] [--max_shares ?int]"; }
         
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
@@ -106,7 +110,8 @@ abstract class Total extends Base
         if ($input->HasParam('publicmodify')) $lim->SetFeature('publicmodify', $input->GetNullParam('publicmodify', SafeParam::TYPE_BOOL));
         if ($input->HasParam('publicupload')) $lim->SetFeature('publicupload', $input->GetNullParam('publicupload', SafeParam::TYPE_BOOL));
         if ($input->HasParam('itemsharing')) $lim->SetFeature('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('shareeveryone')) $lim->SetFeature('shareeveryone', $input->GetNullParam('shareeveryone', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('share2groups')) $lim->SetFeature('share2groups', $input->GetNullParam('share2groups', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('share2everyone')) $lim->SetFeature('share2everyone', $input->GetNullParam('share2everyone', SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_UINT));
         if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT));
@@ -137,7 +142,7 @@ abstract class Total extends Base
     /**
      * Returns a printable client object of this timed limit
      * @return array `{dates:{created:float, download:?float, upload:?float}, features:{track_items:bool,track_dlstats:bool,
-            itemsharing:?bool, shareeveryone:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
+            itemsharing:?bool, share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see TimedStats::GetClientObject()
      */
