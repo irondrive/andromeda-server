@@ -408,17 +408,21 @@ abstract class Item extends StandardObject
     /** Returns true if the item should allow sharing */
     public function GetAllowItemSharing(Account $account) : bool {
         return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowItemSharing(); }, $account); }
-    
-    /** Returns true if the item should allow public shares (shares with all users) */
-    public function GetAllowShareEveryone(Account $account) : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareEveryone(); }, $account); }
+
+    /** Returns true if the item should allow group shares (shares with a group) */
+    public function GetAllowShareToGroups(Account $account) : bool {
+        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareToGroups(); }, $account); }
         
+    /** Returns true if the item should allow public shares (shares with all users) */
+    public function GetAllowShareToEveryone(Account $account) : bool {
+        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareToEveryone(); }, $account); }
+    
     /** Deletes the item from the DB only */
     public abstract function NotifyDelete() : void;
     
     /** Deleting an item also deletes all of its component objects (likes, tags, comments, shares) */
     public function Delete() : void
-    {        
+    {
         if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); });
         

@@ -175,7 +175,8 @@ class AccountTotal extends AuthEntityTotal implements IAccountLimit
 
     protected function GetInheritedFields() : array { return array(
         'features__itemsharing' => true,
-        'features__shareeveryone' => true,
+        'features__share2groups' => true,
+        'features__share2everyone' => true,
         'features__emailshare' => true,
         'features__publicupload' => true,
         'features__publicmodify' => true,
@@ -192,7 +193,8 @@ class AccountTotal extends AuthEntityTotal implements IAccountLimit
     public function GetAllowPublicModify() : bool { return $this->GetFeature('publicmodify'); }
     public function GetAllowPublicUpload() : bool { return $this->GetFeature('publicupload'); }
     public function GetAllowItemSharing() : bool { return $this->GetFeature('itemsharing'); }
-    public function GetAllowShareEveryone() : bool { return $this->GetFeature('shareeveryone'); }
+    public function GetAllowShareToGroups() : bool { return $this->GetFeature('share2groups'); }
+    public function GetAllowShareToEveryone() : bool { return $this->GetFeature('share2everyone'); }
     
     /** Returns true if this account is allowed to email share links */
     public function GetAllowEmailShare() : bool { return $this->GetFeature('emailshare'); }
