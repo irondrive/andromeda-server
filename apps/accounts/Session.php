@@ -52,7 +52,24 @@ class Session extends KeySource
         
         return $this->SetDate('active');
     }
+    
+    /** 
+     * Prunes old sessions from the DB that have expired 
+     * @param database database reference
+     * @param account account to check sessions for
+     */
+    public static function PruneOldFor(ObjectDatabase $database, Account $account) : void
+    {
+        if (($maxage = $account->GetSessionTimeout()) === null) return;
         
+        $mintime = Main::GetInstance()->GetTime() - $maxage;
+        
+        $q = new QueryBuilder(); $q->Where($q->And(
+            $q->Equals('account',$account->ID()),$q->LessThan('dates__created', $mintime)));
+        
+        static::DeleteByQuery($database, $q);
+    }
+    
     /**
      * Authenticates the given info claiming to be this session and checks the timeout
      * @param string $key the session authentication key

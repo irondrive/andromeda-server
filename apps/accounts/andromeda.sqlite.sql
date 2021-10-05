@@ -210,6 +210,8 @@ CREATE INDEX "idx_a2obj_apps_accounts_account_fullname" ON "a2obj_apps_accounts_
 CREATE INDEX "idx_a2obj_apps_accounts_account_authsource" ON "a2obj_apps_accounts_account" (`authsource`);
 CREATE INDEX "idx_a2obj_apps_accounts_session_aid" ON "a2obj_apps_accounts_session" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_session_cid" ON "a2obj_apps_accounts_session" (`client`);
+CREATE INDEX "idx_a2obj_apps_accounts_session_dates__active_account" ON "a2obj_apps_accounts_session" (`dates__active`,`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_auth_manager_authsource" ON "a2obj_apps_accounts_auth_manager" (`authsource`);
 CREATE INDEX "idx_a2obj_apps_accounts_client_account" ON "a2obj_apps_accounts_client" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_client_session" ON "a2obj_apps_accounts_client" (`session`);
+CREATE INDEX "idx_a2obj_apps_accounts_client_dates__active_account" ON "a2obj_apps_accounts_client" (`dates__active`,`account`);
