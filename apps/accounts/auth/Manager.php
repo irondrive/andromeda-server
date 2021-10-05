@@ -28,6 +28,7 @@ class Manager extends BaseObject
     public static function GetFieldTemplate() : array
     {
         return array(
+            'enabled' => new FieldTypes\Scalar(self::ENABLED_FULL),
             'description' => null,
             'authsource' => (new FieldTypes\ObjectPoly(External::class, 'manager', false))->autoDelete(),
             'default_group' => (new FieldTypes\ObjectRef(Group::class))->autoDelete()
@@ -43,7 +44,9 @@ class Manager extends BaseObject
     }
     
     /** Returns basic command usage for Create() and Edit() */
-    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types))." [--description ?text] [--createdefgroup bool]"; }
+    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types)).
+                                                            " [--enabled ".implode('|',array_keys(self::ENABLED_TYPES))."]".
+                                                            " [--description ?text] [--createdefgroup bool]"; }
     
     /** Gets command usage specific to external authentication backends */
     public static function GetPropUsages() : array
@@ -69,6 +72,14 @@ class Manager extends BaseObject
         
         $manager->SetObject('authsource',$authsource)->SetScalar('description',$descr);
         
+        if ($input->HasParam('enabled'))
+        {
+            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
+                function($v){ return array_key_exists($v, self::ENABLED_TYPES); });
+            
+            $manager->SetScalar('enabled', self::ENABLED_TYPES[$param]);
+        }
+        
         if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? true) $manager->CreateDefaultGroup();
         
         return $manager;
@@ -77,6 +88,14 @@ class Manager extends BaseObject
     /** Edits properties of an existing external auth backend */
     public function Edit(Input $input) : self
     {
+        if ($input->HasParam('enabled'))
+        {
+            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
+                function($v){ return array_key_exists($v, self::ENABLED_TYPES); });
+            
+            $this->SetScalar('enabled', self::ENABLED_TYPES[$param]);
+        }
+        
         if ($input->HasParam('description')) $this->SetScalar('description',$this->GetNullParam('description',SafeParam::TYPE_TEXT));
         
         if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
@@ -121,6 +140,14 @@ class Manager extends BaseObject
     /** Returns the class-only (no namespace) of the auth source */
     private function GetShortSourceType() : string { return Utilities::ShortClassName($this->GetAuthSourceType()); }
     
+    const ENABLED_EXIST = 1; /** Only allow users that already exist in the DB to sign in */
+    const ENABLED_FULL = 2;  /** Allow auto-creating new accounts for all external signins */
+    
+    const ENABLED_TYPES = array('disable'=>0, 'exist'=>self::ENABLED_EXIST, 'full'=>self::ENABLED_FULL);
+    
+    /** Returns the enum of how/if this is enabled */
+    public function GetEnabled() : int { return $this->GetScalar('enabled'); }
+    
     /** Returns the description set for this auth source, or the class name if none is set */
     public function GetDescription() : string
     {
@@ -132,8 +159,8 @@ class Manager extends BaseObject
      * 
      * See the GetClientObject() for each specific auth source type.
      * @param bool $admin if true, show admin-level details
-     * @return array `{id:string, description:string}` \
-        if $admin, add `{type:string, authsource:(Authsource), default_group:?id}`
+     * @return array `{id:id, description:string}` \
+        if $admin, add `{enabled:enum, type:enum, authsource:(Authsource), default_group:?id}`
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -145,6 +172,7 @@ class Manager extends BaseObject
         if ($admin) 
         {
             $retval['type'] = $this->GetShortSourceType();
+            $retval['enabled'] = array_flip(self::ENABLED_TYPES)[$this->GetEnabled()];
             $retval['authsource'] = $this->GetAuthSource()->GetClientObject();
             $retval['default_group'] = $this->TryGetObjectID('default_group');
         }

@@ -72,6 +72,7 @@ CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
 );
 CREATE TABLE `a2obj_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL
+,  `enabled` integer NOT NULL
 ,  `authsource` varchar(64) NOT NULL
 ,  `description` text DEFAULT NULL
 ,  `default_group` char(12) DEFAULT NULL
