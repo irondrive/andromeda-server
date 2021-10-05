@@ -451,7 +451,7 @@ class Account extends AuthEntity
     
     /**
      * Gets this account as a printable object
-     * @return array `{id:string,username:string,dispname:string}` \
+     * @return array `{id:id,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contacts:?int,recoverykeys:?int}, features:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool

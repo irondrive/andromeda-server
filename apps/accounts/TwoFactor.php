@@ -180,7 +180,7 @@ class TwoFactor extends StandardObject
     /**
      * Returns a printable client object for this twofactor
      * @param bool $secret if true, show the OTP secret
-     * @return array `{id:string, comment:?string, dates:{created:float,used:float}` \
+     * @return array `{id:id, comment:?string, dates:{created:float,used:float}` \
         if $secret, add `{secret:string, qrcodeurl:string}`
      */
     public function GetClientObject(bool $secret = false) : array

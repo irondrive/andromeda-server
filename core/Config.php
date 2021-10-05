@@ -312,11 +312,11 @@ class Config extends DBVersion
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{api:int, features: {read_only:string, enabled:bool}, apps:[{string:string}]}` \
+     * @return array `{api:int, features: {read_only:enum, enabled:bool}, apps:[{string:string}]}` \
          if admin, add: `{datadir:?string, features:{ \
-            requestlog_file:bool, requestlog_db:bool, requestlog_details:string, \
-            metrics:string, metrics_dblog:bool, metrics_filelog:bool, email:bool
-            debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool }}`
+            requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
+            metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
+            debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }}`
      */
     public function GetClientObject(bool $admin = false) : array
     { 

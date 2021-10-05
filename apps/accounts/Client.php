@@ -107,7 +107,7 @@ class Client extends AuthObject
     
     /**
      * Gets this client as a printable object
-     * @return array `{id:string, name:?string, lastaddr:string, useragent:string, dates:{created:float, active:float, loggedon:float}, session:Session}`
+     * @return array `{id:id, name:?string, lastaddr:string, useragent:string, dates:{created:float, active:float, loggedon:float}, session:Session}`
      * @see AuthObject::GetClientObject()
      * @see Session::GetClientObject()
      */

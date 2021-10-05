@@ -330,7 +330,7 @@ class FSManager extends StandardObject
     /**
      * Gets a printable client object of this filesystem
      * @param bool $admin if true, show details for the owner
-     * @return array `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:string}` \  
+     * @return array `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:enum}` \  
         if priv, add `{storage:Storage}` - if isEncrypted, add `{chunksize:int}`
      * @see Storage::GetClientObject()
      */

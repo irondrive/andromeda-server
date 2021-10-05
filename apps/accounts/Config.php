@@ -126,7 +126,7 @@ class Config extends DBVersion
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{features:{createaccount:string, usernameiscontact:bool, requirecontact:string}}` \
+     * @return array `{features:{createaccount:enum, usernameiscontact:bool, requirecontact:enum}}` \
          if admin, add: `{default_group:?id}`
      */
     public function GetClientObject(bool $admin) : array

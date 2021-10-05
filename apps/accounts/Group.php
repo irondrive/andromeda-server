@@ -191,7 +191,7 @@ class Group extends AuthEntity
     /**
      * Gets this group as a printable object
      * @param int $level if FULL, show list of account IDs, if ADMIN, show details
-     * @return array `{id:string,name:string,priority:int,comment:?string,dates:{created:float}}` \
+     * @return array `{id:id,name:string,priority:int,comment:?string,dates:{created:float}}` \
         if full, add `{accounts:[id]}` \
         also returns all inheritable account properties
      * @see Account::GetClientObject()

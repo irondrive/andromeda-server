@@ -119,7 +119,7 @@ trait GroupCommon
     }
     
     /**
-     * @return array add: `features:{track_items:string,track_dlstats:string}`
+     * @return array add: `features:{track_items:enum,track_dlstats:enum}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */

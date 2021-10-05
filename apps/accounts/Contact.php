@@ -259,7 +259,7 @@ class Contact extends ContactBase
 
     /**
      * Gets this contact as a printable object
-     * @return array `{id:string, type:string, info:string, valid:bool, usefrom:bool, public:bool, dates:{created:float}}`
+     * @return array `{id:id, type:enum, info:string, valid:bool, usefrom:bool, public:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {

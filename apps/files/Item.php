@@ -464,7 +464,7 @@ abstract class Item extends StandardObject
     /**
      * Returns a printable client object of this item
      * @param bool $details if true, show tags and shares
-     * @return array|NULL `{id:string, name:?string, owner:?string, parent:?string}` \
+     * @return array|NULL `{id:id, name:?string, owner:?string, parent:?string}` \
          if details, add: `{tags:[id:Tag], shares:[id:Share]}`
      * @see Tag::GetClientObject()
      * @see Share::GetClientObject()
