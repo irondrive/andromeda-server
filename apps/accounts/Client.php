@@ -74,7 +74,7 @@ class Client extends AuthObject
         $mintime = Main::GetInstance()->GetTime() - $maxage;
         
         $q = new QueryBuilder(); $q->Where($q->And(
-            $q->Equals('account',$account->ID()),$q->LessThan('dates__created', $mintime)));
+            $q->Equals('account',$account->ID()),$q->LessThan('dates__active', $mintime)));
         
         static::DeleteByQuery($database, $q);
     }
