@@ -5,6 +5,7 @@ require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/core/ioformat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
 require_once(ROOT."/apps/accounts/Account.php");
 require_once(ROOT."/apps/accounts/AuthObject.php");
@@ -61,6 +62,23 @@ class Client extends AuthObject
         return $this->SetDate('active');
     }
     
+    /**
+     * Prunes old clients from the DB that have expired
+     * @param database database reference
+     * @param account account to check clients for
+     */
+    public static function PruneOldFor(ObjectDatabase $database, Account $account) : void
+    {
+        if (($maxage = $account->GetClientTimeout()) === null) return;
+        
+        $mintime = Main::GetInstance()->GetTime() - $maxage;
+        
+        $q = new QueryBuilder(); $q->Where($q->And(
+            $q->Equals('account',$account->ID()),$q->LessThan('dates__created', $mintime)));
+        
+        static::DeleteByQuery($database, $q);
+    }
+    
     /** Gets the last timestamp the client created a session */
     public function getLoggedonDate() : float { return $this->GetDate('loggedon'); }
     
@@ -107,7 +125,8 @@ class Client extends AuthObject
     
     /**
      * Gets this client as a printable object
-     * @return array `{id:id, name:?string, lastaddr:string, useragent:string, dates:{created:float, active:float, loggedon:float}, session:Session}`
+     * @return array `{id:id, name:?string, lastaddr:string, useragent:string, \
+            dates:{created:float, active:float, loggedon:float}, session:Session}`
      * @see AuthObject::GetClientObject()
      * @see Session::GetClientObject()
      */

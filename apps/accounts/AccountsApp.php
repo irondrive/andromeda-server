@@ -729,6 +729,9 @@ class AccountsApp extends UpgradableApp
             $account->ChangePassword($new_password);
         }
         
+        Client::PruneOldFor($this->database, $account);
+        Session::PruneOldFor($this->database, $account);
+        
         /* delete old session associated with this client, create a new one */
         $session = Session::Create($this->database, $account, $client->DeleteSession());
         

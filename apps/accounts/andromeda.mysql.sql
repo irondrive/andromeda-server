@@ -125,7 +125,8 @@ CREATE TABLE `a2obj_apps_accounts_client` (
   `session` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `account` (`account`),
-  KEY `session` (`session`)
+  KEY `session` (`session`),
+  KEY `dates__active_account` (`dates__active`,`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -229,7 +230,8 @@ CREATE TABLE `a2obj_apps_accounts_session` (
   `client` char(12) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `aid` (`account`),
-  KEY `cid` (`client`)
+  KEY `cid` (`client`),
+  KEY `dates__active_account` (`dates__active`,`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
