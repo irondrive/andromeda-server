@@ -60,7 +60,7 @@ class Whitelist extends StandardObject
     
     /**
      * Returns a printable client object for this entry
-     * @return array `{type:string, value:string}`
+     * @return array `{type:enum, value:string}`
      */
     public function GetClientObject() : array
     {

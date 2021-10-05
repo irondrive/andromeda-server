@@ -73,7 +73,7 @@ class Session extends KeySource
     
     /**
      * Returns a printable client object for this session
-     * @return array `{id:string,client:id,dates:{created:float]}`
+     * @return array `{id:id,client:id,dates:{created:float]}`
      * @see AuthObject::GetClientObject()
      */
     public function GetClientObject(bool $secret = false) : array

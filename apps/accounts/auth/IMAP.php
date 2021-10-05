@@ -64,7 +64,7 @@ class IMAP extends External
     
     /**
      * Returns a printable client object for this IMAP
-     * @return array `{protocol:string, hostname:stsring, port:int, implssl:bool, secauth:bool}`
+     * @return array `{protocol:enum, hostname:string, port:int, implssl:bool, secauth:bool}`
      */
     public function GetClientObject() : array
     {

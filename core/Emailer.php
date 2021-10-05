@@ -127,7 +127,7 @@ class Emailer extends StandardObject
     
     /**
      * Gets the config as a printable client object
-     * @return array `{type:string, hosts:?string, username:?string, password:bool,
+     * @return array `{type:enum, hosts:?string, username:?string, password:bool,
          from_address:string, from_name:?string, features:{reply:bool}, dates:{created:float}}`
      */
     public function GetClientObject() : array

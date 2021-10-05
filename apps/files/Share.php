@@ -302,7 +302,7 @@ class Share extends AuthObject
     /**
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
-     * @return array `{id:id, owner:id, item:Item|id, itemtype:string, islink:bool, password:bool, dest:?id, desttype:?string,
+     * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, password:bool, dest:?id, desttype:?string,
         expired:bool, dates:{created:float, accessed:?float, expires:?float}, counters:{accessed:int}, limits:{accessed:?int},
         features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool}}`
      * @see Item::SubGetClientObject()
