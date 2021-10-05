@@ -102,6 +102,7 @@ CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL,
+  `enabled` tinyint(2) NOT NULL,
   `authsource` varchar(64) NOT NULL,
   `description` text DEFAULT NULL,
   `default_group` char(12) DEFAULT NULL,

@@ -346,8 +346,11 @@ class AccountsApp extends UpgradableApp
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
-        return array_map(function(Auth\Manager $m)use($admin){ return $m->GetClientObject($admin); },
-            Auth\Manager::LoadAll($this->database));
+        $auths = Auth\Manager::LoadAll($this->database);
+        
+        if (!$admin) $auths = array_filter(function(Auth\Manager $m){ return $m->GetEnabled(); });
+        
+        return array_map(function(Auth\Manager $m)use($admin){ return $m->GetClientObject($admin); }, $auths);
     }
 
     /**
@@ -621,16 +624,18 @@ class AccountsApp extends UpgradableApp
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if ($input->HasParam('authsource'))
         {
-            if (($authsource = $input->GetNullParam('authsource',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS)) !== null)
+            if (($authman = $input->GetNullParam('authsource',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS)) !== null)
             {
-                $authsource = Auth\Manager::TryLoadByID($this->database, $authsource);
-                if ($authsource === null) throw new UnknownAuthSourceException();
+                $authman = Auth\Manager::TryLoadByID($this->database, $authman);
+                if ($authman === null) throw new UnknownAuthSourceException();
             }
         }
-        else $authsource = $this->config->GetDefaultAuth();
+        else $authman = $this->config->GetDefaultAuth();
         
-        $authsource ??= Auth\Local::GetInstance();
-
+        if ($authman !== null && !$authman->GetEnabled()) throw new AuthenticationFailedException();
+        
+        $authsource = ($authman !== null) ? $authman->GetAuthSource() : Auth\Local::GetInstance();
+        
         if ($input->HasParam('username'))
         {
             $username = $input->GetParam("username", SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_ALWAYS);
@@ -657,7 +662,10 @@ class AccountsApp extends UpgradableApp
         }
         /* if no account and using external auth, try the password, and if success, create a new account on the fly */
         else if ($authsource instanceof Auth\External)
-        {            
+        {
+            if ($authman->GetEnabled() < Auth\Manager::ENABLED_FULL)
+                throw new AuthenticationFailedException();
+            
             if (!$authsource->VerifyUsernamePassword($username, $password))
                 throw new AuthenticationFailedException();
             
