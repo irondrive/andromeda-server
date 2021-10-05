@@ -291,14 +291,14 @@ class FilesApp extends UpgradableApp
     /** Returns an ItemAccess authenticating the given file ID (or null to get from input), throws exceptions on failure */
     private function AuthenticateFileAccess(Input $input, ?Authenticator $auth, ?AccessLog $accesslog, ?string $id = null) : ItemAccess 
     {
-        $id ??= $input->GetOptParam('file', SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
+        $id ??= $input->GetParam('file', SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         return $this->AuthenticateItemAccess($input, $auth, $accesslog, File::class, $id);
     }
 
     /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), throws exceptions on failure */
     private function AuthenticateFolderAccess(Input $input, ?Authenticator $auth, ?AccessLog $accesslog, ?string $id = null, bool $isParent = false) : ItemAccess 
     { 
-        $id ??= $input->GetOptParam('folder', SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
+        $id ??= $input->GetParam('folder', SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         return $this->AuthenticateItemAccess($input, $auth, $accesslog, Folder::class, $id, $isParent);
     }
         
@@ -662,9 +662,9 @@ class FilesApp extends UpgradableApp
      */
     protected function GetFolder(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
     {
-        if ($input->GetOptParam('folder',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER))
+        if (($fid = $input->GetOptParam('folder',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER)) !== null)
         {
-            $access = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog);
+            $access = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $fid);
             $folder = $access->GetItem(); $share = $access->GetShare();
             
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
