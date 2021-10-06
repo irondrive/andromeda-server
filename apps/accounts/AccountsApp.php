@@ -1261,7 +1261,7 @@ class AccountsApp extends UpgradableApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        if (in_array($group, $account->GetDefaultGroups(), true))
+        if (array_key_exists($group->ID(), $account->GetDefaultGroups()))
             throw new ImmutableGroupException();
         
         if ($account->HasGroup($group)) $account->RemoveGroup($group);

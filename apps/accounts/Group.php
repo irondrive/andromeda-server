@@ -218,7 +218,7 @@ class Group extends AuthEntity
             ));
         }            
         
-        if ($level && self::OBJECT_FULL) $retval['accounts'] = array_map(function($e){ return $e->ID(); }, array_values($this->GetAccounts()));
+        if ($level && self::OBJECT_FULL) $retval['accounts'] = array_keys($this->GetAccounts());
         
         return $retval;
     }

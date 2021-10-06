@@ -167,7 +167,7 @@ class ObjectDatabase extends Database
         
         return array_filter($objects, function($obj){ return !$obj->isDeleted(); });
     }
-    
+
     /**
      * Delete objects matching the given query
      * 
@@ -196,7 +196,7 @@ class ObjectDatabase extends Database
         $objs = $this->Rows2Objects($result, $class);
         
         // notify all objects of deletion
-        foreach ($objs as $obj) $obj->NotifyDeleted();
+        foreach ($objs as $obj) $obj->NotifyDBDeleted();
         
         return count($objs);
     }
@@ -209,7 +209,7 @@ class ObjectDatabase extends Database
      * @return $this
      */
     public function DeleteObject(BaseObject $object) : self
-    {        
+    {
         $q = new QueryBuilder(); $q->Where($q->Equals('id',$object->ID()));  
         
         $table = $this->GetClassTableName(get_class($object));        

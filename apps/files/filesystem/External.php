@@ -8,6 +8,7 @@ require_once(ROOT."/apps/files/Item.php"); use Andromeda\Apps\Files\Item;
 require_once(ROOT."/apps/files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/apps/files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/apps/files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
+require_once(ROOT."/apps/files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
 
 /**
  * An External Andromeda filesystem is accessible outside Andromeda
@@ -51,7 +52,7 @@ class External extends BaseFileFS
         $storage = $this->GetStorage();        
         $path = $this->GetItemPath($file);
         
-        if (!$storage->isFile($path)) { $file->NotifyDelete(); return $this; }
+        if (!$storage->isFile($path)) { $file->NotifyFSDeleted(); return $this; }
 
         $stat = $storage->ItemStat($path); 
         $file->SetSize($stat->size,true);
@@ -73,12 +74,13 @@ class External extends BaseFileFS
      */
     public function RefreshFolder(Folder $folder, bool $doContents = true, 
         ?StaticWrapper $fileSw = null, ?StaticWrapper $folderSw = null) : self
-    {       
+    {
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
         
-        if ($folder->CanRefreshDelete() && !$storage->isFolder($path)) { 
-            $folder->NotifyDelete(); return $this; }
+        // missing root is usually the result of a config error
+        if (!($folder instanceof RootFolder) && !$storage->isFolder($path)) { 
+            $folder->NotifyFSDeleted(); return $this; }
                 
         $stat = $storage->ItemStat($path);
         if ($stat->atime) $folder->SetAccessed($stat->atime);
@@ -87,47 +89,42 @@ class External extends BaseFileFS
 
         if ($doContents) 
         {
-            if (!$storage->isFolder($path)) { $folder->NotifyDelete(); return $this; }
+            if (!$storage->isFolder($path)) { $folder->NotifyFSDeleted(); return $this; }
             
-            $fsitems = $storage->ReadFolder($path); sort($fsitems);
+            $fsnames = $storage->ReadFolder($path);
             
-            $dbitems = array_merge($folder->GetFiles(), $folder->GetFolders());
+            $dbitems = array(); 
+            foreach ($folder->GetFiles() as $file) $dbitems[$file->GetName()] = $file;
+            foreach ($folder->GetFolders() as $folder) $dbitems[$folder->GetName()] = $folder;
             
-            uasort($dbitems, function(Item $a, Item $b){ 
-                return strcmp($a->GetName(),$b->GetName()); });
-            
-            foreach ($fsitems as $fsitem)
+            foreach ($fsnames as $fsname)
             {
-                $fspath = $path.'/'.$fsitem;
+                $fspath = $path.'/'.$fsname;
                 $isfile = $storage->isFile($fspath);
                 if (!$isfile && !$storage->isFolder($fspath)) continue;
-                    
-                $dbitem = null;
-                foreach ($dbitems as $dbitemid => $dbitemtmp)
+                
+                $dbitem = null; if (array_key_exists($fsname, $dbitems))
                 {
-                    if ($dbitemtmp->GetName() === $fsitem)
-                    {
-                        $dbitem = $dbitemtmp; unset($dbitems[$dbitemid]); break;
-                    }
-                    // dbitems are sorted so if we're past fsitem, it's not there
-                    // only add items for now - stale dbitems will be deleted later when accessed!
-                    else if ($dbitemtmp->GetName() > $fsitem) break;
+                    $dbitem = $dbitems[$fsname]; unset($dbitems[$fsname]);
                 }
                 
                 if ($dbitem === null) 
                 {
-                    $database = $this->GetDatabase(); $owner = $this->GetFSManager()->GetOwner();
+                    $sw = $isfile ? $fileSw : $folderSw;
+                    $class = $isfile ? File::class : SubFolder::class;
                     
-                    $sw = $isfile ? $fileSw : $folderSw; $class = $isfile ? File::class : SubFolder::class;
+                    $database = $this->GetDatabase();
+                    $owner = $this->GetFSManager()->GetOwner();
                     
-                    if ($sw !== null) $dbitem = $sw->NotifyCreate($database, $folder, $owner, $fsitem);
-                    else $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsitem);
+                    if ($sw !== null) 
+                            $dbitem = $sw->NotifyCreate($database, $folder, $owner, $fsname);
+                    else $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
                     
                     $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
                 }
             }
             
-            foreach ($dbitems as $dbitem) $dbitem->Delete();
+            foreach ($dbitems as $dbitem) $dbitem->Delete(); // prune extras
         }
         
         return $this;        

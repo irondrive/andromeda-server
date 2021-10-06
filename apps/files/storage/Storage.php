@@ -328,7 +328,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     public function WriteBytes(string $path, int $start, string $data) : self
     {
-        $this->AssertNotReadOnly()->disallowBatch();
+        $this->AssertNotReadOnly();
         
         if ($this->isDryRun()) return $this;
         
@@ -336,6 +336,13 @@ abstract class Storage extends StandardObject implements Transactions
         {
             $oldsize = $this->getSize($path);
             
+            if ($start < $oldsize) $this->disallowBatch();
+        }
+        
+        $this->SubWriteBytes($path, $start, $data);
+        
+        if (!in_array($path, $this->createdItems))
+        {
             if ($start + strlen($data) > $oldsize)
             {
                 $this->onRollback[] = new PathRollback($path, function()use($path,$oldsize){
@@ -343,7 +350,7 @@ abstract class Storage extends StandardObject implements Transactions
             }
         }
         
-        return $this->SubWriteBytes($path, $start, $data);
+        return $this;
     }
     
     /**
@@ -403,7 +410,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     protected abstract function SubDeleteFile(string $path) : self;
     
-    /** Deletes the empty folder with the given path - NO ROLLBACK */
+    /** Deletes the **empty** folder with the given path - NO ROLLBACK */
     public function DeleteFolder(string $path) : self
     {
         $this->AssertNotReadOnly()->disallowBatch();
@@ -430,7 +437,7 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertNotReadOnly();
         
-        if ($overwrite = $this->isFile($new))
+        if (($overwrite = $this->isFile($new)))
         {
             $this->disallowBatch();            
             if ($this->isDryRun()) return $this;
@@ -441,8 +448,8 @@ abstract class Storage extends StandardObject implements Transactions
         if ($overwrite) $this->deleteRollbacks($new);
         
         if (!in_array($old, $this->createdItems))
-        {   
-            $this->registerRollback($old, function()use($new,$old){
+        {
+            $this->onRollback[] = new PathRollback($new, function()use($old,$new){
                 $this->SubRenameFile($new, $old); });
         }
         
@@ -464,7 +471,7 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertNotReadOnly();                
         
-        if ($overwrite = $this->isFolder($new))
+        if (($overwrite = $this->isFolder($new)))
         {
             $this->disallowBatch();
             if ($this->isDryRun()) return $this;
@@ -474,9 +481,9 @@ abstract class Storage extends StandardObject implements Transactions
         
         if ($overwrite) $this->deleteRollbacks($new);
         
-        if (!in_array($new, $this->createdItems))
+        if (!in_array($old, $this->createdItems))
         {   
-            $this->registerRollback($new, function()use($new,$old){
+            $this->onRollback[] = new PathRollback($new, function()use($old,$new){
                 $this->SubRenameFolder($new, $old); });
         }
         
@@ -508,9 +515,9 @@ abstract class Storage extends StandardObject implements Transactions
         
         if ($overwrite) $this->deleteRollbacks($new);
         
-        if (!in_array($new, $this->createdItems))
+        if (!in_array($old, $this->createdItems))
         {   
-            $this->registerRollback($new, function()use($new,$old){
+            $this->onRollback[] = new PathRollback($new, function()use($old,$new){
                 $this->SubMoveFile($new, $old); });
         }
         
@@ -542,9 +549,9 @@ abstract class Storage extends StandardObject implements Transactions
         
         if ($overwrite) $this->deleteRollbacks($new);
         
-        if (!in_array($new, $this->createdItems))
+        if (!in_array($old, $this->createdItems))
         {
-            $this->registerRollback($new, function()use($new,$old){
+            $this->onRollback[] = new PathRollback($new, function()use($old,$new){
                 $this->SubMoveFolder($new, $old); });
         }
         
@@ -578,7 +585,7 @@ abstract class Storage extends StandardObject implements Transactions
         
         $this->createdItems[] = $new;
         
-        $this->registerRollback($new, function()use($new){
+        $this->onRollback[] = new PathRollback($new, function()use($new){
             $this->SubDeleteFile($new); });
         
         return $this;
@@ -611,7 +618,7 @@ abstract class Storage extends StandardObject implements Transactions
         
         $this->createdItems[] = $new;
         
-        $this->registerRollback($new, function()use($new){
+        $this->onRollback[] = new PathRollback($new, function()use($new){
             $this->SubDeleteFolder($new); });
             
         return $this;

@@ -45,9 +45,6 @@ abstract class Folder extends Item
             'counters__subshares' => new FieldTypes\Counter()   // total number of shares (recursive)
         ));
     }
-    
-    /** Returns true if this folder can be deleted if it no longer exists on storage */
-    public abstract function CanRefreshDelete() : bool;
 
     /** Returns the total size of the folder and its content in bytes */
     public function GetSize() : int { return $this->TryGetCounter('size') ?? 0; }
@@ -187,25 +184,26 @@ abstract class Folder extends Item
         if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true; $this->subrefreshed = $doContents;
-            $this->GetFSImpl()->RefreshFolder($this, $doContents);   
+            $this->GetFSImpl(false)->RefreshFolder($this, $doContents);
         }
+        
         return $this;
     }
     
-    protected bool $notifyDeleted = false; public function isNotifyDeleted() : bool { return $this->notifyDeleted; }
+    protected bool $fsDeleted = false; public function isFSDeleted() : bool { return $this->fsDeleted; }
     
     /** Deletes all subfiles and subfolders, refresh if not isNotify */
-    public function DeleteChildren(bool $isNotify) : void
+    public function DeleteChildren(bool $isNotify = false) : void
     {
+        $this->fsDeleted = $isNotify;
         if (!$isNotify) $this->Refresh(true);
-        
-        $this->notifyDeleted = $isNotify;
+
         $this->DeleteObjects('files');
         $this->DeleteObjects('folders');
     }
     
     /** Deletes this folder and its contents from the DB only */
-    public function NotifyDelete() : void
+    public function NotifyFSDeleted() : void
     {
         $this->DeleteChildren(true);
         

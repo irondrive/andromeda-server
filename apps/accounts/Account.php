@@ -138,7 +138,7 @@ class Account extends AuthEntity
     public function RemoveGroup(Group $group) : self { $this->RemoveObjectRef('groups', $group); return $this; }
     
     /** Returns true if the account is a member of the given group */
-    public function HasGroup(Group $group) : bool { return in_array($group, $this->GetGroups(), true); }
+    public function HasGroup(Group $group) : bool { return array_key_exists($group->ID(), $this->GetGroups()); }
     
     private static array $group_handlers = array();
     

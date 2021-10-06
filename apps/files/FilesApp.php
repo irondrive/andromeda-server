@@ -728,15 +728,14 @@ class FilesApp extends UpgradableApp
             if ($authenticator === null) throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
             
-            $filesystem = $input->TryGetParam('filesystem',SafeParam::TYPE_RANDSTR);
-            
+            $filesystem = $input->GetOptParam('filesystem',SafeParam::TYPE_RANDSTR);
             if ($filesystem !== null)
             {
                 $filesystem = FSManager::TryLoadByID($this->database, $filesystem);
                 if ($filesystem === null) throw new UnknownFilesystemException();
             }
             
-            $folder = Folder::GetRootByAccountAndFS($this->database, $account, $filesystem);
+            $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesystem);
 
             if ($accesslog) $accesslog->LogAccess($folder, null);
         }        

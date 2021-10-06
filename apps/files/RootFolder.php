@@ -56,9 +56,6 @@ class RootFolder extends Folder
         return $this;
     }
     
-    /** Don't let a root folder be deleted if it's missing in storage */
-    public function CanRefreshDelete() : bool { return false; }
-    
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
      * @param ObjectDatabase $database database reference
@@ -123,7 +120,7 @@ class RootFolder extends Folder
         
         foreach ($roots as $folder)
         {
-            if ($unlink) $folder->NotifyDelete(); else $folder->Delete();
+            if ($unlink) $folder->NotifyFSDeleted(); else $folder->Delete();
         }
     }
     
@@ -132,14 +129,14 @@ class RootFolder extends Folder
     {
         foreach (static::LoadRootsByAccount($database, $account) as $folder)
         {
-            if ($folder->GetFilesystem()->isExternal()) $folder->NotifyDelete(); else $folder->Delete();
+            if ($folder->GetFilesystem()->isExternal()) $folder->NotifyFSDeleted(); else $folder->Delete();
         }
     }
     
     /** Deletes the folder and its contents from DB and disk */
     public function Delete() : void
     {
-        $this->DeleteChildren(false);
+        $this->DeleteChildren();
 
         parent::Delete();
     }
