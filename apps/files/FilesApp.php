@@ -150,9 +150,9 @@ class FilesApp extends UpgradableApp
             'commentfolder --folder id --comment text',
             'editcomment --commentid id [--comment text]',
             'deletecomment --commentid id',
-            'sharefile --file id (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
-            'sharefolder --folder id (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetShareOptionsUsage(),
-            'editshare --share id '.Share::GetSetShareOptionsUsage(),
+            'sharefile --file id (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetOptionsUsage(),
+            'sharefolder --folder id (--link bool [--email email] | --account id | --group id | --everyone bool) '.Share::GetSetOptionsUsage(),
+            'editshare --share id '.Share::GetSetOptionsUsage(),
             'deleteshare --share id',
             'shareinfo --sid id [--skey alphanum] [--spassword raw]',
             'listshares [--mine bool]',
@@ -455,7 +455,7 @@ class FilesApp extends UpgradableApp
         
         if ($accesslog) $accesslog->LogDetails('file',$fileobj->ID()); 
         
-        return $fileobj->GetClientObject();
+        return $fileobj->GetClientObject(($owner === $account));
     }
     
     /**
@@ -581,7 +581,7 @@ class FilesApp extends UpgradableApp
             if ($share !== null && !$share->CanUpload())
                 throw new ItemAccessDeniedException();
             
-            return $file->SetContents($infile)->GetClientObject();
+            return $file->SetContents($infile)->GetClientObject(($share === null));
         }
         else
         {
@@ -598,7 +598,7 @@ class FilesApp extends UpgradableApp
             
             if ($accesslog) $accesslog->LogDetails('wlength',$wlength);
             
-            return $file->GetClientObject();
+            return $file->GetClientObject(($share === null));
         }
     }
 
@@ -630,7 +630,7 @@ class FilesApp extends UpgradableApp
 
         $file->SetSize($input->GetParam('size',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_ALWAYS));
         
-        return $file->GetClientObject();
+        return $file->GetClientObject(($share === null));
     }
 
     /**
@@ -648,7 +648,7 @@ class FilesApp extends UpgradableApp
         
         $details = $input->GetOptParam('details',SafeParam::TYPE_BOOL) ?? false;
         
-        return $file->GetClientObject($details);
+        return $file->GetClientObject(($share === null), $details);
     }
 
     /**
@@ -694,13 +694,14 @@ class FilesApp extends UpgradableApp
         
         $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
         $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
+        
         $details = $input->GetOptParam('details',SafeParam::TYPE_BOOL) ?? false;
         
         $public = isset($share) && $share !== null;
 
         if ($public && ($files || $folders)) $folder->CountPublicVisit();
         
-        return $folder->GetClientObject($files,$folders,$recursive,$limit,$offset,$details);
+        return $folder->GetClientObject(($share === null),$details,$files,$folders,$recursive,$limit,$offset);
     }
 
     /**
@@ -718,7 +719,7 @@ class FilesApp extends UpgradableApp
      */
     protected function GetItemByPath(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
-        if (($raccess = $this->TryAuthenticateFolderAccess($input, $authenticator, $accesslog)) !== null)
+        $share = null; if (($raccess = $this->TryAuthenticateFolderAccess($input, $authenticator, $accesslog)) !== null)
         {
             $folder = $raccess->GetItem(); $share = $raccess->GetShare();
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
@@ -767,12 +768,12 @@ class FilesApp extends UpgradableApp
 
         if ($item instanceof File) 
         {
-            $retval = $item->GetClientObject();
+            $retval = $item->GetClientObject(($share === null));
         }
         else if ($item instanceof Folder)
         {
-            if (isset($share) && $share !== null) $item->CountPublicVisit();
-            $retval = $item->GetClientObject(true,true);
+            if ($share !== null) $item->CountPublicVisit();
+            $retval = $item->GetClientObject(($share === null),false,true,true);
         }
         
         $retval['isfile'] = ($item instanceof File); return $retval;
@@ -811,7 +812,7 @@ class FilesApp extends UpgradableApp
         
         if ($input->HasParam('description')) $item->SetDescription($input->GetNullParam('description',SafeParam::TYPE_TEXT));
         
-        return $item->GetClientObject();
+        return $item->GetClientObject(($share === null));
     }    
     
     /**
@@ -834,7 +835,7 @@ class FilesApp extends UpgradableApp
             
         if ($accesslog) $accesslog->LogAccess($file, null);
             
-        return $file->SetOwner($account)->GetClientObject();
+        return $file->SetOwner($account)->GetClientObject(true);
     }
     
     /**
@@ -866,7 +867,7 @@ class FilesApp extends UpgradableApp
         }
         else $folder->SetOwner($account);
         
-        return $folder->SetOwner($account)->GetClientObject();
+        return $folder->SetOwner($account)->GetClientObject(true);
     }    
 
     /**
@@ -897,7 +898,7 @@ class FilesApp extends UpgradableApp
         
         if ($accesslog) $accesslog->LogDetails('folder',$folder->ID()); 
         
-        return $folder->GetClientObject();
+        return $folder->GetClientObject(($owner === $account));
     }
     
     /**
@@ -1006,7 +1007,7 @@ class FilesApp extends UpgradableApp
             
             $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;            
             
-            $retval = $item->CopyToName($owner, $name, $overwrite);
+            $retitem = $item->CopyToName($owner, $name, $overwrite);
         }
         else
         {
@@ -1015,10 +1016,10 @@ class FilesApp extends UpgradableApp
             
             if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
             
-            $retval = $item->SetName($name, $overwrite);
+            $retitem = $item->SetName($name, $overwrite);
         }
         
-        return $retval->GetClientObject();
+        return $retitem->GetClientObject(($share === null));
     }
     
     /**
@@ -1079,7 +1080,7 @@ class FilesApp extends UpgradableApp
         if ($copy) $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
         
         return ($copy ? $itemobj->CopyToParent($owner, $parent, $overwrite)
-                      : $itemobj->SetParent($parent, $overwrite))->GetClientObject();
+                      : $itemobj->SetParent($parent, $overwrite))->GetClientObject(($owner === $account));
     }
     
     /** 
@@ -1447,11 +1448,11 @@ class FilesApp extends UpgradableApp
             $share = Share::Create($this->database, $account, $item, $dest);
         }
         
-        $share->SetShareOptions($input, $oldshare);
+        $share->SetOptions($input, $oldshare);
         
         if ($accesslog) $accesslog->LogDetails('share',$share->ID()); 
         
-        $shares = array($share); $retval = $share->GetClientObject(false, $islink);
+        $shares = array($share); $retval = $share->GetClientObject(false, true, $islink);
         
         if ($islink && ($email = $input->GetOptParam('email',SafeParam::TYPE_EMAIL)) !== null)
         {
@@ -1503,7 +1504,7 @@ class FilesApp extends UpgradableApp
         $origshare = $this->AuthenticateItemObjAccess($input, $authenticator, $accesslog, $share->GetItem())->GetShare();
         if ($origshare !== null && $share->GetOwner() !== $account) throw new ItemAccessDeniedException();
         
-        return $share->SetShareOptions($input, $origshare)->GetClientObject();
+        return $share->SetOptions($input, $origshare)->GetClientObject();
     }
     
     /**
@@ -1547,7 +1548,7 @@ class FilesApp extends UpgradableApp
         
         if ($accesslog) $accesslog->LogAccess($access->GetItem(), $access->GetShare());
         
-        return $access->GetShare()->GetClientObject(true);
+        return $access->GetShare()->GetClientObject(false, false);
     }
     
     /**
@@ -1568,7 +1569,9 @@ class FilesApp extends UpgradableApp
         if ($mine) $shares = Share::LoadByAccountOwner($this->database, $account);
         else $shares = Share::LoadByAccountDest($this->database, $account);
         
-        return array_map(function($share){ return $share->GetClientObject(true); }, $shares);
+        if (!$mine) $shares = array_filter(function(Share $sh){ return !$sh->isExpired(); });
+        
+        return array_map(function($share)use($mine){ return $share->GetClientObject(true, $mine); }, $shares);
     }
     
     /**
@@ -1588,8 +1591,8 @@ class FilesApp extends UpgradableApp
         $files = File::LoadAdoptedByOwner($this->database, $account);
         $folders = Folder::LoadAdoptedByOwner($this->database, $account);
         
-        $files = array_map(function(File $file){ return $file->GetClientObject(); }, $files);
-        $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(); }, $folders);
+        $files = array_map(function(File $file){ return $file->GetClientObject(true); }, $files);
+        $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(true); }, $folders);
         
         return array('files'=>$files, 'folders'=>$folders);
     }

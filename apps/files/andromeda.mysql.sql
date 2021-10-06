@@ -252,6 +252,7 @@ CREATE TABLE `a2obj_apps_files_share` (
   `item` varchar(64) NOT NULL,
   `owner` char(12) NOT NULL,
   `dest` varchar(64) DEFAULT NULL,
+  `label` text DEFAULT NULL,
   `authkey` text DEFAULT NULL,
   `password` text DEFAULT NULL,
   `dates__created` double NOT NULL,

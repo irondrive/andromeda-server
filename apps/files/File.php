@@ -328,9 +328,9 @@ class File extends Item
      * @see File::TryGetClientObject()
      * @throws DeletedByStorageException if the item is deleted
      */
-    public function GetClientObject(bool $details = false) : array
+    public function GetClientObject(bool $owner = false, bool $details = false) : array
     {
-        $retval = $this->TryGetClientObject($details);
+        $retval = $this->TryGetClientObject($owner,$details);
         if ($retval === null) throw new DeletedByStorageException();
         else return $retval;
     }
@@ -338,18 +338,15 @@ class File extends Item
     /**
      * Returns a printable client object of the file
      * @see Item::SubGetClientObject()
-     * @return array|NULL null if deleted, else `{size:int, dates:{created:float,modified:?float,accessed:?float},
-         counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int}}`
+     * @return array|NULL null if deleted, else `{size:int}`
      */
-    public function TryGetClientObject(bool $details = false) : ?array
+    public function TryGetClientObject(bool $owner = false, bool $details = false) : ?array
     {
         $this->Refresh(); if ($this->isDeleted()) return null;
         
-        $data = array_merge(parent::SubGetClientObject($details),array(
-            'size' => $this->GetSize(),
-            'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters()
-        ));
+        $data = parent::SubGetClientObject($owner,$details);
+        
+        $data['size'] = $this->GetSize();
         
         return $data;
     }

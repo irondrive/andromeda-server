@@ -264,10 +264,11 @@ abstract class Folder extends Item
      * @see Folder::TryGetClientObjects()
      * @throws DeletedByStorageException if the item is deleted 
      */
-    public function GetClientObject(bool $files = false, bool $folders = false, bool $recursive = false,
-        ?int $limit = null, ?int $offset = null, bool $details = false) : array
+    public function GetClientObject(bool $owner = false, bool $details = false,
+        bool $files = false, bool $folders = false, bool $recursive = false,
+        ?int $limit = null, ?int $offset = null) : array
     {
-        $retval = $this->TryGetClientObject($files,$folders,$recursive,$limit,$offset,$details);
+        $retval = $this->TryGetClientObject($owner,$details,$files,$folders,$recursive,$limit,$offset);
         if ($retval === null) throw new DeletedByStorageException(); else return $retval;
     }
     
@@ -278,23 +279,20 @@ abstract class Folder extends Item
      * @param bool $recursive if true, show recursive contents
      * @param int $limit max number of items to show
      * @param int $offset offset of items to show
-     * @return array|NULL null if deleted, else `{filesystem:id, files:[id:File], folders:[id:Folder],
-         dates:{created:float, modified:?float, accessed:?float}, counters:{size:int, pubvisits:int, pubdownloads:int, bandwidth:int,
-            subfiles:int, subfolders:int, subshares:int, likes:int, dislikes:int}}`
+     * @return array|NULL null if deleted, else `{files:[id:File], folders:[id:Folder], \
+         counters:{size:int, pubvisits:int, subfiles:int, subfolders:int}}` \
+         if $owner, add: `{counters:{subshares:int}}`
      * @see Item::SubGetClientObject()
      */
-    public function TryGetClientObject(bool $files = false, bool $folders = false, bool $recursive = false, 
-        ?int $limit = null, ?int $offset = null, bool $details = false) : ?array
+    public function TryGetClientObject(bool $owner = false, bool $details = false,
+        bool $files = false, bool $folders = false, bool $recursive = false, 
+        ?int $limit = null, ?int $offset = null) : ?array
     {
         $this->Refresh($files || $folders); 
         
         if ($this->isDeleted()) return null;
         
         $this->SetAccessed();
-
-        $data = array_merge(parent::SubGetClientObject($details),array(
-            'filesystem' => $this->GetObjectID('filesystem')
-        ));        
         
         if ($recursive && ($files || $folders))
         {
@@ -319,15 +317,16 @@ abstract class Folder extends Item
             if ($files) $subfiles = $this->GetFiles($limit,$offset);
         }
         
-        if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder){ 
-            return $folder->TryGetClientObject(); }, $subfolders));
+        if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder)use($owner){ 
+            return $folder->TryGetClientObject($owner); }, $subfolders));
         
-        if ($folders) $data['files'] = array_filter(array_map(function(File $file){ 
-            return $file->TryGetClientObject(); }, $subfiles));
-        
-        $data['dates'] = $this->GetAllDates();
-        $data['counters'] = $this->GetAllCounters();
+        if ($folders) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
+            return $file->TryGetClientObject($owner); }, $subfiles));
 
+        $data = array_merge($data, parent::SubGetClientObject($owner,$details));
+        
+        if (!$owner) unset($data['counters']['subshares']);
+        
         return $data;
     }
 }
