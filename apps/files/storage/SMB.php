@@ -92,9 +92,13 @@ class SMB extends StandardFWrapper
         if (isset($this->state)) return $this;
         
         $state = smbclient_state_new();
-        if ($state === false) throw new SMBStateInitException();
         
-        if (smbclient_state_init($state) === 1)
+        if (state === false || smbclient_state_init($state) === 1)
+            throw new SMBStateInitException();
+        
+        if (!smbclient_option_set($state, 
+            SMBCLIENT_OPT_ENCRYPT_LEVEL, 
+            SMBCLIENT_ENCRYPTLEVEL_REQUEST))
             throw new SMBStateInitException();
         
         if (!is_readable($this->GetFullURL()))

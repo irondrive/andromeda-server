@@ -113,8 +113,15 @@ class FSManager extends StandardObject
     /** Changes the filesystem impl enum type to the given value */
     private function SetType(int $type) { unset($this->interface); return $this->SetScalar('type',$type); }
     
-    /** Activates and returns the underlying storage */
-    public function GetStorage() : Storage { return $this->GetObject('storage')->Activate(); }  
+    /** 
+     * Returns the underlying storage 
+     * @param bool activate if true, activate
+     */
+    public function GetStorage(bool $activate = true) : Storage 
+    { 
+        $ret = $this->GetObject('storage');
+        return $activate ? $ret->Activate() : $ret;
+    }  
     
     /** Returns the type of the underlying storage */
     public function GetStorageType() : string { return $this->GetObjectType('storage'); }
@@ -351,7 +358,7 @@ class FSManager extends StandardObject
         if ($priv) 
         {
             $data['dates'] = $this->GetAllDates();
-            $data['storage'] = $this->GetStorage()->GetClientObject();
+            $data['storage'] = $this->GetStorage(false)->GetClientObject();
         }
         
         return $data;

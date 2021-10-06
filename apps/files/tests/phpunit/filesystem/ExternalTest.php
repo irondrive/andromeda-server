@@ -38,14 +38,18 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
     {        
         $folder = $this->getMockRoot($rpath);
         
-        $dbfiles = array_map(function($name)use($folder,$dbfiles){ return $this->getMockItem(File::class, $name, $folder); }, $dbfiles);
-        $dbfolders = array_map(function($name)use($folder,$dbfolders){ return $this->getMockItem(SubFolder::class, $name, $folder); }, $dbfolders);
+        $dbfiles = array_map(function($name)use($folder,$dbfiles){ 
+            return $this->getMockItem(File::class, $name, $folder); }, $dbfiles);
+        $dbfolders = array_map(function($name)use($folder,$dbfolders){ 
+            return $this->getMockItem(SubFolder::class, $name, $folder); }, $dbfolders);
         
         foreach ($dbfiles as $fname=>$dbfile)
-            $dbfile->method('Delete')->will($this->returnCallback(function()use(&$dbfiles,$fname){ unset($dbfiles[$fname]); }));
+            $dbfile->method('NotifyFSDeleted')->will($this->returnCallback(
+                function()use(&$dbfiles,$fname){ unset($dbfiles[$fname]); }));
         
         foreach ($dbfolders as $fname=>$dbfolder)
-            $dbfolder->method('Delete')->will($this->returnCallback(function()use(&$dbfolders,$fname){ unset($dbfolders[$fname]); }));
+            $dbfolder->method('NotifyFSDeleted')->will($this->returnCallback(
+                function()use(&$dbfolders,$fname){ unset($dbfolders[$fname]); }));
             
         $fsfiles = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfiles);
         $fsfolders = array_map(function($name)use($rpath){ return "$rpath/$name"; }, $fsfolders);
@@ -82,14 +86,16 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $folder->method('GetFiles')->will($this->returnCallback(function()use($dbfiles){ return $dbfiles; }));
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
         
-        $fileSw = (new StaticWrapper(File::class))->_override('NotifyCreate',function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
+        $fileSw = (new StaticWrapper(File::class))->_override('NotifyCreate',
+            function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
         {
             $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles),true));
 
             return $dbfiles[] = $this->getMockItem(File::class, $name, $parent);
         });
         
-        $folderSw = (new StaticWrapper(SubFolder::class))->_override('NotifyCreate',function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
+        $folderSw = (new StaticWrapper(SubFolder::class))->_override('NotifyCreate',
+            function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
         {
             $this->assertFalse(in_array($name, array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders),true));
             
@@ -131,7 +137,7 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $this->testFolderSync($root, array(), array('myfolder'), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
         $this->testFolderSync($root, array('myfile'), array('myfolder'), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
         
-        $this->testFolderSync($root, array('1','2','3','4','5','6','7'), array(), array('2','3','5'), array());
+        $this->testFolderSync($root, array('1','2','3b','4','5','6','7'), array(), array('2','3b','5'), array());
         $this->testFolderSync($root, array(), array('2','3','5'), array(), array('1','2','3','4','5','6','7'));
         
         $this->testFolderSync($root, array('3','4','29','8','1','5'), array('2','7','6'), array('22','27','26'), array('23','24','9','0','00','25'));

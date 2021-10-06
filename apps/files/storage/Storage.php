@@ -209,9 +209,9 @@ abstract class Storage extends StandardObject implements Transactions
     /** Asserts that the folder with the given path exists */
     public function CreateFolder(string $path) : self
     {
-        if ($this->isFolder($path)) return $this;
-        
         $this->AssertNotReadOnly();
+        
+        if ($this->isFolder($path)) return $this;
         
         $this->SubCreateFolder($path);
         
@@ -236,7 +236,7 @@ abstract class Storage extends StandardObject implements Transactions
      */
     public function CreateFile(string $path) : self
     {
-        $this->AssertNotReadOnly();        
+        $this->AssertNotReadOnly();
         
         if ($overwrite = $this->isFile($path))
         {
@@ -330,13 +330,15 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertNotReadOnly();
         
-        if ($this->isDryRun()) return $this;
-        
         if (!in_array($path, $this->createdItems))
         {
             $oldsize = $this->getSize($path);
             
-            if ($start < $oldsize) $this->disallowBatch();
+            if ($start < $oldsize) 
+            {
+                $this->disallowBatch();
+                if ($this->isDryRun()) return $this;
+            }
         }
         
         $this->SubWriteBytes($path, $start, $data);
