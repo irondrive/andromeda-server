@@ -44,6 +44,7 @@ class Share extends AuthObject
             'item' => new FieldTypes\ObjectPoly(Item::Class, 'shares'), // item being shared
             'owner' => new FieldTypes\ObjectRef(Account::class),    // the account that made the share
             'dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
+            'label' => null, // user-supplied label
             'password' => null, // possible password set on the share
             'dates__accessed' => new FieldTypes\Scalar(null, true),
             'counters__accessed' => new FieldTypes\Counter(), // the count of accesses
@@ -181,16 +182,16 @@ class Share extends AuthObject
         return $this;
     }
     
-    /** Returns the command usage for SetShareOptions() */
-    public static function GetSetShareOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--keepowner bool] ".
-                                                                       "[--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
+    /** Returns the command usage for SetOptions() */
+    public static function GetSetOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--keepowner bool] ".
+                                                                  "[--label text] [--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
     
     /**
      * Modifies share permissions and properties from the given input
      * @param Share $access if not null, the share object granting this request access
      * @return $this
      */
-    public function SetShareOptions(Input $input, ?Share $access = null) : self
+    public function SetOptions(Input $input, ?Share $access = null) : self
     {
         $f_read =    $input->GetOptParam('read',SafeParam::TYPE_BOOL);
         $f_upload =  $input->GetOptParam('upload',SafeParam::TYPE_BOOL);
@@ -205,11 +206,18 @@ class Share extends AuthObject
         if ($f_social !== null)  $this->SetFeature('social', $f_social && ($access === null || $access->CanSocial()));
         if ($f_reshare !== null) $this->SetFeature('reshare', $f_reshare && ($access === null || $access->CanReshare()));
         if ($f_keepown !== null) $this->SetFeature('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
-                
-        if ($input->HasParam('spassword')) $this->SetPassword($input->GetNullParam('spassword',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
         
-        if ($input->HasParam('expires')) $this->SetDate('expires',$input->GetNullParam('expires',SafeParam::TYPE_UINT));
-        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',$input->GetNullParam('maxaccess',SafeParam::TYPE_UINT));
+        if ($input->HasParam('label')) $this->SetScalar('label',
+            $input->GetNullParam('label',SafeParam::TYPE_TEXT));
+                
+        if ($input->HasParam('spassword')) $this->SetPassword(
+            $input->GetNullParam('spassword',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
+        
+        if ($input->HasParam('expires')) $this->SetDate('expires',
+            $input->GetNullParam('expires',SafeParam::TYPE_UINT));
+        
+        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
+            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT));
         
         return $this;
     }
@@ -302,30 +310,44 @@ class Share extends AuthObject
     /**
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
-     * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, password:bool, dest:?id, desttype:?string,
-        expired:bool, dates:{created:float, accessed:?float, expires:?float}, counters:{accessed:int}, limits:{accessed:?int},
-        features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool}}`
+     * @param bool $owner if true, we are showing the owner of the share
+     * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
+        expired:bool, dates:{created:float, expires:?float}, features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool}}` \
+        if admin, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
      * @see Item::SubGetClientObject()
      * @see AuthObject::GetClientObject()
      */
-    public function GetClientObject(bool $item = false, bool $secret = false) : array
+    public function GetClientObject(bool $item = false, bool $owner = true, bool $secret = false) : array
     {
         $data = array(
             'id' => $this->ID(),
             'owner' => $this->GetOwnerID(),
+            
             'item' => $item ? $this->GetItem()->GetClientObject() : $this->GetObjectID('item'),
             'itemtype' => Utilities::ShortClassName($this->GetObjectType('item')),
+            
             'islink' => $this->IsLink(),
-            'password' => $this->NeedsPassword(),
+            'needpass' => $this->NeedsPassword(),
+            
             'dest' => $this->TryGetObjectID('dest'),
             'desttype' => Utilities::ShortClassName($this->TryGetObjectType('dest')),
+            
             'expired' => $this->IsExpired(),
-            'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters(),
-            'limits' => $this->GetAllCounterLimits(),
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'expires' => $this->TryGetDate('expires')),
             'features' => $this->GetAllFeatures()
         );
         
+        if ($owner)
+        {
+            $data['label'] = $this->TryGetScalar('label');
+            
+            $data['dates'] = $this->GetAllDates();
+            $data['counters'] = $this->GetAllCounters();
+            $data['limits'] = $this->GetAllCounterLimits();
+        }
+
         if ($secret) $data['authkey'] = $this->GetAuthKey();
         
         return $data;

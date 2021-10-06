@@ -467,33 +467,39 @@ abstract class Item extends StandardObject
 
     /**
      * Returns a printable client object of this item
-     * @param bool $details if true, show tags and shares
-     * @return array|NULL `{id:id, name:?string, owner:?string, parent:?string}` \
-         if details, add: `{tags:[id:Tag], shares:[id:Share]}`
+     * @param bool $owner if true, show owner-level details
+     * @param bool $details if true, show tag and share objects
+     * @return array|NULL `{id:id, name:?string, owner:?string, parent:?string, filesystem:string, \
+        dates:{created:float, modified:?float}, counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int, refs_likes:int, refs_tags:int, refs_comments:int}}` \
+         if $owner, add: `{counters:{refs_shares:int}, dates:{accessed:?float}}`, if $details, add: `{tags:[id:Tag]}`, if $details && $owner, add `{shares:[id:Share]}`
      * @see Tag::GetClientObject()
      * @see Share::GetClientObject()
      */
-    public function SubGetClientObject(bool $details = false) : ?array
+    public function SubGetClientObject(bool $owner = false, bool $details = false) : ?array
     {
         $data = array(
             'id' => $this->ID(),
             'name' => $this->GetName(),
             'owner' => $this->GetOwnerID(),
             'parent' => $this->GetParentID(),
-            'description' => $this->GetDescription()
+            'filesystem' => $this->GetFilesystemID(),
+            'description' => $this->GetDescription(),            
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'modified' => $this->TryGetDate('modified')),
+            'counters' => $this->GetAllCounters()
         );
-                
-        $mapobj = function($e) { return $e->GetClientObject(); };
-
-        if ($details)
-        {                
-            $data['tags'] = array_map($mapobj, $this->GetTags());
-            $data['shares'] = array_map($mapobj, $this->GetShares());
-        }
+        
+        if ($owner) $data['dates'] = $this->GetAllDates();
+        else unset($data['counters']['refs_shares']);
+        
+        if ($details) $data['tags'] = array_map(function(Tag $e) { return $e->GetClientObject(); }, $this->GetTags());
+        
+        if ($owner && $details) $data['shares'] = array_map(function(Share $e) { return $e->GetClientObject(); }, $this->GetShares());
         
         return $data;
     }
     
-    public abstract function GetClientObject() : array;
-    public abstract function TryGetClientObject() : ?array;
+    public abstract function GetClientObject(bool $owner = false, bool $full = false) : array;
+    public abstract function TryGetClientObject(bool $owner = false, bool $full = false) : ?array;
 }
