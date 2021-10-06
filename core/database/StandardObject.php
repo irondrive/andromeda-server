@@ -197,8 +197,8 @@ abstract class StandardObject extends BaseObject
         $counters = array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
             $this->GetAllScalars('counters',$vfunc));
         
-        foreach (array_keys($this->objectrefs) as $refskey) 
-            $counters["refs_$refskey"] = (int)($this->objectrefs[$refskey]->GetValue());
+        foreach ($this->objectrefs as $refskey=>$refsval) 
+            $counters["refs_$refskey"] = (int)($refsval->GetValue());
         
         return $counters;
     }
@@ -221,17 +221,17 @@ abstract class StandardObject extends BaseObject
     protected function GetAllScalars(?string $prefix, callable $vfunc = null) : array
     {
         $output = array(); 
-        foreach (array_keys($this->scalars) as $key)
+        foreach ($this->scalars as $key=>$val)
         {
             if ($prefix !== null)
             {
                 $keyarr = explode("__",$key,2); 
                 if ($keyarr[0] === $prefix)
                 {
-                    $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $this->TryGetScalar($key);
+                    $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $val->GetValue();
                 }
             }
-            else $output[$key] = $this->TryGetScalar($key);
+            else $output[$key] = $val->GetValue();
         }
         return $output;
     }

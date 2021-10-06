@@ -418,7 +418,7 @@ abstract class Item extends StandardObject
         return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareToEveryone(); }, $account); }
     
     /** Deletes the item from the DB only */
-    public abstract function NotifyDelete() : void;
+    public abstract function NotifyFSDeleted() : void;
     
     /** Deleting an item also deletes all of its component objects (likes, tags, comments, shares) */
     public function Delete() : void

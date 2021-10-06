@@ -10,8 +10,6 @@ class SubFolder extends Folder
 {
     public static function GetObjClass(array $row) : string { return self::class; }
     
-    public function CanRefreshDelete() : bool { return true; }
-    
     public function GetName() : string { return $this->GetScalar('name'); }
     public function GetParent() : Folder { return $this->GetObject('parent'); }
     public function GetParentID() : string { return $this->GetObjectID('parent'); }
@@ -36,7 +34,7 @@ class SubFolder extends Folder
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
         $folder = parent::CheckName($name, $overwrite, true);
-        if ($folder !== null) $folder->DeleteChildren(false);
+        if ($folder !== null) $folder->DeleteChildren();
 
         $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
@@ -48,7 +46,7 @@ class SubFolder extends Folder
         $this->CheckIsNotChildOrSelf($parent);
         
         $folder = parent::CheckParent($parent, $overwrite, true);
-        if ($folder !== null) $folder->DeleteChildren(false);
+        if ($folder !== null) $folder->DeleteChildren();
     
         $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
@@ -89,12 +87,20 @@ class SubFolder extends Folder
     /** Deletes the folder and its contents from DB and disk */
     public function Delete() : void
     {
-        $isNotify = $this->GetParent()->isNotifyDeleted();
+        if ($this->GetParent()->isFSDeleted())
+            { $this->NotifyFSDeleted(); return; }
         
-        $this->DeleteChildren($isNotify);
-        
-        if (!$isNotify) $this->GetFSImpl(false)->DeleteFolder($this);
+        if (!$this->isDeleted())
+        {
+            // calls refresh, might delete
+            $this->DeleteChildren();
             
+            if (!$this->isDeleted())
+            {
+                $this->GetFSImpl(false)->DeleteFolder($this);
+            }
+        }
+
         parent::Delete();
     }    
 }

@@ -104,7 +104,7 @@ class AJAX extends IOInterface
         if (empty($get['action'])) throw new NoAppActionException();
         $action = $get['action']; unset($request['action']);
         
-        foreach (array_keys($get) as $key)
+        foreach ($get as $key=>$val)
         {
             if (strpos($key,'password') !== false || strpos($key,'auth_') === 0)
                 throw new IllegalGetFieldException($key);
@@ -112,9 +112,9 @@ class AJAX extends IOInterface
         
         $params = new SafeParams();
         
-        foreach (array_keys($request) as $key)
+        foreach ($request as $key=>$val)
         {
-            $params->AddParam($key, $request[$key]);
+            $params->AddParam($key, $val);
         }
         
         $pfiles = array(); foreach ($files as $key=>$file)

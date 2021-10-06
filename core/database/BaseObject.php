@@ -776,12 +776,15 @@ abstract class BaseObject
      */
     public function isDeleted() : bool { return $this->deleted; }
     
-    /** Unsets all object links but does not actually call DELETE on the DB object */
-    public function NotifyDeleted() : void { $this->deleted = true; $this->Delete(); }
+    /** whether or not this object has been deleted by DB */
+    protected bool $dbDeleted = false;
+    
+    /** Deletes this object without sending to the DB */
+    public function NotifyDBDeleted() : void { $this->dbDeleted = true; $this->Delete(); }
     
     /** Deletes this object from the DB */
     public function Delete() : void
-    {        
+    {
         foreach ($this->objects as $field=>$ref)
         {            
             if ($ref->GetValue()) $this->SetObject($field, null);
@@ -797,7 +800,8 @@ abstract class BaseObject
             }
         }
         
-        if (!$this->deleted) $this->database->DeleteObject($this); 
+        if (!$this->deleted && !$this->dbDeleted) 
+            $this->database->DeleteObject($this); 
         
         $this->deleted = true;
     }

@@ -134,7 +134,7 @@ class File extends Item
     public function Refresh() : self
     {
         if ($this->refreshed) return $this;
-        
+
         if ($this->isCreated() || $this->isDeleted()) return $this;
 
         $this->refreshed = true;
@@ -285,8 +285,8 @@ class File extends Item
     }    
     
     /** Deletes the file from the DB only */
-    public function NotifyDelete() : void 
-    { 
+    public function NotifyFSDeleted() : void 
+    {
         if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){
                 if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
@@ -297,10 +297,17 @@ class File extends Item
     /** Deletes the file from both the DB and disk */
     public function Delete() : void
     {
-        if (!$this->GetParent()->isNotifyDeleted()) 
-            $this->GetFSImpl(false)->DeleteFile($this);
+        if (!$this->isDeleted() && !$this->GetParent()->isFSDeleted()) 
+        {
+            $this->Refresh(); // might delete
+            
+            if (!$this->isDeleted())
+            {
+                $this->GetFSImpl(false)->DeleteFile($this);
+            }
+        }
         
-        $this->NotifyDelete();
+        $this->NotifyFSDeleted();
     }    
     
     /**
