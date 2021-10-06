@@ -77,10 +77,14 @@ class External extends BaseFileFS
     {
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
-        
-        // missing root is usually the result of a config error
-        if (!($folder instanceof RootFolder) && !$storage->isFolder($path)) { 
-            $folder->NotifyFSDeleted(); return $this; }
+
+        if (!$storage->isFolder($path))
+        {
+            // missing root is usually the result of a config error
+            if (!($folder instanceof RootFolder))
+                $folder->NotifyFSDeleted();
+            return $this;
+        }
                 
         $stat = $storage->ItemStat($path);
         if ($stat->atime) $folder->SetAccessed($stat->atime);
@@ -89,26 +93,20 @@ class External extends BaseFileFS
 
         if ($doContents) 
         {
-            if (!$storage->isFolder($path)) { $folder->NotifyFSDeleted(); return $this; }
+            $dbitems = array();
             
-            $fsnames = $storage->ReadFolder($path);
-            
-            $dbitems = array(); 
             foreach ($folder->GetFiles() as $file) $dbitems[$file->GetName()] = $file;
             foreach ($folder->GetFolders() as $folder) $dbitems[$folder->GetName()] = $folder;
             
-            foreach ($fsnames as $fsname)
+            foreach ($storage->ReadFolder($path) as $fsname)
             {
                 $fspath = $path.'/'.$fsname;
                 $isfile = $storage->isFile($fspath);
                 if (!$isfile && !$storage->isFolder($fspath)) continue;
                 
-                $dbitem = null; if (array_key_exists($fsname, $dbitems))
-                {
-                    $dbitem = $dbitems[$fsname]; unset($dbitems[$fsname]);
-                }
-                
-                if ($dbitem === null) 
+                if (array_key_exists($fsname, $dbitems))
+                    unset($dbitems[$fsname]);
+                else
                 {
                     $sw = $isfile ? $fileSw : $folderSw;
                     $class = $isfile ? File::class : SubFolder::class;
@@ -124,7 +122,8 @@ class External extends BaseFileFS
                 }
             }
             
-            foreach ($dbitems as $dbitem) $dbitem->Delete(); // prune extras
+            foreach ($dbitems as $dbitem) 
+                $dbitem->NotifyFSDeleted(); // prune extras
         }
         
         return $this;        

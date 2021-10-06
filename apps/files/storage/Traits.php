@@ -51,7 +51,7 @@ trait OptFieldCrypt
     
     /**
      * Returns the printable client object of this trait
-     * @return array fields mapped to `{field_crypt:bool}`
+     * @return array fields mapped to `{field_iscrypt:bool}`
      */
     public function GetClientObject() : array
     {
@@ -59,7 +59,7 @@ trait OptFieldCrypt
         
         foreach (static::getEncryptedFields() as $field)
         {
-            $retval[$field."_crypt"] = $this->isFieldEncrypted($field);
+            $retval[$field."_iscrypt"] = $this->isFieldEncrypted($field);
         }
 
         return array_merge(parent::GetClientObject(), $retval);

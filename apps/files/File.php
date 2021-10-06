@@ -299,12 +299,7 @@ class File extends Item
     {
         if (!$this->isDeleted() && !$this->GetParent()->isFSDeleted()) 
         {
-            $this->Refresh(); // might delete
-            
-            if (!$this->isDeleted())
-            {
-                $this->GetFSImpl(false)->DeleteFile($this);
-            }
+            $this->GetFSImpl(false)->DeleteFile($this);
         }
         
         $this->NotifyFSDeleted();
