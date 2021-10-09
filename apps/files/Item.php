@@ -470,8 +470,9 @@ abstract class Item extends StandardObject
      * @param bool $owner if true, show owner-level details
      * @param bool $details if true, show tag and share objects
      * @return array|NULL `{id:id, name:?string, owner:?string, parent:?string, filesystem:string, \
-        dates:{created:float, modified:?float}, counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int, refs_likes:int, refs_tags:int, refs_comments:int}}` \
-         if $owner, add: `{counters:{refs_shares:int}, dates:{accessed:?float}}`, if $details, add: `{tags:[id:Tag]}`, if $details && $owner, add `{shares:[id:Share]}`
+         dates:{created:float, modified:?float}, counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int, tags:int, comments:int}}` \
+         if $owner, add: `{counters:{shares:int}, dates:{accessed:?float}}`, \
+         if $details, add: `{tags:[id:Tag]}`, if $details && $owner, add `{shares:[id:Share]}`
      * @see Tag::GetClientObject()
      * @see Share::GetClientObject()
      */
@@ -486,16 +487,29 @@ abstract class Item extends StandardObject
             'description' => $this->GetDescription(),            
             'dates' => array(
                 'created' => $this->GetDateCreated(),
-                'modified' => $this->TryGetDate('modified')),
-            'counters' => $this->GetAllCounters()
+                'modified' => $this->TryGetDate('modified')
+            ),
+            'counters' => array(
+                'pubdownloads' => $this->GetPublicDownloads(),
+                'bandwidth' => $this->GetBandwidth(),
+                'likes' => $this->GetCounter('likes'),
+                'dislikes' => $this->GetCounter('dislikes'),
+                'tags' => $this->CountObjectRefs('tags'),
+                'comments' => $this->CountObjectRefs('comments')
+            )
         );
         
-        if ($owner) $data['dates'] = $this->GetAllDates();
-        else unset($data['counters']['refs_shares']);
+        if ($owner) 
+        {
+            $data['dates']['accessed'] = $this->TryGetDate('accessed');
+            $data['counters']['shares'] = $this->GetNumShares();
+        }
         
-        if ($details) $data['tags'] = array_map(function(Tag $e) { return $e->GetClientObject(); }, $this->GetTags());
+        if ($details) $data['tags'] = array_map(function(Tag $e) {
+            return $e->GetClientObject(); }, $this->GetTags());
         
-        if ($owner && $details) $data['shares'] = array_map(function(Share $e) { return $e->GetClientObject(); }, $this->GetShares());
+        if ($owner && $details) $data['shares'] = array_map(function(Share $e) {
+            return $e->GetClientObject(); }, $this->GetShares());
         
         return $data;
     }

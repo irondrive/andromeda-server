@@ -312,8 +312,8 @@ class Share extends AuthObject
      * @param bool $item if true, show the item client object
      * @param bool $owner if true, we are showing the owner of the share
      * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
-        expired:bool, dates:{created:float, expires:?float}, features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool}}` \
-        if admin, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
+        expired:bool, dates:{created:float, expires:?float}, features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
+        if owner, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
      * @see Item::SubGetClientObject()
      * @see AuthObject::GetClientObject()
      */
@@ -335,17 +335,29 @@ class Share extends AuthObject
             'expired' => $this->IsExpired(),
             'dates' => array(
                 'created' => $this->GetDateCreated(),
-                'expires' => $this->TryGetDate('expires')),
-            'features' => $this->GetAllFeatures()
+                'expires' => $this->TryGetDate('expires')
+            ),
+            'features' => array(
+                'read' => $this->CanRead(),
+                'upload' => $this->CanUpload(),
+                'modify' => $this->CanModify(),
+                'social '=> $this->CanSocial(),
+                'reshare' => $this->CanReshare(),
+                'keepowner' => $this->KeepOwner()
+            )
         );
         
         if ($owner)
         {
             $data['label'] = $this->TryGetScalar('label');
             
-            $data['dates'] = $this->GetAllDates();
-            $data['counters'] = $this->GetAllCounters();
-            $data['limits'] = $this->GetAllCounterLimits();
+            $data['dates']['accessed'] = $this->TryGetDate('accessed');
+            
+            $data['counters'] = array(
+                'accessed' => $this->GetCounter('accessed'));
+            
+            $data['limits'] = array(
+                'accessed' => $this->TryGetCounterLimit('accessed'));
         }
 
         if ($secret) $data['authkey'] = $this->GetAuthKey();

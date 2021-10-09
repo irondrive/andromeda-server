@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/Database.php"); use Andromeda\Core\Database\DatabaseException;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -167,15 +168,21 @@ class TimedStats extends StandardObject
     
     /**
      * Returns a printable client object of the stats
-     * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, counters:{
-        size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
+     * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, 
+        counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      */
     public function GetClientObject() : array
     {
-        return array(
+        $retval = array(
             'iscurrent' => $this->isCurrent(),
-            'dates' => $this->GetAllDates(),
-            'counters' => $this->GetAllCounters()
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'timestart' => $this->GetTimeStart()
+            ),
+            'counters' => Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
+                array('size','items','shares','bandwidth','pubdownloads'))
         );
+        
+        return $retval;
     }
 }

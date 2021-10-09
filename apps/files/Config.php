@@ -85,7 +85,9 @@ class Config extends DBVersion
                 'rwchunksize' => $this->GetRWChunkSize(),
                 'crchunksize' => $this->GetCryptoChunkSize(),
                 'upload_maxsize' => $this->TryGetScalar('upload_maxsize'),
-                'features' => $this->GetAllFeatures()
+                'features' => array(
+                    'timedstats'=>$this->GetAllowTimedStats()
+                )
             ));
         }
         

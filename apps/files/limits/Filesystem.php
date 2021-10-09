@@ -43,6 +43,21 @@ trait FilesystemCommon
     {
         return static::BaseConfigLimits($database, $filesystem, $input);
     }
+    
+    /**
+     * @return array `features:{track_items:bool,track_dlstats:bool}`
+     * @see Total::GetClientObject()
+     * @see Timed::GetClientObject()
+     */
+    public function GetClientObject() : array
+    {
+        $data = parent::GetClientObject();
+        
+        $data['features']['track_items'] = $this->GetFeature('track_items');
+        $data['features']['track_dlstats'] = $this->GetFeature('track_dlstats');
+        
+        return $data;
+    }
 }
 
 /** Concrete class providing filesystem config and total stats */
@@ -75,6 +90,8 @@ class FilesystemTotal extends Total
 class FilesystemTimed extends Timed 
 { 
     use FilesystemCommon; 
+    
+    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge() ?? static::MAX_AGE_FOREVER; }
 
     /**
      * Loads all timed limits for the given filesystem
@@ -87,7 +104,7 @@ class FilesystemTimed extends Timed
         return static::LoadAllForClient($database, $filesystem);
     }    
     
-    public static function GetTimedUsage() : string { return "[--max_stats_age -1 (forever)|0 (none)|int]"; }
+    public static function GetTimedUsage() : string { return "[--max_stats_age ".static::MAX_AGE_FOREVER." (forever)|0 (none)|int]"; }
     
     protected function SetTimedLimits(Input $input) : void
     {

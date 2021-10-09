@@ -701,7 +701,7 @@ class FilesApp extends UpgradableApp
 
         if ($public && ($files || $folders)) $folder->CountPublicVisit();
         
-        return $folder->GetClientObject(($share === null),$details,$files,$folders,$recursive,$limit,$offset);
+        return $folder->GetClientObject(!$public,$details,$files,$folders,$recursive,$limit,$offset);
     }
 
     /**
@@ -1795,7 +1795,7 @@ class FilesApp extends UpgradableApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL Limit | [id:Limit]
-     * @see Limits\Base::GetClientObject()
+     * @see Limits\Total::GetClientObject()
      */
     protected function GetLimits(Input $input, ?Authenticator $authenticator) : ?array
     {
@@ -1826,7 +1826,7 @@ class FilesApp extends UpgradableApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL Limit | [id:Limit]
-     * @see Limits\Base::GetClientObject()
+     * @see Limits\Timed::GetClientObject()
      */
     protected function GetTimedLimits(Input $input, ?Authenticator $authenticator) : array
     {
@@ -1925,7 +1925,7 @@ class FilesApp extends UpgradableApp
      * Configures total limits for the given object
      * @throws AuthenticationFailedException if not admin
      * @return array Limits
-     * @see Limits\Base::GetClientObject()
+     * @see Limits\Total::GetClientObject()
      */
     protected function ConfigLimits(Input $input, ?Authenticator $authenticator) : array
     {
@@ -1943,7 +1943,7 @@ class FilesApp extends UpgradableApp
      * Configures timed limits for the given object
      * @throws AuthenticationFailedException if not admin
      * @return array Limits
-     * @see Limits\Base::GetClientObject()
+     * @see Limits\Timed::GetClientObject()
      */
     protected function ConfigTimedLimits(Input $input, ?Authenticator $authenticator) : array
     {

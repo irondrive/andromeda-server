@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -18,7 +19,7 @@ require_once(ROOT."/apps/files/limits/Timed.php");
 require_once(ROOT."/apps/files/limits/AuthObj.php");
 require_once(ROOT."/apps/files/limits/Group.php");
 
-interface IAccountLimit { }
+interface IAccountLimit { } // AccountCommon
 
 /**
  * Account limits common between total and timed
@@ -49,6 +50,8 @@ trait AccountCommon
         return ($obj !== null) ? $obj->GetLimitedObject() : null;
     }
     
+    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge(); } // not null
+    
     /** Returns the object from which this account limit inherits its max stats age */
     public function GetsMaxStatsAgeFrom() : ?BaseObject
     {
@@ -58,18 +61,24 @@ trait AccountCommon
     /**
      * Returns a printable client object that includes property inherit sources
      * @param bool $isadmin if true, show property inherit sources
-     * @return array `{features_from:[id:class], limits_from:[id:class]}`
+     * @return array `{features:{track_items:bool,track_dlstats:bool}, features_from:"id:class", limits_from:"id:class"}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
     public function GetClientObject(bool $isadmin = false) : array
     {
         $data = parent::GetClientObject();
+
+        $data['features']['track_items'] = $this->GetFeature('track_items');
+        $data['features']['track_dlstats'] = $this->GetFeature('track_dlstats');
         
         if ($isadmin)
         {
-            $data['features_from'] = $this->ToInheritsScalarFromClient([$this,'GetAllFeatures']);
-            $data['limits_from'] = $this->ToInheritsScalarFromClient([$this,'GetAllCounterLimits']);            
+            $data['features_from'] = Utilities::array_map_keys(function($p){
+                return static::toString($this->TryGetInheritsScalarFrom("features__$p")); }, array_keys($data['features']));
+            
+            $data['limits_from'] = Utilities::array_map_keys(function($p){
+                return static::toString($this->TryGetInheritsScalarFrom("counters_limits__$p")); }, array_keys($data['limits']));
         }
         
         return $data;
@@ -320,7 +329,7 @@ class AccountTimed extends AuthEntityTimed implements IAccountLimit
     }
     
     protected function GetInheritedFields() : array { return array(
-        'max_stats_age' => null,
+        'max_stats_age' => static::MAX_AGE_FOREVER,
         'features__track_items' => false,
         'features__track_dlstats' => false,
         'counters_limits__pubdownloads' => null,

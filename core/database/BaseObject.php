@@ -279,18 +279,11 @@ abstract class BaseObject
     /** Returns the unique ID of the object */
     public function ID() : string { return $this->scalars['id']->GetValue(); }
     
-    /** 
-     * Returns an array of the object's ID and its class name 
-     * @return array<string, string> ID => class name
-     */
-    public function getIDType() : array { return array($this->ID() => Utilities::ShortClassName(static::class)); }
-    public function __toString() : string { return $this->ID().' => '.Utilities::ShortClassName(static::class); }
+    /** Returns the string "id:class" where id is the object ID and class is its short class name */
+    public function __toString() : string { return $this->ID().':'.Utilities::ShortClassName(static::class); }
     
-    /** 
-     * Returns the given object's getIDType() if not null, else null 
-     * @return ?string[] [string, string]
-     */
-    public static function toIDType(?self $obj) : ?array { return $obj ? $obj->getIDType() : null; }    
+    /** Returns the given object's as a string if not null, else null */
+    public static function toString(?self $obj) : ?string { return $obj ? (string)$obj : null; }
     
     /** @var array<string, FieldTypes\Scalar> array of scalar properties indexed by their field names */
     protected array $scalars = array();

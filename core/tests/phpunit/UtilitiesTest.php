@@ -152,6 +152,16 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(Utilities::replace_first("test","test2","3testtest5"), "3test2test5");      
    }
    
+   public function testArrayMapKeys() : void
+   {
+       $func = function(string $p){ return $p.'5'; };
+       
+       $this->assertSame(Utilities::array_map_keys($func, array()), array());
+       
+       $this->assertSame(Utilities::array_map_keys($func, 
+           array('a','b','c')), array('a'=>'a5','b'=>'b5','c'=>'c5'));
+   }
+   
    public function testCaptureOutput() : void
    {
        $this->assertSame(Utilities::CaptureOutput(function(){ }), "");

@@ -119,7 +119,7 @@ trait GroupCommon
     }
     
     /**
-     * @return array add: `features:{track_items:enum,track_dlstats:enum}`
+     * @return array add: `{features:{track_items:?enum,track_dlstats:?enum}}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
@@ -127,8 +127,13 @@ trait GroupCommon
     {
         $retval = parent::GetClientObject();
         
-        $retval['features']['track_items'] = array_flip(self::TRACK_TYPES)[$this->GetFeature('track_items')];
-        $retval['features']['track_dlstats'] = array_flip(self::TRACK_TYPES)[$this->GetFeature('track_dlstats')];
+        foreach (array('track_items','track_dlstats') as $prop)
+        {
+            $val = $this->GetFeature($prop);
+            
+            $retval['features'] = ($val !== null) ?
+                array_flip(self::TRACK_TYPES)[$val] : null;
+        }
         
         return $retval;
     }

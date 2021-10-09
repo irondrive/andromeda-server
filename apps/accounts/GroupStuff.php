@@ -57,7 +57,11 @@ class GroupJoin extends JoinObject
      */
     public function GetClientObject()
     {
-        return array('dates'=>$this->GetAllDates());
+        return array(
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+            )
+        );
     }
 }
 

@@ -52,7 +52,7 @@ class Client extends AuthObject
     public function DeleteSession() : self { return $this->DeleteObject('session'); }
     
     /** Gets the last timestamp this client was active */
-    public function getActiveDate() : float { return $this->GetDate('active'); }
+    public function getActiveDate() : ?float { return $this->TryGetDate('active'); }
     
     /** Sets the timestamp this client was active to now */
     public function setActiveDate() : self
@@ -126,7 +126,7 @@ class Client extends AuthObject
     /**
      * Gets this client as a printable object
      * @return array `{id:id, name:?string, lastaddr:string, useragent:string, \
-            dates:{created:float, active:float, loggedon:float}, session:Session}`
+            dates:{created:float, loggedon:float, active:?float}, session:Session}`
      * @see AuthObject::GetClientObject()
      * @see Session::GetClientObject()
      */
@@ -137,7 +137,11 @@ class Client extends AuthObject
             'name' => $this->TryGetScalar('name'),
             'lastaddr' => $this->GetLastAddress(),
             'useragent' => $this->GetUserAgent(),
-            'dates' => $this->GetAllDates(),
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'loggedon' => $this->getLoggedonDate(),
+                'active' => $this->getActiveDate()
+            )
         );
 
         $session = $this->GetSession();

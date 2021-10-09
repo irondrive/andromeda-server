@@ -48,7 +48,10 @@ class Comment extends StandardObject
             'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'comment' => $this->GetScalar('comment'),
-            'dates' => $this->GetAllDates()
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'modified' => $this->TryGetDate('modified')
+            ),
         );
     }
 }

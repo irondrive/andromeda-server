@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -43,8 +44,10 @@ abstract class Timed extends Base
     /** Returns the time period for this timed limit */
     public function GetTimePeriod() : int { return $this->GetScalar('timeperiod'); }
     
+    public const MAX_AGE_FOREVER = -1;
+    
     /** Returns the maximum stats history age (-1 for forever) */
-    public function GetMaxStatsAge() : int { return $this->TryGetScalar('max_stats_age') ?? -1; }
+    public function GetMaxStatsAge() : ?int { return $this->TryGetScalar('max_stats_age'); }
     
     protected function Initialize() : self { return $this; }
     
@@ -136,7 +139,6 @@ abstract class Timed extends Base
     
     // pull counters from the current stats object
     protected function GetCounter(string $name) : int     { return $this->GetCurrentStats()->GetCounter($name); }
-    protected function TryGetCounter(string $name) : ?int { return $this->GetCurrentStats()->TryGetCounter($name); }
     
     protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
     {
@@ -172,16 +174,21 @@ abstract class Timed extends Base
     
     /**
      * Returns a printable client object of this timed limit
-     * @return array `{timeperiod:int, dates:{created:float}, 
-        features:{track_items:bool,track_dlstats:bool}, limits:{pubdownloads:?int, bandwidth:?int}`
-     * @see TimedStats::GetClientObject()        
+     * @return array `{timeperiod:int, max_stats_age:?int, dates:{created:float}, 
+            limits: {pubdownloads:?int, bandwidth:?int}`
      */
     public function GetClientObject() : array
     {
-        $data = parent::GetClientObject();
-        
-        $data['timeperiod'] = $this->GetTimePeriod();
-        
-        return $data;
+        return array(
+            'timeperiod' => $this->GetTimePeriod(),
+            'max_stats_age' => $this->GetMaxStatsAge(),
+            'dates' => array(
+                'created' => $this->GetDateCreated()
+            ),
+            'features' => array(), // need track_items/track_dlstats
+            'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
+                array('pubdownloads','bandwidth')
+            )
+        );
     }
 }

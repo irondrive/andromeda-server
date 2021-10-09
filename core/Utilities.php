@@ -194,6 +194,16 @@ abstract class Utilities
     {
         ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); return $retval;
     }
+    
+    /** 
+     * Performs a key-based array map
+     * @param callable $func function to map onto each key
+     * @param array $keys array of keys to use in result
+     */
+    public static function array_map_keys(callable $func, array $keys)
+    {
+        return array_combine($keys, array_map($func, $keys));
+    }
 }
 
 /** A class for overriding static methods for unit testing */

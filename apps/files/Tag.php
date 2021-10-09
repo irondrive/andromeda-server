@@ -51,7 +51,9 @@ class Tag extends StandardObject
             'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'tag' => $this->GetScalar('tag'),
-            'dates' => $this->GetAllDates()
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+            )
         );
     }
 }

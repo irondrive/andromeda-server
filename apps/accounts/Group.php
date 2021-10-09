@@ -3,6 +3,7 @@
 require_once(ROOT."/apps/accounts/Contact.php");
 require_once(ROOT."/apps/accounts/GroupStuff.php");
 
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -191,9 +192,11 @@ class Group extends AuthEntity
     /**
      * Gets this group as a printable object
      * @param int $level if FULL, show list of account IDs, if ADMIN, show details
-     * @return array `{id:id,name:string,priority:int,comment:?string,dates:{created:float}}` \
-        if full, add `{accounts:[id]}` \
-        also returns all inheritable account properties
+     * @return array `{id:id, name:string}` \
+        if FULL, add `{accounts:[id]}` \
+        if ADMIN, add `{priority:int,comment:?string,dates:{created:float,modified:?float}, session_timeout:?int, client_timeout:?int, max_password_age:?int, \
+            features:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
+            counters:{accounts:int}, limits:{sessions:?int,contacts:?int,recoverykeys:?int}}`
      * @see Account::GetClientObject()
      */
     public function GetClientObject(int $level = 0) : array
@@ -206,12 +209,21 @@ class Group extends AuthEntity
         if ($level && self::OBJECT_ADMIN)
         {
             $retval = array_merge($retval, array(
+                'dates' => array(
+                    'created' => $this->GetDateCreated(),
+                    'modified' => $this->TryGetDate('modified')
+                ),
+                'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeature($p); },
+                    array('admin','disabled','forcetf','allowcrypto','accountsearch','groupsearch','userdelete')
+                ),
+                'counters' => array(
+                    'accounts' => $this->CountObjectRefs('accounts')
+                ),
+                'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
+                    array('sessions','contacts','recoverykeys')
+                ),
                 'priority' => $this->GetPriority(),
                 'comment' => $this->GetComment(),
-                'dates' => $this->GetAllDates(),
-                'features' => $this->GetAllFeatures(),
-                'counters' => $this->GetAllCounters(),
-                'limits' => $this->GetAllCounterLimits(),
                 'session_timeout' => $this->TryGetScalar('session_timeout'),
                 'client_timeout' => $this->TryGetScalar('client_timeout'),
                 'max_password_age' => $this->TryGetScalar('max_password_age')

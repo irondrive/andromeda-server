@@ -357,7 +357,10 @@ class FSManager extends StandardObject
         
         if ($priv) 
         {
-            $data['dates'] = $this->GetAllDates();
+            $data['dates'] = array(
+                'created' => $this->GetDateCreated()
+            );
+            
             $data['storage'] = $this->GetStorage(false)->GetClientObject();
         }
         

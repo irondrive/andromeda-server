@@ -270,7 +270,9 @@ class Contact extends ContactBase
             'valid' => $this->GetIsValid(),
             'usefrom' => boolval($this->TryGetScalar('usefrom')),
             'public' => $this->getIsPublic(),
-            'dates' => $this->GetAllDates(),
+            'dates' => array(
+                'created' => $this->GetDateCreated()
+            )
         );
     }
 }

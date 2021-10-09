@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/core/database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -141,14 +142,29 @@ abstract class Total extends Base
     
     /**
      * Returns a printable client object of this timed limit
-     * @return array `{dates:{created:float, download:?float, upload:?float}, features:{track_items:bool,track_dlstats:bool,
-            itemsharing:?bool, share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
+     * @return array `{dates:{created:float, download:?float, upload:?float}, features:{itemsharing:?bool, \
+        share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see TimedStats::GetClientObject()
      */
     public function GetClientObject() : array
     {
-        return parent::GetClientObject();
+        return array(
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'download' => $this->TryGetDate('download'),
+                'upload' => $this->TryGetDate('upload')
+            ),
+            'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeature($p); },
+                array('itemsharing','share2everyone','share2groups',
+                      'publicupload','publicmodify','randomwrite')
+            ),
+            'counters' => Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
+                array('size','items','shares','pubdownloads','bandwidth')
+            ),
+            'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
+                array('size','items','shares')
+            )
+        );
     }
 }
-

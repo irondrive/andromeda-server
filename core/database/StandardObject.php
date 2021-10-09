@@ -88,13 +88,6 @@ abstract class StandardObject extends BaseObject
         return $this->GetScalar("counters__$name"); }
     
     /**
-     * Gets the value of the given counter field
-     * @see BaseObject::TryGetScalar()
-     */
-    protected function TryGetCounter(string $name) : ?int { 
-        return $this->TryGetScalar("counters__$name"); }
-
-    /**
      * Gets the value of the given counter limit field
      * @see BaseObject::GetScalar()
      */
@@ -171,54 +164,14 @@ abstract class StandardObject extends BaseObject
 
         return parent::AddObjectRef($field, $object, $notification);
     }
-    
-    /**
-     * Gets an array of all date field values
-     * @see StandardObject::GetAllScalars
-     */
-    protected function GetAllDates(callable $vfunc = null) : array { 
-        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (float)$v; },
-            $this->GetAllScalars('dates',$vfunc)); }    
-        
-    /**
-     * Gets an array of all feature field values
-     * @see StandardObject::GetAllScalars
-     */
-    protected function GetAllFeatures(callable $vfunc = null) : array {
-        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
-            $this->GetAllScalars('features',$vfunc)); }   
-    
-    /**
-     * Gets an array of all counter and objectrefs field values
-     * @see StandardObject::GetAllScalars
-     */
-    protected function GetAllCounters(callable $vfunc = null) : array
-    { 
-        $counters = array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
-            $this->GetAllScalars('counters',$vfunc));
-        
-        foreach ($this->objectrefs as $refskey=>$refsval) 
-            $counters["refs_$refskey"] = (int)($refsval->GetValue());
-        
-        return $counters;
-    }
-    
-    /**
-     * Gets an array of all counter limit field values
-     * @see StandardObject::GetAllScalars
-     */
-    protected function GetAllCounterLimits(callable $vfunc = null) : array { 
-        return array_map(function($v)use($vfunc){ return $vfunc ? $v : (int)$v; },
-            $this->GetAllScalars('counters_limits',$vfunc)); }   
 
     /**
      * Gets an array of the values of all fields matching a prefix
      * @param ?string $prefix the prefix to match fields against, or null to get all
-     * @param callable $vfunc the function to map to each field, or TryGetScalar if null
      * @return array mapping field names (stripped of their prefix) to their values
      * @see BaseObject::TryGetScalar
      */
-    protected function GetAllScalars(?string $prefix, callable $vfunc = null) : array
+    protected function GetAllScalars(?string $prefix) : array
     {
         $output = array(); 
         foreach ($this->scalars as $key=>$val)
@@ -228,7 +181,7 @@ abstract class StandardObject extends BaseObject
                 $keyarr = explode("__",$key,2); 
                 if ($keyarr[0] === $prefix)
                 {
-                    $output[$keyarr[1]] = $vfunc ? $vfunc($key) : $val->GetValue();
+                    $output[$keyarr[1]] = $val->GetValue();
                 }
             }
             else $output[$key] = $val->GetValue();
