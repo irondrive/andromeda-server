@@ -85,7 +85,7 @@ class SMB extends StandardFWrapper
         if (!function_exists('smbclient_version')) throw new SMBExtensionException();
     }
     
-    private $state = false;
+    private $state;
     
     public function Activate() : self
     {
@@ -93,7 +93,7 @@ class SMB extends StandardFWrapper
         
         $state = smbclient_state_new();
         
-        if (state === false || smbclient_state_init($state) === 1)
+        if ($state === false || smbclient_state_init($state) !== true)
             throw new SMBStateInitException();
         
         if (!smbclient_option_set($state, 
@@ -107,7 +107,7 @@ class SMB extends StandardFWrapper
         $this->state = $state;
         
         return $this; 
-    }    
+    }
 
     protected function GetFullURL(string $path = "") : string
     {
