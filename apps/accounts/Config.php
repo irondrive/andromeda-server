@@ -132,12 +132,13 @@ class Config extends DBVersion
     public function GetClientObject(bool $admin) : array
     {
         $data = array(
-            'features' => $this->GetAllFeatures(),
+            'features' => array(
+                'usernameiscontact' => $this->GetUsernameIsContact(),
+                'createaccount' => array_flip(self::CREATE_TYPES)[$this->GetAllowCreateAccount()],
+                'requirecontact' => array_flip(self::CONTACT_TYPES)[$this->GetRequireContact()]
+            ),
             'default_auth' => $this->GetDefaultAuthID()
         );
-        
-        $data['features']['createaccount'] = array_flip(self::CREATE_TYPES)[$this->GetAllowCreateAccount()];
-        $data['features']['requirecontact'] = array_flip(self::CONTACT_TYPES)[$this->GetRequireContact()];
         
         if ($admin) $data['default_group'] = $this->GetDefaultGroupID();
         

@@ -43,7 +43,7 @@ class Session extends KeySource
     }
         
     /** Gets the last timestamp this client was active */
-    public function getActiveDate() : float { return $this->GetDate('active'); }
+    public function getActiveDate() : ?float { return $this->TryGetDate('active'); }
     
     /** Sets the timestamp this client was active to now */
     public function setActiveDate() : self
@@ -90,7 +90,7 @@ class Session extends KeySource
     
     /**
      * Returns a printable client object for this session
-     * @return array `{id:id,client:id,dates:{created:float]}`
+     * @return array `{id:id,client:id,dates:{created:float,active:?float}}`
      * @see AuthObject::GetClientObject()
      */
     public function GetClientObject(bool $secret = false) : array
@@ -98,7 +98,10 @@ class Session extends KeySource
         return array_merge(parent::GetClientObject($secret), array(
             'id' => $this->ID(),
             'client' => $this->GetClient()->ID(),
-            'dates' => $this->GetAllDates(),
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'active' => $this->getActiveDate()
+            ),
         ));
     }
 }

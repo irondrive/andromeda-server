@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/core/database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -47,7 +48,7 @@ abstract class Folder extends Item
     }
 
     /** Returns the total size of the folder and its content in bytes */
-    public function GetSize() : int { return $this->TryGetCounter('size') ?? 0; }
+    public function GetSize() : int { return $this->GetCounter('size'); }
     
     /**
      * Returns an array of the files in this folder (not recursive)
@@ -317,15 +318,18 @@ abstract class Folder extends Item
             if ($files) $subfiles = $this->GetFiles($limit,$offset);
         }
         
+        $data = parent::SubGetClientObject($owner,$details);
+        
         if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder)use($owner){ 
             return $folder->TryGetClientObject($owner); }, $subfolders));
         
         if ($folders) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
             return $file->TryGetClientObject($owner); }, $subfiles));
-
-        $data = array_merge($data, parent::SubGetClientObject($owner,$details));
         
-        if (!$owner) unset($data['counters']['subshares']);
+        $data['counters'] = Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
+            array('size','pubvisits','subfiles','subfolders'));
+        
+        if ($owner) $data['counters']['subshares'] = $this->GetCounter('subshares');
         
         return $data;
     }

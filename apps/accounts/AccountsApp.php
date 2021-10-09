@@ -738,7 +738,7 @@ class AccountsApp extends UpgradableApp
         if ($accesslog) $accesslog->LogDetails('session',$session->ID()); 
         
         /* update object dates */
-        $client->setLoggedonDate()->setActiveDate();
+        $client->setLoggedonDate();
         $account->setLoggedonDate()->setActiveDate();
         
         return array('client'=>$client->GetClientObject(true), 

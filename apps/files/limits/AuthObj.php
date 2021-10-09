@@ -38,7 +38,7 @@ abstract class AuthEntityTotal extends Total
 abstract class AuthEntityTimed extends Timed
 {
     // USAGE: -1 means keep forever, 0 means don't keep, null means no value/inherit, otherwise int for max age
-    public static function GetTimedUsage() : string { return "[--max_stats_age -1 (forever)|0 (none)|?int]"; }
+    public static function GetTimedUsage() : string { return "[--max_stats_age ".static::MAX_AGE_FOREVER." (forever)|0 (none)|?int]"; }
     
     protected function SetTimedLimits(Input $input) : void
     {

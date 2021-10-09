@@ -123,7 +123,10 @@ class Emailer extends StandardObject
         if ($port) $host .= ":$port";
         if ($proto) $host = "$proto://$host";        
         return $host;
-    }    
+    }
+    
+    /** Returns whether or not to use the server from address for reply-to */
+    private function GetUseReply() : bool { return $this->TryGetFeature('reply') ?? false; }
     
     /**
      * Gets the config as a printable client object
@@ -139,8 +142,12 @@ class Emailer extends StandardObject
             'password' => boolval($this->TryGetScalar('password')),
             'from_address' => $this->GetScalar('from_address'),
             'from_name' => $this->TryGetScalar('from_name'),
-            'features' => $this->GetAllFeatures(),
-            'dates' => $this->GetAllDates()
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+            ),
+            'features' => array(
+                'reply' => $this->GetUseReply()
+            )
         );        
     }
     
@@ -199,7 +206,7 @@ class Emailer extends StandardObject
         
         $mailer = $this->mailer;
         
-        if ($from === null && $this->TryGetFeature('reply') ?? false)
+        if ($from === null && $this->GetUseReply())
             $mailer->addReplyTo($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');        
         else if ($from !== null) $mailer->addReplyTo($from->GetAddress(), $from->GetName());
         

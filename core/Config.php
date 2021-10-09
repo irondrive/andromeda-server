@@ -320,29 +320,36 @@ class Config extends DBVersion
      */
     public function GetClientObject(bool $admin = false) : array
     { 
-        $data = array('api' => (new VersionInfo())->major, 
-                      'features' => $this->GetAllFeatures());
-        
-        $data['features']['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()];
-        
-        $data['features']['read_only'] = array_flip(self::RUN_TYPES)[$this->getReadOnly()];
-        $data['features']['debug'] = array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()];
-        $data['features']['metrics'] = array_flip(self::METRICS_TYPES)[$this->GetMetricsLevel()];
-        
-        $data['apps'] = array();
+        $data = array( 'api' => (new VersionInfo())->major, 'apps' => array() );
         
         foreach (Main::GetInstance()->GetApps() as $appname=>$app)
         {
             $data['apps'][$appname] = $admin ? $app::getVersion() :
                 implode('.',array_slice(explode('.',$app::getVersion()),0,2));
         }
-                
-        if ($admin) $data['datadir'] = $this->GetDataDir();
-        else
+        
+        $data['features'] = array(
+            'enabled' => $this->isEnabled(),
+            'read_only' => array_flip(self::RUN_TYPES)[$this->getReadOnly()]
+        );
+        
+        if ($admin)
         {
-            $data['features'] = array_filter($data['features'], function($key){ 
-                return in_array($key, array('read_only','enabled')); 
-            }, ARRAY_FILTER_USE_KEY);
+            $data['datadir'] = $this->GetDataDir();
+            
+            $data['features'] = array_merge($data['features'], array(
+                'requestlog_file' => $this->GetEnableRequestLogFile(),
+                'requestlog_db' => $this->GetEnableRequestLogDB(),
+                'requestlog_details' => array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()],
+                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetMetricsLevel()],
+                'metrics_dblog' => $this->GetMetricsLog2DB(),
+                'metrics_filelog' => $this->GetMetricsLog2File(),
+                'email' => $this->GetEnableEmail(),
+                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()],
+                'debug_http' => $this->GetDebugOverHTTP(),
+                'debug_dblog' => $this->GetDebugLog2DB(),
+                'debug_filelog' => $this->GetDebugLog2File()
+            ));
         }
 
         return $data;

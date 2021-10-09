@@ -12,6 +12,7 @@ require_once(ROOT."/apps/accounts/RecoveryKey.php");
 require_once(ROOT."/apps/accounts/auth/Local.php");
 
 require_once(ROOT."/core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
 require_once(ROOT."/core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/core/database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, NullValueException};
@@ -258,7 +259,7 @@ class Account extends AuthEntity
     /** Sets the timestamp of last-login to now */
     public function setLoggedonDate() : self    { return $this->SetDate('loggedon'); }
     
-    private function getPasswordDate() : float  { return $this->GetDate('passwordset'); }
+    private function getPasswordDate() : ?float { return $this->TryGetDate('passwordset'); }
     private function setPasswordDate() : self   { return $this->SetDate('passwordset'); }
     
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
@@ -452,13 +453,13 @@ class Account extends AuthEntity
     /**
      * Gets this account as a printable object
      * @return array `{id:id,username:string,dispname:string}` \
-        if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:float,loggedon:float,active:float}, 
+        if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:?float,loggedon:?float,active:?float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contacts:?int,recoverykeys:?int}, features:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
                 accountsearch:int, groupsearch:int, userdelete:bool},session_timeout:?int,client_timeout:?int,max_password_age:?int} \
         if OBJECT_FULL, add: {contacts:[id:Contact], clients:[id:Client], twofactors:[id:TwoFactor]} \
-        if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:{id:class}], 
-            features_from:[string:{id:class}], session_timeout_from:{id:class}, client_timeout_from:{id:class}, max_password_age_from:{id:class}}
+        if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:"id:class"], dates:{modified:?float},
+            features_from:[string:"id:class"], session_timeout_from:"id:class", client_timeout_from:"id:class", max_password_age_from:"id:class"}
      * @see Contact::GetClientObject()
      * @see TwoFactor::GetClientObject()
      * @see Client::GetClientObject()
@@ -466,32 +467,42 @@ class Account extends AuthEntity
     public function GetClientObject(int $level = 0) : array
     {
         $mapobj = function($e) { return $e->GetClientObject(); };
-
         
         $data = array(
             'id' => $this->ID(),
             'username' => $this->GetUsername(),
             'dispname' => $this->GetDisplayName()
-        );   
-        
+        );
+
         if ($level & self::OBJECT_FULL || $level & self::OBJECT_ADMIN)
         {
             $data = array_merge($data, array(
-                'dates' => $this->GetAllDates(),
-                'counters' => $this->GetAllCounters(),
-                'limits' => $this->GetAllCounterLimits(),
-                'features' => $this->GetAllFeatures(),
                 'client_timeout' => $this->GetClientTimeout(),
                 'session_timeout' => $this->GetSessionTimeout(),
-                'max_password_age' => $this->GetMaxPasswordAge()
+                'max_password_age' => $this->GetMaxPasswordAge(),
+                'dates' => array(
+                    'created' => $this->GetDateCreated(),
+                    'passwordset' => $this->getPasswordDate(),
+                    'loggedon' => $this->getLoggedonDate(),
+                    'active' => $this->getActiveDate()
+                ),
+                'features' => Utilities::array_map_keys(function($p){ return $this->GetFeature($p); },
+                    array('admin','disabled','forcetf','allowcrypto','accountsearch','groupsearch','userdelete')
+                ),
+                'counters' => Utilities::array_map_keys(function($p){ return $this->CountObjectRefs($p); },
+                    array('sessions','contacts','clients','twofactors','recoverykeys')
+                ),
+                'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
+                    array('sessions','contacts','recoverykeys')
+                )
             ));
         }
         
         if ($level & self::OBJECT_FULL)
         {
             $data = array_merge($data, array(
-                'contacts' => array_map($mapobj, $this->GetContacts(false)),
                 'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
+                'contacts' => array_map($mapobj, $this->GetContacts(false)),
                 'clients' => array_map($mapobj, $this->GetClients()),
             ));
         }
@@ -500,24 +511,26 @@ class Account extends AuthEntity
             $data['contacts'] = array_map($mapobj, array_filter($this->GetContacts(),
                 function(Contact $c){ return $c->getIsPublic(); }));
         }
-        
+
         if ($level & self::OBJECT_ADMIN)
         {
             $data = array_merge($data, array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
                 'groups' => array_keys($this->GetGroups()),
-                'limits_from' => $this->ToInheritsScalarFromClient([$this,'GetAllCounterLimits']),
-                'features_from' => $this->ToInheritsScalarFromClient([$this,'GetAllFeatures']),
-                'client_timeout_from' => static::toIDType($this->TryGetInheritsScalarFrom('client_timeout')),
-                'session_timeout_from' => static::toIDType($this->TryGetInheritsScalarFrom('session_timeout')),
-                'max_password_age_from' => static::toIDType($this->TryGetInheritsScalarFrom('max_password_age'))
+                'client_timeout_from' => static::toString($this->TryGetInheritsScalarFrom('client_timeout')),
+                'session_timeout_from' => static::toString($this->TryGetInheritsScalarFrom('session_timeout')),
+                'max_password_age_from' => static::toString($this->TryGetInheritsScalarFrom('max_password_age')),
+                
+                'features_from' => Utilities::array_map_keys(function($p){ 
+                    return static::toString($this->TryGetInheritsScalarFrom("features__$p")); }, array_keys($data['features'])),
+                    
+                'limits_from' => Utilities::array_map_keys(function($p){ 
+                    return static::toString($this->TryGetInheritsScalarFrom("counters_limits__$p")); }, array_keys($data['limits'])),
             ));
-        }
-        else
-        {
-            unset($data['dates']['modified']);
-            unset($data['counters']['refs_groups']);
+            
+            $data['dates']['modified'] = $this->TryGetDate('modified');
+            $data['counters']['groups'] = $this->CountObjectRefs('groups');
         }
 
         return $data;
@@ -865,18 +878,6 @@ trait GroupInherit
         $value ??= self::GetInheritedFields()[$field];
         
         return new InheritedProperty($value, $source);
-    }
-
-    /** Runs the given function with a function that maps a property onto its inherit-source */
-    protected function ToInheritsScalarFrom(callable $getdata) : array
-    {
-        return $getdata(function($k){ return $this->TryGetInheritsScalarFrom($k); });
-    }
-    
-    /** Runs the given function through ToInheritsScalarFrom() and then maps to its ID and class name */
-    protected function ToInheritsScalarFromClient(callable $getdata) : array
-    {
-        return array_map(function($obj){ return static::toIDType($obj); }, $this->ToInheritsScalarFrom($getdata));
     }
 }
 

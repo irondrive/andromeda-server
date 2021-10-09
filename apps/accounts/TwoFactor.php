@@ -79,9 +79,6 @@ class TwoFactor extends StandardObject
      * @return array<string, UsedTokens> used tokens indexed by ID
      */
     private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
-    
-    /** Returns the number of used tokens that exist */
-    private function CountUsedTokens() : int { return $this->CountObjectRefs('usedtokens'); }
 
     /** Returns whether this twofactor has been validated */
     public function GetIsValid() : bool { return $this->GetScalar('valid'); }
@@ -180,7 +177,7 @@ class TwoFactor extends StandardObject
     /**
      * Returns a printable client object for this twofactor
      * @param bool $secret if true, show the OTP secret
-     * @return array `{id:id, comment:?string, dates:{created:float,used:float}` \
+     * @return array `{id:id, comment:?string, dates:{created:float,used:?float}` \
         if $secret, add `{secret:string, qrcodeurl:string}`
      */
     public function GetClientObject(bool $secret = false) : array
@@ -188,7 +185,10 @@ class TwoFactor extends StandardObject
         $data = array(
             'id' => $this->ID(),
             'comment' => $this->GetComment(),
-            'dates' => $this->GetAllDates(),
+            'dates' => array(
+                'created' => $this->GetDateCreated(),
+                'used' => $this->TryGetDate('used')
+            ),
         );
         
         if ($secret) 
