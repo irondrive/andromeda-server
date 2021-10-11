@@ -72,9 +72,9 @@ class TimedStats extends StandardObject
         if (array_key_exists($limit->ID(), static::$cache))
             return static::$cache[$limit->ID()];
 
-        $obj = static::TryLoadCurrent($database, $limit);
-        
         static::PruneStatsByLimit($database, $limit);
+        
+        $obj = static::TryLoadCurrent($database, $limit);
         
         $time = Main::GetInstance()->GetTime(); 
         
