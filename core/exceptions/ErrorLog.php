@@ -39,7 +39,7 @@ class ErrorLog extends BaseObject
     }
     
     /** Returns the common command usage for LoadByInput() and CountByInput() */
-    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum]"; }
+    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text]"; }
     
     /** Returns the command usage for LoadByInput() */
     public static function GetLoadUsage() : string { return "[--logic and|or] [--limit int] [--offset int] [--desc bool]"; }
@@ -58,8 +58,10 @@ class ErrorLog extends BaseObject
         if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));
         if ($input->HasParam('agent')) $criteria[] = $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW));
         
-        if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetParam('app',SafeParam::TYPE_ALPHANUM));
-        if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetParam('action',SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetNullParam('app',SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetNullParam('action',SafeParam::TYPE_ALPHANUM));
+        
+        if ($input->HasParam('message')) $criteria[] = $q->Like('message', $input->GetParam('message',SafeParam::TYPE_TEXT));
         
         $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
