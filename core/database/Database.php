@@ -22,7 +22,7 @@ class InvalidDriverException extends DatabaseException { public $message = "PDO_
 class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
 
 /** Exception indicating that the a write was requested to a read-only database */
-class DatabaseReadOnlyException extends Exceptions\ClientErrorException { public $message = "READ_ONLY_DATABASE"; }
+class DatabaseReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_DATABASE"; }
 
 /** Exception indicating that database config failed */
 class DatabaseConfigFailException extends Exceptions\ClientErrorException { }

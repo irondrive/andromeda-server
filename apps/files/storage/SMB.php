@@ -44,11 +44,11 @@ class SMB extends StandardFWrapper
     /**
      * Returns a printable client object of this SMB storage
      * @return array `{workgroup:?string, hostname:string}`
-     * FWrapper::GetClientObject()
+     * @see Storage::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject($activate), array(
             'workgroup' => $this->TryGetScalar('workgroup'),
             'hostname' => $this->GetScalar('hostname')
         ));
@@ -93,7 +93,7 @@ class SMB extends StandardFWrapper
         
         $state = smbclient_state_new();
         
-        if ($state === false || smbclient_state_init($state) !== true)
+        if (!is_resource($state) || smbclient_state_init($state) !== true)
             throw new SMBStateInitException();
         
         if (!smbclient_option_set($state, 
@@ -149,7 +149,7 @@ class SMB extends StandardFWrapper
     public function canGetFreeSpace() : bool { return true; }
     
     public function GetFreeSpace() : int
-    {
+    {        
         $data = smbclient_statvfs($this->state, $this->GetFullURL());
         
         if ($data === false) throw new FreeSpaceFailedException();

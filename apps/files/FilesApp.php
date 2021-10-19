@@ -157,7 +157,7 @@ class FilesApp extends UpgradableApp
             'shareinfo --sid id [--skey alphanum] [--spassword raw]',
             'listshares [--mine bool]',
             'listadopted',
-            'getfilesystem [--filesystem id]',
+            'getfilesystem [--filesystem id] [--activate bool]',
             'getfilesystems [--everyone bool [--limit int] [--offset int]]',
             'createfilesystem '.FSManager::GetCreateUsage(),
             ...array_map(function($u){ return "(createfilesystem) $u"; }, FSManager::GetCreateUsages()),
@@ -1621,7 +1621,9 @@ class FilesApp extends UpgradableApp
         
         $ispriv = $authenticator->isRealAdmin() || ($account === $filesystem->GetOwner());
         
-        return $filesystem->GetClientObject($ispriv);
+        $activate = $input->GetOptParam('activate',SafeParam::TYPE_BOOL) ?? false;
+        
+        return $filesystem->GetClientObject($ispriv, $activate);
     }
     
     /**

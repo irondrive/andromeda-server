@@ -53,7 +53,7 @@ trait OptFieldCrypt
      * Returns the printable client object of this trait
      * @return array fields mapped to `{field_iscrypt:bool}`
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
         $retval = array();
         
@@ -62,7 +62,7 @@ trait OptFieldCrypt
             $retval[$field."_iscrypt"] = $this->isFieldEncrypted($field);
         }
 
-        return array_merge(parent::GetClientObject(), $retval);
+        return array_merge(parent::GetClientObject($activate), $retval);
     }
 }
 
@@ -83,10 +83,11 @@ trait UserPass
     /**
      * Returns the printable client object of this trait
      * @return array `{username:?string, password:bool}`
+     * @see Storage::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject($activate), array(
             'username' => $this->TryGetUsername(),
             'password' => boolval($this->TryGetPassword()),
         ));
@@ -171,9 +172,9 @@ trait BasePath
         ));
     }
     
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject($activate), array(
             'path' => $this->GetPath()
         ));
     }
