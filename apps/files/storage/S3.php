@@ -65,11 +65,11 @@ class S3 extends S3Base3
      * Returns a printable client object of this S3 storage
      * @return array `{endpoint:string, path_style:?bool, port:?int, usetls:bool, \
            region:string, bucket:string, accesskey:?string, secretkey:bool}`
-     * @see FWrapper::GetClientObject()
+     * @see Storage::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject($activate), array(
             'endpoint' => $this->GetScalar('endpoint'),
             'path_style' => $this->TryGetScalar('path_style'),
             'port' => $this->TryGetScalar('port'),

@@ -336,12 +336,13 @@ class FSManager extends StandardObject
     
     /**
      * Gets a printable client object of this filesystem
-     * @param bool $admin if true, show details for the owner
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activ if true, show details that require activation
      * @return array `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:enum}` \  
         if priv, add `{storage:Storage}` - if isEncrypted, add `{chunksize:int}`
      * @see Storage::GetClientObject()
      */
-    public function GetClientObject(bool $priv = false) : array
+    public function GetClientObject(bool $priv = false, bool $activ = false) : array
     {
         $data = array(
             'id' => $this->ID(),
@@ -361,7 +362,7 @@ class FSManager extends StandardObject
                 'created' => $this->GetDateCreated()
             );
             
-            $data['storage'] = $this->GetStorage(false)->GetClientObject();
+            $data['storage'] = $this->GetStorage(false)->GetClientObject($activ);
         }
         
         return $data;

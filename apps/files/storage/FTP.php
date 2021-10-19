@@ -51,11 +51,11 @@ class FTP extends StandardFWrapper
     /**
      * Returns a printable client object of this FTP storage
      * @return array `{hostname:string, port:?int, implssl:bool}`
-     * @see FWrapper::GetClientObject()
+     * @see Storage::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject(), array(
+        return array_merge(parent::GetClientObject($activate), array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'implssl' => $this->GetScalar('implssl'),

@@ -71,17 +71,19 @@ abstract class Storage extends StandardObject implements Transactions
     
     /**
      * Returns a printable client object of this storage
-     * @return array `{id:id, filesystem:id}`
+     * @param bool $activate if true, show details that require activation
+     * @return array `{id:id, filesystem:id}` \
+        if $activate and supported, add `{freespace:int}`
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $activate = false) : array
     {
         $retval = array(
             'id' => $this->ID(),
             'filesystem' => $this->GetObjectID('filesystem')
         );
         
-        if ($this->canGetFreeSpace())
-            $retval['freespace'] = $this->GetFreeSpace();
+        if ($activate && $this->canGetFreeSpace())
+            $retval['freespace'] = $this->Activate()->GetFreeSpace();
         
         return $retval;
     }
