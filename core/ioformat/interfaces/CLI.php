@@ -142,10 +142,10 @@ class CLI extends IOInterface
     {
         if ($config)
         {
-            if ($this->debug !== null)
+            if ($this->debug !== null && in_array($this->debug, Config::DEBUG_TYPES, true))
                 $config->SetDebugLevel($this->debug, true);
             
-            if ($this->metrics !== null)
+            if ($this->metrics !== null && in_array($this->metrics, Config::METRICS_TYPES, true))
                 $config->SetMetricsLevel($this->metrics, true);
         }
         
