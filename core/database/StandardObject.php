@@ -66,6 +66,13 @@ abstract class StandardObject extends BaseObject
         return ($val === null) ? null : intval($val); 
     }
     
+    /** Returns TryGetFeature() but as a bool */
+    protected function TryGetBoolFeature(string $name) : ?bool
+    {
+        $val = $this->TryGetFeature($name);
+        return ($val !== null) ? (bool)$val : null;
+    }
+    
     /**
      * Sets the value of the given feature field to the given value
      * @see BaseObject::SetScalar()

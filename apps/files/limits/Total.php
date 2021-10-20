@@ -155,7 +155,7 @@ abstract class Total extends Base
                 'download' => $this->TryGetDate('download'),
                 'upload' => $this->TryGetDate('upload')
             ),
-            'features' => Utilities::array_map_keys(function($p){ return (bool)$this->TryGetFeature($p); },
+            'features' => Utilities::array_map_keys(function($p){ return $this->TryGetBoolFeature($p); },
                 array('itemsharing','share2everyone','share2groups',
                       'publicupload','publicmodify','randomwrite')
             ),
