@@ -354,7 +354,7 @@ class FSManager extends StandardObject
             'sttype' => Utilities::ShortClassName($this->GetStorageType())
         );
         
-        if ($this->isEncrypted()) $data['chunksize'] = $this->GetScalar('crypto_chunksize');
+        if ($this->isEncrypted()) $data['chunksize'] = (int)$this->GetScalar('crypto_chunksize');
         
         if ($priv) 
         {

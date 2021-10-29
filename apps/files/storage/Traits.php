@@ -6,8 +6,6 @@ require_once(ROOT."/core/ioformat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/core/ioformat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/core/ioformat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/apps/files/Config.php"); use Andromeda\Apps\Files\Config;
-require_once(ROOT."/apps/files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 require_once(ROOT."/apps/files/filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
 /** Exception indicating that this storage does not support folder functions */
