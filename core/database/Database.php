@@ -59,6 +59,7 @@ class Database implements Transactions
     /** the default path for storing the config file */
     private const CONFIG_PATHS = array(
         ROOT."/Config.php",
+        null, // ~/.config/andromeda/Config.php
         '/usr/local/etc/andromeda/Config.php',
         '/etc/andromeda/Config.php'
     );    
@@ -83,6 +84,14 @@ class Database implements Transactions
      */
     public function __construct(?string $config = null)
     {
+        $paths = self::CONFIG_PATHS;
+        
+        $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
+        if ($home && ($idx = array_search(null, $paths, true)) !== false)
+        {
+            $paths[$idx] = "$home/andromeda/Config.php";
+        }
+        
         if ($config !== null)
         {
             if (!file_exists($config)) $config = null;
@@ -297,7 +306,7 @@ class Database implements Transactions
             throw new DatabaseReadOnlyException();
 
         $this->startTimingQuery();
-            
+        
         $doSavepoint = false;
         
         try 
@@ -324,7 +333,6 @@ class Database implements Transactions
                 }
                 
                 $query = $this->connection->prepare($sql);
-                
                 $query->execute($data ?? array());
                 
                 if ($type & self::QUERY_READ)
@@ -355,7 +363,7 @@ class Database implements Transactions
     }
     
     /** Logs a query to the internal query history, logging the actual data values if debug allows */
-    private function logQuery(string $sql, ?array $data) : void
+    private function logQuery(string $sql, ?array $data) : string
     {
         if ($data !== null && Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_SENSITIVE)
         {            
@@ -370,7 +378,7 @@ class Database implements Transactions
             }
         }
         
-        $this->queries[] = $sql;
+        return $this->queries[] = $sql;
     }
     
     /**

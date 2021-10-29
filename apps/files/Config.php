@@ -14,8 +14,8 @@ class Config extends DBVersion
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'apiurl' => null,
-            'rwchunksize' => new FieldTypes\Scalar(4*1024*1024),
-            'crchunksize' => new FieldTypes\Scalar(128*1024),
+            'rwchunksize' => new FieldTypes\Scalar(4*1024*1024), // 4M
+            'crchunksize' => new FieldTypes\Scalar(1*1024*1024), // 1M
             'upload_maxsize' => null,
             'features__timedstats' => new FieldTypes\Scalar(false)
         ));
