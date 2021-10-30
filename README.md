@@ -10,9 +10,7 @@ The framework can log accesses and errors to the database, or to log files if a 
 ### Primary Apps
 In pursuit of being a cloud storage solution, Andromeda principally includes the "accounts" and "files" apps.  Accounts implements the account management and authentication/session-management tasks.  Files app provides the filesystem interface and related features.  The files app requires the accounts app.
 
-As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  
-
-See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app-specific information.
+As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app-specific information.
 
 # General Usage
 
