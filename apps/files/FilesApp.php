@@ -1619,7 +1619,7 @@ class FilesApp extends UpgradableApp
 
         if ($accesslog) $accesslog->LogDetails('filesystem',$filesystem->ID());
         
-        $ispriv = $authenticator->isRealAdmin() || ($account === $filesystem->GetOwner());
+        $ispriv = $authenticator->isAdmin() || ($account === $filesystem->GetOwner());
         
         $activate = $input->GetOptParam('activate',SafeParam::TYPE_BOOL) ?? false;
         
@@ -1637,7 +1637,7 @@ class FilesApp extends UpgradableApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
 
-        if ($authenticator->isRealAdmin() && $input->GetOptParam('everyone',SafeParam::TYPE_BOOL))
+        if ($authenticator->isAdmin() && $input->GetOptParam('everyone',SafeParam::TYPE_BOOL))
         {
             $limit = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
             $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
@@ -1660,9 +1660,8 @@ class FilesApp extends UpgradableApp
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
-        $isadmin = $authenticator->isRealAdmin();
         
-        $global = ($input->GetOptParam('global', SafeParam::TYPE_BOOL) ?? false) && $isadmin;
+        $global = ($input->GetOptParam('global', SafeParam::TYPE_BOOL) ?? false) && $authenticator->isAdmin();
 
         if (!Limits\AccountTotal::LoadByAccount($this->database, $account, true)->GetAllowUserStorage() && !$global)
             throw new UserStorageDisabledException();
@@ -1688,7 +1687,7 @@ class FilesApp extends UpgradableApp
         
         $fsid = $input->GetParam('filesystem', SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_ALWAYS);
         
-        if ($authenticator->isRealAdmin())
+        if ($authenticator->isAdmin())
             $filesystem = FSManager::TryLoadByID($this->database, $fsid);
         else $filesystem = FSManager::TryLoadByAccountAndID($this->database, $account, $fsid);
         
@@ -1711,7 +1710,7 @@ class FilesApp extends UpgradableApp
         
         $fsid = $input->GetParam('filesystem',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_ALWAYS);
         
-        if ($authenticator->isRealAdmin())
+        if ($authenticator->isAdmin())
             $filesystem = FSManager::TryLoadByID($this->database, $fsid);
         else $filesystem = FSManager::TryLoadByAccountAndID($this->database, $account, $fsid);
         
@@ -1740,7 +1739,7 @@ class FilesApp extends UpgradableApp
     {
         $obj = null;
         
-        $admin = $authenticator->isRealAdmin();
+        $admin = $authenticator->isAdmin();
         $account = $authenticator->GetAccount();
 
         if ($input->HasParam('group'))
@@ -1802,7 +1801,7 @@ class FilesApp extends UpgradableApp
     protected function GetLimits(Input $input, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
-        $isadmin = $authenticator->isRealAdmin();
+        $isadmin = $authenticator->isAdmin();
         
         $obj = $this->GetLimitObject($input, $authenticator, true, true, false);
         $class = $obj['class']; $obj = $obj['obj'];
@@ -1833,7 +1832,7 @@ class FilesApp extends UpgradableApp
     protected function GetTimedLimits(Input $input, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
-        $isadmin = $authenticator->isRealAdmin();
+        $isadmin = $authenticator->isAdmin();
         
         $obj = $this->GetLimitObject($input, $authenticator, true, true, true);
         $class = $obj['class']; $obj = $obj['obj'];

@@ -42,6 +42,13 @@ trait FieldCrypt
     protected function isFieldEncrypted($field) : bool { 
         return $this->TryGetScalar($field."_nonce") !== null; }
     
+    /** Returns true if field crypto is unlockable */
+    protected function isCryptoAvailable() : bool 
+    {
+        $account = $this->GetAccount();
+        return ($account !== null && $account->CryptoAvailable());
+    }
+    
     /** Stores fields decrypted in memory */
     private array $crypto_cache = array();
     
@@ -66,7 +73,7 @@ trait FieldCrypt
             throw new CryptoNotAvailableException();
             
         if (!$account->CryptoAvailable())
-            Authenticator::AllRequireCrypto();
+            Authenticator::TryRequireCryptoFor($account);
             
         if (!$account->CryptoAvailable())
             throw new CrptoNotUnlockedException();

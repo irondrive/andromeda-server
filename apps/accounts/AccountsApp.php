@@ -58,9 +58,6 @@ class AccountWhitelistException extends Exceptions\ClientDeniedException { publi
 /** Exception indicating that deleting accounts is not allowed */
 class AccountDeleteDeniedException extends Exceptions\ClientDeniedException { public $message = "ACCOUNT_DELETE_NOT_ALLOWED"; }
 
-/** Exception indicating that the user is already signed in */
-class AlreadySignedInException extends Exceptions\ClientDeniedException { public $message = "ALREADY_SIGNED_IN"; }
-
 /** Exception indicating that account/group search is not allowed */
 class SearchDeniedException extends Exceptions\ClientDeniedException { public $message = "SEARCH_NOT_ALLOWED"; }
 
@@ -136,7 +133,7 @@ class AccountsApp extends UpgradableApp
     { 
         return array_merge(parent::getUsage(),array(
             'install [--username alphanum --password raw]',
-            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser id]',
+            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_username text]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
@@ -416,11 +413,8 @@ class AccountsApp extends UpgradableApp
             if (!$account->CheckRecoveryKey($recoverykey)) 
                 throw new AuthenticationFailedException();
         }
-        else 
-        {
-            if (!$authenticator->isSudoUser()) 
-                $authenticator->RequirePassword();
-        }
+        else if (!$authenticator->isSudoUser()) 
+            $authenticator->RequirePassword();
         
         Authenticator::StaticTryRequireCrypto($input, $account);
         $account->ChangePassword($new_password);
@@ -497,22 +491,24 @@ class AccountsApp extends UpgradableApp
         
         if (!$account->GetAllowCrypto()) throw new CryptoNotAllowedException();
         
-        $authenticator->RequirePassword();
+        $authenticator->RequirePassword()->TryRequireTwoFactor();
         
         $password = $input->GetParam('auth_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
 
         if ($account->HasRecoveryKeys())
         {
-            $authenticator->TryRequireTwoFactor();
-            
             RecoveryKey::DeleteByAccount($this->database, $account);
         }
         
         $account->InitializeCrypto($password);
         
-        $session = $authenticator->GetSession(); $session->InitializeCrypto();
-        
-        Session::DeleteByAccountExcept($this->database, $account, $session);
+        if (($session = $authenticator->GetSession()) !== null)
+        {
+            $session->InitializeCrypto();
+            
+            Session::DeleteByAccountExcept($this->database, $account, $session);
+        }
+        else Session::DeleteByAccount($this->database, $account);
         
         return array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); },
             RecoveryKey::CreateSet($this->database, $account));
@@ -619,8 +615,6 @@ class AccountsApp extends UpgradableApp
      */
     protected function CreateSession(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
-        if ($authenticator !== null) throw new AlreadySignedInException();
-
         /* load the authentication source being used - could be local, or an LDAP server, etc. */
         if ($input->HasParam('authsource'))
         {
@@ -897,12 +891,14 @@ class AccountsApp extends UpgradableApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         $session = $authenticator->GetSession();
-        
-        $sessionid = $input->GetOptParam("session", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
 
-        if ($authenticator->isSudoUser() || $sessionid !== null)
+        $sessionid = $input->GetOptParam("session", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
+        
+        if (($authenticator->isSudoUser() || $session === null) && $sessionid === null)
+            throw new UnknownSessionException();
+
+        if ($sessionid !== null)
         {
-            if (!$authenticator->isSudoUser()) $authenticator->RequirePassword();
             $session = Session::TryLoadByAccountAndID($this->database, $account, $sessionid);
             if ($session === null) throw new UnknownSessionException();
         }
@@ -923,12 +919,14 @@ class AccountsApp extends UpgradableApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         $client = $authenticator->GetClient();
-        
+
         $clientid = $input->GetOptParam("client", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
-        if ($authenticator->isSudoUser() || $clientid !== null)
+        if (($authenticator->isSudoUser() || $client === null) && $clientid === null)
+            throw new UnknownClientException();
+            
+        if ($clientid !== null)
         {
-            if (!$authenticator->isSudoUser()) $authenticator->RequirePassword();
             $client = Client::TryLoadByAccountAndID($this->database, $account, $clientid);
             if ($client === null) throw new UnknownClientException();
         }

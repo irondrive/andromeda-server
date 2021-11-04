@@ -64,11 +64,13 @@ class S3 extends S3Base3
     /**
      * Returns a printable client object of this S3 storage
      * @return array `{endpoint:string, path_style:?bool, port:?int, usetls:bool, \
-           region:string, bucket:string, accesskey:?string, secretkey:bool}`
+           region:string, bucket:string, accesskey:string/bool, secretkey:bool}`
      * @see Storage::GetClientObject()
      */
     public function GetClientObject(bool $activate = false) : array
     {
+        $accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : boolval($this->TryGetScalar('accesskey'));
+        
         return array_merge(parent::GetClientObject($activate), array(
             'endpoint' => $this->GetScalar('endpoint'),
             'path_style' => $this->TryGetScalar('path_style'),
@@ -76,7 +78,7 @@ class S3 extends S3Base3
             'usetls' => $this->getUseTLS(),
             'region' => $this->GetScalar('region'),
             'bucket' => $this->GetScalar('bucket'),
-            'accesskey' => $this->TryGetAccessKey(),
+            'accesskey' => $accesskey,
             'secretkey' => boolval($this->TryGetScalar('secretkey'))
         ));
     }
