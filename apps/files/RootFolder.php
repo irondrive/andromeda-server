@@ -42,20 +42,7 @@ class RootFolder extends Folder
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self { throw new InvalidRootOpException(); }
     
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self { throw new InvalidRootOpException(); }
-   
-    /** 
-     * Don't let a storage exception fail refreshing a root folder 
-     * @see Folder::Refresh()
-     */
-    public function Refresh(bool $doContents = false) : self 
-    {
-        if ($doContents) parent::Refresh(true);
-        
-        else try { parent::Refresh(); } catch (StorageException $e) { }
-        
-        return $this;
-    }
-    
+
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
      * @param ObjectDatabase $database database reference

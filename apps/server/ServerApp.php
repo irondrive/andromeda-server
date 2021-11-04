@@ -135,7 +135,7 @@ class ServerApp extends UpgradableApp
             $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
             
-            $isAdmin = $authenticator !== null && $authenticator->isRealAdmin();
+            $isAdmin = $authenticator !== null && $authenticator->isAdmin();
         }
         else // not using the accounts app
         {
@@ -317,7 +317,7 @@ class ServerApp extends UpgradableApp
      */
     protected function TestMail(Input $input, bool $isAdmin, $authenticator, ?AccessLog $accesslog) : void
     {
-        if (!$isAdmin || ($authenticator && !$authenticator->isRealAdmin())) throw new AuthFailedException();
+        if (!$isAdmin || ($authenticator && !$authenticator->isAdmin())) throw new AuthFailedException();
         
         if (!$authenticator)
             $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL);

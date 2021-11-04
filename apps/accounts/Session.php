@@ -34,6 +34,14 @@ class Session extends KeySource
         return parent::CreateKeySource($database, $account)->SetObject('client',$client);
     }
     
+    /** Deletes all sessions for the given account */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
+    {
+        $q = new QueryBuilder(); $w = $q->Equals('account',$account->ID());
+        
+        parent::DeleteByQuery($database, $q->Where($w));
+    }
+    
     /** Deletes all sessions for the given account except the given session */
     public static function DeleteByAccountExcept(ObjectDatabase $database, Account $account, Session $session) : void
     {

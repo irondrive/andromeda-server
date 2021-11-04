@@ -36,6 +36,7 @@ class PasswordRequiredException extends AuthenticationFailedException { public $
 class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTOKEY_REQUIRED"; }
 
 use Andromeda\Core\DecryptionFailedException;
+use Andromeda\Core\UpgradeRequiredException;
 
 /**
  * The class used to authenticate requests
@@ -45,33 +46,33 @@ use Andromeda\Core\DecryptionFailedException;
  */
 class Authenticator
 {
-    private Account $account; 
-    private Session $session; 
-    private Client $client;     
     private Input $input;
-    
     private ObjectDatabase $database; 
     
     private static array $instances = array();
    
+    private Account $account;
+    
     /** Returns the authenticated user account */
     public function GetAccount() : Account { return $this->account; }
-    
-    /** Returns the session used for the request */
-    public function GetSession() : Session { return $this->session; }
-    
-    /** Returns the client used for the request */
-    public function GetClient() : Client { return $this->client; }
-    
-    private bool $issudouser = false; 
-    
-    /** Returns true if the user is masquering as another user */
-    public function isSudoUser() : bool { return $this->issudouser; }
-    
-    private Account $realaccount;    
+
+    private Account $realaccount;
     
     /** Returns the actual account used for the request, not the masqueraded one */
     public function GetRealAccount() : Account { return $this->realaccount; }
+    
+    /** Returns true if the user is masquering as another user */
+    public function isSudoUser() : bool { return $this->account !== $this->realaccount; }
+    
+    private ?Session $session = null;
+    
+    /** Returns the session used for the request */
+    public function GetSession() : ?Session { return $this->session; }
+    
+    private ?Client $client = null;
+    
+    /** Returns the client used for the request */
+    public function GetClient() : ?Client { return $this->client; }
     
     /**
      * The primary authentication routine
@@ -88,45 +89,56 @@ class Authenticator
     private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
     {
         if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
-            throw new \Andromeda\Core\UpgradeRequiredException('accounts');            
+            throw new UpgradeRequiredException('accounts');
             
-        $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
-        $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+        $this->input = $input; $this->database = $database;
         
-        if (($auth = $input->GetAuth()) !== null)
+        $username = $input->GetOptParam('auth_username',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
+        
+        if ($interface->isPrivileged() && $username !== null)
         {
-            $sessionid ??= $auth->GetUsername();
-            $sessionkey ??= $auth->GetPassword();
-        }
-        
-        if (!$sessionid || !$sessionkey) throw new InvalidSessionException();
-
-        $session = Session::TryLoadByID($database, $sessionid);
-        
-        if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
+            $account = Account::TryLoadByUsername($database, $username);
+            if ($account === null) throw new UnknownAccountException();
             
-        $account = $session->GetAccount(); $client = $session->GetClient();
-        
-        $this->input = $input;
-        $this->database = $database;
-        $this->realaccount = $account; 
-        $this->session = $session; 
-        $this->client = $client;
-
-        if (!$account->isEnabled()) throw new AccountDisabledException();
-        
-        $account->setActiveDate(); $client->setActiveDate(); $session->setActiveDate();
-        
-        if ($input->HasParam('auth_sudouser') && $account->isAdmin())
-        {
-            $this->issudouser = true;
-            $sudouser = $input->GetParam('auth_sudouser', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
-            $account = Account::TryLoadByID($database, $sudouser);
-            if ($account === null) throw new UnknownAccountException();     
+            $this->account = $this->realaccount = $account->setActiveDate();
         }
-        
-        $this->account = $account;
-        
+        else
+        {
+            $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+            $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+            
+            if (($auth = $input->GetAuth()) !== null)
+            {
+                $sessionid ??= $auth->GetUsername();
+                $sessionkey ??= $auth->GetPassword();
+            }
+            
+            if (!$sessionid || !$sessionkey) throw new InvalidSessionException();
+            
+            $session = Session::TryLoadByID($database, $sessionid);
+            
+            if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
+            
+            $account = $session->GetAccount();
+            
+            if (!$account->isEnabled()) throw new AccountDisabledException();
+            
+            $this->realaccount = $account->setActiveDate();
+            
+            $this->session = $session->setActiveDate();
+            $this->client = $session->GetClient()->setActiveDate();
+            
+            if ($username !== null)
+            {
+                if (!$account->isAdmin()) throw new AdminRequiredException();
+                
+                $account = Account::TryLoadByUsername($database, $username);
+                if ($account === null) throw new UnknownAccountException();
+            }
+            
+            $this->account = $account;
+        }
+
         array_push(self::$instances, $this);
     }
     
@@ -261,8 +273,12 @@ class Authenticator
     }
   
     /** Runs TryRequireCrypto() on all instantiated authenticators */
-    public static function AllRequireCrypto() : void
+    public static function TryRequireCryptoFor(Account $account) : void
     {
-        foreach (self::$instances as $auth) $auth->TryRequireCrypto();
+        foreach (self::$instances as $auth) 
+        {
+            if ($auth->GetAccount() === $account)
+                $auth->TryRequireCrypto();
+        }
     }
 }
