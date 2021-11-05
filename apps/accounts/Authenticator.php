@@ -35,6 +35,12 @@ class PasswordRequiredException extends AuthenticationFailedException { public $
 /** Exception indicating that the request requires providing crypto details */
 class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTOKEY_REQUIRED"; }
 
+/** Exception indicating that the action requires an account to act as */
+class AccountRequiredException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_REQUIRED"; }
+
+/** Exception indicating that the action requires a session to use */
+class SessionRequiredException extends Exceptions\ClientErrorException { public $message = "SESSION_REQUIRED"; }
+
 use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\UpgradeRequiredException;
 
@@ -50,28 +56,60 @@ class Authenticator
     
     private static array $instances = array();
    
-    private Account $account;
+    private ?Account $account = null;
     
-    /** Returns the authenticated user account */
-    public function GetAccount() : Account { return $this->account; }
+    /** Returns the authenticated user account (or null) */
+    public function TryGetAccount() : ?Account { return $this->account; }
+    
+    /** Returns the authenticated user account (not null) */
+    public function GetAccount() : Account
+    {
+        if ($this->account === null)
+            throw new AccountRequiredException();
+        return $this->account;
+    }
 
-    private Account $realaccount;
+    private ?Account $realaccount = null;
     
-    /** Returns the actual account used for the request, not the masqueraded one */
-    public function GetRealAccount() : Account { return $this->realaccount; }
+    /** Returns the actual account used for the request, not the masqueraded one (or null) */
+    public function TryGetRealAccount() : ?Account { return $this->realaccount; }
+    
+    /** Returns the actual account used for the request, not the masqueraded one (not null) */
+    public function GetRealAccount() : Account
+    {
+        if ($this->realaccount === null)
+            throw new AccountRequiredException();
+        return $this->realaccount;
+    }
     
     /** Returns true if the user is masquering as another user */
     public function isSudoUser() : bool { return $this->account !== $this->realaccount; }
     
     private ?Session $session = null;
     
-    /** Returns the session used for the request */
-    public function GetSession() : ?Session { return $this->session; }
+    /** Returns the session used for the request (or null) */
+    public function TryGetSession() : ?Session { return $this->session; }
+    
+    /** Returns the session used for the request (not null) */
+    public function GetSession() : Session
+    {
+        if ($this->session === null)
+            throw new SessionRequiredException();
+        return $this->session;
+    }
     
     private ?Client $client = null;
     
-    /** Returns the client used for the request */
-    public function GetClient() : ?Client { return $this->client; }
+    /** Returns the client used for the request or null */
+    public function TryGetClient() : ?Client { return $this->client; }
+    
+    /** Returns the client used for the request (not null) */
+    public function GetClient() : Client
+    {
+        if ($this->client === null) 
+            throw new SessionRequiredException();
+        return $this->client;
+    }
     
     /**
      * The primary authentication routine
@@ -92,28 +130,19 @@ class Authenticator
             
         $this->input = $input; $this->database = $database;
         
+        $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+        $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
+        
+        if (($auth = $input->GetAuth()) !== null)
+        {
+            $sessionid ??= $auth->GetUsername();
+            $sessionkey ??= $auth->GetPassword();
+        }
+        
         $username = $input->GetOptParam('auth_username',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
         
-        if ($interface->isPrivileged() && $username !== null)
+        if ($sessionid !== null && $sessionkey !== null)
         {
-            $account = Account::TryLoadByUsername($database, $username);
-            if ($account === null) throw new UnknownAccountException();
-            
-            $this->account = $this->realaccount = $account->setActiveDate();
-        }
-        else
-        {
-            $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
-            $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
-            
-            if (($auth = $input->GetAuth()) !== null)
-            {
-                $sessionid ??= $auth->GetUsername();
-                $sessionkey ??= $auth->GetPassword();
-            }
-            
-            if (!$sessionid || !$sessionkey) throw new InvalidSessionException();
-            
             $session = Session::TryLoadByID($database, $sessionid);
             
             if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
@@ -137,6 +166,17 @@ class Authenticator
             
             $this->account = $account;
         }
+        else if ($interface->isPrivileged())
+        {
+            if ($username !== null)
+            {
+                $account = Account::TryLoadByUsername($database, $username);
+                if ($account === null) throw new UnknownAccountException();
+                
+                $this->account = $this->realaccount = $account->setActiveDate();
+            }
+        }
+        else throw new AuthenticationFailedException();
 
         array_push(self::$instances, $this);
     }
@@ -161,10 +201,10 @@ class Authenticator
     }
     
     /** Returns true if the account used for the request is an admin */
-    public function isAdmin() : bool { return $this->account->isAdmin(); }
+    public function isAdmin() : bool { return $this->account === null || $this->account->isAdmin(); }
     
     /** Returns true if the real account used for the request is an admin */
-    public function isRealAdmin() : bool { return $this->realaccount->isAdmin(); }
+    public function isRealAdmin() : bool { return $this->realaccount === null || $this->realaccount->isAdmin(); }
     
     /**
      * Requires that the real user is an administrator
@@ -182,6 +222,8 @@ class Authenticator
      */
     public function TryRequireTwoFactor() : self
     {
+        if ($this->realaccount === null) return $this;
+        
         static::StaticTryRequireTwoFactor($this->input, $this->realaccount, $this->session); return $this;
     }
     
@@ -205,6 +247,8 @@ class Authenticator
      */
     public function RequirePassword() : self
     {
+        if ($this->realaccount === null) return $this;
+        
         $password = $this->input->GetOptParam('auth_password',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         
         if ($password === null) throw new PasswordRequiredException();
@@ -221,6 +265,8 @@ class Authenticator
      */
     public function TryRequireCrypto() : self
     {
+        if ($this->account === null) return $this;
+        
         return (!$this->account->hasCrypto()) ? $this : $this->RequireCrypto();
     }
     
@@ -242,6 +288,8 @@ class Authenticator
      */
     public function RequireCrypto() : self
     {
+        if ($this->account === null) throw new AccountRequiredException();
+        
         static::StaticRequireCrypto($this->input, $this->account, $this->session); return $this;    
     }
     
@@ -276,7 +324,7 @@ class Authenticator
     {
         foreach (self::$instances as $auth) 
         {
-            if ($auth->GetAccount() === $account)
+            if ($auth->TryGetAccount() === $account)
                 $auth->TryRequireCrypto();
         }
     }

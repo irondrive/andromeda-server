@@ -502,7 +502,7 @@ class AccountsApp extends UpgradableApp
         
         $account->InitializeCrypto($password);
         
-        if (($session = $authenticator->GetSession()) !== null)
+        if (($session = $authenticator->TryGetSession()) !== null)
         {
             $session->InitializeCrypto();
             
@@ -541,8 +541,6 @@ class AccountsApp extends UpgradableApp
     {
         $admin = $authenticator !== null; 
         if ($admin) $authenticator->RequireAdmin();
-        
-        $admin = $admin || $this->API->GetInterface()->isPrivileged();
         
         $allowCreate = $this->config->GetAllowCreateAccount();
         
@@ -806,7 +804,7 @@ class AccountsApp extends UpgradableApp
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
-        $authenticator->TryRequireCrypto();
+        $authenticator->TryRequireCrypto(); // can't use authenticator's RequireTwoFactor yet
         
         $account = $authenticator->GetAccount();
         
@@ -894,7 +892,7 @@ class AccountsApp extends UpgradableApp
 
         $sessionid = $input->GetOptParam("session", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
-        if (($authenticator->isSudoUser() || $session === null) && $sessionid === null)
+        if (($authenticator->isSudoUser()) && $sessionid === null)
             throw new UnknownSessionException();
 
         if ($sessionid !== null)
@@ -922,7 +920,7 @@ class AccountsApp extends UpgradableApp
 
         $clientid = $input->GetOptParam("client", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
-        if (($authenticator->isSudoUser() || $client === null) && $clientid === null)
+        if (($authenticator->isSudoUser()) && $clientid === null)
             throw new UnknownClientException();
             
         if ($clientid !== null)
@@ -1034,8 +1032,13 @@ class AccountsApp extends UpgradableApp
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
-        if (!($limit = $authenticator->GetAccount()->GetAllowAccountSearch())) throw new SearchDeniedException();
+        $limit = Account::DEFAULT_SEARCH_MAX;
         
+        $account = $authenticator->TryGetAccount();
+        if ($account !== null) $limit = $account->GetAllowAccountSearch();
+        
+        if (!$limit) throw new SearchDeniedException();
+
         $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
         
         if (strlen($name) < 3) return array();
@@ -1056,7 +1059,12 @@ class AccountsApp extends UpgradableApp
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
-        if (!($limit = $authenticator->GetAccount()->GetAllowGroupSearch())) throw new SearchDeniedException();
+        $limit = Account::DEFAULT_SEARCH_MAX;
+        
+        $account = $authenticator->TryGetAccount();
+        if ($account !== null) $limit = $account->GetAllowGroupSearch();
+        
+        if (!$limit) throw new SearchDeniedException();
         
         $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
         
