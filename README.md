@@ -34,6 +34,7 @@ CLI-specific global flags must come *before* the app/action.
 * `--debug int` change the debug output level (default 1 - errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
+* `--metrics int` will show performance metrics, SQL queries executed, and other development stuff
 
 ### Environment Variables
 To ease command line usage for commands that may involve repeated parameters (e.g. a session key), environment variables prefixed with `andromeda_` can be set that will always be included in a request.  For example, `export andromeda_mykey=myvalue` is equivalent to adding `--mykey=myvalue` to all future commands.
@@ -76,7 +77,7 @@ Use the `server usage` command to see options for all available commands.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
 3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage may sometimes running commands as a specific account using the `auth_username` parameter.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_username` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
 The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  Placing it outside the index.php root is probably a good idea for production, just in case.

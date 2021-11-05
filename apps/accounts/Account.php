@@ -70,6 +70,8 @@ class Account extends AuthEntity
     public const DISABLE_PERMANENT = 1;
     public const DISABLE_PENDING_CONTACT = 2;
     
+    public const DEFAULT_SEARCH_MAX = 3;
+    
     /**
      * Gets the fields that can be inherited from a group, with their default values
      * @return array<string, mixed>
@@ -82,8 +84,8 @@ class Account extends AuthEntity
         'features__disabled' => false,
         'features__forcetf' => false,
         'features__allowcrypto' => true,
-        'features__accountsearch' => 3,
-        'features__groupsearch' => 3,
+        'features__accountsearch' => self::DEFAULT_SEARCH_MAX,
+        'features__groupsearch' => self::DEFAULT_SEARCH_MAX,
         'features__userdelete' => true,
         'counters_limits__sessions' => null,
         'counters_limits__contacts' => null,
