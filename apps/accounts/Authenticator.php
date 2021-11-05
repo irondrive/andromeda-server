@@ -42,7 +42,6 @@ use Andromeda\Core\UpgradeRequiredException;
  * The class used to authenticate requests
  *
  * This is the API class that should be used in other apps.
- * Allows admins to masquerade as other users ("sudouser")
  */
 class Authenticator
 {
@@ -77,7 +76,7 @@ class Authenticator
     /**
      * The primary authentication routine
      * 
-     * Loads the specified session, checks validity, updates dates, checks sudouser.
+     * Loads the specified session, checks validity, updates dates.
      * Note that only a session must be provided, not the client that owns it.
      * @param ObjectDatabase $database database reference
      * @param Input $input the input containing auth details
@@ -272,7 +271,7 @@ class Authenticator
         else throw new CryptoKeyRequiredException();
     }
   
-    /** Runs TryRequireCrypto() on all instantiated authenticators */
+    /** Runs TryRequireCrypto() on all instantiated authenticators for $account */
     public static function TryRequireCryptoFor(Account $account) : void
     {
         foreach (self::$instances as $auth) 

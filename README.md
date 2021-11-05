@@ -42,35 +42,29 @@ To ease command line usage for commands that may involve repeated parameters (e.
 Every request will return an object with `ok` and `code`.  `ok` denotes whether the transaction was successful, and `code` returns the corresponding HTTP error code. If the request was successful (200), the `appdata` field will have the output from the app-action.  If there was an error, the `message` field will have a string describing the error.  For simpler CLI usage, if `appdata` or `message` are just a string and there is no debug to output, only that string will be output to CLI (not the whole object).  
 
 ### HTTP Differences
-
 Parameters can be placed in the URL query string, the POST body as `application/x-www-form-urlencoded` or similar (see PHP $_POST), or cookies.  The only restrictions are app and action must be URL variables, and any parameter starting with `auth_` cannot be in the URL.  Andromeda does not make use of the different HTTP methods, headers, or endpoints.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.
 
 ### CLI Batching
 Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  To run a batch, simply list each command on its own line in a plain text file, then run `./andromeda batch myfile.txt`.  The returned `appdata` will be an array, each entry for the corresponding action.
 
 ### HTTP Batching
-
 Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=server&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
 
 ### Arrays and Objects
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
 
+### Alternative Input
+Certain parameters (password, etc.) are better when not direclty on the command line.  Using `!` at the end of a parameter name (e.g. `--myparam!`) will read the parameter value interactively from the console (or from STDIN, though the order is not specified).  This is a good way to input things like passwords.  Unfortunately PHP does not support silent input, so all input will be echoed to the console.  A parameter can also source its content from a file using `--myparam@ path`.
+
 ### File Inputs
-From the CLI, files can be included in several ways.  
-
-- The file's contents can be dumped into any variable itself via @ `--myparam@ myfile.txt`.  @ will appear to the app as a regular parameter (and is a safer way of inputting things) while % is for app actions that require files.
-- If the app specifically requires it, a file's path can be sent to the app directly via % `--myparam% myfile.txt`.  With %, the inputted file's name can optionally be modified as well `--myparam% myfile.txt newname.txt`.  
-- Instead of `%` with a path, the STDIN stream can be attached to the given file input with `-`.  With `echo "test" | ./andromeda app action --myparam-`,  the value of`myparam` will be `test`.
-
-### Interactive Input
-Using `!` at the end of a parameter name (e.g. `--myparam!`) will read the parameter value interactively from the console (or from STDIN).  This is a good way to input things like passwords.  Unfortunately PHP does not support silent input, so all input will be echoed to the console.
+Certain app actions require that they are passed a file stream as input.  With HTTP they should be a regular `multipart/form-data` file upload. See PHP's $_FILES.  With CLI they can be specified as a path with `--myfile% path` or they can be read directly from STDIN (one file only) with `--myfile-`.  With `%` the inputted file's name can optionally be changed as well, e.g. `--myfile% path newname`.  App actions that require file input will specify `%` or `-` in their usage text.
 
 # Installation
 
 For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  For production, download a release tarball with dependencies included.
 
 ### Basic Requirements
-Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON, mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
+Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
 Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  However, it is strongly recommended to make sure that Andromeda's subdirectories (apps, core, vendor) are not accessible over the web.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (metadata.json), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  .htaccess files are included to accomplish this with Apache 2.4, but manual configuration is needed for nginx or others.  Alternatively, the subfolders can be installed elsewhere if the definition of `ROOT` in `a2init.php` is updated.
 
@@ -82,7 +76,7 @@ Use the `server usage` command to see options for all available commands.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
 3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  From here you will probably want to create and use a session with your new account using `accounts createsession`.  This is required to run admin-specific commands post-install.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage may sometimes running commands as a specific account using the `auth_username` parameter.  See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
 The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  Placing it outside the index.php root is probably a good idea for production, just in case.
