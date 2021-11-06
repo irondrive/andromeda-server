@@ -57,8 +57,8 @@ class CLITests(BaseTest):
 
     def testDryrunFlag(self):
         if not 'test' in self.main.servApps: return False
-        assert(not assertOk(self.fullCliRun(app='test',action='check-dryrun')))
-        assert(assertOk(self.fullCliRun(app='test',action='check-dryrun',dryrun=True)))
+        assert(not assertOk(self.fullCliRun(app='testutil',action='check-dryrun')))
+        assert(assertOk(self.fullCliRun(app='testutil',action='check-dryrun',dryrun=True)))
 
     def testFileInput(self):
         # tests only the --file@ specific to CLI
@@ -67,7 +67,7 @@ class CLITests(BaseTest):
             with open(tmp.name,'w') as tmpfile:
                 tmpfile.write(val)
             rval = assertOk(self.fullCliRun(
-                app='test', action='getinput',
+                app='testutil', action='getinput',
                 params={'myfile@': tmp.name}))
             assertEquals(val, rval['params']['myfile'])
 
@@ -76,7 +76,7 @@ class CLITests(BaseTest):
         val = "myvalue"
 
         rval = self.fullCliRun(
-            app='test', action='getinput', isJson=False,
+            app='testutil', action='getinput', isJson=False,
             params={key+'!':None}, stdin=val).decode('utf-8')
         
         expect = "enter {}...".format(key)+os.linesep
