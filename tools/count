@@ -5,10 +5,12 @@ if [ -z "$1" ]; then echo "extension?"; exit 1; fi
 rm combined.php
 
 getfiles() {
-    find $1 -name '*'$2 | grep -v "/data/\|/docs/\|/tools/\|/vendor/"
+    find $1 -name '*'$2
 }
 
-for i in . apps/* core; do 
+cd Andromeda
+
+for i in . Apps/* Core; do 
     echo DIR $i; echo $(getfiles $i $1 | wc -l) files
     getfiles $i $1 | xargs -d '\n' wc -l | sort -gr
 done

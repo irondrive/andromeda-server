@@ -9,8 +9,8 @@ rm -rf docs/doctum_*
 php tools/doctum.phar update tools/doctum-conf.php -v
 
 TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
-./andromeda server dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB > /dev/null
-./andromeda --dbconf $TEMPCONF server install > /dev/null
-./andromeda --dbconf $TEMPCONF server usage | grep "=>" | 
+./andromeda-server server dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB > /dev/null
+./andromeda-server --dbconf $TEMPCONF server install > /dev/null
+./andromeda-server --dbconf $TEMPCONF server usage | grep "=>" | 
     grep -v "\[ok\]\|\[code\]\|\[appdata\]" | sed 's/.*=> //g' | grep -v "^test" > docs/USAGE.txt    
 rm $TEMPDB $TEMPCONF

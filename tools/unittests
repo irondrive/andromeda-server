@@ -5,13 +5,15 @@ cd tools; if [ ! -f phpunit-9.phar ]; then
 fi; cd ..
 
 runtests() {
-    CMD="php tools/phpunit-9.phar $@"
+    CMD="php ../tools/phpunit-9.phar $@"
     echo; echo "$CMD"; $CMD || exit
 }
 
-runtests core/tests/phpunit $@
+cd Andromeda;
 
-for i in $(ls apps); do
-    DIR=apps/$i/tests/phpunit
+runtests Core/tests/phpunit $@
+
+for i in $(ls Apps); do
+    DIR=Apps/$i/tests/phpunit
     if [ -d $DIR ]; then runtests $DIR $@; fi
 done
