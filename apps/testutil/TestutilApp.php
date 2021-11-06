@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Test; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/core/AppBase.php"); use Andromeda\Core\{AppBase, UnknownActionException};
 
@@ -18,9 +18,9 @@ class TestServerException extends Exceptions\ServerException { public $message =
 /**
  * Utility app for the python test framework
  */
-class TestApp extends AppBase
-{    
-    public static function getName() : string { return 'test'; }
+class TestUtilApp extends AppBase
+{
+    public static function getName() : string { return 'testutil'; }
     
     public static function getUsage() : array
     {
@@ -59,7 +59,7 @@ class TestApp extends AppBase
     }
 
     protected function Random(Input $input) : string
-    {        
+    {
         $length = $input->GetOptParam("length", SafeParam::TYPE_UINT);
 
         return Utilities::Random($length ?? 16);

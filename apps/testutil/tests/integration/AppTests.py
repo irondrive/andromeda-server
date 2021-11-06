@@ -5,14 +5,14 @@ from TestUtils import *
 
 class AppTests(BaseAppTest):
     def __str__(self):
-        return "TEST"
+        return "TESTUTIL"
 
     def install(self):
         pass # no install routine
 
     def runBinOutput(self, data:str, times:int):
         return self.interface.run(
-            app='test',action='binoutput',isJson=False,
+            app='testutil',action='binoutput',isJson=False,
             params={'data':data, 'times':times})
 
     def parseMultiBin(self, data):
