@@ -5,13 +5,9 @@ use Doctum\Parser\Filter\TrueFilter;
 use Symfony\Component\Finder\Finder;
 
 $iterator = Finder::create()
-    ->files()->name('*.php')->in('.')
-    ->exclude('docs')
-    ->exclude('tests')
-    ->exclude('tools')
-    ->exclude('vendor')
-    ->exclude('apps/test')
-    ->exclude('/Config.php');
+    ->files()->name('*.php')->in('Andromeda')
+    ->exclude('Apps/Testutil')
+    ->exclude('DBConfig.php');
 
 $doctum = new Doctum($iterator, [
     'title' => 'Andromeda Server API',

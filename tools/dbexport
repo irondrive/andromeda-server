@@ -6,17 +6,17 @@ fi; cd ..
 
 tools/pgtransfer
 
-for i in apps/* core; do if [ -f $i/andromeda.mysql.sql ]; then
+cd Andromeda; for i in Apps/* Core; do if [ -f $i/andromeda.mysql.sql ]; then
 
-   TABLES=$(mysql -D andromeda -u root -p -se "SHOW TABLES LIKE 'a2obj_${i//\//_}%'")
+   il=${i,,}; TABLES=$(mysql -D andromeda -u root -p -se "SHOW TABLES LIKE 'a2obj_${il//\//_}%'")
    mysqldump andromeda $TABLES --skip-comments --no-create-db --no-data \
       --skip-add-drop-table -h localhost -u root -p > $i/andromeda.mysql.sql
 
-   pg_dump --schema-only --table public.a2obj_${i//\//_}"*" --dbname andromeda \
+   pg_dump --schema-only --table public.a2obj_${il//\//_}"*" --dbname andromeda \
       --host localhost --username postgres --no-owner > $i/andromeda.pgsql.sql
    sed -i "s/DEFAULT '\\\x4e554c4c'::bytea/DEFAULT NULL::bytea/" $i/andromeda.pgsql.sql
 
-   tools/mysql2sqlite/mysql2sqlite "$i"/andromeda.mysql.sql \
+   ../tools/mysql2sqlite/mysql2sqlite "$i"/andromeda.mysql.sql \
       | grep -v TRANSACTION | grep -v "PRAGMA synchronous" > $i/andromeda.sqlite.sql
 
 fi; done

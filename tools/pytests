@@ -1,2 +1,2 @@
 #!/bin/sh
-python3 core/tests/integration/main.py $@
+cd Andromeda; python3 Core/tests/integration/main.py $@

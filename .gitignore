@@ -12,7 +12,7 @@ wiki/
 metrics/
 
 combined.php
-/Config.php
+Andromeda/DBConfig.php
 
 pytest-config.json
 

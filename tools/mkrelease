@@ -12,9 +12,8 @@ mkdir release; cd release
 git clone git@github.com:lightray22/andromeda-server.git api
 cd api; git checkout $TAG || exit 3
 
-rm -rf tools
-rm -rf apps/test
-rm README.md
+rm -rf tools README.md
+rm -rf Andromeda/Apps/Testutil
 
 find . -name tests | while read -r i; do rm -rf $i; done
 rm pytest-config.example.json

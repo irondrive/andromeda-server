@@ -16,9 +16,9 @@ As the framework itself is app-agnostic, the commands and documentation are gene
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
-Run the API from the CLI with no arguments (either `./andromeda` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
+Run the API from the CLI with no arguments (either `./andromeda-server` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda-server myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda-server server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified with no value, in which case they are implicitly mapped to `true`.  
 
-Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda` and will only specify the `app action` to run, e.g. `server usage`.  The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda-server` and will only specify the `app action` to run, e.g. `server usage`.  The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
 
 ### Common Exceptions
 
@@ -46,7 +46,7 @@ Every request will return an object with `ok` and `code`.  `ok` denotes whether 
 Parameters can be placed in the URL query string, the POST body as `application/x-www-form-urlencoded` or similar (see PHP $_POST), or cookies.  The only restrictions are app and action must be URL variables, and any parameter starting with `auth_` cannot be in the URL.  Andromeda does not make use of the different HTTP methods, headers, or endpoints.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.
 
 ### CLI Batching
-Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  To run a batch, simply list each command on its own line in a plain text file, then run `./andromeda batch myfile.txt`.  The returned `appdata` will be an array, each entry for the corresponding action.
+Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  To run a batch, simply list each command on its own line in a plain text file, then run `./andromeda-server batch myfile.txt`.  The returned `appdata` will be an array, each entry for the corresponding action.
 
 ### HTTP Batching
 Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=server&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
@@ -67,7 +67,9 @@ For development, simply clone the repo and use `composer install` to download an
 ### Basic Requirements
 Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
-Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  However, it is strongly recommended to make sure that Andromeda's subdirectories (apps, core, vendor) are not accessible over the web.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (metadata.json), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  .htaccess files are included to accomplish this with Apache 2.4, but manual configuration is needed for nginx or others.  Alternatively, the subfolders can be installed elsewhere if the definition of `ROOT` in `a2init.php` is updated.
+Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
+
+It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/lib`).  This can be accomplished easily by changing the include path in the root `index.php`.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders have not moved.
 
 ### Install Steps
 
@@ -75,17 +77,17 @@ Use the `server usage` command to see options for all available commands.
 
 1. Run `server dbconf` to generate a database configuration file.
 2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
-3. Install all apps that require it.  Hint: try `./andromeda server usage | grep install`.
+3. Install all apps that require it.  Hint: try `./andromeda-server server usage | grep install`.
 
 Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_username` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 #### Database Config
-The `server dbconf` command will store the new configuration file (Config.php) by default in the root (index.php) folder.  When Andromeda runs it checks its root, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.  Placing it outside the index.php root is probably a good idea for production, just in case.
+The `server dbconf` command will store the new configuration file (`DBConfig.php`) by default in the `Andromeda/` folder.  In case the web-server cannot write to this folder, an alternative location will need to be picked with `--outfile`.  When Andromeda runs it checks its root, `~/.config/andromeda`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.
 
 For example to create and use an SQLite database - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments as it only supports one access at a time.
 
 ### Upgrading
-When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda server usage | grep upgrade`.
+When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server server usage | grep upgrade`.
 
 
 # License
