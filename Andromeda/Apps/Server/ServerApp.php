@@ -29,8 +29,8 @@ class MailSendFailException extends Exceptions\ClientErrorException { public $me
 /** Client error indicating that the database config failed */
 class DatabaseFailException extends Exceptions\ClientErrorException { public $message = "INVALID_DATABASE"; }
 
-/** Client error indicating authentication failed */
-class AuthFailedException extends Exceptions\ClientDeniedException { public $message = "ACCESS_DENIED"; }
+/** Exception indicating that admin-level access is required */
+class AdminRequiredException extends Exceptions\ClientDeniedException { public $message = "ADMIN_REQUIRED"; }
 
 /**
  * Server management/info app included with the framework.
@@ -153,7 +153,7 @@ class ServerApp extends UpgradableApp
         {
             case 'usage':   return $this->GetUsages($input);
             
-            case 'dbconf':  return $this->ConfigDB($input);
+            case 'dbconf':  return $this->ConfigDB($input, $isAdmin);
             case 'install': return $this->Install($input);
             case 'listapps': return $this->ListApps($input, $isAdmin);
             
@@ -211,8 +211,10 @@ class ServerApp extends UpgradableApp
      * Creates a database config with the given input
      * @throws DatabaseFailException if the config is invalid
      */
-    protected function ConfigDB(Input $input) : void
+    protected function ConfigDB(Input $input, bool $isAdmin) : void
     {
+        if ($this->database && !$isAdmin) throw new AdminRequiredException();
+        
         $this->API->GetInterface()->DisallowBatch();
         
         try { Database::Install($input); }
@@ -267,18 +269,18 @@ class ServerApp extends UpgradableApp
     /** @see Config::ListApps() */
     public function ListApps(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException(); return Config::ListApps();
+        if (!$isAdmin) throw new AdminRequiredException(); return Config::ListApps();
     }
     
     /**
      * Prints the phpinfo() page
-     * @throws AuthFailedException if not admin-level access
+     * @throws AdminRequiredException if not admin-level access
      */
     protected function PHPInfo(Input $input, bool $isAdmin) : void
     {
         $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
 
         $retval = Utilities::CaptureOutput(function(){ phpinfo(); });
         
@@ -289,13 +291,13 @@ class ServerApp extends UpgradableApp
     
     /**
      * Gets miscellaneous server identity information
-     * @throws AuthFailedException if not admin-level access
+     * @throws AdminRequiredException if not admin-level access
      * @return array `{uname:string, server:[various], db:Database::getInfo()}`
      * @see Database::getInfo()
      */
     protected function ServerInfo(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $server = array_filter($_SERVER, function($key){ 
             return strpos($key, 'andromeda_') !== 0;; }, ARRAY_FILTER_USE_KEY);
@@ -311,13 +313,13 @@ class ServerApp extends UpgradableApp
     
     /**
      * Sends a test email via a given mailer
-     * @throws AuthFailedException if not an admin via the accounts app
+     * @throws AdminRequiredException if not an admin via the accounts app
      * @throws UnknownMailerException if the given mailer is invalid
      * @throws MailSendFailException if sending the email fails
      */
     protected function TestMail(Input $input, bool $isAdmin, $authenticator, ?AccessLog $accesslog) : void
     {
-        if (!$isAdmin || ($authenticator && !$authenticator->isAdmin())) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         if (!$authenticator)
             $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL);
@@ -345,12 +347,12 @@ class ServerApp extends UpgradableApp
     
     /**
      * Registers (enables) an app
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
     protected function EnableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
@@ -363,12 +365,12 @@ class ServerApp extends UpgradableApp
     
     /**
      * Unregisters (disables) an app
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
     protected function DisableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
@@ -394,33 +396,33 @@ class ServerApp extends UpgradableApp
      */
     protected function GetDBConfig(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return $this->database->GetClientObject();
     }
 
     /**
      * Sets server config
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return array Config
      * @see Config::GetClientObject()
      */
     protected function SetConfig(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return $this->API->GetConfig()->SetConfig($input)->GetClientObject(true);
     }
     
     /**
      * Returns a list of the configured mailers
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return array [id:Emailer]
      * @see Emailer::GetClientObject()
      */
     protected function GetMailers(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function($m){ return $m->GetClientObject(); }, 
             Emailer::LoadAll($this->database));
@@ -428,13 +430,13 @@ class ServerApp extends UpgradableApp
     
     /**
      * Creates a new emailer config
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return array Emailer
      * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(Input $input, bool $isAdmin, $authenticator, ?AccessLog $accesslog) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $emailer = Emailer::Create($this->database, $input);
         
@@ -452,12 +454,12 @@ class ServerApp extends UpgradableApp
     
     /**
      * Deletes a configured emailer
-     * @throws AuthFailedException if not an admin 
+     * @throws AdminRequiredException if not an admin 
      * @throws UnknownMailerException if given an invalid emailer
      */
     protected function DeleteMailer(Input $input, bool $isAdmin, ?AccessLog $accesslog) : void
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
@@ -472,11 +474,11 @@ class ServerApp extends UpgradableApp
     
     /**
      * Returns the server error log, possibly filtered
-     * @throws AuthFailedException if not an admin 
+     * @throws AdminRequiredException if not an admin 
      */
     protected function GetErrors(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function(ErrorLog $e){ return $e->GetClientObject(); },
             ErrorLog::LoadByInput($this->database, $input));
@@ -484,25 +486,25 @@ class ServerApp extends UpgradableApp
     
     /**
      * Counts server error log entries, possibly filtered
-     * @throws AuthFailedException if not an admin
+     * @throws AdminRequiredException if not an admin
      * @return int error log entry count
      */
     protected function CountErrors(Input $input, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return ErrorLog::CountByInput($this->database, $input);
     }
     
     /**
      * Returns all request logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @return array RequestLog
      * @see RequestLog::GetFullClientObject()
      */
     protected function GetRequests(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
@@ -519,25 +521,25 @@ class ServerApp extends UpgradableApp
     
     /**
      * Counts all request logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @return int log entry count
      */
     protected function CountRequests(Input $input, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return RequestLog::CountByInput($this->database, $input);
     }
     
     /**
      * Returns all action logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @return array ActionLog
      * @see ActionLog::GetFullClientObject()
      */
     protected function GetAllActions(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
@@ -554,26 +556,26 @@ class ServerApp extends UpgradableApp
     
     /**
      * Counts all action logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @return int log entry count
      */
     protected function CountAllActions(Input $input, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         return ActionLog::CountByInput($this->database, $input);
     }
     
     /**
      * Returns all app action logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @throws InvalidAppException if the given app is invalid
      * @return array BaseAppLog
      * @see BaseAppLog::GetFullClientObject()
      */
     protected function GetActions(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $appname = $input->GetParam("appname",SafeParam::TYPE_ALPHANUM);
         
@@ -597,13 +599,13 @@ class ServerApp extends UpgradableApp
     
     /**
      * Counts all app action logs matching the given input
-     * @throws AuthFailedException if not admin
+     * @throws AdminRequiredException if not admin
      * @throws InvalidAppException if the given app is invalid
      * @return int log entry count
      */
     protected function CountActions(Input $input, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AuthFailedException();
+        if (!$isAdmin) throw new AdminRequiredException();
         
         $appname = $input->GetParam("appname",SafeParam::TYPE_ALPHANUM);
         
