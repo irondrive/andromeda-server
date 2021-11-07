@@ -43,26 +43,13 @@ class RecoveryKey extends RecoveryKeyBase
         return parent::CreateKeySource($database, $account);
     }
     
-    private bool $codeused = false;  
-    
-    /** Calls Delete() if the code was used */
-    protected function SubSave() : void
-    {
-        if ($this->codeused) $this->Delete();
-    }
-    
     protected static function GetFullKeyPrefix() : string { return "rk"; }
 
     public function CheckFullKey(string $code) : bool
     {
         $retval = parent::CheckFullKey($code);
         
-        if ($retval) 
-        {
-            $this->codeused = true;
-            $this->database->setModified($this);
-            // schedule the delete for later
-        }
+        if ($retval) $this->DeleteLater();
         
         return $retval;
     }
