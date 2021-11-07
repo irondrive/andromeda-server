@@ -11,8 +11,8 @@ $iterator = Finder::create()
 
 $doctum = new Doctum($iterator, [
     'title' => 'Andromeda Server API',
-    'build_dir' => __DIR__.'/../docs/doctum_build',
-    'cache_dir' => __DIR__.'/../docs/doctum_cache'
+    'build_dir' => 'docs/doctum_build',
+    'cache_dir' => 'docs/doctum_cache'
 ]);
 
 $doctum['filter'] = function () {
