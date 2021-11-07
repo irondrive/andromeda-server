@@ -39,7 +39,7 @@ abstract class AppBase implements Transactions
      */
     public abstract static function getUsage() : array;
     
-    /** @return string the name of the app */
+    /** @return string the lowercase name of the app */
     public abstract static function getName() : string;
     
     /** Return this app's BaseAppLog class name, if used (or null) */
@@ -54,6 +54,8 @@ abstract class AppBase implements Transactions
      */
     protected static function getMetadata(string $app, string $key)
     {
+        $app = strtolower($app);
+        
         if (!array_key_exists($app, self::$metadata))
         {
             $uapp = Utilities::FirstUpper($app);
@@ -106,7 +108,8 @@ abstract class UpgradableApp extends AppBase
     /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
     protected static function getUpgradeScripts() : array
     {
-        return require(ROOT."/Apps/".static::getName()."/_upgrade/scripts.php");
+        $uname = Utilities::FirstUpper(static::getName());
+        return require(ROOT."/Apps/$uname/_upgrade/scripts.php");
     }
     
     /**
