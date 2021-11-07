@@ -106,7 +106,7 @@ abstract class UpgradableApp extends AppBase
     /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
     protected static function getUpgradeScripts() : array
     {
-        return require(ROOT."/Apps/".static::getName()."/upgrade/scripts.php");
+        return require(ROOT."/Apps/".static::getName()."/_upgrade/scripts.php");
     }
     
     /**

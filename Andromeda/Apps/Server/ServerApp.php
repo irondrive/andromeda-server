@@ -249,7 +249,7 @@ class ServerApp extends UpgradableApp
     
     protected static function getUpgradeScripts() : array
     {
-        return require_once(ROOT."/Core/upgrade/scripts.php");
+        return require_once(ROOT."/Core/_upgrade/scripts.php");
     }
     
     public function Upgrade() : void

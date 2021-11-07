@@ -11,9 +11,9 @@ runtests() {
 
 cd Andromeda;
 
-runtests Core/tests/phpunit $@
+runtests Core/_tests/phpunit $@
 
 for i in $(ls Apps); do
-    DIR=Apps/$i/tests/phpunit
+    DIR=Apps/$i/_tests/phpunit
     if [ -d $DIR ]; then runtests $DIR $@; fi
 done

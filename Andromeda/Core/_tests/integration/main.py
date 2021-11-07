@@ -112,7 +112,7 @@ class Main():
             self.servApps = config['config']['apps'].keys()
 
         for app in self.servApps:
-            path = self.phproot+'/Apps/'+app.capitalize()+'/tests/integration'
+            path = self.phproot+'/Apps/'+app.capitalize()+'/_tests/integration'
             if not os.path.exists(path): continue
 
             spec = importlib.util.spec_from_file_location('AppTests', path+'/AppTests.py')
