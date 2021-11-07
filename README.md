@@ -81,6 +81,8 @@ Use the `server usage` command to see options for all available commands.
 
 Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_username` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
+The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.
+
 #### Database Config
 The `server dbconf` command will store the new configuration file (`DBConfig.php`) by default in the `Andromeda/` folder.  In case the web-server cannot write to this folder, an alternative location will need to be picked with `--outfile`.  When Andromeda runs it checks its root, `~/.config/andromeda`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for the config file.
 
@@ -88,6 +90,8 @@ For example to create and use an SQLite database - `php index.php server dbconf 
 
 ### Upgrading
 When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server server usage | grep upgrade`.
+
+The upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.
 
 
 # License
