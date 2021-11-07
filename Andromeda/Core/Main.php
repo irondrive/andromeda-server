@@ -157,11 +157,8 @@ final class Main extends Singleton
         $this->total_stats = new DBStats();
         
         $interface->Initialize();
-        
-        $uapp = Utilities::FirstUpper(self::SERVERAPP);
-        $sapppath = ROOT."/Apps/$uapp/$uapp"."App.php";
-        
-        $apps = file_exists($sapppath) ? array(self::SERVERAPP) : array();
+
+        $apps = file_exists(ROOT."/Apps/Server/ServerApp.php") ? array('server') : array();
         
         try 
         {
@@ -208,15 +205,8 @@ final class Main extends Singleton
     public function LoadApp(string $app) : self
     {
         $app = strtolower($app); 
+        
         $uapp = Utilities::FirstUpper($app);
-        
-        if ($app !== self::SERVERAPP)
-        {
-            $reqver = AppBase::getAppReqVersion($app);
-            if ($reqver != (new VersionInfo())->major)
-                throw new AppVersionException($reqver);
-        }
-        
         $path = ROOT."/Apps/$uapp/$uapp"."App.php";
         $app_class = "Andromeda\\Apps\\$uapp\\$uapp".'App';
 
@@ -246,8 +236,8 @@ final class Main extends Singleton
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        if ($app !== self::SERVERAPP && $this->requireUpgrade)
-            throw new UpgradeRequiredException(self::SERVERAPP);
+        if ($app !== 'server' && $this->requireUpgrade)
+            throw new UpgradeRequiredException('server');
         
         $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
         

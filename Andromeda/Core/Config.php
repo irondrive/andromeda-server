@@ -173,6 +173,10 @@ class Config extends DBVersion
                 throw new AppDependencyException("$app requires $tapp");
         }
         
+        $reqver = AppBase::getAppReqVersion($app);
+        if ($reqver != (new VersionInfo())->major)
+            throw new AppVersionException($reqver);
+        
         Main::GetInstance()->LoadApp($app);
         
         $capps = $this->GetApps();        
