@@ -102,6 +102,7 @@ class Main():
 
     def runTests(self, interface):
 
+        # build list of server apps
         if self.doInstall:
             for app in os.listdir(self.phproot+'/Apps'): 
                 path = self.phproot+'/Apps/'+app+'/'+app+'App.php'
@@ -111,6 +112,7 @@ class Main():
             config = TestUtils.assertOk(interface.run(app='server',action='getconfig'))
             self.servApps = config['config']['apps'].keys()
 
+        # load app test modules
         for app in self.servApps:
             path = self.phproot+'/Apps/'+app.capitalize()+'/_tests/integration'
             if not os.path.exists(path): continue
@@ -128,12 +130,14 @@ class Main():
         appTests = list(self.appMap.values())
         self.random.shuffle(appTests)
 
+        # install apps if needed
         if self.doInstall:
             print(" -- BEGIN INSTALLS -- ")
             appNames = TestUtils.assertOk(interface.run(app='server',action='install',params={'enable':True}))
             TestUtils.assertEquals(set(self.servApps), set(appNames))
             for app in appTests: app.install()
 
+        # run all test modules
         print(" -- BEGIN", interface, "TESTS --"); interface.runTests()
         for app in appTests: print(" -- BEGIN", app, "TESTS --"); app.runTests()
     
