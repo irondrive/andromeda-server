@@ -724,7 +724,7 @@ abstract class BaseObject
     
     /** Function to allow subclasses to do something before the object is saved to DB */
     protected function SubSave() : void { }
-
+    
     /** 
      * Collects fields that have changed and saves them to the database
      * @param bool $onlyMandatory true if only required fields should be saved
@@ -732,11 +732,12 @@ abstract class BaseObject
      */
     public function Save(bool $onlyMandatory = false) : self
     {
-        if ($this->deleted || ($onlyMandatory && $this->created)) return $this; 
+        $this->SubSave();
         
-        if (!$onlyMandatory) $this->SubSave(); 
+        if ($this->deleteLater) { $this->Delete(); return $this; }
         
-        if ($this->deleted || !$this->modified) return $this;
+        if (!$this->modified || $this->deleted 
+            || ($onlyMandatory && $this->created)) return $this;
         
         $values = array(); $counters = array();
 
@@ -757,10 +758,10 @@ abstract class BaseObject
     } 
     
     /** whether or not this object has been modified */
-    protected bool $modified = false;
+    private bool $modified = false;
     
     /** whether or not this object has been deleted */
-    protected bool $deleted = false; 
+    private bool $deleted = false; 
     
     /** 
      * whether or not this object has been, or should be considered, deleted
@@ -770,7 +771,7 @@ abstract class BaseObject
     public function isDeleted() : bool { return $this->deleted; }
     
     /** whether or not this object has been deleted by DB */
-    protected bool $dbDeleted = false;
+    private bool $dbDeleted = false;
     
     /** Deletes this object without sending to the DB */
     public function NotifyDBDeleted() : void { $this->dbDeleted = true; $this->Delete(); }
@@ -798,9 +799,19 @@ abstract class BaseObject
         
         $this->deleted = true;
     }
+    
+    private bool $deleteLater = false;
+    
+    /** Schedules the object to be deleted when Save() is called */
+    public function DeleteLater() : void 
+    {
+        $this->deleteLater = true; 
+        
+        $this->database->setModified($this);
+    }
 
     /** True if this object has been created and not yet saved to DB */
-    protected bool $created = false; 
+    private bool $created = false; 
     
     /** True if this object has been created and not yet saved to DB (should not be overriden) */
     public function isCreated() : bool { return $this->created; }

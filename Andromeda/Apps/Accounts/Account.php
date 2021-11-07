@@ -605,7 +605,7 @@ class Account extends AuthEntity
     {
         if ($this->hasCrypto())
         {
-           $this->InitializeCrypto($new_password, true);
+           $this->InitializeCrypto($new_password, true); // keeps same key
            
            foreach ($this->GetTwoFactors() as $tf) $tf->InitializeCrypto();
         }

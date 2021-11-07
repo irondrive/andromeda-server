@@ -1,17 +1,10 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 
 require_once(ROOT."/Apps/Accounts/Account.php");
 require_once(ROOT."/Apps/Accounts/Authenticator.php");
-
-/** Exception indicating that crypto has not been unlocked on the requied account */
-class CrptoNotUnlockedException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_CRYPTO_NOT_UNLOCKED"; }
-
-/** Exception indicating that crypto has not been initialized on the required account */
-class CryptoNotAvailableException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_CRYPTO_NOT_AVAILABLE"; }
 
 /**
  * Trait allowing objects to store fields encrypted with an account's crypto
@@ -69,14 +62,10 @@ trait FieldCrypt
     /** Unlocks account crypto for usage and returns it */
     protected function RequireCrypto() : Account
     {
-        if (($account = $this->GetAccount()) === null || !$account->hasCrypto())
-            throw new CryptoNotAvailableException();
-            
-        if (!$account->CryptoAvailable())
-            Authenticator::TryRequireCryptoFor($account);
-            
-        if (!$account->CryptoAvailable())
-            throw new CrptoNotUnlockedException();
+        if (($account = $this->GetAccount()) === null)
+            throw new CryptoInitRequiredException();
+
+        Authenticator::RequireCryptoFor($account);
         
         return $account;
     }
@@ -84,7 +73,6 @@ trait FieldCrypt
     /**
      * Decrypts and returns the value of the given field
      * @param string $field field name
-     * @throws CrptoNotUnlockedException if account crypto is not unlocked
      * @return string|NULL decrypted value
      */
     protected function TryGetEncryptedScalar(string $field) : ?string
@@ -110,7 +98,6 @@ trait FieldCrypt
      * @param string $field field to set
      * @param string $value value to set
      * @param bool $fieldcrypt if true, encrypt - default current state
-     * @throws CryptoNotAvailableException if account crypto is not unlocked
      * @return $this
      */
     protected function SetEncryptedScalar(string $field, ?string $value, ?bool $fieldcrypt = null) : self

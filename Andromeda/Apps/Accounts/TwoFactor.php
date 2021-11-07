@@ -103,16 +103,11 @@ class TwoFactor extends StandardObject
                 ->SetObject('account',$account);
         
         $ga = new \PHPGangsta_GoogleAuthenticator();
-        $secret = $ga->createSecret(self::SECRET_LENGTH);
+        $obj->SetScalar('secret', $ga->createSecret(self::SECRET_LENGTH));
         
-        if ($account->hasCrypto())
-        {        
-            $nonce = CryptoSecret::GenerateNonce();
-            $secret = $account->EncryptSecret($secret, $nonce);            
-            $obj->SetScalar('nonce',$nonce);
-        }
+        if ($account->hasCrypto()) $obj->InitializeCrypto();
         
-        return $obj->SetScalar('secret',$secret);
+        return $obj;
     }
     
     /** Returns the (decrypted) OTP secret */

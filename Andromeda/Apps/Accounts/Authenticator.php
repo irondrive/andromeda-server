@@ -30,10 +30,13 @@ class AdminRequiredException extends AuthenticationFailedException { public $mes
 class TwoFactorRequiredException extends AuthenticationFailedException { public $message = "TWOFACTOR_REQUIRED"; }
 
 /** Exception indicating that a password for authentication was required but not given */
-class PasswordRequiredException extends AuthenticationFailedException { public $message = "AUTH_PASSWORD_REQUIRED"; }
+class PasswordRequiredException extends AuthenticationFailedException { public $message = "PASSWORD_REQUIRED"; }
 
 /** Exception indicating that the request requires providing crypto details */
-class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTOKEY_REQUIRED"; }
+class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTO_KEY_REQUIRED"; }
+
+/** Exception indicating that the account does not have crypto initialized */
+class CryptoInitRequiredException extends Exceptions\ClientErrorException { public $message = "CRYPTO_INIT_REQUIRED"; }
 
 /** Exception indicating that the action requires an account to act as */
 class AccountRequiredException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_REQUIRED"; }
@@ -298,34 +301,42 @@ class Authenticator
     {
         if ($account->CryptoAvailable()) return;
         
+        if (!$account->hasCrypto()) throw new CryptoInitRequiredException();
+        
         $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         
-        if ($session !== null && $session->hasCrypto())
+        if ($session !== null)
         {
             try { $account->UnlockCryptoFromKeySource($session); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
         }
-        else if ($recoverykey !== null && $recoverykey->hasCrypto())
+        else if ($recoverykey !== null)
         {
             try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
             catch (DecryptionFailedException | RecoveryKeyFailedException $e) { throw new AuthenticationFailedException(); }
         }
-        else if ($password !== null && $account->hasCrypto())
+        else if ($password !== null)
         {
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
-        }       
+        }
         else throw new CryptoKeyRequiredException();
     }
   
-    /** Runs TryRequireCrypto() on all instantiated authenticators for $account */
-    public static function TryRequireCryptoFor(Account $account) : void
+    /** 
+     * Runs TryRequireCrypto() on all instantiated authenticators 
+     * for $account and throws if not unlocked 
+     */
+    public static function RequireCryptoFor(Account $account) : void
     {
         foreach (self::$instances as $auth) 
         {
             if ($auth->TryGetAccount() === $account)
                 $auth->TryRequireCrypto();
         }
+        
+        if (!$account->CryptoAvailable())
+            throw new CryptoKeyRequiredException();
     }
 }
