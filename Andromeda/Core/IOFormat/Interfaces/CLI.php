@@ -108,7 +108,7 @@ class CLI extends IOInterface
                     
                 case 'dbconf':
                     if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $this->dbconf = (new SafeParam('dbfconf',$val))->GetValue(SafeParam::TYPE_FSPATH);
+                    $this->dbconf = (new SafeParam('dbconf',$val))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
 
                 default: throw new IncorrectCLIUsageException();

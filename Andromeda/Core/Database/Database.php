@@ -12,11 +12,14 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 /** Base class representing a database exception */
 abstract class DatabaseException extends Exceptions\ServerException { }
 
-/** Exception indicating that the database connection is not configured */
-class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_CONFIG_MISSING"; }
+/** Exception indicating that the database connection failed to initialize */
+class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_CONFIG_ERROR"; }
+
+/** Exception indicating that the database configuration is not found */
+class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }
 
 /** Exception indicating that the database was requested to use an unknkown driver */
-class InvalidDriverException extends DatabaseException { public $message = "PDO_UNKNOWN_DRIVER"; }
+class InvalidDriverException extends DatabaseConfigException { public $message = "PDO_UNKNOWN_DRIVER"; }
 
 /** Exception indicating that PDO failed to execute the given query */
 class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
@@ -100,7 +103,7 @@ class Database implements Transactions
         }
         
         if ($config !== null) $config = require($config);
-        else throw new DatabaseConfigException();
+        else throw new DatabaseMissingException();
         
         $this->config = $config;
         
@@ -111,14 +114,19 @@ class Database implements Transactions
         
         $connect = $config['DRIVER'].':'.$config['CONNECT'];
         
-        $this->connection = new PDO($connect, 
-            $config['USERNAME'] ?? null, 
-            $config['PASSWORD'] ?? null, 
-            array(
-                PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_EMULATE_PREPARES => false
-        ));
+        try
+        {
+            $this->connection = new PDO($connect, 
+                $config['USERNAME'] ?? null, 
+                $config['PASSWORD'] ?? null, 
+                array(
+                    PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false, 
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_EMULATE_PREPARES => false
+            ));
+        }
+        catch (\PDOException $e) { 
+            throw DatabaseConfigException::Copy($e); }
         
         if ($this->connection->inTransaction())
             $this->connection->rollback();

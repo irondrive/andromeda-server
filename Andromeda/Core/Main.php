@@ -116,11 +116,32 @@ final class Main extends Singleton
      */
     public function GetApps() : array { return $this->apps; }
     
-    /** Returns the global config object */
-    public function GetConfig() : ?Config { return $this->config; }
+    /** Returns true if the global config object is valid */
+    public function HasConfig() : bool { return $this->config !== null; }
     
-    /** Returns the global ObjectDatabase instance */
-    public function GetDatabase() : ?ObjectDatabase { return $this->database; }
+    /** Returns the global config object or null if not installed */
+    public function TryGetConfig() : ?Config { return $this->config; }
+    
+    /** Returns the global config object if installed else throws */
+    public function GetConfig() : Config 
+    {
+        if ($this->config === null) 
+            throw new InstallRequiredException('server');
+        
+        return $this->config; 
+    }
+    
+    /** Returns true if the global ObjectDatabase instance is valid */
+    public function HasDatabase() : bool { return $this->database !== null; }
+    
+    /** Returns the global ObjectDatabase instance or throws if not configured */
+    public function GetDatabase() : ObjectDatabase
+    {
+        if ($this->database === null) 
+            throw DatabaseConfigException::Copy($this->dbException);
+        
+        else return $this->database;
+    }
     
     /** Returns the interface used for the current request */
     public function GetInterface() : IOInterface { return $this->interface; }
@@ -131,10 +152,9 @@ final class Main extends Singleton
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
-    /** the name of the standard server app */
-    private const SERVERAPP = 'server';
-    
     private bool $requireUpgrade = false;
+    
+    private $dbException; // reason DB is not configured
 
     /**
      * Initializes the Main API
@@ -176,20 +196,20 @@ final class Main extends Singleton
             $apps = array_merge($apps, $this->config->GetApps());
             
             if ($this->config->getVersion() !== andromeda_version)
-                $this->requireUpgrade = true;                
+                $this->requireUpgrade = true;
         }
         catch (DatabaseException $e) 
         {
             if ($e instanceof DatabaseConfigException && $dbconf !== null) throw $e;
             
-            else $this->error_manager->LogException($e);
+            else { $this->dbException = $e; $this->error_manager->LogException($e); }
         }
         
         foreach ($apps as $app) $this->LoadApp($app);
 
         if ($this->database)
         {
-            if ($this->config !== null && !$this->config->isReadOnly()
+            if ($this->config && !$this->config->isReadOnly()
                     && $this->config->GetEnableRequestLog())
                 $this->reqlog = RequestLog::Create($this);
             
@@ -234,10 +254,10 @@ final class Main extends Singleton
     {        
         $app = $input->GetApp();
         
-        if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
-        
         if ($app !== 'server' && $this->requireUpgrade)
             throw new UpgradeRequiredException('server');
+        
+        if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
         $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
         

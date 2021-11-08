@@ -28,7 +28,7 @@ $interface = IOInterface::TryGet() or die('Unknown Interface');
 
 $main = new Main($interface, new ErrorManager($interface)); 
 
-$inputs = $interface->GetInputs($main->GetConfig());
+$inputs = $interface->GetInputs($main->TryGetConfig());
 
 $retvals = array_map(function(Input $input)use($main){
     return $main->Run($input); }, $inputs);
