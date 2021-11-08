@@ -23,14 +23,12 @@ class ObjectDatabase extends Database
 {
     /** @var array<string, array<string, BaseObject>> array of loaded objects indexed by class then ID */
     private array $objects = array();
+    
+    /** @var array <string, string> list of ID arrays indexed by class of loaded objects */
+    private array $loaded = array();
 
     /** @return array<string, string> list of ID arrays indexed by class */
-    public function getLoadedObjectIDs() : array
-    { 
-        return array_map(function(array $cobjs){
-            return array_keys($cobjs);
-        }, $this->objects);
-    }
+    public function getLoadedObjectIDs() : array { return $this->loaded; }
 
     /**
      * Loops through every objects and saves them to the DB
@@ -69,6 +67,7 @@ class ObjectDatabase extends Database
             
             $dbclass = $class::GetDBClass(); 
             $this->objects[$dbclass] ??= array();
+            $this->loaded[$dbclass] ??= array();
             
             // if this object is already loaded, don't replace it
             if (array_key_exists($id, $this->objects[$dbclass]))
@@ -81,6 +80,7 @@ class ObjectDatabase extends Database
                 $output[$id] = $object; 
                 
                 $this->objects[$dbclass][$id] = $object; 
+                $this->loaded[$dbclass][] = $object->ID();
             }
         }
         
@@ -167,6 +167,11 @@ class ObjectDatabase extends Database
         
         return array_filter($objects, function($obj){ return !$obj->isDeleted(); });
     }
+    
+    private function UnsetObject(BaseObject $object) : void
+    {
+        unset($this->objects[$object::GetDBClass()][$object->ID()]);
+    }
 
     /**
      * Delete objects matching the given query
@@ -183,20 +188,30 @@ class ObjectDatabase extends Database
             // if we can't use RETURNING, just load the objects and delete individually
             $objs = $this->LoadObjectsByQuery($class, $query);
             
-            foreach ($objs as $obj) $obj->Delete(); return count($objs);
+            foreach ($objs as $obj) 
+            {
+                $obj->Delete();
+                $this->UnsetObject($obj);
+            }
         }
-        
-        $table = $this->GetClassTableName($class);
-        
-        $querystr = "DELETE FROM $table ".$query->GetText()." RETURNING *";
-
-        $qtype = Database::QUERY_WRITE | Database::QUERY_READ;
-        $result = $this->query($querystr, $qtype, $query->GetData());
-        
-        $objs = $this->Rows2Objects($result, $class);
-        
-        // notify all objects of deletion
-        foreach ($objs as $obj) $obj->NotifyDBDeleted();
+        else
+        {
+            $table = $this->GetClassTableName($class);
+            
+            $querystr = "DELETE FROM $table ".$query->GetText()." RETURNING *";
+            
+            $qtype = Database::QUERY_WRITE | Database::QUERY_READ;
+            $result = $this->query($querystr, $qtype, $query->GetData());
+            
+            $objs = $this->Rows2Objects($result, $class);
+            
+            // notify all objects of deletion
+            foreach ($objs as $obj)
+            {
+                $obj->NotifyDBDeleted();
+                $this->UnsetObject($obj);
+            }
+        }
         
         return count($objs);
     }
@@ -218,7 +233,7 @@ class ObjectDatabase extends Database
         if ($this->query($querystr, Database::QUERY_WRITE, $q->GetData()) !== 1)
             throw new RowWriteFailedException();
         
-        return $this;
+        $this->UnsetObject($object); return $this;
     }
     
     /**
