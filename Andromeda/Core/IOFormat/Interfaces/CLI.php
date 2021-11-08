@@ -164,7 +164,7 @@ class CLI extends IOInterface
                 case 'metrics': $i++; break;
                 case 'dbconf': $i++; break;
                     
-                case 'dryrun': if ($config) $config->overrideReadOnly(Config::RUN_DRYRUN); break;
+                case 'dryrun': if ($config) $config->setDryRun(); break;
 
                 default: throw new IncorrectCLIUsageException();
             }
