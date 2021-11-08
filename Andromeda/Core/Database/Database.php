@@ -128,7 +128,7 @@ class Database implements Transactions
     }
 
     /** Returns a string with the primary CLI usage for Install() */
-    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile fspath]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile [fspath]]"; }
     
     /** 
      * Returns the CLI usages specific to each driver 
@@ -148,8 +148,9 @@ class Database implements Transactions
      * @param Input $input input parameters
      * @see Database::GetInstallUsage()
      * @throws \Throwable if the database config is not valid and PDO fails
+     * @return string the database config file contents
      */
-    public static function Install(Input $input) : void
+    public static function Install(Input $input) : string
     {
         $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($arg){ return array_key_exists($arg, self::DRIVERS); });
@@ -190,15 +191,19 @@ class Database implements Transactions
         
         $output = "<?php if (!defined('Andromeda')) die(); return $params;";
         
-        $outnam = $input->GetOptParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_PATHS[0];
-        
-        $tmpnam = "$outnam.tmp.php";
-        file_put_contents($tmpnam, $output);
-        
-        try { new Database($tmpnam); } catch (\Throwable $e) {
-            unlink($tmpnam); throw DatabaseConfigFailException::Copy($e); }
-        
-        rename($tmpnam, $outnam);
+        if ($input->HasParam('outfile'))
+        {
+            $outnam = $input->GetNullParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_PATHS[0];
+
+            $tmpnam = "$outnam.tmp.php";
+            file_put_contents($tmpnam, $output);
+            
+            try { new Database($tmpnam); } catch (\Throwable $e) {
+                unlink($tmpnam); throw DatabaseConfigFailException::Copy($e); }
+            
+            rename($tmpnam, $outnam); return "";
+        }
+        else return $output;
     }
     
     /** 

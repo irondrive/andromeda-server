@@ -168,7 +168,8 @@ class SafeParam
         }
         else if ($type === self::TYPE_BOOL)
         {
-            if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
+            if ($value === null) $value = true; // flag
+            else if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($key, $type);
             else $value = (bool)$value;
         }

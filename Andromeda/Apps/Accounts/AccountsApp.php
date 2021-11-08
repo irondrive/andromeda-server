@@ -133,18 +133,18 @@ class AccountsApp extends UpgradableApp
     { 
         return array_merge(parent::getUsage(),array(
             'install [--username alphanum --password raw]',
-            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_username text]',
+            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser text | --auth_sudoacct id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
             'enablecrypto --auth_password raw [--auth_twofactor int]',
             'disablecrypto --auth_password raw',
-            'changepassword --new_password raw ((--username text --auth_password raw) | --recoverykey text)',
+            'changepassword --new_password raw ((--username text --auth_password raw) | --auth_recoverykey text)',
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
             'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource ?id] [--old_password raw] [--new_password raw]',
-            '(createsession) [--recoverykey text | --auth_twofactor int] [--name name]',
+            '(createsession) [--auth_recoverykey text | --auth_twofactor int] [--name name]',
             '(createsession) --auth_clientid id --auth_clientkey alphanum',
             'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
             'createtwofactor --auth_password raw [--comment text]',
@@ -362,8 +362,6 @@ class AccountsApp extends UpgradableApp
         
         $account = $input->GetOptParam("account", SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
-        $self = ($account === null);
-        
         if ($account !== null)
         {
             $account = Account::TryLoadByID($this->database, $account);
@@ -371,13 +369,16 @@ class AccountsApp extends UpgradableApp
         }
         else $account = $authenticator->GetAccount();
         
-        $admin = $authenticator->isRealAdmin();
+        $objtype = 0;
         
-        $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL) && ($self || $admin);
+        $admin = $authenticator->isAdmin();
+        if ($admin) $objtype |= Account::OBJECT_ADMIN;
+        
+        $self = ($account === $authenticator->GetAccount());
+        $full = $input->GetOptParam("full", SafeParam::TYPE_BOOL);
+        if ($full && ($admin || $self)) $objtype |= Account::OBJECT_FULL;
 
-        $type = ($full ? Account::OBJECT_FULL : 0) | ($admin ? Account::OBJECT_ADMIN : 0);
-        
-        return $account->GetClientObject($type);
+        return $account->GetClientObject($objtype);
     }
 
     /**
@@ -391,7 +392,7 @@ class AccountsApp extends UpgradableApp
     protected function ChangePassword(Input $input, ?Authenticator $authenticator) : void
     {
         $new_password = $input->GetParam('new_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
-        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_NEVER);
+        $recoverykey = $input->GetOptParam('auth_recoverykey', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_NEVER);
         
         if ($recoverykey !== null)
         {
@@ -686,7 +687,7 @@ class AccountsApp extends UpgradableApp
         } 
         else /* if no clientkey, require either a recoverykey or twofactor, create a client */
         { 
-            if (($recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_NEVER)) !== null)
+            if (($recoverykey = $input->GetOptParam('auth_recoverykey', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_NEVER)) !== null)
             {
                 if (!$account->CheckRecoveryKey($recoverykey))
                     throw new AuthenticationFailedException();

@@ -211,13 +211,13 @@ class ServerApp extends UpgradableApp
      * Creates a database config with the given input
      * @throws DatabaseFailException if the config is invalid
      */
-    protected function ConfigDB(Input $input, bool $isAdmin) : void
+    protected function ConfigDB(Input $input, bool $isAdmin) : string
     {
         if ($this->database && !$isAdmin) throw new AdminRequiredException();
         
         $this->API->GetInterface()->DisallowBatch();
         
-        try { Database::Install($input); }
+        try { return Database::Install($input); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
     

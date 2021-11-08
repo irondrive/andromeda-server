@@ -254,7 +254,7 @@ class CLI extends IOInterface
                 echo "enter $param...".PHP_EOL;
                 $val = trim(fgets(STDIN), PHP_EOL);
             }
-            else $val = static::getNextValue($argv,$i) ?? true;
+            else $val = static::getNextValue($argv,$i);
 
             // optionally send the app a path/name of a file instead
             if ($special === '%')
