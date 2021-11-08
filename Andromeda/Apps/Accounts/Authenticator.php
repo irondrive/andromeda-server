@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamException};
+require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -114,9 +114,25 @@ class Authenticator
         return $this->client;
     }
     
+    /** Returns true if the account used for the request is an admin */
+    public function isAdmin() : bool { return $this->account === null || $this->account->isAdmin(); }
+    
+    /** Returns true if the real account used for the request is an admin */
+    public function isRealAdmin() : bool { return $this->realaccount === null || $this->realaccount->isAdmin(); }
+    
+    /**
+     * @param ObjectDatabase $database database reference
+     * @param Input $input the input containing auth details
+     */
+    private function __construct(ObjectDatabase $database, Input $input)
+    {
+        $this->database = $database;
+        $this->input = $input;
+    }
+    
     /**
      * The primary authentication routine
-     * 
+     *
      * Loads the specified session, checks validity, updates dates.
      * Note that only a session must be provided, not the client that owns it.
      * @param ObjectDatabase $database database reference
@@ -125,13 +141,16 @@ class Authenticator
      * @throws InvalidSessionException if the given session details are invalid
      * @throws AccountDisabledException if the given account is disabled
      * @throws UnknownAccountException if the given sudo account is not valid
+     * @returns new authenticator object or null if not authenticated
      */
-    private function __construct(ObjectDatabase $database, Input $input, IOInterface $interface)
+    public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
-        if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
-            throw new UpgradeRequiredException('accounts');
-            
-        $this->input = $input; $this->database = $database;
+        try
+        {
+            if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
+                throw new UpgradeRequiredException('accounts');
+        }
+        catch (DatabaseException $e){ return null; } // not installed
         
         $sessionid = $input->GetOptParam('auth_sessionid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
         $sessionkey = $input->GetOptParam('auth_sessionkey',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER);
@@ -142,7 +161,10 @@ class Authenticator
             $sessionkey ??= $auth->GetPassword();
         }
         
-        $username = $input->GetOptParam('auth_username',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
+        $sudouser = $input->GetOptParam('auth_sudouser',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
+        $sudoacct = $input->GetOptParam('auth_sudoacct',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_ALWAYS);
+        
+        $account = null; $authenticator = new Authenticator($database, $input);
         
         if ($sessionid !== null && $sessionkey !== null)
         {
@@ -154,68 +176,40 @@ class Authenticator
             
             if (!$account->isEnabled()) throw new AccountDisabledException();
             
-            $this->realaccount = $account->setActiveDate();
+            $authenticator->realaccount = $account->setActiveDate();
+            $authenticator->session = $session->setActiveDate();
+            $authenticator->client = $session->GetClient()->setActiveDate();
             
-            $this->session = $session->setActiveDate();
-            $this->client = $session->GetClient()->setActiveDate();
-            
-            if ($username !== null)
-            {
-                if (!$account->isAdmin()) throw new AdminRequiredException();
-                
-                $account = Account::TryLoadByUsername($database, $username);
-                if ($account === null) throw new UnknownAccountException();
-            }
-            
-            $this->account = $account;
+            if (($sudouser !== null || $sudoacct !== null) && !$account->isAdmin())
+                throw new AdminRequiredException();
         }
-        else if ($interface->isPrivileged())
+        else if (!$interface->isPrivileged()) return null; // not authenticated
+        
+        if ($sudouser !== null)
         {
-            if ($username !== null)
-            {
-                $account = Account::TryLoadByUsername($database, $username);
-                if ($account === null) throw new UnknownAccountException();
-                
-                $this->account = $this->realaccount = $account->setActiveDate();
-            }
+            $account = Account::TryLoadByUsername($database, $sudouser);
+            if ($account === null) throw new UnknownAccountException();           
         }
-        else throw new AuthenticationFailedException();
+        else if ($sudoacct !== null)
+        {
+            $account = Account::TryLoadByID($database, $sudoacct);
+            if ($account === null) throw new UnknownAccountException();
+        }
+        
+        $authenticator->account = $account;
+        
+        array_push(self::$instances, $authenticator);
+        
+        return $authenticator;
+    }
 
-        array_push(self::$instances, $this);
-    }
-    
     /**
-     * Returns a new authenticator object
-     * @see Authenticator::__construct()
-     */
-    public static function Authenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : self
-    {
-        return new self($database, $input, $interface);
-    }
-    
-    /**
-     * Returns a new authenticator object, or null if it fails (instead of exceptions)
-     * @see Authenticator::__construct()
-     */
-    public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
-    {
-        try { return new self($database, $input, $interface); }
-        catch (AuthenticationFailedException | SafeParamException | DatabaseException $e) { return null; }
-    }
-    
-    /** Returns true if the account used for the request is an admin */
-    public function isAdmin() : bool { return $this->account === null || $this->account->isAdmin(); }
-    
-    /** Returns true if the real account used for the request is an admin */
-    public function isRealAdmin() : bool { return $this->realaccount === null || $this->realaccount->isAdmin(); }
-    
-    /**
-     * Requires that the real user is an administrator
+     * Requires that the user is an administrator
      * @throws AdminRequiredException if not an admin
      */
     public function RequireAdmin() : self
     {
-        if (!$this->isRealAdmin()) throw new AdminRequiredException(); return $this;
+        if (!$this->isAdmin()) throw new AdminRequiredException(); return $this;
     }
     
     /**
@@ -304,22 +298,25 @@ class Authenticator
         if (!$account->hasCrypto()) throw new CryptoInitRequiredException();
         
         $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
-        $recoverykey = $input->GetOptParam('recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+        $recoverykey = $input->GetOptParam('auth_recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         
         if ($session !== null)
         {
             try { $account->UnlockCryptoFromKeySource($session); }
-            catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
+            catch (DecryptionFailedException $e) { 
+                throw new AuthenticationFailedException(); }
         }
         else if ($recoverykey !== null)
         {
             try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
-            catch (DecryptionFailedException | RecoveryKeyFailedException $e) { throw new AuthenticationFailedException(); }
+            catch (DecryptionFailedException | RecoveryKeyFailedException $e) { 
+                throw new AuthenticationFailedException(); }
         }
         else if ($password !== null)
         {
             try { $account->UnlockCryptoFromPassword($password); }
-            catch (DecryptionFailedException $e) { throw new AuthenticationFailedException(); }
+            catch (DecryptionFailedException $e) { 
+                throw new AuthenticationFailedException(); }
         }
         else throw new CryptoKeyRequiredException();
     }

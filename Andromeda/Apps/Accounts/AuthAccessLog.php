@@ -40,11 +40,11 @@ abstract class AuthAccessLog extends BaseAppLog
         if ($obj !== null && $auth !== null)
         {            
             if ($auth->isSudoUser()) 
-                $obj->SetObject('sudouser',$auth->GetAccount());
+                $obj->SetObject('sudouser',$auth->TryGetAccount());
             
-            $obj->SetScalar('admin', $auth->isRealAdmin())
-                ->SetObject('account', $auth->TryGetRealAccount())
-                ->SetObject('client', $auth->TryGetClient());
+            $obj->SetScalar('admin', $auth->isAdmin())
+                ->SetObject('client', $auth->TryGetClient())
+                ->SetObject('account', $auth->TryGetRealAccount());
         }
         
         return $obj;

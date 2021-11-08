@@ -1,4 +1,6 @@
 
+from json.decoder import JSONDecodeError as CliJsonError
+from simplejson.errors import JSONDecodeError as AjaxJsonError
 import requests, subprocess, json, TestUtils, InterfaceTests
 
 class Interface():
@@ -17,16 +19,26 @@ class AJAX(Interface):
         self.url = config
         self.verbose = verbose
 
+    def isPriv(): return False
+
     def run(self, app, action, params={}, files={}, isJson=True):
         super().run()
         if self.verbose:
             print('API <-',app,action,params)
 
+        for key,val in params.items():
+            if val is None: params[key] = ""
+
         urlparams = {'app':app,'action':action}
         resp = requests.post(self.url,params=urlparams,data=params,files=files)
         TestUtils.assertEquals(isJson, (resp.headers.get('content-type') == 'application/json'))
 
-        retval = resp.json() if isJson else resp.content
+        if isJson:
+            try: retval = resp.json()
+            except AjaxJsonError: 
+                print(resp.content.decode('utf-8')); raise
+        else: retval = resp.content
+
         if self.verbose: print("\tAPI ->", retval)
         return retval        
 
@@ -41,6 +53,8 @@ class CLI(Interface):
         self.path = path
         self.config = config
         self.verbose = verbose
+
+    def isPriv(): return True
 
     def run(self, app, action, params={}, files={}, isJson=True):
         flags = ['--debug','3']
@@ -67,7 +81,12 @@ class CLI(Interface):
 
         retval = subprocess.run(command, input=stdin, capture_output=True).stdout
 
-        if isJson: retval = json.loads(retval.decode('utf-8'))
+        if isJson: 
+            retval = retval.decode('utf-8')
+            try: retval = json.loads(retval)
+            except CliJsonError: 
+                print(retval); raise
+
         if self.verbose: print("\tAPI ->", retval)
         return retval
         

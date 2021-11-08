@@ -47,10 +47,10 @@ class Main():
         with open(config) as file:
             self.config = json.load(file)
   
-        if 'cli' in self.config:
+        if 'cli' in self.config and self.config['cli']:
             self.interfaces.append(Interface.CLI(
                 self, self.phproot, self.config['cli'], self.verbose))
-        if 'ajax' in self.config:
+        if 'ajax' in self.config and self.config['ajax']:
             self.interfaces.append(Interface.AJAX(
                 self, self.config['ajax'], self.verbose))
 
