@@ -106,12 +106,13 @@ class ErrorManager extends Singleton
         
         if ($e instanceof ClientException) return $debug;
         
+        $config = ($this->API !== null) ? $this->API->TryGetConfig() : null;
+        
         try
         {
-            if ($this->filelogok && $this->API !== null && $this->API->GetConfig() !== null)
+            if ($this->filelogok && $config !== null && $config->GetDebugLog2File())
             {
-                $logdir = $this->API->GetConfig()->GetDataDir();
-                if ($logdir && $this->API->GetConfig()->GetDebugLog2File())
+                if (($logdir = $config->GetDataDir()) !== null)
                 {
                     $data = Utilities::JSONEncode($debug);
                     file_put_contents("$logdir/error.log", $data."\r\n", FILE_APPEND); 
@@ -122,19 +123,13 @@ class ErrorManager extends Singleton
         
         try
         {
-            if ($this->dblogok) 
+            if ($this->dblogok && $config !== null && $config->GetDebugLog2DB()) 
             {
-                $dblog = $this->API === null || $this->API->GetConfig() === null ||
-                    $this->API->GetConfig()->GetDebugLog2DB();
-                
-                if ($dblog)
-                {
-                    $db = new ObjectDatabase();
+                $db = new ObjectDatabase();
 
-                    $log = ErrorLog::LogDebugData($db, $debug);
-                    
-                    $log->Save(); $db->commit();
-                }
+                $log = ErrorLog::LogDebugData($db, $debug);
+                
+                $log->Save(); $db->commit();
             }
         }
         catch (\Throwable $e2) { $this->dblogok = false; $this->LogException($e2); }

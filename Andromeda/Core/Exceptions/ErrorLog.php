@@ -167,8 +167,8 @@ class ErrorLog extends BaseObject
             {                
                 if ($debuglog !== null) $data['log'] = $debuglog;
                 
-                $data['objects'] = ($api && $api->GetDatabase() !== null) ? $api->GetDatabase()->getLoadedObjectIDs() : "";
-                $data['queries'] = ($api && $api->GetDatabase() !== null) ? $api->GetDatabase()->getAllQueries() : "";
+                $data['objects'] = ($api && $api->HasDatabase()) ? $api->GetDatabase()->getLoadedObjectIDs() : "";
+                $data['queries'] = ($api && $api->HasDatabase()) ? $api->GetDatabase()->getAllQueries() : "";
             }
             
             if ($sensitive)
