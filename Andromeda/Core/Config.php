@@ -315,7 +315,7 @@ class Config extends DBVersion
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{api:int, features: {read_only:enum, enabled:bool}, apps:[{string:string}]}` \
+     * @return array `{api:int, features: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
          if admin, add: `{datadir:?string, features:{ \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
