@@ -148,7 +148,8 @@ class Share extends AuthObject
     /** Deletes the share */
     public function Delete() : void
     {
-        $this->GetItem()->CountShare(false);
+        if ($this->HasObject('item'))
+            $this->GetItem()->CountShare(false);
         
         parent::Delete();
     }
