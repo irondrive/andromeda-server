@@ -53,23 +53,23 @@ abstract class StandardObject extends BaseObject
      * Gets the value of the given feature field (used for config)
      * @see BaseObject::GetScalar()
      */
-    protected function GetFeature(string $name) : int { 
-        return intval($this->GetScalar("features__$name")); }
+    protected function GetFeature(string $name, bool $allowTemp = true) : int { 
+        return intval($this->GetScalar("features__$name", $allowTemp)); }
     
     /**
      * Gets the value of the given feature field (used for config)
      * @see BaseObject::GetScalar()
      */
-    protected function TryGetFeature(string $name) : ?int 
+    protected function TryGetFeature(string $name, bool $allowTemp = true) : ?int 
     { 
-        $val = $this->TryGetScalar("features__$name"); 
+        $val = $this->TryGetScalar("features__$name", $allowTemp); 
         return ($val === null) ? null : intval($val); 
     }
     
     /** Returns TryGetFeature() but as a bool */
-    protected function TryGetBoolFeature(string $name) : ?bool
+    protected function TryGetBoolFeature(string $name, bool $allowTemp = true) : ?bool
     {
-        $val = $this->TryGetFeature($name);
+        $val = $this->TryGetFeature($name, $allowTemp);
         return ($val !== null) ? (bool)$val : null;
     }
     

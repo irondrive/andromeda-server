@@ -359,7 +359,7 @@ final class Main extends Singleton
      */
     private function innerCommit(bool $apps) : void
     {
-        $rollback = $this->config && $this->config->getReadOnly();
+        $rollback = $this->database->isReadOnly() || ($this->config && $this->config->isDryRun());
         
         if ($apps) foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
         

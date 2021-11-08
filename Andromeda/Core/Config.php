@@ -58,7 +58,7 @@ class Config extends DBVersion
             'features__metrics' => new FieldTypes\Scalar(0),
             'features__metrics_dblog' => new FieldTypes\Scalar(false),
             'features__metrics_filelog' => new FieldTypes\Scalar(false),
-            'features__read_only' => new FieldTypes\Scalar(0),
+            'features__read_only' => new FieldTypes\Scalar(false),
             'features__enabled' => new FieldTypes\Scalar(true),
             'features__email' => new FieldTypes\Scalar(true),
             'apps' => new FieldTypes\JSON()
@@ -72,7 +72,7 @@ class Config extends DBVersion
     public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".
                                                                  "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
                                                                  "[--metrics ".implode('|',array_keys(self::METRICS_TYPES))."] [--metrics_dblog bool] [--metrics_filelog bool] ".
-                                                                 "[--read_only ".implode('|',array_keys(self::RUN_TYPES))."] [--enabled bool] [--email bool] [--datadir ?text]"; }
+                                                                 "[--read_only bool] [--enabled bool] [--email bool] [--datadir ?text]"; }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -124,14 +124,15 @@ class Config extends DBVersion
         if ($input->HasParam('metrics_dblog')) $this->SetFeature('metrics_dblog',$input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
         if ($input->HasParam('metrics_filelog')) $this->SetFeature('metrics_filelog',$input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
         
-        if ($input->HasParam('read_only'))
+        if ($input->HasParam('read_only')) 
         {
-            $this->overrideReadOnly();
+            $ro = $input->GetParam('read_only',SafeParam::TYPE_BOOL);
             
-            $param = $input->GetParam('read_only',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::RUN_TYPES); });
+            if (!$ro) $this->database->setReadOnly(false); // make DB writable
             
-            $this->SetFeature('read_only', self::RUN_TYPES[$param]);
+            $this->SetFeature('read_only',$ro);
+            
+            if ($ro) $this->SetFeature('read_only',false,true); // not really RO yet 
         }
         
         if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
@@ -209,30 +210,16 @@ class Config extends DBVersion
     /** Set whether the server is allowed to respond to requests */
     public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
     
-    /** Allow write queries but always rollback at the end */
-    const RUN_DRYRUN = 1;
-    
-    /** Fail when any write queries are attempted */
-    const RUN_READONLY = 2;
-    
-    const RUN_TYPES = array('off'=>0, 'dryrun'=>self::RUN_DRYRUN, 'readonly'=>self::RUN_READONLY);
-        
-    /** Returns the enum for whether the server is set to read-only (or dry run) */
-    public function getReadOnly() : int { return $this->GetFeature('read_only'); }
-    
+    private bool $dryrun = false;
+
     /** Returns true if the server is set to dry-run mode */
-    public function isDryRun() : bool { return $this->GetFeature('read_only') === self::RUN_DRYRUN; }
+    public function isDryRun() : bool { return $this->dryrun; }
+    
+    /** Sets the server to dryrun mode if $val is true */
+    public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
-    public function isReadOnly() : bool { return $this->GetFeature('read_only') === self::RUN_READONLY; }
-    
-    /** Temporarily overrides the read-only steting in config to the given value */
-    public function overrideReadOnly(int $mode = 0) : self 
-    {
-        $this->database->setReadOnly($mode === self::RUN_READONLY);
-        
-        return $this->SetFeature('read_only', $mode, true); 
-    }
+    public function isReadOnly() : bool { return $this->GetFeature('read_only'); }
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
@@ -346,7 +333,7 @@ class Config extends DBVersion
         
         $data['features'] = array(
             'enabled' => $this->isEnabled(),
-            'read_only' => array_flip(self::RUN_TYPES)[$this->getReadOnly()]
+            'read_only' => (bool)$this->GetFeature('read_only',false) // no temp
         );
         
         if ($admin)
@@ -357,11 +344,11 @@ class Config extends DBVersion
                 'requestlog_file' => $this->GetEnableRequestLogFile(),
                 'requestlog_db' => $this->GetEnableRequestLogDB(),
                 'requestlog_details' => array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()],
-                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetMetricsLevel()],
+                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetFeature('metrics',false)], // no temp
                 'metrics_dblog' => $this->GetMetricsLog2DB(),
                 'metrics_filelog' => $this->GetMetricsLog2File(),
                 'email' => $this->GetEnableEmail(),
-                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetDebugLevel()],
+                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetFeature('debug',false)], // no temp
                 'debug_http' => $this->GetDebugOverHTTP(),
                 'debug_dblog' => $this->GetDebugLog2DB(),
                 'debug_filelog' => $this->GetDebugLog2File()
