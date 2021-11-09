@@ -205,7 +205,7 @@ class AccountsApp extends UpgradableApp
     {
         // if config is not available, require installing it
         if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new InstallRequiredException('accounts');
+            throw new InstallRequiredException(static::getName());
         
         if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
         

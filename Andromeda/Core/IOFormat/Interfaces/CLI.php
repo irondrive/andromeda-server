@@ -25,7 +25,7 @@ class IncorrectCLIUsageException extends Exceptions\ClientErrorException {
                           PHP_EOL.
                       "batch usage:   php index.php batch myfile.txt".PHP_EOL.
                       "get version:   php index.php version".PHP_EOL.
-                      "get actions:   php index.php server usage"; }
+                      "get actions:   php index.php core usage"; }
 
 /** Exception indicating that the given batch file is not valid */
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }

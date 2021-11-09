@@ -11,7 +11,7 @@ class Database():
     def install(self, interface):
         self.config['outfile'] = None
         TestUtils.assertOk(interface.run(
-            app='server',action='dbconf',params=self.config))
+            app='core',action='dbconf',params=self.config))
 
 
 class SQLite(Database):
