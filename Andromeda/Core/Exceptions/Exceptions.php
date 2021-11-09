@@ -43,7 +43,7 @@ class NotImplementedException extends ClientException { public $code = 501; publ
 /** Base class for server exceptions (errors in server code) */
 abstract class ServerException extends BaseException 
 {     
-    public $code = 0; public $message = "GENERIC_SERVER_ERROR";
+    public $code = 0; public $message = "SERVER_ERROR"; public $public = false;
     
     public function __construct(string $details = null) { 
         if ($details) $this->message .= ": $details"; }

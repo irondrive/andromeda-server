@@ -47,7 +47,7 @@ class CLITests(BaseTest):
 
     def testDbconfFlag(self):
         rval = self.fullCliRun(debug=1, dbconf="/nonexistent")
-        assertError(rval, 500, "SERVER_ERROR")
+        assertError(rval, 500, "DATABASE_CONFIG_MISSING")
         assertEquals(rval['debug']['message'], 'DATABASE_CONFIG_MISSING')
 
     def testVersionCommand(self):

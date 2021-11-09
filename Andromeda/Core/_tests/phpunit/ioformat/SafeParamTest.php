@@ -79,7 +79,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     public function testNull() : void
     {
-        $this->testGoodMatch("", SafeParam::TYPE_BOOL, null);        
+        $this->testGoodMatch("", SafeParam::TYPE_ALPHANUM, null);
         $this->testGoodMatch("null", SafeParam::TYPE_ALPHANUM, null);
     }
     
@@ -103,7 +103,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     {
         $t = SafeParam::TYPE_BOOL;
         
-        foreach (array("true", "1", "yes") as $val) 
+        foreach (array("true", "1", "yes", "null") as $val) 
             $this->testGoodMatch($val, $t, true);
         
         foreach (array("false", "0", "no") as $val)
