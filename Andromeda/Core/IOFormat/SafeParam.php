@@ -159,17 +159,18 @@ class SafeParam
     public function GetValue(int $type, callable ...$valfuncs)
     {
         $key = $this->key; $value = $this->value;
-        
-        if ($type !== self::TYPE_RAW && is_string($value)) $value = trim($value);
 
-        if ($value === null || $type === self::TYPE_RAW)
+        if ($type !== self::TYPE_RAW && is_string($value)) $value = trim($value);
+        
+        if ($value === null && $type === self::TYPE_BOOL) $value = true; // flag
+
+        else if ($value === null || $type === self::TYPE_RAW)
         {
             // do nothing for null or raw params
         }
         else if ($type === self::TYPE_BOOL)
         {
-            if ($value === null) $value = true; // flag
-            else if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
+            if (($value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) === null)
                 throw new SafeParamInvalidException($key, $type);
             else $value = (bool)$value;
         }

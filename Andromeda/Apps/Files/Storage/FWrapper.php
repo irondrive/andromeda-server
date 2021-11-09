@@ -271,12 +271,6 @@ abstract class FWrapper extends Storage
                 
             unset($this->contexts[$path]);
         }
-    }  
-    
-    /** Close all open handles when Saving */
-    protected function SubSave() : void
-    {
-        foreach (array_keys($this->contexts) as $path) $this->ClosePath($path);
     }
 }
 

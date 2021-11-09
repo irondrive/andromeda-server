@@ -721,10 +721,7 @@ abstract class BaseObject
     
     /** Function to allow subclasses to do something after being constructed without overriding the constructor */
     protected function SubConstruct() : void { }
-    
-    /** Function to allow subclasses to do something before the object is saved to DB */
-    protected function SubSave() : void { }
-    
+
     /** 
      * Collects fields that have changed and saves them to the database
      * @param bool $onlyMandatory true if only required fields should be saved
@@ -732,8 +729,6 @@ abstract class BaseObject
      */
     public function Save(bool $onlyMandatory = false) : self
     {
-        $this->SubSave();
-        
         if ($this->deleteLater) { $this->Delete(); return $this; }
         
         if (!$this->modified || $this->deleted 
