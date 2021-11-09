@@ -115,6 +115,20 @@ final class Main extends Singleton
      * @return array<string, AppBase>
      */
     public function GetApps() : array { return $this->apps; }
+
+    /** Returns true if the global ObjectDatabase instance is valid */
+    public function HasDatabase() : bool { return $this->database !== null; }
+    
+    /** Returns the global ObjectDatabase instance or throws if not configured */
+    public function GetDatabase() : ObjectDatabase
+    {
+        if ($this->database === null)
+        {
+            $class = get_class($this->dbException);
+            throw $class::Copy($this->dbException);
+        }
+        else return $this->database;
+    }
     
     /** Returns true if the global config object is valid */
     public function HasConfig() : bool { return $this->config !== null; }
@@ -123,24 +137,14 @@ final class Main extends Singleton
     public function TryGetConfig() : ?Config { return $this->config; }
     
     /** Returns the global config object if installed else throws */
-    public function GetConfig() : Config 
+    public function GetConfig() : Config
     {
-        if ($this->config === null) 
+        $this->GetDatabase(); // assert exists
+        
+        if ($this->config === null)
             throw new InstallRequiredException('server');
         
-        return $this->config; 
-    }
-    
-    /** Returns true if the global ObjectDatabase instance is valid */
-    public function HasDatabase() : bool { return $this->database !== null; }
-    
-    /** Returns the global ObjectDatabase instance or throws if not configured */
-    public function GetDatabase() : ObjectDatabase
-    {
-        if ($this->database === null) 
-            throw DatabaseConfigException::Copy($this->dbException);
-        
-        else return $this->database;
+        return $this->config;
     }
     
     /** Returns the interface used for the current request */

@@ -12,11 +12,14 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 /** Base class representing a database exception */
 abstract class DatabaseException extends Exceptions\ServerException { }
 
-/** Exception indicating that the database connection failed to initialize */
-class DatabaseConfigException extends DatabaseException { public $message = "DATABASE_CONFIG_ERROR"; }
+/** Base class representing a database config exception */
+abstract class DatabaseConfigException extends DatabaseException { }
 
 /** Exception indicating that the database configuration is not found */
-class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }
+class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; public $public = true; }
+
+/** Exception indicating that the database connection failed to initialize */
+class DatabaseInvalidException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_ERROR"; }
 
 /** Exception indicating that the database was requested to use an unknkown driver */
 class InvalidDriverException extends DatabaseConfigException { public $message = "PDO_UNKNOWN_DRIVER"; }
@@ -126,7 +129,7 @@ class Database implements Transactions
             ));
         }
         catch (\PDOException $e) { 
-            throw DatabaseConfigException::Copy($e); }
+            throw DatabaseInvalidException::Copy($e); }
         
         if ($this->connection->inTransaction())
             $this->connection->rollback();
@@ -158,7 +161,7 @@ class Database implements Transactions
      * @throws \Throwable if the database config is not valid and PDO fails
      * @return string the database config file contents
      */
-    public static function Install(Input $input) : string
+    public static function Install(Input $input) : ?string
     {
         $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($arg){ return array_key_exists($arg, self::DRIVERS); });
@@ -206,10 +209,10 @@ class Database implements Transactions
             $tmpnam = "$outnam.tmp.php";
             file_put_contents($tmpnam, $output);
             
-            try { new Database($tmpnam); } catch (\Throwable $e) {
+            try { new Database($tmpnam); } catch (DatabaseConfigException $e) {
                 unlink($tmpnam); throw DatabaseConfigFailException::Copy($e); }
             
-            rename($tmpnam, $outnam); return "";
+            rename($tmpnam, $outnam); return null;
         }
         else return $output;
     }

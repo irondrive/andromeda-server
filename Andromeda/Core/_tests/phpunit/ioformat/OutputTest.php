@@ -7,6 +7,8 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/Core/IOFormat/Output.php");
 
 class TestClientException extends Exceptions\ClientErrorException { public $message = "TEST_EXCEPTION"; }
+class TestServerException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; }
+class TestServerPubException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; public $public = true; }
 
 class OutputTest extends \PHPUnit\Framework\TestCase
 {
@@ -50,7 +52,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testServerException() : void
     {
-        $output = Output::ServerException(array('mydebug'))->SetMetrics(array('mymetrics'));
+        $output = Output::ServerException(new TestServerException(), array('mydebug'))->SetMetrics(array('mymetrics'));
         
         $this->assertFalse($output->isOK());
         
@@ -59,6 +61,9 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame(array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
+        
+        $output = Output::ServerException(new TestServerPubException());
+        $this->assertSame($output->GetMessage(), 'TEST_EXCEPTION');
     }
     
     public function testGetAsString() : void
@@ -69,8 +74,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(Output::Success(array('rval1','rval2'))->GetAsString(), null);        
         $this->assertSame(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString(), null);
         
-        $this->assertSame(Output::ServerException()->GetAsString(), 'SERVER_ERROR');        
-        $this->assertSame(Output::ServerException(array('mydebug'))->GetAsString(), null);        
+        $this->assertSame(Output::ServerException(new TestServerException())->GetAsString(), 'SERVER_ERROR');
+        $this->assertSame(Output::ServerException(new TestServerException(),array('mydebug'))->GetAsString(), null);
     }
     
     public function testParseArrayGood() : void

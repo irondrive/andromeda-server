@@ -93,14 +93,18 @@ class Output
         return $output;
     }
     
-    /** Constructs an Output object representing a generic server error, possibly with debug */
-    public static function ServerException(?array $debug = null) : Output
+    /** Constructs an Output object representing a server error, possibly with debug */
+    public static function ServerException(\Throwable $e, ?array $debug = null) : Output
     {
         $output = new Output(false, 500);
         
-        $output->message = 'SERVER_ERROR';
+        if (isset($e->public) && $e->public) 
+        {
+            $output->message = $e->getMessage();
+        }
+        else $output->message = 'SERVER_ERROR';
         
-        if ($debug !== null) $output->debug = $debug;
+        if ($debug) $output->debug = $debug;
         
         return $output;
     }
