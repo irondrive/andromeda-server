@@ -8,7 +8,7 @@ tools/pgtransfer
 
 cd Andromeda; for i in Apps/* Core; do if [ -f $i/andromeda.mysql.sql ]; then
 
-   il=${i,,}; TABLES=$(mysql -D andromeda -u root -p -se "SHOW TABLES LIKE 'a2obj_${il//\//_}%'")
+   il=${i,,}; TABLES=$(mysql -D andromeda -u root -p -se "SHOW TABLES LIKE '%${il//\//_}%'")
    mysqldump andromeda $TABLES --skip-comments --no-create-db --no-data \
       --skip-add-drop-table -h localhost -u root -p > $i/andromeda.mysql.sql
 

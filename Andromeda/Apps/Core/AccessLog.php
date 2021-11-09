@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -8,7 +8,7 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
 
 require_once(ROOT."/Core/Logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
 
-/** Server app access log for use without the accounts app installed */
+/** Core app access log for use without the accounts app installed */
 class AccessLog extends BaseAppLog
 {    
     public static function GetFieldTemplate() : array

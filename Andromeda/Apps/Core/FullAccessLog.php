@@ -1,11 +1,11 @@
-<?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
 require_once(ROOT."/Apps/Accounts/AuthAccessLog.php"); use Andromeda\Apps\Accounts\AuthAccessLog;
 
-/** Server app access log for use with the accounts app installed */
+/** Core app access log for use with the accounts app installed */
 class AccessLog extends AuthAccessLog
 {    
     /** 

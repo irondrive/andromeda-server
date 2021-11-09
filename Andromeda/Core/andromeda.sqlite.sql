@@ -1,4 +1,12 @@
 PRAGMA journal_mode = MEMORY;
+CREATE TABLE `a2obj_apps_core_accesslog` (
+  `id` char(20) NOT NULL
+,  `admin` integer DEFAULT NULL
+,  `account` char(12) DEFAULT NULL
+,  `sudouser` char(12) DEFAULT NULL
+,  `client` char(12) DEFAULT NULL
+,  PRIMARY KEY (`id`)
+);
 CREATE TABLE `a2obj_core_config` (
   `id` char(12) NOT NULL
 ,  `version` varchar(255) NOT NULL

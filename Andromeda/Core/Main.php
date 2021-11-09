@@ -142,7 +142,7 @@ final class Main extends Singleton
         $this->GetDatabase(); // assert exists
         
         if ($this->config === null)
-            throw new InstallRequiredException('server');
+            throw new InstallRequiredException('core');
         
         return $this->config;
     }
@@ -182,7 +182,7 @@ final class Main extends Singleton
         
         $interface->Initialize();
 
-        $apps = file_exists(ROOT."/Apps/Server/ServerApp.php") ? array('server') : array();
+        $apps = file_exists(ROOT."/Apps/Core/CoreApp.php") ? array('core') : array();
         
         try 
         {
@@ -258,8 +258,8 @@ final class Main extends Singleton
     {        
         $app = $input->GetApp();
         
-        if ($app !== 'server' && $this->requireUpgrade)
-            throw new UpgradeRequiredException('server');
+        if ($app !== 'core' && $this->requireUpgrade)
+            throw new UpgradeRequiredException('core');
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         

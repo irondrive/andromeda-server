@@ -3,7 +3,7 @@ from TestUtils import *
 
 class AppTests(BaseAppTest):
     def __str__(self):
-        return "SERVER"
+        return "CORE"
 
     def install(self):
         pass # already installed by main
@@ -15,12 +15,12 @@ class AppTests(BaseAppTest):
 
     def testUsage(self):
 
-        rval = assertOk(self.interface.run(app='server',action='usage'))
+        rval = assertOk(self.interface.run(app='core',action='usage'))
 
         assertInstance(rval, list)
         assertNotEmpty(rval)
 
-        rval2 = assertOk(self.interface.run(app='server',action='usage',params={'appname':'server'}))
+        rval2 = assertOk(self.interface.run(app='core',action='usage',params={'appname':'core'}))
 
         assertInstance(rval2, list)
         assertNotEmpty(rval2)
@@ -28,6 +28,6 @@ class AppTests(BaseAppTest):
             assert(len(rval) > len(rval2))
     
     def testListApps(self):
-        rval = assertOk(self.interface.run(app='server',action='listapps',params=self.asAdmin({})))
+        rval = assertOk(self.interface.run(app='core',action='listapps',params=self.asAdmin({})))
         assertEquals(set(rval), set(self.main.servApps))
 

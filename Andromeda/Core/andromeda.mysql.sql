@@ -11,6 +11,17 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_core_accesslog` (
+  `id` char(20) NOT NULL,
+  `admin` tinyint(1) DEFAULT NULL,
+  `account` char(12) DEFAULT NULL,
+  `sudouser` char(12) DEFAULT NULL,
+  `client` char(12) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_core_config` (
   `id` char(12) NOT NULL,
   `version` varchar(255) NOT NULL,
@@ -27,7 +38,7 @@ CREATE TABLE `a2obj_core_config` (
   `features__metrics` tinyint(2) NOT NULL,
   `features__metrics_dblog` tinyint(1) NOT NULL,
   `features__metrics_filelog` tinyint(1) NOT NULL,
-  `features__read_only` tinyint(2) NOT NULL,
+  `features__read_only` tinyint(1) NOT NULL,
   `features__enabled` tinyint(1) NOT NULL,
   `features__email` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)

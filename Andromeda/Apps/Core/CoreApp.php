@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Server; if (!defined('Andromeda')) { die(); }
+<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
 require_once(ROOT."/Core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
@@ -37,9 +37,9 @@ class AdminRequiredException extends Exceptions\ClientDeniedException { public $
  * 
  * Handles DB config, install, and getting/setting config/logs.
  */
-class ServerApp extends UpgradableApp
+class CoreApp extends UpgradableApp
 {    
-    public static function getName() : string { return 'server'; }
+    public static function getName() : string { return 'core'; }
     
     protected static function getLogClass() : ?string { return AccessLog::class; }
     
@@ -104,7 +104,7 @@ class ServerApp extends UpgradableApp
     {
         if ($this->API->HasDatabase() && !$this->API->HasConfig() 
                 && $input->GetAction() !== 'install')
-            throw new InstallRequiredException('server');
+            throw new InstallRequiredException(static::getName());
 
         if ($this->API->HasConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
 
@@ -114,7 +114,7 @@ class ServerApp extends UpgradableApp
         if ($useAuth)
         {
             require_once(ROOT."/Apps/Accounts/Authenticator.php");
-            require_once(ROOT."/Apps/Server/FullAccessLog.php");
+            require_once(ROOT."/Apps/Core/FullAccessLog.php");
             
             $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->GetDatabase(), $input, $this->API->GetInterface());
@@ -123,7 +123,7 @@ class ServerApp extends UpgradableApp
         }
         else // not using the accounts app
         {
-            require_once(ROOT."/Apps/Server/AccessLog.php");
+            require_once(ROOT."/Apps/Core/AccessLog.php");
             
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }

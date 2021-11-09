@@ -109,7 +109,7 @@ class Main():
                 if not os.path.exists(path): continue 
                 else: self.servApps.append(app.lower())
         else:
-            config = TestUtils.assertOk(interface.run(app='server',action='getconfig'))
+            config = TestUtils.assertOk(interface.run(app='core',action='getconfig'))
             self.servApps = config['config']['apps'].keys()
 
         # load app test modules
@@ -133,7 +133,7 @@ class Main():
         # install apps if needed
         if self.doInstall:
             print(" -- BEGIN INSTALLS -- ")
-            appNames = TestUtils.assertOk(interface.run(app='server',action='install',params={'enable':True}))
+            appNames = TestUtils.assertOk(interface.run(app='core',action='install',params={'enable':True}))
             TestUtils.assertEquals(set(self.servApps), set(appNames))
             for app in appTests: app.install()
 

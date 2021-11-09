@@ -3,7 +3,7 @@
 Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server.  It is a pure-PHP REST-ish transactional API divided into a reusable core framework and component "apps" which implement the actual API calls.
 
 ### Core Framework
-The framework is independent of the apps built for Andromeda and can be used for other projects.  The core principally provides safe input/output handling and formatting, error handling and logging, and an object-oriented transactional database abstraction.  The related "server" app is used for server configuration, enabling/disabling apps, and other core-specific tasks.  
+The framework is independent of the apps built for Andromeda and can be used for other projects.  The core principally provides safe input/output handling and formatting, error handling and logging, and an object-oriented transactional database abstraction.  The related "core" app is used for server configuration, enabling/disabling apps, and other core-specific tasks.  
 
 The framework can log accesses and errors to the database, or to log files if a data directory is configured.  It also allows setting up outgoing email configurations that may be used by apps.
 
@@ -16,9 +16,9 @@ As the framework itself is app-agnostic, the commands and documentation are gene
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
-Run the API from the CLI with no arguments (either `./andromeda-server` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda-server myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda-server server usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified as a flag with no value, in which case they are implicitly mapped to `true` for booleans and `null` for all other types.  
+Run the API from the CLI with no arguments (either `./andromeda-server` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda-server myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda-server core usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified as a flag with no value, in which case they are implicitly mapped to `true` for booleans and `null` for all other types.  
 
-Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda-server` and will only specify the `app action` to run, e.g. `server usage`.  The `server usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda-server` and will only specify the `app action` to run, e.g. `core usage`.  The `core usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
 
 ### Common Exceptions
 
@@ -26,7 +26,7 @@ Commands mentioned in the readme or wiki will omit the `php index.php` or `./and
 
 ### Parameter Types
 
-All input parameters are strictly validated against their expected types.  Most that you will see in `server usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. `?int`) indicates that the parameter can be null (e.g. `... --myparam null`).  This can have a different meaning than just omitting the parameter.
+All input parameters are strictly validated against their expected types.  Most that you will see in `core usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. `?int`) indicates that the parameter can be null (e.g. `... --myparam null`).  This can have a different meaning than just omitting the parameter.
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
@@ -49,7 +49,7 @@ Parameters can be placed in the URL query string, the POST body as `application/
 Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  To run a batch, simply list each command on its own line in a plain text file, then run `./andromeda-server batch myfile.txt`.  The returned `appdata` will be an array, each entry for the corresponding action.
 
 ### HTTP Batching
-Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=server&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
+Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=testutil&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
 
 ### Arrays and Objects
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
@@ -72,23 +72,23 @@ Andromeda does not use any OS or webserver-specific functions and works on Windo
 It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/lib`).  This can be accomplished easily by changing the include path in the root `index.php`.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders have not moved.
 
 ### CLI Install Steps
-Use the `server usage` command to see options for all available commands.
+Use the `core usage` command to see options for all available commands.
 
-1. Run `server dbconf --outfile` to generate database configuration.
-2. Run `server install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
-3. Install all apps that require it.  Hint: try `./andromeda-server server usage | grep install`.
+1. Run `core dbconf --outfile` to generate database configuration.
+2. Run `core install` to install the core database tables.  This will enable all apps that are found in the apps folder, and return the list of them for step 3.
+3. Install all apps that require it.  Hint: try `./andromeda-server core usage | grep install`.
 
-Installing the accounts app optionally will also create an initial administrator account (see its `server usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_sudouser` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
+Installing the accounts app optionally will also create an initial administrator account (see its `core usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_sudouser` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
 The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.
 
 #### Database Config
-The `server dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output location can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `Andromeda/`, `~/.config/andromeda`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for `DBConfig.php`.
+The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output location can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `Andromeda/`, `~/.config/andromeda`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for `DBConfig.php`.
 
-For example to create and use an SQLite database and save the config file in the default location - `php index.php server dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
+For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
 ### Upgrading
-When the code being run does not match the version stored in the database, running `server upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server server usage | grep upgrade`.
+When the code being run does not match the version stored in the database, running `core upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server core usage | grep upgrade`.
 
 The upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.
 
