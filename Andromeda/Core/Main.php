@@ -125,7 +125,7 @@ final class Main extends Singleton
         if ($this->database === null)
         {
             $class = get_class($this->dbException);
-            throw $class::Copy($this->dbException);
+            throw $class::Copy($this->dbException); // new trace
         }
         else return $this->database;
     }
@@ -139,10 +139,11 @@ final class Main extends Singleton
     /** Returns the global config object if installed else throws */
     public function GetConfig() : Config
     {
-        $this->GetDatabase(); // assert exists
-        
         if ($this->config === null)
+        {
+            $this->GetDatabase(); // assert db exists
             throw new InstallRequiredException('core');
+        }
         
         return $this->config;
     }
