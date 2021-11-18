@@ -87,6 +87,50 @@ The `core dbconf` command is used to create database configuration.  By default,
 
 For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
+#### Full SQLite Web Server Install Example
+
+```
+###################################
+# Example SQLite web-server setup #
+###################################
+
+# /usr/lib/andromeda		server code
+# /var/www/html/andromeda	index.php
+# /usr/local/bin		entry script
+# /var/lib/andromeda		sqlite db
+# /usr/local/etc/andromeda	db config
+
+# install the server folder
+mkdir /usr/lib/andromeda
+cd /usr/lib/andromeda
+tar -xf andromeda-server.tar
+
+# copy the entry points
+cp andromeda-server /usr/local/bin
+cp index.php /var/www/html/andromeda
+
+# create directories
+mkdir /var/lib/andromeda
+mkdir /usr/local/etc/andromeda
+chown -R www-data:www-data /var/lib/andromeda
+chown -R www-data:www-data /usr/local/etc/andromeda
+chmod -R 770 /var/lib/andromeda
+chmod -R 770 /usr/local/etc/andromeda
+
+## make sure /usr/lib/andromeda and /var/www/andromeda
+## are NOT writeable by www-data!
+
+# initialize the SQLite database
+sudo -u www-data \
+   andromeda-server core dbconf --driver sqlite \
+   --dbpath /var/lib/andromeda/database.s3db \
+   --outfile /usr/local/etc/andromeda/DBConfig.php
+   
+sudo -u www-data andromeda-server core install
+sudo -u www-data andromeda-server accounts install
+sudo -u www-data andromeda-server files install
+```
+
 ### Upgrading
 When the code being run does not match the version stored in the database, running `core upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server core usage | grep upgrade`.
 
