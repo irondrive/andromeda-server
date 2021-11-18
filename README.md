@@ -117,8 +117,8 @@ chown -R www-data:www-data /usr/local/etc/andromeda
 chmod -R 770 /var/lib/andromeda
 chmod -R 770 /usr/local/etc/andromeda
 
-## make sure /usr/lib/andromeda and /var/www/andromeda
-## are NOT writeable by www-data!
+## /usr/lib/andromeda and /var/www/andromeda
+## should NOT be writeable by www-data!
 
 # initialize the SQLite database
 sudo -u www-data \
