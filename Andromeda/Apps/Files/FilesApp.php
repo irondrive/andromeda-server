@@ -509,7 +509,7 @@ class FilesApp extends UpgradableApp
         $file->CheckBandwidth($length);
 
         if ($flast == $fsize-1) // the end of the file
-            $file->CountDownload((isset($share) && $share !== null));
+            $file->CountDownload(($share !== null));
         
         // send necessary headers
         if (!$debugdl)
