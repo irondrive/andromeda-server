@@ -614,21 +614,6 @@ class AccountsApp extends UpgradableApp
      */
     protected function CreateSession(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
-        /* load the authentication source being used - could be local, or an LDAP server, etc. */
-        if ($input->HasParam('authsource'))
-        {
-            if (($authman = $input->GetNullParam('authsource',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS)) !== null)
-            {
-                $authman = Auth\Manager::TryLoadByID($this->database, $authman);
-                if ($authman === null) throw new UnknownAuthSourceException();
-            }
-        }
-        else $authman = $this->config->GetDefaultAuth();
-        
-        if ($authman !== null && !$authman->GetEnabled()) throw new AuthenticationFailedException();
-        
-        $authsource = ($authman !== null) ? $authman->GetAuthSource() : Auth\Local::GetInstance();
-        
         if ($input->HasParam('username'))
         {
             $username = $input->GetParam("username", SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_ALWAYS);
@@ -642,29 +627,46 @@ class AccountsApp extends UpgradableApp
             if ($account === null) throw new AuthenticationFailedException();
         }
         
-        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);        
+        $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
         
-        /* if we found an account, verify the password and correct authsource */
-        if ($account !== null)
-        {            
-            if (($account->GetAuthSource() === null && !($authsource instanceof Auth\Local)) ||
-                ($account->GetAuthSource() !== null && $account->GetAuthSource() !== $authsource)) 
-                    throw new AuthenticationFailedException();
-            
-            if (!$account->VerifyPassword($password)) throw new AuthenticationFailedException();
-        }
-        /* if no account and using external auth, try the password, and if success, create a new account on the fly */
-        else if ($authsource instanceof Auth\External)
+        $reqauthman = null; if ($input->HasParam('authsource'))
         {
+            $reqauthman = Auth\Manager::TryLoadByID($this->database,
+                $input->GetParam('authsource',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS));
+            
+            if ($reqauthman === null) throw new UnknownAuthSourceException();
+        }
+        
+        if ($account !== null) /** check password */
+        {
+            $authsource = $account->GetAuthSource();
+            $authman = ($authsource instanceof Auth\External)
+                ? $authsource->GetManager() : null;
+            
+            /** check the authmanager matches if given */
+            if ($reqauthman !== null && $reqauthman !== $authman)
+                throw new AuthenticationFailedException();
+            
+            if ($authman !== null && !$authman->GetEnabled())
+                 throw new AuthenticationFailedException();
+             
+            if (!$account->VerifyPassword($password))
+                throw new AuthenticationFailedException();
+        }
+        else /** create account on the fly if external auth */
+        {
+            $authman = $reqauthman ?? $this->config->GetDefaultAuth();
+            if ($authman === null) throw new UnknownAuthSourceException();
+            
             if ($authman->GetEnabled() < Auth\Manager::ENABLED_FULL)
                 throw new AuthenticationFailedException();
             
+            $authsource = $authman->GetAuthSource();
             if (!$authsource->VerifyUsernamePassword($username, $password))
                 throw new AuthenticationFailedException();
             
-            $account = Account::Create($this->database, $authsource, $username);    
+            $account = Account::Create($this->database, $authsource, $username);
         }
-        else throw new AuthenticationFailedException();
         
         if (!$account->isEnabled()) throw new AccountDisabledException();
         
