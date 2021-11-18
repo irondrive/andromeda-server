@@ -9,7 +9,7 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
 
 /** An exception indicating that the app is not installed and needs to be */
-class InstallRequiredException extends Exceptions\ServerException { public $message = "APP_INSTALL_REQUIRED"; public $public = true; }
+class InstallRequiredException extends Exceptions\ClientException { public $message = "APP_INSTALL_REQUIRED"; public $code = 500; }
 
 /** An exception indicating that the metadata file is missing */
 class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }

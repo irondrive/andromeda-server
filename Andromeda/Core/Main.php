@@ -29,9 +29,6 @@ class UnknownAppException extends Exceptions\ClientErrorException { public $mess
 /** Exception indicating that the server is configured as disabled */
 class MaintenanceException extends Exceptions\ClientException { public $code = 503; public $message = "SERVER_DISABLED"; }
 
-/** Exception indicating that the server must be disabled for this request */
-class DisableRequiredException extends Exceptions\ClientErrorException { public $message = "DISABLE_REQUIRED"; }
-
 /** Exception indicating that the server failed to load a configured app */
 class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
 
@@ -142,7 +139,9 @@ final class Main extends Singleton
         if ($this->config === null)
         {
             $this->GetDatabase(); // assert db exists
-            throw new InstallRequiredException('core');
+            
+            $class = get_class($this->dbException);
+            throw $class::Copy($this->dbException); // new trace
         }
         
         return $this->config;
@@ -159,7 +158,7 @@ final class Main extends Singleton
     
     private bool $requireUpgrade = false;
     
-    private $dbException; // reason DB is not configured
+    private $dbException = null; // reason DB is not configured
 
     /**
      * Initializes the Main API
@@ -190,7 +189,15 @@ final class Main extends Singleton
             $dbconf = $interface->GetDBConfigFile();
             $this->database = new ObjectDatabase($dbconf);
             $this->database->pushStatsContext();
-
+        }
+        catch (DatabaseConfigException $e)
+        {
+            if ($dbconf !== null) throw $e;
+            $this->dbException = $e;
+        }
+        
+        if ($this->database) try
+        {
             $this->config = Config::GetInstance($this->database);
 
             if (!$this->isEnabled()) throw new MaintenanceException();
@@ -205,9 +212,7 @@ final class Main extends Singleton
         }
         catch (DatabaseException $e) 
         {
-            if ($e instanceof DatabaseConfigException && $dbconf !== null) throw $e;
-            
-            else { $this->dbException = $e; $this->error_manager->LogException($e); }
+            $this->dbException = $e;
         }
         
         foreach ($apps as $app) $this->LoadApp($app);
@@ -397,18 +402,6 @@ final class Main extends Singleton
         if ($this->config === null) return true;
         
         return $this->config->isEnabled() || $this->interface->isPrivileged();
-    }
-    
-    /**
-     * Asserts that the server is disabled via config
-     * @throws DisableRequiredException if not
-     */
-    public function requireDisabled() : self
-    {
-        if ($this->config !== null && $this->config->isEnabled())
-            throw new DisableRequiredException();
-       
-        return $this;
     }
     
     /** Returns the configured debug level, or the interface's default */
