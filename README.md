@@ -83,7 +83,7 @@ Installing the accounts app optionally will also create an initial administrator
 The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.
 
 #### Database Config
-The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output location can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `Andromeda/`, `~/.config/andromeda`, `/usr/local/etc/andromeda` and `/etc/andromeda` in that order for `DBConfig.php`.
+The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.
 
 For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
