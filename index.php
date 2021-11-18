@@ -23,4 +23,4 @@ foreach ($paths as $path)
     }
 }
  
-die("Could not find Andromeda folder!");
+die("Could not find the Andromeda folder!");
