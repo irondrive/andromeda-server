@@ -1,6 +1,12 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-if (!class_exists('PDO')) die("PHP PDO Extension Required".PHP_EOL); use \PDO;
+if (!class_exists('PDO')) 
+    die("PHP PDO Extension Required".PHP_EOL); 
+
+if (!function_exists('mb_internal_encoding'))
+    die("PHP mbstring Extension Required".PHP_EOL);
+
+use \PDO; mb_internal_encoding("UTF-8");
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions, JSONEncodingException};
@@ -90,7 +96,7 @@ class Database implements Transactions
      */
     public function __construct(?string $config = null)
     {
-        $paths = self::CONFIG_PATHS;
+        $paths = defined('DBCONF') ? array(DBCONF) : self::CONFIG_PATHS;
         
         $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
         if ($home && ($idx = array_search(null, $paths, true)) !== false)
@@ -100,7 +106,7 @@ class Database implements Transactions
         {
             if (!file_exists($config)) $config = null;
         }
-        else foreach (self::CONFIG_PATHS as $path)
+        else foreach ($paths as $path)
         {
             if (file_exists($path)) { $config = $path; break; }
         }

@@ -142,7 +142,7 @@ class AJAX extends IOInterface
             header("Cache-Control: no-cache");
             
             if ($this->outmode === null)
-                http_response_code($output->GetHTTPCode());
+                http_response_code($output->GetCode());
         }
         
         return parent::UserOutput($output);
@@ -157,7 +157,7 @@ class AJAX extends IOInterface
             header("Cache-Control: no-cache");
             
             if ($this->outmode === null)
-                http_response_code($output->GetHTTPCode());
+                http_response_code($output->GetCode());
         }
         
         if ($this->outmode === self::OUTPUT_PLAIN)
@@ -166,7 +166,7 @@ class AJAX extends IOInterface
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
-                http_response_code($output->GetHTTPCode());
+                http_response_code($output->GetCode());
             }
             
             // try echoing as a string, switch to json if it fails

@@ -314,6 +314,6 @@ class CLI extends IOInterface
             echo $outdata;
         }
 
-        exit($output->isOK() ? 0 : $output->GetHTTPCode());
+        exit($output->isOK() ? 0 : $output->GetCode());
     }
 }

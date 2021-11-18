@@ -7,7 +7,7 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/Core/IOFormat/Output.php");
 
 class TestClientException extends Exceptions\ClientErrorException { public $message = "TEST_EXCEPTION"; }
-class TestServerException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; }
+class TestServerException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; public $code = 3; }
 
 class OutputTest extends \PHPUnit\Framework\TestCase
 {
@@ -16,7 +16,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetHTTPCode(), 200);
+        $this->assertSame($output->GetCode(), 200);
         $this->assertSame($output->GetAppdata(), 'myretval');
         
         $this->assertSame(array('ok'=>true,'code'=>200,
@@ -28,7 +28,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval','myretval2'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetHTTPCode(), 200);
+        $this->assertSame($output->GetCode(), 200);
         
         $this->assertSame($output->GetAppdata(), array('myretval','myretval2'));
         
@@ -42,7 +42,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetHTTPCode(), 400);
+        $this->assertSame($output->GetCode(), 400);
         $this->assertSame($output->GetMessage(), 'TEST_EXCEPTION');
         
         $this->assertSame(array('ok'=>false,'code'=>400,'message'=>'TEST_EXCEPTION',
@@ -51,11 +51,11 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testServerException() : void
     {
-        $output = Output::ServerException(new TestServerException(), array('mydebug'))->SetMetrics(array('mymetrics'));
+        $output = Output::Exception(new TestServerException(), array('mydebug'))->SetMetrics(array('mymetrics'));
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetHTTPCode(), 500);
+        $this->assertSame($output->GetCode(), 500);
         $this->assertSame($output->GetMessage(), 'SERVER_ERROR');
         
         $this->assertSame(array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR',
@@ -70,8 +70,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(Output::Success(array('rval1','rval2'))->GetAsString(), null);        
         $this->assertSame(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString(), null);
         
-        $this->assertSame(Output::ServerException(new TestServerException())->GetAsString(), 'SERVER_ERROR');
-        $this->assertSame(Output::ServerException(new TestServerException(),array('mydebug'))->GetAsString(), null);
+        $this->assertSame(Output::Exception(new TestServerException())->GetAsString(), 'SERVER_ERROR');
+        $this->assertSame(Output::Exception(new TestServerException(),array('mydebug'))->GetAsString(), null);
     }
     
     public function testParseArrayGood() : void
@@ -81,7 +81,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetHTTPCode(), 200);
+        $this->assertSame($output->GetCode(), 200);
         $this->assertSame($output->GetAppdata(), $data['appdata']);        
         $this->assertSame($data, $output->GetAsArray());
         
@@ -90,7 +90,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetHTTPCode(), 200);
+        $this->assertSame($output->GetCode(), 200);
         $this->assertSame($output->GetAppdata(), $data['appdata']);
         $this->assertSame($data, $output->GetAsArray());
         
