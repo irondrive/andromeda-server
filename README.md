@@ -80,7 +80,7 @@ Use the `core usage` command to see options for all available commands.
 
 Installing the accounts app optionally will also create an initial administrator account (see its `core usage` entry).  CLI usage does not require authentication generally but some actions may require running as a specific account using the `auth_sudouser` parameter. Some may require using a session. See the [accounts app wiki](https://github.com/lightray22/andromeda-server/wiki/Accounts-App#clients-and-sessions) for more information.
 
-The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.
+The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `define('HTTPINSTALL',false)` to `a2init.php`.
 
 #### Database Config
 The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `define('DBCONF','path-to-config');` to the end of `a2init.php`.
@@ -136,7 +136,7 @@ sudo -u www-data andromeda-server core setconfig \
 ### Upgrading
 When the code being run does not match the version stored in the database, running `core upgrade` is required. This will automatically update all apps.  Apps can also have their `(myapp) upgrade` command run separately if supported. Hint: `./andromeda-server core usage | grep upgrade`.
 
-The upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.
+The upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.  It can also be permanently disabled for HTTP by adding `define('HTTPINSTALL',false)` to `a2init.php`.
 
 
 # License

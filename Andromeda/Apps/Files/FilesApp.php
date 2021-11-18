@@ -371,11 +371,11 @@ class FilesApp extends UpgradableApp
 
     /**
      * Installs the app by importing its SQL file and creating config
-     * @throws UnknownActionException if config already exists
+     * @throws UnknownActionException if config already exists or not allowed
      */
     public function Install(Input $input) : void
     {
-        if (isset($this->config)) throw new UnknownActionException();
+        if (isset($this->config) || !$this->allowInstall()) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/Apps/Files");
         

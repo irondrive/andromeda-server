@@ -102,12 +102,14 @@ class CoreApp extends UpgradableApp
      */
     public function Run(Input $input)
     {
-        if ($this->API->HasDatabase() && !$this->API->HasConfig() 
-                && $input->GetAction() !== 'install')
-            throw new InstallRequiredException(static::getName());
-
-        if ($this->API->HasConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
-
+        if ($this->API->HasDatabase())
+        {
+            if (!$this->API->HasConfig() && $input->GetAction() !== 'install')
+                throw new InstallRequiredException(static::getName());
+            
+            if ($this->API->HasConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
+        }
+        
         $useAuth = array_key_exists('accounts', Main::GetInstance()->GetApps());
         
         // if the Accounts app is installed, use it for authentication, else check interface privilege
@@ -199,6 +201,8 @@ class CoreApp extends UpgradableApp
     {
         if ($this->API->HasDatabase() && !$isAdmin) throw new AdminRequiredException();
         
+        if (!$this->allowInstall()) throw new UnknownActionException();
+        
         $this->API->GetInterface()->DisallowBatch();
         
         try { return Database::Install($input); }
@@ -209,12 +213,12 @@ class CoreApp extends UpgradableApp
      * Installs the server by importing its SQL template and creating config
      * 
      * Also enables all installable apps that exist (retval)
-     * @throws UnknownActionException if config already exists
+     * @throws UnknownActionException if config already exists or not allowed
      * @return array<string> list of apps that were enabled
      */
     public function Install(Input $input) : array
     {
-        if ($this->API->HasConfig()) throw new UnknownActionException();
+        if ($this->API->HasConfig() || !$this->allowInstall()) throw new UnknownActionException();
         
         $this->API->GetInterface()->DisallowBatch();
         
