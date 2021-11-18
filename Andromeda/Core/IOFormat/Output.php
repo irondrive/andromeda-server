@@ -69,8 +69,6 @@ class Output
     
     private function __construct(bool $ok = true, int $code = 200)
     {
-        if ($code !== 200 && ($code < 400 || $code >= 600)) $code = 500;
-        
         $this->ok = $ok; $this->code = $code;
     }
     
@@ -96,9 +94,9 @@ class Output
     }
     
     /** Constructs an Output object representing a non-client error, possibly with debug */
-    public static function Exception(\Throwable $e, ?array $debug = null) : Output
+    public static function Exception(?array $debug = null) : Output
     {
-        $output = new Output(false, $e->getCode());
+        $output = new Output(false, 500);
         
         $output->message = 'SERVER_ERROR';
         
