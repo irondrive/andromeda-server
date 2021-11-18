@@ -78,11 +78,11 @@ abstract class Timed extends Base
         {
             static::$cache[$obj->ID()] = static::LoadByObject($database, 'object', $obj, true);
         }
-        /*else
+        else
         {
             static::$cache[$obj->ID()] = array_filter(static::$cache[$obj->ID()],
                 function(Timed $lim){ return !$lim->isDeleted(); });
-        }*/
+        }
         
         return static::$cache[$obj->ID()];
     }
@@ -101,7 +101,7 @@ abstract class Timed extends Base
             if ($lim->GetTimePeriod() === $period) return $lim;
         }
         return null;
-    }    
+    }
     
     /** Deletes all limit objects corresponding to the given limited object */
     public static function DeleteByClient(ObjectDatabase $database, StandardObject $obj) : void

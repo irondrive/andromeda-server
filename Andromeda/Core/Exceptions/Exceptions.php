@@ -4,20 +4,27 @@ require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 
 /** The base class for Andromeda exceptions */
 abstract class BaseException extends \Exception 
-{    
+{
+    public function __construct(string $details = null) 
+    {
+        if ($details) $this->message .= ": $details"; 
+    }
+    
     /** Copy another exception, converting its type */
     public static function Copy(\Throwable $e) : self 
     { 
         $e2 = new static(); $e2->message = $e->getMessage(); return $e2;
     }
+    
+    /** Copy another exception, converting its type */
+    public static function Append(\Throwable $e) : self
+    {
+        $e2 = new static(); $e2->message .= ": ".$e->getMessage(); return $e2;
+    }
 }
 
 /** Base class for errors caused by the client's request */
-abstract class ClientException extends BaseException 
-{    
-    public function __construct(string $details = null) { 
-        if ($details) $this->message .= ": $details"; }
-}
+abstract class ClientException extends BaseException { }
 
 /** Class for errors caused by the client's request (custom) */
 class CustomClientException extends BaseException
@@ -43,10 +50,7 @@ class NotImplementedException extends ClientException { public $code = 501; publ
 /** Base class for server exceptions (errors in server code) */
 abstract class ServerException extends BaseException 
 {     
-    public $code = 0; public $message = "SERVER_ERROR"; public $public = false;
-    
-    public function __construct(string $details = null) { 
-        if ($details) $this->message .= ": $details"; }
+    public $code = 500; public $message = "GENERIC_SERVER_ERROR";
 }
 
 /** Represents an non-exception error from PHP */

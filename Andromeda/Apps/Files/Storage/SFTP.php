@@ -137,7 +137,7 @@ class SFTP extends StandardFWrapper
             if ($cached === null) $this->SetHostKey($hostkey);
             else if ($cached !== $hostkey) throw new HostKeyMismatchException();            
         }
-        catch (Exceptions\PHPError $e) { throw SSHConnectionFailure::Copy($e); }
+        catch (Exceptions\PHPError $e) { throw SSHConnectionFailure::Append($e); }
 
         try
         {

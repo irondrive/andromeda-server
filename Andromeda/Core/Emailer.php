@@ -222,7 +222,7 @@ class Emailer extends StandardObject
         else $mailer->Body = $message;
         
         try { if (!$mailer->send()) throw new MailSendException($mailer->ErrorInfo); }
-        catch (\Throwable $e) { throw MailSendException::Copy($e); }
+        catch (\Throwable $e) { throw MailSendException::Append($e); }
         
         $mailer->clearAddresses(); $mailer->clearAttachments();
     }

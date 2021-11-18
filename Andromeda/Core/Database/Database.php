@@ -9,14 +9,11 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
-/** Base class representing a database exception */
-abstract class DatabaseException extends Exceptions\ServerException { }
-
-/** Base class representing a database config exception */
-abstract class DatabaseConfigException extends DatabaseException { }
+/** Base class for database initialization exceptions */
+abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 500; }
 
 /** Exception indicating that the database configuration is not found */
-class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; public $public = true; }
+class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }
 
 /** Exception indicating that the database connection failed to initialize */
 class DatabaseInvalidException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_ERROR"; }
@@ -24,14 +21,17 @@ class DatabaseInvalidException extends DatabaseConfigException { public $message
 /** Exception indicating that the database was requested to use an unknkown driver */
 class InvalidDriverException extends DatabaseConfigException { public $message = "PDO_UNKNOWN_DRIVER"; }
 
+/** Base class representing a run-time database error */
+class DatabaseException extends Exceptions\ServerException { public $message = "DATABASE_ERROR"; }
+
 /** Exception indicating that PDO failed to execute the given query */
-class DatabaseErrorException extends DatabaseException { public $message = "DATABASE_ERROR"; }
+class DatabaseQueryException extends DatabaseException { public $message = "DATABASE_QUERY_ERROR"; }
 
 /** Exception indicating that the a write was requested to a read-only database */
 class DatabaseReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_DATABASE"; }
 
-/** Exception indicating that database config failed */
-class DatabaseConfigFailException extends Exceptions\ClientErrorException { }
+/** Exception indicating that database install config failed */
+class DatabaseInstallException extends Exceptions\ClientErrorException { }
 
 /**
  * This class implements the PDO database abstraction.
@@ -128,8 +128,12 @@ class Database implements Transactions
                     PDO::ATTR_EMULATE_PREPARES => false
             ));
         }
-        catch (\PDOException $e) { 
-            throw DatabaseInvalidException::Copy($e); }
+        catch (\PDOException $e) 
+        {
+            if (Main::GetInstance()->GetInterface()->isPrivileged())
+                throw DatabaseInvalidException::Append($e);
+            else throw new DatabaseInvalidException();
+        }
         
         if ($this->connection->inTransaction())
             $this->connection->rollback();
@@ -210,7 +214,7 @@ class Database implements Transactions
             file_put_contents($tmpnam, $output);
             
             try { new Database($tmpnam); } catch (DatabaseConfigException $e) {
-                unlink($tmpnam); throw DatabaseConfigFailException::Copy($e); }
+                unlink($tmpnam); throw DatabaseInstallException::Copy($e); }
             
             rename($tmpnam, $outnam); return null;
         }
@@ -368,7 +372,7 @@ class Database implements Transactions
                 
             $idx = count($this->queries)-1;
             $this->queries[$idx] = array($this->queries[$idx], $e->getMessage());
-            throw DatabaseErrorException::Copy($e); 
+            throw DatabaseQueryException::Append($e); 
         }
         
         $this->stopTimingQuery($sql, $type);

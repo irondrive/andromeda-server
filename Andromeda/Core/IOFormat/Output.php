@@ -96,13 +96,9 @@ class Output
     /** Constructs an Output object representing a server error, possibly with debug */
     public static function ServerException(\Throwable $e, ?array $debug = null) : Output
     {
-        $output = new Output(false, 500);
+        $output = new Output(false, $e->getCode());
         
-        if (isset($e->public) && $e->public) 
-        {
-            $output->message = $e->getMessage();
-        }
-        else $output->message = 'SERVER_ERROR';
+        $output->message = 'SERVER_ERROR';
         
         if ($debug) $output->debug = $debug;
         

@@ -218,7 +218,7 @@ class S3 extends S3Base3
     {
         try { return $this->s3->$func($params); }
         catch (\Aws\S3\Exception\S3Exception $e) {
-            throw S3ErrorException::Copy($e); }
+            throw S3ErrorException::Append($e); }
     }
     
     /**

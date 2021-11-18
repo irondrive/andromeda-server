@@ -8,7 +8,6 @@ require_once(ROOT."/Core/IOFormat/Output.php");
 
 class TestClientException extends Exceptions\ClientErrorException { public $message = "TEST_EXCEPTION"; }
 class TestServerException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; }
-class TestServerPubException extends Exceptions\ServerException { public $message = "TEST_EXCEPTION"; public $public = true; }
 
 class OutputTest extends \PHPUnit\Framework\TestCase
 {
@@ -61,9 +60,6 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame(array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
-        
-        $output = Output::ServerException(new TestServerPubException());
-        $this->assertSame($output->GetMessage(), 'TEST_EXCEPTION');
     }
     
     public function testGetAsString() : void

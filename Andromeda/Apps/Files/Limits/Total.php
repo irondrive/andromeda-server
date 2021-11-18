@@ -126,8 +126,6 @@ abstract class Total extends Base
     /** Sets all stats counters to zero */
     protected function Initialize() : self
     {
-        Main::GetInstance()->requireDisabled();
-        
         foreach (array('items','size','shares','pubdownloads','bandwidth') as $prop) 
             $this->DeltaCounter($prop, $this->GetCounter($prop)*-1);
         
