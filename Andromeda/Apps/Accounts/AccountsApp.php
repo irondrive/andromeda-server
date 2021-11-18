@@ -143,7 +143,7 @@ class AccountsApp extends UpgradableApp
             'changepassword --new_password raw ((--username text --auth_password raw) | --auth_recoverykey text)',
             'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
-            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource ?id] [--old_password raw] [--new_password raw]',
+            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
             '(createsession) [--auth_recoverykey text | --auth_twofactor int] [--name name]',
             '(createsession) --auth_clientid id --auth_clientkey alphanum',
             'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
@@ -282,13 +282,13 @@ class AccountsApp extends UpgradableApp
      * Installs the app by importing its SQL file and creating config
      * 
      * Optionally creates an initial administrator account
-     * @throws UnknownActionException if config already exists
+     * @throws UnknownActionException if config already exists or not allowed
      * @return ?array Account if admin was created
      * @see Account::GetClientObject()
      */
     public function Install(Input $input) : ?array
     {
-        if (isset($this->config)) throw new UnknownActionException();
+        if (isset($this->config) || !$this->allowInstall()) throw new UnknownActionException();
         
         $this->database->importTemplate(ROOT."/Apps/Accounts");
         

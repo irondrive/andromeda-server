@@ -132,6 +132,13 @@ abstract class UpgradableApp extends AppBase
         $this->getDBVersion()->setVersion(static::getVersion());
     }
     
+    /** Returns true if the user is allowed to install/upgrade */
+    protected function allowInstall() : bool
+    {
+        return $this->API->GetInterface()->isPrivileged() ||
+            !defined('HTTPINSTALL') || HTTPINSTALL;
+    }
+    
     /**
      * Complements Run() with checking if upgrade is required and running it
      * @param Input $input the app action input object
@@ -142,7 +149,7 @@ abstract class UpgradableApp extends AppBase
     {
         if ($this->getDBVersion()->getVersion() !== static::getVersion())
         {
-            if ($input->GetAction() === 'upgrade')
+            if ($input->GetAction() === 'upgrade' && $this->allowInstall())
             {
                 $this->Upgrade(); return true;
             }

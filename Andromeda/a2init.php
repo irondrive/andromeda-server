@@ -13,3 +13,6 @@ require_once(ROOT.'/../vendor/autoload.php');
 
 /** Use to permanently set the database config path */
 //define('DBCONF','path-to-config');
+
+/** Use to permanently disable install/upgrade via HTTP */
+//define('HTTPINSTALL',false);
