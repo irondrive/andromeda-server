@@ -1,4 +1,11 @@
 #!/bin/sh
 
-cd "$(dirname "$0")"
-php index.php "$@"
+try_run() {
+    if [ -f "$1" ]; then
+        php "$@"; exit $?
+    fi
+}
+
+try_run ./Andromeda/index.php "$@"
+try_run /usr/local/lib/andromeda-server/Andromeda/index.php "$@"
+try_run /usr/lib/andromeda-server/Andromeda/index.php "$@"

@@ -51,7 +51,7 @@ class ErrorManager extends Singleton
         try { $debug = $this->LogException($e, false); }
         catch (\Throwable $e) { $debug = null; }
 
-        return Output::ServerException($e, $debug);
+        return Output::Exception($e, $debug);
     }
     
     /** Registers PHP error and exception handlers */
@@ -66,13 +66,13 @@ class ErrorManager extends Singleton
 
         set_exception_handler(function(\Throwable $e)
         {
-            if ($e instanceof Exceptions\ClientException) 
+            if ($e instanceof ClientException) 
             {
                 $output = $this->HandleClientException($e);
                 
                 $this->API->FinalizeOutput($output, true);
             }
-            else $output = $this->HandleThrowable($e);           
+            else $output = $this->HandleThrowable($e);
             
             $this->interface->WriteOutput($output); die();  
         });

@@ -69,7 +69,7 @@ Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstri
 
 Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
 
-It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/lib`).  This can be accomplished easily by changing the include path in the root `index.php`.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders have not moved.
+It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
 
 ### CLI Install Steps
 Use the `core usage` command to see options for all available commands.
@@ -83,27 +83,25 @@ Installing the accounts app optionally will also create an initial administrator
 The install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.
 
 #### Database Config
-The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.
+The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `define('DBCONF','path-to-config');` to the end of `a2init.php`.
 
 For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
-#### Full SQLite Web Server Install Example
+#### Full SQLite Web Server Install Example with Proper Directories
 
 ```
-###################################
-# Example SQLite web-server setup #
-###################################
 
-# /usr/lib/andromeda		server code
-# /var/www/html/andromeda	index.php
-# /usr/local/bin		entry script
-# /var/lib/andromeda		sqlite db
-# /usr/local/etc/andromeda	db config
+# server code:  /usr/local/lib/andromeda-server/
+# index.php:    /var/www/html/andromeda/
+# entry script: /usr/local/bin/
+# db config:    /usr/local/etc/andromeda/
+# sqlite db:    /var/lib/andromeda/
 
-# install the server folder
-mkdir /usr/lib/andromeda
-cd /usr/lib/andromeda
-tar -xf andromeda-server.tar
+# install the server files
+cd /usr/local/lib
+git clone https://github.com/lightray22/andromeda-server
+cd andromeda-server
+composer install
 
 # copy the entry points
 cp andromeda-server /usr/local/bin
@@ -117,7 +115,7 @@ chown -R www-data:www-data /usr/local/etc/andromeda
 chmod -R 770 /var/lib/andromeda
 chmod -R 770 /usr/local/etc/andromeda
 
-## /usr/lib/andromeda and /var/www/andromeda
+## /usr/local/lib/andromeda-server and /var/www/html/andromeda
 ## should NOT be writeable by www-data!
 
 # initialize the SQLite database
@@ -129,6 +127,10 @@ sudo -u www-data \
 sudo -u www-data andromeda-server core install
 sudo -u www-data andromeda-server accounts install
 sudo -u www-data andromeda-server files install
+
+# set the core datadir (for logging)
+sudo -u www-data andromeda-server core setconfig \
+   --datadir /var/lib/andromeda
 ```
 
 ### Upgrading

@@ -24,8 +24,8 @@ class Output
     /** Returns whether or not the request succeeded */
     public function isOK() : bool { return $this->ok; }
     
-    /** Returns the HTTP response code for the request */
-    public function GetHTTPCode() : int { return $this->code; }
+    /** Returns the response code for the request */
+    public function GetCode() : int { return $this->code; }
     
     /** Returns the error message string (only if not isOK) */
     public function GetMessage() : string { return $this->message; }
@@ -67,9 +67,11 @@ class Output
         return $data;
     }
     
-    private function __construct(bool $ok, int $code)
+    private function __construct(bool $ok = true, int $code = 200)
     {
-        $this->ok = $ok; $this->code = $code;   
+        if ($code !== 200 && ($code < 400 || $code >= 600)) $code = 500;
+        
+        $this->ok = $ok; $this->code = $code;
     }
     
     /** Constructs an Output object representing a success response */
@@ -78,11 +80,11 @@ class Output
         // if we only ran a single input, make the output array be that result
         if (count($appdata) === 1 && array_key_exists(0,$appdata)) $appdata = $appdata[0];
         
-        $output = new Output(true, 200); $output->appdata = $appdata; return $output;
+        $output = new Output(); $output->appdata = $appdata; return $output;
     }
     
     /** Constructs an Output object representing a client error, showing the exception and possibly extra debug */
-    public static function ClientException(\Throwable $e, ?array $debug = null) : Output
+    public static function ClientException(Exceptions\ClientException $e, ?array $debug = null) : Output
     {
         $output = new Output(false, $e->getCode());
         
@@ -93,14 +95,14 @@ class Output
         return $output;
     }
     
-    /** Constructs an Output object representing a server error, possibly with debug */
-    public static function ServerException(\Throwable $e, ?array $debug = null) : Output
+    /** Constructs an Output object representing a non-client error, possibly with debug */
+    public static function Exception(\Throwable $e, ?array $debug = null) : Output
     {
         $output = new Output(false, $e->getCode());
         
         $output->message = 'SERVER_ERROR';
         
-        if ($debug) $output->debug = $debug;
+        if ($debug !== null) $output->debug = $debug;
         
         return $output;
     }

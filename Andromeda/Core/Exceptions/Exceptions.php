@@ -23,6 +23,21 @@ abstract class BaseException extends \Exception
     }
 }
 
+/** Base class for server exceptions (errors in server code) */
+abstract class ServerException extends BaseException
+{
+    public $code = 500; public $message = "GENERIC_SERVER_ERROR";
+}
+
+/** Represents an non-exception error from PHP */
+class PHPError extends ServerException
+{
+    public function __construct(int $code, string $string, string $file, $line)
+    {
+        $this->code = $code; $this->message = $string; $this->file = $file; $this->line = $line;
+    }
+}
+
 /** Base class for errors caused by the client's request */
 abstract class ClientException extends BaseException { }
 
@@ -46,18 +61,3 @@ abstract class ClientNotFoundException extends ClientException { public $code = 
 
 /** Exception indicating something is not implemented - these are not unexpected server errors (HTTP 501) */
 class NotImplementedException extends ClientException { public $code = 501; public $message = "NOT_IMPLEMENTED"; }
-
-/** Base class for server exceptions (errors in server code) */
-abstract class ServerException extends BaseException 
-{     
-    public $code = 500; public $message = "GENERIC_SERVER_ERROR";
-}
-
-/** Represents an non-exception error from PHP */
-class PHPError extends ServerException 
-{    
-    public function __construct(int $code, string $string, string $file, $line) 
-    {
-        $this->code = $code; $this->message = $string; $this->file = $file; $this->line = $line;
-    } 
-}
