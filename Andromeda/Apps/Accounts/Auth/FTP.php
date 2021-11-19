@@ -32,7 +32,7 @@ class FTP extends External
     {
         return parent::Create($database, $input)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptNullParam('port', SafeParam::TYPE_UINT))
+            ->SetScalar('port', $input->GetOptNullParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)))
             ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
     }
     
@@ -40,7 +40,7 @@ class FTP extends External
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)));
         
         return $this;
     }

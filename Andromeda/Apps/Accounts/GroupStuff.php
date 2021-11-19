@@ -107,13 +107,13 @@ abstract class AuthEntity extends StandardObject
             if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
         
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
-            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT));
+            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT, SafeParam::MaxValueBits(8)));
         
         foreach (array('admin','disabled','forcetf','allowcrypto','userdelete') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_BOOL));
         
         foreach (array('accountsearch','groupsearch') as $prop)
-            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
+            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT, SafeParam::MaxValueBits(8)));
             
         return $this->SetDate('modified');
     }

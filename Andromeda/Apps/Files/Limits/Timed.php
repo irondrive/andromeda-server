@@ -162,13 +162,13 @@ abstract class Timed extends Base
     
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {
-        $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
+        $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT, SafeParam::MaxValueBits(32));
         
         $lim = static::LoadByClientAndPeriod($database, $obj, $period) ?? static::CreateTimed($database, $obj, $period);
         
         $lim->SetBaseLimits($input); $lim->SetTimedLimits($input);
 
-        if ($input->HasParam('max_pubdownloads')) $lim->SetCounterLimit('pubdownloads', $input->GetNullParam('max_pubdownloads', SafeParam::TYPE_UINT));
+        if ($input->HasParam('max_pubdownloads')) $lim->SetCounterLimit('pubdownloads', $input->GetNullParam('max_pubdownloads', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(32)));
         if ($input->HasParam('max_bandwidth')) $lim->SetCounterLimit('bandwidth', $input->GetNullParam('max_bandwidth', SafeParam::TYPE_UINT));
         
         if ($lim->isCreated()) $lim->Initialize();

@@ -93,7 +93,7 @@ class SFTP extends StandardFWrapper
     { 
         $obj = parent::Create($database, $input, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT))
+            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)))
             ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));         
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey($input->GetFile('privkey')->GetData());
@@ -106,7 +106,7 @@ class SFTP extends StandardFWrapper
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)));
         
         if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
         if ($input->HasFile('privkey')) $this->SetPrivkey($input->GetFile('privkey')->GetData());

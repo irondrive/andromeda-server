@@ -144,6 +144,21 @@ class SafeParam
     /** Returns a function that checks the max length of the value, for use with GetValue */
     public static function MaxLength(int $len) : callable { 
         return function($val)use($len){ return mb_strlen($val) <= $len; }; }
+
+    /**
+     * Returns a function that checks the max value of the int
+     * @param int $bits the # of bits in the integer size
+     * @param bool $signed true if signed
+     * @return callable function for use with GetValue
+     */
+    public static function MaxValueBits(int $bits, bool $signed = false) : callable 
+    {
+        if ($signed) { $max = pow(2,$bits-1); $min = -$max; }
+        else { $max = pow(2,$bits); $min = 0; }
+        
+        return function($val)use($min,$max){ 
+            return $val >= $min && $val < $max; };
+    }
         
     /**
      * Gets the value of the parameter, doing filtering/validation, and JSON decoding for objects/arrays
