@@ -117,7 +117,9 @@ abstract class UpgradableApp extends AppBase
      * sequentially until the DB is up to date with the code
      */
     public function Upgrade() : void
-    {        
+    {
+        $this->API->GetInterface()->DisallowBatch();
+        
         $oldVersion = $this->getDBVersion()->getVersion();
         
         foreach (static::getUpgradeScripts() as $newVersion=>$script)
@@ -126,6 +128,8 @@ abstract class UpgradableApp extends AppBase
                 version_compare($newVersion, static::getVersion()) <= 0)
             {
                 $script(); $this->getDBVersion()->setVersion($newVersion);
+                
+                $this->API->commit(); // commit after every step
             }
         }
         
