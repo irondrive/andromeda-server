@@ -1130,7 +1130,7 @@ class AccountsApp extends UpgradableApp
         
         $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
         
-        $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT);
+        $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT, SafeParam::MaxValueBits(8,true));
         $comment = $input->GetOptParam("comment", SafeParam::TYPE_TEXT);
         
         $duplicate = Group::TryLoadByName($this->database, $name);
@@ -1170,7 +1170,7 @@ class AccountsApp extends UpgradableApp
             $group->SetName($name);
         }
  
-        if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT));
+        if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT, SafeParam::MaxValueBits(8,true)));
         if ($input->HasParam('comment')) $group->SetComment($input->GetNullParam("comment", SafeParam::TYPE_TEXT));
         
         return $group->GetClientObject(Group::OBJECT_ADMIN);

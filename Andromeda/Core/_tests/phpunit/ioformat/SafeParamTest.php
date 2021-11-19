@@ -59,6 +59,29 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $param->GetValue(SafeParam::TYPE_RAW, SafeParam::MaxLength(5));
     }
     
+    protected function checkMaxValue(int $bits, int $type, int $value, bool $signed) : bool
+    {
+        $param = new SafeParam("key",$value);
+        
+        try { $param->GetValue($type, SafeParam::MaxValueBits($bits,$signed)); }
+        catch (SafeParamInvalidException $e){ return false; }
+        
+        return true;
+    }
+    
+    public function testMaxValueBits() : void
+    {
+        $this->assertSame(false, $this->checkMaxValue(16, SafeParam::TYPE_UINT, -1, false));
+        $this->assertSame(true, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 0, false));
+        $this->assertSame(true, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 65535, false));
+        $this->assertSame(false, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 65536, false));
+        
+        $this->assertSame(false, $this->checkMaxValue(8, SafeParam::TYPE_INT, -129, true));
+        $this->assertSame(true, $this->checkMaxValue(8, SafeParam::TYPE_INT, -128, true));
+        $this->assertSame(true, $this->checkMaxValue(8, SafeParam::TYPE_INT, 127, true));
+        $this->assertSame(false, $this->checkMaxValue(8, SafeParam::TYPE_INT, 128, true));
+    }
+    
     protected function testGood($value, int $type) : void
     {
         $this->testGoodMatch($value, $type, $value);

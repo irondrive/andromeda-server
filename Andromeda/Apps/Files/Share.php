@@ -218,7 +218,7 @@ class Share extends AuthObject
             $input->GetNullParam('expires',SafeParam::TYPE_UINT));
         
         if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
-            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT));
+            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(32)));
         
         return $this;
     }

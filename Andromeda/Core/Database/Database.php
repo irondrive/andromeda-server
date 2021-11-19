@@ -190,7 +190,7 @@ class Database implements Transactions
             {
                 $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
                 
-                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT);
+                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(16));
                 if ($port !== null) $connect .= ";port=$port";
             }
             
