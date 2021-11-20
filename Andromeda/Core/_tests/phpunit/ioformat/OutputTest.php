@@ -65,8 +65,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     {
         $this->assertSame(Output::Success(array('myretval'))->GetAsString(), 'myretval');
         
-        $this->assertSame(Output::Success(array(array('mykey'=>'myval')))->GetAsString(), null);
-        $this->assertSame(Output::Success(array('rval1','rval2'))->GetAsString(), null);        
+        $v = array('mykey'=>'myval'); $this->assertSame(Output::Success(array($v))->GetAsString(), print_r($v,true));
         $this->assertSame(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString(), null);
         
         $this->assertSame(Output::Exception()->GetAsString(), 'SERVER_ERROR');
