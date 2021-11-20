@@ -25,11 +25,11 @@ class TestUtilApp extends AppBase
     public static function getUsage() : array
     {
         $retval = array(
-            'random [--length int]',
+            'random [--length uint]',
             'getinput',
             'exception',
             'check-dryrun',
-            'binoutput --data raw [--times int]'
+            'binoutput --data raw [--times uint]'
         );
 
         return $retval;
@@ -90,7 +90,7 @@ class TestUtilApp extends AppBase
         
         $data = $input->GetParam('data',SafeParam::TYPE_RAW);
 
-        for ($i = 0; $i < ($input->GetOptParam('times',SafeParam::TYPE_INT) ?? 0); $i++)
+        for ($i = 0; $i < ($input->GetOptParam('times',SafeParam::TYPE_UINT) ?? 0); $i++)
         {
             $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
                 function()use($data,$i){ return strlen($data)*$i; },

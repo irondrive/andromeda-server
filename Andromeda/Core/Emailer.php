@@ -78,7 +78,7 @@ class Emailer extends StandardObject
     public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
     
     /** Returns a array of strings with the CLI usage for each specific driver */
-    public static function GetCreateUsages() : array { return array("--type smtp ((--host alphanum [--port int] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
+    public static function GetCreateUsages() : array { return array("--type smtp ((--host alphanum [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
     
     /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, Input $input) : self
@@ -116,7 +116,7 @@ class Emailer extends StandardObject
     private static function BuildHostFromParams(SafeParams $input) : string
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
-        $port = $input->GetOptParam('port',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(16));
+        $port = $input->GetOptParam('port',SafeParam::TYPE_UINT16);
         $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,SafeParams::PARAMLOG_ONLYFULL,
             function($d){ return in_array($d,array('tls','ssl')); });
         

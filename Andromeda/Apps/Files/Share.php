@@ -185,7 +185,7 @@ class Share extends AuthObject
     
     /** Returns the command usage for SetOptions() */
     public static function GetSetOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--keepowner bool] ".
-                                                                  "[--label text] [--spassword ?raw] [--expires ?int] [--maxaccess ?int]"; }
+                                                                  "[--label text] [--spassword ?raw] [--expires ?uint] [--maxaccess ?uint32]"; }
     
     /**
      * Modifies share permissions and properties from the given input
@@ -218,7 +218,7 @@ class Share extends AuthObject
             $input->GetNullParam('expires',SafeParam::TYPE_UINT));
         
         if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
-            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(32)));
+            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT32));
         
         return $this;
     }

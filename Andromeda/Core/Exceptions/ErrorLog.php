@@ -42,7 +42,7 @@ class ErrorLog extends BaseObject
     public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text]"; }
     
     /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit int] [--offset int] [--desc bool]"; }
+    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint] [--desc bool]"; }
     
     /** Returns the command usage for CountByInput() */
     public static function GetCountUsage() : string { return "[--logic and|or]"; }

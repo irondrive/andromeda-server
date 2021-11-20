@@ -160,10 +160,10 @@ class AccountsApp extends UpgradableApp
             'editcontact --contact id [--usefrom bool] [--public bool]',
             'searchaccounts --name text',
             'searchgroups --name text',
-            'listaccounts [--limit int] [--offset int]',
-            'listgroups [--limit int] [--offset int]',            
-            'creategroup --name name [--priority int] [--comment text]',
-            'editgroup --group id [--name name] [--priority int] [--comment ?text]',
+            'listaccounts [--limit uint] [--offset uint]',
+            'listgroups [--limit uint] [--offset uint]',
+            'creategroup --name name [--priority int8] [--comment text]',
+            'editgroup --group id [--name name] [--priority int8] [--comment ?text]',
             'getgroup --group id',
             'deletegroup --group id',
             'addgroupmember --account id --group id',
@@ -1130,7 +1130,7 @@ class AccountsApp extends UpgradableApp
         
         $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
         
-        $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT, SafeParam::MaxValueBits(8,true));
+        $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT8);
         $comment = $input->GetOptParam("comment", SafeParam::TYPE_TEXT);
         
         $duplicate = Group::TryLoadByName($this->database, $name);
@@ -1170,7 +1170,7 @@ class AccountsApp extends UpgradableApp
             $group->SetName($name);
         }
  
-        if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT, SafeParam::MaxValueBits(8,true)));
+        if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT8));
         if ($input->HasParam('comment')) $group->SetComment($input->GetNullParam("comment", SafeParam::TYPE_TEXT));
         
         return $group->GetClientObject(Group::OBJECT_ADMIN);

@@ -105,14 +105,14 @@ class S3 extends S3Base3
     protected static function cleanPath(string $path) : string { return implode('/',array_filter(explode('/',$path))); }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --endpoint fspath --bucket alphanum --region alphanum [--path_style bool]".
-                                                                                       "[--port int] [--usetls bool] [--accesskey randstr] [--secretkey randstr]"; }
+                                                                                       "[--port uint16] [--usetls bool] [--accesskey randstr] [--secretkey randstr]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::Create($database, $input, $filesystem)
             ->SetScalar('endpoint', self::cleanPath($input->GetParam('endpoint', SafeParam::TYPE_FSPATH)))
             ->SetScalar('path_style', $input->GetOptParam('path_style',SafeParam::TYPE_BOOL))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)))
+            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
             ->SetScalar('usetls', $input->GetOptParam('usetls', SafeParam::TYPE_BOOL))
             ->SetScalar('region', $input->GetParam('region', SafeParam::TYPE_ALPHANUM))
             ->SetScalar('bucket', $input->GetParam('bucket', SafeParam::TYPE_ALPHANUM))
@@ -121,7 +121,7 @@ class S3 extends S3Base3
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--endpoint fspath] [--bucket alphanum] [--region alphanum] [--path_style ?bool]".
-                                                                                   "[--port ?int] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
+                                                                                   "[--port ?uint16] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
     
     public function Edit(Input $input) : self
     {
@@ -130,7 +130,7 @@ class S3 extends S3Base3
         if ($input->HasParam('region')) $this->SetScalar('region', $input->GetParam('region', SafeParam::TYPE_ALPHANUM));
         if ($input->HasParam('bucket')) $this->SetScalar('bucket', $input->GetParam('bucket', SafeParam::TYPE_ALPHANUM));
         
-        if ($input->HasParam('port')) $this->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)));
+        if ($input->HasParam('port')) $this->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT16));
         if ($input->HasParam('usetls')) $this->SetScalar('usetls', $input->GetNullParam('usetls', SafeParam::TYPE_BOOL));
         if ($input->HasParam('path_style')) $this->SetScalar('path_style', $input->GetNullParam('path_style', SafeParam::TYPE_BOOL));
         

@@ -22,7 +22,7 @@ Commands mentioned in the readme or wiki will omit the `php index.php` or `./and
 
 ### Common Exceptions
 
-`SAFEPARAM_*` related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_DATA` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  `UNKNOWN_APP` and `UNKNOWN_ACTION` indicate that the requested app or action are invalid.
+`SAFEPARAM_*` related exceptions indicate a problem with the input provided.  For example `SAFEPARAM_KEY_MISSING` indicates that a required parameter was not given.  `SAFEPARAM_INVALID_VALUE` indicates that the parameter did not pass input validation (e.g. giving a string for a numeric input).  `UNKNOWN_APP` and `UNKNOWN_ACTION` indicate that the requested app or action are invalid.
 
 ### Parameter Types
 

@@ -87,13 +87,13 @@ class SFTP extends StandardFWrapper
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port int] [--privkey% path | --privkey-] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port uint16] [--privkey% path | --privkey-] [--keypass raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     { 
         $obj = parent::Create($database, $input, $filesystem)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)))
+            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
             ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));         
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey($input->GetFile('privkey')->GetData());
@@ -101,12 +101,12 @@ class SFTP extends StandardFWrapper
         return $obj;
     }
 
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?int] [--privkey% path | --privkey-] [--keypass ?raw] [--resethost bool]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?uint16] [--privkey% path | --privkey-] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(16)));
+        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT16));
         
         if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
         if ($input->HasFile('privkey')) $this->SetPrivkey($input->GetFile('privkey')->GetData());

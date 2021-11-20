@@ -95,10 +95,10 @@ abstract class AuthEntity extends StandardObject
     }
     
     /** defines command usage for SetProperties() */
-    public static function GetPropUsage() : string { return "[--session_timeout ?int] [--client_timeout ?int] [--max_password_age ?int] ".
-                                                            "[--max_sessions ?int] [--max_contacts ?int] [--max_recoverykeys ?int] ".
+    public static function GetPropUsage() : string { return "[--session_timeout ?uint] [--client_timeout ?uint] [--max_password_age ?uint] ".
+                                                            "[--max_sessions ?uint8] [--max_contacts ?uint8] [--max_recoverykeys ?uint8] ".
                                                             "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
-                                                            "[--accountsearch ?int] [--groupsearch ?int] [--userdelete ?bool]"; }
+                                                            "[--accountsearch ?uint8] [--groupsearch ?uint8] [--userdelete ?bool]"; }
 
     /** Sets the value of an inherited property for the object */
     public function SetProperties(Input $input) : self
@@ -107,13 +107,13 @@ abstract class AuthEntity extends StandardObject
             if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
         
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
-            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT, SafeParam::MaxValueBits(8)));
+            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT8));
         
         foreach (array('admin','disabled','forcetf','allowcrypto','userdelete') as $prop)
             if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_BOOL));
         
         foreach (array('accountsearch','groupsearch') as $prop)
-            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT, SafeParam::MaxValueBits(8)));
+            if ($input->HasParam($prop)) $this->SetFeature($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT8));
             
         return $this->SetDate('modified');
     }
