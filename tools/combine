@@ -1,7 +1,8 @@
 #!/bin/bash
 
-cd Andromeda
+(find Andromeda -iname '*.php' | xargs cat) > combined.txt
+(find Andromeda -iname '*.py' | xargs cat) >> combined.txt
+(find Andromeda -iname '*.md' | xargs cat) >> combined.txt
+(find wiki -iname '*.md' | xargs cat) >> combined.txt
 
-(find $1 -iname '*.php'; find $1 -iname '*.py'; find $1 -iname '*.md') | xargs cat > ../combined.txt
-
-ls -lh ../combined.txt
+ls -lh combined.txt

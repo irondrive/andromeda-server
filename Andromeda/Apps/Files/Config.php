@@ -25,7 +25,7 @@ class Config extends DBVersion
     public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->setVersion(FilesApp::getVersion()); }
     
     /** Returns the command usage for SetConfig() */
-    public static function GetSetConfigUsage() : string { return "[--rwchunksize uint] [--crchunksize uint]".
+    public static function GetSetConfigUsage() : string { return "[--rwchunksize uint32] [--crchunksize uint32]".
                                           " [--upload_maxsize ?uint] [--timedstats bool] [--apiurl ?string]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
@@ -33,8 +33,8 @@ class Config extends DBVersion
     {
         if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW));
         
-        if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(32)));
-        if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(32)));
+        if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT32));
+        if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT32));
         
         if ($input->HasParam('upload_maxsize')) $this->SetScalar('upload_maxsize',$input->GetNullParam('upload_maxsize',SafeParam::TYPE_UINT));
         

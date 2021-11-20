@@ -34,7 +34,7 @@ abstract class BaseLog extends BaseObject
     public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array;
     
     /** Returns the common CLI usage for loading log entries */
-    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit int] [--offset int]"; }
+    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint]"; }
     
     /** Returns the common CLI usage for counting log entries */
     public static function GetCountUsage() : string { return "[--logic and|or]"; }

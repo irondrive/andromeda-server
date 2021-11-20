@@ -175,7 +175,7 @@ class FSManager extends StandardObject
     
     /** Returns the common command usage of Create() */
     public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types)).
-        " [--fstype native|crypt|external] [--name name] [--global bool] [--readonly bool] [--chunksize int]"; }
+        " [--fstype native|crypt|external] [--name name] [--global bool] [--readonly bool] [--chunksize uint]"; }
     
     /** Returns the command usage of Create() specific to each storage type */
     public static function GetCreateUsages() : array 

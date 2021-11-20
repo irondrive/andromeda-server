@@ -99,7 +99,7 @@ abstract class Total extends Base
 
     public static function BaseConfigUsage() : string { return "[--randomwrite ?bool] [--publicmodify ?bool] [--publicupload ?bool] ".
                                                                "[--itemsharing ?bool] [--share2groups ?bool] [--share2everyone ?bool] ".
-                                                               "[--max_size ?int] [--max_items ?int] [--max_shares ?int]"; }
+                                                               "[--max_size ?uint] [--max_items ?uint32] [--max_shares ?uint32]"; }
         
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {
@@ -115,8 +115,8 @@ abstract class Total extends Base
         if ($input->HasParam('share2everyone')) $lim->SetFeature('share2everyone', $input->GetNullParam('share2everyone', SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_UINT));
-        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(32)));
-        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_UINT, SafeParam::MaxValueBits(32)));
+        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT32));
+        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_UINT32));
 
         if ($lim->isCreated()) $lim->Initialize();
         

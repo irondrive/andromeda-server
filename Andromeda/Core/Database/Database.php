@@ -158,8 +158,8 @@ class Database implements Transactions
     public static function GetInstallUsages() : array
     {
         return array(
-            "--driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port int])) [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "--driver pgsql --dbname alphanum --host hostname [--port int] [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "--driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port uint16])) [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "--driver pgsql --dbname alphanum --host hostname [--port uint16] [--dbuser name] [--dbpass raw] [--persistent bool]",
             "--driver sqlite --dbpath fspath"
         );
     }
@@ -190,7 +190,7 @@ class Database implements Transactions
             {
                 $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
                 
-                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT,SafeParam::MaxValueBits(16));
+                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT16);
                 if ($port !== null) $connect .= ";port=$port";
             }
             

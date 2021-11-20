@@ -59,29 +59,6 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $param->GetValue(SafeParam::TYPE_RAW, SafeParam::MaxLength(5));
     }
     
-    protected function checkMaxValue(int $bits, int $type, int $value, bool $signed) : bool
-    {
-        $param = new SafeParam("key",$value);
-        
-        try { $param->GetValue($type, SafeParam::MaxValueBits($bits,$signed)); }
-        catch (SafeParamInvalidException $e){ return false; }
-        
-        return true;
-    }
-    
-    public function testMaxValueBits() : void
-    {
-        $this->assertSame(false, $this->checkMaxValue(16, SafeParam::TYPE_UINT, -1, false));
-        $this->assertSame(true, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 0, false));
-        $this->assertSame(true, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 65535, false));
-        $this->assertSame(false, $this->checkMaxValue(16, SafeParam::TYPE_UINT, 65536, false));
-        
-        $this->assertSame(false, $this->checkMaxValue(8, SafeParam::TYPE_INT, -129, true));
-        $this->assertSame(true, $this->checkMaxValue(8, SafeParam::TYPE_INT, -128, true));
-        $this->assertSame(true, $this->checkMaxValue(8, SafeParam::TYPE_INT, 127, true));
-        $this->assertSame(false, $this->checkMaxValue(8, SafeParam::TYPE_INT, 128, true));
-    }
-    
     protected function testGood($value, int $type) : void
     {
         $this->testGoodMatch($value, $type, $value);
@@ -99,7 +76,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($rval);
     }
-    
+
     public function testNull() : void
     {
         $this->testGoodMatch("", SafeParam::TYPE_ALPHANUM, null);
@@ -165,6 +142,39 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGoodMatch("123", $t, 123);
         
         $this->testBad("-123", $t);        
+    }
+    
+    public function testMaxValue() : void
+    {
+        $this->testBad(-1, SafeParam::TYPE_UINT8);
+        $this->testGood(0, SafeParam::TYPE_UINT8);
+        $this->testGood(255, SafeParam::TYPE_UINT8);
+        $this->testBad(256, SafeParam::TYPE_UINT8);
+        
+        $this->testBad(-1, SafeParam::TYPE_UINT16);
+        $this->testGood(0, SafeParam::TYPE_UINT16);
+        $this->testGood(65535, SafeParam::TYPE_UINT16);
+        $this->testBad(65536, SafeParam::TYPE_UINT16);
+        
+        $this->testBad(-1, SafeParam::TYPE_UINT32);
+        $this->testGood(0, SafeParam::TYPE_UINT32);
+        $this->testGood(4294967295, SafeParam::TYPE_UINT32);
+        $this->testBad(4294967296, SafeParam::TYPE_UINT32);
+        
+        $this->testBad(-129, SafeParam::TYPE_INT8);
+        $this->testGood(-128, SafeParam::TYPE_INT8);
+        $this->testGood(127, SafeParam::TYPE_INT8);
+        $this->testBad(128, SafeParam::TYPE_INT8);
+        
+        $this->testBad(-32769, SafeParam::TYPE_INT16);
+        $this->testGood(-32768, SafeParam::TYPE_INT16);
+        $this->testGood(32767, SafeParam::TYPE_INT16);
+        $this->testBad(32768, SafeParam::TYPE_INT16);
+        
+        $this->testBad(-2147483649, SafeParam::TYPE_INT32);
+        $this->testGood(-2147483648, SafeParam::TYPE_INT32);
+        $this->testGood(2147483647, SafeParam::TYPE_INT32);
+        $this->testBad(2147483648, SafeParam::TYPE_INT32);
     }
     
     public function testFloat() : void
