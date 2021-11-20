@@ -58,13 +58,9 @@ class Output
     /** Returns the appdata as a single string (or null if not possible) */
     public function GetAsString() : ?string
     {
-        $extras = $this->debug !== null || $this->metrics !== null;
+        if ($this->debug !== null || $this->metrics !== null) return null;
         
-        $data = $this->ok ? $this->appdata : $this->message;
-        
-        if (!is_string($data) || $extras) return null;
-        
-        return $data;
+        return print_r($this->ok ? $this->appdata : $this->message, true);
     }
     
     private function __construct(bool $ok = true, int $code = 200)
