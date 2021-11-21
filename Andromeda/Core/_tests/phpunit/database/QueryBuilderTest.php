@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Database; 
 
-if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
+require_once("init.php");
 
 require_once(ROOT."/Core/Database/QueryBuilder.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");

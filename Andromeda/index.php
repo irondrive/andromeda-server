@@ -1,4 +1,7 @@
-<?php require_once(__DIR__.'/a2init.php');
+<?php require_once(__DIR__.'/init.php');
+
+if (file_exists(ROOT.'/defs.php'))
+    require_once(ROOT.'/defs.php');
 
 /** 
  * An Andromeda API is a pure-PHP transactional REST-ish API.

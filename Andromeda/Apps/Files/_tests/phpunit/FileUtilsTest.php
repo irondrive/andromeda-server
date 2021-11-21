@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Files; 
 
-if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
+require_once("init.php");
 
 require_once(ROOT."/Apps/Files/FileUtils.php");
 require_once(ROOT."/Apps/Files/File.php");

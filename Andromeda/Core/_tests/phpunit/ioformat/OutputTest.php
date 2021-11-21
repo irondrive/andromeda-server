@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\IOFormat; 
 
-if (!defined('a2test')) define('a2test',true); require_once("a2init.php");
+require_once("init.php");
 
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
