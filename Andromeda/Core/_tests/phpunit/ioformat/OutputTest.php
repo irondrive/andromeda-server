@@ -63,6 +63,9 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testGetAsString() : void
     {
+        $this->assertSame(Output::Success(array(null))->GetAsString(), 'SUCCESS');
+        $this->assertSame(Output::Success(array(false))->GetAsString(), 'FALSE');
+        $this->assertSame(Output::Success(array(true))->GetAsString(), 'TRUE');
         $this->assertSame(Output::Success(array('myretval'))->GetAsString(), 'myretval');
         
         $v = array('mykey'=>'myval'); $this->assertSame(Output::Success(array($v))->GetAsString(), print_r($v,true));
