@@ -9,8 +9,10 @@ rm -rf docs/doctum_*
 php tools/doctum.phar update tools/doctum-conf.php -v
 
 TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
+unset andromeda_auth_sessionid
+unset andromeda_auth_sudouser
 ./andromeda-server core dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB
 ./andromeda-server --dbconf $TEMPCONF core install
 ./andromeda-server --dbconf $TEMPCONF core usage | grep "=>" |
-    grep -v "\[ok\]\|\[code\]\|\[appdata\]" | sed 's/.*=> //g' | grep -v "^testutil" > docs/USAGE.txt
+    sed 's/.*=> //g' | grep -v "^testutil" > docs/USAGE.txt
 rm $TEMPDB $TEMPCONF
