@@ -1,14 +1,13 @@
 <?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
-require_once(ROOT."/Core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Config, DBVersion, InvalidAppException, MissingMetadataException};
+require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Config, InvalidAppException, MissingMetadataException};
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Exceptions/ErrorLog.php"); use Andromeda\Core\Exceptions\ErrorLog;
 require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException};
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -18,7 +17,7 @@ require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\Re
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/Core/Logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
 
-use Andromeda\Core\{UnknownActionException, InstallRequiredException, MailSendException};
+use Andromeda\Core\{UnknownActionException, MailSendException};
 
 /** Exception indicating that the specified mailer object does not exist */
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
@@ -37,11 +36,35 @@ class AdminRequiredException extends Exceptions\ClientDeniedException { public $
  * 
  * Handles DB config, install, and getting/setting config/logs.
  */
-class CoreApp extends UpgradableApp
-{    
+class CoreApp extends InstalledApp
+{
     public static function getName() : string { return 'core'; }
     
-    protected static function getLogClass() : ?string { return AccessLog::class; }
+    protected static function getLogClass() : string { return AccessLog::class; }
+    
+    protected static function getConfigClass() : string { return Config::class; }
+    
+    public static function getVersion() : string { return andromeda_version; }
+    
+    protected static function getTemplateFolder() : string { return ROOT.'/Core'; }
+    
+    protected static function getUpgradeScripts() : array
+    {
+        return require_once(ROOT.'/Core/_upgrade/scripts.php');
+    }
+    
+    protected static function getInstallUsage() : array
+    {
+        $istr = 'install'; $ustr = 'upgrade';
+        
+        foreach (Utilities::getClassesMatching(InstalledApp::class) as $class)
+        {
+            if ($if = $class::getInstallFlags()) $istr .= " $if";
+            if ($uf = $class::getUpgradeFlags()) $ustr .= " $uf";
+        }
+
+        return array($istr,$ustr);
+    }
     
     public static function getUsage() : array
     {
@@ -49,7 +72,6 @@ class CoreApp extends UpgradableApp
             'usage [--appname alphanum]',
             'dbconf '.Database::GetInstallUsage(),
             ...array_map(function($u){ return "(dbconf) $u"; }, Database::GetInstallUsages()),
-            'install [--enable bool]',
             'listapps',
             'phpinfo',
             'serverinfo',
@@ -87,39 +109,30 @@ class CoreApp extends UpgradableApp
         
         return $retval;
     }
-  
-    /** if true, the user has admin access (via the accounts app or if not installed, a privileged interface) */
-    private bool $isAdmin;
-    
-    private function GetDatabase() : ObjectDatabase { 
-        return $this->API->GetDatabase(); }
-    
+
     /**
      * {@inheritDoc}
-     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
-     * @see AppBase::Run()
+     * @see BaseApp::Run()
      */
     public function Run(Input $input)
     {
-        if ($this->API->HasDatabase())
-        {
-            if (!$this->API->HasConfig() && $input->GetAction() !== 'install')
-                throw new InstallRequiredException(static::getName());
-            
-            if ($this->API->HasConfig() && ($retval = $this->CheckUpgrade($input))) return $retval;
-        }
+        $action = $input->GetAction();
+        
+        if ($action !== 'dbconf' && $action !== 'usage' 
+            && ($retval = parent::Run($input)) !== false) return $retval;
         
         $useAuth = array_key_exists('accounts', Main::GetInstance()->GetApps());
         
-        // if the Accounts app is installed, use it for authentication, else check interface privilege
+        /* if the Accounts app is installed, use it for 
+         * authentication, else check interface privilege */
         if ($useAuth)
         {
             require_once(ROOT."/Apps/Accounts/Authenticator.php");
             require_once(ROOT."/Apps/Core/FullAccessLog.php");
             
             $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
-                $this->GetDatabase(), $input, $this->API->GetInterface());
+                $this->database, $input, $this->API->GetInterface());
             
             $isAdmin = $authenticator !== null && $authenticator->isAdmin();
         }
@@ -130,17 +143,15 @@ class CoreApp extends UpgradableApp
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
         
-        $accesslog = null; if ($this->API->HasDatabase())
-            $accesslog = AccessLog::Create($this->GetDatabase(), $authenticator, $isAdmin); 
+        $accesslog = null; if (isset($this->database))
+            $accesslog = AccessLog::Create($this->database, $authenticator, $isAdmin); 
         
         $input->SetLogger($accesslog);
                 
-        switch ($input->GetAction())
+        switch ($action)
         {
-            case 'usage':   return $this->GetUsages($input);
-            
-            case 'dbconf':  return $this->ConfigDB($input, $isAdmin);
-            case 'install': return $this->Install($input);
+            case 'usage':    return $this->GetUsages($input);
+            case 'dbconf':   return $this->ConfigDB($input, $isAdmin);
             case 'listapps': return $this->ListApps($input, $isAdmin);
             
             case 'phpinfo':    return $this->PHPInfo($input, $isAdmin);
@@ -151,9 +162,9 @@ class CoreApp extends UpgradableApp
             case 'enableapp':  return $this->EnableApp($input, $isAdmin, $accesslog);
             case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
             
-            case 'getconfig':  return $this->GetConfig($input, $isAdmin);
+            case 'getconfig':   return $this->GetConfig($input, $isAdmin);
             case 'getdbconfig': return $this->GetDBConfig($input, $isAdmin);
-            case 'setconfig':  return $this->SetConfig($input, $isAdmin, $accesslog);
+            case 'setconfig':   return $this->SetConfig($input, $isAdmin, $accesslog);
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
             case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $accesslog);
@@ -199,7 +210,7 @@ class CoreApp extends UpgradableApp
      */
     protected function ConfigDB(Input $input, bool $isAdmin) : ?string
     {
-        if ($this->API->HasDatabase() && !$isAdmin) throw new AdminRequiredException();
+        if (isset($this->database) && !$isAdmin) throw new AdminRequiredException();
         
         if (!$this->allowInstall()) throw new UnknownActionException();
         
@@ -208,50 +219,52 @@ class CoreApp extends UpgradableApp
         try { return Database::Install($input); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
-    
-    /**
-     * Installs the server by importing its SQL template and creating config
-     * 
-     * Also enables all installable apps that exist (retval)
-     * @throws UnknownActionException if config already exists or not allowed
-     * @return array<string> list of apps that were enabled
-     */
-    public function Install(Input $input) : array
-    {
-        if ($this->API->HasConfig() || !$this->allowInstall()) throw new UnknownActionException();
-        
-        $this->API->GetInterface()->DisallowBatch();
-        
-        $this->GetDatabase()->importTemplate(ROOT."/Core");
-        
-        $config = Config::Create($this->GetDatabase());
-        
-        $enable = $input->GetOptParam('enable', SafeParam::TYPE_BOOL);
-        
-        $config->setEnabled($enable ?? !$this->API->GetInterface()->isPrivileged());
-        
-        $apps = Config::ListApps(); foreach ($apps as $app) $config->EnableApp($app); return $apps;
-    }
-    
-    public static function getVersion() : string { return andromeda_version; }
 
-    protected function getDBVersion() : DBVersion { return $this->API->GetConfig(); }
-    
-    protected static function getUpgradeScripts() : array
+    /**
+     * {@inheritDoc}
+     * @see \Andromeda\Core\InstalledApp::Install()
+     * @return array map of enabled apps to their install retval
+     */
+    protected function Install(Input $input) : array
     {
-        return require_once(ROOT."/Core/_upgrade/scripts.php");
+        $retval = array('core'=>parent::Install($input));
+        
+        // enable all existing apps
+        foreach (Config::ListApps() as $app)
+        {
+            $retval[$app] = null;
+            $this->config->EnableApp($app);
+        }
+
+        // install all enabled apps
+        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false)) 
+            foreach ($this->API->GetApps() as $name=>$app)
+        {
+            if ($app instanceof InstalledApp && $app !== $this) 
+                $retval[$name] = $app->Install($input);
+        }
+        
+        return $retval;
     }
-    
-    public function Upgrade() : void
+
+    /**
+     * {@inheritDoc}
+     * @see \Andromeda\Core\InstalledApp::Upgrade()
+     * @return array map of upgraded apps to their upgrade retval
+     */
+    protected function Upgrade(Input $input) : array
     {
-        parent::Upgrade();
+        $retval = array('core'=>parent::Upgrade($input));
         
         // upgrade all installed apps also
-        foreach ($this->API->GetApps() as $name=>$app)
-        {            
-            if ($app instanceof UpgradableApp && 
-                $name !== self::getName()) $app->Upgrade();
+        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false))
+            foreach ($this->API->GetApps() as $name=>$app)
+        {
+            if ($app instanceof InstalledApp && $app !== $this)
+                $retval[$name] = $app->Upgrade($input);
         }
+        
+        return $retval;
     }
     
     /** @see Config::ListApps() */
@@ -295,7 +308,7 @@ class CoreApp extends UpgradableApp
         return array(
             'uname' => php_uname(),
             'server' => $server,
-            'db' => $this->GetDatabase()->getInfo()
+            'db' => $this->database->getInfo()
         );
     }
     
@@ -321,11 +334,11 @@ class CoreApp extends UpgradableApp
         
         if (($mailer = $input->GetOptParam('mailid', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER)) !== null)
         {
-            $mailer = Emailer::TryLoadByID($this->GetDatabase(), $mailer);
+            $mailer = Emailer::TryLoadByID($this->database, $mailer);
             if ($mailer === null) throw new UnknownMailerException();
             else $mailer->Activate();
         }
-        else $mailer = $this->API->GetConfig()->GetMailer();       
+        else $mailer = $this->config->GetMailer();
         
         if ($accesslog) $accesslog->LogDetails('mailer',$mailer->ID());
         
@@ -344,11 +357,11 @@ class CoreApp extends UpgradableApp
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
-        try { $this->API->GetConfig()->EnableApp($app); }
+        try { $this->config->EnableApp($app); }
         catch (FailedAppLoadException | MissingMetadataException $e){ 
             throw new InvalidAppException(); }
 
-        return $this->API->GetConfig()->GetApps();
+        return $this->config->GetApps();
     }
     
     /**
@@ -362,9 +375,9 @@ class CoreApp extends UpgradableApp
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
-        $this->API->GetConfig()->DisableApp($app);
+        $this->config->DisableApp($app);
         
-        return $this->API->GetConfig()->GetApps();
+        return $this->config->GetApps();
     }
     
     /**
@@ -374,7 +387,7 @@ class CoreApp extends UpgradableApp
      */
     protected function GetConfig(Input $input, bool $isAdmin) : array
     {
-        return $this->API->GetConfig()->GetClientObject($isAdmin);
+        return $this->config->GetClientObject($isAdmin);
     }
     
     /**
@@ -386,7 +399,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->GetDatabase()->GetClientObject();
+        return $this->database->GetClientObject();
     }
 
     /**
@@ -399,7 +412,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->API->GetConfig()->SetConfig($input)->GetClientObject(true);
+        return $this->config->SetConfig($input)->GetClientObject(true);
     }
     
     /**
@@ -413,7 +426,7 @@ class CoreApp extends UpgradableApp
         if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function($m){ return $m->GetClientObject(); }, 
-            Emailer::LoadAll($this->GetDatabase()));
+            Emailer::LoadAll($this->database));
     }
     
     /**
@@ -426,7 +439,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $emailer = Emailer::Create($this->GetDatabase(), $input);
+        $emailer = Emailer::Create($this->database, $input);
         
         if (($dest = $input->GetOptParam('test',SafeParam::TYPE_EMAIL)) !== null)
         {
@@ -451,7 +464,7 @@ class CoreApp extends UpgradableApp
         
         $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
         
-        $mailer = Emailer::TryLoadByID($this->GetDatabase(), $mailid);
+        $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
         
         if ($accesslog && AccessLog::isFullDetails()) 
@@ -469,7 +482,7 @@ class CoreApp extends UpgradableApp
         if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function(ErrorLog $e){ return $e->GetClientObject(); },
-            ErrorLog::LoadByInput($this->GetDatabase(), $input));
+            ErrorLog::LoadByInput($this->database, $input));
     }
     
     /**
@@ -481,7 +494,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return ErrorLog::CountByInput($this->GetDatabase(), $input);
+        return ErrorLog::CountByInput($this->database, $input);
     }
     
     /**
@@ -497,7 +510,7 @@ class CoreApp extends UpgradableApp
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
         
-        $logs = RequestLog::LoadByInput($this->GetDatabase(), $input);
+        $logs = RequestLog::LoadByInput($this->database, $input);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -516,7 +529,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return RequestLog::CountByInput($this->GetDatabase(), $input);
+        return RequestLog::CountByInput($this->database, $input);
     }
     
     /**
@@ -532,7 +545,7 @@ class CoreApp extends UpgradableApp
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
         
-        $logs = ActionLog::LoadByInput($this->GetDatabase(), $input);
+        $logs = ActionLog::LoadByInput($this->database, $input);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -551,7 +564,7 @@ class CoreApp extends UpgradableApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return ActionLog::CountByInput($this->GetDatabase(), $input);
+        return ActionLog::CountByInput($this->database, $input);
     }
     
     /**
@@ -575,7 +588,7 @@ class CoreApp extends UpgradableApp
         
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         
-        $logs = $class::LoadByInput($this->GetDatabase(), $input);
+        $logs = $class::LoadByInput($this->database, $input);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -603,7 +616,7 @@ class CoreApp extends UpgradableApp
             ($class = $apps[$appname]::getLogClass()) === null)
             throw new InvalidAppException();   
         
-        return $class::CountByInput($this->GetDatabase(), $input);
+        return $class::CountByInput($this->database, $input);
     }
 }
 

@@ -148,7 +148,7 @@ class Authenticator
         try
         {
             if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
-                throw new UpgradeRequiredException('accounts');
+                throw new UpgradeRequiredException(AccountsApp::getName());
         }
         catch (DatabaseException $e){ return null; } // not installed
         

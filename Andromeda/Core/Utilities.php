@@ -208,8 +208,8 @@ abstract class Utilities
     /** Returns all classes that are a $match type */
     public static function getClassesMatching(string $match)
     {
-        return array_filter(get_declared_classes(), function(string $class)use($match){
-            return $class !== $match && is_a($class, $match, true) && !(new \ReflectionClass($class))->isAbstract(); });
+        return array_values(array_filter(get_declared_classes(), function(string $class)use($match){
+            return $class !== $match && is_a($class, $match, true) && !(new \ReflectionClass($class))->isAbstract(); }));
     }
 }
 

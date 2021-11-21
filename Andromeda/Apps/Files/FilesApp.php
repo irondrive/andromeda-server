@@ -19,11 +19,8 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\{FileReadFailedException, FileWriteFailedException};
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\DBVersion;
-require_once(ROOT."/Core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
+require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
 require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -38,9 +35,7 @@ require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group
 require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\{Authenticator, AuthenticationFailedException};
 
 use Andromeda\Core\UnknownActionException;
-use Andromeda\Core\InstallRequiredException;
 
-use Andromeda\Core\Database\DatabaseException;
 use Andromeda\Apps\Accounts\UnknownAccountException;
 use Andromeda\Apps\Accounts\UnknownGroupException;
 
@@ -104,18 +99,17 @@ class ShareTargetDisabledException extends Exceptions\ClientDeniedException { pu
  * configurable rules per-account or per-filesystem, and granular statistics
  * gathering and limiting for accounts/groups/filesystems.
  */
-class FilesApp extends UpgradableApp
-{    
+class FilesApp extends InstalledApp
+{
     public static function getName() : string { return 'files'; }
     
-    protected static function getLogClass() : ?string { return AccessLog::class; }    
+    protected static function getLogClass() : string { return AccessLog::class; }
     
-    protected function getDBVersion() : DBVersion { return $this->config; }
+    protected static function getConfigClass() : string { return Config::class; }
     
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
-            'install',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey alphanum] [--spassword raw]',
@@ -181,35 +175,17 @@ class FilesApp extends UpgradableApp
         )); 
     }
     
-    /** files app config */ private Config $config;
-    
-    /** database reference */ private ObjectDatabase $database;
-     
-    public function __construct(Main $api)
-    {
-        parent::__construct($api);
-        $this->database = $api->GetDatabase();
-        
-        try { $this->config = Config::GetInstance($this->database); }
-        catch (DatabaseException $e) { }
-    }
-    
     public function commit() { Storage::commitAll(); }    
     public function rollback() { Storage::rollbackAll(); }
     
     /**
      * {@inheritDoc}
-     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
-     * @see AppBase::Run()
+     * @see BaseApp::Run()
      */
     public function Run(Input $input)
     {
-        // if config is not available, require installing it
-        if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new InstallRequiredException(static::getName());
-        
-        if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
+        if (($retval = parent::Run($input)) !== false) return $retval;
 
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
@@ -218,8 +194,6 @@ class FilesApp extends UpgradableApp
 
         switch($input->GetAction())
         {
-            case 'install':  return $this->Install($input);
-            
             case 'getconfig': return $this->GetConfig($input, $authenticator);
             case 'setconfig': return $this->SetConfig($input, $authenticator);
             
@@ -369,19 +343,6 @@ class FilesApp extends UpgradableApp
         return $access;
     }
 
-    /**
-     * Installs the app by importing its SQL file and creating config
-     * @throws UnknownActionException if config already exists or not allowed
-     */
-    public function Install(Input $input) : void
-    {
-        if (isset($this->config) || !$this->allowInstall()) throw new UnknownActionException();
-        
-        $this->database->importTemplate(ROOT."/Apps/Files");
-        
-        $this->config = Config::Create($this->database)->Save();
-    }
-    
     /**
      * Gets config for this app
      * @return array Config
@@ -1475,7 +1436,7 @@ class FilesApp extends UpgradableApp
             // TODO CLIENT - param for the client to have the URL point at the client
             // TODO CLIENT - HTML - configure a directory where client templates reside
 
-            $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
+            $this->config->GetMailer()->SendMail($subject, $body, true,
                 array(new EmailRecipient($email)), $account->GetEmailFrom(), false);
         }
         

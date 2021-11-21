@@ -15,11 +15,14 @@ class AppTests(BaseAppTest):
             if 'session' in config: 
                 self.session = config['session']
 
-    def install(self):
+    def getInstallParams(self):
         self.username = ''.join(self.main.random.choice(string.ascii_letters) for _ in range(8))
         self.password = ''.join(self.main.random.choice(string.printable) for _ in range(16))
-        assertOk(self.interface.run(app='accounts',action='install',
-            params={'username':self.username,'password':self.password}))
+        return {'username':self.username,'password':self.password}
+
+    def install(self):
+        assertError(self.interface.run(app='accounts',action='getconfig'),500,'APP_INSTALL_REQUIRED: accounts')
+        assertOk(self.interface.run(app='accounts',action='install',params=self.getInstallParams()))
         self.session = assertOk(self.interface.run(app='accounts',action='createsession',
             params={'username':self.username,'auth_password':self.password}))['client']['session']
 

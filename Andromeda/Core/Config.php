@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Emailer.php");
-require_once(ROOT."/Core/AppBase.php");
+require_once(ROOT."/Core/BaseApp.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
@@ -27,7 +27,7 @@ class AppDependencyException extends Exceptions\ClientErrorException { public $m
 class AppVersionException extends Exceptions\ClientErrorException { public $message = "APP_VERSION_MISMATCH"; }
 
 /** A singleton object that stores a version field */
-abstract class DBVersion extends SingletonObject
+abstract class BaseConfig extends SingletonObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -42,7 +42,7 @@ abstract class DBVersion extends SingletonObject
 }
 
 /** The global framework config stored in the database */
-class Config extends DBVersion
+class Config extends BaseConfig
 {
     public static function GetFieldTemplate() : array
     {
@@ -168,13 +168,13 @@ class Config extends DBVersion
         
         $apps = array_keys(Main::GetInstance()->GetApps()); 
 
-        foreach (AppBase::getAppRequires($app) as $tapp)
+        foreach (BaseApp::getAppRequires($app) as $tapp)
         {
             if (!in_array($tapp, $apps))
                 throw new AppDependencyException("$app requires $tapp");
         }
         
-        $reqver = AppBase::getAppReqVersion($app);
+        $reqver = BaseApp::getAppReqVersion($app);
         if ($reqver != (new VersionInfo())->major)
             throw new AppVersionException($reqver);
         
@@ -195,7 +195,7 @@ class Config extends DBVersion
     
         foreach (array_keys(Main::GetInstance()->GetApps()) as $tapp)
         {
-            if (in_array($app, AppBase::getAppRequires($tapp)))
+            if (in_array($app, BaseApp::getAppRequires($tapp)))
                 throw new AppDependencyException("$tapp requires $app");
         }            
         

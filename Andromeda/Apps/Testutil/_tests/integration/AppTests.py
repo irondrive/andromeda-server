@@ -7,6 +7,9 @@ class AppTests(BaseAppTest):
     def __str__(self):
         return "TESTUTIL"
 
+    def getInstallParams(self):
+        return { }
+
     def install(self):
         pass # no install routine
 

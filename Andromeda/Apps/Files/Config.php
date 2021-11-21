@@ -1,14 +1,14 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\DBVersion;
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
 /** App config stored in the database */
-class Config extends DBVersion
+class Config extends BaseConfig
 {
     public static function GetFieldTemplate() : array
     {
