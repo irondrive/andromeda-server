@@ -174,9 +174,10 @@ class Config extends BaseConfig
                 throw new AppDependencyException("$app requires $tapp");
         }
         
-        $reqver = BaseApp::getAppReqVersion($app);
-        if ($reqver != (new VersionInfo())->major)
-            throw new AppVersionException($reqver);
+        $appver = BaseApp::getAppApiVersion($app);
+        $ourver = (new VersionInfo())->getCompatVer();
+        if ($appver !== $ourver) 
+            throw new AppVersionException("$app:$appver core:$ourver");
         
         Main::GetInstance()->LoadApp($app);
         
@@ -325,10 +326,10 @@ class Config extends BaseConfig
     { 
         $data = array( 'api' => (new VersionInfo())->major, 'apps' => array() );
         
-        foreach (Main::GetInstance()->GetApps() as $appname=>$app)
+        foreach (Main::GetInstance()->GetApps() as $name=>$app)
         {
-            $data['apps'][$appname] = $admin ? $app::getVersion() :
-                implode('.',array_slice(explode('.',$app::getVersion()),0,2));
+            $data['apps'][$name] = $admin ? $app::getVersion() : 
+                (new VersionInfo($app::getVersion()))->getCompatVer();
         }
         
         $data['features'] = array(

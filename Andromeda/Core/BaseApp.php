@@ -79,8 +79,8 @@ abstract class BaseApp implements Transactions
         return self::getMetadata($app,'requires') ?? array();
     }
     
-    /** @return int Returns the major API version this app is compatible with */
-    public static function getAppReqVersion(string $app) : int
+    /** @return string Returns the major.minor API version this app is compatible with */
+    public static function getAppApiVersion(string $app) : string
     {
         return self::getMetadata($app,'api-version');
     }

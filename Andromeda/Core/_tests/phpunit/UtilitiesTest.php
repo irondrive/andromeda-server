@@ -67,6 +67,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame($version->patch, 1);
        $this->assertSame($version->extra, 'alpha');
        $this->assertSame((string)$version, "3.2.1-alpha");
+       $this->assertSame($version->getCompatVer(), '3.2');
    }
    
    public function testBadJSONEncode() : void
