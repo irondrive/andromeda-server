@@ -86,6 +86,9 @@ class VersionInfo
     }
     
     public function __toString(){ return $this->version; }
+    
+    /** Returns the Major.Minor compatibility version string */
+    public function getCompatVer(){ return $this->major.'.'.$this->minor; }
 }
 
 /** Abstract with some global static utility functions */

@@ -97,17 +97,19 @@ class Database implements Transactions
     public function __construct(?string $config = null)
     {
         $paths = defined('DBCONF') ? array(DBCONF) : self::CONFIG_PATHS;
-        
-        $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
-        if ($home && ($idx = array_search(null, $paths, true)) !== false)
-            $paths[$idx] = "$home/andromeda/DBConfig.php";
-        
+
         if ($config !== null)
         {
             if (!file_exists($config)) $config = null;
         }
         else foreach ($paths as $path)
         {
+            if ($path === null)
+            {
+                $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
+                if ($home) $path = "$home/andromeda/DBConfig.php";
+            }
+            
             if (file_exists($path)) { $config = $path; break; }
         }
         
