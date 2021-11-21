@@ -7,6 +7,7 @@ use Symfony\Component\Finder\Finder;
 $iterator = Finder::create()
     ->files()->name('*.php')->in('Andromeda')
     ->exclude('Apps/Testutil')
+    ->exclude('_tests')
     ->exclude('DBConfig.php');
 
 $doctum = new Doctum($iterator, [
