@@ -72,7 +72,7 @@ Andromeda does not use any OS or webserver-specific functions and works on Windo
 It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
 
 #### Database Config
-The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `<?php define('DBCONF','path-to-config');` to `Andromeda/defs.php`.
+The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `<?php define('DBCONF','path-to-config');` to `Andromeda/user-defs.php`.
 
 For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
@@ -82,7 +82,7 @@ Use the `core usage` command to see options for all available commands.
 1. Run `core dbconf --outfile` to generate and write database configuration.
 2. Run `core install` to install the database tables.  This will enable and install all apps that are found in the Apps folder unless `--noapps` is provided.  It returns a list of all enabled apps mapped their specific install output.  Apps can also have their `(myapp) install` command run separately if needed.  The `core install` command can take any parameter needed by an individual app. 
 
-Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/defs.php`.
+Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/user-defs.php`.
 
 #### Full SQLite Web Server Install Example with Proper Directories
 
@@ -131,7 +131,7 @@ sudo -u www-data andromeda-server core setconfig \
 ### Upgrading
 When the code being run does not match the version stored in the database, running `core upgrade` is required. This will automatically update all enabled apps unless `--noapps` is provided.  It returns a list of all enabled apps mapped their specific upgrade output.  Apps can also have their `(myapp) upgrade` command run separately if needed.  The `core upgrade` command can take any parameter needed by an individual app. 
 
-Note the upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/defs.php`.
+Note the upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/user-defs.php`.
 
 
 # License
