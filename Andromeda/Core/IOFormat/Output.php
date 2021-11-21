@@ -60,7 +60,19 @@ class Output
     {
         if ($this->debug !== null || $this->metrics !== null) return null;
         
-        return print_r($this->ok ? $this->appdata : $this->message, true);
+        if ($this->ok)
+        {
+            if ($this->appdata === null)
+                $retval = 'SUCCESS';
+            else if ($this->appdata === true)
+                $retval = 'TRUE';
+            else if ($this->appdata === false)
+                $retval = 'FALSE';
+            else $retval = $this->appdata;
+            
+            return print_r($retval, true);
+        }
+        else return print_r($this->message, true);
     }
     
     private function __construct(bool $ok = true, int $code = 200)
