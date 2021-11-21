@@ -12,8 +12,6 @@ require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 class FTPExtensionException extends Exceptions\ServerException   { public $message = "FTP_EXTENSION_MISSING"; }
 class FTPConnectionFailure extends Exceptions\ServerException    { public $message = "FTP_CONNECTION_FAILURE"; }
 
-Manager::RegisterAuthType(FTP::class);
-
 /** Uses an FTP server for authentication */
 class FTP extends External
 {

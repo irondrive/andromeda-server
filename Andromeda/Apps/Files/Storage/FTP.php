@@ -27,8 +27,6 @@ class FTPCopyFileException extends Exceptions\ClientErrorException { public $mes
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
 
-FSManager::RegisterStorageType(FTP::class);
-
 /**
  * Allows FTP to be used as a backend storage
  * 

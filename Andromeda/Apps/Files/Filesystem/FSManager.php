@@ -165,23 +165,26 @@ class FSManager extends StandardObject
         return $this->interface; 
     }
     
-    private static $storage_types = array();
-
-    /** Registers an available type of underlying storage */
-    public static function RegisterStorageType(string $class) : void
+    /** Returns a map of all storage classes as $name=>$class */
+    private static function getStorageClasses() : array
     {
-        self::$storage_types[strtolower(Utilities::ShortClassName($class))] = $class;
+        $classes = Utilities::getClassesMatching(Storage::class);
+        
+        $retval = array(); foreach ($classes as $class)
+            $retval[strtolower(Utilities::ShortClassName($class))] = $class;
+            
+        return $retval;
     }
     
     /** Returns the common command usage of Create() */
-    public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::$storage_types)).
+    public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::getStorageClasses())).
         " [--fstype native|crypt|external] [--name name] [--global bool] [--readonly bool] [--chunksize uint]"; }
     
     /** Returns the command usage of Create() specific to each storage type */
     public static function GetCreateUsages() : array 
     { 
         $retval = array();
-        foreach (self::$storage_types as $name=>$class)
+        foreach (self::getStorageClasses() as $name=>$class)
             $retval[] = "--sttype $name ".$class::GetCreateUsage();
         return $retval;
     }
@@ -199,8 +202,10 @@ class FSManager extends StandardObject
         
         $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
         
+        $classes = self::getStorageClasses();
+        
         $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($sttype){ return array_key_exists($sttype, self::$storage_types); });
+            function($sttype)use($classes){ return array_key_exists($sttype, $classes); });
         
         $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
             function($fstype){ return in_array($fstype, array('native','crypt','external')); });        
@@ -232,7 +237,7 @@ class FSManager extends StandardObject
 
         try
         {            
-            $filesystem->SetStorage(self::$storage_types[$sttype]::Create($database, $input, $filesystem));
+            $filesystem->SetStorage($classes[$sttype]::Create($database, $input, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
         }
@@ -247,7 +252,7 @@ class FSManager extends StandardObject
     public static function GetEditUsages() : array
     {
         $retval = array();
-        foreach (self::$storage_types as $name=>$class)
+        foreach (self::getStorageClasses() as $name=>$class)
             $retval[] = "$name: ".$class::GetEditUsage();
         return $retval;
     }

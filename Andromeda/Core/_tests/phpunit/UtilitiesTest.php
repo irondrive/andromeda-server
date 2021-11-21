@@ -7,6 +7,13 @@ require_once(ROOT."/Core/Utilities.php");
 
 class MySingleton extends Singleton { }
 
+abstract class TestBase0 { }
+abstract class TestBase1 { }
+abstract class TestBase2 { }
+class TestClass1 extends TestBase1 { }
+class TestClass2 extends TestBase2 { }
+class TestClass3 extends TestBase2 { }
+
 class UtilitiesTest extends \PHPUnit\Framework\TestCase
 {
    public function testInit() : void 
@@ -166,5 +173,12 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    {
        $this->assertSame(Utilities::CaptureOutput(function(){ }), "");
        $this->assertSame(Utilities::CaptureOutput(function(){ echo "test"; }), "test");       
+   }
+   
+   public function testGetClassesMatching() : void
+   {
+       $this->assertSame(Utilities::getClassesMatching(TestBase0::class), array());
+       $this->assertSame(Utilities::getClassesMatching(TestBase1::class), array(TestClass1::class));
+       $this->assertSame(Utilities::getClassesMatching(TestBase2::class), array(TestClass2::class, TestClass3::class));
    }
 }

@@ -16,8 +16,6 @@ class IMAPExtensionException extends Exceptions\ServerException { public $messag
 /** Exception indicating IMAP encountered an error */
 class IMAPErrorException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_ERROR"; }
 
-Manager::RegisterAuthType(IMAP::class);
-
 /** Uses an IMAP server for authentication */
 class IMAP extends External
 {

@@ -32,8 +32,6 @@ class S3ModifyException extends Exceptions\ClientErrorException { public $messag
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) S3::DecryptAccount($database, $account); });
 
-FSManager::RegisterStorageType(S3::class);
-
 abstract class S3Base1 extends FWrapper { use NoFolders; }
 abstract class S3Base2 extends S3Base1 { use FieldCrypt; }
 abstract class S3Base3 extends S3Base2 { use OptFieldCrypt; }
