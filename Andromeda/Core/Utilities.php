@@ -204,6 +204,13 @@ abstract class Utilities
     {
         return array_combine($keys, array_map($func, $keys));
     }
+    
+    /** Returns all classes that are a $match type */
+    public static function getClassesMatching(string $match)
+    {
+        return array_filter(get_declared_classes(), function(string $class)use($match){
+            return $class !== $match && is_a($class, $match, true) && !(new \ReflectionClass($class))->isAbstract(); });
+    }
 }
 
 /** A class for overriding static methods for unit testing */

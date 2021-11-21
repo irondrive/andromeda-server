@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -18,8 +17,6 @@ class LDAPConnectionFailure extends Exceptions\ServerException    { public $mess
 
 /** Exception indicating that LDAP encountered an error */
 class LDAPErrorException extends Exceptions\ServerException       { public $message = "LDAP_EXTENSION_ERROR"; }
-
-Manager::RegisterAuthType(LDAP::class);
 
 /** Uses an LDAP server for authentication */
 class LDAP extends External

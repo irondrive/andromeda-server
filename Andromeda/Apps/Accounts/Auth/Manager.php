@@ -35,16 +35,19 @@ class Manager extends BaseObject
         );
     }
     
-    private static $auth_types = array();
-    
-    /** Registers a class that provides external authentication */
-    public static function RegisterAuthType(string $class) : void
+    /** Returns a map of all external Auth classes as $name=>$class */
+    private static function getAuthClasses() : array
     {
-        self::$auth_types[strtolower(Utilities::ShortClassName($class))] = $class;
+        $classes = Utilities::getClassesMatching(External::class);
+        
+        $retval = array(); foreach ($classes as $class)
+            $retval[strtolower(Utilities::ShortClassName($class))] = $class;
+        
+        return $retval;
     }
     
     /** Returns basic command usage for Create() and Edit() */
-    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::$auth_types)).
+    public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::getAuthClasses())).
                                                             " [--enabled ".implode('|',array_keys(self::ENABLED_TYPES))."]".
                                                             " [--description ?text] [--createdefgroup bool]"; }
     
@@ -52,7 +55,7 @@ class Manager extends BaseObject
     public static function GetPropUsages() : array
     {
         $retval = array();
-        foreach (self::$auth_types as $name=>$class)
+        foreach (self::getAuthClasses() as $name=>$class)
             $retval[] = "--type $name ".$class::GetPropUsage();
         return $retval;
     }
@@ -60,12 +63,14 @@ class Manager extends BaseObject
     /** Creates and tests a new external authentication backend, creating a manager and optionally, a default group for it */
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
+        $classes = self::getAuthClasses();
+        
         $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($val){ return array_key_exists($val, self::$auth_types); });
+            function($val)use($classes){ return array_key_exists($val, $classes); });
         
         $descr = $input->GetOptNullParam('description', SafeParam::TYPE_TEXT);
         
-        try { $authsource = self::$auth_types[$type]::Create($database, $input)->Activate(); }
+        try { $authsource = $classes[$type]::Create($database, $input)->Activate(); }
         catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }
         
         $manager = parent::BaseCreate($database);

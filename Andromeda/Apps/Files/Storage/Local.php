@@ -9,8 +9,6 @@ require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
 class LocalNonAdminException extends ActivateException { public $message = "LOCAL_STORAGE_ADMIN_ONLY"; }
 
-FSManager::RegisterStorageType(Local::class);
-
 abstract class LocalBase extends FWrapper { use BasePath; }
 
 /** 

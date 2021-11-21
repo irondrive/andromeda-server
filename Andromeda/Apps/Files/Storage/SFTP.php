@@ -22,8 +22,6 @@ class HostKeyMismatchException extends ActivateException { public $message = "SS
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SFTP::DecryptAccount($database, $account); });
 
-FSManager::RegisterStorageType(SFTP::class);
-
 /**
  * Allows using an SFTP server for backend storage using phpseclib
  * 

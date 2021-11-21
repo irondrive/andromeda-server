@@ -22,8 +22,6 @@ class SMBConnectException extends ActivateException { public $message = "SMB_CON
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
 
-FSManager::RegisterStorageType(SMB::class);
-
 /**
  * Allows using an SMB/CIFS server for backend storage
  * 
