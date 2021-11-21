@@ -38,9 +38,6 @@ class CommitAfterRollbackException extends Exceptions\ServerException { public $
 /** FinalizeOutput requires the database to not already be undergoing a transaction */
 class FinalizeTransactionException extends Exceptions\ServerException { public $message = "FINALIZE_OUTPUT_IN_TRANSACTION"; }
 
-/** Exception indicating that the database upgrade scripts must be run */
-class UpgradeRequiredException extends Exceptions\ClientDeniedException { public $message = "UPGRADE_REQUIRED"; }
-
 class RunContext 
 { 
     private Input $input;     
@@ -83,7 +80,7 @@ final class Main extends Singleton
     /** @var float time of request */
     private float $time;
     
-    /** @var array<string,AppBase> apps indexed by name */
+    /** @var array<string,BaseApp> apps indexed by name */
     private array $apps = array(); 
     
     /** @var RunContext[] stack frames for nested Run() calls */
@@ -109,7 +106,7 @@ final class Main extends Singleton
     
     /**
      * Gets an array of instantiated apps
-     * @return array<string, AppBase>
+     * @return array<string, BaseApp>
      */
     public function GetApps() : array { return $this->apps; }
 
@@ -127,9 +124,6 @@ final class Main extends Singleton
         else return $this->database;
     }
     
-    /** Returns true if the global config object is valid */
-    public function HasConfig() : bool { return $this->config !== null; }
-    
     /** Returns the global config object or null if not installed */
     public function TryGetConfig() : ?Config { return $this->config; }
     
@@ -138,13 +132,12 @@ final class Main extends Singleton
     {
         if ($this->config === null)
         {
-            $this->GetDatabase(); // assert db exists
+            $this->API->GetDatabase(); // assert db exists
             
             $class = get_class($this->dbException);
             throw $class::Copy($this->dbException); // new trace
         }
-        
-        return $this->config;
+        else return $this->config;
     }
     
     /** Returns the interface used for the current request */
@@ -205,10 +198,8 @@ final class Main extends Singleton
             if ($this->config->isReadOnly()) 
                 $this->database->setReadOnly();
             
-            $apps = array_merge($apps, $this->config->GetApps());
-            
-            if ($this->config->getVersion() !== andromeda_version)
-                $this->requireUpgrade = true;
+            if ($this->config->getVersion() === andromeda_version)
+                $apps = array_merge($apps, $this->config->GetApps());
         }
         catch (DatabaseException $e) 
         {
@@ -263,9 +254,6 @@ final class Main extends Singleton
     public function Run(Input $input)
     {        
         $app = $input->GetApp();
-        
-        if ($app !== 'core' && $this->requireUpgrade)
-            throw new UpgradeRequiredException('core');
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         

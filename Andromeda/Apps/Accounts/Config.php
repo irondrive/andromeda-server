@@ -3,7 +3,7 @@
 require_once(ROOT."/Apps/Accounts/Group.php");
 require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\DBVersion;
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -11,7 +11,7 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
-class Config extends DBVersion
+class Config extends BaseConfig
 {
     public static function GetFieldTemplate() : array
     {

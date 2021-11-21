@@ -5,6 +5,9 @@ class AppTests(BaseAppTest):
     def __str__(self):
         return "CORE"
 
+    def getInstallParams(self):
+        return { }
+
     def install(self):
         pass # already installed by main
 

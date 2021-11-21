@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/AppBase.php"); use Andromeda\Core\{AppBase, UnknownActionException};
+require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, UnknownActionException};
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
@@ -18,7 +18,7 @@ class TestServerException extends Exceptions\ServerException { public $message =
 /**
  * Utility app for the python test framework
  */
-class TestUtilApp extends AppBase
+class TestUtilApp extends BaseApp
 {
     public static function getName() : string { return 'testutil'; }
     

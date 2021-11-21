@@ -4,6 +4,7 @@ require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 
 /** An exception indicating that the requested action is invalid for this app */
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
@@ -11,11 +12,14 @@ class UnknownActionException extends Exceptions\ClientErrorException { public $m
 /** An exception indicating that the app is not installed and needs to be */
 class InstallRequiredException extends Exceptions\ClientException { public $message = "APP_INSTALL_REQUIRED"; public $code = 500; }
 
+/** Exception indicating that the database upgrade scripts must be run */
+class UpgradeRequiredException extends Exceptions\ClientException { public $message = "APP_UPGRADE_REQUIRED"; public $code = 500; }
+
 /** An exception indicating that the metadata file is missing */
 class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
 
 /** The base class from which apps must inherit */
-abstract class AppBase implements Transactions
+abstract class BaseApp implements Transactions
 {
     /** Reference to the main API, for convenience */
     protected Main $API;
@@ -95,45 +99,45 @@ abstract class AppBase implements Transactions
 }
 
 /** 
- * Describes an app that stores database versions
+ * Describes an app that needs database installation
  * and has upgrade scripts for upgrading the database
  */
-abstract class UpgradableApp extends AppBase
+abstract class InstalledApp extends BaseApp
 {    
-    public static function getUsage() : array { return array('upgrade'); }
+    protected static function getInstallFlags() : string { return ""; }
+    protected static function getUpgradeFlags() : string { return ""; }
     
-    /** @return DBVersion that database object that stores the app version */
-    protected abstract function getDBVersion() : DBVersion;
-    
-    /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
-    protected static function getUpgradeScripts() : array
+    protected static function getInstallUsage() : array 
     {
-        $uname = Utilities::FirstUpper(static::getName());
-        return require(ROOT."/Apps/$uname/_upgrade/scripts.php");
+        $istr = 'install'; if ($if = static::getInstallFlags()) $istr .= " $if";
+        $ustr = 'upgrade'; if ($uf = static::getUpgradeFlags()) $ustr .= " $uf";
+        
+        return array($istr,$ustr);
     }
     
-    /**
-     * Iterates over the list of upgrade scripts, running them
-     * sequentially until the DB is up to date with the code
-     */
-    public function Upgrade() : void
+    public static function getUsage() : array { return static::getInstallUsage(); }
+    
+    /** Return the BaseConfig class for this app */
+    protected abstract static function getConfigClass() : string;
+    
+    protected BaseConfig $config;    
+    protected ObjectDatabase $database;
+    
+    public function __construct(Main $API)
     {
-        $this->API->GetInterface()->DisallowBatch();
+        parent::__construct($API);
         
-        $oldVersion = $this->getDBVersion()->getVersion();
-        
-        foreach (static::getUpgradeScripts() as $newVersion=>$script)
+        if ($this->API->HasDatabase())
         {
-            if (version_compare($newVersion, $oldVersion) === 1 &&
-                version_compare($newVersion, static::getVersion()) <= 0)
+            $this->database = $this->API->GetDatabase();
+            
+            try 
             {
-                $script(); $this->getDBVersion()->setVersion($newVersion);
-                
-                $this->API->commit(); // commit after every step
+                $class = static::getConfigClass();
+                $this->config = $class::GetInstance($this->database);
             }
+            catch (DatabaseException $e) { }
         }
-        
-        $this->getDBVersion()->setVersion(static::getVersion());
     }
     
     /** Returns true if the user is allowed to install/upgrade */
@@ -143,23 +147,81 @@ abstract class UpgradableApp extends AppBase
             !defined('HTTPINSTALL') || HTTPINSTALL;
     }
     
-    /**
-     * Complements Run() with checking if upgrade is required and running it
-     * @param Input $input the app action input object
-     * @throws UpgradeRequiredException if the DB version does not match
-     * @return bool true if the upgrade action was performed
-     */
-    protected function CheckUpgrade(Input $input) : bool
+    /** Returns the path of the app's code folder */
+    protected static function getTemplateFolder() : string
     {
-        if ($this->getDBVersion()->getVersion() !== static::getVersion())
+        return ROOT.'/Apps/'.Utilities::FirstUpper(static::getName());
+    }
+    
+    /** @return array<string,callable> the array of upgrade scripts indexed by version (in order!) */
+    protected static function getUpgradeScripts() : array
+    {
+        return require(static::getTemplateFolder().'/_upgrade/scripts.php');
+    }
+
+    /**
+     * Checks if the client is running/needs to run install/upgrade
+     * {@inheritDoc}
+     * @see \Andromeda\Core\BaseApp::Run()
+     * @throws InstallRequiredException if the DB is not installed
+     * @throws UpgradeRequiredException if the DB version does not match
+     * @return mixed false if nothing was done else the app-specific retval
+     */
+    public function Run(Input $input)
+    {
+        $this->API->GetDatabase(); // assert db exists
+        
+        if (!isset($this->config))
+        {
+            if ($input->GetAction() === 'install' && $this->allowInstall())
+            {
+                return $this->Install($input);
+            }
+            else throw new InstallRequiredException(static::getName());
+        }
+        else if ($this->config->getVersion() !== static::getVersion())
         {
             if ($input->GetAction() === 'upgrade' && $this->allowInstall())
             {
-                $this->Upgrade(); return true;
+                return $this->Upgrade($input);
             }
             else throw new UpgradeRequiredException(static::getName());
         }
-        return false;
+        else return false;
+    }
+    
+    /** Installs the app by importing its SQL file and creating config */
+    protected function Install(Input $input)
+    {
+        $this->API->GetInterface()->DisallowBatch();
+        
+        $this->database->importTemplate(static::getTemplateFolder());
+        
+        $this->config = (static::getConfigClass())::Create($this->database)->Save();
+    }
+    
+    /**
+     * Iterates over the list of upgrade scripts, running them
+     * sequentially until the DB is up to date with the code
+     */
+    protected function Upgrade(Input $input)
+    {
+        $this->API->GetInterface()->DisallowBatch();
+        
+        $oldVersion = $this->config->getVersion();
+
+        foreach (static::getUpgradeScripts() as $newVersion=>$script)
+        {
+            if (version_compare($newVersion, $oldVersion) === 1 &&
+                version_compare($newVersion, static::getVersion()) <= 0)
+            {
+                $script(); $this->config->setVersion($newVersion);
+                
+                $this->API->commit(); // commit after every step
+            }
+        }
+        
+        $this->config->setVersion(static::getVersion());
     }
 }
 

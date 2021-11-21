@@ -18,8 +18,7 @@ class AJAX(Interface):
         self.main = main
         self.url = config
         self.verbose = verbose
-
-    def isPriv(): return False
+        self.isPriv = False
 
     def run(self, app, action, params={}, files={}, isJson=True):
         super().run()
@@ -53,8 +52,7 @@ class CLI(Interface):
         self.path = path
         self.config = config
         self.verbose = verbose
-
-    def isPriv(): return True
+        self.isPriv = True
 
     def run(self, app, action, params={}, files={}, isJson=True):
         flags = ['--debug','3']

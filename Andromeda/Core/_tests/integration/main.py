@@ -84,23 +84,23 @@ class Main():
                 print("--- TEST SUITE -",interface,database,'---')
                 print("------------------------------------")
 
-                if self.doInstall:
-                    atexit.register(database.deinstall)
-                    database.install(interface)
-
-                self.runTests(interface)
-
-                if self.doInstall:
-                    atexit.unregister(database.deinstall)
-                    database.deinstall()
-                    os.remove(self.dbconfig)
+                self.runTests(interface, database)
         
         count = 0
         for iface in self.interfaces: count += iface.count
         print();print("!! ALL TESTS COMPLETE! RAN {} COMMANDS!".format(count))
 
 
-    def runTests(self, interface):
+    def runTests(self, interface, database):
+
+        # test usage command works pre-configure
+        TestUtils.assertOk(interface.run(app='core',action='usage'))
+        TestUtils.assertError(interface.run(app='core',action='getconfig'),
+            500,'DATABASE_CONFIG_MISSING')
+
+        if self.doInstall:
+            atexit.register(database.deinstall)
+            database.install(interface)
 
         # build list of server apps
         if self.doInstall:
@@ -130,16 +130,40 @@ class Main():
         appTests = list(self.appMap.values())
         self.random.shuffle(appTests)
 
-        # install apps if needed
+        # install everything
         if self.doInstall:
             print(" -- BEGIN INSTALLS -- ")
-            appNames = TestUtils.assertOk(interface.run(app='core',action='install',params={'enable':True}))
+
+            # test usage command works pre-install
+            TestUtils.assertOk(interface.run(app='core',action='usage'))
+            TestUtils.assertError(interface.run(app='core',action='getconfig'),
+                500,'APP_INSTALL_REQUIRED: core')
+
+            # test installing everything at once
+            params = { }
+            for app in appTests:
+                for key,val in app.getInstallParams().items():
+                    params[key] = val
+            appNames = TestUtils.assertOk(interface.run(app='core',action='install',params=params))
+            TestUtils.assertEquals(set(self.servApps), set(appNames))
+
+            database.deinstall()
+            os.remove(self.dbconfig)
+            database.install(interface)
+
+            # test installing everything separately
+            appNames = TestUtils.assertOk(interface.run(app='core',action='install',params={'noapps':True}))
             TestUtils.assertEquals(set(self.servApps), set(appNames))
             for app in appTests: app.install()
 
         # run all test modules
         print(" -- BEGIN", interface, "TESTS --"); interface.runTests()
         for app in appTests: print(" -- BEGIN", app, "TESTS --"); app.runTests()
+
+        if self.doInstall:
+            atexit.unregister(database.deinstall)
+            database.deinstall()
+            os.remove(self.dbconfig)
     
     def restoreConfig(self):
         if os.path.exists(self.dbconfig+'.old'):

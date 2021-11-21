@@ -1,11 +1,9 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/AppBase.php"); use Andromeda\Core\{AppBase, UpgradableApp};
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\DBVersion;
+require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
@@ -32,10 +30,7 @@ require_once(ROOT."/Apps/Accounts/Auth/IMAP.php");
 require_once(ROOT."/Apps/Accounts/Auth/FTP.php");
 
 use Andromeda\Core\UnknownActionException;
-use Andromeda\Core\InstallRequiredException;
 use Andromeda\Core\DecryptionFailedException;
-
-use Andromeda\Core\Database\DatabaseException;
 
 /** Exception indicating that an account already exists under this username/email */
 class AccountExistsException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_ALREADY_EXISTS"; }
@@ -117,22 +112,19 @@ class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException
  * authentication, multi-client/session management, authentication via external
  * sources, and granular per-account/per-group config.
  */
-class AccountsApp extends UpgradableApp
-{   
-    private Config $config;
-    
-    private ObjectDatabase $database;
-    
+class AccountsApp extends InstalledApp
+{
     public static function getName() : string { return 'accounts'; }
     
-    protected static function getLogClass() : ?string { return AccessLog::class; }
+    protected static function getLogClass() : string { return AccessLog::class; }
     
-    protected function getDBVersion() : DBVersion { return $this->config; }
+    protected static function getConfigClass() : string { return Config::class; }
+    
+    protected static function getInstallFlags() : string { return '[--username alphanum --password raw]'; }
     
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
-            'install [--username alphanum --password raw]',
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser text | --auth_sudoacct id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -187,27 +179,18 @@ class AccountsApp extends UpgradableApp
     public function __construct(Main $api)
     {
         parent::__construct($api);
-        $this->database = $api->GetDatabase();
-        
-        try { $this->config = Config::GetInstance($this->database); }
-        catch (DatabaseException $e) { }
         
         new Auth\Local(); // construct the singleton
     }
 
     /**
      * {@inheritDoc}
-     * @throws InstallRequiredException if config needs to be initialized
      * @throws UnknownActionException if the given action is not valid
-     * @see AppBase::Run()
+     * @see BaseApp::Run()
      */
     public function Run(Input $input)
     {
-        // if config is not available, require installing it
-        if (!isset($this->config) && $input->GetAction() !== 'install')
-            throw new InstallRequiredException(static::getName());
-        
-        if (isset($this->config) && ($retval = $this->CheckUpgrade($input))) return $retval;
+        if (($retval = parent::Run($input)) !== false) return $retval;
         
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
@@ -216,8 +199,6 @@ class AccountsApp extends UpgradableApp
         
         switch($input->GetAction())
         {
-            case 'install':             return $this->Install($input); 
-            
             case 'getconfig':           return $this->GetConfig($input, $authenticator);
             case 'setconfig':           return $this->SetConfig($input, $authenticator);
             
@@ -277,35 +258,26 @@ class AccountsApp extends UpgradableApp
             default: throw new UnknownActionException();
         }
     }
-
+    
     /**
-     * Installs the app by importing its SQL file and creating config
-     * 
-     * Optionally creates an initial administrator account
-     * @throws UnknownActionException if config already exists or not allowed
-     * @return ?array Account if admin was created
+     * {@inheritDoc}
+     * @see \Andromeda\Core\InstalledApp::Install()
      * @see Account::GetClientObject()
+     * @return ?array Account if admin was created
      */
-    public function Install(Input $input) : ?array
+    protected function Install(Input $input) : ?array
     {
-        if (isset($this->config) || !$this->allowInstall()) throw new UnknownActionException();
-        
-        $this->database->importTemplate(ROOT."/Apps/Accounts");
-        
-        $this->config = Config::Create($this->database)->Save();
+        parent::Install($input);
         
         if ($input->HasParam('username'))
         {
             $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, SafeParam::MaxLength(127));
-            
             $password = $input->GetParam("password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
             
-            $account = Account::Create($this->database, Auth\Local::GetInstance(), $username, $password)->setAdmin(true);
-            
-            return $account->GetClientObject();
+            return Account::Create($this->database, Auth\Local::GetInstance(), 
+                $username, $password)->setAdmin(true)->GetClientObject();
         }
-        
-        return null;
+        else return null;
     }
 
     /**
