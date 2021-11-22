@@ -31,10 +31,10 @@ All input parameters are strictly validated against their expected types.  Most 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
 * `--json`/`--printr` use JSON or PHP printr() for output (default printr)
-* `--debug int` change the debug output level (default 1 - errors only)
+* `--debug enum` change the debug output level (default server errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
-* `--metrics int` will show performance metrics, SQL queries executed, and other development stuff
+* `--metrics enum` will show performance metrics, SQL queries executed, and other development stuff
 
 ### Environment Variables
 To ease command line usage for commands that may involve repeated parameters (e.g. a session key), environment variables prefixed with `andromeda_` can be set that will always be included in a request.  For example, `export andromeda_mykey=myvalue` is equivalent to adding `--mykey=myvalue` to all future commands.

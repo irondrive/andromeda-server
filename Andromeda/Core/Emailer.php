@@ -85,8 +85,8 @@ class Emailer extends StandardObject
     {
         $mailer = parent::BaseCreate($database);
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($type){ return array_key_exists($type, self::MAIL_TYPES); });
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::MAIL_TYPES));
         
         $type = self::MAIL_TYPES[$type];
         
@@ -117,8 +117,8 @@ class Emailer extends StandardObject
     {
         $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
         $port = $input->GetOptParam('port',SafeParam::TYPE_UINT16);
-        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,SafeParams::PARAMLOG_ONLYFULL,
-            function($d){ return in_array($d,array('tls','ssl')); });
+        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,
+            SafeParams::PARAMLOG_ONLYFULL, array('tls','ssl'));
         
         if ($port) $host .= ":$port";
         if ($proto) $host = "$proto://$host";        
@@ -168,7 +168,7 @@ class Emailer extends StandardObject
             default: throw new InvalidMailTypeException();
         }
         
-        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
+        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
         
         $mailer->Debugoutput = function($str, $level){ 
             if (!preg_match('//u', $str)) $str = base64_encode($str); // check UTF-8

@@ -95,16 +95,16 @@ class Config extends BaseConfig
 
         if ($input->HasParam('requestlog_details'))
         {
-            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::RQLOG_DETAILS_TYPES); });
+            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::RQLOG_DETAILS_TYPES));
             
             $this->SetFeature('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
         }
         
         if ($input->HasParam('debug'))
         {
-            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::DEBUG_TYPES); });
+            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::DEBUG_TYPES));
             
             $this->SetFeature('debug', self::DEBUG_TYPES[$param]);
         }
@@ -115,8 +115,8 @@ class Config extends BaseConfig
 
         if ($input->HasParam('metrics'))
         {
-            $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::METRICS_TYPES); });
+            $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::METRICS_TYPES));
             
             $this->SetFeature('metrics', self::METRICS_TYPES[$param]);
         }
@@ -249,12 +249,12 @@ class Config extends BaseConfig
     const ERRLOG_ERRORS = 1; 
     
     /** show a full back trace, loaded objects, SQL queries */
-    const ERRLOG_DEVELOPMENT = 2;
+    const ERRLOG_DETAILS = 2;
     
     /** also show input params, function arguments, SQL values */ 
     const ERRLOG_SENSITIVE = 3;
     
-    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'development'=>self::ERRLOG_DEVELOPMENT, 'sensitive'=>self::ERRLOG_SENSITIVE);
+    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->GetFeature('debug'); }

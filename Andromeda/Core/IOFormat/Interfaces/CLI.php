@@ -15,17 +15,29 @@ use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,Input
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that the command line usage is incorrect */
-class IncorrectCLIUsageException extends Exceptions\ClientErrorException { 
-    public $message = "general usage: php index.php [--json|--printr] [--debug int] [--metrics int] [--dryrun] [--dbconf fspath] app action ".
-                          "[--\$param value] [--\$param@ file] [--\$param!] [--\$param% file [name]] [--\$param-]".PHP_EOL.
-                          "\t param@ puts the content of the file in the parameter".PHP_EOL.
-                          "\t param! will prompt interactively or read stdin for the parameter value".PHP_EOL.
-                          "\t param% gives the file path as a direct file input (optionally with a new name)".PHP_EOL.
-                          "\t param- will attach the stdin stream as a direct file input".PHP_EOL.
-                          PHP_EOL.
-                      "batch usage:   php index.php batch myfile.txt".PHP_EOL.
-                      "get version:   php index.php version".PHP_EOL.
-                      "get actions:   php index.php core usage"; }
+class IncorrectCLIUsageException extends Exceptions\ClientErrorException 
+{
+    public function __construct()
+    {
+        $this->message = implode(PHP_EOL,array(
+            "general usage: php index.php [global flags+] app action [action params+]",
+            null,
+            "global flags: [--json|--printr] [--dryrun] [--dbconf fspath] ".
+                "[--debug ".implode('|',array_keys(Config::DEBUG_TYPES))."] ".
+                "[--metrics ".implode('|',array_keys(Config::METRICS_TYPES))."]",
+            null,
+            "action params: [--\$param value] [--\$param@ file] [--\$param!] [--\$param% file [name]] [--\$param-]",
+            "\t param@ puts the content of the file in the parameter",
+            "\t param! will prompt interactively or read stdin for the parameter value",
+            "\t param% gives the file path as a direct file input (optionally with a new name)",
+            "\t param- will attach the stdin stream as a direct file input",
+            null,
+            "batch usage:   php index.php batch myfile.txt",
+            "get version:   php index.php version",
+            "get actions:   php index.php core usage"
+        ));
+    }
+}
 
 /** Exception indicating that the given batch file is not valid */
 class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
@@ -98,12 +110,14 @@ class CLI extends IOInterface
                 
                 case 'debug':
                     if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $this->debug = (new SafeParam('debug',$val))->GetValue(SafeParam::TYPE_UINT);
+                    $debug = (new SafeParam('debug',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::DEBUG_TYPES));
+                    $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
                     
                 case 'metrics':
                     if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $this->metrics = (new SafeParam('metrics',$val))->GetValue(SafeParam::TYPE_UINT);
+                    $metrics = (new SafeParam('metrics',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::METRICS_TYPES));
+                    $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
                     
                 case 'dbconf':

@@ -198,17 +198,18 @@ class FSManager extends StandardObject
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
-        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
+        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, 
+            SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(127));
         
         $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
         
         $classes = self::getStorageClasses();
         
-        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($sttype)use($classes){ return array_key_exists($sttype, $classes); });
+        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array_keys($classes));
         
-        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($fstype){ return in_array($fstype, array('native','crypt','external')); });        
+        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array('native','crypt','external'));  
         
         switch ($fstype ?? 'native')
         {
@@ -225,7 +226,7 @@ class FSManager extends StandardObject
         {
             if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
             {
-                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_ONLYFULL,
+                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_ONLYFULL, null,
                     function($v){ return $v >= 4*1024 && $v <= 1*1024*1024; });
             }
             

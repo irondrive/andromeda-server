@@ -99,7 +99,8 @@ trait UserPass
     {
         return parent::Create($database, $input, $filesystem)
             ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER))
-            ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
+            ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
     }
     
     /** Returns the command usage for Edit() */
@@ -108,8 +109,10 @@ trait UserPass
     /** Performs cred-crypt level edit on an existing storage */
     public function Edit(Input $input) : Storage
     {
-        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
-        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
+        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', 
+            SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
+        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', 
+            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
 
         return parent::Edit($input);
     }

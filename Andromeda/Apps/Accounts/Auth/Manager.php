@@ -65,8 +65,8 @@ class Manager extends BaseObject
     {
         $classes = self::getAuthClasses();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($val)use($classes){ return array_key_exists($val, $classes); });
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array_keys($classes));
         
         $descr = $input->GetOptNullParam('description', SafeParam::TYPE_TEXT);
         
@@ -79,8 +79,8 @@ class Manager extends BaseObject
         
         if ($input->HasParam('enabled'))
         {
-            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::ENABLED_TYPES); });
+            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::ENABLED_TYPES));
             
             $manager->SetScalar('enabled', self::ENABLED_TYPES[$param]);
         }
@@ -95,8 +95,8 @@ class Manager extends BaseObject
     {
         if ($input->HasParam('enabled'))
         {
-            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::ENABLED_TYPES); });
+            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::ENABLED_TYPES));
             
             $this->SetScalar('enabled', self::ENABLED_TYPES[$param]);
         }

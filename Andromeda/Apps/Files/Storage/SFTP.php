@@ -20,7 +20,8 @@ class SSHAuthenticationFailure extends ActivateException { public $message = "SS
 /** Exception indicating that the server's public key has changed */
 class HostKeyMismatchException extends ActivateException { public $message = "SSH_HOST_KEY_MISMATCH"; }
 
-Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SFTP::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
+    if (!$init) SFTP::DecryptAccount($database, $account); });
 
 /**
  * Allows using an SFTP server for backend storage using phpseclib
