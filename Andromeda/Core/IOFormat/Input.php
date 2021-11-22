@@ -76,20 +76,20 @@ class Input
         $this->params->AddParam($key, $value); return $this; }
     
     /** @see SafeParams::GetParam() */
-    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
-        return $this->params->GetParam($key, $type, $minlog, ...$valfuncs); }
+    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
+        return $this->params->GetParam($key, $type, $minlog, $values, $valfunc); }
     
     /** @see SafeParams::GetOptParam() */
-    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
-        return $this->params->GetOptParam($key, $type, $minlog, ...$valfuncs); }
+    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
+        return $this->params->GetOptParam($key, $type, $minlog, $values, $valfunc); }
 
     /** @see SafeParams::GetNullParam() */
-    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
-        return $this->params->GetNullParam($key, $type, $minlog, ...$valfuncs); }
+    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
+        return $this->params->GetNullParam($key, $type, $minlog, $values, $valfunc); }
     
     /** @see SafeParams::GetOptNullParam() */
-    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, callable ...$valfuncs) {
-        return $this->params->GetOptNullParam($key, $type, $minlog, ...$valfuncs); }
+    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
+        return $this->params->GetOptNullParam($key, $type, $minlog, $values, $valfunc); }
     
     /** @see Input::GetFiles() */
     private array $files;

@@ -30,7 +30,8 @@ class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCE
 /** Exception indicating that objects cannot be modified */
 class S3ModifyException extends Exceptions\ClientErrorException { public $message = "S3_OBJECTS_IMMUTABLE"; }
 
-Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) S3::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
+    if (!$init) S3::DecryptAccount($database, $account); });
 
 abstract class S3Base1 extends FWrapper { use NoFolders; }
 abstract class S3Base2 extends S3Base1 { use FieldCrypt; }

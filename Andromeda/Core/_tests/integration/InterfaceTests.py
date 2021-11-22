@@ -13,20 +13,24 @@ class CLITests(BaseTest):
         
         if flags is None: flags = [] # don't want to modify default
         if format is not None: flags.append('--'+format)
-        if debug is not None: flags += ['--debug',str(debug)]
-        if metrics is not None: flags += ['--metrics',str(metrics)]
-        if dbconf is not None: flags += ['--dbconf',str(dbconf)]
+        if debug is not None: flags += ['--debug',debug]
+        if metrics is not None: flags += ['--metrics',metrics]
+        if dbconf is not None: flags += ['--dbconf',dbconf]
         if dryrun: flags.append('--dryrun')
 
         return self.interface.cliRun(app=app, action=action, params=params, files=files, 
             flags=flags, isJson=isJson, stdin=stdin)
     
     def testDebugFlag(self):
-        rval = self.fullCliRun(debug=0)
+        rval = self.fullCliRun(debug="none")
         assertEquals(rval['code'], 400)
         assertNotIn('debug', rval)
 
-        rval = self.fullCliRun(debug=2)
+        rval = self.fullCliRun(debug="basic")
+        assertEquals(rval['code'], 400)
+        assertNotIn('debug', rval)
+
+        rval = self.fullCliRun(debug="details")
         assertEquals(rval['code'], 400)
         assertIn('debug', rval)
 
@@ -35,18 +39,19 @@ class CLITests(BaseTest):
         assertInstance(rval, object)
         assert(not rval['ok'])
 
-        rval = self.fullCliRun(isJson=False,format=None,debug=0,metrics=0).decode('utf-8')
+        rval = self.fullCliRun(isJson=False,format=None).decode('utf-8')
         assertEquals(rval.strip(),"UNKNOWN_APP")
 
         rval = self.fullCliRun(isJson=False,format="printr").decode('utf-8')
         assert(rval.startswith("Array")), rval
 
     def testMetricsFlag(self):
-        assertNotIn('metrics', self.fullCliRun(metrics=0))
-        assertIn('metrics', self.fullCliRun(metrics=1))
+        assertNotIn('metrics', self.fullCliRun(metrics="none"))
+        assertIn('metrics', self.fullCliRun(metrics="basic"))
+        assertIn('metrics', self.fullCliRun(metrics="extended"))
 
     def testDbconfFlag(self):
-        rval = self.fullCliRun(debug=1, dbconf="/nonexistent")
+        rval = self.fullCliRun(dbconf="/nonexistent")
         assertError(rval, 500, "DATABASE_CONFIG_MISSING")
 
     def testVersionCommand(self):

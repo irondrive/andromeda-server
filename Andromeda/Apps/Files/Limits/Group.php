@@ -75,8 +75,8 @@ trait GroupCommon
     
     protected static function GetTrackParam(Input $input, string $name) : ?int
     {
-        $param = $input->GetNullParam($name, SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($v){ return array_key_exists($v, self::TRACK_TYPES); });
+        $param = $input->GetNullParam($name, SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::TRACK_TYPES));
         
         return ($param !== null) ? self::TRACK_TYPES[$param] : null;
     }

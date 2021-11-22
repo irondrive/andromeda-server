@@ -38,8 +38,8 @@ class IMAP extends External
     
     public static function Create(ObjectDatabase $database, Input $input) : self
     {
-        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($val){ return array_key_exists($val, self::PROTOCOLS); });
+        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::PROTOCOLS));
 
         return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))

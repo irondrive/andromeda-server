@@ -40,16 +40,16 @@ class Config extends BaseConfig
     {
         if ($input->HasParam('createaccount')) 
         {
-            $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, 
-                function($v){ return array_key_exists($v, self::CREATE_TYPES); });
+            $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CREATE_TYPES));
 
             $this->SetFeature('createaccount', self::CREATE_TYPES[$param]);
         }
         
         if ($input->HasParam('requirecontact')) 
         {
-            $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-                function($v){ return array_key_exists($v, self::CONTACT_TYPES); });
+            $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CONTACT_TYPES));
 
             $this->SetFeature('requirecontact', self::CONTACT_TYPES[$param]);
         }

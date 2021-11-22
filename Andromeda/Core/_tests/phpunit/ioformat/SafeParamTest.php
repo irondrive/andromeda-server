@@ -48,15 +48,26 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->assertSame((new SafeParam("key", $val))->GetRawValue(), $val);
     }
     
+    public function testValueList() : void
+    {
+        $val = 5; $param = new SafeParam('key',$val);
+        
+        $this->assertSame($param->GetValue(SafeParam::TYPE_INT, array($val,6,7)), $val);
+        
+        $this->expectException(SafeParamInvalidEnumException::class);
+        
+        $param->GetValue(SafeParam::TYPE_INT, array(1,2,3));
+    }
+    
     public function testMaxLength() : void
     {
         $val = "123456789"; $param = new SafeParam("key", $val);
         
-        $this->assertSame($param->GetValue(SafeParam::TYPE_RAW, SafeParam::MaxLength(99)), $val);
+        $this->assertSame($param->GetValue(SafeParam::TYPE_RAW, null, SafeParam::MaxLength(99)), $val);
         
         $this->expectException(SafeParamInvalidException::class);
         
-        $param->GetValue(SafeParam::TYPE_RAW, SafeParam::MaxLength(5));
+        $param->GetValue(SafeParam::TYPE_RAW, null, SafeParam::MaxLength(5));
     }
     
     protected function testGood($value, int $type) : void

@@ -25,7 +25,8 @@ class FTPAppendOnlyException extends Exceptions\ClientErrorException { public $m
 /** Exception indicating that FTP does not support file copy */
 class FTPCopyFileException extends Exceptions\ClientErrorException { public $message = "FTP_NO_COPY_SUPPORT"; }
 
-Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) FTP::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
+    if (!$init) FTP::DecryptAccount($database, $account); });
 
 /**
  * Allows FTP to be used as a backend storage

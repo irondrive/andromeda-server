@@ -49,8 +49,8 @@ abstract class BaseLog extends BaseObject
     {
         $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $input);
         
-        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,SafeParams::PARAMLOG_ONLYFULL,
-            function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
+        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
+            SafeParams::PARAMLOG_ONLYFULL, array('and','or')) === 'or'; // default AND
             
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         

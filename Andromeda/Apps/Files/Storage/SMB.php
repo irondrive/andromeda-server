@@ -20,7 +20,8 @@ class SMBStateInitException extends ActivateException { public $message = "SMB_S
 /** Exception indicating that SMB failed to connect or read the base path */
 class SMBConnectException extends ActivateException { public $message = "SMB_CONNECT_FAILED"; }
 
-Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ if (!$init) SMB::DecryptAccount($database, $account); });
+Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
+    if (!$init) SMB::DecryptAccount($database, $account); });
 
 /**
  * Allows using an SMB/CIFS server for backend storage
@@ -58,7 +59,7 @@ class SMB extends StandardFWrapper
     {
         return parent::Create($database, $input, $filesystem)
             ->SetScalar('workgroup', $input->GetOptParam('workgroup', 
-                SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)))            
+                SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)))
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
     }
     
@@ -67,7 +68,7 @@ class SMB extends StandardFWrapper
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', 
-            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(255)));
+            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
         
         if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
         

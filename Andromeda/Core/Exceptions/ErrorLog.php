@@ -63,8 +63,8 @@ class ErrorLog extends BaseObject
         
         if ($input->HasParam('message')) $criteria[] = $q->Like('message', $input->GetParam('message',SafeParam::TYPE_TEXT));
         
-        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL,
-            function($v){ return $v === 'and' || $v === 'or'; }) === 'or'; // default AND
+        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, array('and','or')) === 'or'; // default AND
             
         if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
@@ -160,7 +160,7 @@ class ErrorLog extends BaseObject
                 $data['action'] = $input->GetAction();
             }
     
-            $extended = $api && $api->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
+            $extended = $api && $api->GetDebugLevel() >= Config::ERRLOG_DETAILS;
             $sensitive = $api && $api->GetDebugLevel() >= Config::ERRLOG_SENSITIVE;
             
             if ($extended)

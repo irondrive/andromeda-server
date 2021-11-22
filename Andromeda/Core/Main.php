@@ -257,7 +257,7 @@ final class Main extends Singleton
         
         if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
         
-        $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT;
+        $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DETAILS;
         
         if ($dbstats && $this->database) 
             $this->database->pushStatsContext();
@@ -350,14 +350,14 @@ final class Main extends Singleton
         
         if ($this->database)
         {          
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
                 $this->database->pushStatsContext();
                 
             $this->database->saveObjects();
             
             $this->innerCommit(true);
                     
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) 
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
             {
                 $commit_stats = $this->database->popStatsContext();
                 $this->commit_stats[] = $commit_stats;
@@ -418,7 +418,7 @@ final class Main extends Singleton
         
         if (!$this->database || !$mlevel) return;
         
-        if  ($this->GetDebugLevel() < Config::ERRLOG_DEVELOPMENT &&
+        if  ($this->GetDebugLevel() < Config::ERRLOG_DETAILS &&
              !$this->interface->isPrivileged()) return;
         
         if ($this->database->inTransaction())
@@ -439,7 +439,7 @@ final class Main extends Singleton
         {
             $this->database->rollback();
 
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DEVELOPMENT) throw $e;
+            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) throw $e;
             else $this->error_manager->LogException($e, false);
         }
     }

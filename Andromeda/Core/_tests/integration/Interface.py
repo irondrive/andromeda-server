@@ -55,7 +55,7 @@ class CLI(Interface):
         self.isPriv = True
 
     def run(self, app, action, params={}, files={}, isJson=True):
-        flags = ['--debug','3']
+        flags = ['--debug','sensitive']
         if isJson: flags.append('--json')
         return self.cliRun(app, action, params, files, flags, isJson)
 

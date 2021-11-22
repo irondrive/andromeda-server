@@ -70,51 +70,48 @@ class SafeParams
     
     /**
      * Gets the requested parameter (present and not null)
-     * @param string $key the name of the parameter
-     * @param int $type the type of the parameter
      * @param int $minlog minimum log level for logging (0 for never) - RAW is never logged!
-     * @param callable $valfunc optional functions for custom validation
-     * @throws SafeParamKeyMissingException if the parameter is not present
+     * @throws SafeParamKeyMissingException if the parameter is missing
      * @throws SafeParamNullValueException if the parameter is null
      * @see SafeParam::GetValue()
      */
-    public function GetParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, callable ...$valfuncs)
+    public function GetParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
     {
         if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
         
-        $data = $this->params[$key]->GetValue($type, ...$valfuncs);
+        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
         if ($data === null) throw new SafeParamNullValueException($key);
         
         $this->LogData($minlog, $type, $key, $data); return $data;
     }
     
     /** Same as GetParam() but returns null if the param is not present */
-    public function GetOptParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, callable ...$valfuncs)
+    public function GetOptParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
     {
         if (!$this->HasParam($key)) return null;
         
-        $data = $this->params[$key]->GetValue($type, ...$valfuncs);
+        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
         if ($data === null) throw new SafeParamNullValueException($key);
 
         $this->LogData($minlog, $type, $key, $data); return $data;
     }
     
     /** Same as GetParam() but returns null if the param is present and null */
-    public function GetNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, callable ...$valfuncs)
+    public function GetNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
     {
         if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
         
-        $data = $this->params[$key]->GetValue($type, ...$valfuncs);
+        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
         
         $this->LogData($minlog, $type, $key, $data); return $data;
     }
     
     /** Same as GetParam() but returns null if the param is not present, or is present and null */
-    public function GetOptNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, callable ...$valfuncs)
+    public function GetOptNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
     {
         if (!$this->HasParam($key)) return null;
         
-        $data = $this->params[$key]->GetValue($type, ...$valfuncs);
+        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
         
         $this->LogData($minlog, $type, $key, $data); return $data;
     }

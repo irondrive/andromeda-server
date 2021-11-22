@@ -16,9 +16,20 @@ class SafeParamInvalidException extends SafeParamException
 {
     public function __construct(string $key, ?int $type = null) 
     {
-        $this->message = "SAFEPARAM_INVALID_VALUE: ".
-            (($type !== null) ? SafeParam::GetTypeString($type).' ' : '').$key; 
+        $this->message = "SAFEPARAM_INVALID_VALUE: $key";
+        
+        if ($type !== null) $this->message .=
+            " must be ".SafeParam::GetTypeString($type); 
     } 
+}
+
+/** Exception indicating an invalid enum-based paramter */
+class SafeParamInvalidEnumException extends SafeParamInvalidException
+{
+    public function __construct(string $key, array $values)
+    {
+        $this->message = "SAFEPARAM_INVALID_VALUE: $key must be ".implode('|',$values);
+    }
 }
 
 /**
@@ -155,19 +166,21 @@ class SafeParam
     /** Returns a function that checks the max length of the value, for use with GetValue */
     public static function MaxLength(int $len) : callable { 
         return function($val)use($len){ return mb_strlen($val) <= $len; }; }
- 
+
     /**
      * Gets the value of the parameter, doing filtering/validation, and JSON decoding for objects/arrays
      * 
      * If the parameter is an object type, a SafeParams object will be returned
      * If the parameter is an array type, returns an array of SafeParams
      * @param int $type the requested type of the parameter
-     * @param callable $valfunc if not null, check the value against this custom function
-     * @throws SafeParamInvalidException if the value fails validation
+     * @param ?array $values if not null, the value must be in this array
+     * @param callable $valfunc if not null, check the value against this function
+     * @throws SafeParamInvalidException if the value fails type validation
+     * @throws SafeParamInvalidEnumException if the value is not in the given array
      * @throws SafeParamUnknownTypeException if an unknown type was requested
      * @return NULL|mixed|SafeParam[]|SafeParams the value of the SafeParam
      */
-    public function GetValue(int $type, callable ...$valfuncs)
+    public function GetValue(int $type, ?array $values = null, ?callable $valfunc = null)
     {
         $key = $this->key; $value = $this->value;
 
@@ -303,9 +316,12 @@ class SafeParam
         }
         else throw new SafeParamUnknownTypeException($type);
         
-        if ($value !== null) foreach ($valfuncs as $valfunc)
-            if (!$valfunc($value)) throw new SafeParamInvalidException($key);
+        if ($value !== null && $valfunc !== null && !$valfunc($value))
+            throw new SafeParamInvalidException($key);
         
+        if ($value !== null && $values !== null && !in_array($value,$values,true))
+            throw new SafeParamInvalidEnumException($key, $values);
+
         return $value;
     }
 }

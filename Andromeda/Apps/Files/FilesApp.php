@@ -431,7 +431,7 @@ class FilesApp extends InstalledApp
         // TODO CLIENT - since this is not AJAX, we might want to redirect to a page when doing a 404, etc. - better than plaintext - use appurl config
         
         $debugdl = ($input->GetOptParam('debugdl',SafeParam::TYPE_BOOL) ?? false) &&
-            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::ERRLOG_DEVELOPMENT;
+            $this->API->GetDebugLevel() >= \Andromeda\Core\Config::ERRLOG_DETAILS;
         
         // debugdl disables file output printing and instead does a normal JSON return
         if (!$debugdl) $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
@@ -1121,7 +1121,8 @@ class FilesApp extends InstalledApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
-        $tag = $input->GetParam('tag', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
+        $tag = $input->GetParam('tag', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(127));
         
         $item = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
 

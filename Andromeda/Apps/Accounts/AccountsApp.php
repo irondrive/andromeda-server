@@ -271,7 +271,8 @@ class AccountsApp extends InstalledApp
         
         if ($input->HasParam('username'))
         {
-            $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, SafeParam::MaxLength(127));
+            $username = $input->GetParam("username", SafeParam::TYPE_ALPHANUM, 
+                SafeParams::PARAMLOG_ALWAYS, null, SafeParam::MaxLength(127));
             $password = $input->GetParam("password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
             
             return Account::Create($this->database, Auth\Local::GetInstance(), 
@@ -528,7 +529,7 @@ class AccountsApp extends InstalledApp
         }
 
         $username = $userIsContact ? $contactInfo->info : $input->GetParam("username", 
-            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, SafeParam::MaxLength(127));
+            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, null, SafeParam::MaxLength(127));
         
         if (!$admin && $allowCreate == Config::CREATE_WHITELIST)
         {
@@ -1100,7 +1101,8 @@ class AccountsApp extends InstalledApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
+        $name = $input->GetParam("name", SafeParam::TYPE_NAME,
+            SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(127));
         
         $priority = $input->GetOptParam("priority", SafeParam::TYPE_INT8);
         $comment = $input->GetOptParam("comment", SafeParam::TYPE_TEXT);
@@ -1134,7 +1136,8 @@ class AccountsApp extends InstalledApp
         
         if ($input->HasParam('name')) 
         {
-            $name = $input->GetParam("name", SafeParam::TYPE_NAME, SafeParams::PARAMLOG_ONLYFULL, SafeParam::MaxLength(127));
+            $name = $input->GetParam("name", SafeParam::TYPE_NAME, 
+                SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(127));
             
             $duplicate = Group::TryLoadByName($this->database, $name);
             if ($duplicate !== null) throw new GroupExistsException();
@@ -1464,8 +1467,8 @@ class AccountsApp extends InstalledApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, 
-            function(string $v){ return array_key_exists($v, Whitelist::TYPES); });
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ALWAYS, array_keys(Whitelist::TYPES));
         
         $type = Whitelist::TYPES[$type];
         
@@ -1483,8 +1486,8 @@ class AccountsApp extends InstalledApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS,
-            function(string $v){ return array_key_exists($v, Whitelist::TYPES); });
+        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ALWAYS, array_keys(Whitelist::TYPES));
         
         $type = Whitelist::TYPES[$type];
         
