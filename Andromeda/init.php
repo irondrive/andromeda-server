@@ -11,6 +11,8 @@ define('ROOT',__DIR__.'/');
 
 require_once(ROOT.'/../vendor/autoload.php');
 
+/** The following can be used in user-defs.php (don't edit this file!) */
+
 /** Use to permanently set the database config path */
 //define('DBCONF','path-to-config');
 

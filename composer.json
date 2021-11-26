@@ -30,6 +30,8 @@
     },
     "require-dev": {
         "phpmetrics/phpmetrics": "~2",
-        "phpstan/phpstan": "^1.2"
+        "phpstan/phpstan": "^1.2",
+        "phpunit/phpunit": "^9.5",
+        "code-lts/doctum": "^5.4"
     }
 }
