@@ -1,19 +1,5 @@
 #!/bin/bash
 
-cd tools; if [ ! -f phpunit-9.phar ]; then
-    wget https://phar.phpunit.de/phpunit-9.phar
-fi; cd ..
-
-runtests() {
-    CMD="php ../tools/phpunit-9.phar $@"
-    echo; echo "$CMD"; $CMD || exit
-}
-
-cd Andromeda;
-
-runtests Core/_tests/phpunit $@
-
-for i in $(ls Apps); do
-    DIR=Apps/$i/_tests/phpunit
-    if [ -d $DIR ]; then runtests $DIR $@; fi
+cd Andromeda; find . -iname phpunit | while read -r dir; do
+    ../vendor/bin/phpunit $dir
 done
