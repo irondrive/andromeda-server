@@ -1015,9 +1015,8 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
 
-        $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
-        
-        if (strlen($name) < 3) return array();
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, null,
+            function($v){ return mb_strlen($v) >= 3; });
 
         return array_map(function(Account $account){ return $account->GetClientObject(); },
             Account::LoadAllMatchingInfo($this->database, $name, $limit));
@@ -1042,9 +1041,8 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
         
-        $name = $input->GetParam('name', SafeParam::TYPE_TEXT);
-        
-        if (strlen($name) < 3) return array();
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, null,
+            function($v){ return mb_strlen($v) >= 3; });
         
         return array_map(function(Group $group){ return $group->GetClientObject(); },
             Group::LoadAllMatchingName($this->database, $name, $limit));
