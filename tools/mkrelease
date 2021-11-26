@@ -19,6 +19,7 @@ rm pytest-config.example.json
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
+composer licenses > vendor/LICENSES.txt
 rm composer.json composer.lock
 
 cd vendor/aws/aws-sdk-php
