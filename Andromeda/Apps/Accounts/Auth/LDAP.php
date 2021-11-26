@@ -112,7 +112,8 @@ class LDAP extends External
         {
             $errman = ErrorManager::GetInstance(); $errman->LogException($e);
             
-            if ($lerr = ldap_error()) $errman->LogException(new LDAPErrorException($lerr));
+            if ($lerr = ldap_error($this->ldap)) 
+                $errman->LogException(new LDAPErrorException($lerr));
             
             return false; 
         } 

@@ -8,7 +8,8 @@ $iterator = Finder::create()
     ->files()->name('*.php')->in('Andromeda')
     ->exclude('Apps/Testutil')
     ->exclude('_tests')
-    ->exclude('DBConfig.php');
+    ->exclude('DBConfig.php')
+    ->exclude('user-defs.php');
 
 $doctum = new Doctum($iterator, [
     'title' => 'Andromeda Server API',

@@ -49,15 +49,7 @@ trait AccountCommon
         $obj = $this->TryGetInheritable($field)->GetSource();
         return ($obj !== null) ? $obj->GetLimitedObject() : null;
     }
-    
-    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge(); } // not null
-    
-    /** Returns the object from which this account limit inherits its max stats age */
-    public function GetsMaxStatsAgeFrom() : ?BaseObject
-    {
-        return $this->TryGetInheritable('max_stats_age')->GetSource();
-    }
-    
+
     /**
      * Returns a printable client object that includes property inherit sources
      * @param bool $isadmin if true, show property inherit sources
@@ -284,6 +276,14 @@ class AccountTotalDefault extends AccountTotal implements IAccountLimit
 class AccountTimed extends AuthEntityTimed implements IAccountLimit
 {
     use AccountCommon;
+    
+    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge(); } // not null
+    
+    /** Returns the object from which this account limit inherits its max stats age */
+    public function GetsMaxStatsAgeFrom() : ?BaseObject
+    {
+        return $this->TryGetInheritable('max_stats_age')->GetSource();
+    }
     
     /** cache of group limits that apply to this account */
     protected array $grouplims;

@@ -332,7 +332,9 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $this->AssertNotReadOnly();
         
-        if (!in_array($path, $this->createdItems))
+        $created = in_array($path, $this->createdItems);
+        
+        if (!$created)
         {
             $oldsize = $this->getSize($path);
             
@@ -345,7 +347,7 @@ abstract class Storage extends StandardObject implements Transactions
         
         $this->SubWriteBytes($path, $start, $data);
         
-        if (!in_array($path, $this->createdItems))
+        if (!$created)
         {
             if ($start + strlen($data) > $oldsize)
             {

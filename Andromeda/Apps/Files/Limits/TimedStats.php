@@ -103,7 +103,7 @@ class TimedStats extends StandardObject
             }
             catch (DatabaseException $e) // someone may have already inserted a new time period, try loading again
             {
-                if (($obj = static::TryLoad($database, $limit)) === null) throw $e;
+                if (($obj = static::TryLoadCurrent($database, $limit)) === null) throw $e;
             }
                 
         }

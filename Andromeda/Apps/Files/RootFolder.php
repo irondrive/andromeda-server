@@ -99,11 +99,8 @@ class RootFolder extends Folder
     public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $unlink = false) : void
     {
         $unlink = $filesystem->isExternal() || $unlink;
-        if ($unlink) static::$skiprefresh = true;
         
         $roots = static::LoadRootsByFSManager($database, $filesystem);
-        
-        static::$skiprefresh = false;
         
         foreach ($roots as $folder)
         {

@@ -216,7 +216,7 @@ class AJAX extends IOInterface
     public static function GetRemoteURL(string $url, Input $input, bool $params = true)
     {
         $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
-        if ($params) $get = array_merge($get, static::EncodeParams($input->GetParams()));
+        if ($params) $get = array_merge($get, $input->GetParams()->GetClientObject());
         return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
     }
 

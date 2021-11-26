@@ -666,7 +666,7 @@ class Account extends AuthEntity
     }
     
     /**
-     * Attemps to unlock crypto using the given password
+     * Attempts to unlock crypto using the given password
      * @throws CryptoNotInitializedException if crypto does not exist
      */
     public function UnlockCryptoFromPassword(string $password) : self
@@ -721,7 +721,9 @@ class Account extends AuthEntity
         $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new RecoveryKeyFailedException();
         
-        return $this->UnlockCryptoFromKeySource($obj, $key);
+        if (!$obj->CheckFullKey($key)) throw new RecoveryKeyFailedException();
+        
+        return $this->UnlockCryptoFromKeySource($obj);
     }
     
     private static array $crypto_handlers = array();

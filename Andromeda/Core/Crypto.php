@@ -157,14 +157,8 @@ class CryptoAuth
     /** Returns the length of a key for use with this class */
     public static function KeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
     
-    /** Returns the length of a nonce for use with this class */
-    public static function NonceLength() : int { return SODIUM_CRYPTO_AUTH_NONCEBYTES; }
-    
     /** Generates a crypto key for use with this class */
     public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
-    
-    /** Generates a crypto nonce for use with this class */
-    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
     
     /**
      * Creates an authentication code (MAC) from a message and key

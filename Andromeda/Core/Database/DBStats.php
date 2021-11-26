@@ -9,6 +9,8 @@ class DBStats
 {
     private int $reads = 0; 
     private int $writes = 0; 
+    private float $start_time;
+    private float $query_start;
     private float $read_time = 0; 
     private float $write_time = 0; 
     private array $queries = array();
@@ -17,7 +19,7 @@ class DBStats
     public function __construct(){ $this->start_time = hrtime(true); }
 
     /** Begins tracking a query by logging the current time */
-    public function startQuery() : void { $this->tempt = hrtime(true); }
+    public function startQuery() : void { $this->query_start = hrtime(true); }
 
     /**
      * Ends tracking a query and updates the relevant stats
@@ -27,7 +29,7 @@ class DBStats
      */
     public function endQuery(string $sql, int $type, bool $count = true) : void
     { 
-        $el = (hrtime(true)-$this->tempt)/1e9;
+        $el = (hrtime(true)-$this->query_start)/1e9;
         
         $isRead = $type & Database::QUERY_READ;
         $isWrite = $type & Database::QUERY_WRITE;

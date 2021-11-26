@@ -98,7 +98,7 @@ class FileUtilsTest extends \PHPUnit\Framework\TestCase
         $file = $this->createMock(File::class);
         
         $file->method('WriteBytes')->will($this->returnCallback(
-            function(int $offset2, string $wdata2)use(&$fdata0,$wdata,$offset,$file)
+            function(int $offset2, string $wdata2)use(&$fdata0,$file)
             { $fdata0 = substr_replace($fdata0, $wdata2, $offset2, strlen($wdata2)); return $file; }
         ));
         

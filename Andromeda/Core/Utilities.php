@@ -220,6 +220,7 @@ abstract class Utilities
 class StaticWrapper
 {
     private $overrides = array();
+    private string $class;
     
     public function __construct(string $class){ $this->class = $class; }
     
