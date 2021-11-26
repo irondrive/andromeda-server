@@ -21,6 +21,9 @@ class InvalidSharePasswordException extends Exceptions\ClientDeniedException { p
  */
 class ItemAccess
 {
+    private Item $item;
+    private ?Share $share;
+    
     private function __construct(Item $item, ?Share $share){ 
         $this->item = $item; $this->share = $share; }
     
@@ -118,7 +121,7 @@ class ItemAccess
      */
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, ?Authenticator $authenticator, ?Item $item = null) : ?self
     {
-        try { static::Authenticate($database, $input, $authenticator, $item); }
+        try { return static::Authenticate($database, $input, $authenticator, $item); }
         catch (Exceptions\ClientException $e) { return null; }
     }
 }

@@ -198,7 +198,7 @@ class FilesApp extends InstalledApp
             case 'setconfig': return $this->SetConfig($input, $authenticator);
             
             case 'upload':     return $this->UploadFile($input, $authenticator, $accesslog);  
-            case 'download':   return $this->DownloadFile($input, $authenticator, $accesslog);
+            case 'download':   $this->DownloadFile($input, $authenticator, $accesslog); return;
             case 'ftruncate':  return $this->TruncateFile($input, $authenticator, $accesslog);
             case 'writefile':  return $this->WriteToFile($input, $authenticator, $accesslog);
             case 'createfolder':  return $this->CreateFolder($input, $authenticator, $accesslog);
@@ -218,8 +218,8 @@ class FilesApp extends InstalledApp
             case 'editfilemeta':   return $this->EditFileMeta($input, $authenticator, $accesslog);
             case 'editfoldermeta': return $this->EditFolderMeta($input, $authenticator, $accesslog);
            
-            case 'deletefile':   return $this->DeleteFile($input, $authenticator, $accesslog);
-            case 'deletefolder': return $this->DeleteFolder($input, $authenticator, $accesslog);
+            case 'deletefile':   $this->DeleteFile($input, $authenticator, $accesslog); return;
+            case 'deletefolder': $this->DeleteFolder($input, $authenticator, $accesslog); return;
             case 'renamefile':   return $this->RenameFile($input, $authenticator, $accesslog);
             case 'renamefolder': return $this->RenameFolder($input, $authenticator, $accesslog);
             case 'movefile':     return $this->MoveFile($input, $authenticator, $accesslog);
@@ -229,16 +229,16 @@ class FilesApp extends InstalledApp
             case 'likefolder':    return $this->LikeFolder($input, $authenticator, $accesslog);
             case 'tagfile':       return $this->TagFile($input, $authenticator, $accesslog);
             case 'tagfolder':     return $this->TagFolder($input, $authenticator, $accesslog);
-            case 'deletetag':     return $this->DeleteTag($input, $authenticator, $accesslog);
+            case 'deletetag':     $this->DeleteTag($input, $authenticator, $accesslog); return;
             case 'commentfile':   return $this->CommentFile($input, $authenticator, $accesslog);
             case 'commentfolder': return $this->CommentFolder($input, $authenticator, $accesslog);
             case 'editcomment':   return $this->EditComment($input, $authenticator);
-            case 'deletecomment': return $this->DeleteComment($input, $authenticator, $accesslog);
+            case 'deletecomment': $this->DeleteComment($input, $authenticator, $accesslog); return;
             
             case 'sharefile':    return $this->ShareFile($input, $authenticator, $accesslog);
             case 'sharefolder':  return $this->ShareFolder($input, $authenticator, $accesslog);
             case 'editshare':    return $this->EditShare($input, $authenticator, $accesslog);
-            case 'deleteshare':  return $this->DeleteShare($input, $authenticator, $accesslog);
+            case 'deleteshare':  $this->DeleteShare($input, $authenticator, $accesslog); return;
             case 'shareinfo':    return $this->ShareInfo($input, $authenticator, $accesslog);
             case 'listshares':   return $this->ListShares($input, $authenticator);
             case 'listadopted':  return $this->ListAdopted($input, $authenticator);
@@ -246,7 +246,7 @@ class FilesApp extends InstalledApp
             case 'getfilesystem':  return $this->GetFilesystem($input, $authenticator, $accesslog);
             case 'getfilesystems': return $this->GetFilesystems($input, $authenticator);
             case 'createfilesystem': return $this->CreateFilesystem($input, $authenticator, $accesslog);
-            case 'deletefilesystem': return $this->DeleteFilesystem($input, $authenticator, $accesslog);
+            case 'deletefilesystem': $this->DeleteFilesystem($input, $authenticator, $accesslog); return;
             case 'editfilesystem':   return $this->EditFilesystem($input, $authenticator);
             
             case 'getlimits':      return $this->GetLimits($input, $authenticator);
@@ -255,8 +255,8 @@ class FilesApp extends InstalledApp
             case 'gettimedstatsat':  return $this->GetTimedStatsAt($input, $authenticator);
             case 'configlimits':      return $this->ConfigLimits($input, $authenticator);
             case 'configtimedlimits': return $this->ConfigTimedLimits($input, $authenticator);
-            case 'purgelimits':      return $this->PurgeLimits($input, $authenticator);
-            case 'purgetimedlimits': return $this->PurgeTimedLimits($input, $authenticator);
+            case 'purgelimits':      $this->PurgeLimits($input, $authenticator); return;
+            case 'purgetimedlimits': $this->PurgeTimedLimits($input, $authenticator); return;
             
             default: throw new UnknownActionException();
         }
@@ -491,7 +491,7 @@ class FilesApp extends InstalledApp
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
-            function() use($length,$fstart,$debugdl){ return $debugdl ? null : $length; },
+            function() use($debugdl,$length){ return $debugdl ? null : $length; },
             function(Output $output) use($file,$fstart,$flast,$debugdl)
         {            
             set_time_limit(0); ignore_user_abort(true);
@@ -955,12 +955,12 @@ class FilesApp extends InstalledApp
         $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
         $overwrite = $input->GetOptParam('overwrite',SafeParam::TYPE_BOOL) ?? false;
         
+        $paccess = $this->AuthenticateItemObjAccess($input, $authenticator, $accesslog, $item->GetParent(), true);
+        
+        $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
+        
         if ($copy)
         {
-            $paccess = $this->AuthenticateItemObjAccess($input, $authenticator, $accesslog, $item->GetParent(), true);
-            
-            $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
-            
             if (!$authenticator && !$parent->GetAllowPublicUpload())
                 throw new AuthenticationFailedException();
             
@@ -1016,7 +1016,7 @@ class FilesApp extends InstalledApp
     {
         $copy = $input->GetOptParam('copy',SafeParam::TYPE_BOOL) ?? false;
         
-        $item = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
+        $itemid = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         
         $parentid = $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         $paccess = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $parentid, true);
@@ -1030,18 +1030,26 @@ class FilesApp extends InstalledApp
         $overwrite = $input->GetOptParam('overwrite',SafeParam::TYPE_BOOL) ?? false;        
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
 
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
-        $itemobj = $access->GetItem(); $share = $access->GetShare();
+        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $itemid);
+        $item = $access->GetItem(); $share = $access->GetShare();
+
+        if ($copy)
+        {
+            $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
+            
+            return $item->CopyToParent($owner, $parent, $overwrite);
+        }
+        else 
+        {
+            if (!$authenticator && !$item->GetAllowPublicModify())
+                throw new AuthenticationFailedException();
+            
+            if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
+            
+            $owner = $item->GetOwner(); $retobj = $item->SetParent($parent, $overwrite);
+        }
         
-        if (!$copy && !$authenticator && !$itemobj->GetAllowPublicModify())
-            throw new AuthenticationFailedException();
-        
-        if (!$copy && $share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();            
-        
-        if ($copy) $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
-        
-        return ($copy ? $itemobj->CopyToParent($owner, $parent, $overwrite)
-                      : $itemobj->SetParent($parent, $overwrite))->GetClientObject(($owner === $account));
+        return $retobj->GetClientObject(($owner === $account));
     }
     
     /** 

@@ -40,7 +40,7 @@ abstract class BaseObject
      * 
      * This template will be copied into the object when it is constructed.
      * If a field maps to null, a basic Scalar fieldtype will be used.
-     * @return array<string, FieldTypes\Scalar> array of FieldTypes indexed by field names
+     * @return array<string, ?FieldTypes\Scalar> array of FieldTypes indexed by field names
      */
     public abstract static function GetFieldTemplate() : array;
     

@@ -23,6 +23,9 @@ use Andromeda\Apps\Files\Storage\FileReadFailedException;
  */
 class NativeCrypt extends Native
 {
+    protected string $masterkey;
+    protected int $chunksize;
+    
     public function __construct(FSManager $filesystem, string $masterkey, int $chunksize)
     {
         $this->masterkey = $masterkey;

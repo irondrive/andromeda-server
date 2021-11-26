@@ -209,12 +209,10 @@ class CLI extends IOInterface
         try { $lines = array_filter(explode("\n", file_get_contents($file))); }
         catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
         
-        global $argv; return array_map(function($line)use($argv)
+        return array_map(function($line)
         {
-            try { $args = \Clue\Arguments\split($line); }
+            try { return static::GetInput(\Clue\Arguments\split($line)); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
-            
-            return static::GetInput($args);
         }, $lines);
     }
     

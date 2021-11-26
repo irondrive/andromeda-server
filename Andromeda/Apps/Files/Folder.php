@@ -323,7 +323,7 @@ abstract class Folder extends Item
         if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder)use($owner){ 
             return $folder->TryGetClientObject($owner); }, $subfolders));
         
-        if ($folders) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
+        if ($files) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
             return $file->TryGetClientObject($owner); }, $subfiles));
         
         $data['counters'] = Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },

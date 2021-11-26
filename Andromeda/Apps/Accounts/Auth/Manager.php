@@ -101,7 +101,7 @@ class Manager extends BaseObject
             $this->SetScalar('enabled', self::ENABLED_TYPES[$param]);
         }
         
-        if ($input->HasParam('description')) $this->SetScalar('description',$this->GetNullParam('description',SafeParam::TYPE_TEXT));
+        if ($input->HasParam('description')) $this->SetScalar('description',$input->GetNullParam('description',SafeParam::TYPE_TEXT));
         
         if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
         

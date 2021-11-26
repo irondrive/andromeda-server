@@ -132,7 +132,7 @@ final class Main extends Singleton
     {
         if ($this->config === null)
         {
-            $this->API->GetDatabase(); // assert db exists
+            $this->GetDatabase(); // assert db exists
             
             $class = get_class($this->dbException);
             throw $class::Copy($this->dbException); // new trace
@@ -300,6 +300,8 @@ final class Main extends Singleton
         return Output::ParseArray($data)->GetAppdata();
     }
     
+    private bool $rolledback = false;
+    
     /**
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
@@ -308,7 +310,7 @@ final class Main extends Singleton
      */
     public function rollback(?\Throwable $e = null) : void
     {
-        $this->rollback = true;
+        $this->rolledback = true;
         
         foreach ($this->apps as $app) try { $app->rollback(); }
         catch (\Throwable $e) { $this->error_manager->LogException($e); }
@@ -343,7 +345,7 @@ final class Main extends Singleton
      */
     public function commit() : void
     {
-        if (isset($this->rollback)) throw new CommitAfterRollbackException();
+        if ($this->rolledback) throw new CommitAfterRollbackException();
         
         $tl = ini_get('max_execution_time'); set_time_limit(0);
         $ua = ignore_user_abort(); ignore_user_abort(true);

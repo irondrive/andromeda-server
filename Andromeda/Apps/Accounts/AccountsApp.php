@@ -206,32 +206,32 @@ class AccountsApp extends InstalledApp
             case 'createauthsource':    return $this->CreateAuthSource($input, $authenticator, $accesslog);
             case 'testauthsource':      return $this->TestAuthSource($input, $authenticator);
             case 'editauthsource':      return $this->EditAuthSource($input, $authenticator);
-            case 'deleteauthsource':    return $this->DeleteAuthSource($input, $authenticator, $accesslog);
+            case 'deleteauthsource':    $this->DeleteAuthSource($input, $authenticator, $accesslog); return;
             
             case 'getaccount':          return $this->GetAccount($input, $authenticator);
-            case 'setfullname':         return $this->SetFullName($input, $authenticator);
-            case 'changepassword':      return $this->ChangePassword($input, $authenticator);
+            case 'setfullname':         $this->SetFullName($input, $authenticator); return;
+            case 'changepassword':      $this->ChangePassword($input, $authenticator); return;
             
-            case 'emailrecovery':       return $this->EmailRecovery($input);
+            case 'emailrecovery':       $this->EmailRecovery($input); return;
             
             case 'createaccount':       return $this->CreateAccount($input, $authenticator, $accesslog);
             case 'createsession':       return $this->CreateSession($input, $authenticator, $accesslog);
             case 'enablecrypto':        return $this->EnableCrypto($input, $authenticator);
-            case 'disablecrypto':       return $this->DisableCrypto($input, $authenticator);
+            case 'disablecrypto':       $this->DisableCrypto($input, $authenticator); return;
             
             case 'createrecoverykeys':  return $this->CreateRecoveryKeys($input, $authenticator);
             case 'createtwofactor':     return $this->CreateTwoFactor($input, $authenticator, $accesslog);
-            case 'verifytwofactor':     return $this->VerifyTwoFactor($input, $authenticator);
+            case 'verifytwofactor':     $this->VerifyTwoFactor($input, $authenticator); return;
             case 'createcontact':       return $this->CreateContact($input, $authenticator, $accesslog);
-            case 'verifycontact':       return $this->VerifyContact($input);
+            case 'verifycontact':       $this->VerifyContact($input); return;
             
-            case 'deleteaccount':       return $this->DeleteAccount($input, $authenticator, $accesslog);
-            case 'deletesession':       return $this->DeleteSession($input, $authenticator, $accesslog);
-            case 'deleteclient':        return $this->DeleteClient($input, $authenticator, $accesslog);
-            case 'deleteallauth':       return $this->DeleteAllAuth($input, $authenticator);
-            case 'deletetwofactor':     return $this->DeleteTwoFactor($input, $authenticator, $accesslog);
+            case 'deleteaccount':       $this->DeleteAccount($input, $authenticator, $accesslog); return;
+            case 'deletesession':       $this->DeleteSession($input, $authenticator, $accesslog); return;
+            case 'deleteclient':        $this->DeleteClient($input, $authenticator, $accesslog); return;
+            case 'deleteallauth':       $this->DeleteAllAuth($input, $authenticator); return;
+            case 'deletetwofactor':     $this->DeleteTwoFactor($input, $authenticator, $accesslog); return;
             
-            case 'deletecontact':       return $this->DeleteContact($input, $authenticator, $accesslog); 
+            case 'deletecontact':       $this->DeleteContact($input, $authenticator, $accesslog); return;
             case 'editcontact':         return $this->EditContact($input, $authenticator);
             
             case 'searchaccounts':      return $this->SearchAccounts($input, $authenticator);
@@ -241,7 +241,7 @@ class AccountsApp extends InstalledApp
             case 'creategroup':         return $this->CreateGroup($input, $authenticator, $accesslog);
             case 'editgroup':           return $this->EditGroup($input, $authenticator); 
             case 'getgroup':            return $this->GetGroup($input, $authenticator);
-            case 'deletegroup':         return $this->DeleteGroup($input, $authenticator, $accesslog);
+            case 'deletegroup':         $this->DeleteGroup($input, $authenticator, $accesslog); return;
             case 'addgroupmember':      return $this->AddGroupMember($input, $authenticator);
             case 'removegroupmember':   return $this->RemoveGroupmember($input, $authenticator);
             case 'getmembership':       return $this->GetMembership($input, $authenticator);
@@ -249,10 +249,10 @@ class AccountsApp extends InstalledApp
             case 'setaccountprops':     return $this->SetAccountProps($input, $authenticator);
             case 'setgroupprops':       return $this->SetGroupProps($input, $authenticator);
             
-            case 'sendmessage':         return $this->SendMessage($input, $authenticator);
+            case 'sendmessage':         $this->SendMessage($input, $authenticator); return;
             
             case 'addwhitelist':        return $this->AddWhitelist($input, $authenticator);
-            case 'removewhitelist':     return $this->RemoveWhitelist($input, $authenticator);
+            case 'removewhitelist':     $this->RemoveWhitelist($input, $authenticator); return;
             case 'getwhitelist':        return $this->GetWhitelist($input, $authenticator);
             
             default: throw new UnknownActionException();
@@ -596,7 +596,6 @@ class AccountsApp extends InstalledApp
         {
             $cinfo = Contact::FetchInfoFromInput($input);
             $account = Account::TryLoadByContactInfo($this->database, $cinfo);
-            
             if ($account === null) throw new AuthenticationFailedException();
         }
         
@@ -1299,7 +1298,8 @@ class AccountsApp extends InstalledApp
         
         if ($input->HasParam('test_username'))
         {
-            $this->TestAuthSource($input->AddParam('manager',$manager->ID()));
+            $input->AddParam('manager',$manager->ID());
+            $this->TestAuthSource($input, $authenticator);
         }
         
         if ($accesslog) $accesslog->LogDetails('manager',$manager->ID()); 
@@ -1351,7 +1351,8 @@ class AccountsApp extends InstalledApp
         $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
-        if ($input->HasParam('test_username')) $this->TestAuthSource($input);
+        if ($input->HasParam('test_username')) 
+            $this->TestAuthSource($input, $authenticator);
         
         return $manager->Edit($input)->GetClientObject(true);
     }

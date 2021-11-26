@@ -32,6 +32,9 @@ class SafeParamInvalidEnumException extends SafeParamInvalidException
     }
 }
 
+/** Exception indicating the int-type setup code is invalid */
+class IntTypeErrorException extends Exceptions\ServerException { public $message = "UNKNOWN_INT_TYPE"; }
+
 /**
  * Class representing a client input parameter
  * 
@@ -218,6 +221,7 @@ class SafeParam
                     case self::TYPE_UINT32: $bits = 32; $signed = false; break;
                     case self::TYPE_UINT16: $bits = 16; $signed = false; break;
                     case self::TYPE_UINT8:  $bits = 8;  $signed = false; break;
+                    default: throw new IntTypeErrorException();
                 }
                 
                 if ($signed) { $max = pow(2,$bits-1); $min = -$max; }

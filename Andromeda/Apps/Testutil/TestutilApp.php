@@ -6,6 +6,7 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
@@ -35,6 +36,8 @@ class TestUtilApp extends BaseApp
         return $retval;
     }
     
+    private ObjectDatabase $database;
+    
     public function __construct(Main $api)
     {
         parent::__construct($api);
@@ -49,10 +52,10 @@ class TestUtilApp extends BaseApp
             case 'random':  return $this->Random($input);  
             case 'getinput': return $this->GetInput($input);
             
-            case 'exception': return $this->ServerException();
+            case 'exception': $this->ServerException(); return;
             
             case 'check-dryrun': return $this->CheckDryRun();
-            case 'binoutput': return $this->BinaryOutput($input);
+            case 'binoutput': $this->BinaryOutput($input); return;
             
             default: throw new UnknownActionException();
         }

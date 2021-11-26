@@ -38,9 +38,9 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
     {        
         $folder = $this->getMockRoot($rpath);
         
-        $dbfiles = array_map(function($name)use($folder,$dbfiles){ 
+        $dbfiles = array_map(function($name)use($folder){ 
             return $this->getMockItem(File::class, $name, $folder); }, $dbfiles);
-        $dbfolders = array_map(function($name)use($folder,$dbfolders){ 
+        $dbfolders = array_map(function($name)use($folder){ 
             return $this->getMockItem(SubFolder::class, $name, $folder); }, $dbfolders);
         
         foreach ($dbfiles as $fname=>$dbfile)
@@ -87,7 +87,7 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
         
         $fileSw = (new StaticWrapper(File::class))->_override('NotifyCreate',
-            function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
+            function($database, Folder $parent, $owner, string $name)use(&$dbfiles)
         {
             $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles),true));
 
@@ -95,7 +95,7 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         });
         
         $folderSw = (new StaticWrapper(SubFolder::class))->_override('NotifyCreate',
-            function($database, Folder $parent, $owner, string $name)use(&$dbfiles,&$dbfolders)
+            function($database, Folder $parent, $owner, string $name)use(&$dbfolders)
         {
             $this->assertFalse(in_array($name, array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders),true));
             
@@ -132,7 +132,7 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $this->testFolderSync($root, array('myfile'), array('myfolder'), array('myfile'), array('myfolder'));
         
         // extraneous dbitems
-        $this->testFolderSync($root, array(), array(), array(), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
+        $this->testFolderSync($root, array(), array(), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
         $this->testFolderSync($root, array('myfile'), array(), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
         $this->testFolderSync($root, array(), array('myfolder'), array('myfile1','myfile2'), array('myfolder1','myfolder2'));
         $this->testFolderSync($root, array('myfile'), array('myfolder'), array('myfile1','myfile2'), array('myfolder1','myfolder2'));

@@ -5,7 +5,10 @@ require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\
 
 require_once(ROOT."/Apps/Accounts/KeySource.php");
 
-class RecoveryKeyBase extends KeySource { use FullAuthKey; }
+abstract class RecoveryKeyBase extends KeySource 
+{ 
+    use FullAuthKey; protected static function GetFullKeyPrefix() : string { return "rk"; } 
+}
 
 /**
  * A recovery key allows account recovery by bypassing a password
@@ -42,8 +45,6 @@ class RecoveryKey extends RecoveryKeyBase
     {
         return parent::CreateKeySource($database, $account);
     }
-    
-    protected static function GetFullKeyPrefix() : string { return "rk"; }
 
     public function CheckFullKey(string $code) : bool
     {

@@ -154,10 +154,10 @@ class CoreApp extends InstalledApp
             case 'dbconf':   return $this->ConfigDB($input, $isAdmin);
             case 'listapps': return $this->ListApps($input, $isAdmin);
             
-            case 'phpinfo':    return $this->PHPInfo($input, $isAdmin);
+            case 'phpinfo':    $this->PHPInfo($input, $isAdmin); return;
             case 'serverinfo': return $this->ServerInfo($input, $isAdmin);
             
-            case 'testmail':   return $this->TestMail($input, $isAdmin, $authenticator, $accesslog);
+            case 'testmail':   $this->TestMail($input, $isAdmin, $authenticator, $accesslog); return;
             
             case 'enableapp':  return $this->EnableApp($input, $isAdmin, $accesslog);
             case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
@@ -168,7 +168,7 @@ class CoreApp extends InstalledApp
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
             case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $accesslog);
-            case 'deletemailer': return $this->DeleteMailer($input, $isAdmin, $accesslog);
+            case 'deletemailer': $this->DeleteMailer($input, $isAdmin, $accesslog); return;
             
             case 'geterrors':     return $this->GetErrors($input, $isAdmin);
             case 'counterrors':   return $this->CountErrors($input, $isAdmin);

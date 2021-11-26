@@ -19,6 +19,9 @@ require_once(ROOT."/Apps/Files/Share.php");
 /** Exception indicating that only one file/folder access can logged */
 class ItemLogFullException extends Exceptions\ServerException { public $message = "ITEM_LOG_SLOT_FULL"; }
 
+/** Exception indicating that an unknown item type was given */
+class BadItemTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_ITEM_TYPE"; }
+
 /** Access log for the files app */
 class AccessLog extends AuthAccessLog
 {
@@ -48,13 +51,13 @@ class AccessLog extends AuthAccessLog
             
             return $this->SetObject('file',$item)->SetObject('file_share',$share);
         }
-        
-        if ($item instanceof Folder) 
+        else if ($item instanceof Folder) 
         {
             if ($this->HasObject('folder')) throw new ItemLogFullException();
             
             return $this->SetObject('folder',$item)->SetObject('folder_share',$share);
         }
+        else throw new BadItemTypeException();
     }
 
     /**

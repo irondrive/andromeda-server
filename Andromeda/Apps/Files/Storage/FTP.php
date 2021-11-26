@@ -184,7 +184,7 @@ class FTP extends StandardFWrapper
     {
         $this->ClosePath($dest);
         
-        if (!ftp_put($this->ftp, $this->GetPath($dest), $src))
+        if (!ftp_put($this->ftp, $this->GetPath($dest), $src, FTP_BINARY))
             throw new FileCreateFailedException();
         
         return $this;

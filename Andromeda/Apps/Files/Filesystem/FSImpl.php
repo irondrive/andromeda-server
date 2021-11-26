@@ -20,7 +20,9 @@ require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
  * @see FSManager
  */
 abstract class FSImpl
-{    
+{
+    protected FSManager $fsmanager;
+    
     public function __construct(FSManager $fsmanager)
     {
         $this->fsmanager = $fsmanager;

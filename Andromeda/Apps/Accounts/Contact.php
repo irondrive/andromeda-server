@@ -30,7 +30,10 @@ class ContactInfo
         $this->type = $type; $this->info = $info; } 
 }
 
-class ContactBase extends AuthObject { use FullAuthKey; }
+abstract class ContactBase extends AuthObject 
+{ 
+    use FullAuthKey; protected static function GetFullKeyPrefix() : string { return "ci"; }
+}
 
 /** An object describing a contact method for a user account */
 class Contact extends ContactBase
@@ -48,8 +51,6 @@ class Contact extends ContactBase
     }
     
     protected const KEY_LENGTH = 8;
-    
-    protected static function GetFullKeyPrefix() : string { return "ci"; }
     
     public function CheckFullKey(string $code) : bool
     {

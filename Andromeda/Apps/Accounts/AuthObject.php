@@ -61,7 +61,19 @@ abstract class AuthObject extends StandardObject
     {
         $hash = $this->GetAuthKey(true);
         $correct = password_verify($key, $hash);
-        if ($correct) $this->InformUnlockedKey($key);
+        
+        if ($correct)
+        {
+            $this->haveKey = true; $algo = Utilities::GetHashAlgo();
+            
+            if (password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS))
+            {
+                $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
+            }
+            
+            $this->SetScalar('authkey', $key, true);
+        }
+        
         return $correct;
     }
     
@@ -100,30 +112,13 @@ abstract class AuthObject extends StandardObject
         
         return $this->SetScalar('authkey', $key, true);
     }
-    
-    /**
-     * Sets the unlocked key in memory to the given value, possibly rehashing if required
-     * @param string $key unlocked key
-     * @return $this
-     */
-    private function InformUnlockedKey(string $key) : self
-    {
-        $this->haveKey = true; $algo = Utilities::GetHashAlgo();
-        
-        if (password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS))
-        {
-            $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
-        }
-        
-        return $this->SetScalar('authkey', $key, true);
-    }
 }
 
 /** A trait for getting a serialized user key with both the ID and auth key */
 trait FullAuthKey
 {    
     /**
-     * Tries to load an AuthObject by the full serialized key
+     * Tries to load an AuthObject by the full serialized key - DOES NOT CheckFullKey()!
      * @param ObjectDatabase $database database reference
      * @param string $code the full user/serialized code
      * @param Account $account the owner of the authObject or null for any
