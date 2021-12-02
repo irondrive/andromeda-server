@@ -63,8 +63,8 @@ class Session extends KeySource
     
     /** 
      * Prunes old sessions from the DB that have expired 
-     * @param database database reference
-     * @param account account to check sessions for
+     * @param ObjectDatabase $database reference
+     * @param Account $account to check sessions for
      */
     public static function PruneOldFor(ObjectDatabase $database, Account $account) : void
     {

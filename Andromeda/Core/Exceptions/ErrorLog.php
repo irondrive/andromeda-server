@@ -121,7 +121,7 @@ class ErrorLog extends BaseObject
             {
                 $val = method_exists($val,'__toString') ? (string)$val : get_class($val);
             }
-            else if (is_array($val)) static::arrayStrings($val);
+            else if (is_array($val)) self::arrayStrings($val);
             
             try { Utilities::JSONEncode(array($val)); }
             catch (JSONEncodingException $e) { $val = base64_encode($val); }
@@ -187,12 +187,13 @@ class ErrorLog extends BaseObject
                     if (!array_key_exists('args', $data['trace_full'][$key])) continue;
                     if (!$sensitive) { unset($data['trace_full'][$key]['args']); continue; }
                     
-                    static::arrayStrings($data['trace_full'][$key]['args']);
+                    self::arrayStrings($data['trace_full'][$key]['args']);
                 }
             }
             
             return $data;
         } 
-        catch (\Throwable $e2) { return array('message'=>'ErrorLog failed: '.$e2->getMessage().' in '.$e2->getFile()."(".$e2->getLine().")"); }
+        catch (\Throwable $e2) { return array('message'=>'ErrorLog failed: '.
+            $e2->getMessage().' in '.$e2->getFile()."(".$e2->getLine().")"); }
     }   
 }

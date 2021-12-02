@@ -122,7 +122,7 @@ abstract class BaseAppLog extends BaseLog
     {
         $retval = $this->GetClientObject($expand);
         
-        $retval['action'] = $this->GetActionLog()->GetReqClientObject($expand);
+        $retval['action'] = $this->GetActionLog()->GetReqClientObject();
         
         return $retval;
     }

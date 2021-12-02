@@ -208,7 +208,7 @@ class FilesApp extends InstalledApp
             case 'getfilecomments':   return $this->GetFileComments($input, $authenticator, $accesslog);
             case 'getfoldercomments': return $this->GetFolderComments($input, $authenticator, $accesslog);
             
-            case 'fileinfo':      return $this->GetFileInfo($input, $authenticator, $accesslog);
+            case 'filemeta':      return $this->GetFileMeta($input, $authenticator, $accesslog);
             case 'getfolder':     return $this->GetFolder($input, $authenticator, $accesslog);
             case 'getitembypath': return $this->GetItemByPath($input, $authenticator, $accesslog);
             
@@ -301,12 +301,12 @@ class FilesApp extends InstalledApp
         {
             $item = $class::TryLoadByID($this->database, $id);
             
-            if ($item === null) static::UnknownItemException($class);
+            if ($item === null) self::UnknownItemException($class);
         }
         
         $access = ItemAccess::Authenticate($this->database, $input, $auth, $item); 
 
-        if (!is_a($access->GetItem(), $class)) static::UnknownItemException($class);
+        if (!is_a($access->GetItem(), $class)) self::UnknownItemException($class);
         
         if ($accesslog) $accesslog->LogAccess($access->GetItem(), $access->GetShare(), $isParent); 
         
@@ -320,7 +320,7 @@ class FilesApp extends InstalledApp
         {
             $item = $class::TryLoadByID($this->database, $id);
             
-            if ($item === null) static::UnknownItemException($class);
+            if ($item === null) self::UnknownItemException($class);
         }
         
         $access = ItemAccess::TryAuthenticate($this->database, $input, $auth, $item); 
@@ -600,7 +600,7 @@ class FilesApp extends InstalledApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function GetFileInfo(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
+    protected function GetFileMeta(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
     {
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
         $file = $access->GetItem(); $share = $access->GetShare();
@@ -895,7 +895,7 @@ class FilesApp extends InstalledApp
     {        
         $item = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
 
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
         $itemobj = $access->GetItem(); $share = $access->GetShare();
         
         if (!$authenticator && !$itemobj->GetAllowPublicModify())
@@ -935,7 +935,6 @@ class FilesApp extends InstalledApp
      * Renames or copies an item
      * @param string $class item class
      * @param string $key input param for a single item
-     * @param string $keys input param for an array of items
      * @throws ItemAccessDeniedException if access via share and share upload/modify is not allowed
      * @throws AuthenticationFailedException if public access and public upload/modify is not allowed
      */
@@ -944,7 +943,7 @@ class FilesApp extends InstalledApp
         $copy = $input->GetOptParam('copy',SafeParam::TYPE_BOOL) ?? false;
 
         $id = $input->GetParam($key, SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
         
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
@@ -1030,7 +1029,7 @@ class FilesApp extends InstalledApp
         $overwrite = $input->GetOptParam('overwrite',SafeParam::TYPE_BOOL) ?? false;        
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
 
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $itemid);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $itemid);
         $item = $access->GetItem(); $share = $access->GetShare();
 
         if ($copy)
@@ -1085,7 +1084,7 @@ class FilesApp extends InstalledApp
         $account = $authenticator->GetAccount();
         
         $id = $input->GetParam($key, SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
         
         if ($share !== null && !$share->CanSocial()) throw new ItemAccessDeniedException();
@@ -1134,7 +1133,7 @@ class FilesApp extends InstalledApp
         
         $item = $input->GetParam($key,SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
 
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
         $itemobj = $access->GetItem(); $share = $access->GetShare();
         
         if ($share !== null && !$share->CanModify()) throw new ItemAccessDeniedException();
@@ -1205,7 +1204,7 @@ class FilesApp extends InstalledApp
         $account = $authenticator->GetAccount();
         
         $id = $input->GetParam($key, SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $id);
         $item = $access->GetItem(); $share = $access->GetShare();
         
         if ($share !== null && !$share->CanSocial()) throw new ItemAccessDeniedException();
@@ -1385,7 +1384,7 @@ class FilesApp extends InstalledApp
         if (count(array_filter(array($destacct,$destgroup,$everyone,$islink))) !== 1)
             throw new InvalidShareTargetException(); // only one dest allowed
 
-        $access = static::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
+        $access = self::AuthenticateItemAccess($input, $authenticator, $accesslog, $class, $item);
         
         $oldshare = $access->GetShare(); $item = $access->GetItem();
         if ($oldshare !== null && !$oldshare->CanReshare())
@@ -1765,7 +1764,7 @@ class FilesApp extends InstalledApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL Limit | [id:Limit]
+     * @return array|NULL Limit | [id:Limit] client object
      * @see Limits\Total::GetClientObject()
      */
     protected function GetLimits(Input $input, ?Authenticator $authenticator) : ?array
@@ -1796,7 +1795,7 @@ class FilesApp extends InstalledApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL Limit | [id:Limit]
+     * @return array [id:Limit] client objects
      * @see Limits\Timed::GetClientObject()
      */
     protected function GetTimedLimits(Input $input, ?Authenticator $authenticator) : array

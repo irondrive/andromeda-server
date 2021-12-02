@@ -149,9 +149,7 @@ final class Main extends Singleton
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
-    private bool $requireUpgrade = false;
-    
-    private $dbException = null; // reason DB is not configured
+    private Exceptions\BaseException $dbException; // reason DB is not configured
 
     /**
      * Initializes the Main API
@@ -175,7 +173,10 @@ final class Main extends Singleton
         
         $interface->Initialize();
 
-        $apps = file_exists(ROOT."/Apps/Core/CoreApp.php") ? array('core') : array();
+        $apps = array();
+        
+        if (file_exists(ROOT."/Apps/Core/CoreApp.php"))
+            $apps[] = 'core'; // always enabled if present
         
         try 
         {
@@ -346,10 +347,7 @@ final class Main extends Singleton
     public function commit() : void
     {
         if ($this->rolledback) throw new CommitAfterRollbackException();
-        
-        $tl = ini_get('max_execution_time'); set_time_limit(0);
-        $ua = ignore_user_abort(); ignore_user_abort(true);
-        
+
         if ($this->database)
         {          
             if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
@@ -368,8 +366,6 @@ final class Main extends Singleton
         }
         else foreach ($this->apps as $app) $app->commit();
         
-        set_time_limit($tl); ignore_user_abort($ua);
-        
         $this->dirty = false;
     }
     
@@ -379,11 +375,16 @@ final class Main extends Singleton
      */
     private function innerCommit(bool $apps) : void
     {
+        $tl = ini_get('max_execution_time'); set_time_limit(0);
+        $ua = ignore_user_abort(); ignore_user_abort(true);
+        
         $rollback = $this->database->isReadOnly() || ($this->config && $this->config->isDryRun());
         
         if ($apps) foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
         
         if ($rollback) $this->database->rollback(); else $this->database->commit();
+        
+        set_time_limit($tl); ignore_user_abort($ua);
     }
 
     /** if false, requests are not allowed (always true for privileged interfaces) */
@@ -422,6 +423,7 @@ final class Main extends Singleton
         
         if  ($this->GetDebugLevel() < Config::ERRLOG_DETAILS &&
              !$this->interface->isPrivileged()) return;
+        // TODO should check debug over HTTP config?
         
         if ($this->database->inTransaction())
             throw new FinalizeTransactionException();
@@ -439,8 +441,6 @@ final class Main extends Singleton
         }
         catch (\Throwable $e)
         {
-            $this->database->rollback();
-
             if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) throw $e;
             else $this->error_manager->LogException($e, false);
         }

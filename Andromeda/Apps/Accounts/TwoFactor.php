@@ -76,7 +76,7 @@ class TwoFactor extends StandardObject
     
     /**
      * Gets an array of used tokens
-     * @return array<string, UsedTokens> used tokens indexed by ID
+     * @return array<string, UsedToken> used tokens indexed by ID
      */
     private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
 

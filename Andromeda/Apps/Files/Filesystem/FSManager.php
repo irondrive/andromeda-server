@@ -115,7 +115,7 @@ class FSManager extends StandardObject
     
     /** 
      * Returns the underlying storage 
-     * @param bool activate if true, activate
+     * @param bool $activate if true, activate
      */
     public function GetStorage(bool $activate = true) : Storage 
     { 

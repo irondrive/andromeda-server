@@ -64,8 +64,8 @@ class Client extends AuthObject
     
     /**
      * Prunes old clients from the DB that have expired
-     * @param database database reference
-     * @param account account to check clients for
+     * @param ObjectDatabase $database reference
+     * @param Account $account to check clients for
      */
     public static function PruneOldFor(ObjectDatabase $database, Account $account) : void
     {

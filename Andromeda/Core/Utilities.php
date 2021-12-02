@@ -16,6 +16,7 @@ abstract class Singleton
     /**
      * Get the instance of the singleton
      * @throws MissingSingletonException if not yet constructed
+     * @return static
      */
     public static function GetInstance() : self
     {
@@ -97,14 +98,14 @@ abstract class Utilities
     private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; // 36 (5 bits/char)
     
     /** Returns the number of possible characters for a digit in Random */
-    public static function RandomRange() : int { return strlen(static::$chars); }
+    public static function RandomRange() : int { return strlen(self::$chars); }
     
     /** Returns a random string with the given length */
     public static function Random(int $length) : string
     {
         $string = ""; $range = static::RandomRange() - 1;
         for ($i = 0; $i < $length; $i++)
-            $string .= static::$chars[random_int(0, $range)];
+            $string .= self::$chars[random_int(0, $range)];
         return $string;        
     }
     

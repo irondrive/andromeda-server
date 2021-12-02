@@ -84,7 +84,7 @@ class File extends Item
     
     /** 
      * Counts a download by updating limits, and notifying parents if $public 
-     * @param bool public if false, only updates the timestamp and not limit counters
+     * @param bool $public if false, only updates the timestamp and not limit counters
      */
     public function CountDownload(bool $public = true) : self
     {
@@ -227,7 +227,7 @@ class File extends Item
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the file's parent folder
      * @param Account $account the account owning this file
-     * @param InputPath the input file name and content path
+     * @param InputPath $infile the input file name and content path
      * @param bool $overwrite if true (reuses the same object)
      * @return self newly created object
      */

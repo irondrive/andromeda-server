@@ -33,6 +33,7 @@ abstract class StandardObject extends BaseObject
      * @param string $name the name of the date field to set
      * @param ?float $value the value of the timestamp, or null to use the current time
      * @see BaseObject::SetScalar()
+     * @return $this
      */
     protected function SetDate(string $name, ?float $value = null) : self
     { 
@@ -45,6 +46,7 @@ abstract class StandardObject extends BaseObject
     /**
      * Create the object by setting its created date
      * @see BaseObject::BaseCreate()
+     * @return static
      */
     protected static function BaseCreate(ObjectDatabase $database) : self {
         return parent::BaseCreate($database)->SetDate('created'); }
@@ -70,12 +72,13 @@ abstract class StandardObject extends BaseObject
     protected function TryGetBoolFeature(string $name, bool $allowTemp = true) : ?bool
     {
         $val = $this->TryGetFeature($name, $allowTemp);
-        return ($val !== null) ? (bool)$val : null;
+        return ($val === null) ? null : (bool)$val;
     }
     
     /**
      * Sets the value of the given feature field to the given value
      * @see BaseObject::SetScalar()
+     * @return $this
      */
     protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { 
         return $this->SetScalar("features__$name", $value, $temp); }
@@ -115,6 +118,7 @@ abstract class StandardObject extends BaseObject
     /**
      * Sets the value of the given counter limit field
      * @see BaseObject::SetScalar()
+     * @return $this
      */
     protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self { 
         return $this->SetScalar("counters_limits__$name", $value, $temp); }

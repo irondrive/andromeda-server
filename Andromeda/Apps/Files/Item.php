@@ -99,7 +99,7 @@ abstract class Item extends StandardObject
     /**
      * Copies the item to a new parent.  If $overwrite, deletes an object if the target already exists.
      * @param ?Account $owner the owner of the new item
-     * @param Folder $folder the parent folder of the new item
+     * @param Folder $parent the parent folder of the new item
      * @param bool $overwrite if true, reuse the duplicate object
      */
     public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self;
@@ -186,10 +186,10 @@ abstract class Item extends StandardObject
     
     /** 
      * Returns the filesystem manager's implementor that stores this object 
-     * @param bool $allowDeleted if true the item must not be deleted
+     * @param bool $requireExist if true the item must not be deleted
      * 
      * Refreshes the item from storage first to make sure it's ready to use.
-     * @throws DeletedByStorageException if the item has been deleted
+     * @throws DeletedByStorageException if requreExist and the item has been deleted
      */
     protected function GetFSImpl(bool $requireExist = true) : FSImpl 
     {

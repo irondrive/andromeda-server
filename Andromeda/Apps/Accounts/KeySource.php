@@ -90,7 +90,7 @@ abstract class KeySource extends AuthObject
     /**
      * Returns a printable client object
      * @param bool $secret if true, show the real key
-     * @return array|NULL `{authkey:string}` if $secret, else null
+     * @return array `{authkey:string}` if $secret, else empty
      */
     public function GetClientObject(bool $secret = false) : array
     {

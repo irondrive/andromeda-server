@@ -6,13 +6,6 @@ require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
-const OPERATOR_SETEQUAL = 0; 
-const OPERATOR_INCREMENT = 1;
-
-const RETURN_SCALAR = 0; 
-const RETURN_OBJECT = 1; 
-const RETURN_OBJECTS = 2;
-
 /**
  * Represents a basic scalar value stored in the column of a database table
  * 
@@ -44,13 +37,7 @@ class Scalar
     
     /** Reference to this field's parent object */
     protected BaseObject $parent;
-    
-    /** Returns OPERATOR_SETEQUAL as the operator used to update this field a DB query */
-    public static function GetOperatorType() : int { return OPERATOR_SETEQUAL; }
-    
-    /** Returns RETURN_SCALAR as the basic type of value stored in this field */
-    public static function GetReturnType() : int { return RETURN_SCALAR; }
-    
+
     /**
      * Declares a new scalar fieldtype (use this in object templates)
      * @param mixed $defvalue the default value of the field type
@@ -146,9 +133,6 @@ class Scalar
 /** Stores a value that represents a thread-safe counter */
 class Counter extends Scalar
 {
-    /** Returns OPERATOR_INCREMENT as the operator used to update this field a DB query */
-    public static function GetOperatorType() : int { return OPERATOR_INCREMENT; }
-    
     /**
      * Constructs a new counter with a default value of zero
      * @see Scalar::$mandatorySave
@@ -210,9 +194,6 @@ class ObjectRef extends Scalar
     
     /** if true, delete the linked object when unsetting our reference to it */
     protected bool $autoDelete = false;
-    
-    /** Returns RETURN_OBJECT as the basic type of value stored in this field */
-    public static function GetReturnType() : int { return RETURN_OBJECT; }
 
     /**
      * Creates a new object reference field
@@ -333,7 +314,7 @@ class ObjectPoly extends ObjectRef
      */
     public static function GetIDTypeDBValue(string $id, string $type) : string 
     { 
-        return $id.':'.static::ShortClass($type); 
+        return $id.':'.self::ShortClass($type); 
     }
     
     /**
@@ -406,10 +387,7 @@ class ObjectRefs extends Counter
     
     /** @var BaseObject[] array of references that have been deleted */
     protected array $refs_deleted = array();
-    
-    /** Returns RETURN_OBJECTS as the basic type of value stored in this field */
-    public static function GetReturnType() : int { return RETURN_OBJECTS; }
-    
+
     /** return false - referenced objects refer to us as a single object */
     public static function GetIsRefsMany() : bool { return false; }    
     

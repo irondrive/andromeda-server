@@ -144,7 +144,7 @@ class SafeParam
         $type &= ~self::TYPE_ARRAY;
         
         if (!array_key_exists($type, self::TYPE_STRINGS))
-            throw new SafeParamUnknownTypeException($type);
+            throw new SafeParamUnknownTypeException((string)$type);
             
         return self::TYPE_STRINGS[$type].$suffix;
     }
@@ -318,7 +318,7 @@ class SafeParam
             $value = array_map(function($value)use($key,$type){ 
                 return (new SafeParam($key, $value))->GetValue($type); }, $value);
         }
-        else throw new SafeParamUnknownTypeException($type);
+        else throw new SafeParamUnknownTypeException(static::GetTypeString($type));
         
         if ($value !== null && $valfunc !== null && !$valfunc($value))
             throw new SafeParamInvalidException($key);

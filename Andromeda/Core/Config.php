@@ -220,16 +220,16 @@ class Config extends BaseConfig
     public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
-    public function isReadOnly() : bool { return $this->GetFeature('read_only'); }
+    public function isReadOnly() : bool { return (bool)$this->GetFeature('read_only'); }
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
     /** Returns true if request logging to DB is enabled */
-    public function GetEnableRequestLogDB() : bool { return $this->GetFeature('requestlog_db'); }
+    public function GetEnableRequestLogDB() : bool { return (bool)$this->GetFeature('requestlog_db'); }
     
     /** Returns true if request logging to data dir file is enabled */
-    public function GetEnableRequestLogFile() : bool { return $this->GetFeature('requestlog_file'); }
+    public function GetEnableRequestLogFile() : bool { return (bool)$this->GetFeature('requestlog_file'); }
     
     /** Returns true if request logging is enabled */
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
@@ -243,7 +243,7 @@ class Config extends BaseConfig
     const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
-    public function GetRequestLogDetails() : int { return $this->GetFeature('requestlog_details'); }
+    public function GetRequestLogDetails() : int { return (bool)$this->GetFeature('requestlog_details'); }
     
     /** show a basic back trace */ 
     const ERRLOG_ERRORS = 1; 
@@ -266,13 +266,13 @@ class Config extends BaseConfig
     public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug', $data, $temp); }
     
     /** Gets whether the server should log errors to the database */
-    public function GetDebugLog2DB()   : bool { return $this->GetFeature('debug_dblog'); }
+    public function GetDebugLog2DB()   : bool { return (bool)$this->GetFeature('debug_dblog'); }
     
     /** Gets whether the server should log errors to a log file in the datadir */
-    public function GetDebugLog2File() : bool { return $this->GetFeature('debug_filelog'); } 
+    public function GetDebugLog2File() : bool { return (bool)$this->GetFeature('debug_filelog'); } 
     
     /** Gets whether debug should be allowed over a non-privileged interface */
-    public function GetDebugOverHTTP() : bool { return $this->GetFeature('debug_http'); }    
+    public function GetDebugOverHTTP() : bool { return (bool)$this->GetFeature('debug_http'); }    
     
     /** Show basic performance metrics */
     const METRICS_BASIC = 1;

@@ -16,7 +16,7 @@ abstract class SingletonObject extends StandardObject
      * @param ObjectDatabase $database reference to the database
      * @throws DuplicateSingletonException if > 1 object is loaded
      * @throws ObjectNotFoundException if no object is loaded
-     * @return self
+     * @return static
      */
     public static function GetInstance(ObjectDatabase $database) : self
     {

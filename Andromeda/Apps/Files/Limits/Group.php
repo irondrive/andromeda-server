@@ -15,7 +15,7 @@ require_once(ROOT."/Apps/Files/Limits/Total.php");
 require_once(ROOT."/Apps/Files/Limits/Timed.php");
 require_once(ROOT."/Apps/Files/Limits/AuthObj.php");
 
-interface IGroupLimit 
+interface IGroupCommon 
 { 
     /** Track stats for component accounts by inheriting this property */
     const TRACK_ACCOUNTS = 1;
@@ -57,10 +57,10 @@ trait GroupCommon
     
     /**
      * Updates the group's stats by adding or subtracting an account's stats
-     * @param AccountCommon $aclim the account limits
+     * @param IAccountCommon $aclim the account limits
      * @param bool $add true to add, false to subtract
      */
-    public function ProcessAccountChange(IAccountLimit $aclim, bool $add) : void
+    public function ProcessAccountChange(IAccountCommon $aclim, bool $add) : void
     {  
         $mul = $add ? 1 : -1;
         $this->CountPublicDownloads($mul*$aclim->GetPublicDownloads());
@@ -140,7 +140,7 @@ trait GroupCommon
 }
 
 /** Concrete class providing group config and total stats */
-class GroupTotal extends AuthEntityTotal implements IGroupLimit
+class GroupTotal extends AuthEntityTotal implements IGroupCommon
 { 
     use GroupCommon; 
     
@@ -217,7 +217,7 @@ class GroupTotal extends AuthEntityTotal implements IGroupLimit
 }
 
 /** Concrete class providing timed group member limits */
-class GroupTimed extends AuthEntityTimed implements IGroupLimit
+class GroupTimed extends AuthEntityTimed implements IGroupCommon
 { 
     use GroupCommon;
     
