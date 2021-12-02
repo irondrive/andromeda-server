@@ -30,13 +30,6 @@ class Local extends Singleton implements ISource
      */
     public static function SetPassword(Account $account, string $password) : void
     {
-        $account->SetPasswordHash(static::HashPassword($password));
-    }
-    
-    /** Returns a new hash of the given password */
-    private static function HashPassword(string $password) : string
-    {
-        return password_hash($password, Utilities::GetHashAlgo());
+        $account->SetPasswordHash(password_hash($password, Utilities::GetHashAlgo()));
     }
 }
-

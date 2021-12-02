@@ -45,6 +45,12 @@ class ActionLog extends BaseLog
         return static::TryLoadUniqueByObject($database, 'applog', $applog, true);
     }
     
+    /** @return RequestLog the parent request log */
+    private function GetRequestLog() : RequestLog { return $this->GetObject('request'); }
+    
+    /** @return ?BaseAppLog the relevant BaseAppLog if it exists */
+    private function TryGetApplog() : ?BaseAppLog { return $this->TryGetObject('applog'); }
+    
     /** Sets an extended BaseAppLog to accompany this ActionLog */
     public function SetApplog(BaseAppLog $applog) : self { return $this->SetObject('applog', $applog); }
     
@@ -66,7 +72,7 @@ class ActionLog extends BaseLog
     
     public function Save(bool $onlyMandatory = false) : self
     {
-        $applog = $this->TryGetObject('applog');
+        $applog = $this->TryGetApplog();
         
         if ($applog !== null) $applog->SaveDetails();
         
@@ -119,7 +125,7 @@ class ActionLog extends BaseLog
     {
         $retval = $this->GetBaseClientObject(true);
         
-        $retval['request'] = $this->GetObject('request')->GetClientObject();
+        $retval['request'] = $this->GetRequestLog()->GetClientObject();
         
         return $retval;
     }
@@ -133,11 +139,11 @@ class ActionLog extends BaseLog
     {
         $retval = $this->GetBaseClientObject($applogs);
 
-        if ($applogs && ($applog = $this->TryGetObject('applog')) !== null)
+        if ($applogs && ($applog = $this->TryGetApplog()) !== null)
             $retval['applog'] = $applog->GetClientObject($expand);
         
         return $retval;
-    } 
+    }
 
     /**
      * Returns the printable client object of this action log, with both the request and applogs

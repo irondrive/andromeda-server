@@ -146,11 +146,11 @@ class Account extends AuthEntity
     private static array $group_handlers = array();
     
     /** Registers a function to be run when the account is added to or removed from a group */
-    public static function RegisterGroupChangeHandler(callable $func){ static::$group_handlers[] = $func; }
+    public static function RegisterGroupChangeHandler(callable $func){ self::$group_handlers[] = $func; }
 
     /** Runs all functions registered to handle the account being added to or removed from a group */
     public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
-        { foreach (static::$group_handlers as $func) $func($database, $account, $group, $added); }
+        { foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
 
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
@@ -433,7 +433,7 @@ class Account extends AuthEntity
     private static array $delete_handlers = array();
     
     /** Registers a function to be run when an account is deleted */
-    public static function RegisterDeleteHandler(callable $func){ static::$delete_handlers[] = $func; }
+    public static function RegisterDeleteHandler(callable $func){ self::$delete_handlers[] = $func; }
     
     /**
      * Deletes this account and all associated objects
@@ -445,7 +445,7 @@ class Account extends AuthEntity
         foreach ($this->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
         
-        foreach (static::$delete_handlers as $func) $func($this->database, $this);
+        foreach (self::$delete_handlers as $func) $func($this->database, $this);
         
         parent::Delete();
     }
@@ -729,7 +729,7 @@ class Account extends AuthEntity
     private static array $crypto_handlers = array();
     
     /** Registers a function to be run when crypto is enabled/disabled on the account */
-    public static function RegisterCryptoHandler(callable $func){ static::$crypto_handlers[] = $func; }
+    public static function RegisterCryptoHandler(callable $func){ self::$crypto_handlers[] = $func; }
 
     /**
      * Initializes secret-key crypto on the account
@@ -770,7 +770,7 @@ class Account extends AuthEntity
         
         foreach ($this->GetTwoFactors() as $twofactor) $twofactor->InitializeCrypto();
         
-        foreach (static::$crypto_handlers as $func) $func($this->database, $this, true);
+        foreach (self::$crypto_handlers as $func) $func($this->database, $this, true);
         
         return $this;
     }
@@ -778,7 +778,7 @@ class Account extends AuthEntity
     /** Disables crypto on the account, stripping all keys */
     public function DestroyCrypto() : self
     {
-        foreach (static::$crypto_handlers as $func) $func($this->database, $this, false);
+        foreach (self::$crypto_handlers as $func) $func($this->database, $this, false);
 
         foreach ($this->GetSessions() as $session) $session->DestroyCrypto();
         foreach ($this->GetTwoFactors() as $twofactor) $twofactor->DestroyCrypto();

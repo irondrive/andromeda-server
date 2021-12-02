@@ -49,7 +49,7 @@ abstract class FSImpl
     public abstract function RefreshFile(File $file) : self;
     
     /** Synchronizes the given folder's metadata with storage */
-    public abstract function RefreshFolder(Folder $folder) : self;
+    public abstract function RefreshFolder(Folder $folder, bool $doContents = true) : self;
     
     /** Creates the given folder on disk */
     public abstract function CreateFolder(Folder $folder) : self;

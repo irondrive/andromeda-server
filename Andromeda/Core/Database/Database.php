@@ -16,7 +16,7 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** Base class for database initialization exceptions */
-abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 500; }
+abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 503; }
 
 /** Exception indicating that the database configuration is not found */
 class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }

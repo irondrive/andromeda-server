@@ -82,7 +82,7 @@ class CLI extends IOInterface
     /** Returns the next args value (or null if not found) and increments $i */
     private static function getNextValue(array $args, int &$i) : ?string
     {
-        return (isset($args[$i+1]) && !static::getKey($args[$i+1])) ? $args[++$i] : null;
+        return (isset($args[$i+1]) && !self::getKey($args[$i+1])) ? $args[++$i] : null;
     }
 
     /** 
@@ -99,7 +99,7 @@ class CLI extends IOInterface
         // pre-process params that may be needed before $config is available        
         for ($i = 1; $i < count($argv); $i++)
         {
-            $key = static::getKey($argv[$i]);
+            $key = self::getKey($argv[$i]);
 
             if (!$key) break; else switch ($key)
             {
@@ -109,19 +109,19 @@ class CLI extends IOInterface
                 case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
                 
                 case 'debug':
-                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
                     $debug = (new SafeParam('debug',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::DEBUG_TYPES));
                     $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
                     
                 case 'metrics':
-                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
                     $metrics = (new SafeParam('metrics',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::METRICS_TYPES));
                     $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
                     
                 case 'dbconf':
-                    if (($val = static::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
                     $this->dbconf = (new SafeParam('dbconf',$val))->GetValue(SafeParam::TYPE_FSPATH);
                     break;
 
@@ -168,7 +168,7 @@ class CLI extends IOInterface
         // process flags that are relevant for $config
         $i = 1; for (; $i < count($argv); $i++)
         {
-            $key = static::getKey($argv[$i]);
+            $key = self::getKey($argv[$i]);
             
             if (!$key) break; else switch ($key)
             {
@@ -192,11 +192,11 @@ class CLI extends IOInterface
                 case 'version': die("Andromeda ".andromeda_version.PHP_EOL); break;
                 
                 case 'batch':
-                    if (($val = static::getNextValue($argv,$i)) === null) 
+                    if (($val = self::getNextValue($argv,$i)) === null) 
                         throw new IncorrectCLIUsageException();
-                    return static::GetBatch($val); break;
+                    return self::GetBatch($val); break;
                     
-                default: return array(static::GetInput(array_slice($argv, $i))); break;
+                default: return array(self::GetInput(array_slice($argv, $i))); break;
             }
         }
         
@@ -211,7 +211,7 @@ class CLI extends IOInterface
         
         return array_map(function($line)
         {
-            try { return static::GetInput(\Clue\Arguments\split($line)); }
+            try { return self::GetInput(\Clue\Arguments\split($line)); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
         }, $lines);
     }
@@ -239,7 +239,7 @@ class CLI extends IOInterface
         
         for ($i = 0; $i < count($argv); $i++)
         {
-            $param = static::getKey($argv[$i]); 
+            $param = self::getKey($argv[$i]); 
             if (!$param) throw new IncorrectCLIUsageException();
             
             $special = mb_substr($param, -1);
@@ -250,7 +250,7 @@ class CLI extends IOInterface
                 $param = mb_substr($param,0,-1); 
                 if (!$param) throw new IncorrectCLIUsageException();
                 
-                $val = static::getNextValue($argv,$i);
+                $val = self::getNextValue($argv,$i);
                 if ($val === null) throw new IncorrectCLIUsageException();
                 
                 if (!is_readable($val)) throw new InvalidFileException();
@@ -266,7 +266,7 @@ class CLI extends IOInterface
                 echo "enter $param...".PHP_EOL;
                 $val = trim(fgets(STDIN), PHP_EOL);
             }
-            else $val = static::getNextValue($argv,$i);
+            else $val = self::getNextValue($argv,$i);
 
             // optionally send the app a path/name of a file instead
             if ($special === '%')
@@ -276,7 +276,7 @@ class CLI extends IOInterface
                 
                 if (!is_readable($val)) throw new InvalidFileException($val);
                 
-                $filename = basename(static::getNextValue($argv,$i) ?? $val);
+                $filename = basename(self::getNextValue($argv,$i) ?? $val);
                 $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME);
                 
                 $files[$param] = new InputPath($val, $filename, false);
@@ -294,8 +294,6 @@ class CLI extends IOInterface
         
         return new Input($app, $action, $params, $files);
     }
-    
-    private $output_json = false;
     
     public function WriteOutput(Output $output)
     {

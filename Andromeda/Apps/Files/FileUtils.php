@@ -140,7 +140,7 @@ class FileUtils
      *
      * Based on the configured RW chunk size and the file's FS chunk size
      * We want to use the RW size but MUST use a multiple of the FS size
-     * @param ?int $chunksize the configured RW chunk size
+     * @param int $chunksize the configured RW chunk size
      * @param ?int $fschunksize filesystem chunksize (or null)
      * @return int chunk size in bytes
      */
@@ -172,7 +172,7 @@ class FileUtils
     
     /**
      * Perform a chunked write to a file
-     * @param ObjectDatabase database reference
+     * @param ObjectDatabase $database reference
      * @param resource $handle input data handle
      * @param File $file write destination
      * @param int $wstart write offset

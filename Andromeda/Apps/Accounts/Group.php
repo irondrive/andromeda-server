@@ -171,7 +171,7 @@ class Group extends AuthEntity
     private static array $delete_handlers = array();
     
     /** Registers a function to be run when a group is deleted */
-    public static function RegisterDeleteHandler(callable $func){ static::$delete_handlers[] = $func; }
+    public static function RegisterDeleteHandler(callable $func){ self::$delete_handlers[] = $func; }
     
     /**
      * Deletes this group and all associated objects
@@ -182,7 +182,7 @@ class Group extends AuthEntity
         foreach ($this->GetDefaultAccounts() ?? array() as $account)
             Account::RunGroupChangeHandlers($this->database, $account, $this, false);
             
-        foreach (static::$delete_handlers as $func) $func($this->database, $this);    
+        foreach (self::$delete_handlers as $func) $func($this->database, $this);
             
         parent::Delete();
     }

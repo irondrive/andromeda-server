@@ -207,7 +207,7 @@ abstract class FWrapper extends Storage
      * Returns a new handle for the given path
      * @param string $path path of file
      * @param int $offset offset to initialize to
-     * @param isWrite true if this is a write
+     * @param bool $isWrite true if this is a write
      * @throws FileOpenFailedException if opening fails
      * @throws FileSeekFailedException if seeking fails
      * @return FileContext new file context

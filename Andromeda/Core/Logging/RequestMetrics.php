@@ -53,10 +53,10 @@ class RequestMetrics extends StandardObject
     /**
      * Logs metrics and returns a metrics object
      * @param int $level logging level
-     * @param ObjectDatabase $origdb database reference
+     * @param ObjectDatabase $database database reference
      * @param RequestLog $reqlog request log for the request
      * @param DBStats $construct construct stats
-     * @param array $action array<RunContext> actions with metrics
+     * @param array $actions array<RunContext> actions with metrics
      * @param array $commits array<DBStats> commit metrics
      * @param DBStats $total total request stats
      * @return self created metrics object
@@ -102,7 +102,7 @@ class RequestMetrics extends StandardObject
      */
     public function Save(bool $onlyMandatory = false) : self
     {
-        $config = Main::GetInstance()->GetConfig();
+        $config = Main::GetInstance()->TryGetConfig();
         
         if ($config && $config->GetMetricsLog2DB())
         {            

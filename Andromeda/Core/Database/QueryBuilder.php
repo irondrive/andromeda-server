@@ -37,7 +37,6 @@ class QueryBuilder
     private ?string $where = null;
     private ?string $orderby = null;
     private ?bool $orderdesc = null;
-    private ?string $join = null;
     private ?int $limit = null;
     private ?int $offset = null;
 

@@ -79,12 +79,12 @@ class AJAX extends IOInterface
                 $files = array_merge($global_files, $files);
                 $request = array_merge($global_request, $request);
                 
-                $inputs[$i] = static::GetInput($get, $files, $request);
+                $inputs[$i] = self::GetInput($get, $files, $request);
             }
             
             if (count($inputs) > 65535) throw new LargeBatchException();
         }
-        else $inputs = array(static::GetInput($_GET, $_FILES, $_REQUEST));
+        else $inputs = array(self::GetInput($_GET, $_FILES, $_REQUEST));
         
         return $inputs;
     }

@@ -410,7 +410,7 @@ class AccountsApp extends InstalledApp
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
-        $fullname = static::capitalizeWords($input->GetParam("fullname", SafeParam::TYPE_NAME));
+        $fullname = self::capitalizeWords($input->GetParam("fullname", SafeParam::TYPE_NAME));
         
         $authenticator->GetAccount()->SetFullName($fullname);
     }

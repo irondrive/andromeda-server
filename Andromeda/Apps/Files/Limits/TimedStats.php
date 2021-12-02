@@ -69,12 +69,12 @@ class TimedStats extends StandardObject
      */
     public static function LoadCurrentByLimit(ObjectDatabase $database, Timed $limit) : self
     {
-        if (array_key_exists($limit->ID(), static::$cache))
-            return static::$cache[$limit->ID()];
+        if (array_key_exists($limit->ID(), self::$cache))
+            return self::$cache[$limit->ID()];
 
         static::PruneStatsByLimit($database, $limit);
         
-        $obj = static::TryLoadCurrent($database, $limit);
+        $obj = self::TryLoadCurrent($database, $limit);
         
         $time = Main::GetInstance()->GetTime(); 
         
@@ -103,12 +103,12 @@ class TimedStats extends StandardObject
             }
             catch (DatabaseException $e) // someone may have already inserted a new time period, try loading again
             {
-                if (($obj = static::TryLoadCurrent($database, $limit)) === null) throw $e;
+                if (($obj = self::TryLoadCurrent($database, $limit)) === null) throw $e;
             }
                 
         }
             
-        static::$cache[$limit->ID()] = $obj; return $obj;
+        self::$cache[$limit->ID()] = $obj; return $obj;
     }
     
     /**
