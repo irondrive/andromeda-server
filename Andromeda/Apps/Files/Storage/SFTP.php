@@ -12,10 +12,10 @@ require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
 /** Exception indicating that the SSH connection failed */
-class SSHConnectionFailure extends ActivateException     { public $message = "SSH_CONNECTION_FAILURE"; }
+class SSHConnectionFailure extends ActivateException     { public $message = "SSH_CONNECTION_FAILURE"; use Exceptions\Copyable; }
 
 /** Exception indicating that SSH authentication failed */
-class SSHAuthenticationFailure extends ActivateException { public $message = "SSH_AUTHENTICATION_FAILURE"; }
+class SSHAuthenticationFailure extends ActivateException { public $message = "SSH_AUTHENTICATION_FAILURE"; use Exceptions\Copyable; }
 
 /** Exception indicating that the server's public key has changed */
 class HostKeyMismatchException extends ActivateException { public $message = "SSH_HOST_KEY_MISMATCH"; }

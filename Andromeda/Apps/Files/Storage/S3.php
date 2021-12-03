@@ -25,7 +25,7 @@ class S3AwsSdkException extends ActivateException { public $message = "S3_AWS_SD
 class S3ConnectException extends ActivateException { public $message = "S3_CONNECT_FAILED"; }
 
 /** Exception that wraps S3 SDK exceptions */
-class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCEPTION"; }
+class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCEPTION"; use Exceptions\Copyable; }
 
 /** Exception indicating that objects cannot be modified */
 class S3ModifyException extends Exceptions\ClientErrorException { public $message = "S3_OBJECTS_IMMUTABLE"; }

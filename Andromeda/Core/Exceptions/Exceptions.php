@@ -3,16 +3,26 @@
 require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 
 /** The base class for Andromeda exceptions */
-abstract class BaseException extends \Exception 
+abstract class BaseException extends \Exception
 {
-    public function __construct(string $details = null) 
+    public function __construct(?string $details = null) 
     {
         if ($details) $this->message .= ": $details"; 
     }
+}
+
+/** An exception that can be created by copying the message from another */
+trait Copyable
+{
+    // must have a constructor with no args for copying
+    final public function __construct(?string $details = null) 
+    { 
+        parent::__construct($details); 
+    }
     
     /** Copy another exception, converting its type */
-    public static function Copy(\Throwable $e) : self 
-    { 
+    public static function Copy(\Throwable $e) : self
+    {
         $e2 = new static(); $e2->message = $e->getMessage(); return $e2;
     }
     

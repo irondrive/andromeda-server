@@ -96,7 +96,7 @@ class Main():
         # test usage command works pre-configure
         TestUtils.assertOk(interface.run(app='core',action='usage'))
         TestUtils.assertError(interface.run(app='core',action='getconfig'),
-            500,'DATABASE_CONFIG_MISSING')
+            503, 'DATABASE_CONFIG_MISSING')
 
         if self.doInstall:
             atexit.register(database.deinstall)
@@ -137,7 +137,7 @@ class Main():
             # test usage command works pre-install
             TestUtils.assertOk(interface.run(app='core',action='usage'))
             TestUtils.assertError(interface.run(app='core',action='getconfig'),
-                500,'APP_INSTALL_REQUIRED: core')
+                503, 'APP_INSTALL_REQUIRED: core')
 
             # test installing everything at once
             params = { }

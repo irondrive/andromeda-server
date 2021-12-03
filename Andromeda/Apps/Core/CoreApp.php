@@ -23,7 +23,7 @@ use Andromeda\Core\{UnknownActionException, MailSendException};
 class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
 
 /** Client error indicating that the mailer config failed */
-class MailSendFailException extends Exceptions\ClientErrorException { public $message = "MAIL_SEND_FAILURE"; }
+class MailSendFailException extends Exceptions\ClientErrorException { public $message = "MAIL_SEND_FAILURE"; use Exceptions\Copyable; }
 
 /** Client error indicating that the database config failed */
 class DatabaseFailException extends Exceptions\ClientErrorException { public $message = "INVALID_DATABASE"; }
