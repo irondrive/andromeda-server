@@ -21,7 +21,7 @@ class AppTests(BaseAppTest):
         return {'username':self.username,'password':self.password}
 
     def install(self):
-        assertError(self.interface.run(app='accounts',action='getconfig'),500,'APP_INSTALL_REQUIRED: accounts')
+        assertError(self.interface.run(app='accounts',action='getconfig'),503,'APP_INSTALL_REQUIRED: accounts')
         assertOk(self.interface.run(app='accounts',action='install',params=self.getInstallParams()))
         self.session = assertOk(self.interface.run(app='accounts',action='createsession',
             params={'username':self.username,'auth_password':self.password}))['client']['session']

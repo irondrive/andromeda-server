@@ -52,7 +52,7 @@ class CLITests(BaseTest):
 
     def testDbconfFlag(self):
         rval = self.fullCliRun(dbconf="/nonexistent")
-        assertError(rval, 500, "DATABASE_CONFIG_MISSING")
+        assertError(rval, 503, "DATABASE_CONFIG_MISSING")
 
     def testVersionCommand(self):
         rval = self.interface.cliRun(app='',action='',

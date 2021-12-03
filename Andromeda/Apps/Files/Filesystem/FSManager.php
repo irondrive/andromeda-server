@@ -33,7 +33,7 @@ class InvalidFSTypeException extends Exceptions\ServerException { public $messag
 class InvalidNameException extends Exceptions\ClientErrorException { public $message = "INVALID_FILESYSTEM_NAME"; }
 
 /** Exception indicating that the underlying storage connection failed */
-class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; }
+class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; use Exceptions\Copyable; }
 
 /**
  * An object that manages and points to a filesystem manager

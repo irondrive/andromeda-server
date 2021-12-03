@@ -57,5 +57,5 @@ abstract class ActivateException extends StorageException { }
 class TestReadFailedException extends ActivateException { public $message = "STORAGE_TEST_READ_FAILED"; }
 
 /** Exception indicating that the tested storage is not writeable */
-class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; }
+class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; use Exceptions\Copyable; }
 

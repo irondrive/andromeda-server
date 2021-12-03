@@ -52,14 +52,14 @@ abstract class StandardObject extends BaseObject
         return parent::BaseCreate($database)->SetDate('created'); }
     
     /**
-     * Gets the value of the given feature field (used for config)
+     * Gets the value of the given feature field as an int (used for config)
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureInt(string $name, bool $allowTemp = true) : int { 
         return intval($this->GetScalar("features__$name", $allowTemp)); }
     
     /**
-     * Gets the value of the given feature field (used for config)
+     * Gets the value of the given feature field as an int (used for config)
      * @see BaseObject::GetScalar()
      */
     protected function TryGetFeatureInt(string $name, bool $allowTemp = true) : ?int 
@@ -69,14 +69,14 @@ abstract class StandardObject extends BaseObject
     }
     
     /**
-     * Gets the value of the given feature field (used for config)
+     * Gets the value of the given feature field as a bool (used for config)
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureBool(string $name, bool $allowTemp = true) : bool {
         return boolval($this->GetScalar("features__$name", $allowTemp)); }
         
     /**
-     * Gets the value of the given feature field (used for config)
+     * Gets the value of the given feature field as a bool (used for config)
      * @see BaseObject::GetScalar()
      */
     protected function TryGetFeatureBool(string $name, bool $allowTemp = true) : ?bool
@@ -86,7 +86,7 @@ abstract class StandardObject extends BaseObject
     }
     
     /**
-     * Sets the value of the given feature field to the given value
+     * Sets the value of the given feature field to the given (?int) value
      * @see BaseObject::SetScalar()
      * @return $this
      */

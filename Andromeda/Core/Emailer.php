@@ -12,7 +12,7 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php");
 use \PHPMailer\PHPMailer; // via autoloader
 
 /** Exception indicating that sending mail failed */
-class MailSendException extends Exceptions\ServerException { public $message = "MAIL_SEND_FAILURE"; }
+class MailSendException extends Exceptions\ServerException { public $message = "MAIL_SEND_FAILURE"; use Exceptions\Copyable; }
 
 /** Exception indicating that no recipients were given */
 class EmptyRecipientsException extends MailSendException { public $message = "NO_RECIPIENTS_GIVEN"; }

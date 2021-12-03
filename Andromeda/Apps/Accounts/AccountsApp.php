@@ -525,12 +525,13 @@ class AccountsApp extends InstalledApp
                
         if ($userIsContact || $requireContact >= Config::CONTACT_EXIST)
         {
-            $contactInfo = Contact::FetchInfoFromInput($input);           
+            $contactInfo = Contact::FetchInfoFromInput($input);
+            if ($userIsContact) $username = $contactInfo->info;
         }
-
-        $username = $userIsContact ? $contactInfo->info : $input->GetParam("username", 
-            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS, null, SafeParam::MaxLength(127));
         
+        $username ??= $input->GetParam("username", SafeParam::TYPE_ALPHANUM, 
+            SafeParams::PARAMLOG_ALWAYS, null, SafeParam::MaxLength(127));
+
         if (!$admin && $allowCreate == Config::CREATE_WHITELIST)
         {
             $ok = Whitelist::ExistsTypeAndValue($this->database, Whitelist::TYPE_USERNAME, $username);
@@ -596,7 +597,9 @@ class AccountsApp extends InstalledApp
         {
             $cinfo = Contact::FetchInfoFromInput($input);
             $account = Account::TryLoadByContactInfo($this->database, $cinfo);
-            if ($account === null) throw new AuthenticationFailedException();
+            if ($account === null) // can't log in externally with contact info
+                throw new AuthenticationFailedException();
+            $username = $account->GetUsername(); // phpstan
         }
         
         $password = $input->GetParam("auth_password", SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);

@@ -11,12 +11,9 @@ use \PDO; mb_internal_encoding("UTF-8");
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, Transactions, JSONEncodingException};
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** Base class for database initialization exceptions */
-abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 503; }
+abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 503; use Exceptions\Copyable; }
 
 /** Exception indicating that the database configuration is not found */
 class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }
@@ -28,7 +25,7 @@ class DatabaseInvalidException extends DatabaseConfigException { public $message
 class InvalidDriverException extends DatabaseConfigException { public $message = "PDO_UNKNOWN_DRIVER"; }
 
 /** Base class representing a run-time database error */
-class DatabaseException extends Exceptions\ServerException { public $message = "DATABASE_ERROR"; }
+class DatabaseException extends Exceptions\ServerException { public $message = "DATABASE_ERROR"; use Exceptions\Copyable; }
 
 /** Exception indicating that PDO failed to execute the given query */
 class DatabaseQueryException extends DatabaseException { public $message = "DATABASE_QUERY_ERROR"; }
@@ -37,7 +34,11 @@ class DatabaseQueryException extends DatabaseException { public $message = "DATA
 class DatabaseReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_DATABASE"; }
 
 /** Exception indicating that database install config failed */
-class DatabaseInstallException extends Exceptions\ClientErrorException { }
+class DatabaseInstallException extends Exceptions\ClientErrorException { use Exceptions\Copyable; }
+
+require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /**
  * This class implements the PDO database abstraction.
