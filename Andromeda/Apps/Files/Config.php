@@ -50,7 +50,7 @@ class Config extends BaseConfig
     public function GetCryptoChunkSize() : int { return $this->GetScalar('crchunksize'); }
     
     /** Returns whether the timed-stats system as a whole is enabled */
-    public function GetAllowTimedStats() : bool { return $this->GetFeature('timedstats'); }
+    public function GetAllowTimedStats() : bool { return $this->GetFeatureBool('timedstats'); }
         
     /** Returns the URL this server API is accessible from over HTTP */
     public function GetAPIUrl() : ?string { return $this->TryGetScalar('apiurl'); }

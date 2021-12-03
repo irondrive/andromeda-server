@@ -49,8 +49,8 @@ trait GroupCommon
     /** Returns the inheritance priority of the limited group */
     public function GetPriority() : int { return $this->GetGroup()->GetPriority(); }
 
-    protected function canTrackItems() : bool { return ($this->TryGetFeature('track_items') ?? 0) >= self::TRACK_WHOLE_GROUP; }
-    protected function canTrackDLStats() : bool { return ($this->TryGetFeature('track_dlstats') ?? 0) >= self::TRACK_WHOLE_GROUP; }
+    protected function canTrackItems() : bool { return ($this->TryGetFeatureInt('track_items') ?? 0) >= self::TRACK_WHOLE_GROUP; }
+    protected function canTrackDLStats() : bool { return ($this->TryGetFeatureInt('track_dlstats') ?? 0) >= self::TRACK_WHOLE_GROUP; }
 
     // the group's limits apply only to its component accounts
     protected function IsCounterOverLimit(string $name, int $delta = 0) : bool { return false; }
@@ -129,7 +129,7 @@ trait GroupCommon
         
         foreach (array('track_items','track_dlstats') as $prop)
         {
-            $val = $this->GetFeature($prop);
+            $val = $this->GetFeatureInt($prop);
             
             $retval['features'] = ($val !== null) ?
                 array_flip(self::TRACK_TYPES)[$val] : null;
@@ -188,10 +188,10 @@ class GroupTotal extends AuthEntityTotal implements IGroupCommon
     }
     
     /** Returns true if the group's members are allowed to email share links */
-    public function GetAllowEmailShare() : ?bool { return $this->TryGetFeature('emailshare'); }
+    public function GetAllowEmailShare() : ?bool { return $this->TryGetFeatureBool('emailshare'); }
     
     /** Returns true if the group's members are allowed to add new filesystems */
-    public function GetAllowUserStorage() : ?bool { return $this->TryGetFeature('userstorage'); }
+    public function GetAllowUserStorage() : ?bool { return $this->TryGetFeatureBool('userstorage'); }
 
     /** Returns the total limits for the given group (or none) */
     public static function LoadByGroup(ObjectDatabase $database, Group $group) : ?self

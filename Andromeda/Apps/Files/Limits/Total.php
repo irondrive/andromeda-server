@@ -70,22 +70,22 @@ abstract class Total extends Base
     public function SetUploadDate() : self { return $this->canTrackDLStats() ? $this->SetDate('upload') : $this; }
     
     /** Returns true if the limited object should allow random writes to files */
-    public function GetAllowRandomWrite() : ?bool { return $this->TryGetFeature('randomwrite'); }
+    public function GetAllowRandomWrite() : ?bool { return $this->TryGetFeatureBool('randomwrite'); }
     
     /** Returns true if the limited object should allow public modification of files */
-    public function GetAllowPublicModify() : ?bool { return $this->TryGetFeature('publicmodify'); } 
+    public function GetAllowPublicModify() : ?bool { return $this->TryGetFeatureBool('publicmodify'); } 
     
     /** Returns true if the limited object should allow public upload to folders */
-    public function GetAllowPublicUpload() : ?bool { return $this->TryGetFeature('publicupload'); }
+    public function GetAllowPublicUpload() : ?bool { return $this->TryGetFeatureBool('publicupload'); }
     
     /** Returns true if the limited object should allow sharing items */
-    public function GetAllowItemSharing() : ?bool { return $this->TryGetFeature('itemsharing'); }
+    public function GetAllowItemSharing() : ?bool { return $this->TryGetFeatureBool('itemsharing'); }
     
     /** Returns true if the limited object should allow sharing to groups */
-    public function GetAllowShareToGroups() : ?bool { return $this->TryGetFeature('share2groups'); }
+    public function GetAllowShareToGroups() : ?bool { return $this->TryGetFeatureBool('share2groups'); }
     
     /** Returns true if the limited object should allow sharing to everyone */
-    public function GetAllowShareToEveryone() : ?bool { return $this->TryGetFeature('share2everyone'); }
+    public function GetAllowShareToEveryone() : ?bool { return $this->TryGetFeatureBool('share2everyone'); }
     
     /** Creates and caches a new limit object for the given limited object */
     protected static function Create(ObjectDatabase $database, StandardObject $obj) : self
