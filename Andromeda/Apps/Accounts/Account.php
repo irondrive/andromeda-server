@@ -218,25 +218,25 @@ class Account extends AuthEntity
     public function HasTwoFactor() : bool       { return $this->CountObjectRefs('twofactors') > 0; }
     
     /** True if two factor should be required to create a session even for a pre-existing client */
-    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeature('forcetf') ?? self::GetInheritedFields()['features__forcetf']; }
+    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeatureBool('forcetf') ?? self::GetInheritedFields()['features__forcetf']; }
     
     /** True if account-based server-side crypto is allowed */
-    public function GetAllowCrypto() : bool     { return $this->TryGetFeature('allowcrypto') ?? self::GetInheritedFields()['features__allowcrypto']; }
+    public function GetAllowCrypto() : bool     { return $this->TryGetFeatureBool('allowcrypto') ?? self::GetInheritedFields()['features__allowcrypto']; }
     
     /** Returns 0 if account search is disabled, or N if up to N matches are allowed */
-    public function GetAllowAccountSearch() : int { return $this->TryGetFeature('accountsearch') ?? self::GetInheritedFields()['features__accountsearch']; }
+    public function GetAllowAccountSearch() : int { return $this->TryGetFeatureInt('accountsearch') ?? self::GetInheritedFields()['features__accountsearch']; }
 
     /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
-    public function GetAllowGroupSearch() : int { return $this->TryGetFeature('groupsearch') ?? self::GetInheritedFields()['features__groupsearch']; }
+    public function GetAllowGroupSearch() : int { return $this->TryGetFeatureInt('groupsearch') ?? self::GetInheritedFields()['features__groupsearch']; }
     
     /** Returns true if the user is allowed to delete their account */
-    public function GetAllowUserDelete() : bool { return $this->TryGetFeature('userdelete') ?? self::GetInheritedFields()['features__userdelete']; }
+    public function GetAllowUserDelete() : bool { return $this->TryGetFeatureBool('userdelete') ?? self::GetInheritedFields()['features__userdelete']; }
     
     /** True if this account has administrator privileges */
-    public function isAdmin() : bool            { return $this->TryGetFeature('admin') ?? self::GetInheritedFields()['features__admin']; }
+    public function isAdmin() : bool            { return $this->TryGetFeatureBool('admin') ?? self::GetInheritedFields()['features__admin']; }
     
     /** True if this account is enabled */
-    public function isEnabled() : bool       { return !boolval($this->TryGetFeature('disabled') ?? self::GetInheritedFields()['features__disabled']); }
+    public function isEnabled() : bool       { return !boolval($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['features__disabled']); }
     
     /** Sets this account's admin-status to the given value */
     public function setAdmin(?bool $val) : self { return $this->SetFeature('admin', $val); }
@@ -405,7 +405,7 @@ class Account extends AuthEntity
     /** Sets this account to enabled if it was disabled pending a valid contact */
     public function NotifyValidContact() : self
     {
-        return ($this->TryGetFeature('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->setDisabled(null) : $this;
+        return ($this->TryGetFeatureInt('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->setDisabled(null) : $this;
     }
         
     /**
@@ -488,8 +488,11 @@ class Account extends AuthEntity
                     'loggedon' => $this->getLoggedonDate(),
                     'active' => $this->getActiveDate()
                 ),
-                'features' => Utilities::array_map_keys(function($p){ return $this->GetFeature($p); },
-                    array('admin','disabled','forcetf','allowcrypto','accountsearch','groupsearch','userdelete')
+                'features' => array_merge(
+                    Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
+                        array('admin','forcetf','allowcrypto','userdelete')),
+                    Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },
+                        array('disabled','accountsearch','groupsearch'))
                 ),
                 'counters' => Utilities::array_map_keys(function($p){ return $this->CountObjectRefs($p); },
                     array('sessions','contacts','clients','twofactors','recoverykeys')

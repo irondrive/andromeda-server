@@ -206,7 +206,7 @@ class Config extends BaseConfig
     }
     
     /** Returns whether the server is allowed to respond to requests */
-    public function isEnabled() : bool { return $this->GetFeature('enabled'); }
+    public function isEnabled() : bool { return $this->GetFeatureBool('enabled'); }
     
     /** Set whether the server is allowed to respond to requests */
     public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
@@ -220,16 +220,16 @@ class Config extends BaseConfig
     public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
-    public function isReadOnly() : bool { return (bool)$this->GetFeature('read_only'); }
+    public function isReadOnly() : bool { return (bool)$this->GetFeatureBool('read_only'); }
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
     /** Returns true if request logging to DB is enabled */
-    public function GetEnableRequestLogDB() : bool { return (bool)$this->GetFeature('requestlog_db'); }
+    public function GetEnableRequestLogDB() : bool { return (bool)$this->GetFeatureBool('requestlog_db'); }
     
     /** Returns true if request logging to data dir file is enabled */
-    public function GetEnableRequestLogFile() : bool { return (bool)$this->GetFeature('requestlog_file'); }
+    public function GetEnableRequestLogFile() : bool { return (bool)$this->GetFeatureBool('requestlog_file'); }
     
     /** Returns true if request logging is enabled */
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
@@ -243,7 +243,7 @@ class Config extends BaseConfig
     const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
-    public function GetRequestLogDetails() : int { return (bool)$this->GetFeature('requestlog_details'); }
+    public function GetRequestLogDetails() : int { return $this->GetFeatureInt('requestlog_details'); }
     
     /** show a basic back trace */ 
     const ERRLOG_ERRORS = 1; 
@@ -257,7 +257,7 @@ class Config extends BaseConfig
     const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
-    public function GetDebugLevel() : int { return $this->GetFeature('debug'); }
+    public function GetDebugLevel() : int { return $this->GetFeatureInt('debug'); }
     
     /**
      * Sets the current debug level
@@ -266,13 +266,13 @@ class Config extends BaseConfig
     public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug', $data, $temp); }
     
     /** Gets whether the server should log errors to the database */
-    public function GetDebugLog2DB()   : bool { return (bool)$this->GetFeature('debug_dblog'); }
+    public function GetDebugLog2DB()   : bool { return $this->GetFeatureBool('debug_dblog'); }
     
     /** Gets whether the server should log errors to a log file in the datadir */
-    public function GetDebugLog2File() : bool { return (bool)$this->GetFeature('debug_filelog'); } 
+    public function GetDebugLog2File() : bool { return $this->GetFeatureBool('debug_filelog'); } 
     
     /** Gets whether debug should be allowed over a non-privileged interface */
-    public function GetDebugOverHTTP() : bool { return (bool)$this->GetFeature('debug_http'); }    
+    public function GetDebugOverHTTP() : bool { return $this->GetFeatureBool('debug_http'); }    
     
     /** Show basic performance metrics */
     const METRICS_BASIC = 1;
@@ -283,7 +283,7 @@ class Config extends BaseConfig
     const METRICS_TYPES = array('none'=>0, 'basic'=>1, 'extended'=>2);
     
     /** Returns the current metrics log level */
-    public function GetMetricsLevel() : int { return $this->GetFeature('metrics'); }
+    public function GetMetricsLevel() : int { return $this->GetFeatureInt('metrics'); }
     
     /**
      * Sets the current metrics log level
@@ -292,13 +292,13 @@ class Config extends BaseConfig
     public function SetMetricsLevel(int $data, bool $temp = true) : self { return $this->SetFeature('metrics', $data, $temp); }
     
     /** Gets whether the server should log metrics to the database */
-    public function GetMetricsLog2DB()   : bool { return $this->GetFeature('metrics_dblog'); }
+    public function GetMetricsLog2DB()   : bool { return $this->GetFeatureBool('metrics_dblog'); }
     
     /** Gets whether the server should log errors to a log file in the datadir */
-    public function GetMetricsLog2File() : bool { return $this->GetFeature('metrics_filelog'); } 
+    public function GetMetricsLog2File() : bool { return $this->GetFeatureBool('metrics_filelog'); } 
     
     /** Gets whether using configured emailers is currently allowed */
-    public function GetEnableEmail() : bool { return $this->GetFeature('email'); }
+    public function GetEnableEmail() : bool { return $this->GetFeatureBool('email'); }
 
     /**
      * Retrieves a configured mailer service, picking one randomly 
@@ -334,7 +334,7 @@ class Config extends BaseConfig
         
         $data['features'] = array(
             'enabled' => $this->isEnabled(),
-            'read_only' => (bool)$this->GetFeature('read_only',false) // no temp
+            'read_only' => $this->GetFeatureBool('read_only',false) // no temp
         );
         
         if ($admin)
@@ -345,11 +345,11 @@ class Config extends BaseConfig
                 'requestlog_file' => $this->GetEnableRequestLogFile(),
                 'requestlog_db' => $this->GetEnableRequestLogDB(),
                 'requestlog_details' => array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()],
-                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetFeature('metrics',false)], // no temp
+                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetFeatureInt('metrics',false)], // no temp
                 'metrics_dblog' => $this->GetMetricsLog2DB(),
                 'metrics_filelog' => $this->GetMetricsLog2File(),
                 'email' => $this->GetEnableEmail(),
-                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetFeature('debug',false)], // no temp
+                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetFeatureInt('debug',false)], // no temp
                 'debug_http' => $this->GetDebugOverHTTP(),
                 'debug_dblog' => $this->GetDebugLog2DB(),
                 'debug_filelog' => $this->GetDebugLog2File()

@@ -53,8 +53,8 @@ trait FilesystemCommon
     {
         $data = parent::GetClientObject();
         
-        $data['features']['track_items'] = $this->GetFeature('track_items');
-        $data['features']['track_dlstats'] = $this->GetFeature('track_dlstats');
+        $data['features']['track_items'] = $this->GetFeatureBool('track_items');
+        $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
         
         return $data;
     }

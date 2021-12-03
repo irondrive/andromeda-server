@@ -78,22 +78,22 @@ class Share extends AuthObject
     public function GetDest() : ?AuthEntity { return $this->TryGetObject('dest'); }
     
     /** Returns true if the share grants read access to the item */
-    public function CanRead() : bool { return (bool)$this->GetFeature('read'); }
+    public function CanRead() : bool { return $this->GetFeatureBool('read'); }
     
     /** Returns true if the share grants upload (create new files) to the item */
-    public function CanUpload() : bool { return (bool)$this->GetFeature('upload'); }
+    public function CanUpload() : bool { return $this->GetFeatureBool('upload'); }
     
     /** Returns true if the share grants write access to the item */
-    public function CanModify() : bool { return (bool)$this->GetFeature('modify'); }
+    public function CanModify() : bool { return $this->GetFeatureBool('modify'); }
     
     /** Returns true if the share allows social features (comments, likes) on the item */
-    public function CanSocial() : bool { return (bool)$this->GetFeature('social'); }
+    public function CanSocial() : bool { return $this->GetFeatureBool('social'); }
     
     /** Returns true if the share allows the target to re-share the item */
-    public function CanReshare() : bool { return (bool)$this->GetFeature('reshare'); }
+    public function CanReshare() : bool { return $this->GetFeatureBool('reshare'); }
     
     /** True if the uploader should stay the owner, else the owner of the parent is the owner */
-    public function KeepOwner() : bool { return (bool)$this->GetFeature('keepowner'); }
+    public function KeepOwner() : bool { return $this->GetFeatureBool('keepowner'); }
 
     /** Returns true if the share is expired, either by access count or expiry time  */
     public function IsExpired() : bool

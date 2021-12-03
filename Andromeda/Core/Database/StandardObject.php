@@ -55,24 +55,34 @@ abstract class StandardObject extends BaseObject
      * Gets the value of the given feature field (used for config)
      * @see BaseObject::GetScalar()
      */
-    protected function GetFeature(string $name, bool $allowTemp = true) : int { 
+    protected function GetFeatureInt(string $name, bool $allowTemp = true) : int { 
         return intval($this->GetScalar("features__$name", $allowTemp)); }
     
     /**
      * Gets the value of the given feature field (used for config)
      * @see BaseObject::GetScalar()
      */
-    protected function TryGetFeature(string $name, bool $allowTemp = true) : ?int 
+    protected function TryGetFeatureInt(string $name, bool $allowTemp = true) : ?int 
     { 
         $val = $this->TryGetScalar("features__$name", $allowTemp); 
         return ($val === null) ? null : intval($val); 
     }
     
-    /** Returns TryGetFeature() but as a bool */
-    protected function TryGetBoolFeature(string $name, bool $allowTemp = true) : ?bool
+    /**
+     * Gets the value of the given feature field (used for config)
+     * @see BaseObject::GetScalar()
+     */
+    protected function GetFeatureBool(string $name, bool $allowTemp = true) : bool {
+        return boolval($this->GetScalar("features__$name", $allowTemp)); }
+        
+    /**
+     * Gets the value of the given feature field (used for config)
+     * @see BaseObject::GetScalar()
+     */
+    protected function TryGetFeatureBool(string $name, bool $allowTemp = true) : ?bool
     {
-        $val = $this->TryGetFeature($name, $allowTemp);
-        return ($val === null) ? null : (bool)$val;
+        $val = $this->TryGetScalar("features__$name", $allowTemp);
+        return ($val === null) ? null : boolval($val);
     }
     
     /**
@@ -82,8 +92,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { 
         return $this->SetScalar("features__$name", $value, $temp); }
-    
-    
+
     /** Returns true if the given feature has been modified */
     protected function isFeatureModified(string $name) : bool
     {

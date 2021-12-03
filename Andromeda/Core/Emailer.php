@@ -126,7 +126,7 @@ class Emailer extends StandardObject
     }
     
     /** Returns whether or not to use the server from address for reply-to */
-    private function GetUseReply() : bool { return $this->TryGetFeature('reply') ?? false; }
+    private function GetUseReply() : bool { return $this->TryGetFeatureBool('reply') ?? false; }
     
     /**
      * Gets the config as a printable client object

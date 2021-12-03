@@ -213,8 +213,11 @@ class Group extends AuthEntity
                     'created' => $this->GetDateCreated(),
                     'modified' => $this->TryGetDate('modified')
                 ),
-                'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeature($p); },
-                    array('admin','disabled','forcetf','allowcrypto','accountsearch','groupsearch','userdelete')
+                'features' => array_merge(
+                    Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
+                        array('admin','forcetf','allowcrypto','userdelete')),
+                    Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },
+                        array('disabled','accountsearch','groupsearch'))
                 ),
                 'counters' => array(
                     'accounts' => $this->CountObjectRefs('accounts')

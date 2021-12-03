@@ -102,10 +102,10 @@ class Config extends BaseConfig
     const CREATE_TYPES = array('disable'=>0, 'whitelist'=>self::CREATE_WHITELIST, 'public'=>self::CREATE_PUBLIC);
     
     /** Returns whether the API for creating new accounts is enabled */
-    public function GetAllowCreateAccount() : int { return $this->GetFeature('createaccount'); }
+    public function GetAllowCreateAccount() : int { return $this->GetFeatureInt('createaccount'); }
     
     /** Returns whether emails should be used as usernames */
-    public function GetUsernameIsContact() : bool  { return $this->GetFeature('usernameiscontact'); }
+    public function GetUsernameIsContact() : bool  { return $this->GetFeatureBool('usernameiscontact'); }
     
     /** Sets whether the API for creating new accounts is enabled */
     public function SetAllowCreateAccount(int $value, bool $temp = false) : self { return $this->SetFeature('createaccount', $value, $temp); }
@@ -118,7 +118,7 @@ class Config extends BaseConfig
     const CONTACT_TYPES = array('none'=>0, 'exist'=>self::CONTACT_EXIST, 'valid'=>self::CONTACT_VALID);
     
     /** Returns whether a contact for accounts is required or validated */
-    public function GetRequireContact() : int { return $this->GetFeature('requirecontact'); }
+    public function GetRequireContact() : int { return $this->GetFeatureInt('requirecontact'); }
     
     /* Sets whether a contact for accounts is required or validated */
     public function SetRequireContact(int $value, bool $temp = false) : self { return $this->SetFeature('requirecontact', $value, $temp); }

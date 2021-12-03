@@ -55,10 +55,10 @@ abstract class Base extends StandardObject
     public function GetLimitedObject() : StandardObject { return $this->GetObject('object'); }
 
     /** Returns true if we should track size, item count, and share count */
-    protected function canTrackItems() : bool { return $this->TryGetFeature('track_items') ?? false; }
+    protected function canTrackItems() : bool { return $this->TryGetFeatureBool('track_items') ?? false; }
     
     /** Returns true if we should count public downloads and bandwidth */
-    protected function canTrackDLStats() : bool { return $this->TryGetFeature('track_dlstats') ?? false; }
+    protected function canTrackDLStats() : bool { return $this->TryGetFeatureBool('track_dlstats') ?? false; }
 
     /** Adds to the size counter, if item tracking is allowed */
     public function CountSize(int $delta, bool $noLimit = false) : self { return $this->canTrackItems() ? $this->DeltaCounter('size',$delta,$noLimit) : $this; }

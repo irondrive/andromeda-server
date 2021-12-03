@@ -61,8 +61,8 @@ trait AccountCommon
     {
         $data = parent::GetClientObject();
 
-        $data['features']['track_items'] = $this->GetFeature('track_items');
-        $data['features']['track_dlstats'] = $this->GetFeature('track_dlstats');
+        $data['features']['track_items'] = $this->GetFeatureBool('track_items');
+        $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
         
         if ($isadmin)
         {
@@ -190,18 +190,18 @@ class AccountTotal extends AuthEntityTotal implements IAccountCommon
         'counters_limits__shares' => null,
     ); }
     
-    public function GetAllowRandomWrite() : bool { return $this->GetFeature('randomwrite'); }
-    public function GetAllowPublicModify() : bool { return $this->GetFeature('publicmodify'); }
-    public function GetAllowPublicUpload() : bool { return $this->GetFeature('publicupload'); }
-    public function GetAllowItemSharing() : bool { return $this->GetFeature('itemsharing'); }
-    public function GetAllowShareToGroups() : bool { return $this->GetFeature('share2groups'); }
-    public function GetAllowShareToEveryone() : bool { return $this->GetFeature('share2everyone'); }
+    public function GetAllowRandomWrite() : bool { return $this->GetFeatureBool('randomwrite'); }
+    public function GetAllowPublicModify() : bool { return $this->GetFeatureBool('publicmodify'); }
+    public function GetAllowPublicUpload() : bool { return $this->GetFeatureBool('publicupload'); }
+    public function GetAllowItemSharing() : bool { return $this->GetFeatureBool('itemsharing'); }
+    public function GetAllowShareToGroups() : bool { return $this->GetFeatureBool('share2groups'); }
+    public function GetAllowShareToEveryone() : bool { return $this->GetFeatureBool('share2everyone'); }
     
     /** Returns true if this account is allowed to email share links */
-    public function GetAllowEmailShare() : bool { return $this->GetFeature('emailshare'); }
+    public function GetAllowEmailShare() : bool { return $this->GetFeatureBool('emailshare'); }
     
     /** Returns true if this account is allowed to add new filesystems */
-    public function GetAllowUserStorage() : bool { return $this->GetFeature('userstorage'); }
+    public function GetAllowUserStorage() : bool { return $this->GetFeatureBool('userstorage'); }
     
     /**
      * Returns the total limits object for this account
