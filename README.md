@@ -135,6 +135,4 @@ Note the upgrade command is allowed by any user on any interface when required, 
 
 
 # License
-
-Andromeda including all source code and any documentation are copyrighted by the author.  Use of this repository and source code is licensed under the AGPLv3.  Commercial licenses can be obtained separately.
-
+Andromeda including all source code and any documentation are copyrighted by the author.  Use of this repository and source code is licensed under the AGPLv3.  Contributors agree that any contributions made to the repository are issued under this license.  Commercial licenses can be obtained separately.
