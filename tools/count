@@ -1,16 +1,35 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then echo "extension?"; exit 1; fi
-
-rm combined.php
-
-getfiles() {
-    find $1 -name '*'$2
-}
-
 cd Andromeda
 
-for i in . Apps/* Core; do 
-    echo DIR $i; echo $(getfiles $i $1 | wc -l) files
-    getfiles $i $1 | xargs -d '\n' wc -l | sort -gr
+dostats(){
+   LINES=$(xargs -d '\n' wc -l)
+   echo $(echo "$LINES" | wc -l) files
+   echo "$LINES" | sort -gr
+}
+
+phpcode(){
+   grep '.php\>' | grep -v _tests
+}
+
+phptests(){
+   grep '.php\>' | grep _tests
+}
+
+python(){
+   grep '.py\>'
+}
+
+chunk(){
+   echo SCANNING $1 $2
+   find $2 -type f | $1 | dostats
+}
+
+for t in phpcode phptests python; do
+
+   if [ "$1" == "total" ]; then 
+      chunk $t . | grep "SCANNING\|total\>\|files\>"
+   else
+      for d in . Apps/* Core; do chunk $t $d; done
+   fi
 done
