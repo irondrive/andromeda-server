@@ -28,6 +28,9 @@ class FTPCopyFileException extends Exceptions\ClientErrorException { public $mes
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) FTP::DecryptAccount($database, $account); });
 
+abstract class FTPBase1 extends FWrapper { use BasePath; }
+abstract class FTPBase2 extends FTPBase1 { use UserPass; }
+
 /**
  * Allows FTP to be used as a backend storage
  * 
@@ -36,7 +39,7 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
  * every call.  fwrapper functions are still used as fallbacks where needed.
  * Uses the fieldcrypt trait for optionally encrypting server credentials.
  */
-class FTP extends StandardFWrapper
+class FTP extends FTPBase2
 {    
     public static function GetFieldTemplate() : array
     {

@@ -237,13 +237,13 @@ class StaticWrapper
     }
     
     public function __call($fname, $args)
-    {        
-        if (method_exists($this, $fname)) 
-            return $this->$fname(...$args);
-        
+    {
         if (array_key_exists($fname, $this->overrides))
             return $this->overrides[$fname](...$args);
         
+        if (method_exists($this, $fname))
+            return $this->$fname(...$args);
+            
         return ($this->class)::$fname(...$args);
     }
 }

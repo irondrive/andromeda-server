@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
 require_once(ROOT."/Apps/Files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
@@ -273,10 +272,3 @@ abstract class FWrapper extends Storage
         }
     }
 }
-
-abstract class SFWBase1 extends FWrapper { use BasePath; }
-abstract class SFWBase2 extends SFWBase1 { use FieldCrypt; }
-abstract class SFWBase3 extends SFWBase2 { use OptFieldCrypt; }
-
-/** A standard fwrapper storage with a base path and user/password */
-abstract class StandardFWrapper extends SFWBase3 { use UserPass; }

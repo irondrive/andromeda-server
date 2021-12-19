@@ -239,7 +239,7 @@ class Contact extends ContactBase
         
         $recipients = array_map(function(Contact $contact){ return $contact->GetAsEmailRecipient(); }, $recipients);
         
-        if ($from !== null) $from = $from->GetFromEmail();
+        if ($from !== null) $from = $from->GetEmailFrom();
         
         $mailer->SendMail($subject, $message, $ishtml, $recipients, $bcc, $from);
     }

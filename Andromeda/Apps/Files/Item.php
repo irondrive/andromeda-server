@@ -110,7 +110,7 @@ abstract class Item extends StandardObject
      * @param bool $overwrite if true, delete the duplicate item
      * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
      * @throws DuplicateItemException if a duplicate item exists and not $overwrite
-     * @return self|NULL Item
+     * @return static|NULL existing item to be re-used
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?self
     {
@@ -135,7 +135,7 @@ abstract class Item extends StandardObject
      * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
      * @throws CrossFilesystemException if the parent is on a different filesystem
      * @throws DuplicateItemException if a duplicate item exists and not $overwrite
-     * @return self|NULL Item
+     * @return static|NULL existing item to be re-used
      */
     protected function CheckParent(Folder $parent, bool $overwrite, bool $reuse) : ?self
     {
@@ -434,7 +434,7 @@ abstract class Item extends StandardObject
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the parent folder of the item
      * @param string $name the name of the item to load
-     * @return self|NULL loaded item or null if not found
+     * @return static|NULL loaded item or null if not found
      */
     public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?self
     {

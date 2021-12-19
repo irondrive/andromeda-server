@@ -91,7 +91,10 @@ abstract class Storage extends StandardObject implements Transactions
     /** Returns the command usage for Create() */
     public static function GetCreateUsage() : string { return ""; }
     
-    /** Creates a new storage with the given input and the given FS manager */
+    /** 
+     * Creates a new storage with the given input and the given FS manager 
+     * @return static
+     */
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         return parent::BaseCreate($database)->SetObject('filesystem',$filesystem);

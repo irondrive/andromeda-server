@@ -120,6 +120,8 @@ class AccountsApp extends InstalledApp
     
     protected static function getConfigClass() : string { return Config::class; }
     
+    protected function GetConfig() : Config { return $this->config; }
+    
     protected static function getInstallFlags() : string { return '[--username alphanum --password raw]'; }
     
     public static function getUsage() : array 
@@ -199,8 +201,8 @@ class AccountsApp extends InstalledApp
         
         switch($input->GetAction())
         {
-            case 'getconfig':           return $this->GetConfig($input, $authenticator);
-            case 'setconfig':           return $this->SetConfig($input, $authenticator);
+            case 'getconfig':           return $this->RunGetConfig($input, $authenticator);
+            case 'setconfig':           return $this->RunSetConfig($input, $authenticator);
             
             case 'getauthsources':      return $this->GetAuthSources($input, $authenticator);
             case 'createauthsource':    return $this->CreateAuthSource($input, $authenticator, $accesslog);
@@ -286,11 +288,11 @@ class AccountsApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function GetConfig(Input $input, ?Authenticator $authenticator) : array
+    protected function RunGetConfig(Input $input, ?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
 
-        return $this->config->GetClientObject($admin);
+        return $this->GetConfig()->GetClientObject($admin);
     }
     
     /**
@@ -299,12 +301,12 @@ class AccountsApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function SetConfig(Input $input, ?Authenticator $authenticator) : array
+    protected function RunSetConfig(Input $input, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();        
         $authenticator->RequireAdmin();
         
-        return $this->config->SetConfig($input)->GetClientObject(true);
+        return $this->GetConfig()->SetConfig($input)->GetClientObject(true);
     }
     
     /**
@@ -516,12 +518,12 @@ class AccountsApp extends InstalledApp
         $admin = $authenticator !== null; 
         if ($admin) $authenticator->RequireAdmin();
         
-        $allowCreate = $this->config->GetAllowCreateAccount();
+        $allowCreate = $this->GetConfig()->GetAllowCreateAccount();
         
         if (!$admin && !$allowCreate) throw new AccountCreateDeniedException();
         
-        $userIsContact = $this->config->GetUsernameIsContact();
-        $requireContact = $this->config->GetRequireContact();
+        $userIsContact = $this->GetConfig()->GetUsernameIsContact();
+        $requireContact = $this->GetConfig()->GetRequireContact();
                
         if ($userIsContact || $requireContact >= Config::CONTACT_EXIST)
         {
@@ -630,7 +632,7 @@ class AccountsApp extends InstalledApp
         }
         else /** create account on the fly if external auth */
         {
-            $authman = $reqauthman ?? $this->config->GetDefaultAuth();
+            $authman = $reqauthman ?? $this->GetConfig()->GetDefaultAuth();
             if ($authman === null) throw new UnknownAuthSourceException();
             
             if ($authman->GetEnabled() < Auth\Manager::ENABLED_FULL)
@@ -804,7 +806,7 @@ class AccountsApp extends InstalledApp
         if ($authenticator === null) throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
-        $verify = $this->config->GetRequireContact() >= Config::CONTACT_VALID;
+        $verify = $this->GetConfig()->GetRequireContact() >= Config::CONTACT_VALID;
         
         $info = Contact::FetchInfoFromInput($input);
         
@@ -969,7 +971,7 @@ class AccountsApp extends InstalledApp
         $contact = Contact::TryLoadByAccountAndID($this->database, $account, $cid);
         if ($contact === null) throw new UnknownContactException();
 
-        if ($this->config->GetRequireContact() && $contact->GetIsValid() && count($account->GetContacts()) <= 1)
+        if ($this->GetConfig()->GetRequireContact() && $contact->GetIsValid() && count($account->GetContacts()) <= 1)
             throw new ContactRequiredException();
         
         if ($accesslog && AccessLog::isFullDetails()) 
@@ -1142,7 +1144,7 @@ class AccountsApp extends InstalledApp
             $duplicate = Group::TryLoadByName($this->database, $name);
             if ($duplicate !== null) throw new GroupExistsException();
             
-            $group->SetName($name);
+            $group->SetDisplayName($name);
         }
  
         if ($input->HasParam('priority')) $group->SetPriority($input->GetParam("priority", SafeParam::TYPE_INT8));

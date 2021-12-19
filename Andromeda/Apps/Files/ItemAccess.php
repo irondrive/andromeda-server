@@ -30,6 +30,12 @@ class ItemAccess
     /** Returns the item that is being accessed */
     public function GetItem() : Item { return $this->item; }
     
+    /** Returns the item that is being accessed (if applicable) */
+    public function GetFile() : File { return $this->item; }
+    
+    /** Returns the item that is being accessed (if applicable) */
+    public function GetFolder() : Folder { return $this->item; }
+    
     /** Returns the share object that grants access, or null if the item is owned */
     public function GetShare() : ?Share { return $this->share; }
 

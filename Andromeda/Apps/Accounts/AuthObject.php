@@ -33,7 +33,7 @@ abstract class AuthObject extends StandardObject
      * @param ObjectDatabase $database database reference
      * @param Account $account account that owns this object
      * @param string $id the ID of this object
-     * @return self|NULL loaded object or null if not found
+     * @return static|NULL loaded object or null if not found
      */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
@@ -91,7 +91,10 @@ abstract class AuthObject extends StandardObject
     
     private $haveKey = false;
     
-    /** Sets the auth key to a new random value */
+    /** 
+     * Sets the auth key to a new random value 
+     * @return $this
+     */
     protected function InitAuthKey() : self
     {
         return $this->ChangeAuthKey(Utilities::Random(static::KEY_LENGTH));
@@ -156,5 +159,3 @@ trait FullAuthKey
         return implode(":",array(static::GetFullKeyPrefix(),$this->ID(),$this->GetAuthKey()));
     }    
 }
-
-

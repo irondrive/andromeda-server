@@ -160,6 +160,7 @@ abstract class Timed extends Base
     
     public static function BaseConfigUsage() : string { return "--timeperiod uint32 [--max_pubdownloads ?uint32] [--max_bandwidth ?uint]"; }
     
+    /** @return static */
     protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
     {
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT32);
@@ -182,7 +183,7 @@ abstract class Timed extends Base
      * @return array `{timeperiod:int, max_stats_age:?int, dates:{created:float}, 
             limits: {pubdownloads:?int, bandwidth:?int}`
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $isadmin = false) : array
     {
         return array(
             'timeperiod' => $this->GetTimePeriod(),

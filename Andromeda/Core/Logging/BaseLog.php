@@ -61,7 +61,7 @@ abstract class BaseLog extends BaseObject
      * Loads log entries the given input
      * @param ObjectDatabase $database database reference
      * @param Input $input user input with selectors
-     * @return array<string, BaseLog> loaded log entries indexed by ID
+     * @return array<string, static> loaded log entries indexed by ID
      */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
     {

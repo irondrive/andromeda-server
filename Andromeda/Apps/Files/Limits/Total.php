@@ -145,7 +145,7 @@ abstract class Total extends Base
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see TimedStats::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $isadmin = false) : array
     {
         return array(
             'dates' => array(

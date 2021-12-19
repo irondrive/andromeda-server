@@ -3,7 +3,6 @@
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
@@ -100,7 +99,10 @@ abstract class AuthEntity extends StandardObject
                                                             "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
                                                             "[--accountsearch ?uint8] [--groupsearch ?uint8] [--userdelete ?bool]"; }
 
-    /** Sets the value of an inherited property for the object */
+    /** 
+     * Sets the value of an inherited property for the object 
+     * @return $this
+     */
     public function SetProperties(Input $input) : self
     {
         foreach (array('session_timeout','client_timeout','max_password_age') as $prop)

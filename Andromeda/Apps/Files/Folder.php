@@ -40,7 +40,7 @@ abstract class Folder extends Item
             'counters__size' => new FieldTypes\Counter(),      // total size of the folder and all contents
             'parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
             'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
-            'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
+            'folders'   => new FieldTypes\ObjectRefs(SubFolder::class, 'parent'),
             'counters__subfiles' => new FieldTypes\Counter(),   // total number of subfiles (recursive)
             'counters__subfolders' => new FieldTypes\Counter(), // total number of subfolders (recursive)
             'counters__subshares' => new FieldTypes\Counter()   // total number of shares (recursive)

@@ -19,8 +19,6 @@ require_once(ROOT."/Apps/Files/Limits/Timed.php");
 require_once(ROOT."/Apps/Files/Limits/AuthObj.php");
 require_once(ROOT."/Apps/Files/Limits/Group.php");
 
-interface IAccountCommon { } // AccountCommon
-
 /**
  * Account limits common between total and timed
  * 
@@ -47,7 +45,10 @@ trait AccountCommon
     protected function TryGetInheritsScalarFrom(string $field) : ?BaseObject
     {
         $obj = $this->TryGetInheritable($field)->GetSource();
-        return ($obj !== null) ? $obj->GetLimitedObject() : null;
+        
+        if ($obj === null) return null;
+        assert($obj instanceof Base); 
+        return $obj->GetLimitedObject();
     }
 
     /**
@@ -59,7 +60,7 @@ trait AccountCommon
      */
     public function GetClientObject(bool $isadmin = false) : array
     {
-        $data = parent::GetClientObject();
+        $data = parent::GetClientObject($isadmin);
 
         $data['features']['track_items'] = $this->GetFeatureBool('track_items');
         $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
@@ -108,9 +109,9 @@ trait AccountCommon
      * 
      * The account limit will be deleted if it does not have any properties that
      * were set specifically for it, and no other group limits applicable to it exist
-     * @param IGroupCommon $grlim group to remove
+     * @param Base $grlim group to remove
      */
-    public function ProcessGroupRemove(IGroupCommon $grlim) : void
+    protected function BaseProcessGroupRemove(Base $grlim) : void
     {
         // see if the account has any properties specific to it
         foreach (array_keys($this->GetInheritedFields()) as $field)
@@ -127,9 +128,14 @@ trait AccountCommon
 }
 
 /** Concrete class providing account config and total stats */
-class AccountTotal extends AuthEntityTotal implements IAccountCommon
+class AccountTotal extends AuthEntityTotal
 { 
     use AccountCommon;
+    
+    public function ProcessGroupRemove(GroupTotal $grlim) : void
+    {
+        $this->BaseProcessGroupRemove($grlim);
+    }
     
     /** cache of group limits that apply to this account */
     protected array $grouplims;
@@ -265,7 +271,7 @@ class AccountTotal extends AuthEntityTotal implements IAccountCommon
 }
 
 /** A fake empty account limits that returns default property values */
-class AccountTotalDefault extends AccountTotal implements IAccountCommon
+class AccountTotalDefault extends AccountTotal
 {
     public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
     
@@ -273,9 +279,14 @@ class AccountTotalDefault extends AccountTotal implements IAccountCommon
 }
 
 /** Concrete class providing timed account limits */
-class AccountTimed extends AuthEntityTimed implements IAccountCommon
+class AccountTimed extends AuthEntityTimed
 {
     use AccountCommon;
+    
+    public function ProcessGroupRemove(GroupTimed $grlim) : void
+    {
+        $this->BaseProcessGroupRemove($grlim);
+    }
     
     public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge(); } // not null
     

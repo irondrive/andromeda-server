@@ -134,8 +134,8 @@ final class Main extends Singleton
         {
             $this->GetDatabase(); // assert db exists
             
-            $class = get_class($this->dbException);
-            throw $class::Copy($this->dbException); // new trace
+            $class = get_class($this->cfgException);
+            throw $class::Copy($this->cfgException); // new trace
         }
         else return $this->config;
     }
@@ -149,7 +149,8 @@ final class Main extends Singleton
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
-    private Exceptions\BaseException $dbException; // reason DB is not configured
+    private DatabaseConfigException $dbException; // reason DB did not init
+    private DatabaseException $cfgException; // reason config did not init
 
     /**
      * Initializes the Main API
@@ -204,7 +205,7 @@ final class Main extends Singleton
         }
         catch (DatabaseException $e) 
         {
-            $this->dbException = $e;
+            $this->cfgException = $e;
         }
         
         foreach ($apps as $app) $this->LoadApp($app);

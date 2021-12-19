@@ -5,7 +5,6 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\StorageException;
 require_once(ROOT."/Apps/Files/Folder.php");
 
 use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -73,7 +72,7 @@ class RootFolder extends Folder
      * Loads all root folders on the given filesystem
      * @param ObjectDatabase $database database reference
      * @param FSManager $filesystem the filesystem
-     * @return array<string, FSManager> folders indexed by ID
+     * @return array<string, RootFolder> folders indexed by ID
      */
     public static function LoadRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : array
     {
@@ -86,7 +85,7 @@ class RootFolder extends Folder
      * Load all root folders for the given owner
      * @param ObjectDatabase $database database reference
      * @param Account $account folder owner
-     * @return array<string, FSManager> folders indexed by ID
+     * @return array<string, RootFolder> folders indexed by ID
      */
     public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
     {

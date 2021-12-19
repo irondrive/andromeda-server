@@ -66,7 +66,11 @@ abstract class AuthAccessLog extends BaseAppLog
             $criteria[] = $q->Equals("$table.$prop", $input->GetParam($prop,SafeParam::TYPE_RANDSTR));       
 
         return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));
-    }    
+    }
+    
+    private function TryGetAccount() : ?Account { return $this->TryGetObject('account'); }
+    private function TryGetSudouser() : ?Account { return $this->TryGetObject('sudouser'); }
+    private function TryGetClient() : ?Client { return $this->TryGetObject('client'); }
     
     /**
      * Returns the printable client object of this AuthAccessLog
@@ -80,14 +84,25 @@ abstract class AuthAccessLog extends BaseAppLog
     {
         $retval = array('admin' => $this->isAdmin());
         
-        foreach (array('account','sudouser','client') as $prop)
+        if ($expand)
         {
-            $obj = $expand ? $this->TryGetObject($prop) : null;
+            $account = $this->TryGetAccount();
+            $client = $this->TryGetClient();
             
-            $retval[$prop] = ($obj !== null) ? $obj->GetClientObject() : $this->TryGetObjectID($prop);
+            $retval['account'] = ($account !== null) ? $account->GetClientObject() : null;
+            $retval['client'] = ($client !== null) ? $client->GetClientObject() : null;
+            
+            $sudouser = $this->TryGetSudouser();
+            if ($sudouser !== null) $retval['sudouser'] = $sudouser->GetClientObject();
         }
-        
-        if (!$retval['sudouser']) unset($retval['sudouser']);
+        else
+        {
+            $retval['account'] = $this->TryGetObjectID('account');
+            $retval['client'] = $this->TryGetObjectID('client');
+            
+            $sudouser = $this->TryGetObjectID('sudouser');
+            if ($sudouser !== null) $retval['sudouser'] = $sudouser;
+        }
 
         return $retval;
     }

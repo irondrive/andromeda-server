@@ -44,6 +44,8 @@ class CoreApp extends InstalledApp
     
     protected static function getConfigClass() : string { return Config::class; }
     
+    protected function GetConfig() : Config { return $this->config; }
+    
     public static function getVersion() : string { return andromeda_version; }
     
     protected static function getTemplateFolder() : string { return ROOT.'/Core'; }
@@ -162,9 +164,9 @@ class CoreApp extends InstalledApp
             case 'enableapp':  return $this->EnableApp($input, $isAdmin, $accesslog);
             case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
             
-            case 'getconfig':   return $this->GetConfig($input, $isAdmin);
+            case 'getconfig':   return $this->RunGetConfig($input, $isAdmin);
             case 'getdbconfig': return $this->GetDBConfig($input, $isAdmin);
-            case 'setconfig':   return $this->SetConfig($input, $isAdmin, $accesslog);
+            case 'setconfig':   return $this->RunSetConfig($input, $isAdmin, $accesslog);
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
             case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $accesslog);
@@ -233,7 +235,7 @@ class CoreApp extends InstalledApp
         foreach (Config::ListApps() as $app)
         {
             $retval[$app] = null;
-            $this->config->EnableApp($app);
+            $this->GetConfig()->EnableApp($app);
         }
 
         // install all enabled apps
@@ -338,7 +340,7 @@ class CoreApp extends InstalledApp
             if ($mailer === null) throw new UnknownMailerException();
             else $mailer->Activate();
         }
-        else $mailer = $this->config->GetMailer();
+        else $mailer = $this->GetConfig()->GetMailer();
         
         if ($accesslog) $accesslog->LogDetails('mailer',$mailer->ID());
         
@@ -357,11 +359,11 @@ class CoreApp extends InstalledApp
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
-        try { $this->config->EnableApp($app); }
+        try { $this->GetConfig()->EnableApp($app); }
         catch (FailedAppLoadException | MissingMetadataException $e){ 
             throw new InvalidAppException(); }
 
-        return $this->config->GetApps();
+        return $this->GetConfig()->GetApps();
     }
     
     /**
@@ -375,9 +377,9 @@ class CoreApp extends InstalledApp
         
         $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
         
-        $this->config->DisableApp($app);
+        $this->GetConfig()->DisableApp($app);
         
-        return $this->config->GetApps();
+        return $this->GetConfig()->GetApps();
     }
     
     /**
@@ -385,9 +387,9 @@ class CoreApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject() 
      */
-    protected function GetConfig(Input $input, bool $isAdmin) : array
+    protected function RunGetConfig(Input $input, bool $isAdmin) : array
     {
-        return $this->config->GetClientObject($isAdmin);
+        return $this->GetConfig()->GetClientObject($isAdmin);
     }
     
     /**
@@ -408,11 +410,11 @@ class CoreApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function SetConfig(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
+    protected function RunSetConfig(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->config->SetConfig($input)->GetClientObject(true);
+        return $this->GetConfig()->SetConfig($input)->GetClientObject(true);
     }
     
     /**

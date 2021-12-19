@@ -23,6 +23,9 @@ class SMBConnectException extends ActivateException { public $message = "SMB_CON
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) SMB::DecryptAccount($database, $account); });
 
+abstract class SMBBase1 extends FWrapper { use BasePath; }
+abstract class SMBBase2 extends SMBBase1 { use UserPass; }
+
 /**
  * Allows using an SMB/CIFS server for backend storage
  * 
@@ -30,7 +33,7 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
  * functions but some manual workarounds are needed.
  * Uses fieldcrypt to allow encrypting the username/password.
  */
-class SMB extends StandardFWrapper
+class SMB extends SMBBase2
 {    
     public static function GetFieldTemplate() : array
     {

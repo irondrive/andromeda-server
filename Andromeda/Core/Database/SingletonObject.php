@@ -33,6 +33,7 @@ abstract class SingletonObject extends StandardObject
     /**
      * @throws DuplicateSingletonException if an object already exists in the DB
      * @see StandardObject::BaseCreate()
+     * @return static
      */
     protected static function BaseCreate(ObjectDatabase $database) : self
     {

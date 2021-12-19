@@ -11,7 +11,7 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\FieldCrypt;
+require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\OptFieldCrypt;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
@@ -33,22 +33,22 @@ class S3ModifyException extends Exceptions\ClientErrorException { public $messag
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) S3::DecryptAccount($database, $account); });
 
-abstract class S3Base1 extends FWrapper { use NoFolders; }
-abstract class S3Base2 extends S3Base1 { use FieldCrypt; }
-abstract class S3Base3 extends S3Base2 { use OptFieldCrypt; }
+abstract class S3Base extends FWrapper { use NoFolders; }
 
 /**
  * Allows using an S3-compatible server for backend storage
  * 
  * Uses fieldcrypt to allow encrypting the keys.
  */
-class S3 extends S3Base3
+class S3 extends S3Base
 {
+    use OptFieldCrypt;
+    
     protected static function getEncryptedFields() : array { return array('accesskey','secretkey'); }
     
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
+        return array_merge(parent::GetFieldTemplate(), self::GetFieldCryptFieldTemplate(), array(
             'endpoint' => null,
             'path_style' => null,
             'port' => null,
@@ -70,7 +70,7 @@ class S3 extends S3Base3
     {
         $accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : boolval($this->TryGetScalar('accesskey'));
         
-        return array_merge(parent::GetClientObject($activate), array(
+        return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
             'endpoint' => $this->GetScalar('endpoint'),
             'path_style' => $this->TryGetScalar('path_style'),
             'port' => $this->TryGetScalar('port'),
@@ -103,12 +103,13 @@ class S3 extends S3Base3
     /** Returns the given path with no leading, trailing or duplicate / */
     protected static function cleanPath(string $path) : string { return implode('/',array_filter(explode('/',$path))); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --endpoint fspath --bucket alphanum --region alphanum [--path_style bool]".
-                                                                                       "[--port uint16] [--usetls bool] [--accesskey randstr] [--secretkey randstr]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".self::GetFieldCryptCreateUsage().
+        " --endpoint fspath --bucket alphanum --region alphanum [--path_style bool]".
+        " [--port uint16] [--usetls bool] [--accesskey randstr] [--secretkey randstr]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $filesystem)
+        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($input)
             ->SetScalar('endpoint', self::cleanPath($input->GetParam('endpoint', SafeParam::TYPE_FSPATH)))
             ->SetScalar('path_style', $input->GetOptParam('path_style',SafeParam::TYPE_BOOL))
             ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
@@ -119,8 +120,9 @@ class S3 extends S3Base3
             ->SetSecretKey($input->GetOptParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
     }
     
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--endpoint fspath] [--bucket alphanum] [--region alphanum] [--path_style ?bool]".
-                                                                                   "[--port ?uint16] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".self::GetFieldCryptEditUsage().
+        " [--endpoint fspath] [--bucket alphanum] [--region alphanum] [--path_style ?bool]".
+        " [--port ?uint16] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
     
     public function Edit(Input $input) : self
     {
@@ -136,7 +138,7 @@ class S3 extends S3Base3
         if ($input->HasParam('accesskey')) $this->SetScalar('accesskey', $input->GetNullParam('accesskey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
         if ($input->HasParam('secretkey')) $this->SetScalar('secretkey', $input->GetNullParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
         
-        return parent::Edit($input);
+        $this->FieldCryptEdit($input); return parent::Edit($input);
     }
     
     /** s3 connection resource */ private $s3;
