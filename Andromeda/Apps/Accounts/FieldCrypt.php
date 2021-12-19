@@ -1,7 +1,9 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
+require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
 
 require_once(ROOT."/Apps/Accounts/Account.php");
 require_once(ROOT."/Apps/Accounts/Authenticator.php");
@@ -23,12 +25,10 @@ trait FieldCrypt
     public abstract static function LoadByAccount(ObjectDatabase $database, Account $account) : array;
     
     /** Gets the extra DB fields required for this trait */
-    public static function GetFieldTemplate() : array
+    public static function GetFieldCryptFieldTemplate() : array
     {
-        $fields = array_fill_keys(array_map(function(string $field){ 
+        return array_fill_keys(array_map(function(string $field){ 
             return $field."_nonce"; }, static::getEncryptedFields()), null);
-        
-        return array_merge(parent::GetFieldTemplate(), $fields);
     }   
     
     /** Returns true if the given DB field is encrypted */
@@ -145,5 +145,52 @@ trait FieldCrypt
     public static function DecryptAccount(ObjectDatabase $database, Account $account) : void 
     { 
         foreach (static::LoadByAccount($database, $account) as $obj) $obj->SetEncrypted(false);
+    }
+}
+
+/**
+ * Trait for storage classes that store a optionally-encrypted credential fields
+ *
+ * The encryption uses the owner account's secret-key crypto (only accessible by them)
+ */
+trait OptFieldCrypt
+{
+    use FieldCrypt;
+    
+    /** Returns the command usage for Create() */
+    public static function GetFieldCryptCreateUsage() : string { return "[--fieldcrypt bool]"; }
+    
+    /** Performs cred-crypt level initialization on a new storage */
+    public function FieldCryptCreate(Input $input) : self
+    {
+        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL) ?? false;
+        
+        return $this->SetEncrypted($fieldcrypt);
+    }
+    
+    /** Returns the command usage for Edit() */
+    public static function GetFieldCryptEditUsage() : string { return "[--fieldcrypt bool]"; }
+    
+    /** Performs cred-crypt level edit on an existing storage */
+    public function FieldCryptEdit(Input $input) : self
+    {
+        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL);
+        if ($fieldcrypt !== null) $this->SetEncrypted($fieldcrypt); return $this;
+    }
+    
+    /**
+     * Returns the printable client object of this trait
+     * @return array fields mapped to `{field_iscrypt:bool}`
+     */
+    public function GetFieldCryptClientObject() : array
+    {
+        $retval = array();
+        
+        foreach (static::getEncryptedFields() as $field)
+        {
+            $retval[$field."_iscrypt"] = $this->isFieldEncrypted($field);
+        }
+        
+        return $retval;
     }
 }

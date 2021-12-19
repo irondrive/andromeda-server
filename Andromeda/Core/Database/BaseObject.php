@@ -73,7 +73,7 @@ abstract class BaseObject
      * Loads an array of objects from the DB matching the given query
      * @param ObjectDatabase $database Reference to the database
      * @param QueryBuilder $query The query to use for matching objects
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @return array<string, static> array of objects indexed by their IDs
      */
     public static function LoadByQuery(ObjectDatabase $database, QueryBuilder $query) : array
     {
@@ -97,7 +97,7 @@ abstract class BaseObject
      * Loads a unique object matching the given query
      * @param ObjectDatabase $database Reference to the database
      * @param QueryBuilder $query the query to uniquely identify the object
-     * @return self|NULL
+     * @return static|NULL
      */
     public static function TryLoadUniqueByQuery(ObjectDatabase $database, QueryBuilder $query) : ?self
     {
@@ -120,7 +120,7 @@ abstract class BaseObject
      * Loads a unique object by its ID
      * @param ObjectDatabase $database Reference to the database
      * @param string $id the ID of the object
-     * @return self|null object or null if not found
+     * @return static|null object or null if not found
      */
     public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
     {
@@ -143,7 +143,7 @@ abstract class BaseObject
      * @param ObjectDatabase $database Reference to the database
      * @param int $limit the maximum number of objects to load
      * @param int $offset the number of objects to skip loading 
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @return array<string, static> array of objects indexed by their IDs
      */
     public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array 
     {
@@ -638,6 +638,7 @@ abstract class BaseObject
     /**
      * Same as BoolSetObject() but returns $this
      * @see BaseObject::BoolSetObject()
+     * @return $this
      */
     protected function SetObject(string $field, ?self $object, bool $notification = false) : self
     {

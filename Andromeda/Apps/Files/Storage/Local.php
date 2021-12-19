@@ -7,6 +7,7 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
+/** Exception indicating only admins can create local storage */
 class LocalNonAdminException extends ActivateException { public $message = "LOCAL_STORAGE_ADMIN_ONLY"; }
 
 abstract class LocalBase extends FWrapper { use BasePath; }

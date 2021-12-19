@@ -23,12 +23,15 @@ class HostKeyMismatchException extends ActivateException { public $message = "SS
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) SFTP::DecryptAccount($database, $account); });
 
+abstract class SFTPBase1 extends FWrapper { use BasePath; }
+abstract class SFTPBase2 extends SFTPBase1 { use UserPass; }
+
 /**
  * Allows using an SFTP server for backend storage using phpseclib
  * 
  * Uses fieldcrypt to allow encrypting the username/password.
  */
-class SFTP extends StandardFWrapper
+class SFTP extends SFTPBase2
 {
     protected static function getEncryptedFields() : array { return array_merge(parent::getEncryptedFields(), array('privkey','keypass')); }
     

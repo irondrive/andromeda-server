@@ -33,7 +33,7 @@ interface IGroupCommon
  * 
  * The extra complexity with groups is because they operate as sums of their component
  * accounts, and must manage updating themselves when account memberships are changed.
- *  
+ * 
  * Group limits apply to its component accounts individually, not the group as a whole.
  */
 trait GroupCommon
@@ -57,10 +57,10 @@ trait GroupCommon
     
     /**
      * Updates the group's stats by adding or subtracting an account's stats
-     * @param IAccountCommon $aclim the account limits
+     * @param Base $aclim the account limits
      * @param bool $add true to add, false to subtract
      */
-    public function ProcessAccountChange(IAccountCommon $aclim, bool $add) : void
+    protected function BaseProcessAccountChange(Base $aclim, bool $add) : void
     {  
         $mul = $add ? 1 : -1;
         $this->CountPublicDownloads($mul*$aclim->GetPublicDownloads());
@@ -123,9 +123,9 @@ trait GroupCommon
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $isadmin = false) : array
     {
-        $retval = parent::GetClientObject();
+        $retval = parent::GetClientObject($isadmin);
         
         foreach (array('track_items','track_dlstats') as $prop)
         {
@@ -146,6 +146,11 @@ class GroupTotal extends AuthEntityTotal implements IGroupCommon
     
     /** cache of account limits that apply to this group */
     protected array $acctlims;
+
+    public function ProcessAccountChange(AccountTotal $aclim, bool $add) : void
+    {
+        $this->BaseProcessAccountChange($aclim, $add);
+    }
     
     /**
      * loads account limits via a JOIN, caches, and returns them
@@ -223,6 +228,11 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
     
     /** cache of account limits that apply to this group */
     protected array $acctlims;
+    
+    public function ProcessAccountChange(AccountTimed $aclim, bool $add) : void
+    {
+        $this->BaseProcessAccountChange($aclim, $add);
+    }
     
     /**
      * loads account limits via a JOIN, caches, and returns them

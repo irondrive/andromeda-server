@@ -120,6 +120,7 @@ class FSManager extends StandardObject
     public function GetStorage(bool $activate = true) : Storage 
     { 
         $ret = $this->GetObject('storage');
+        assert($ret instanceof Storage);
         return $activate ? $ret->Activate() : $ret;
     }  
     
@@ -127,7 +128,7 @@ class FSManager extends StandardObject
     public function GetStorageType() : string { return $this->GetObjectType('storage'); }
     
     /** Edits properites of the underlying storage and runs test */
-    public function EditStorage(Input $input) : Storage { return $this->GetObject('storage')->Edit($input)->Test(); }
+    public function EditStorage(Input $input) : Storage { return $this->GetStorage(false)->Edit($input)->Test(); }
     
     /** Sets the underlying storage object for the filesystem */
     private function SetStorage(Storage $st) : self { return $this->SetObject('storage',$st); }
@@ -185,7 +186,7 @@ class FSManager extends StandardObject
     { 
         $retval = array();
         foreach (self::getStorageClasses() as $name=>$class)
-            $retval[] = "--sttype $name ".$class::GetCreateUsage();
+            $retval[] = "--sttype $name".$class::GetCreateUsage();
         return $retval;
     }
     
@@ -254,7 +255,7 @@ class FSManager extends StandardObject
     {
         $retval = array();
         foreach (self::getStorageClasses() as $name=>$class)
-            $retval[] = "$name: ".$class::GetEditUsage();
+            $retval[] = "($name)".$class::GetEditUsage();
         return $retval;
     }
     

@@ -173,7 +173,7 @@ class File extends Item
     {
         $file = parent::CheckParent($parent, $overwrite, true);
         
-        $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());        
+        $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
         $this->GetFSImpl()->CopyFile($this, $file); return $file;
     }

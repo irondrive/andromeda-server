@@ -49,9 +49,9 @@ trait FilesystemCommon
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $isadmin = false) : array
     {
-        $data = parent::GetClientObject();
+        $data = parent::GetClientObject($isadmin);
         
         $data['features']['track_items'] = $this->GetFeatureBool('track_items');
         $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');

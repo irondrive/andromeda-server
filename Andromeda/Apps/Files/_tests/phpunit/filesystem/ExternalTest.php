@@ -4,13 +4,38 @@ require_once("init.php");
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php");
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\StaticWrapper;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, ItemStat};
 
 require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/Apps/Files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
+
+class MockFileCreator implements FileCreator
+{
+    private ExternalTest $test; private array $dbfiles; 
+    
+    public function __construct(ExternalTest $test, array& $dbfiles){ $this->test = $test; $this->dbfiles = &$dbfiles; }
+    
+    public function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : File
+    {
+        return $this->test->NotifyCreateFile($this->dbfiles, $database, $parent, $account, $name);
+    }
+}
+
+class MockFolderCreator implements FolderCreator
+{
+    private ExternalTest $test; private array $dbfolders;
+    
+    public function __construct(ExternalTest $test, array& $dbfolders){ $this->test = $test; $this->dbfolders = &$dbfolders; }
+    
+    public function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : SubFolder
+    {
+        return $this->test->NotifyCreateFolder($this->dbfolders, $database, $parent, $account, $name);
+    }
+}
 
 class ExternalTest extends \PHPUnit\Framework\TestCase
 {
@@ -24,13 +49,27 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         return $item;
     }
     
-    protected function getMockRoot(string $rpath) : Folder
+    protected function getMockRoot(string $rpath)
     {        
         $path = explode('/',$rpath); $name = array_pop($path); $path = implode('/',$path);
         
         $parent = $name ? $this->getMockRoot($path) : null;
         
         return $this->getMockItem(Folder::class, $name, $parent);
+    }
+    
+    public function NotifyCreateFile(array& $dbfiles, ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : File
+    {
+        $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles),true));
+        
+        return $dbfiles[] = $this->getMockItem(File::class, $name, $parent);
+    }
+    
+    public function NotifyCreateFolder(array& $dbfolders, ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : SubFolder
+    {
+        $this->assertFalse(in_array($name, array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders),true));
+        
+        return $dbfolders[] = $this->getMockItem(SubFolder::class, $name, $parent);
     }
     
     // thoroughly tests both GetItemPath() and RefreshFolder()
@@ -85,24 +124,10 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         
         $folder->method('GetFiles')->will($this->returnCallback(function()use($dbfiles){ return $dbfiles; }));
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
-        
-        $fileSw = (new StaticWrapper(File::class))->_override('NotifyCreate',
-            function($database, Folder $parent, $owner, string $name)use(&$dbfiles)
-        {
-            $this->assertFalse(in_array($name, array_map(function(File $file){ return $file->GetName(); }, $dbfiles),true));
 
-            return $dbfiles[] = $this->getMockItem(File::class, $name, $parent);
-        });
-        
-        $folderSw = (new StaticWrapper(SubFolder::class))->_override('NotifyCreate',
-            function($database, Folder $parent, $owner, string $name)use(&$dbfolders)
-        {
-            $this->assertFalse(in_array($name, array_map(function(SubFolder $folder){ return $folder->GetName(); }, $dbfolders),true));
-            
-            return $dbfolders[] = $this->getMockItem(SubFolder::class, $name, $parent);
-        });
-
-        $fsimpl->RefreshFolder($folder, true, $fileSw, $folderSw);        
+        $fsimpl->RefreshFolder($folder, true,
+            new MockFileCreator($this, $dbfiles),
+            new MockFolderCreator($this, $dbfolders));
         
         $fsfiles = array_map(function($path){ return basename($path); }, $fsfiles);
         $fsfolders = array_map(function($path){ return basename($path); }, $fsfolders);

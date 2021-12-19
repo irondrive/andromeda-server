@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\StaticWrapper;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/Apps/Files/Filesystem/Native.php");
 
@@ -9,6 +10,9 @@ require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/Apps/Files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
 require_once(ROOT."/Apps/Files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
+
+interface FileCreator { function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : File; }
+interface FolderCreator { function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : SubFolder; }
 
 /**
  * An External Andromeda filesystem is accessible outside Andromeda
@@ -69,11 +73,11 @@ class External extends BaseFileFS
      * Checks that it exists, then updates stat metadata.
      * Also scans for new items and creates objects for them.
      * @param bool $doContents if true, recurse, else just this folder
-     * @param ?StaticWrapper $fileSw MUST BE NULL (unit testing only)
-     * @param ?StaticWrapper $folderSw MUST BE NULL (unit testing only)
+     * @param ?FileCreator $fileCr MUST BE NULL (unit testing only)
+     * @param ?FolderCreator $folderCr MUST BE NULL (unit testing only)
      */
     public function RefreshFolder(Folder $folder, bool $doContents = true, 
-        ?StaticWrapper $fileSw = null, ?StaticWrapper $folderSw = null) : self
+        ?FileCreator $fileCr = null, ?FolderCreator $folderCr = null) : self
     {
         $storage = $this->GetStorage();
         $path = $this->GetItemPath($folder);
@@ -108,7 +112,7 @@ class External extends BaseFileFS
                     unset($dbitems[$fsname]);
                 else
                 {
-                    $sw = $isfile ? $fileSw : $folderSw;
+                    $sw = $isfile ? $fileCr : $folderCr;
                     $class = $isfile ? File::class : SubFolder::class;
                     
                     $database = $this->GetDatabase();

@@ -8,73 +8,23 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
+require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\OptFieldCrypt;
+
 /** Exception indicating that this storage does not support folder functions */
 class FoldersUnsupportedException extends Exceptions\ClientErrorException { public $message = "STORAGE_FOLDERS_UNSUPPORTED"; }
-
-/**
- * Trait for storage classes that store a optionally-encrypted credential fields
- * 
- * The encryption uses the owner account's secret-key crypto (only accessible by them)
- */
-trait OptFieldCrypt
-{
-    protected abstract static function getEncryptedFields() : array;
-    
-    protected abstract function isFieldEncrypted($field) : bool;
-    
-    protected abstract function SetEncrypted(bool $crypt);
-    
-    /** Returns the command usage for Create() */
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--fieldcrypt bool]"; }
-    
-    /** Performs cred-crypt level initialization on a new storage */
-    public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
-    {
-        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL) ?? false;
-        
-        return parent::Create($database, $input, $filesystem)->SetEncrypted($fieldcrypt);
-    }
-    
-    /** Returns the command usage for Edit() */
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--fieldcrypt bool]"; }
-    
-    /** Performs cred-crypt level edit on an existing storage */
-    public function Edit(Input $input) : Storage
-    {
-        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL);
-        if ($fieldcrypt !== null) $this->SetEncrypted($fieldcrypt);
-        
-        return parent::Edit($input);
-    }
-    
-    /**
-     * Returns the printable client object of this trait
-     * @return array fields mapped to `{field_iscrypt:bool}`
-     */
-    public function GetClientObject(bool $activate = false) : array
-    {
-        $retval = array();
-        
-        foreach (static::getEncryptedFields() as $field)
-        {
-            $retval[$field."_iscrypt"] = $this->isFieldEncrypted($field);
-        }
-
-        return array_merge(parent::GetClientObject($activate), $retval);
-    }
-}
 
 /** Trait for storage classes that store a possibly-encrypted username and password */
 trait UserPass
 {
+    use OptFieldCrypt;
+    
     protected static function getEncryptedFields() : array { return array('username','password'); }
     
     /** Gets the extra DB fields required for this trait */
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'username' => null,
-            'password' => null,
+        return array_merge(parent::GetFieldTemplate(), self::GetFieldCryptFieldTemplate(), array(
+            'username' => null, 'password' => null,
         ));
     }
     
@@ -85,26 +35,26 @@ trait UserPass
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), array(
+        return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
             'username' => $this->TryGetUsername(),
             'password' => boolval($this->TryGetPassword()),
         ));
     }
     
     /** Returns the command usage for Create() */
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." [--username alphanum] [--password raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".self::GetFieldCryptCreateUsage()." [--username alphanum] [--password raw]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
-        return parent::Create($database, $input, $filesystem)
+        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($input)
             ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER))
             ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
     }
     
     /** Returns the command usage for Edit() */
-    public static function GetEditUsage() : string { return parent::GetEditUsage()." [--username ?alphanum] [--password ?raw]"; }
+    public static function GetEditUsage() : string { return parent::GetEditUsage()." ".self::GetFieldCryptEditUsage()." [--username ?alphanum] [--password ?raw]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
     public function Edit(Input $input) : Storage
@@ -114,7 +64,7 @@ trait UserPass
         if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', 
             SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
 
-        return parent::Edit($input);
+        $this->FieldCryptEdit($input); return parent::Edit($input);
     }
     
     /** Returns the decrypted username */
@@ -204,5 +154,5 @@ trait BasePath
     }
     
     /** Sets the path of the storage's root */
-    private function SetPath(string $path) : self { return $this->SetScalar('path',$path); }
+    private function SetPath(string $path) : Storage { return $this->SetScalar('path',$path); }
 }

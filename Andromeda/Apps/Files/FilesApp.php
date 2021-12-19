@@ -107,6 +107,8 @@ class FilesApp extends InstalledApp
     
     protected static function getConfigClass() : string { return Config::class; }
     
+    protected function GetConfig() : Config { return $this->config; }
+    
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
@@ -194,8 +196,8 @@ class FilesApp extends InstalledApp
 
         switch($input->GetAction())
         {
-            case 'getconfig': return $this->GetConfig($input, $authenticator);
-            case 'setconfig': return $this->SetConfig($input, $authenticator);
+            case 'getconfig': return $this->RunGetConfig($input, $authenticator);
+            case 'setconfig': return $this->RunSetConfig($input, $authenticator);
             
             case 'upload':     return $this->UploadFile($input, $authenticator, $accesslog);  
             case 'download':   $this->DownloadFile($input, $authenticator, $accesslog); return;
@@ -348,11 +350,11 @@ class FilesApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function GetConfig(Input $input, ?Authenticator $authenticator) : array
+    protected function RunGetConfig(Input $input, ?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
-        return $this->config->GetClientObject($admin);
+        return $this->GetConfig()->GetClientObject($admin);
     }
     
     /**
@@ -361,13 +363,13 @@ class FilesApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function SetConfig(Input $input, ?Authenticator $authenticator) : array
+    protected function RunSetConfig(Input $input, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
         $authenticator->RequireAdmin();
 
-        return $this->config->SetConfig($input)->GetClientObject(true);
+        return $this->GetConfig()->SetConfig($input)->GetClientObject(true);
     }
     
     /**
@@ -383,7 +385,7 @@ class FilesApp extends InstalledApp
         
         $parentid = $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         $paccess = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $parentid, true);
-        $parent = $paccess->GetItem(); $share = $paccess->GetShare();
+        $parent = $paccess->GetFolder(); $share = $paccess->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
@@ -437,7 +439,7 @@ class FilesApp extends InstalledApp
         if (!$debugdl) $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog); 
-        $file = $access->GetItem(); $share = $access->GetShare();
+        $file = $access->GetFile(); $share = $access->GetShare();
         
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
 
@@ -515,7 +517,7 @@ class FilesApp extends InstalledApp
     protected function WriteToFile(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {        
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
-        $file = $access->GetItem(); $share = $access->GetShare();
+        $file = $access->GetFile(); $share = $access->GetShare();
         
         $account = $authenticator ? $authenticator->GetAccount() : null;
         
@@ -577,7 +579,7 @@ class FilesApp extends InstalledApp
     protected function TruncateFile(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {        
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
-        $file = $access->GetItem(); $share = $access->GetShare();
+        $file = $access->GetFile(); $share = $access->GetShare();
 
         $account = $authenticator ? $authenticator->GetAccount() : null;
         
@@ -603,7 +605,7 @@ class FilesApp extends InstalledApp
     protected function GetFileMeta(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
     {
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
-        $file = $access->GetItem(); $share = $access->GetShare();
+        $file = $access->GetFile(); $share = $access->GetShare();
 
         if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         
@@ -626,7 +628,7 @@ class FilesApp extends InstalledApp
         if (($fid = $input->GetOptParam('folder',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER)) !== null)
         {
             $access = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $fid);
-            $folder = $access->GetItem(); $share = $access->GetShare();
+            $folder = $access->GetFolder(); $share = $access->GetShare();
             
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         }
@@ -844,7 +846,7 @@ class FilesApp extends InstalledApp
         
         $parentid = $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         $access = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $parentid, true);
-        $parent = $access->GetItem(); $share = $access->GetShare();
+        $parent = $access->GetFolder(); $share = $access->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
@@ -1433,7 +1435,7 @@ class FilesApp extends InstalledApp
             
             $body = implode("<br />",array_map(function(Share $share)
             {                
-                $url = $this->config->GetAPIUrl();
+                $url = $this->GetConfig()->GetAPIUrl();
                 if (!$url) throw new ShareURLGenerateException();
                 
                 $cmd = (new Input('files','download'))->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
@@ -1444,7 +1446,7 @@ class FilesApp extends InstalledApp
             // TODO CLIENT - param for the client to have the URL point at the client
             // TODO CLIENT - HTML - configure a directory where client templates reside
 
-            $this->config->GetMailer()->SendMail($subject, $body, true,
+            $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
                 array(new EmailRecipient($email)), $account->GetEmailFrom(), false);
         }
         
