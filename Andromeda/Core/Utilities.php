@@ -66,11 +66,18 @@ class JSONDecodingException extends JSONException { public $message = "JSON_DECO
  */
 interface Transactions { public function rollback(); public function commit(); }
 
+/** Exception indicating that the given version string is invalid */
+class InvalidVersionException extends Exceptions\ServerException { public $message = "VERSION_STRING_INVALID"; }
+
 /** Class for parsing a version string into components */
 class VersionInfo
 {
-    public int $major; public int $minor; public int $patch; 
-    public string $version; public string $extra;
+    public string $version;
+    
+    public int $major;
+    public int $minor;
+    public int $patch;
+    public string $extra;
     
     public function __construct(string $version = andromeda_version)
     {
@@ -81,9 +88,17 @@ class VersionInfo
         
         $version = explode('.',$version[0],3);
         
-        $this->major = $version[0];
-        $this->minor = $version[1] ?? null;
-        $this->patch = $version[2] ?? null;
+        foreach ($version as $v) if (!is_numeric($v)) 
+            throw new InvalidVersionException();
+
+        if (!isset($version[0]) || !isset($version[1]))
+            throw new InvalidVersionException();
+        
+        $this->major = (int)($version[0]);
+        $this->minor = (int)($version[1]);
+        
+        if (isset($version[2])) 
+            $this->patch = (int)($version[2]);
     }
     
     public function __toString(){ return $this->version; }
@@ -172,7 +187,7 @@ abstract class Utilities
         $val = trim($val); 
         if (!$val) return 0;
         
-        $num = intval($val);        
+        $num = (int)($val);
         switch (substr($val, -1)) {
             case 'T': $num *= 1024;
             case 'G': $num *= 1024;

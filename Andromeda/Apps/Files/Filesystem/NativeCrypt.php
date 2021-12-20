@@ -49,7 +49,7 @@ class NativeCrypt extends Native
         if (!($handle = $infile->GetHandle()))
             throw new FileReadFailedException();
         
-        $newpath = parent::GetFilePath($file);
+        $newpath = static::GetFilePath($file);
         
         $length = $infile->GetSize();
         $chunks = $this->GetNumChunks($length);

@@ -213,7 +213,7 @@ class FTP extends FTPBase2
         {
             $stropt = stream_context_create(array('ftp'=>array('resume_pos'=>$offset)));
             
-            $handle = fopen($this->GetFullURL($path), 'rb', null, $stropt);
+            $handle = fopen($this->GetFullURL($path), 'rb', false, $stropt);
         }
         
         if (!$handle) throw new FileOpenFailedException();

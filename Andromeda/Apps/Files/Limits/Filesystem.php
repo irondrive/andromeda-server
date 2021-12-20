@@ -24,14 +24,14 @@ trait FilesystemCommon
     {
         if ($input->HasParam('track_items') || $this->isCreated())
         {
-            $this->SetFeature('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }
         
         if ($input->HasParam('track_dlstats') || $this->isCreated())
         {
-            $this->SetFeature('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }

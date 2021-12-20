@@ -55,6 +55,7 @@ abstract class BaseObject
      * Returns the name of the class that should be used for a given DB row (cast up at load)
      * 
      * Defaults to the actual class used. Allows polymorphism on DB rows based on properties
+     * @return class-string<static>
      */
     public static function GetObjClass(array $row) : string { return static::class; }
     
@@ -107,9 +108,10 @@ abstract class BaseObject
     
     /**
      * Asserts that the given object is not null
-     * @param self $obj the object to check for null
+     * @template T of self
+     * @param ?T $obj the object to check for null
      * @throws ObjectNotFoundException if the object is null
-     * @return $this
+     * @return T object if not null
      */
     public static function NotNull(?self $obj) : self 
     { 
@@ -164,11 +166,12 @@ abstract class BaseObject
      * Loads objects from the database with the given object ID as the value of the given field
      * 
      * Can be used as an alternative to LoadByObject() to avoid actually loading the object
+     * @template T of self
      * @param ObjectDatabase $database Reference to the database
      * @param string $field The name of the field to check
      * @param string $id The ID of the object referenced
-     * @param string $class optionally, the class to match if this column is polymorphic
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @param class-string<T> $class optionally, the class to match if this column is polymorphic
+     * @return array<string, static> array of objects indexed by their IDs
      */
     public static function LoadByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : array
     {
@@ -180,10 +183,11 @@ abstract class BaseObject
      * Deletes objects from the database with the given object ID as the value of the given field
      *
      * Can be used as an alternative to DeleteByObject() to avoid actually loading the object
+     * @template T of self
      * @param ObjectDatabase $database Reference to the database
      * @param string $field The name of the field to check
      * @param string $id The ID of the object referenced
-     * @param string $class optionally, the class to match if this column is polymorphic
+     * @param class-string<T>$class  optionally, the class to match if this column is polymorphic
      * @return int number of rows deleted
      */
     public static function DeleteByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : int
@@ -197,7 +201,7 @@ abstract class BaseObject
      * @param ObjectDatabase $database Reference to the database
      * @param string $field the name of the field to check
      * @param string $key the value of the field that uniquely identifies the object
-     * @return self|NULL
+     * @return static|NULL
      */
     protected static function TryLoadUniqueByKey(ObjectDatabase $database, string $field, string $key) : ?self
     {
@@ -215,7 +219,7 @@ abstract class BaseObject
     {
         $q = new QueryBuilder(); $rows = static::DeleteByQuery($database, $q->Where($q->Equals($field, $key)));
         
-        if ($rows > 1) throw new DuplicateUniqueKeyException(); return (bool)$rows;
+        if ($rows > 1) throw new DuplicateUniqueKeyException(); return $rows > 0;
     }
     
     /**
@@ -224,7 +228,7 @@ abstract class BaseObject
      * @param string $field The name of the field to check
      * @param BaseObject $object the object referenced by the field
      * @param bool $isPoly whether or not this field is polymorphic
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @return array<string, static> array of objects indexed by their IDs
      */
     public static function LoadByObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : array
     {
@@ -252,7 +256,7 @@ abstract class BaseObject
      * @param string $field The name of the field to check
      * @param BaseObject $object the object referenced by the field
      * @param bool $isPoly whether or not this field is polymorphic
-     * @return self|null
+     * @return static|null
      */
     public static function TryLoadUniqueByObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : ?self
     {
@@ -273,7 +277,7 @@ abstract class BaseObject
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
         $rows = static::TryDeleteByUniqueKey($database, $field, $v);
         
-        if ($rows > 1) throw new DuplicateUniqueKeyException(); return (bool)$rows;
+        if ($rows > 1) throw new DuplicateUniqueKeyException(); return $rows > 0;
     }
     
     /** Returns the unique ID of the object */
@@ -377,7 +381,7 @@ abstract class BaseObject
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
-        return boolval($this->objects[$field]->GetValue());
+        return (bool)($this->objects[$field]->GetValue());
     }
     
     /**
@@ -458,7 +462,7 @@ abstract class BaseObject
      * @param int $limit the maximum number of objects to load
      * @param int $offset the number of objects to skip loading
      * @throws KeyNotFoundException if the field name is invalid
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @return array<string, self> array of objects indexed by their IDs
      */
     protected function GetObjectRefs(string $field, ?int $limit = null, ?int $offset = null) : array
     {
@@ -566,7 +570,8 @@ abstract class BaseObject
      */
     protected function DeltaCounter(string $field, int $delta) : self
     {
-        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        if ($this->database->isReadOnly()) 
+            throw new DatabaseReadOnlyException();
         
         if (!array_key_exists($field, $this->scalars)) 
             throw new KeyNotFoundException($field);
@@ -592,11 +597,12 @@ abstract class BaseObject
      */
     protected function BoolSetObject(string $field, ?self $object, bool $notification = false) : bool
     {
-        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        if ($this->database->isReadOnly()) 
+            throw new DatabaseReadOnlyException();
 
         if (!array_key_exists($field, $this->objects)) 
         {
-            if ($object === null) return $this;
+            if ($object === null) return false;
             else throw new KeyNotFoundException($field);
         }
         
@@ -657,7 +663,8 @@ abstract class BaseObject
      */
     protected function AddObjectRef(string $field, self $object, bool $notification = false) : bool
     {
-        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();        
+        if ($this->database->isReadOnly()) 
+            throw new DatabaseReadOnlyException();        
         
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
@@ -688,7 +695,8 @@ abstract class BaseObject
      */
     protected function RemoveObjectRef(string $field, self $object, bool $notification = false) : bool
     {
-        if ($this->database->isReadOnly()) throw new DatabaseReadOnlyException();
+        if ($this->database->isReadOnly()) 
+            throw new DatabaseReadOnlyException();
         
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
@@ -739,7 +747,7 @@ abstract class BaseObject
     }
     
     /** Adds the given field object to the correct internal array */
-    private function AddField(string $key, $field)
+    private function AddField(string $key, FieldTypes\Scalar $field)
     {
         $key = $field->GetMyField();
 

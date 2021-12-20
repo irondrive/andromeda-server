@@ -125,7 +125,7 @@ trait FullAuthKey
      * @param ObjectDatabase $database database reference
      * @param string $code the full user/serialized code
      * @param Account $account the owner of the authObject or null for any
-     * @return self|NULL loaded object or null if not found
+     * @return static|NULL loaded object or null if not found
      */
     public static function TryLoadByFullKey(ObjectDatabase $database, string $code, ?Account $account = null) : ?self
     {

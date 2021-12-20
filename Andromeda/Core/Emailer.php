@@ -93,7 +93,7 @@ class Emailer extends StandardObject
         $mailer->SetScalar('type',$type)
             ->SetScalar('from_address',$input->GetParam('from_address',SafeParam::TYPE_EMAIL))
             ->SetScalar('from_name',$input->GetOptParam('from_name',SafeParam::TYPE_NAME))
-            ->SetFeature('reply',$input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
+            ->SetFeatureBool('reply',$input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
         
         if ($type == self::TYPE_SMTP)
         {
@@ -139,7 +139,7 @@ class Emailer extends StandardObject
             'type' => array_flip(self::MAIL_TYPES)[$this->GetScalar('type')],
             'hosts' => $this->TryGetScalar('hosts'),
             'username' => $this->TryGetScalar('username'),
-            'password' => boolval($this->TryGetScalar('password')),
+            'password' => (bool)($this->TryGetScalar('password')),
             'from_address' => $this->GetScalar('from_address'),
             'from_name' => $this->TryGetScalar('from_name'),
             'dates' => array(

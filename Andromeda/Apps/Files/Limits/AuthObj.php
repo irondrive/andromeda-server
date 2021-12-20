@@ -28,8 +28,8 @@ abstract class AuthEntityTotal extends Total
     {
         $lim = parent::BaseConfigLimits($database, $obj, $input);
         
-        if ($input->HasParam('emailshare')) $lim->SetFeature('emailshare', $input->GetNullParam('emailshare', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('userstorage')) $lim->SetFeature('userstorage', $input->GetNullParam('userstorage', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('emailshare')) $lim->SetFeatureBool('emailshare', $input->GetNullParam('emailshare', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('userstorage')) $lim->SetFeatureBool('userstorage', $input->GetNullParam('userstorage', SafeParam::TYPE_BOOL));
         
         return $lim;
     }

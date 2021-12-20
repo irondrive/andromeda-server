@@ -4,9 +4,6 @@ if (!function_exists('sodium_memzero')) die("PHP Sodium Extension Required".PHP_
 
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
-/** Exception indicating that encryption failed */
-class EncryptionFailedException extends Exceptions\ServerException { public $message = "ENCRYPTION_FAILED"; }
-
 /** Exception indicating that decryption failed */
 class DecryptionFailedException extends Exceptions\ServerException { public $message = "DECRYPTION_FAILED"; }
 
@@ -67,7 +64,6 @@ class CryptoSecret
      * @param string $nonce the crypto nonce to use
      * @param string $key the crypto key to use
      * @param string $extra extra data to include in authentication (must be provided at decrypt)
-     * @throws EncryptionFailedException if encryption fails
      * @return string an encrypted and authenticated ciphertext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_encrypt()
      */
@@ -75,7 +71,6 @@ class CryptoSecret
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
-        if ($output === false) throw new EncryptionFailedException();
         return $output;
     }
     
@@ -120,7 +115,6 @@ class CryptoPublic
      * @param string $nonce the nonce to encrypt with
      * @param string $recipient_public the recipient's public key
      * @param string $sender_private the sender's private key
-     * @throws EncryptionFailedException if decryption fails
      * @return string the encrypted and signed ciphertext
      */
     public static function Encrypt(string $message, string $nonce, string $recipient_public, string $sender_private)
@@ -128,7 +122,6 @@ class CryptoPublic
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($sender_private, $recipient_public);
         $output = sodium_crypto_box($message, $nonce, $keypair);
         sodium_memzero($message); sodium_memzero($sender_private);
-        if ($output === false) throw new EncryptionFailedException();
         return $output;
     }
     
@@ -164,14 +157,12 @@ class CryptoAuth
      * Creates an authentication code (MAC) from a message and key
      * @param string $message the message to create the MAC for
      * @param string $key the secret key to use for creating the MAC
-     * @throws EncryptionFailedException if encryption fails
      * @return string the message authentication code (MAC)
      */
     public static function MakeAuthCode(string $message, string $key) : string
     {
         $output = sodium_crypto_auth($message, $key);
         sodium_memzero($message); sodium_memzero($key);
-        if ($output === false) throw new EncryptionFailedException();
         return $output;
     }
     

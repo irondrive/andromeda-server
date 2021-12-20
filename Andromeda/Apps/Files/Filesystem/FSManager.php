@@ -130,9 +130,6 @@ class FSManager extends StandardObject
     /** Edits properites of the underlying storage and runs test */
     public function EditStorage(Input $input) : Storage { return $this->GetStorage(false)->Edit($input)->Test(); }
     
-    /** Sets the underlying storage object for the filesystem */
-    private function SetStorage(Storage $st) : self { return $this->SetObject('storage',$st); }
-    
     /** Returns a reference to the global database */
     public function GetDatabase() : ObjectDatabase { return $this->database; }
     
@@ -195,7 +192,7 @@ class FSManager extends StandardObject
      * @param ObjectDatabase $database database reference
      * @param Account $owner owner of the filesystem
      * @throws InvalidStorageException if the storage fails
-     * @return self
+     * @return static
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
@@ -239,7 +236,7 @@ class FSManager extends StandardObject
 
         try
         {            
-            $filesystem->SetStorage($classes[$sttype]::Create($database, $input, $filesystem));
+            $filesystem->SetObject('storage',$classes[$sttype]::Create($database, $input, $filesystem));
         
             $filesystem->GetStorage()->Test(); 
         }
@@ -272,7 +269,7 @@ class FSManager extends StandardObject
      * Attempts to load the default filesystem (no name)
      * @param ObjectDatabase $database database reference
      * @param Account $account account to get the default for
-     * @return self|NULL loaded FS or null if not available
+     * @return static|NULL loaded FS or null if not available
      */
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
@@ -327,7 +324,7 @@ class FSManager extends StandardObject
     /** Deletes all filesystems owned by the given account */
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
     {
-        parent::DeleteByObject($database, 'owner', $account);
+        static::DeleteByObject($database, 'owner', $account);
     }
 
     /** Deletes this filesystem and all folder roots on it - if $unlink, from DB only */

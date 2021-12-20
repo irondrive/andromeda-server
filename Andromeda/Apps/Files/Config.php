@@ -38,7 +38,7 @@ class Config extends BaseConfig
         
         if ($input->HasParam('upload_maxsize')) $this->SetScalar('upload_maxsize',$input->GetNullParam('upload_maxsize',SafeParam::TYPE_UINT));
         
-        if ($input->HasParam('timedstats')) $this->SetFeature('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('timedstats')) $this->SetFeatureBool('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
         
         return $this;
     }

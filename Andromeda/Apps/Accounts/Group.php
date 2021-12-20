@@ -115,7 +115,7 @@ class Group extends AuthEntity
     {
         $q = new QueryBuilder(); $name = QueryBuilder::EscapeWildcards($name).'%'; // search by prefix
         
-        $loaded = parent::LoadByQuery($database, $q->Where($q->Like('name',$name,true))->Limit($limit+1));
+        $loaded = static::LoadByQuery($database, $q->Where($q->Like('name',$name,true))->Limit($limit+1));
         
         return (count($loaded) >= $limit+1) ? array() : $loaded;
     }
@@ -206,7 +206,7 @@ class Group extends AuthEntity
             'name' => $this->GetDisplayName()
         );
         
-        if ($level && self::OBJECT_ADMIN)
+        if ($level & self::OBJECT_ADMIN)
         {
             $retval = array_merge($retval, array(
                 'dates' => array(
@@ -233,7 +233,7 @@ class Group extends AuthEntity
             ));
         }            
         
-        if ($level && self::OBJECT_FULL) $retval['accounts'] = array_keys($this->GetAccounts());
+        if ($level & self::OBJECT_FULL) $retval['accounts'] = array_keys($this->GetAccounts());
         
         return $retval;
     }

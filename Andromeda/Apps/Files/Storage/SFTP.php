@@ -57,8 +57,8 @@ class SFTP extends SFTPBase2
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'hostkey' => $this->TryGetHostKey(),
-            'privkey' => boolval($this->TryGetScalar('privkey')),
-            'keypass' => boolval($this->TryGetScalar('keypass')),
+            'privkey' => (bool)($this->TryGetScalar('privkey')),
+            'keypass' => (bool)($this->TryGetScalar('keypass')),
         ));
     }
 

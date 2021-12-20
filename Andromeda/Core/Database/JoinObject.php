@@ -76,7 +76,7 @@ abstract class JoinObject extends StandardObject
      */
     public static function TryLoadJoin(ObjectDatabase $database, FieldTypes\ObjectJoin $joinfield, BaseObject $destobj) : ?self
     {        
-        return parent::TryLoadUniqueByQuery($database, static::GetWhereQuery($database, $joinfield, $destobj));
+        return static::TryLoadUniqueByQuery($database, static::GetWhereQuery($database, $joinfield, $destobj));
     }
     
     /**
@@ -88,7 +88,9 @@ abstract class JoinObject extends StandardObject
      */
     public static function TryDeleteJoin(ObjectDatabase $database, FieldTypes\ObjectJoin $joinfield, BaseObject $destobj) : bool
     {
-        return (bool)parent::DeleteByQuery($database, static::GetWhereQuery($database, $joinfield, $destobj));
+        $rows = static::DeleteByQuery($database, static::GetWhereQuery($database, $joinfield, $destobj));
+        
+        if ($rows > 1) throw new DuplicateUniqueKeyException(); return $rows > 0;
     }
 
     public function Delete() : void

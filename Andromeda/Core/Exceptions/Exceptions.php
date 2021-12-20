@@ -42,7 +42,7 @@ abstract class ServerException extends BaseException
 /** Represents an non-exception error from PHP */
 class PHPError extends ServerException
 {
-    public function __construct(int $code, string $string, string $file, $line)
+    public function __construct(int $code, string $string, string $file, int $line)
     {
         $this->code = $code; $this->message = $string; $this->file = $file; $this->line = $line;
     }

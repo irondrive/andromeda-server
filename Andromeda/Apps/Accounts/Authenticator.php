@@ -55,7 +55,6 @@ use Andromeda\Core\UpgradeRequiredException;
 class Authenticator
 {
     private Input $input;
-    private ObjectDatabase $database; 
     
     private static array $instances = array();
    
@@ -121,12 +120,10 @@ class Authenticator
     public function isRealAdmin() : bool { return $this->realaccount === null || $this->realaccount->isAdmin(); }
     
     /**
-     * @param ObjectDatabase $database database reference
      * @param Input $input the input containing auth details
      */
-    private function __construct(ObjectDatabase $database, Input $input)
+    private function __construct(Input $input)
     {
-        $this->database = $database;
         $this->input = $input;
     }
     
@@ -164,7 +161,7 @@ class Authenticator
         $sudouser = $input->GetOptParam('auth_sudouser',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
         $sudoacct = $input->GetOptParam('auth_sudoacct',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_ALWAYS);
         
-        $account = null; $authenticator = new Authenticator($database, $input);
+        $account = null; $authenticator = new Authenticator($input);
         
         if ($sessionid !== null && $sessionkey !== null)
         {

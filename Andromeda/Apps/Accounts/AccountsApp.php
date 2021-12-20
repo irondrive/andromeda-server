@@ -320,7 +320,7 @@ class AccountsApp extends InstalledApp
         
         $auths = Auth\Manager::LoadAll($this->database);
         
-        if (!$admin) $auths = array_filter(function(Auth\Manager $m){ return $m->GetEnabled(); });
+        if (!$admin) $auths = array_filter($auths, function(Auth\Manager $m){ return $m->GetEnabled(); });
         
         return array_map(function(Auth\Manager $m)use($admin){ return $m->GetClientObject($admin); }, $auths);
     }
@@ -1019,7 +1019,7 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
 
-        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, null,
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_ONLYFULL, null,
             function($v){ return mb_strlen($v) >= 3; });
 
         return array_map(function(Account $account){ return $account->GetClientObject(); },
@@ -1045,7 +1045,7 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
         
-        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, null,
+        $name = $input->GetParam('name', SafeParam::TYPE_TEXT, SafeParams::PARAMLOG_ONLYFULL, null,
             function($v){ return mb_strlen($v) >= 3; });
         
         return array_map(function(Group $group){ return $group->GetClientObject(); },

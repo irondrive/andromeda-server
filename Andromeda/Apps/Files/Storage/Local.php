@@ -38,7 +38,7 @@ class Local extends LocalBase
     {
         $space = disk_free_space($this->GetPath());
         if ($space === false) throw new FreeSpaceFailedException();
-        else return $space;
+        else return (int)$space;
     }
 
     protected function GetFullURL(string $path = "") : string

@@ -68,7 +68,7 @@ class S3 extends S3Base
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        $accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : boolval($this->TryGetScalar('accesskey'));
+        $accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : (bool)($this->TryGetScalar('accesskey'));
         
         return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
             'endpoint' => $this->GetScalar('endpoint'),
@@ -78,7 +78,7 @@ class S3 extends S3Base
             'region' => $this->GetScalar('region'),
             'bucket' => $this->GetScalar('bucket'),
             'accesskey' => $accesskey,
-            'secretkey' => boolval($this->TryGetScalar('secretkey'))
+            'secretkey' => (bool)($this->TryGetScalar('secretkey'))
         ));
     }
     
@@ -98,7 +98,7 @@ class S3 extends S3Base
     protected function SetSecretKey(?string $key) : self { return $this->SetEncryptedScalar('secretkey',$key); }
     
     /** Returns true if the connection should use TLS */
-    protected function getUseTLS() : bool { return boolval($this->TryGetScalar('usetls')) ?? true; }
+    protected function getUseTLS() : bool { return (bool)($this->TryGetScalar('usetls') ?? true); }
     
     /** Returns the given path with no leading, trailing or duplicate / */
     protected static function cleanPath(string $path) : string { return implode('/',array_filter(explode('/',$path))); }
@@ -174,7 +174,7 @@ class S3 extends S3Base
         $params['scheme'] = $this->getUseTLS() ? 'https' : 'http';
         
         if (($pathstyle = $this->TryGetScalar('path_style')) !== null)
-            $params['use_path_style_endpoint'] = boolval($pathstyle);
+            $params['use_path_style_endpoint'] = (bool)($pathstyle);
         
         $accesskey = $this->TryGetAccessKey();
         $secretkey = $this->TryGetSecretKey();
@@ -234,8 +234,9 @@ class S3 extends S3Base
     
     protected function assertReadable() : void
     {
-        if ($this->ReadFolder('') === null)
-            throw new TestReadFailedException();
+        try { $this->ReadFolder(''); } 
+        catch (FolderReadFailedException $e) { 
+            throw TestReadFailedException::Copy($e); }
     }
     
     protected function assertWriteable() : void { $this->TestWriteable(); }

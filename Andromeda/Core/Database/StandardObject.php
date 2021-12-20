@@ -56,7 +56,7 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureInt(string $name, bool $allowTemp = true) : int { 
-        return intval($this->GetScalar("features__$name", $allowTemp)); }
+        return (int)($this->GetScalar("features__$name", $allowTemp)); }
     
     /**
      * Gets the value of the given feature field as an int (used for config)
@@ -65,7 +65,7 @@ abstract class StandardObject extends BaseObject
     protected function TryGetFeatureInt(string $name, bool $allowTemp = true) : ?int 
     { 
         $val = $this->TryGetScalar("features__$name", $allowTemp); 
-        return ($val === null) ? null : intval($val); 
+        return ($val === null) ? null : (int)($val); 
     }
     
     /**
@@ -73,7 +73,7 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureBool(string $name, bool $allowTemp = true) : bool {
-        return boolval($this->GetScalar("features__$name", $allowTemp)); }
+        return (bool)($this->GetScalar("features__$name", $allowTemp)); }
         
     /**
      * Gets the value of the given feature field as a bool (used for config)
@@ -82,7 +82,7 @@ abstract class StandardObject extends BaseObject
     protected function TryGetFeatureBool(string $name, bool $allowTemp = true) : ?bool
     {
         $val = $this->TryGetScalar("features__$name", $allowTemp);
-        return ($val === null) ? null : boolval($val);
+        return ($val === null) ? null : (bool)($val);
     }
     
     /**
@@ -90,13 +90,21 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::SetScalar()
      * @return $this
      */
-    protected function SetFeature(string $name, ?int $value, bool $temp = false) : self { 
+    protected function SetFeatureInt(string $name, ?int $value, bool $temp = false) : self { 
         return $this->SetScalar("features__$name", $value, $temp); }
-
+        
+    /**
+     * Sets the value of the given feature field to the given (?bool) value
+     * @see BaseObject::SetScalar()
+     * @return $this
+     */
+    protected function SetFeatureBool(string $name, ?bool $value, bool $temp = false) : self {
+        return $this->SetScalar("features__$name", $value, $temp); }
+        
     /** Returns true if the given feature has been modified */
     protected function isFeatureModified(string $name) : bool
     {
-        return boolval($this->GetScalarDelta("features__$name"));
+        return $this->GetScalarDelta("features__$name") > 0;
     }
     
     /**

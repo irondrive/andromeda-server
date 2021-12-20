@@ -59,7 +59,7 @@ class RequestMetrics extends StandardObject
      * @param array $actions array<RunContext> actions with metrics
      * @param array $commits array<DBStats> commit metrics
      * @param DBStats $total total request stats
-     * @return self created metrics object
+     * @return static created metrics object
      */
     public static function Create(int $level, ObjectDatabase $database, ?RequestLog $reqlog,
                                   DBStats $construct, array $actions, array $commits, DBStats $total) : self
@@ -125,6 +125,16 @@ class RequestMetrics extends StandardObject
         return $this;
     }
     
+    /** @return array<string, ActionMetrics> */
+    private function GetActions() : array 
+    {
+        $obj = $this->GetObjectRefs('actions');
+        
+        foreach ($obj as $o) assert($o instanceof ActionMetrics);
+        
+        return $obj;
+    }
+    
     /**
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
@@ -144,7 +154,7 @@ class RequestMetrics extends StandardObject
         );
         
         $retval['action_stats'] = array_values(array_map(function(ActionMetrics $o){ 
-            return $o->GetClientObject(); }, $this->GetObjectRefs('actions')));
+            return $o->GetClientObject(); }, $this->GetActions()));
             
         $retval['commit_stats'] = array_values(array_map(function(CommitMetrics $o){
             return $o->GetClientObject(); }, $this->GetObjectRefs('commits')));

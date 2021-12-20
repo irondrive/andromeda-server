@@ -61,7 +61,7 @@ class ErrorManager extends Singleton
         
         $this->interface = $interface;
         
-        set_error_handler( function($code,$string,$file,$line){
+        set_error_handler( function(int $code, string $string, string $file, int $line){
            throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
 
         set_exception_handler(function(\Throwable $e)
@@ -78,7 +78,7 @@ class ErrorManager extends Singleton
         });
     }
     
-    public function __destruct() { set_error_handler(function($a,$b,$c,$d){ }, E_ALL); }
+    public function __destruct() { set_error_handler(null, E_ALL); }
     
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     

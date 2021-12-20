@@ -37,7 +37,7 @@ trait UserPass
     {
         return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
             'username' => $this->TryGetUsername(),
-            'password' => boolval($this->TryGetPassword()),
+            'password' => (bool)($this->TryGetPassword()),
         ));
     }
     

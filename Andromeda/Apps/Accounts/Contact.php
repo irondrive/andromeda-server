@@ -74,7 +74,7 @@ class Contact extends ContactBase
      * Attemps to load a from contact for the given account
      * @param ObjectDatabase $database database reference
      * @param Account $account account of interest
-     * @return self|NULL contact to use as "from" or none if not set
+     * @return static|NULL contact to use as "from" or none if not set
      */
     public static function TryLoadAccountFromContact(ObjectDatabase $database, Account $account) : ?self
     {
@@ -269,7 +269,7 @@ class Contact extends ContactBase
             'type' => self::TYPES[$this->GetType()],
             'info' => $this->GetInfo(),
             'valid' => $this->GetIsValid(),
-            'usefrom' => boolval($this->TryGetScalar('usefrom')),
+            'usefrom' => (bool)($this->TryGetScalar('usefrom')),
             'public' => $this->getIsPublic(),
             'dates' => array(
                 'created' => $this->GetDateCreated()

@@ -174,7 +174,7 @@ abstract class Item extends StandardObject
      * @param Folder $parent the item's parent folder
      * @param Account $account the account owning this item
      * @param string $name the name of the item
-     * @return self newly created object
+     * @return static newly created object
      */
     public abstract static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self;
     
@@ -211,7 +211,7 @@ abstract class Item extends StandardObject
     }
     
     /** Sets the item's access time to the given value or now if null */
-    public function SetAccessed(?int $time = null) : self 
+    public function SetAccessed(?float $time = null) : self 
     { 
         if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
 
@@ -219,10 +219,10 @@ abstract class Item extends StandardObject
     }
     
     /** Sets the item's created time to the given value or now if null */
-    public function SetCreated(?int $time = null) : self  { return $this->SetDate('created', max($this->TryGetDate('created'), $time)); }
+    public function SetCreated(?float $time = null) : self  { return $this->SetDate('created', max($this->TryGetDate('created'), $time)); }
     
     /** Sets the item's modified time to the given value or now if null */
-    public function SetModified(?int $time = null) : self { return $this->SetDate('modified', max($this->TryGetDate('modified'), $time)); }
+    public function SetModified(?float $time = null) : self { return $this->SetDate('modified', max($this->TryGetDate('modified'), $time)); }
     
     /** Returns the bandwidth used by the item in bytes */
     public function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }
@@ -261,14 +261,20 @@ abstract class Item extends StandardObject
     /** Returns the number of shares on this object */
     public function GetNumShares() : int { return $this->CountObjectRefs('shares'); }
     
-    /** Registers a new item with all limit objects */
+    /** 
+     * Registers a new item with all limit objects 
+     * @return $this
+     */
     protected function CountCreate() : self 
     {
         return $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(); })
                     ->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetUploadDate(); }); 
     }
     
-    /** Counts a public download on the item and its parents */
+    /** 
+     * Counts a public download on the item and its parents 
+     * @return $this
+     */
     protected function CountPublicDownload() : self            
     {        
         $parent = $this->GetParent();
@@ -276,7 +282,10 @@ abstract class Item extends StandardObject
         return $this->DeltaCounter('pubdownloads'); 
     }
     
-    /** Counts the given bandwidth on the item and its parents */
+    /** 
+     * Counts the given bandwidth on the item and its parents 
+     * @return $this
+     */
     public function CountBandwidth(int $bytes) : self 
     {        
         $parent = $this->GetParent();
@@ -310,13 +319,19 @@ abstract class Item extends StandardObject
         return $this->MapToLimits(function(Limits\Base $lim)use($count){ $lim->CountShare($count); });
     }
 
-    /** Maps the given function to all applicable limit objects */
+    /** 
+     * Maps the given function to all applicable limit objects 
+     * @return $this
+     */
     protected function MapToLimits(callable $func) : self
     {        
         return $this->MapToTotalLimits($func)->MapToTimedLimits($func);
     }
     
-    /** Maps the given function to all applicable total limit objects */
+    /** 
+     * Maps the given function to all applicable total limit objects 
+     * @return $this
+     */
     protected function MapToTotalLimits(callable $func) : self
     {        
         $fslim = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem()); if ($fslim !== null) $func($fslim);
@@ -326,7 +341,10 @@ abstract class Item extends StandardObject
         return $this;
     }
     
-    /** Maps the given function to all applicable timed limit objects */
+    /** 
+     * Maps the given function to all applicable timed limit objects 
+     * @return $this
+     */
     protected function MapToTimedLimits(callable $func) : self
     {        
         if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
@@ -440,19 +458,19 @@ abstract class Item extends StandardObject
     {
         $q = new QueryBuilder(); 
         $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name));        
-        return parent::TryLoadUniqueByQuery($database, $q->Where($where));
+        return static::TryLoadUniqueByQuery($database, $q->Where($where));
     }
     
     /**
      * Returns an array of all items belonging to the given owner
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner to load objects for
-     * @return array<string, Item> items indexed by ID
+     * @return array<string, static> items indexed by ID
      */
     public static function LoadByOwner(ObjectDatabase $database, Account $account) : array
     {
         $q = new QueryBuilder(); $where = $q->Equals('owner',$account->ID());
-        return parent::LoadByQuery($database, $q->Where($where));
+        return static::LoadByQuery($database, $q->Where($where));
     }
     
     /**
@@ -461,7 +479,7 @@ abstract class Item extends StandardObject
      * Does not return items that are world accessible
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns the items
-     * @return array<string, Item> items indexed by ID
+     * @return array<string, static> items indexed by ID
      */
     public abstract static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array;
 
