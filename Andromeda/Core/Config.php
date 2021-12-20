@@ -37,7 +37,10 @@ abstract class BaseConfig extends SingletonObject
     /** Returns the database schema version */
     public function getVersion() : string { return $this->GetScalar('version'); }
     
-    /** Sets the database schema version to the given value */
+    /** 
+     * Sets the database schema version to the given value 
+     * @return $this
+     */
     public function setVersion(string $version) : self { return $this->SetScalar('version',$version); }
 }
 
@@ -90,15 +93,15 @@ class Config extends BaseConfig
             $this->SetScalar('datadir', $datadir);
         }
         
-        if ($input->HasParam('requestlog_db')) $this->SetFeature('requestlog_db',$input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('requestlog_file')) $this->SetFeature('requestlog_file',$input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('requestlog_db')) $this->SetFeatureBool('requestlog_db',$input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('requestlog_file')) $this->SetFeatureBool('requestlog_file',$input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
 
         if ($input->HasParam('requestlog_details'))
         {
             $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::RQLOG_DETAILS_TYPES));
             
-            $this->SetFeature('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
+            $this->SetFeatureInt('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
         }
         
         if ($input->HasParam('debug'))
@@ -106,23 +109,23 @@ class Config extends BaseConfig
             $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::DEBUG_TYPES));
             
-            $this->SetFeature('debug', self::DEBUG_TYPES[$param]);
+            $this->SetFeatureInt('debug', self::DEBUG_TYPES[$param]);
         }
         
-        if ($input->HasParam('debug_http')) $this->SetFeature('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_dblog')) $this->SetFeature('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_filelog')) $this->SetFeature('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_http')) $this->SetFeatureBool('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_dblog')) $this->SetFeatureBool('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_filelog')) $this->SetFeatureBool('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
 
         if ($input->HasParam('metrics'))
         {
             $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::METRICS_TYPES));
             
-            $this->SetFeature('metrics', self::METRICS_TYPES[$param]);
+            $this->SetFeatureInt('metrics', self::METRICS_TYPES[$param]);
         }
         
-        if ($input->HasParam('metrics_dblog')) $this->SetFeature('metrics_dblog',$input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('metrics_filelog')) $this->SetFeature('metrics_filelog',$input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('metrics_dblog')) $this->SetFeatureBool('metrics_dblog',$input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('metrics_filelog')) $this->SetFeatureBool('metrics_filelog',$input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('read_only')) 
         {
@@ -130,13 +133,13 @@ class Config extends BaseConfig
             
             if (!$ro) $this->database->setReadOnly(false); // make DB writable
             
-            $this->SetFeature('read_only',$ro);
+            $this->SetFeatureBool('read_only',$ro);
             
-            if ($ro) $this->SetFeature('read_only',false,true); // not really RO yet 
+            if ($ro) $this->SetFeatureBool('read_only',false,true); // not really RO yet 
         }
         
-        if ($input->HasParam('enabled')) $this->SetFeature('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('email')) $this->SetFeature('email',$input->GetParam('email',SafeParam::TYPE_BOOL));        
+        if ($input->HasParam('enabled')) $this->SetFeatureBool('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('email')) $this->SetFeatureBool('email',$input->GetParam('email',SafeParam::TYPE_BOOL));        
        
         return $this;
     }
@@ -209,7 +212,7 @@ class Config extends BaseConfig
     public function isEnabled() : bool { return $this->GetFeatureBool('enabled'); }
     
     /** Set whether the server is allowed to respond to requests */
-    public function setEnabled(bool $enable) : self { return $this->SetFeature('enabled',$enable); }
+    public function setEnabled(bool $enable) : self { return $this->SetFeatureBool('enabled',$enable); }
     
     private bool $dryrun = false;
 
@@ -220,16 +223,16 @@ class Config extends BaseConfig
     public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
-    public function isReadOnly() : bool { return (bool)$this->GetFeatureBool('read_only'); }
+    public function isReadOnly() : bool { return $this->GetFeatureBool('read_only'); }
     
     /** Returns the configured global data directory path */
     public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
     
     /** Returns true if request logging to DB is enabled */
-    public function GetEnableRequestLogDB() : bool { return (bool)$this->GetFeatureBool('requestlog_db'); }
+    public function GetEnableRequestLogDB() : bool { return $this->GetFeatureBool('requestlog_db'); }
     
     /** Returns true if request logging to data dir file is enabled */
-    public function GetEnableRequestLogFile() : bool { return (bool)$this->GetFeatureBool('requestlog_file'); }
+    public function GetEnableRequestLogFile() : bool { return $this->GetFeatureBool('requestlog_file'); }
     
     /** Returns true if request logging is enabled */
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
@@ -263,7 +266,7 @@ class Config extends BaseConfig
      * Sets the current debug level
      * @param bool $temp if true, only for this request
      */
-    public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeature('debug', $data, $temp); }
+    public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeatureInt('debug', $data, $temp); }
     
     /** Gets whether the server should log errors to the database */
     public function GetDebugLog2DB()   : bool { return $this->GetFeatureBool('debug_dblog'); }
@@ -289,7 +292,7 @@ class Config extends BaseConfig
      * Sets the current metrics log level
      * @param bool $temp if true, only for this request
      */
-    public function SetMetricsLevel(int $data, bool $temp = true) : self { return $this->SetFeature('metrics', $data, $temp); }
+    public function SetMetricsLevel(int $data, bool $temp = true) : self { return $this->SetFeatureInt('metrics', $data, $temp); }
     
     /** Gets whether the server should log metrics to the database */
     public function GetMetricsLog2DB()   : bool { return $this->GetFeatureBool('metrics_dblog'); }

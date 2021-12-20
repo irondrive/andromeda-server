@@ -96,7 +96,7 @@ class IMAP extends External
         { 
             $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); 
             
-            $retval = boolval($imap); imap_close($imap); return $retval;
+            $retval = (bool)($imap); imap_close($imap); return $retval;
         }
         catch (Exceptions\PHPError $e) 
         {

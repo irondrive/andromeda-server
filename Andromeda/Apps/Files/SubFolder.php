@@ -8,6 +8,7 @@ require_once(ROOT."/Apps/Files/Folder.php");
 /** A subfolder has a parent */
 class SubFolder extends Folder
 {
+    /** @return class-string<self> */
     public static function GetObjClass(array $row) : string { return self::class; }
     
     public function GetName() : string { return $this->GetScalar('name'); }
@@ -16,7 +17,7 @@ class SubFolder extends Folder
 
     public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite, false);
+        static::CheckName($name, $overwrite, false);
         
         $this->GetFSImpl()->RenameFolder($this, $name);
         return $this->SetScalar('name', $name);
@@ -25,7 +26,7 @@ class SubFolder extends Folder
     public function SetParent(Folder $parent, bool $overwrite = false) : self
     {
         $this->CheckIsNotChildOrSelf($parent);
-        parent::CheckParent($parent, $overwrite, false); 
+        static::CheckParent($parent, $overwrite, false); 
         
         $this->GetFSImpl()->MoveFolder($this, $parent);
         return $this->SetObject('parent', $parent);
@@ -33,7 +34,7 @@ class SubFolder extends Folder
     
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
-        $folder = parent::CheckName($name, $overwrite, true);
+        $folder = static::CheckName($name, $overwrite, true);
         if ($folder !== null) $folder->DeleteChildren();
 
         $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
@@ -45,7 +46,7 @@ class SubFolder extends Folder
     {
         $this->CheckIsNotChildOrSelf($parent);
         
-        $folder = parent::CheckParent($parent, $overwrite, true);
+        $folder = static::CheckParent($parent, $overwrite, true);
         if ($folder !== null) $folder->DeleteChildren();
     
         $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
@@ -59,7 +60,7 @@ class SubFolder extends Folder
      * @param Folder $parent the parent folder of this folder
      * @param Account $account the owner of this folder (or null)
      * @param string $name the name of this folder
-     * @return $this
+     * @return static
      */
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {

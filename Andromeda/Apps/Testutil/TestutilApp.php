@@ -82,7 +82,7 @@ class TestUtilApp extends BaseApp
         throw new TestServerException();
     }    
     
-    protected function CheckDryRun() : int
+    protected function CheckDryRun() : bool
     {
         return Config::GetInstance($this->database)->isDryRun();
     }

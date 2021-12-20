@@ -83,14 +83,14 @@ trait AccountCommon
     {
         if ($input->HasParam('track_items'))
         {
-            $this->SetFeature('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_BOOL));
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }        
         
         if ($input->HasParam('track_dlstats')) 
         {
-            $this->SetFeature('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -219,7 +219,7 @@ class AccountTotal extends AuthEntityTotal
      */
     public static function LoadByAccount(ObjectDatabase $database, ?Account $account, bool $require = true) : ?self
     {
-        $obj = ($account !== null) ? $obj = static::LoadByClient($database, $account) : null;
+        $obj = ($account !== null) ? $obj = self::LoadByClient($database, $account) : null;
         
         // optionally return a fake object so the caller can get default limits/features
         if ($obj === null && $require) $obj = new AccountTotalDefault($database);
@@ -227,7 +227,10 @@ class AccountTotal extends AuthEntityTotal
         return $obj;
     }
     
-    /** Loads a limit object for the given account, creating it if it does not exist */
+    /** 
+     * Loads a limit object for the given account, creating it if it does not exist 
+     * @return static
+     */
     public static function ForceLoadByAccount(ObjectDatabase $database, Account $account) : self
     {
         return static::LoadByClient($database, $account) ?? static::Create($database, $account);

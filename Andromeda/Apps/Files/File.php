@@ -146,7 +146,7 @@ class File extends Item
 
     public function SetName(string $name, bool $overwrite = false) : self
     {
-        parent::CheckName($name, $overwrite, false);
+        static::CheckName($name, $overwrite, false);
         
         $this->GetFSImpl()->RenameFile($this, $name); 
         return $this->SetScalar('name', $name);
@@ -154,7 +154,7 @@ class File extends Item
     
     public function SetParent(Folder $parent, bool $overwrite = false) : self
     {
-        parent::CheckParent($parent, $overwrite, false);
+        static::CheckParent($parent, $overwrite, false);
         
         $this->GetFSImpl()->MoveFile($this, $parent);
         return $this->SetObject('parent', $parent);
@@ -162,7 +162,7 @@ class File extends Item
 
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
-        $file = parent::CheckName($name, $overwrite, true);
+        $file = static::CheckName($name, $overwrite, true);
 
         $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
@@ -171,13 +171,14 @@ class File extends Item
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
     {
-        $file = parent::CheckParent($parent, $overwrite, true);
+        $file = static::CheckParent($parent, $overwrite, true);
         
         $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
         $this->GetFSImpl()->CopyFile($this, $file); return $file;
     }
 
+    /** @return static */
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {        
         return parent::BaseCreate($database)
@@ -194,7 +195,7 @@ class File extends Item
      * @param Account $account the account owning this file
      * @param string $name the name for the file
      * @param bool $overwrite if true (reuses the same object)
-     * @return self newly created object
+     * @return static newly created object
      */
     protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
@@ -213,7 +214,7 @@ class File extends Item
      * @param Account $account the account owning this file
      * @param string $name the name for the file
      * @param bool $overwrite if true (reuses the same object)
-     * @return self newly created object
+     * @return static newly created object
      */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
@@ -229,7 +230,7 @@ class File extends Item
      * @param Account $account the account owning this file
      * @param InputPath $infile the input file name and content path
      * @param bool $overwrite if true (reuses the same object)
-     * @return self newly created object
+     * @return static newly created object
      */
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : self
     {
@@ -311,7 +312,7 @@ class File extends Item
      * Does not return items that are world accessible
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns the items
-     * @return array<string, Item> items indexed by ID
+     * @return array<string, static> items indexed by ID
      */
     public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
     {
@@ -321,7 +322,7 @@ class File extends Item
             $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
             $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
 
-        return array_filter(parent::LoadByQuery($database, $q), function(File $file){ return !$file->isWorldAccess(); });
+        return array_filter(static::LoadByQuery($database, $q), function(File $file){ return !$file->isWorldAccess(); });
     }
     
     /**

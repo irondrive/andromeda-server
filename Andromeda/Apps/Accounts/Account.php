@@ -13,7 +13,7 @@ require_once(ROOT."/Apps/Accounts/Auth/Local.php");
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
+require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey, DecryptionFailedException};
 require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, NullValueException};
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -236,13 +236,13 @@ class Account extends AuthEntity
     public function isAdmin() : bool            { return $this->TryGetFeatureBool('admin') ?? self::GetInheritedFields()['features__admin']; }
     
     /** True if this account is enabled */
-    public function isEnabled() : bool       { return !boolval($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['features__disabled']); }
+    public function isEnabled() : bool       { return !(bool)($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['features__disabled']); }
     
     /** Sets this account's admin-status to the given value */
-    public function setAdmin(?bool $val) : self { return $this->SetFeature('admin', $val); }
+    public function setAdmin(?bool $val) : self { return $this->SetFeatureBool('admin', $val); }
     
     /** Sets the account's disabled status to the given enum value */
-    public function setDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeature('disabled', $val); }    
+    public function setDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeatureInt('disabled', $val); }    
     
     /** Gets the timestamp when this user was last active */
     public function getActiveDate() : ?float    { return $this->TryGetDate('active'); }
@@ -283,14 +283,14 @@ class Account extends AuthEntity
      */
     public static function SearchByFullName(ObjectDatabase $database, string $fullname) : array
     {
-        $q = new QueryBuilder(); return parent::LoadByQuery($database, $q->Where($q->Like('fullname',$fullname)));
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Like('fullname',$fullname)));
     }
     
     /**
      * Attempts to load an account with the given username
      * @param ObjectDatabase $database database reference
      * @param string $username username to load for
-     * @return self|NULL loaded account or null if not found
+     * @return static|NULL loaded account or null if not found
      */
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
     {
@@ -323,13 +323,13 @@ class Account extends AuthEntity
         
         $info = QueryBuilder::EscapeWildcards($info).'%'; // search by prefix
         
-        $loaded1 = parent::LoadByQuery($database, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1));
+        $loaded1 = static::LoadByQuery($database, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1));
         if (count($loaded1) >= $limit+1) $loaded1 = array(); else $limit -= count($loaded1);
         
         $loaded2 = Contact::LoadAccountsMatchingValue($database, $info, $limit+1);
         if (count($loaded2) >= $limit+1) $loaded2 = array(); else $limit -= count($loaded2);
         
-        $loaded3 = parent::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
+        $loaded3 = static::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
         if (count($loaded3) >= $limit+1) $loaded3 = array(); else $limit -= count($loaded3);
         
         return array_merge($loaded1, $loaded2, $loaded3);
@@ -343,7 +343,7 @@ class Account extends AuthEntity
      */
     public static function LoadByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : array
     {
-        return parent::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
+        return static::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }
     
     /**
@@ -353,7 +353,7 @@ class Account extends AuthEntity
      */
     public static function DeleteByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : void
     {
-        parent::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
+        static::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }   
     
     /**
@@ -377,10 +377,12 @@ class Account extends AuthEntity
      */
     public function GetContactEmails() : array
     {
-        $emails = array_filter($this->GetContacts(), function(Contact $contact){ return $contact->isEmail(); });
+        $emails = array_filter($this->GetContacts(), 
+            function(Contact $contact){ return $contact->isEmail(); });
         
-        return array_map(function(Contact $contact){ return $contact->GetAsEmailRecipient(); }, $emails);
-    }        
+        return array_map(function(Contact $contact){ 
+            return $contact->GetAsEmailRecipient(); }, $emails);
+    }
 
     /**
      * Returns the EmailRecipient to use for sending email FROM this account
@@ -414,7 +416,7 @@ class Account extends AuthEntity
      * @param Auth\ISource $source the auth source for the account
      * @param string $username the account's username
      * @param string $password the account's password, if not external auth
-     * @return self created account
+     * @return static created account
      */
     public static function Create(ObjectDatabase $database, Auth\ISource $source, string $username, string $password = null) : self
     {        
@@ -671,6 +673,7 @@ class Account extends AuthEntity
     /**
      * Attempts to unlock crypto using the given password
      * @throws CryptoNotInitializedException if crypto does not exist
+     * @throws DecryptionFailedException if decryption fails
      */
     public function UnlockCryptoFromPassword(string $password) : self
     {
@@ -693,6 +696,8 @@ class Account extends AuthEntity
     /**
      * Attempts to unlock crypto using the given unlocked key source
      * @throws CryptoNotInitializedException if crypto does not exist
+     * @throws DecryptionFailedException if decryption fails
+     * @return $this
      */
     public function UnlockCryptoFromKeySource(KeySource $source) : self
     {
@@ -711,7 +716,8 @@ class Account extends AuthEntity
      * Attempts to unlock crypto using a full recovery key
      * @throws CryptoNotInitializedException if crypto does not exist
      * @throws RecoveryKeyFailedException if the key is not valid
-     * @return self
+     * @throws DecryptionFailedException if decryption fails
+     * @return $this
      */
     public function UnlockCryptoFromRecoveryKey(string $key) : self
     {

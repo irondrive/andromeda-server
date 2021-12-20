@@ -657,7 +657,7 @@ abstract class Storage extends StandardObject implements Transactions
      * Moves all pending rollback actions from $old to $new for delete tracking
      * @param string $old old path of item
      * @param string $new new path of item
-     * @return self
+     * @return $this
      */
     protected function renameRollbacks(string $old, string $new) : self
     {

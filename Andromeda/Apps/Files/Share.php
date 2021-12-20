@@ -60,7 +60,7 @@ class Share extends AuthObject
     }
     
     /** Returns true if this share is via a link rather than to an account/group */
-    public function IsLink() : bool { return boolval($this->TryGetScalar('authkey')); }
+    public function IsLink() : bool { return (bool)($this->TryGetScalar('authkey')); }
     
     /** Returns the item being shared */
     public function GetItem() : Item { return $this->GetObject('item'); }
@@ -117,7 +117,7 @@ class Share extends AuthObject
      * @param Account $owner the owner of the share
      * @param Item $item the item being shared
      * @param AuthEntity $dest account or group target, or null for everyone
-     * @return self new share object
+     * @return static new share object
      */
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
     {
@@ -138,7 +138,7 @@ class Share extends AuthObject
      * @param ObjectDatabase $database database reference
      * @param Account $owner owner of the share
      * @param Item $item item being shared
-     * @return self new share object
+     * @return static new share object
      */
     public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
     {
@@ -155,7 +155,7 @@ class Share extends AuthObject
     }
     
     /** Returns true if this share requires a password to access */
-    public function NeedsPassword() : bool { return boolval($this->TryGetScalar('password')); }
+    public function NeedsPassword() : bool { return (bool)($this->TryGetScalar('password')); }
     
     /** Returns true if the given password matches this share */
     public function CheckPassword(string $password) : bool
@@ -201,12 +201,12 @@ class Share extends AuthObject
         $f_reshare = $input->GetOptParam('reshare',SafeParam::TYPE_BOOL);
         $f_keepown = $input->GetOptParam('keepowner',SafeParam::TYPE_BOOL);
         
-        if ($f_read !== null)    $this->SetFeature('read', $f_read && ($access === null || $access->CanRead()));
-        if ($f_upload !== null)  $this->SetFeature('upload', $f_upload && ($access === null || $access->CanUpload()));
-        if ($f_modify !== null)  $this->SetFeature('modify', $f_modify && ($access === null || $access->CanModify()));
-        if ($f_social !== null)  $this->SetFeature('social', $f_social && ($access === null || $access->CanSocial()));
-        if ($f_reshare !== null) $this->SetFeature('reshare', $f_reshare && ($access === null || $access->CanReshare()));
-        if ($f_keepown !== null) $this->SetFeature('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
+        if ($f_read !== null)    $this->SetFeatureBool('read', $f_read && ($access === null || $access->CanRead()));
+        if ($f_upload !== null)  $this->SetFeatureBool('upload', $f_upload && ($access === null || $access->CanUpload()));
+        if ($f_modify !== null)  $this->SetFeatureBool('modify', $f_modify && ($access === null || $access->CanModify()));
+        if ($f_social !== null)  $this->SetFeatureBool('social', $f_social && ($access === null || $access->CanSocial()));
+        if ($f_reshare !== null) $this->SetFeatureBool('reshare', $f_reshare && ($access === null || $access->CanReshare()));
+        if ($f_keepown !== null) $this->SetFeatureBool('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
         
         if ($input->HasParam('label')) $this->SetScalar('label',
             $input->GetNullParam('label',SafeParam::TYPE_TEXT));

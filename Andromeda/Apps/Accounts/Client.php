@@ -91,7 +91,7 @@ class Client extends AuthObject
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns this client
      * @param string $name custom name to show for the client
-     * @return self new Client
+     * @return static new Client
      */
     public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account, ?string $name = null) : self
     {

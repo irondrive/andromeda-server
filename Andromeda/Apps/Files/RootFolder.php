@@ -15,6 +15,7 @@ class InvalidRootOpException extends Exceptions\ClientErrorException { public $m
 /** A root folder has no parent or name */
 class RootFolder extends Folder
 {
+    /** @return class-string<self> */
     public static function GetObjClass(array $row) : string { return self::class; }
     
     public function GetName() : string 
@@ -47,7 +48,7 @@ class RootFolder extends Folder
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner of the root folder
      * @param FSManager $filesystem the filesystem of the root, or null to get the default
-     * @return self|NULL loaded folder or null if a default FS does not exist and none is given
+     * @return static|NULL loaded folder or null if a default FS does not exist and none is given
      */
     public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {

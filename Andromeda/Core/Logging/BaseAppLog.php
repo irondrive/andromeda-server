@@ -61,7 +61,7 @@ abstract class BaseAppLog extends BaseLog
     /**
      * Creates a new empty applog object and binds it to the current action log
      * @param ObjectDatabase $database database reference
-     * @return self|NULL new entry or NULL if there's no current action log
+     * @return static|NULL new entry or NULL if there's no current action log
      */
     public static function BaseRunCreate(ObjectDatabase $database) : ?self
     {

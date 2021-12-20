@@ -1,6 +1,9 @@
 parameters:
-    level: 2
+    level: 5
     paths: 
         - ../Andromeda
     bootstrapFiles:
         - ../Andromeda/init.php
+
+includes:
+	- ./phpstan-baseline.neon

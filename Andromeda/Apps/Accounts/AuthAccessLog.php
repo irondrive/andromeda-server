@@ -30,7 +30,7 @@ abstract class AuthAccessLog extends BaseAppLog
      * Returns a new self object with the given auth info logged
      * @param ObjectDatabase $database database reference
      * @param Authenticator $auth Authenticator info to log
-     * @return self|NULL new log object or null if BaseRunCreate returns null
+     * @return static|NULL new log object or null if BaseRunCreate returns null
      * @see BaseAppLog::BaseRunCreate()
      */
     public static function BaseAuthCreate(ObjectDatabase $database, ?Authenticator $auth) : ?self

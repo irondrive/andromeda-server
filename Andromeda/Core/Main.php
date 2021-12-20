@@ -376,8 +376,8 @@ final class Main extends Singleton
      */
     private function innerCommit(bool $apps) : void
     {
-        $tl = ini_get('max_execution_time'); set_time_limit(0);
-        $ua = ignore_user_abort(); ignore_user_abort(true);
+        $tl = (int)ini_get('max_execution_time'); set_time_limit(0);
+        $ua = (bool)ignore_user_abort(); ignore_user_abort(true);
         
         $rollback = $this->database->isReadOnly() || ($this->config && $this->config->isDryRun());
         

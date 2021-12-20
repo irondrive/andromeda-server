@@ -66,7 +66,7 @@ class Database implements Transactions
     /** @var DBStats[] the stack of DB statistics contexts, for nested API->Run() calls */
     private array $stats_stack = array();
     
-    /** @var string[] global history of SQL queries sent to the DB (not a stack) */
+    /** global history of SQL queries sent to the DB (not a stack) */
     private array $queries = array();
     
     /** the default path for storing the config file */

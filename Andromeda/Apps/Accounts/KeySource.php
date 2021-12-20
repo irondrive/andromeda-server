@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey};
+require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey, DecryptionFailedException};
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/Apps/Accounts/Account.php");
@@ -63,6 +63,7 @@ abstract class KeySource extends AuthObject
     /**
      * Returns the decrypted account master key
      * @throws CryptoNotInitializedException if no key material exists
+     * @throws DecryptionFailedException if decryption fails
      * @see AuthObject::GetAuthKey()
      */
     public function GetUnlockedKey() : string

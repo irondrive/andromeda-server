@@ -54,7 +54,7 @@ class FreeSpaceFailedException extends StorageException     { public $message = 
 abstract class ActivateException extends StorageException { }
 
 /** Exception indicating that the tested storage is not readable */
-class TestReadFailedException extends ActivateException { public $message = "STORAGE_TEST_READ_FAILED"; }
+class TestReadFailedException extends ActivateException { public $message = "STORAGE_TEST_READ_FAILED"; use Exceptions\Copyable; }
 
 /** Exception indicating that the tested storage is not writeable */
 class TestWriteFailedException extends ActivateException { public $message = "STORAGE_TEST_WRITE_FAILED"; use Exceptions\Copyable; }

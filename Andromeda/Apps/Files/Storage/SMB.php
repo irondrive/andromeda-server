@@ -117,12 +117,13 @@ class SMB extends SMBBase2
         $password = rawurlencode($this->TryGetPassword() ?? "");
         $workgroup = rawurlencode($this->TryGetWorkgroup() ?? "");
                 
-        $connstr = "smb://";
+        $connstr = "";
         if ($workgroup) $connstr .= "$workgroup;";
         if ($username) $connstr .= $username;
         if ($password) $connstr .= ":$password";
         if ($connstr) $connstr .= "@";
-        $connstr .= $this->GetScalar('hostname');
+        
+        $connstr = "smb://".$connstr.$this->GetScalar('hostname');
                 
         return $connstr.'/'.$this->GetPath($path);
     }

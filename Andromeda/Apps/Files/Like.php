@@ -32,7 +32,7 @@ class Like extends StandardObject
      * @param Account $owner the person doing the like
      * @param Item $item the item being liked
      * @param bool $value true if like, false if dislike, null to unset
-     * @return self|NULL like object if $value is not null
+     * @return static|NULL like object if $value is not null
      */
     public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?self
     {

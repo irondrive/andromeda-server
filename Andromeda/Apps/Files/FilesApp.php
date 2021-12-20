@@ -457,8 +457,8 @@ class FilesApp extends InstalledApp
             $ranges = explode('-',$ranges[1]);
             if (count($ranges) != 2) throw new InvalidDLRangeException();
             
-            $fstart = intval($ranges[0]); 
-            $flast2 = intval($ranges[1]); 
+            $fstart = (int)($ranges[0]); 
+            $flast2 = (int)($ranges[1]); 
             if ($flast2) $flast = $flast2;
         }
 
@@ -602,7 +602,7 @@ class FilesApp extends InstalledApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function GetFileMeta(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
+    protected function GetFileMeta(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
         $access = $this->AuthenticateFileAccess($input, $authenticator, $accesslog);
         $file = $access->GetFile(); $share = $access->GetShare();
@@ -623,7 +623,7 @@ class FilesApp extends InstalledApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function GetFolder(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : ?array
+    protected function GetFolder(Input $input, ?Authenticator $authenticator, ?AccessLog $accesslog) : array
     {
         if (($fid = $input->GetOptParam('folder',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER)) !== null)
         {
@@ -684,7 +684,7 @@ class FilesApp extends InstalledApp
     {
         $share = null; if (($raccess = $this->TryAuthenticateFolderAccess($input, $authenticator, $accesslog)) !== null)
         {
-            $folder = $raccess->GetItem(); $share = $raccess->GetShare();
+            $folder = $raccess->GetFolder(); $share = $raccess->GetShare();
             if ($share !== null && !$share->CanRead()) throw new ItemAccessDeniedException();
         }
         else // no root folder given
@@ -764,10 +764,10 @@ class FilesApp extends InstalledApp
      * Edits item metadata
      * @param ItemAccess $access access object for item
      * @throws ItemAccessDeniedException if accessing via share and can't modify
-     * @return array|NULL Item
+     * @return array Item
      * @see Item::GetClientObject()
      */
-    private function EditItemMeta(ItemAccess $access, Input $input) : ?array
+    private function EditItemMeta(ItemAccess $access, Input $input) : array
     {
         $item = $access->GetItem(); $share = $access->GetShare();
         
@@ -958,7 +958,7 @@ class FilesApp extends InstalledApp
         
         $paccess = $this->AuthenticateItemObjAccess($input, $authenticator, $accesslog, $item->GetParent(), true);
         
-        $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
+        $parent = $paccess->GetFolder(); $pshare = $paccess->GetShare();
         
         if ($copy)
         {
@@ -1021,7 +1021,7 @@ class FilesApp extends InstalledApp
         
         $parentid = $input->GetOptParam('parent',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_NEVER);
         $paccess = $this->AuthenticateFolderAccess($input, $authenticator, $accesslog, $parentid, true);
-        $parent = $paccess->GetItem(); $pshare = $paccess->GetShare();
+        $parent = $paccess->GetFolder(); $pshare = $paccess->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
@@ -1038,7 +1038,7 @@ class FilesApp extends InstalledApp
         {
             $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
             
-            return $item->CopyToParent($owner, $parent, $overwrite);
+            $retobj = $item->CopyToParent($owner, $parent, $overwrite);
         }
         else 
         {
@@ -1447,7 +1447,7 @@ class FilesApp extends InstalledApp
             // TODO CLIENT - HTML - configure a directory where client templates reside
 
             $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
-                array(new EmailRecipient($email)), $account->GetEmailFrom(), false);
+                array(new EmailRecipient($email)), false, $account->GetEmailFrom());
         }
         
         return $retval;
@@ -1540,7 +1540,7 @@ class FilesApp extends InstalledApp
         if ($mine) $shares = Share::LoadByAccountOwner($this->database, $account);
         else $shares = Share::LoadByAccountDest($this->database, $account);
         
-        if (!$mine) $shares = array_filter(function(Share $sh){ return !$sh->isExpired(); });
+        if (!$mine) $shares = array_filter($shares, function(Share $sh){ return !$sh->isExpired(); });
         
         return array_map(function($share)use($mine){ return $share->GetClientObject(true, $mine); }, $shares);
     }

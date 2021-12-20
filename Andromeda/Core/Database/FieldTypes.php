@@ -48,7 +48,7 @@ class Scalar
         $this->mandatorySave = $mandatorySave;
         $this->tempvalue = $defvalue;
         $this->realvalue = $defvalue;
-        $this->delta = ($defvalue !== null);
+        $this->delta = ($defvalue !== null) ? 1 : 0;
     }
 
     /**
@@ -97,7 +97,7 @@ class Scalar
     public function GetDBValue() 
     { 
         if (is_bool($this->realvalue)) 
-            return intval($this->realvalue);
+            return (int)($this->realvalue);
         
         return $this->realvalue; 
     }
@@ -146,7 +146,7 @@ class Counter extends Scalar
     /** Gives the counter its value from the DB, or 0 if null */
     public function InitValue($value) : void
     {        
-        parent::InitValue(intval($value ?? 0));
+        parent::InitValue((int)($value ?? 0));
     }        
     
     /** Increments the counter by the given delta */
@@ -358,19 +358,20 @@ class ObjectPoly extends ObjectRef
  * Essentially is a syntactic-sugar/caching field that allows loading the array 
  * of objects without having to call into their class to load ones that reference us.  
  * The practical value is that the field stores a reference counter and acts as a cache.
+ * @template T of BaseObject
  */
 class ObjectRefs extends Counter
 {
     /**
      * array of objects that reference this field 
-     * @var array<string, BaseObject>
+     * @var array<string, T>
      */
     protected array $objects; 
     
     /** true if the objects array is fully loaded */
     protected bool $isLoaded = false;
     
-    /** The class of the object that is referenced */
+    /** @var class-string<T> The class of the object that is referenced */
     protected string $refclass;
     
     /** The name of the field in the referenced object that references our parent object */
@@ -382,10 +383,10 @@ class ObjectRefs extends Counter
     /** if true, delete the linked object when removing our reference to it */
     protected bool $autoDelete = false;
     
-    /** @var BaseObject[] array of references that have been added */
+    /** @var T[] array of references that have been added */
     protected array $refs_added = array();
     
-    /** @var BaseObject[] array of references that have been deleted */
+    /** @var T[] array of references that have been deleted */
     protected array $refs_deleted = array();
 
     /** return false - referenced objects refer to us as a single object */
@@ -399,6 +400,7 @@ class ObjectRefs extends Counter
     
     /**
      * Creates a new object reference array field
+     * @param class-string<T> $refclass
      * @see ObjectRefs::$refclass
      * @see ObjectRefs::$reffield
      * @see ObjectRefs::$parentPoly
@@ -408,7 +410,7 @@ class ObjectRefs extends Counter
         $this->refclass = $refclass; $this->reffield = $reffield; $this->parentPoly = $parentPoly;
     }
     
-    /** @see ObjectRefs::$refclass */
+    /** @return class-string<T> */
     public function GetRefClass() : string { return $this->refclass; }
     
     /** @see ObjectRefs::$reffield */
@@ -420,7 +422,7 @@ class ObjectRefs extends Counter
      * If offset or limit are not null, the array will not be fully loaded and will need to be queried again
      * @param int $limit max number of objects to load
      * @param int $offset number of objects to skip loading
-     * @return array<string, BaseObject> objects indexed by their ID
+     * @return array<string, T> objects indexed by their ID
      */
     public function GetObjects(?int $limit = null, ?int $offset = null) : array
     {
@@ -432,7 +434,7 @@ class ObjectRefs extends Counter
     /** Gives the counter its value from the DB, or 0 if null */
     public function InitValue($value) : void
     {
-        parent::InitValue(intval($value ?? 0));
+        parent::InitValue((int)($value ?? 0));
 
         if (!$this->GetValue()) { $this->isLoaded = true; $this->objects = array(); }
     }
@@ -486,7 +488,7 @@ class ObjectRefs extends Counter
     
     /**
      * Add the given object to this field's object array
-     * @param BaseObject $object the object to add
+     * @param T $object the object to add
      * @return bool true if this field was modified
      */
     public function AddObject(BaseObject $object) : bool
@@ -516,7 +518,7 @@ class ObjectRefs extends Counter
     
     /**
      * Deletes the given object from this field's object array
-     * @param BaseObject $object the object to remove
+     * @param T $object the object to remove
      * @return bool true if this field was modified
      */
     public function RemoveObject(BaseObject $object) : bool

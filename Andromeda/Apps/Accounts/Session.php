@@ -39,7 +39,7 @@ class Session extends KeySource
     {
         $q = new QueryBuilder(); $w = $q->Equals('account',$account->ID());
         
-        parent::DeleteByQuery($database, $q->Where($w));
+        static::DeleteByQuery($database, $q->Where($w));
     }
     
     /** Deletes all sessions for the given account except the given session */
@@ -47,7 +47,7 @@ class Session extends KeySource
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
         
-        parent::DeleteByQuery($database, $q->Where($w));
+        static::DeleteByQuery($database, $q->Where($w));
     }
         
     /** Gets the last timestamp this client was active */

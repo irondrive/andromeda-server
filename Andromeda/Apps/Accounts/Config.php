@@ -43,7 +43,7 @@ class Config extends BaseConfig
             $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CREATE_TYPES));
 
-            $this->SetFeature('createaccount', self::CREATE_TYPES[$param]);
+            $this->SetFeatureInt('createaccount', self::CREATE_TYPES[$param]);
         }
         
         if ($input->HasParam('requirecontact')) 
@@ -51,10 +51,10 @@ class Config extends BaseConfig
             $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CONTACT_TYPES));
 
-            $this->SetFeature('requirecontact', self::CONTACT_TYPES[$param]);
+            $this->SetFeatureInt('requirecontact', self::CONTACT_TYPES[$param]);
         }
         
-        if ($input->HasParam('usernameiscontact')) $this->SetFeature('usernameiscontact',$input->GetParam('usernameiscontact',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('usernameiscontact')) $this->SetFeatureBool('usernameiscontact',$input->GetParam('usernameiscontact',SafeParam::TYPE_BOOL));
         
         if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
         
@@ -108,10 +108,10 @@ class Config extends BaseConfig
     public function GetUsernameIsContact() : bool  { return $this->GetFeatureBool('usernameiscontact'); }
     
     /** Sets whether the API for creating new accounts is enabled */
-    public function SetAllowCreateAccount(int $value, bool $temp = false) : self { return $this->SetFeature('createaccount', $value, $temp); }
+    public function SetAllowCreateAccount(int $value, bool $temp = false) : self { return $this->SetFeatureInt('createaccount', $value, $temp); }
     
     /** Sets whether emails should be used as usernames */
-    public function SetUsernameIsContact(bool $value, bool $temp = false) : self { return $this->SetFeature('usernameiscontact', $value, $temp); }
+    public function SetUsernameIsContact(bool $value, bool $temp = false) : self { return $this->SetFeatureBool('usernameiscontact', $value, $temp); }
     
     public const CONTACT_EXIST = 1; public const CONTACT_VALID = 2;
     
@@ -121,7 +121,7 @@ class Config extends BaseConfig
     public function GetRequireContact() : int { return $this->GetFeatureInt('requirecontact'); }
     
     /* Sets whether a contact for accounts is required or validated */
-    public function SetRequireContact(int $value, bool $temp = false) : self { return $this->SetFeature('requirecontact', $value, $temp); }
+    public function SetRequireContact(int $value, bool $temp = false) : self { return $this->SetFeatureInt('requirecontact', $value, $temp); }
      
     /**
      * Gets the config as a printable client object

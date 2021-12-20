@@ -28,6 +28,7 @@ abstract class Folder extends Item
 {
     public static function GetDBClass() : string { return self::class; }
 
+    /** @return class-string<self> */
     public static function GetObjClass(array $row) : string 
     {
         return $row['parent'] === null ? RootFolder::class : SubFolder::class;
@@ -177,6 +178,7 @@ abstract class Folder extends Item
     /**
      * Refreshes the folder's metadata from disk
      * @param bool $doContents if true, refresh all contents of the folder
+     * @return $this
      */
     public function Refresh(bool $doContents = false) : self
     {
@@ -217,7 +219,7 @@ abstract class Folder extends Item
      * Does not return items that are world accessible
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns the items
-     * @return array<string, Item> items indexed by ID
+     * @return array<string, static> items indexed by ID
      */
     public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
     {
@@ -228,7 +230,7 @@ abstract class Folder extends Item
         $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.owner', $account->ID()),
             $q->Equals($database->GetClassTableName(Folder::class).'.owner', $account->ID()));
 
-        return array_filter(parent::LoadByQuery($database, $q->Where($w)), 
+        return array_filter(static::LoadByQuery($database, $q->Where($w)), 
             function(Folder $folder){ return !$folder->isWorldAccess(); });
     }
     

@@ -44,7 +44,10 @@ abstract class Total extends Base
         ));
     }
     
-    /** Loads the limit object corresponding to the given limited object */
+    /** 
+     * Loads the limit object corresponding to the given limited object 
+     * @return static
+     */
     public static function LoadByClient(ObjectDatabase $database, StandardObject $obj) : ?self
     {
         if (!array_key_exists($obj->ID(), static::$cache))
@@ -87,7 +90,10 @@ abstract class Total extends Base
     /** Returns true if the limited object should allow sharing to everyone */
     public function GetAllowShareToEveryone() : ?bool { return $this->TryGetFeatureBool('share2everyone'); }
     
-    /** Creates and caches a new limit object for the given limited object */
+    /** 
+     * Creates and caches a new limit object for the given limited object 
+     * @return static
+     */
     protected static function Create(ObjectDatabase $database, StandardObject $obj) : self
     {
         $newobj = parent::BaseCreate($database)->SetObject('object',$obj);
@@ -107,12 +113,12 @@ abstract class Total extends Base
         
         $lim->SetBaseLimits($input);
         
-        if ($input->HasParam('randomwrite')) $lim->SetFeature('randomwrite', $input->GetNullParam('randomwrite', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicmodify')) $lim->SetFeature('publicmodify', $input->GetNullParam('publicmodify', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicupload')) $lim->SetFeature('publicupload', $input->GetNullParam('publicupload', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('itemsharing')) $lim->SetFeature('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('share2groups')) $lim->SetFeature('share2groups', $input->GetNullParam('share2groups', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('share2everyone')) $lim->SetFeature('share2everyone', $input->GetNullParam('share2everyone', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('randomwrite')) $lim->SetFeatureBool('randomwrite', $input->GetNullParam('randomwrite', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('publicmodify')) $lim->SetFeatureBool('publicmodify', $input->GetNullParam('publicmodify', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('publicupload')) $lim->SetFeatureBool('publicupload', $input->GetNullParam('publicupload', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('itemsharing')) $lim->SetFeatureBool('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('share2groups')) $lim->SetFeatureBool('share2groups', $input->GetNullParam('share2groups', SafeParam::TYPE_BOOL));
+        if ($input->HasParam('share2everyone')) $lim->SetFeatureBool('share2everyone', $input->GetNullParam('share2everyone', SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_UINT));
         if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT32));

@@ -30,7 +30,7 @@ class Tag extends StandardObject
      * @param Account $owner owner creating the tag
      * @param Item $item item being tagged
      * @param string $tag the text value of the tag
-     * @return self new tag object
+     * @return static new tag object
      */
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $tag) : self
     {

@@ -85,14 +85,14 @@ trait GroupCommon
     {        
         if ($input->HasParam('track_items'))
         {
-            $this->SetFeature('track_items', static::GetTrackParam($input,'track_items'));
+            $this->SetFeatureInt('track_items', static::GetTrackParam($input,'track_items'));
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }
         
         if ($input->HasParam('track_dlstats'))
         {
-            $this->SetFeature('track_dlstats', static::GetTrackParam($input,'track_dlstats'));
+            $this->SetFeatureInt('track_dlstats', static::GetTrackParam($input,'track_dlstats'));
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -129,7 +129,7 @@ trait GroupCommon
         
         foreach (array('track_items','track_dlstats') as $prop)
         {
-            $val = $this->GetFeatureInt($prop);
+            $val = $this->TryGetFeatureInt($prop);
             
             $retval['features'] = ($val !== null) ?
                 array_flip(self::TRACK_TYPES)[$val] : null;
@@ -251,7 +251,7 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
             
             foreach ($this->GetGroup()->GetDefaultAccounts() ?? array() as $account)
             {
-                $acctlim = AccountTimed::LoadByAccount($this->database, $account, false);
+                $acctlim = AccountTimed::LoadByAccount($this->database, $account, $this->GetTimePeriod());
                 if ($acctlim !== null) $this->acctlims[$acctlim->ID()] = $acctlim;
             }
         }

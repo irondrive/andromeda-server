@@ -40,7 +40,7 @@ class TimedStats extends StandardObject
     protected function GetLimiter() : Timed { return $this->GetObject('limitobj'); }
     
     /** Returns the beginning of the time period for these stats */
-    protected function GetTimeStart() : int { return $this->GetDate('timestart'); }
+    protected function GetTimeStart() : int { return (int)$this->GetDate('timestart'); }
     
     /** Returns the time period length for the timed stats */
     protected function GetTimePeriod() : int { return $this->GetLimiter()->GetTimePeriod(); }   
@@ -83,7 +83,7 @@ class TimedStats extends StandardObject
             $start = $obj->GetTimeStart(); 
             $period = $obj->GetTimePeriod();
             
-            $offset = intdiv($time-$start,$period)*$period;
+            $offset = intdiv((int)($time-$start),$period)*$period;
             
             if ($offset !== 0) // need to create a new timeperiod
             {
@@ -92,7 +92,7 @@ class TimedStats extends StandardObject
                 $start += $offset; $obj = null;
             }
         }
-        else $start = $time;
+        else $start = (int)$time;
         
         if ($obj === null)
         {
@@ -149,7 +149,7 @@ class TimedStats extends StandardObject
      * @param ObjectDatabase $database database reference
      * @param Timed $limit limit to load stats for
      * @param int $time the time at which the stats were current
-     * @return self|NULL load stats or null if none exist
+     * @return static|NULL load stats or null if none exist
      */
     public static function LoadByLimitAtTime(ObjectDatabase $database, Timed $limit, int $time) : ?self
     {

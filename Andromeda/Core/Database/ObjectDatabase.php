@@ -42,7 +42,11 @@ class ObjectDatabase extends Database
         return $this;
     }
     
-    /** Return the database table name for a class */
+    /** 
+     * Return the database table name for a class 
+     * @template T of BaseObject
+     * @param class-string<T> $class the class name
+     */
     public function GetClassTableName(string $class) : string
     {
         $class = explode('\\',$class::GetDBClass()); unset($class[0]);
@@ -53,9 +57,10 @@ class ObjectDatabase extends Database
     
     /**
      * Converts database rows into objects
+     * @template T of BaseObject
      * @param array $rows rows from the DB, each becoming an object
-     * @param string $class the class of object represented by the rows
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @param class-string<T> $class the class of object represented by the rows
+     * @return array<string, T> array of objects indexed by their IDs
      */
     private function Rows2Objects(array $rows, string $class) : array
     {
@@ -63,7 +68,7 @@ class ObjectDatabase extends Database
 
         foreach ($rows as $row)
         {
-            $id = $row['id'];
+            $id = (string)$row['id'];
             
             $dbclass = $class::GetDBClass(); 
             $this->objects[$dbclass] ??= array();
@@ -89,10 +94,11 @@ class ObjectDatabase extends Database
     
     /**
      * Attempt to fetch an object from the cache by its ID
-     * @param string $class the class of the desired object
+     * @template T of BaseObject
+     * @param class-string<T> $class the class of the desired object
      * @param string $id the ID of the object to load
      * @throws ObjectTypeException if the object exists but is a different class
-     * @return BaseObject|NULL the object from the cache
+     * @return T|NULL the object from the cache
      */
     private function TryPreloadObjectByID(string $class, string $id) : ?BaseObject
     {
@@ -114,11 +120,12 @@ class ObjectDatabase extends Database
      * Attempt to load a unique object by the value of a field
      * 
      * Will try to fetch the object from the cache if loading by ID
-     * @param string $class the desired class of the object
+     * @template T of BaseObject
+     * @param class-string<T> $class the desired class of the object
      * @param string $field the field to check
      * @param string $value the value of the field to match
      * @throws DuplicateUniqueKeyException if this returns > 1 object
-     * @return BaseObject|NULL the object returned by the database
+     * @return T|NULL the object returned by the database
      */
     public function TryLoadObjectByUniqueKey(string $class, string $field, string $value) : ?BaseObject
     {
@@ -136,7 +143,8 @@ class ObjectDatabase extends Database
     
     /**
      * Counts objects using the given query
-     * @param string $class the class of the objects
+     * @template T of BaseObject
+     * @param class-string<T> $class the class of the objects
      * @param QueryBuilder $query the query used to match objects
      * @return int count of objects
      */
@@ -151,9 +159,10 @@ class ObjectDatabase extends Database
     
     /**
      * Loads an array of objects using the given query
-     * @param string $class the class of the objects
+     * @template T of BaseObject
+     * @param class-string<T> $class the class of the objects
      * @param QueryBuilder $query the query used to match objects
-     * @return array<string, BaseObject> array of objects indexed by their IDs
+     * @return array<string, T> array of objects indexed by their IDs
      */
     public function LoadObjectsByQuery(string $class, QueryBuilder $query) : array
     {
@@ -177,7 +186,8 @@ class ObjectDatabase extends Database
      * Delete objects matching the given query
      * 
      * The objects will be loaded when deleted and their Delete() will run
-     * @param string $class the class of the objects to delete
+     * @template T of BaseObject
+     * @param class-string<T> $class the class of the objects to delete
      * @param QueryBuilder $query the query used to match objects
      * @return int number of deleted objects
      */
@@ -304,8 +314,9 @@ class ObjectDatabase extends Database
      * 
      * The object will not actually exist in the DB until Save() is called,
      * and its fields will have only the defaults given in its field template
-     * @param string $class the desired class of the new object
-     * @return BaseObject the newly created object
+     * @template T of BaseObject
+     * @param class-string<T> $class the desired class of the new object
+     * @return T the newly created object
      */
     public function CreateObject(string $class) : BaseObject
     {

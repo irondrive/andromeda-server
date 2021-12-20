@@ -24,7 +24,7 @@ class Whitelist extends StandardObject
      * @param ObjectDatabase $database database reference
      * @param int $type entry type enum
      * @param string $value value of whitelist entry
-     * @return self new whitelist entry
+     * @return static new whitelist entry
      */
     public static function Create(ObjectDatabase $database, int $type, string $value) : self
     {

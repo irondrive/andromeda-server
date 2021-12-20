@@ -70,7 +70,7 @@ abstract class Timed extends Base
      * Returns all timed limits for the given limited object (all time periods)
      * @param ObjectDatabase $database database reference
      * @param StandardObject $obj the limited object
-     * @return array<string, Timed> limits indexed by ID
+     * @return array<string, static> limits indexed by ID
      */
     public static function LoadAllForClient(ObjectDatabase $database, StandardObject $obj) : array
     {
@@ -92,7 +92,7 @@ abstract class Timed extends Base
      * @param ObjectDatabase $database database reference
      * @param StandardObject $obj the limited object
      * @param int $period the time period
-     * @return self|NULL limit object or null if none
+     * @return static|NULL limit object or null if none
      */
     public static function LoadByClientAndPeriod(ObjectDatabase $database, StandardObject $obj, int $period) : ?self
     {
@@ -124,7 +124,7 @@ abstract class Timed extends Base
      * @param ObjectDatabase $database database reference
      * @param StandardObject $obj object to limit
      * @param int $timeperiod time period for limit
-     * @return self new limit object
+     * @return static new limit object
      */
     protected static function CreateTimed(ObjectDatabase $database, StandardObject $obj, int $timeperiod) : self
     {
