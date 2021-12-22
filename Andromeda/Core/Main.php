@@ -208,7 +208,7 @@ final class Main extends Singleton
             $this->cfgException = $e;
         }
         
-        foreach ($apps as $app) $this->LoadApp($app);
+        foreach ($apps as $app) $this->TryLoadApp($app);
 
         if ($this->database)
         {
@@ -225,22 +225,29 @@ final class Main extends Singleton
     }
     
     /** Loads the main include file for an app and constructs it */
-    public function LoadApp(string $app) : self
+    protected function TryLoadApp(string $app) : bool
     {
-        $app = strtolower($app); 
+        $app = strtolower($app);
         
         $uapp = Utilities::FirstUpper($app);
         $path = ROOT."/Apps/$uapp/$uapp"."App.php";
         $app_class = "Andromeda\\Apps\\$uapp\\$uapp".'App';
-
-        if (is_file($path)) require_once($path);
-        else throw new FailedAppLoadException();
         
-        if (!class_exists($app_class)) throw new FailedAppLoadException();
+        if (is_file($path)) require_once($path); else return false;
         
+        if (!class_exists($app_class)) return false;
+            
         if (!array_key_exists($app, $this->apps))
             $this->apps[$app] = new $app_class($this);
-        
+            
+        return true;
+    }
+    
+    /** Loads the main include file for an app and constructs it */
+    public function LoadApp(string $app) : self
+    {
+        if (!$this->TryLoadApp($app))
+            throw new FailedAppLoadException($app);
         return $this;
     }
 
@@ -304,6 +311,13 @@ final class Main extends Singleton
     
     private bool $rolledback = false;
     
+    /** Runs the given $func in try/catch and logs if exception */
+    public static function LoggedTry(callable $func)
+    {
+        try { return $func(); } catch (\Throwable $e) { 
+            ErrorManager::GetInstance()->LogException($e); }
+    }
+    
     /**
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
@@ -312,30 +326,30 @@ final class Main extends Singleton
      */
     public function rollback(?\Throwable $e = null) : void
     {
-        $this->rolledback = true;
-        
-        foreach ($this->apps as $app) try { $app->rollback(); }
-        catch (\Throwable $e) { $this->error_manager->LogException($e); }
-        
-        if ($this->database) 
+        Utilities::RunAtomic(function()use($e)
         {
-            $this->database->rollback();
+            $this->rolledback = true;
             
-            if ($e instanceof ClientException)
+            foreach ($this->apps as $app) $this->LoggedTry(
+                function()use($app) { $app->rollback(); });
+            
+            if ($this->database) 
             {
-                try 
-                {                    
-                    if (isset($this->reqlog)) $this->reqlog->SetError($e);
+                $this->database->rollback();
+                
+                if ($e instanceof ClientException) 
+                    $this->LoggedTry(function()use($e)
+                {
+                    if (isset($this->reqlog)) 
+                        $this->reqlog->SetError($e);
                     
-                    $this->database->saveObjects(true); 
-                    
+                    $this->database->saveObjects(true);
                     $this->innerCommit(false);
-                }
-                catch (\Throwable $e) { $this->error_manager->LogException($e); }
+                });
             }
-        }
-        
-        $this->dirty = false;
+            
+            $this->dirty = false;
+        });
     }
     
     /**
@@ -348,26 +362,29 @@ final class Main extends Singleton
     public function commit() : void
     {
         if ($this->rolledback) throw new CommitAfterRollbackException();
-
-        if ($this->database)
-        {          
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
-                $this->database->pushStatsContext();
-                
-            $this->database->saveObjects();
-            
-            $this->innerCommit(true);
-                    
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
-            {
-                $commit_stats = $this->database->popStatsContext();
-                $this->commit_stats[] = $commit_stats;
-                $this->total_stats->Add($commit_stats);
-            }
-        }
-        else foreach ($this->apps as $app) $app->commit();
         
-        $this->dirty = false;
+        Utilities::RunAtomic(function()
+        {
+            if ($this->database)
+            {
+                if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
+                    $this->database->pushStatsContext();
+                
+                $this->database->saveObjects();
+                
+                $this->innerCommit(true);
+                
+                if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
+                {
+                    $commit_stats = $this->database->popStatsContext();
+                    $this->commit_stats[] = $commit_stats;
+                    $this->total_stats->Add($commit_stats);
+                }
+            }
+            else foreach ($this->apps as $app) $app->commit();
+            
+            $this->dirty = false;
+        });
     }
     
     /**
@@ -376,16 +393,14 @@ final class Main extends Singleton
      */
     private function innerCommit(bool $apps) : void
     {
-        $tl = (int)ini_get('max_execution_time'); set_time_limit(0);
-        $ua = (bool)ignore_user_abort(); ignore_user_abort(true);
+        $rollback = $this->database->isReadOnly() || 
+            ($this->config && $this->config->isDryRun());
         
-        $rollback = $this->database->isReadOnly() || ($this->config && $this->config->isDryRun());
+        if ($apps) foreach ($this->apps as $app) 
+            if ($rollback) $app->rollback(); else $app->commit();
         
-        if ($apps) foreach ($this->apps as $app) $rollback ? $app->rollback() : $app->commit();
-        
-        if ($rollback) $this->database->rollback(); else $this->database->commit();
-        
-        set_time_limit($tl); ignore_user_abort($ua);
+        if ($rollback) $this->database->rollback(); 
+        else $this->database->commit();
     }
 
     /** if false, requests are not allowed (always true for privileged interfaces) */
