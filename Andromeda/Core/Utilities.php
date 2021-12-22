@@ -219,16 +219,29 @@ abstract class Utilities
      * @param callable $func function to map onto each key
      * @param array $keys array of keys to use in result
      */
-    public static function array_map_keys(callable $func, array $keys)
+    public static function array_map_keys(callable $func, array $keys) : array
     {
         return array_combine($keys, array_map($func, $keys));
     }
     
     /** Returns all classes that are a $match type */
-    public static function getClassesMatching(string $match)
+    public static function getClassesMatching(string $match) : array
     {
         return array_values(array_filter(get_declared_classes(), function(string $class)use($match){
             return $class !== $match && is_a($class, $match, true) && !(new \ReflectionClass($class))->isAbstract(); }));
+    }
+    
+    /** Runs the given function with no execution timeouts or user aborts */
+    public static function RunAtomic(callable $func)
+    {
+        $tl = (int)ini_get('max_execution_time'); set_time_limit(0);
+        $ua = (bool)ignore_user_abort(); ignore_user_abort(true);
+        
+        $retval = $func();
+        
+        set_time_limit($tl); ignore_user_abort($ua);
+        
+        return $retval;
     }
 }
 

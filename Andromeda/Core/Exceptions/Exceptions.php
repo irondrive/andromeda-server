@@ -7,7 +7,7 @@ abstract class BaseException extends \Exception
 {
     public function __construct(?string $details = null) 
     {
-        if ($details) $this->message .= ": $details"; 
+        if ($details !== null) $this->message .= ": $details"; 
     }
 }
 

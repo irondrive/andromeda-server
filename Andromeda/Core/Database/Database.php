@@ -285,7 +285,11 @@ class Database implements Transactions
     }
     
     /** Whether or not the DB supports the RETURNING keyword */
-    protected function SupportsRETURNING() : bool { return in_array($this->getDriver(), array(self::DRIVER_MYSQL, self::DRIVER_POSTGRESQL)); }
+    protected function SupportsRETURNING() : bool 
+    { 
+        return $this->getDriver() === self::DRIVER_MYSQL || 
+               $this->getDriver() === self::DRIVER_POSTGRESQL; 
+    }
     
     /** Whether or not the DB aborts transactions after an error and requires use of SAVEPOINTs */
     protected function RequiresSAVEPOINT() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
@@ -320,9 +324,9 @@ class Database implements Transactions
      * @param int $type whether the query is a read, a write, or both (bitset)
      * @param array<string, string> $data associative array of data replacements for the prepared statement
      * @throws DatabaseReadOnlyException if the query is a write and the DB is read-only
-     * @return mixed if the query is a read, an associative array of the result, else count of affected rows
+     * @return array|int|NULL an associative array of the query results for reads, row count for writes
      */
-    public function query(string $sql, int $type, ?array $data = null) 
+    public function query(string $sql, int $type, ?array $data = null)
     {
         if (!$this->connection->inTransaction())
             $this->beginTransaction();
@@ -334,12 +338,12 @@ class Database implements Transactions
 
         $this->startTimingQuery();
         
-        $doSavepoint = false;
+        $doSavepoint = false; $result = null;
         
         try 
         {           
-            if      ($sql === 'COMMIT') { $this->commit(); $result = null; }
-            else if ($sql === 'ROLLBACK') { $this->rollback(); $result = null; }
+            if      ($sql === 'COMMIT') { $this->commit(); }
+            else if ($sql === 'ROLLBACK') { $this->rollback(); }
             else
             {
                 if ($this->RequiresSAVEPOINT())
@@ -361,13 +365,13 @@ class Database implements Transactions
                 
                 $query = $this->connection->prepare($sql);
                 $query->execute($data ?? array());
-                
+
                 if ($type & self::QUERY_READ)
                 {
                     $result = $query->fetchAll(PDO::FETCH_ASSOC);
                     
                     if ($this->BinaryAsStreams()) $this->fetchStreams($result);
-                }                    
+                }
                 else $result = $query->rowCount();
                 
                 if ($doSavepoint)

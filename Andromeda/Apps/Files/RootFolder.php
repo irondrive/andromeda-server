@@ -37,8 +37,8 @@ class RootFolder extends Folder
     public function GetParent() : ?Folder { return null; }
     public function GetParentID() : ?string { return null; }
     
-    public function SetParent(Folder $folder, bool $overwrite = false) : self { throw new InvalidRootOpException(); }
-    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self { throw new InvalidRootOpException(); }
+    public function SetParent(Folder $folder, bool $overwrite = false) : self                     { throw new InvalidRootOpException(); }
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self     { throw new InvalidRootOpException(); }
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self { throw new InvalidRootOpException(); }
     
     public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self { throw new InvalidRootOpException(); }

@@ -357,6 +357,10 @@ class Config extends BaseConfig
                 'debug_dblog' => $this->GetDebugLog2DB(),
                 'debug_filelog' => $this->GetDebugLog2File()
             ));
+            
+            foreach ($this->GetApps() as $app) 
+                if (!array_key_exists($app, $data['apps']))
+                    $data['apps'][$app] = "FAILED_LOAD";
         }
 
         return $data;
