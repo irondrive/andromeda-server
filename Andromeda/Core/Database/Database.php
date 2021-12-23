@@ -313,6 +313,20 @@ class Database implements Transactions
         else return implode(' || ',$args);
     }
     
+    /**
+     * Returns the driver-specific SQL UPSERT DO NOTHING query
+     * @param string $query the query after INSERT INTO (e.g. table (columns) VALUES (vals)
+     * @return string compiled query
+     */
+    public function SQLUpsert(string $query) : string
+    {
+        if ($this->getDriver() === self::DRIVER_MYSQL)
+        {
+            return "INSERT IGNORE INTO $query";
+        }
+        else return "INSERT INTO $query ON CONFLICT DO NOTHING";
+    }
+    
     /** Returns true if the DB is currently in a transaction */
     public function inTransaction() : bool { return $this->connection->inTransaction(); }
     

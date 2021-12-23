@@ -755,7 +755,8 @@ abstract class BaseObject
             $this->objectrefs[$key] = $field;
         else if ($field instanceof FieldTypes\ObjectRef)
             $this->objects[$key] = $field;
-        else $this->scalars[$key] = $field;
+        else 
+            $this->scalars[$key] = $field;
     }
     
     /** Function to allow subclasses to do something after being constructed without overriding the constructor */
@@ -764,6 +765,7 @@ abstract class BaseObject
     /** 
      * Collects fields that have changed and saves them to the database
      * @param bool $onlyMandatory true if only required fields should be saved
+     * @throws RowInsertFailedException if the insert fails (duplicate?)
      * @return $this
      */
     public function Save(bool $onlyMandatory = false) : self
@@ -775,18 +777,25 @@ abstract class BaseObject
         
         $values = array(); $counters = array();
 
-        foreach (array_merge($this->scalars, $this->objects, $this->objectrefs) as $key=>$field)
+        foreach (array($this->scalars,$this->objects,$this->objectrefs) as &$arr) 
+            foreach ($arr as $key=>$field)
         {
             if (!$field->GetDelta() || ($onlyMandatory && !$field->isMandatorySave())) continue;
 
-            if ($field instanceof FieldTypes\Counter)
+            if (!$this->created && $field instanceof FieldTypes\Counter)
+            {
                 $counters[$key] = $field->GetDBValue();
+            }
             else $values[$key] = $field->GetDBValue();
             
             $field->ResetDelta();
         }
         
-        $this->database->SaveObject($this, $values, $counters);
+        if ($this->created)
+        {
+            $this->database->InsertObject($this, $values);
+        }
+        else $this->database->SaveObject($this, $values, $counters);
         
         $this->created = false; return $this;
     } 
@@ -851,7 +860,7 @@ abstract class BaseObject
      */
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
-        $obj = $database->CreateObject(static::class); 
+        $obj = $database->GenerateObject(static::class); 
         
         $obj->modified = true; $obj->created = true;
         

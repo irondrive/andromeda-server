@@ -61,6 +61,8 @@ trait AccountCommon
     public function GetClientObject(bool $isadmin = false) : array
     {
         $data = parent::GetClientObject($isadmin);
+        
+        $data['max_stats_age_from'] = static::toString($this->TryGetInheritsScalarFrom("max_stats_age"));
 
         $data['features']['track_items'] = $this->GetFeatureBool('track_items');
         $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
@@ -290,9 +292,7 @@ class AccountTimed extends AuthEntityTimed
     {
         $this->BaseProcessGroupRemove($grlim);
     }
-    
-    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge(); } // not null
-    
+
     /** Returns the object from which this account limit inherits its max stats age */
     public function GetsMaxStatsAgeFrom() : ?BaseObject
     {
@@ -343,7 +343,7 @@ class AccountTimed extends AuthEntityTimed
     }
     
     protected function GetInheritedFields() : array { return array(
-        'max_stats_age' => static::MAX_AGE_FOREVER,
+        'max_stats_age' => null,
         'features__track_items' => false,
         'features__track_dlstats' => false,
         'counters_limits__pubdownloads' => null,

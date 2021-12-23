@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -153,7 +152,7 @@ abstract class Total extends Base
      */
     public function GetClientObject(bool $isadmin = false) : array
     {
-        return array(
+        return array_merge(parent::GetClientObject($isadmin), array(
             'dates' => array(
                 'created' => $this->GetDateCreated(),
                 'download' => $this->TryGetDate('download'),
@@ -169,6 +168,6 @@ abstract class Total extends Base
             'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                 array('size','items','shares')
             )
-        );
+        ));
     }
 }

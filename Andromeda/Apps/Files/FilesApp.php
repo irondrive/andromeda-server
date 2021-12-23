@@ -1708,10 +1708,7 @@ class FilesApp extends InstalledApp
      */
     private function GetLimitObject(Input $input, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array
     {
-        $obj = null;
-        
-        $admin = $authenticator->isAdmin();
-        $account = $authenticator->GetAccount();
+        $obj = null; $admin = $authenticator->isAdmin();
 
         if ($input->HasParam('group'))
         {
@@ -1735,7 +1732,7 @@ class FilesApp extends InstalledApp
             
             $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
             
-            if (!$admin && ($obj === null || $obj !== $account)) throw new UnknownAccountException();
+            if (!$admin && $obj !== $authenticator->GetAccount()) throw new UnknownAccountException();
         }
         else if ($input->HasParam('filesystem'))
         {
@@ -1747,7 +1744,7 @@ class FilesApp extends InstalledApp
             
             $class = $timed ? Limits\FilesystemTimed::class : Limits\FilesystemTotal::class;
             
-            if (!$admin && ($obj === null || ($obj->GetOwnerID() !== null && $obj->GetOwnerID() !== $account->ID()))) throw new UnknownFilesystemException();
+            if (!$admin && ($obj->GetOwnerID() !== null && $obj->GetOwnerID() !== $authenticator->GetAccount()->ID())) throw new UnknownFilesystemException();
         }
         else if ($allowAuto) 
         {
@@ -1756,7 +1753,8 @@ class FilesApp extends InstalledApp
         }
         else throw new UnknownObjectException();
         
-        if (!$allowMany && $obj === null) throw new UnknownObjectException();
+        // a null flag means admin wants to see all of that category
+        if ($obj === null && (!$allowMany || !$admin)) throw new UnknownObjectException();
         
         return array('obj' => $obj, 'class' => $class);
     }
@@ -1766,7 +1764,7 @@ class FilesApp extends InstalledApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL Limit | [id:Limit] client object
+     * @return array|NULL Limit | [Limit] client object
      * @see Limits\Total::GetClientObject()
      */
     protected function GetLimits(Input $input, ?Authenticator $authenticator) : ?array
@@ -1787,8 +1785,9 @@ class FilesApp extends InstalledApp
             $count = $input->GetOptNullParam('limit',SafeParam::TYPE_UINT);
             $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
+            
             return array_map(function(Limits\Total $obj)use($isadmin){ 
-                return $obj->GetClientObject($isadmin); },$lims);
+                return $obj->GetClientObject($isadmin); }, array_values($lims));
         }
     }
     
@@ -1797,7 +1796,7 @@ class FilesApp extends InstalledApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array [id:Limit] client objects
+     * @return array [Limit] client objects
      * @see Limits\Timed::GetClientObject()
      */
     protected function GetTimedLimits(Input $input, ?Authenticator $authenticator) : array

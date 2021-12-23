@@ -46,8 +46,8 @@ abstract class Timed extends Base
     
     public const MAX_AGE_FOREVER = -1;
     
-    /** Returns the maximum stats history age (-1 for forever) */
-    public function GetMaxStatsAge() : ?int { return $this->TryGetScalar('max_stats_age'); }
+    /** Returns the maximum stats history age (-1 for forever - default) */
+    public function GetMaxStatsAge() : int { return $this->TryGetScalar('max_stats_age') ?? self::MAX_AGE_FOREVER; }
     
     protected function Initialize() : self { return $this; }
     
@@ -185,7 +185,7 @@ abstract class Timed extends Base
      */
     public function GetClientObject(bool $isadmin = false) : array
     {
-        return array(
+        return array_merge(parent::GetClientObject($isadmin), array(
             'timeperiod' => $this->GetTimePeriod(),
             'max_stats_age' => $this->GetMaxStatsAge(),
             'dates' => array(
@@ -195,6 +195,6 @@ abstract class Timed extends Base
             'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                 array('pubdownloads','bandwidth')
             )
-        );
+        ));
     }
 }

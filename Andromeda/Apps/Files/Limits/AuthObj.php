@@ -42,6 +42,9 @@ abstract class AuthEntityTimed extends Timed
     
     protected function SetTimedLimits(Input $input) : void
     {
-        if ($input->HasParam('max_stats_age')) $this->SetScalar('max_stats_age', $input->GetNullParam('max_stats_age', SafeParam::TYPE_INT));
+        if ($input->HasParam('max_stats_age')) 
+        {
+            $this->SetScalar('max_stats_age', $input->GetNullParam('max_stats_age', SafeParam::TYPE_INT));
+        }
     }
 }
