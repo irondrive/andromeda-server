@@ -416,7 +416,7 @@ parameters:
 			path: ../Andromeda/Apps/Files/Tag.php
 
 		-
-			message: "#^Method Andromeda\\\\Core\\\\Database\\\\ObjectDatabase\\:\\:Rows2Objects\\(\\) should return array\\<string, T of Andromeda\\\\Core\\\\Database\\\\BaseObject\\> but returns array\\<string, Andromeda\\\\Core\\\\Database\\\\BaseObject\\>\\.$#"
+			message: "#^Method Andromeda\\\\Core\\\\Database\\\\ObjectDatabase\\:\\:Rows2Objects\\(\\) should return array\\<string, T of Andromeda\\\\Core\\\\Database\\\\BaseObject\\> but returns array\\<string, T of Andromeda\\\\Core\\\\Database\\\\BaseObject\\|T of Andromeda\\\\Core\\\\Database\\\\BaseObject\\>\\.$#"
 			count: 1
 			path: ../Andromeda/Core/Database/ObjectDatabase.php
 

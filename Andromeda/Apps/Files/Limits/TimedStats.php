@@ -3,10 +3,10 @@
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\DatabaseException;
+require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, RowInsertFailedException};
 require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\QueryBuilder;
 
 /**
  * Stores an entry of statistics for a Timed limit
@@ -44,14 +44,15 @@ class TimedStats extends StandardObject
     
     /** Returns the time period length for the timed stats */
     protected function GetTimePeriod() : int { return $this->GetLimiter()->GetTimePeriod(); }   
-    
-    protected function isCurrent() : bool { return $this->TryGetScalar('iscurrent') ?? false; }
 
-    /** array<limit ID, self> */
-    private static $cache = array();
+    /** @var array<string, static> */
+    protected static $cache = array();
     
-    /** Returns the current stats for the given limit, if it exists */
-    private static function TryLoadCurrent(ObjectDatabase $database, Timed $limit) : ?self
+    /** 
+     * Returns the current stats for the given limit, if it exists 
+     * @return static
+     */
+    protected static function TryLoadCurrent(ObjectDatabase $database, Timed $limit) : ?self
     {
         $q = new QueryBuilder(); 
         
@@ -59,56 +60,68 @@ class TimedStats extends StandardObject
         
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }
+
+    /** Returns true iff the timed stats is current */
+    protected function isCurrent() : bool
+    {
+        $time = Main::GetInstance()->GetTime(); $start = $this->GetTimeStart();
+        
+        return $time >= $start && $time < $start + $this->GetTimePeriod();
+    }
     
     /**
      * Returns (and creates) the current stats object for the given limit
      * @param ObjectDatabase $database object database
      * @param Timed $limit the limit object
      * @throws DatabaseException if a conflict creating a new stats object occurs
-     * @return self current limit object
+     * @return static current limit object
      */
     public static function LoadCurrentByLimit(ObjectDatabase $database, Timed $limit) : self
     {
-        if (array_key_exists($limit->ID(), self::$cache))
-            return self::$cache[$limit->ID()];
-
+        if (array_key_exists($limit->ID(), static::$cache))
+        {
+            $stats = static::$cache[$limit->ID()];
+            if ($stats->isCurrent()) return $stats;
+        }
+        
         static::PruneStatsByLimit($database, $limit);
         
-        $obj = self::TryLoadCurrent($database, $limit);
+        $stats = static::TryLoadCurrent($database, $limit);
         
-        $time = Main::GetInstance()->GetTime(); 
+        $now = Main::GetInstance()->GetTime(); 
         
-        if ($obj !== null)
-        {            
-            $start = $obj->GetTimeStart(); 
-            $period = $obj->GetTimePeriod();
+        if ($stats !== null)
+        {
+            $start = $stats->GetTimeStart();
+            $period = $stats->GetTimePeriod();
             
-            $offset = intdiv((int)($time-$start),$period)*$period;
+            $offset = intdiv((int)($now-$start),$period)*$period;
             
+            // this is equivalent to the math in isCurrent()
             if ($offset !== 0) // need to create a new timeperiod
             {
-                $obj->SetScalar('iscurrent', null);
+                $stats->SetScalar('iscurrent',null)->Save();
                 
-                $start += $offset; $obj = null;
+                $start += $offset; $stats = null;
             }
         }
-        else $start = (int)$time;
+        else $start = (int)$now;
         
-        if ($obj === null)
+        if ($stats === null)
         {
             try 
-            { 
-                $obj = parent::BaseCreate($database)->SetObject('limitobj',$limit)
-                    ->SetScalar('iscurrent',true)->SetDate('timestart',$start);
-            }
-            catch (DatabaseException $e) // someone may have already inserted a new time period, try loading again
             {
-                if (($obj = self::TryLoadCurrent($database, $limit)) === null) throw $e;
+                $stats = parent::BaseCreate($database)->SetObject('limitobj',$limit)
+                    ->SetScalar('iscurrent',true)->SetDate('timestart',$start)->Save();
             }
-                
+            catch (RowInsertFailedException $e) // someone may have already inserted a new time period, try loading again
+            {
+                $stats = static::TryLoadCurrent($database, $limit);
+                if ($stats === null || !$stats->isCurrent()) throw $e;
+            }
         }
             
-        self::$cache[$limit->ID()] = $obj; return $obj;
+        return static::$cache[$limit->ID()] = $stats;
     }
     
     /**
@@ -118,11 +131,15 @@ class TimedStats extends StandardObject
      */
     public static function PruneStatsByLimit(ObjectDatabase $database, Timed $limit) : void
     {
-        if ($limit->GetMaxStatsAge() < 0) return;
+        $maxage = $limit->GetMaxStatsAge(); if ($maxage < 0) return;
+
+        $minstart = (int)Main::GetInstance()->GetTime() - $limit->GetTimePeriod() - $maxage;
+
+        $q = new QueryBuilder();
         
-        $q = new QueryBuilder(); $minstart = Main::GetInstance()->GetTime() - $limit->GetMaxStatsAge();
-        
-        $w = $q->And($q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit)), $q->LessThan('dates__timestart',$minstart));
+        $w = $q->And($q->Equals('limitobj',
+            FieldTypes\ObjectPoly::GetObjectDBValue($limit)), 
+            $q->LessThan('dates__timestart',$minstart));
         
         static::DeleteByQuery($database, $q->Where($w));
     }
@@ -165,7 +182,7 @@ class TimedStats extends StandardObject
     // pull limits from the master Limits\Timed object
     protected function GetCounterLimit(string $name) : int     { return $this->GetLimiter()->GetCounterLimit($name); }
     protected function TryGetCounterLimit(string $name) : ?int { return $this->GetLimiter()->TryGetCounterLimit($name); }
-    
+
     /**
      * Returns a printable client object of the stats
      * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, 

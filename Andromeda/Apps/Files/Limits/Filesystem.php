@@ -90,8 +90,6 @@ class FilesystemTotal extends Total
 class FilesystemTimed extends Timed 
 { 
     use FilesystemCommon; 
-    
-    public function GetMaxStatsAge() : int { return parent::GetMaxStatsAge() ?? static::MAX_AGE_FOREVER; }
 
     /**
      * Loads all timed limits for the given filesystem
@@ -108,8 +106,10 @@ class FilesystemTimed extends Timed
     
     protected function SetTimedLimits(Input $input) : void
     {
-        if ($input->HasParam('max_stats_age') || $this->isCreated()) 
+        if ($input->HasParam('max_stats_age')) 
+        {
             $this->SetScalar('max_stats_age', $input->GetParam('max_stats_age', SafeParam::TYPE_INT));
+        }
     }
 }
 
