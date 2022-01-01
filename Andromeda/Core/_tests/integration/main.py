@@ -169,4 +169,4 @@ class Main():
         if os.path.exists(self.dbconfig+'.old'):
             os.rename(self.dbconfig+'.old', self.dbconfig)
 
-if __name__ == "__main__": Main(config=os.getcwd()+'/../pytest-config.json')
+if __name__ == "__main__": Main(config=os.getcwd()+'/../tools/pytest-config.json')

@@ -17,7 +17,7 @@ test.s3db
 Andromeda/DBConfig.php
 Andromeda/user-defs.php
 
-pytest-config.json
+tools/pytest-config.json
 
 __pycache__
 

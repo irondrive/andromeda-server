@@ -135,4 +135,5 @@ Note the upgrade command is allowed by any user on any interface when required, 
 
 
 # License
-Andromeda including all source code and any documentation are copyrighted by the author.  Use of this repository and source code is licensed under the AGPLv3.  Contributors agree that any contributions made to the repository are issued under this license.  Commercial licenses can be obtained separately.
+
+Andromeda including all source code, documentation, and APIs are copyrighted by the author.  Use of any code is licensed under the SSPL (Server Side Public License) Version 1.  This license also applies to the any other software that substantially implements the server API, but not to external consumers of it (client software).  Use of any documentation (wiki, readme, etc.) is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 (CC BY-NC-SA 3.0) license.  Alternative commercial licenses for either can be obtained separately.  Contributors agree to the terms in CONTRIBUTING.md for all contributions.  All 3rdparty code (located in `vendor/` folders) retains its original licenses - see `composer licenses`.  All must be copyleft-permissive - no GPL or derivatives.
