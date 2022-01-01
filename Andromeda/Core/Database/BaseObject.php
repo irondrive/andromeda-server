@@ -187,7 +187,7 @@ abstract class BaseObject
      * @param ObjectDatabase $database Reference to the database
      * @param string $field The name of the field to check
      * @param string $id The ID of the object referenced
-     * @param class-string<T>$class  optionally, the class to match if this column is polymorphic
+     * @param class-string<T> $class optionally, the class to match if this column is polymorphic
      * @return int number of rows deleted
      */
     public static function DeleteByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : int
