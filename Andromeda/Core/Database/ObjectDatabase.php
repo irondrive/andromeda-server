@@ -98,6 +98,8 @@ class ObjectDatabase extends Database
                 $this->objects[$dbclass][$id] = $object; 
                 $this->loaded[$dbclass][] = $object->ID();
             }
+            
+            assert($output[$id] instanceof $test);
         }
         
         return $output;
