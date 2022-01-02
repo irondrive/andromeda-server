@@ -256,16 +256,6 @@ parameters:
 			path: ../Andromeda/Apps/Files/Item.php
 
 		-
-			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\ItemAccess\\:\\:GetFile\\(\\) should return Andromeda\\\\Apps\\\\Files\\\\File but returns Andromeda\\\\Apps\\\\Files\\\\Item\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/ItemAccess.php
-
-		-
-			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\ItemAccess\\:\\:GetFolder\\(\\) should return Andromeda\\\\Apps\\\\Files\\\\Folder but returns Andromeda\\\\Apps\\\\Files\\\\Item\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/ItemAccess.php
-
-		-
 			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\Limits\\\\AccountTimed\\:\\:GetAccount\\(\\) should return Andromeda\\\\Apps\\\\Accounts\\\\Account but returns Andromeda\\\\Core\\\\Database\\\\BaseObject\\.$#"
 			count: 1
 			path: ../Andromeda/Apps/Files/Limits/Account.php
