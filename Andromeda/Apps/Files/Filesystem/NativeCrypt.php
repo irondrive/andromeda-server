@@ -50,12 +50,11 @@ class NativeCrypt extends Native
             throw new FileReadFailedException();
         
         $newpath = static::GetFilePath($file);
+        $this->GetStorage()->CreateFile($newpath);
         
         $length = $infile->GetSize();
         $chunks = $this->GetNumChunks($length);
-        
-        $this->GetStorage()->CreateFile($newpath);
-            
+
         for ($chunk = 0; $chunk < $chunks; $chunk++)
         {
             $offset = $chunk * $this->chunksize;
@@ -68,6 +67,22 @@ class NativeCrypt extends Native
         }
         
         fclose($handle); return $this;
+    }
+    
+    public function CopyFile(File $file, File $dest) : self
+    {
+        $newpath = static::GetFilePath($dest);
+        $this->GetStorage()->CreateFile($newpath);
+        
+        $chunks = $this->GetNumChunks($file->GetSize());
+        
+        for ($chunk = 0; $chunk < $chunks; $chunk++)
+        {
+            // need to manually re-encrypt each chunk
+            $this->WriteChunk($dest, $chunk, $this->ReadChunk($file, $chunk));
+        }
+        
+        return $this;
     }
     
     public function ReadBytes(File $file, int $start, int $length) : string

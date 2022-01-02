@@ -97,7 +97,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $file->method('GetSize')->will($this->returnCallback(
             function()use($file) { return $this->sizes[$file->ID()]; }));
         
-        $infile = new InputPath($path, 'none', false);
+        $infile = new InputPath($path);
         
         $this->fsimpl->ImportFile($file->SetSize(strlen($data),true), $infile);
         

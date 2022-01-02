@@ -61,8 +61,6 @@ trait AccountCommon
     public function GetClientObject(bool $isadmin = false) : array
     {
         $data = parent::GetClientObject($isadmin);
-        
-        $data['max_stats_age_from'] = static::toString($this->TryGetInheritsScalarFrom("max_stats_age"));
 
         $data['features']['track_items'] = $this->GetFeatureBool('track_items');
         $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
@@ -286,7 +284,7 @@ class AccountTotalDefault extends AccountTotal
 /** Concrete class providing timed account limits */
 class AccountTimed extends AuthEntityTimed
 {
-    use AccountCommon;
+    use AccountCommon { GetClientObject as protected CommonGetClientObject; }
     
     public function ProcessGroupRemove(GroupTimed $grlim) : void
     {
@@ -294,7 +292,7 @@ class AccountTimed extends AuthEntityTimed
     }
 
     /** Returns the object from which this account limit inherits its max stats age */
-    public function GetsMaxStatsAgeFrom() : ?BaseObject
+    public function GetsMaxStatsAgeFrom() : ?AuthEntityTimed
     {
         return $this->TryGetInheritable('max_stats_age')->GetSource();
     }
@@ -381,6 +379,21 @@ class AccountTimed extends AuthEntityTimed
         
         return $retval;
     }
+    
+    /**
+     * Returns a printable client object that includes property inherit sources
+     * @return array `{max_stats_age_from:"id:class"}`
+     * @see AccountCommon::GetClientObject()
+     */
+    public function GetClientObject(bool $isadmin = false) : array
+    {
+        $data = $this->CommonGetClientObject($isadmin);
+        
+        $data['max_stats_age_from'] = static::toString($this->TryGetInheritsScalarFrom("max_stats_age"));
+
+        return $data;
+    }
+    
 }
 
 // handle auto creating/deleting account limits and updating group stats when a group membership changes

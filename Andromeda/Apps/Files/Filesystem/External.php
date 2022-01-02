@@ -178,18 +178,4 @@ class External extends BaseFileFS
         $this->GetStorage()->MoveFolder($path, $dest);
         return $this;
     }
-
-    public function CopyFolder(Folder $folder, Folder $dest) : self
-    {
-        $storage = $this->GetStorage();
-        if ($storage->canCopyFolders())
-        {
-            $path = $this->GetItemPath($folder);
-            $dest = $this->GetItemPath($dest);
-            $storage->CopyFolder($path, $dest); 
-        }
-        else $this->ManualCopyFolder($folder, $dest);
-
-        return $this;
-    }
 }

@@ -128,12 +128,23 @@ abstract class FSImpl
      * @return $this
      */
     public abstract function CopyFile(File $file, File $dest) : self;
-    
+ 
     /**
-     * Copies a folder
-     * @param Folder $folder folder to copy
-     * @param Folder $dest new object for destination
-     * @return $this
-     */
-    public abstract function CopyFolder(Folder $folder, Folder $dest) : self;
+    * Copy a folder by copying its individual contents
+    * @param Folder $folder folder to copy
+    * @param Folder $dest new object for destination
+    * @return $this
+    */
+    public function CopyFolder(Folder $folder, Folder $dest) : self
+    {
+        $this->CreateFolder($dest);
+        
+        foreach ($folder->GetFiles() as $item)
+            $item->CopyToParent($dest->GetOwner(), $dest);
+            
+        foreach ($folder->GetFolders() as $item)
+            $item->CopyToParent($dest->GetOwner(), $dest);
+            
+        return $this;
+    }
 }

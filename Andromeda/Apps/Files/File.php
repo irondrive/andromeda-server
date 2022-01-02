@@ -166,7 +166,7 @@ class File extends Item
 
         $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFSImpl()->CopyFile($this, $file); return $file;
+        $this->GetFSImpl()->CopyFile($this, $file->SetSize($this->GetSize(),true)); return $file;
     }
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
@@ -175,7 +175,7 @@ class File extends Item
         
         $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFSImpl()->CopyFile($this, $file); return $file;
+        $this->GetFSImpl()->CopyFile($this, $file->SetSize($this->GetSize(),true)); return $file;
     }
 
     /** @return static */

@@ -642,9 +642,6 @@ abstract class Storage extends StandardObject implements Transactions
         throw new FolderCopyFailedException();
     }
     
-    /** By default, most storages cannot copy whole folders */
-    public function canCopyFolders() : bool { return false; }
-    
     /** array of all instantiated storages */
     private static $instances = array();    
     

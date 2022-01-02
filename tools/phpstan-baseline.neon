@@ -191,26 +191,6 @@ parameters:
 			path: ../Andromeda/Apps/Files/Filesystem/FSManager.php
 
 		-
-			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\File\\:\\:CopyToParent\\(\\) invoked with 1 parameter, 2\\-3 required\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/Filesystem/Native.php
-
-		-
-			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\Item\\:\\:CopyToParent\\(\\) invoked with 1 parameter, 2\\-3 required\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/Filesystem/Native.php
-
-		-
-			message: "#^Parameter \\#1 \\$owner of method Andromeda\\\\Apps\\\\Files\\\\File\\:\\:CopyToParent\\(\\) expects Andromeda\\\\Apps\\\\Accounts\\\\Account\\|null, Andromeda\\\\Apps\\\\Files\\\\Folder given\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/Filesystem/Native.php
-
-		-
-			message: "#^Parameter \\#1 \\$owner of method Andromeda\\\\Apps\\\\Files\\\\Item\\:\\:CopyToParent\\(\\) expects Andromeda\\\\Apps\\\\Accounts\\\\Account\\|null, Andromeda\\\\Apps\\\\Files\\\\Folder given\\.$#"
-			count: 1
-			path: ../Andromeda/Apps/Files/Filesystem/Native.php
-
-		-
 			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\Folder\\:\\:GetFiles\\(\\) should return array\\<string, Andromeda\\\\Apps\\\\Files\\\\File\\> but returns array\\<string, Andromeda\\\\Core\\\\Database\\\\BaseObject\\>\\.$#"
 			count: 1
 			path: ../Andromeda/Apps/Files/Folder.php
@@ -257,6 +237,11 @@ parameters:
 
 		-
 			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\Limits\\\\AccountTimed\\:\\:GetAccount\\(\\) should return Andromeda\\\\Apps\\\\Accounts\\\\Account but returns Andromeda\\\\Core\\\\Database\\\\BaseObject\\.$#"
+			count: 1
+			path: ../Andromeda/Apps/Files/Limits/Account.php
+
+		-
+			message: "#^Method Andromeda\\\\Apps\\\\Files\\\\Limits\\\\AccountTimed\\:\\:GetsMaxStatsAgeFrom\\(\\) should return Andromeda\\\\Apps\\\\Files\\\\Limits\\\\AuthEntityTimed\\|null but returns Andromeda\\\\Core\\\\Database\\\\BaseObject\\|null\\.$#"
 			count: 1
 			path: ../Andromeda/Apps/Files/Limits/Account.php
 
