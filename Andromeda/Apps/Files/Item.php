@@ -93,6 +93,7 @@ abstract class Item extends StandardObject
      * @param ?Account $owner the owner of the new item
      * @param string $name the name of the new item
      * @param bool $overwrite if true, reuse the duplicate object
+     * @return static the newly created object
      */
     public abstract function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self;
     
@@ -101,6 +102,7 @@ abstract class Item extends StandardObject
      * @param ?Account $owner the owner of the new item
      * @param Folder $parent the parent folder of the new item
      * @param bool $overwrite if true, reuse the duplicate object
+     * @return static the newly created object
      */
     public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self;
     
@@ -121,7 +123,7 @@ abstract class Item extends StandardObject
         {
             if ($overwrite && $item !== $this) 
             {
-                if ($reuse) return $item; else $item->Delete();
+                if ($reuse) return $item->SetCreated(); else $item->Delete();
             }
             else throw new DuplicateItemException();
         }
@@ -149,7 +151,7 @@ abstract class Item extends StandardObject
         {
             if ($overwrite && $item !== $this)
             {
-                if ($reuse) return $item; else $item->Delete();
+                if ($reuse) return $item->SetCreated(); else $item->Delete();
             }
             else throw new DuplicateItemException();
         }
@@ -218,11 +220,17 @@ abstract class Item extends StandardObject
         return $this->SetDate('accessed', max($this->TryGetDate('accessed'), $time)); 
     }
     
-    /** Sets the item's created time to the given value or now if null */
-    public function SetCreated(?float $time = null) : self  { return $this->SetDate('created', max($this->TryGetDate('created'), $time)); }
+    /** 
+     * Sets the item's created time to the given value or now if null 
+     * @return $this
+     */
+    public function SetCreated(?float $time = null) : self  { return $this->SetDate('created',$time); }
     
-    /** Sets the item's modified time to the given value or now if null */
-    public function SetModified(?float $time = null) : self { return $this->SetDate('modified', max($this->TryGetDate('modified'), $time)); }
+    /** 
+     * Sets the item's modified time to the given value or now if null 
+     * @return $this
+     */
+    public function SetModified(?float $time = null) : self { return $this->SetDate('modified',$time); }
     
     /** Returns the bandwidth used by the item in bytes */
     public function GetBandwidth() : int { return $this->GetCounter('bandwidth'); }
