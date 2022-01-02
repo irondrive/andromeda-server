@@ -29,8 +29,13 @@ class InputPath extends InputStream
     private string $name;
     private bool $istemp;
     
-    public function __construct(string $path, string $name, bool $istemp) {
-        $this->path = $path; $this->name = $name; $this->istemp = $istemp; }
+    /**
+     * @param string $path path to the input file
+     * @param ?string $name optional new name of the file
+     * @param bool $istemp if true, is a tmp file we can move
+     */
+    public function __construct(string $path, ?string $name = null, bool $istemp = false) {
+        $this->path = $path; $this->name = $name ?? basename($path); $this->istemp = $istemp; }
     
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }

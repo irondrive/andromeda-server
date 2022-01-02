@@ -50,20 +50,6 @@ abstract class BaseFileFS extends FSImpl
     {
         $this->GetStorage()->DeleteFile($this->GetFilePath($file)); return $this;
     }
-    
-    /**
-     * Helper function to emulate copying a folder by copying its contents manually
-     * @param Folder $folder folder to copy
-     * @param Folder $dest new folder object to copy to
-     * @return $this
-     */
-    protected function ManualCopyFolder(Folder $folder, Folder $dest) : self
-    {
-        $this->CreateFolder($dest);        
-        foreach ($folder->GetFiles() as $item) $item->CopyToParent($dest);
-        foreach ($folder->GetFolders() as $item) $item->CopyToParent($dest);        
-        return $this;
-    }
 }
 
 /**
@@ -83,12 +69,6 @@ class Native extends BaseFileFS
     /** no-op */ public function MoveFile(File $file, Folder $parent) : self        { return $this; }
     /** no-op */ public function MoveFolder(Folder $folder, Folder $parent) : self  { return $this; }
     
-    /** @see BaseFileFS::ManualCopyFolder() */
-    public function CopyFolder(Folder $folder, Folder $dest) : self
-    {
-        return $this->ManualCopyFolder($folder, $dest);
-    }
-
     /** The path to a file is simply its ID, broken into a prefix */
     protected function GetFilePath(File $file) : string 
     {
