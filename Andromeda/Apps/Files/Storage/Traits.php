@@ -109,8 +109,6 @@ trait NoFolders
     protected function SubMoveFile(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }
     
     protected function SubMoveFolder(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }
-    
-    protected function SubCopyFolder(string $old, string $new) : Storage { throw new FoldersUnsupportedException(); }  
 }
 
 /** A storage that has a base path */

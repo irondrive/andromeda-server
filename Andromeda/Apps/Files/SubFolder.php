@@ -31,6 +31,21 @@ class SubFolder extends Folder
         $this->GetFSImpl()->MoveFolder($this, $parent);
         return $this->SetObject('parent', $parent);
     }
+
+    /**
+     * Copy to a folder by copying our individual contents
+     * @param Folder $dest new object for destination
+     */
+    protected function CopyToFolder(Folder $dest) : void
+    {
+        $this->GetFSImpl()->CreateFolder($dest);
+        
+        foreach ($this->GetFiles() as $item)
+            $item->CopyToParent($dest->GetOwner(), $dest);
+        
+        foreach ($this->GetFolders() as $item)
+            $item->CopyToParent($dest->GetOwner(), $dest);
+    }
     
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
     {
@@ -39,7 +54,7 @@ class SubFolder extends Folder
 
         $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFSImpl()->CopyFolder($this, $folder); return $folder;
+        $this->CopyToFolder($folder); return $folder;
     }
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
@@ -51,8 +66,8 @@ class SubFolder extends Folder
     
         $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFSImpl()->CopyFolder($this, $folder); return $folder;
-    } 
+        $this->CopyToFolder($folder); return $folder;
+    }
     
     /**
      * Creates a new non-root folder in DB only

@@ -605,43 +605,7 @@ abstract class Storage extends StandardObject implements Transactions
      * @see Storage::CopyFile()
      */
     protected abstract function SubCopyFile(string $old, string $new) : self;
-    
-    /** 
-     * Copies a folder from $old to $new (path and name can change) 
-     *
-     * The destination folder must not already exist
-     */
-    public function CopyFolder(string $old, string $new) : self 
-    { 
-        $this->AssertNotReadOnly();
-        
-        if ($overwrite = $this->isFolder($new))
-        {
-            $this->disallowBatch();
-            if ($this->isDryRun()) return $this;
-        }
-        
-        $this->SubCopyFolder($old, $new);
-        
-        if ($overwrite) $this->deleteRollbacks($new);
-        
-        $this->createdItems[] = $new;
-        
-        $this->onRollback[] = new PathRollback($new, function()use($new){
-            $this->SubDeleteFolder($new); });
-            
-        return $this;
-    }
-    
-    /**
-     * The storage-specific CopyFolder
-     * @see Storage::CopyFolder()
-     */
-    protected function SubCopyFolder(string $old, string $new) : self
-    {
-        throw new FolderCopyFailedException();
-    }
-    
+
     /** array of all instantiated storages */
     private static $instances = array();    
     
