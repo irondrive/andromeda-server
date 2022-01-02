@@ -3,7 +3,7 @@
 /** An input file stream */
 class InputStream
 {
-    private $handle;
+    protected $handle;
     
     public function __construct($handle) {
         $this->handle = $handle; }
@@ -49,5 +49,5 @@ class InputPath extends InputStream
     /** Returns the size of the file to be used */
     public function GetSize() : int { return filesize($this->path); }
     
-    public function GetHandle() { return fopen($this->path,'rb'); }
+    public function GetHandle() { return $this->handle ??= fopen($this->path,'rb'); }
 }
