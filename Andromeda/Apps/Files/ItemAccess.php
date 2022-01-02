@@ -31,11 +31,21 @@ class ItemAccess
     public function GetItem() : Item { return $this->item; }
     
     /** Returns the item that is being accessed (if applicable) */
-    public function GetFile() : File { return $this->item; }
+    public function GetFile() : File 
+    {
+        if (!is_a($this->item, File::class))
+            throw new UnknownItemException();
+        return $this->item; 
+    }
     
     /** Returns the item that is being accessed (if applicable) */
-    public function GetFolder() : Folder { return $this->item; }
-    
+    public function GetFolder() : Folder 
+    { 
+        if (!is_a($this->item, Folder::class))
+            throw new UnknownItemException();
+        return $this->item; 
+    }
+        
     /** Returns the share object that grants access, or null if the item is owned */
     public function GetShare() : ?Share { return $this->share; }
 
