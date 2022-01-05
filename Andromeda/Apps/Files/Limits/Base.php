@@ -170,8 +170,9 @@ abstract class Base extends StandardObject
     
     /** Returns the share counter for the limited object */
     protected function GetShares() : int { return $this->GetCounter('shares'); }  
-
-    public function GetClientObject(bool $isadmin = false) : array
+    
+    /** @return array `{limited:id}` */
+    public function GetClientObject(bool $full) : array
     {
         return array('limited' => $this->GetLimitedObject()->ID());
     }

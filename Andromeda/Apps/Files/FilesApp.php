@@ -1697,6 +1697,9 @@ class FilesApp extends InstalledApp
     
     /**
      * Common function for loading and authenticating the limited object and limit class referred to by input
+     * 
+     * Groups can be viewed only by admin.  Accounts can be viewed by admin (any) or users (their own - not full)
+     * Filesystems can be viewed by admin (any) or users (their own - full, or global - not full)
      * @param bool $allowAuto if true, return the current account if no object is specified
      * @param bool $allowMany if true, allow selecting all of the given type
      * @param bool $timed if true, return a timed limit class (not total)
@@ -1704,7 +1707,7 @@ class FilesApp extends InstalledApp
      * @throws UnknownAccountException if the given account is not found
      * @throws UnknownFilesystemException if the given filesystem is not found
      * @throws UnknownObjectException if nothing valid was specified
-     * @return array `{class:string, obj:object}`
+     * @return array `{class:string, obj:object, full:bool}`
      */
     private function GetLimitObject(Input $input, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array
     {
@@ -1718,9 +1721,9 @@ class FilesApp extends InstalledApp
                 if ($obj === null) throw new UnknownGroupException();
             }
             
-            $class = $timed ? Limits\GroupTimed::class : Limits\GroupTotal::class;
+            $class = $timed ? Limits\GroupTimed::class : Limits\GroupTotal::class; 
             
-            if (!$admin) throw new UnknownGroupException();            
+            $full = true; if (!$admin) throw new UnknownGroupException();
         }
         else if ($input->HasParam('account'))
         {
@@ -1731,8 +1734,8 @@ class FilesApp extends InstalledApp
             }
             
             $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
-            
-            if (!$admin && $obj !== $authenticator->GetAccount()) throw new UnknownAccountException();
+
+            $full = $admin; if (!$admin && $obj !== $authenticator->GetAccount()) throw new UnknownAccountException();
         }
         else if ($input->HasParam('filesystem'))
         {
@@ -1744,11 +1747,15 @@ class FilesApp extends InstalledApp
             
             $class = $timed ? Limits\FilesystemTimed::class : Limits\FilesystemTotal::class;
             
-            if (!$admin && ($obj->GetOwnerID() !== null && $obj->GetOwnerID() !== $authenticator->GetAccount()->ID())) throw new UnknownFilesystemException();
+            $full = $admin || ($obj->GetOwnerID() === $authenticator->GetAccount()->ID());
+            
+            // non-admins can view a subset of total info (feature config) for global filesystems
+            if (!$full && ($timed || ($obj->GetOwnerID() !== null))) throw new UnknownFilesystemException();
         }
         else if ($allowAuto) 
         {
-            $obj = $authenticator->GetAccount(); 
+            $obj = $authenticator->GetAccount(); $full = $admin;
+            
             $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
         }
         else throw new UnknownObjectException();
@@ -1756,7 +1763,7 @@ class FilesApp extends InstalledApp
         // a null flag means admin wants to see all of that category
         if ($obj === null && (!$allowMany || !$admin)) throw new UnknownObjectException();
         
-        return array('obj' => $obj, 'class' => $class);
+        return array('obj'=>$obj, 'class'=>$class, 'full'=>$full);
     }
     
     /**
@@ -1765,20 +1772,20 @@ class FilesApp extends InstalledApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL Limit | [Limit] client object
+     * @see FilesApp::GetLimitObject()
      * @see Limits\Total::GetClientObject()
      */
     protected function GetLimits(Input $input, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
-        $isadmin = $authenticator->isAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, true, true, false);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, true, true, false);
+        $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full'];
         
         if ($obj !== null)
         {
             $lim = $class::LoadByClient($this->database, $obj);
-            return ($lim !== null) ? $lim->GetClientObject($isadmin) : null;
+            return ($lim !== null) ? $lim->GetClientObject($full) : null;
         }
         else
         {
@@ -1786,8 +1793,8 @@ class FilesApp extends InstalledApp
             $offset = $input->GetOptNullParam('offset',SafeParam::TYPE_UINT);
             $lims = $class::LoadAll($this->database, $count, $offset);
             
-            return array_map(function(Limits\Total $obj)use($isadmin){ 
-                return $obj->GetClientObject($isadmin); }, array_values($lims));
+            return array_map(function(Limits\Total $obj)use($full){ 
+                return $obj->GetClientObject($full); }, array_values($lims));
         }
     }
     
@@ -1797,15 +1804,15 @@ class FilesApp extends InstalledApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array [Limit] client objects
+     * @see FilesApp::GetLimitObject()
      * @see Limits\Timed::GetClientObject()
      */
     protected function GetTimedLimits(Input $input, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
-        $isadmin = $authenticator->isAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, true, true, true);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, true, true, true);
+        $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full'];
         
         if ($obj !== null)
         {
@@ -1818,8 +1825,8 @@ class FilesApp extends InstalledApp
             $lims = $class::LoadAll($this->database, $count, $offset);
         }
 
-        return array_map(function(Limits\Timed $lim)use($isadmin){ 
-            return $lim->GetClientObject($isadmin); }, array_values($lims));
+        return array_map(function(Limits\Timed $lim)use($full){ 
+            return $lim->GetClientObject($full); }, array_values($lims));
     }
     
     /**
@@ -1828,14 +1835,15 @@ class FilesApp extends InstalledApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL [id:TimedStats]
+     * @see FilesApp::GetLimitObject()
      * @see Limits\TimedStats::GetClientObject()
      */
     protected function GetTimedStatsFor(Input $input, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
-        $obj = $this->GetLimitObject($input, $authenticator, true, false, true);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, true, false, true);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
         $lim = $class::LoadByClientAndPeriod($this->database, $obj, $period);
@@ -1855,6 +1863,7 @@ class FilesApp extends InstalledApp
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
      * @return array|NULL TimedStats | [id:TimedStats]
+     * @see FilesApp::GetLimitObject()
      * @see Limits\TimedStats::GetClientObject()
      */
     protected function GetTimedStatsAt(Input $input, ?Authenticator $authenticator) : ?array
@@ -1864,8 +1873,8 @@ class FilesApp extends InstalledApp
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT);
         $attime = $input->GetParam('matchtime',SafeParam::TYPE_UINT);
         
-        $obj = $this->GetLimitObject($input, $authenticator, true, true, true);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, true, true, true);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
         if ($obj !== null)
         {
@@ -1896,6 +1905,7 @@ class FilesApp extends InstalledApp
      * Configures total limits for the given object
      * @throws AuthenticationFailedException if not admin
      * @return array Limits
+     * @see FilesApp::GetLimitObject()
      * @see Limits\Total::GetClientObject()
      */
     protected function ConfigLimits(Input $input, ?Authenticator $authenticator) : array
@@ -1904,16 +1914,17 @@ class FilesApp extends InstalledApp
         
         $authenticator->RequireAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, false, false, false);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, false, false, false);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
-        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
+        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject(true);
     }    
     
     /**
      * Configures timed limits for the given object
      * @throws AuthenticationFailedException if not admin
      * @return array Limits
+     * @see FilesApp::GetLimitObject()
      * @see Limits\Timed::GetClientObject()
      */
     protected function ConfigTimedLimits(Input $input, ?Authenticator $authenticator) : array
@@ -1922,15 +1933,16 @@ class FilesApp extends InstalledApp
         
         $authenticator->RequireAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, false, false, true);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, false, false, true);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
-        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject();
+        return $class::ConfigLimits($this->database, $obj, $input)->GetClientObject(true);
     }
     
     /**
      * Deletes all total limits for the given object
      * @throws AuthenticationFailedException if not admin
+     * @see FilesApp::GetLimitObject()
      */
     protected function PurgeLimits(Input $input, ?Authenticator $authenticator) : void
     {
@@ -1938,8 +1950,8 @@ class FilesApp extends InstalledApp
         
         $authenticator->RequireAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, false, false, false);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, false, false, false);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
         $class::DeleteByClient($this->database, $obj);
     }    
@@ -1947,6 +1959,7 @@ class FilesApp extends InstalledApp
     /**
      * Deletes all timed limits for the given object
      * @throws AuthenticationFailedException if not admin
+     * @see FilesApp::GetLimitObject()
      */
     protected function PurgeTimedLimits(Input $input, ?Authenticator $authenticator) : void
     {
@@ -1954,8 +1967,8 @@ class FilesApp extends InstalledApp
         
         $authenticator->RequireAdmin();
         
-        $obj = $this->GetLimitObject($input, $authenticator, false, false, true);
-        $class = $obj['class']; $obj = $obj['obj'];
+        $lobj = $this->GetLimitObject($input, $authenticator, false, false, true);
+        $class = $lobj['class']; $obj = $lobj['obj'];
         
         $period = $input->GetParam('period', SafeParam::TYPE_UINT);
         $class::DeleteClientAndPeriod($this->database, $obj, $period);

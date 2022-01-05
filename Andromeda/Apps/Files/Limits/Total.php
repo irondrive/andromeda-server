@@ -145,29 +145,35 @@ abstract class Total extends Base
     
     /**
      * Returns a printable client object of this timed limit
+     * @param bool $full if false, show features only (no dates,counters,limits)
      * @return array `{dates:{created:float, download:?float, upload:?float}, features:{itemsharing:?bool, \
         share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
-     * @see TimedStats::GetClientObject()
+     * @see Base::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        return array_merge(parent::GetClientObject($isadmin), array(
-            'dates' => array(
+        $retval = array_merge(parent::GetClientObject($full), array(
+            'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeatureBool($p); },
+                array('itemsharing','share2everyone','share2groups',
+                      'publicupload','publicmodify','randomwrite'))
+        ));
+        
+        if ($full)
+        {
+            $retval['dates'] = array(
                 'created' => $this->GetDateCreated(),
                 'download' => $this->TryGetDate('download'),
                 'upload' => $this->TryGetDate('upload')
-            ),
-            'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeatureBool($p); },
-                array('itemsharing','share2everyone','share2groups',
-                      'publicupload','publicmodify','randomwrite')
-            ),
-            'counters' => Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
-                array('size','items','shares','pubdownloads','bandwidth')
-            ),
-            'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
-                array('size','items','shares')
-            )
-        ));
+            );
+            
+            $retval['counters'] = Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
+                array('size','items','shares','pubdownloads','bandwidth'));
+            
+            $retval['limits'] = Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
+                array('size','items','shares'));
+        }
+        
+        return $retval;
     }
 }

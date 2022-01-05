@@ -53,19 +53,19 @@ trait AccountCommon
 
     /**
      * Returns a printable client object that includes property inherit sources
-     * @param bool $isadmin if true, show property inherit sources
+     * @param bool $full if true, show property inherit sources - always show $full for parent!
      * @return array `{features:{track_items:bool,track_dlstats:bool}, features_from:"id:class", limits_from:"id:class"}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        $data = parent::GetClientObject($isadmin);
+        $data = parent::GetClientObject(true);
 
         $data['features']['track_items'] = $this->GetFeatureBool('track_items');
         $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
         
-        if ($isadmin)
+        if ($full)
         {
             $data['features_from'] = Utilities::array_map_keys(function($p){
                 return static::toString($this->TryGetInheritsScalarFrom("features__$p")); }, array_keys($data['features']));
@@ -385,15 +385,14 @@ class AccountTimed extends AuthEntityTimed
      * @return array `{max_stats_age_from:"id:class"}`
      * @see AccountCommon::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        $data = $this->CommonGetClientObject($isadmin);
+        $data = $this->CommonGetClientObject($full);
         
-        $data['max_stats_age_from'] = static::toString($this->TryGetInheritsScalarFrom("max_stats_age"));
+        if ($full) $data['max_stats_age_from'] = static::toString($this->TryGetInheritsScalarFrom("max_stats_age"));
 
         return $data;
     }
-    
 }
 
 // handle auto creating/deleting account limits and updating group stats when a group membership changes
