@@ -45,16 +45,20 @@ trait FilesystemCommon
     }
     
     /**
+     * @param bool $full if false, don't show track_items/track_dlstats
      * @return array `features:{track_items:bool,track_dlstats:bool}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        $data = parent::GetClientObject($isadmin);
+        $data = parent::GetClientObject($full);
         
-        $data['features']['track_items'] = $this->GetFeatureBool('track_items');
-        $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
+        if ($full)
+        {
+            $data['features']['track_items'] = $this->GetFeatureBool('track_items');
+            $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
+        }
         
         return $data;
     }

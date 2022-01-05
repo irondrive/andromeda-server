@@ -130,13 +130,10 @@ abstract class Timed extends Base
     {
         $newobj = parent::BaseCreate($database)->SetObject('object',$obj)->SetScalar('timeperiod',$timeperiod);
         
-        if (array_key_exists($obj->ID(),static::$cache))
-        {
-            static::$cache[$obj->ID()][] = $newobj;
-        }
-        else static::$cache[$obj->ID()] = array($newobj);
+        static::$cache[$obj->ID()] ??= array();
+        static::$cache[$obj->ID()][] = $newobj;
         
-        return $newobj->Save();
+        return $newobj;
     }
 
     /** Loads and returns the current stats for this limit */
@@ -180,12 +177,18 @@ abstract class Timed extends Base
     
     /**
      * Returns a printable client object of this timed limit
+     * @param bool $full if false, don't show anything
      * @return array `{timeperiod:int, max_stats_age:?int, dates:{created:float}, 
             limits: {pubdownloads:?int, bandwidth:?int}`
+     * @see Base::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        return array_merge(parent::GetClientObject($isadmin), array(
+        $retval = parent::GetClientObject($full);
+        
+        if (!$full) return $retval;
+        
+        return array_merge($retval, array(
             'timeperiod' => $this->GetTimePeriod(),
             'max_stats_age' => $this->GetMaxStatsAge(),
             'dates' => array(

@@ -119,22 +119,23 @@ trait GroupCommon
     }
     
     /**
+     * @param bool $full if false, don't show track_items/track_dlstats
      * @return array add: `{features:{track_items:?enum,track_dlstats:?enum}}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject(bool $full) : array
     {
-        $retval = parent::GetClientObject($isadmin);
+        $retval = parent::GetClientObject($full);
         
-        foreach (array('track_items','track_dlstats') as $prop)
+        if ($full) foreach (array('track_items','track_dlstats') as $prop)
         {
             $val = $this->TryGetFeatureInt($prop);
             
-            $retval['features'] = ($val !== null) ?
+            $retval['features'][$prop] = ($val !== null) ?
                 array_flip(self::TRACK_TYPES)[$val] : null;
         }
-        
+
         return $retval;
     }
 }

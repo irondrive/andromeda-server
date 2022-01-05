@@ -188,7 +188,7 @@ class TimedStats extends StandardObject
      * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, 
         counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      */
-    public function GetClientObject(bool $isadmin = false) : array
+    public function GetClientObject() : array
     {
         $retval = array(
             'iscurrent' => $this->isCurrent(),
