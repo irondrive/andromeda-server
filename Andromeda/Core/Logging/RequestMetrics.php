@@ -151,15 +151,12 @@ class RequestMetrics extends StandardObject
             'nincludes' => $this->GetScalar('nincludes'),
             'nobjects' => $this->GetScalar('nobjects'),
             'construct_stats' => $this->GetAllScalars('construct'),
+            'action_stats' => array_values(array_map(function(ActionMetrics $o){
+                return $o->GetClientObject(); }, $this->GetActions())),
+            'commit_stats' => array_values(array_map(function(CommitMetrics $o){
+                return $o->GetClientObject(); }, $this->GetObjectRefs('commits'))),
+            'total_stats' => $this->GetAllScalars('total')
         );
-        
-        $retval['action_stats'] = array_values(array_map(function(ActionMetrics $o){ 
-            return $o->GetClientObject(); }, $this->GetActions()));
-            
-        $retval['commit_stats'] = array_values(array_map(function(CommitMetrics $o){
-            return $o->GetClientObject(); }, $this->GetObjectRefs('commits')));
-            
-        $retval['total_stats'] = $this->GetAllScalars('total');
             
         $props = array('gcstats','rusage','includes');
         
