@@ -245,7 +245,7 @@ class Database implements Transactions
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array<string, mixed> `{driver:string, cversion:string, sversion:string, info:string}`
+     * @return array `{driver:string, cversion:string, sversion:string, info:string}`
      */
     public function getInfo() : array
     {
@@ -352,45 +352,37 @@ class Database implements Transactions
 
         $this->startTimingQuery();
         
-        $doSavepoint = false; $result = null;
+        $doSavepoint = $this->RequiresSAVEPOINT();
         
         try 
-        {           
-            if      ($sql === 'COMMIT') { $this->commit(); }
-            else if ($sql === 'ROLLBACK') { $this->rollback(); }
-            else
+        {
+            if ($doSavepoint)
+                $this->connection->query("SAVEPOINT a2save");
+            
+            if ($this->BinaryEscapeInput() && $data !== null)
             {
-                if ($this->RequiresSAVEPOINT())
+                foreach ($data as &$value)
                 {
-                    $doSavepoint = true;
-                    $this->connection->query("SAVEPOINT mysave");
-                }
-                
-                if ($this->BinaryEscapeInput() && $data !== null)
-                {
-                    foreach ($data as &$value)
+                    if (!mb_check_encoding($value,'UTF-8'))
                     {
-                        if (!mb_check_encoding($value,'UTF-8'))
-                        {
-                            $value = pg_escape_bytea($value);
-                        }
+                        $value = pg_escape_bytea($value);
                     }
                 }
-                
-                $query = $this->connection->prepare($sql);
-                $query->execute($data ?? array());
-
-                if ($type & self::QUERY_READ)
-                {
-                    $result = $query->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    if ($this->BinaryAsStreams()) $this->fetchStreams($result);
-                }
-                else $result = $query->rowCount();
-                
-                if ($doSavepoint)
-                    $this->connection->query("RELEASE SAVEPOINT mysave");
             }
+            
+            $query = $this->connection->prepare($sql);
+            $query->execute($data ?? array());
+
+            if ($type & self::QUERY_READ)
+            {
+                $result = $query->fetchAll(PDO::FETCH_ASSOC);
+                
+                if ($this->BinaryAsStreams()) $this->fetchStreams($result);
+            }
+            else $result = $query->rowCount();
+            
+            if ($doSavepoint)
+                $this->connection->query("RELEASE SAVEPOINT mysave");
         }
         catch (\PDOException $e)
         {
