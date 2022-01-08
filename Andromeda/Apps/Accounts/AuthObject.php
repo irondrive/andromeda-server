@@ -37,7 +37,7 @@ abstract class AuthObject extends StandardObject
      */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->Equals('id',$id));
         return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
 
@@ -135,7 +135,7 @@ trait FullAuthKey
         
         $q = new QueryBuilder(); $w = $q->Equals('id',$code[1]); 
         
-        if ($account !== null) $w = $q->And($w,$q->Equals('account',$account->ID()));
+        if ($account !== null) $w = $q->And($w,$q->Equals('obj_account',$account->ID()));
 
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }

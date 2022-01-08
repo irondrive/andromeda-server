@@ -60,8 +60,8 @@ class FSManager extends StandardObject
             'name' => null, // name of the FS, null if it's the default
             'type' => null, // enum of the type of FS impl
             'readonly' => null,
-            'storage' => new FieldTypes\ObjectPoly(Storage::class),
-            'owner' => new FieldTypes\ObjectRef(Account::class),
+            'obj_storage' => new FieldTypes\ObjectPoly(Storage::class),
+            'obj_owner' => new FieldTypes\ObjectRef(Account::class),
             'crypto_masterkey' => null,
             'crypto_chunksize' => null
         ));
@@ -273,12 +273,12 @@ class FSManager extends StandardObject
      */
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
-        $q1 = new QueryBuilder(); $q1->Where($q1->And($q1->IsNull('name'), $q1->Equals('owner',$account->ID())));
+        $q1 = new QueryBuilder(); $q1->Where($q1->And($q1->IsNull('name'), $q1->Equals('obj_owner',$account->ID())));
         $found = static::TryLoadUniqueByQuery($database, $q1);
         
         if ($found === null)
         {
-            $q2 = new QueryBuilder(); $q2->Where($q2->And($q2->IsNull('name'), $q2->IsNull('owner')));
+            $q2 = new QueryBuilder(); $q2->Where($q2->And($q2->IsNull('name'), $q2->IsNull('obj_owner')));
             $found = static::TryLoadUniqueByQuery($database, $q2);
         }
         
@@ -288,9 +288,9 @@ class FSManager extends StandardObject
     /** Attempts to load a filesystem with the given owner and ID - if $null, the owner can be null */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id, bool $null = false) : ?self
     {
-        $q = new QueryBuilder(); $ownerq = $q->Equals('owner',$account->ID());
+        $q = new QueryBuilder(); $ownerq = $q->Equals('obj_owner',$account->ID());
         
-        if ($null) $ownerq = $q->Or($ownerq, $q->IsNull('owner'));
+        if ($null) $ownerq = $q->Or($ownerq, $q->IsNull('obj_owner'));
         
         $w = $q->And($ownerq,$q->Equals('id',$id));
         
@@ -304,7 +304,7 @@ class FSManager extends StandardObject
         
         $q = new QueryBuilder(); 
         
-        $w1 = $q->Or($q->IsNull('owner'), $q->Equals('owner',$account ? $account->ID() : null));
+        $w1 = $q->Or($q->IsNull('obj_owner'), $q->Equals('obj_owner',$account ? $account->ID() : null));
 
         return self::TryLoadUniqueByQuery($database, $q->Where($q->And($w1, $q->Equals('name',$name))));
     }
@@ -317,7 +317,8 @@ class FSManager extends StandardObject
      */
     public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
-        $q = new QueryBuilder(); $w = $q->Or($q->Equals('owner',$account->ID()),$q->IsNull('owner'));
+        $q = new QueryBuilder(); $w = $q->Or($q->Equals('obj_owner',$account->ID()),$q->IsNull('obj_owner'));
+        
         return self::LoadByQuery($database, $q->Where($w));
     }
     

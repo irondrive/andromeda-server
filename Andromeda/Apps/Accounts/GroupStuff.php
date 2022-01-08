@@ -76,20 +76,20 @@ abstract class AuthEntity extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'features__admin' => null, // true if the account is an admin
-            'features__disabled' => null, // > 0 if the account is disabled
-            'features__forcetf' => null, // true if two-factor is required to create sessions (not just clients)
-            'features__allowcrypto' => null, // true if server-side account crypto is enabled
-            'features__accountsearch' => null, // whether looking up accounts by name is allowed
-            'features__groupsearch' => null, // whether looking up groups by name is allowed
-            'features__userdelete' => null, // whether the user is allowed to delete their account
-            'counters_limits__sessions' => null, // maximum number of sessions for the account
-            'counters_limits__contacts' => null, // maximum number of contacts for the account
-            'counters_limits__recoverykeys' => null, // maximum number of recovery keys for the account
+            'admin' => null, // true if the account is an admin
+            'disabled' => null, // > 0 if the account is disabled
+            'forcetf' => null, // true if two-factor is required to create sessions (not just clients)
+            'allowcrypto' => null, // true if server-side account crypto is enabled
+            'accountsearch' => null, // whether looking up accounts by name is allowed
+            'groupsearch' => null, // whether looking up groups by name is allowed
+            'userdelete' => null, // whether the user is allowed to delete their account
+            'limit_sessions' => null, // maximum number of sessions for the account
+            'limit_contacts' => null, // maximum number of contacts for the account
+            'limit_recoverykeys' => null, // maximum number of recovery keys for the account
             'session_timeout' => null, // server-side timeout - max time for a session to be inactive
             'client_timeout' => null, // server-side timeout - max time for a client to be inactive
             'max_password_age' => null, // max time since the account's password changed
-            'dates__modified' => null // last timestamp these properties were modified
+            'date_modified' => null // last timestamp these properties were modified
         ));
     }
     

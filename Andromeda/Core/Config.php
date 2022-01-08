@@ -51,19 +51,19 @@ class Config extends BaseConfig
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'datadir' => null,
-            'features__requestlog_db' => new FieldTypes\Scalar(false),
-            'features__requestlog_file' => new FieldTypes\Scalar(false),
-            'features__requestlog_details' => new FieldTypes\Scalar(self::RQLOG_DETAILS_BASIC),
-            'features__debug' => new FieldTypes\Scalar(self::ERRLOG_ERRORS),
-            'features__debug_http' => new FieldTypes\Scalar(false),
-            'features__debug_dblog' => new FieldTypes\Scalar(true),
-            'features__debug_filelog' => new FieldTypes\Scalar(false),
-            'features__metrics' => new FieldTypes\Scalar(0),
-            'features__metrics_dblog' => new FieldTypes\Scalar(false),
-            'features__metrics_filelog' => new FieldTypes\Scalar(false),
-            'features__read_only' => new FieldTypes\Scalar(false),
-            'features__enabled' => new FieldTypes\Scalar(true),
-            'features__email' => new FieldTypes\Scalar(true),
+            'requestlog_db' => new FieldTypes\Scalar(false),
+            'requestlog_file' => new FieldTypes\Scalar(false),
+            'requestlog_details' => new FieldTypes\Scalar(self::RQLOG_DETAILS_BASIC),
+            'debug' => new FieldTypes\Scalar(self::ERRLOG_ERRORS),
+            'debug_http' => new FieldTypes\Scalar(false),
+            'debug_dblog' => new FieldTypes\Scalar(true),
+            'debug_filelog' => new FieldTypes\Scalar(false),
+            'metrics' => new FieldTypes\Scalar(0),
+            'metrics_dblog' => new FieldTypes\Scalar(false),
+            'metrics_filelog' => new FieldTypes\Scalar(false),
+            'read_only' => new FieldTypes\Scalar(false),
+            'enabled' => new FieldTypes\Scalar(true),
+            'email' => new FieldTypes\Scalar(true),
             'apps' => new FieldTypes\JSON()
         ));
     }
@@ -319,8 +319,8 @@ class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{api:int, features: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, features:{ \
+     * @return array `{api:int, config: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
+         if admin, add: `{datadir:?string, config:{ \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
             debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }}`
@@ -335,7 +335,7 @@ class Config extends BaseConfig
                 (new VersionInfo($app::getVersion()))->getCompatVer();
         }
         
-        $data['features'] = array(
+        $data['config'] = array(
             'enabled' => $this->isEnabled(),
             'read_only' => $this->GetFeatureBool('read_only',false) // no temp
         );
@@ -344,7 +344,7 @@ class Config extends BaseConfig
         {
             $data['datadir'] = $this->GetDataDir();
             
-            $data['features'] = array_merge($data['features'], array(
+            $data['config'] = array_merge($data['config'], array(
                 'requestlog_file' => $this->GetEnableRequestLogFile(),
                 'requestlog_db' => $this->GetEnableRequestLogDB(),
                 'requestlog_details' => array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()],

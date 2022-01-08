@@ -26,9 +26,9 @@ abstract class Base extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'object' => new FieldTypes\ObjectPoly(StandardObject::class),
-            'features__track_items' => null,
-            'features__track_dlstats' => null
+            'obj_object' => new FieldTypes\ObjectPoly(StandardObject::class),
+            'track_items' => null,
+            'track_dlstats' => null
         ));
     }
 
@@ -183,7 +183,7 @@ abstract class Base extends StandardObject
     public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array
     {
         // since different limit types are stored in the same table, load rows matching the correct type of limited object
-        $q = new QueryBuilder(); $w = $q->Like('object','%'.FieldTypes\ObjectPoly::GetIDTypeDBValue("",static::GetObjectClass()),true);
+        $q = new QueryBuilder(); $w = $q->Like('obj_object','%'.FieldTypes\ObjectPoly::GetIDTypeDBValue("",static::GetObjectClass()),true);
         
         return static::LoadByQuery($database, $q->Where($w)->Limit($limit)->Offset($offset));
     }

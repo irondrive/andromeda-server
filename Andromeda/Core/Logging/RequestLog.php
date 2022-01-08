@@ -19,7 +19,7 @@ class RequestLog extends BaseLog
     public static function GetFieldTemplate() : array
     {
         return array(
-            'actions' => new FieldTypes\ObjectRefs(ActionLog::class, 'request'),
+            'objs_actions' => new FieldTypes\ObjectRefs(ActionLog::class, 'request'),
             'time' => null,
             'addr' => null,
             'agent' => null,

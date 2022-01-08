@@ -120,7 +120,7 @@ trait GroupCommon
     
     /**
      * @param bool $full if false, don't show track_items/track_dlstats
-     * @return array add: `{features:{track_items:?enum,track_dlstats:?enum}}`
+     * @return array add: `{config:{track_items:?enum,track_dlstats:?enum}}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
@@ -132,7 +132,7 @@ trait GroupCommon
         {
             $val = $this->TryGetFeatureInt($prop);
             
-            $retval['features'][$prop] = ($val !== null) ?
+            $retval['config'][$prop] = ($val !== null) ?
                 array_flip(self::TRACK_TYPES)[$val] : null;
         }
 
@@ -163,8 +163,8 @@ class GroupTotal extends AuthEntityTotal implements IGroupCommon
         {
             $q = new QueryBuilder();
             
-            $q->Where($q->Equals($this->database->GetClassTableName(GroupJoin::class).'.groups', $this->GetGroupID()))
-                ->Join($this->database, GroupJoin::class, 'accounts', AccountTotal::class, 'object', Account::class);
+            $q->Where($q->Equals($this->database->GetClassTableName(GroupJoin::class).'.objs_groups', $this->GetGroupID()))
+                ->Join($this->database, GroupJoin::class, 'objs_accounts', AccountTotal::class, 'obj_object', Account::class);
             
             $this->acctlims = AccountTotal::LoadByQuery($this->database, $q);
             
@@ -245,8 +245,8 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
         {
             $q = new QueryBuilder();
             
-            $q->Where($q->And($q->Equals('timeperiod',$this->GetTimePeriod()),$q->Equals($this->database->GetClassTableName(GroupJoin::class).'.groups', $this->GetGroupID())))
-                ->Join($this->database, GroupJoin::class, 'accounts', AccountTimed::class, 'object', Account::class);
+            $q->Where($q->And($q->Equals('timeperiod',$this->GetTimePeriod()),$q->Equals($this->database->GetClassTableName(GroupJoin::class).'.objs_groups', $this->GetGroupID())))
+                ->Join($this->database, GroupJoin::class, 'objs_accounts', AccountTimed::class, 'obj_object', Account::class);
             
             $this->acctlims = AccountTimed::LoadByQuery($this->database, $q);
             

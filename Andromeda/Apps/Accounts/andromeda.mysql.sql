@@ -14,11 +14,11 @@
 CREATE TABLE `a2obj_apps_accounts_accesslog` (
   `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
-  `account` char(12) DEFAULT NULL,
-  `sudouser` char(12) DEFAULT NULL,
-  `client` char(12) DEFAULT NULL,
+  `obj_account` char(12) DEFAULT NULL,
+  `obj_sudouser` char(12) DEFAULT NULL,
+  `obj_client` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`account`)
+  KEY `account` (`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -27,40 +27,40 @@ CREATE TABLE `a2obj_apps_accounts_account` (
   `id` char(12) NOT NULL,
   `username` varchar(127) NOT NULL,
   `fullname` varchar(255) DEFAULT NULL,
-  `dates__created` double NOT NULL,
-  `dates__passwordset` double DEFAULT NULL,
-  `dates__loggedon` double DEFAULT NULL,
-  `dates__active` double DEFAULT NULL,
-  `dates__modified` double DEFAULT NULL,
+  `date_created` double NOT NULL,
+  `date_passwordset` double DEFAULT NULL,
+  `date_loggedon` double DEFAULT NULL,
+  `date_active` double DEFAULT NULL,
+  `date_modified` double DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
   `client_timeout` bigint(20) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
-  `features__admin` tinyint(1) DEFAULT NULL,
-  `features__disabled` tinyint(2) DEFAULT NULL,
-  `features__forcetf` tinyint(1) DEFAULT NULL,
-  `features__allowcrypto` tinyint(1) DEFAULT NULL,
-  `features__accountsearch` tinyint(4) DEFAULT NULL,
-  `features__groupsearch` tinyint(4) DEFAULT NULL,
-  `features__userdelete` tinyint(1) DEFAULT NULL,
-  `counters_limits__sessions` tinyint(4) DEFAULT NULL,
-  `counters_limits__contacts` tinyint(4) DEFAULT NULL,
-  `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
+  `admin` tinyint(1) DEFAULT NULL,
+  `disabled` tinyint(2) DEFAULT NULL,
+  `forcetf` tinyint(1) DEFAULT NULL,
+  `allowcrypto` tinyint(1) DEFAULT NULL,
+  `accountsearch` tinyint(4) DEFAULT NULL,
+  `groupsearch` tinyint(4) DEFAULT NULL,
+  `userdelete` tinyint(1) DEFAULT NULL,
+  `limit_sessions` tinyint(4) DEFAULT NULL,
+  `limit_contacts` tinyint(4) DEFAULT NULL,
+  `limit_recoverykeys` tinyint(4) DEFAULT NULL,
   `comment` text DEFAULT NULL,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
   `master_salt` binary(16) DEFAULT NULL,
   `password` text DEFAULT NULL,
-  `authsource` varchar(64) DEFAULT NULL,
-  `groups` tinyint(4) NOT NULL DEFAULT 0,
-  `sessions` tinyint(4) NOT NULL DEFAULT 0,
-  `contacts` tinyint(4) NOT NULL DEFAULT 0,
-  `clients` tinyint(4) NOT NULL DEFAULT 0,
-  `twofactors` tinyint(4) NOT NULL DEFAULT 0,
-  `recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
+  `obj_authsource` varchar(64) DEFAULT NULL,
+  `objs_groups` tinyint(4) NOT NULL DEFAULT 0,
+  `objs_sessions` tinyint(4) NOT NULL DEFAULT 0,
+  `objs_contacts` tinyint(4) NOT NULL DEFAULT 0,
+  `objs_clients` tinyint(4) NOT NULL DEFAULT 0,
+  `objs_twofactors` tinyint(4) NOT NULL DEFAULT 0,
+  `objs_recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `fullname` (`fullname`),
-  KEY `authsource` (`authsource`)
+  KEY `authsource` (`obj_authsource`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -70,7 +70,7 @@ CREATE TABLE `a2obj_apps_accounts_auth_ftp` (
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
-  `manager` char(12) NOT NULL,
+  `obj_manager` char(12) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -83,7 +83,7 @@ CREATE TABLE `a2obj_apps_accounts_auth_imap` (
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
   `secauth` tinyint(1) NOT NULL,
-  `manager` char(12) NOT NULL,
+  `obj_manager` char(12) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -94,7 +94,7 @@ CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
-  `manager` char(12) NOT NULL,
+  `obj_manager` char(12) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -103,11 +103,11 @@ CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
 CREATE TABLE `a2obj_apps_accounts_auth_manager` (
   `id` char(12) NOT NULL,
   `enabled` tinyint(2) NOT NULL,
-  `authsource` varchar(64) NOT NULL,
+  `obj_authsource` varchar(64) NOT NULL,
   `description` text DEFAULT NULL,
-  `default_group` char(12) DEFAULT NULL,
+  `obj_default_group` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `authsource` (`authsource`)
+  KEY `authsource` (`obj_authsource`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -118,15 +118,15 @@ CREATE TABLE `a2obj_apps_accounts_client` (
   `authkey` text NOT NULL,
   `lastaddr` varchar(255) NOT NULL,
   `useragent` text NOT NULL,
-  `dates__active` double DEFAULT 0,
-  `dates__created` double NOT NULL DEFAULT 0,
-  `dates__loggedon` double NOT NULL DEFAULT 0,
-  `account` char(12) NOT NULL,
-  `session` char(12) DEFAULT NULL,
+  `date_active` double DEFAULT 0,
+  `date_created` double NOT NULL DEFAULT 0,
+  `date_loggedon` double NOT NULL DEFAULT 0,
+  `obj_account` char(12) NOT NULL,
+  `obj_session` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`account`),
-  KEY `session` (`session`),
-  KEY `dates__active_account` (`dates__active`,`account`)
+  KEY `account` (`obj_account`),
+  KEY `session` (`obj_session`),
+  KEY `date_active_account` (`date_active`,`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -134,12 +134,12 @@ CREATE TABLE `a2obj_apps_accounts_client` (
 CREATE TABLE `a2obj_apps_accounts_config` (
   `id` char(12) NOT NULL,
   `version` varchar(255) NOT NULL,
-  `features__createaccount` smallint(1) NOT NULL,
-  `features__usernameiscontact` tinyint(1) NOT NULL,
-  `features__requirecontact` tinyint(2) NOT NULL,
-  `default_group` char(12) DEFAULT NULL,
-  `default_auth` char(12) DEFAULT NULL,
-  `dates__created` double NOT NULL,
+  `createaccount` smallint(1) NOT NULL,
+  `usernameiscontact` tinyint(1) NOT NULL,
+  `requirecontact` tinyint(2) NOT NULL,
+  `obj_default_group` char(12) DEFAULT NULL,
+  `obj_default_auth` char(12) DEFAULT NULL,
+  `date_created` double NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -153,13 +153,13 @@ CREATE TABLE `a2obj_apps_accounts_contact` (
   `usefrom` tinyint(1) DEFAULT NULL,
   `public` tinyint(1) NOT NULL DEFAULT 0,
   `authkey` text DEFAULT NULL,
-  `dates__created` double NOT NULL,
-  `account` char(12) NOT NULL,
+  `date_created` double NOT NULL,
+  `obj_account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `type_info` (`type`,`info`),
-  UNIQUE KEY `prefer` (`usefrom`,`account`),
+  UNIQUE KEY `prefer` (`usefrom`,`obj_account`),
   KEY `info` (`info`),
-  KEY `account` (`account`)
+  KEY `account` (`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -169,22 +169,22 @@ CREATE TABLE `a2obj_apps_accounts_group` (
   `name` varchar(127) NOT NULL,
   `comment` text DEFAULT NULL,
   `priority` tinyint(4) NOT NULL,
-  `dates__created` double NOT NULL,
-  `dates__modified` double DEFAULT NULL,
-  `features__admin` tinyint(1) DEFAULT NULL,
-  `features__disabled` tinyint(1) DEFAULT NULL,
-  `features__forcetf` tinyint(1) DEFAULT NULL,
-  `features__allowcrypto` tinyint(1) DEFAULT NULL,
-  `features__accountsearch` tinyint(4) DEFAULT NULL,
-  `features__groupsearch` tinyint(4) DEFAULT NULL,
-  `features__userdelete` tinyint(1) DEFAULT NULL,
-  `counters_limits__sessions` tinyint(4) DEFAULT NULL,
-  `counters_limits__contacts` tinyint(4) DEFAULT NULL,
-  `counters_limits__recoverykeys` tinyint(4) DEFAULT NULL,
+  `date_created` double NOT NULL,
+  `date_modified` double DEFAULT NULL,
+  `admin` tinyint(1) DEFAULT NULL,
+  `disabled` tinyint(1) DEFAULT NULL,
+  `forcetf` tinyint(1) DEFAULT NULL,
+  `allowcrypto` tinyint(1) DEFAULT NULL,
+  `accountsearch` tinyint(4) DEFAULT NULL,
+  `groupsearch` tinyint(4) DEFAULT NULL,
+  `userdelete` tinyint(1) DEFAULT NULL,
+  `limit_sessions` tinyint(4) DEFAULT NULL,
+  `limit_contacts` tinyint(4) DEFAULT NULL,
+  `limit_recoverykeys` tinyint(4) DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
   `client_timeout` bigint(11) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
-  `accounts` int(11) NOT NULL DEFAULT 0,
+  `objs_accounts` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -193,13 +193,13 @@ CREATE TABLE `a2obj_apps_accounts_group` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL,
-  `dates__created` double NOT NULL,
-  `accounts` char(12) NOT NULL,
-  `groups` char(12) NOT NULL,
+  `date_created` double NOT NULL,
+  `objs_accounts` char(12) NOT NULL,
+  `objs_groups` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `pair` (`accounts`,`groups`),
-  KEY `accounts` (`accounts`),
-  KEY `groups` (`groups`)
+  UNIQUE KEY `pair` (`objs_accounts`,`objs_groups`),
+  KEY `accounts` (`objs_accounts`),
+  KEY `groups` (`objs_groups`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -207,13 +207,13 @@ CREATE TABLE `a2obj_apps_accounts_groupjoin` (
 CREATE TABLE `a2obj_apps_accounts_recoverykey` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
-  `dates__created` double NOT NULL DEFAULT 0,
+  `date_created` double NOT NULL DEFAULT 0,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
   `master_salt` binary(16) DEFAULT NULL,
-  `account` char(12) NOT NULL,
+  `obj_account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`account`)
+  KEY `account` (`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -221,17 +221,17 @@ CREATE TABLE `a2obj_apps_accounts_recoverykey` (
 CREATE TABLE `a2obj_apps_accounts_session` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
-  `dates__active` double DEFAULT NULL,
-  `dates__created` double NOT NULL DEFAULT 0,
+  `date_active` double DEFAULT NULL,
+  `date_created` double NOT NULL DEFAULT 0,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
   `master_salt` binary(16) DEFAULT NULL,
-  `account` char(12) NOT NULL,
-  `client` char(12) NOT NULL,
+  `obj_account` char(12) NOT NULL,
+  `obj_client` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `aid` (`account`),
-  KEY `cid` (`client`),
-  KEY `dates__active_account` (`dates__active`,`account`)
+  KEY `account` (`obj_account`),
+  KEY `client` (`obj_client`),
+  KEY `date_active_account` (`date_active`,`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -242,12 +242,12 @@ CREATE TABLE `a2obj_apps_accounts_twofactor` (
   `secret` varbinary(48) NOT NULL,
   `nonce` binary(24) DEFAULT NULL,
   `valid` tinyint(1) NOT NULL DEFAULT 0,
-  `dates__created` double NOT NULL,
-  `dates__used` double DEFAULT NULL,
-  `account` char(12) NOT NULL,
-  `usedtokens` tinyint(4) NOT NULL DEFAULT 0,
+  `date_created` double NOT NULL,
+  `date_used` double DEFAULT NULL,
+  `obj_account` char(12) NOT NULL,
+  `objs_usedtokens` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `account` (`account`)
+  KEY `account` (`obj_account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -255,18 +255,18 @@ CREATE TABLE `a2obj_apps_accounts_twofactor` (
 CREATE TABLE `a2obj_apps_accounts_usedtoken` (
   `id` char(12) NOT NULL,
   `code` char(6) NOT NULL,
-  `dates__created` double NOT NULL,
-  `twofactor` char(12) NOT NULL,
+  `date_created` double NOT NULL,
+  `obj_twofactor` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `dates__created` (`dates__created`),
-  KEY `twofactor` (`twofactor`)
+  KEY `date_created` (`date_created`),
+  KEY `twofactor` (`obj_twofactor`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_apps_accounts_whitelist` (
   `id` char(12) NOT NULL,
-  `dates__created` double NOT NULL,
+  `date_created` double NOT NULL,
   `type` smallint(6) NOT NULL,
   `value` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),

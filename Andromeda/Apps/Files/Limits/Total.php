@@ -24,22 +24,22 @@ abstract class Total extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'dates__download' => null,
-            'dates__upload' => null,
-            'features__itemsharing' => null,
-            'features__share2groups' => null,
-            'features__share2everyone' => null,
-            'features__publicupload' => null,
-            'features__publicmodify' => null,
-            'features__randomwrite' => null,
-            'counters__pubdownloads' => new FieldTypes\Counter(),
-            'counters__bandwidth' => new FieldTypes\Counter(true),
-            'counters__size' => new FieldTypes\Counter(),
-            'counters__items' => new FieldTypes\Counter(),
-            'counters__shares' => new FieldTypes\Counter(),
-            'counters_limits__size' => null,
-            'counters_limits__items' => null,
-            'counters_limits__shares' => null
+            'date_download' => null,
+            'date_upload' => null,
+            'itemsharing' => null,
+            'share2groups' => null,
+            'share2everyone' => null,
+            'publicupload' => null,
+            'publicmodify' => null,
+            'randomwrite' => null,
+            'count_pubdownloads' => new FieldTypes\Counter(),
+            'count_bandwidth' => new FieldTypes\Counter(true),
+            'count_size' => new FieldTypes\Counter(),
+            'count_items' => new FieldTypes\Counter(),
+            'count_shares' => new FieldTypes\Counter(),
+            'limit_size' => null,
+            'limit_items' => null,
+            'limit_shares' => null
         ));
     }
     
@@ -145,8 +145,8 @@ abstract class Total extends Base
     
     /**
      * Returns a printable client object of this timed limit
-     * @param bool $full if false, show features only (no dates,counters,limits)
-     * @return array `{dates:{created:float, download:?float, upload:?float}, features:{itemsharing:?bool, \
+     * @param bool $full if false, show config only (no dates,counters,limits)
+     * @return array `{dates:{created:float, download:?float, upload:?float}, config:{itemsharing:?bool, \
         share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see Base::GetClientObject()
@@ -154,7 +154,7 @@ abstract class Total extends Base
     public function GetClientObject(bool $full) : array
     {
         $retval = array_merge(parent::GetClientObject($full), array(
-            'features' => Utilities::array_map_keys(function($p){ return $this->TryGetFeatureBool($p); },
+            'config' => Utilities::array_map_keys(function($p){ return $this->TryGetFeatureBool($p); },
                 array('itemsharing','share2everyone','share2groups',
                       'publicupload','publicmodify','randomwrite'))
         ));

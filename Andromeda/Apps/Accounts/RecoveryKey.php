@@ -21,7 +21,7 @@ class RecoveryKey extends RecoveryKeyBase
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(      
-            'account' => new FieldTypes\ObjectRef(Account::class, 'recoverykeys')
+            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'recoverykeys')
         ));
     }      
 

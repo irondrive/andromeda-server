@@ -22,25 +22,25 @@ class RequestMetrics extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'actions' => new FieldTypes\ObjectRefs(ActionMetrics::class, 'request'),
-            'commits' => new FieldTypes\ObjectRefs(CommitMetrics::class, 'request'),
-            'requestlog' => new FieldTypes\ObjectRef(RequestLog::class),
+            'objs_actions' => new FieldTypes\ObjectRefs(ActionMetrics::class, 'request'),
+            'objs_commits' => new FieldTypes\ObjectRefs(CommitMetrics::class, 'request'),
+            'obj_requestlog' => new FieldTypes\ObjectRef(RequestLog::class),
             'peak_memory' => null,
             'nincludes' => null,
             'nobjects' => null,
-            'construct__db_reads' => null,
-            'construct__db_read_time' => null,
-            'construct__db_writes' => null,
-            'construct__db_write_time' => null,
-            'construct__code_time' => null,
-            'construct__total_time' => null,
-            'construct__queries' => new FieldTypes\JSON(),
-            'total__db_reads' => null,
-            'total__db_read_time' => null,
-            'total__db_writes' => null,
-            'total__db_write_time' => null,
-            'total__code_time' => null,
-            'total__total_time' => null,
+            'construct_db_reads' => null,
+            'construct_db_read_time' => null,
+            'construct_db_writes' => null,
+            'construct_db_write_time' => null,
+            'construct_code_time' => null,
+            'construct_total_time' => null,
+            'construct_queries' => new FieldTypes\JSON(),
+            'total_db_reads' => null,
+            'total_db_read_time' => null,
+            'total_db_writes' => null,
+            'total_db_write_time' => null,
+            'total_code_time' => null,
+            'total_total_time' => null,
             'gcstats' => new FieldTypes\JSON(),
             'rusage' => new FieldTypes\JSON(),
             'includes' => new FieldTypes\JSON(),
@@ -71,14 +71,14 @@ class RequestMetrics extends StandardObject
             ->SetScalar('nobjects', count($database->getLoadedObjectIDs()));
         
         foreach ($construct->getStats() as $statkey=>$statval)
-            $obj->SetScalar("construct__$statkey", $statval);
+            $obj->SetScalar("construct_$statkey", $statval);
         
         foreach ($total->getStats() as $statkey=>$statval)
-            $obj->SetScalar("total__$statkey", $statval);
+            $obj->SetScalar("total_$statkey", $statval);
     
         if ($level >= Config::METRICS_EXTENDED)
         {
-            $obj->SetScalar('construct__queries', $construct->getQueries())
+            $obj->SetScalar('construct_queries', $construct->getQueries())
                 ->SetScalar('gcstats',gc_status())->SetScalar('rusage',getrusage())
                 ->SetScalar('includes',get_included_files())
                 ->SetScalar('objects',$database->getLoadedObjectIDs())

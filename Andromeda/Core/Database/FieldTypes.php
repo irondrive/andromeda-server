@@ -463,7 +463,7 @@ class ObjectRefs extends Counter
     protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
     {
         $myval = $this->parentPoly ? ObjectPoly::GetObjectDBValue($this->parent) : $this->parent->ID();
-        $q = new QueryBuilder(); $q->Where($q->Equals($this->reffield, $myval));
+        $q = new QueryBuilder(); $q->Where($q->Equals('obj_'.$this->reffield, $myval));
         $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
     }
     
@@ -595,7 +595,7 @@ class ObjectJoin extends ObjectRefs
     /** Perform the inner/core object array loading query using WHERE the join class references us and JOIN the target class */
     protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
     {
-        $q = new QueryBuilder(); $key = $this->database->GetClassTableName($this->joinclass).'.'.$this->reffield;
+        $q = new QueryBuilder(); $key = $this->database->GetClassTableName($this->joinclass).'.objs_'.$this->reffield;
 
         $q->Where($q->Equals($key, $this->parent->ID()))
             ->Join($this->database, $this->joinclass, $this->myfield, $this->refclass, 'id');

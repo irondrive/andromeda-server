@@ -26,6 +26,12 @@ class NullValueException extends DatabaseException      { public $message = "VAL
  * to be ignored in favor of more domain-specific alternatives provided by classes that extend this one.
  * 
  * All objects have a unique ID that globally identifies them.
+ * 
+ * date columns have a date_ prefix
+ * counter columns have a count_ prefix
+ * limit columns have a limit_ prefix
+ * ObjectRef columns have a obj_ prefix
+ * ObjectRefs columns have a objs_ prefix
  */
 abstract class BaseObject
 {
@@ -126,7 +132,7 @@ abstract class BaseObject
      */
     public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
     {
-        return static::TryLoadUniqueByKey($database,'id',$id);
+        return static::TryLoadByUniqueKey($database,'id',$id);
     }
     
     /**
@@ -176,7 +182,7 @@ abstract class BaseObject
     public static function LoadByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : array
     {
         $v = $class ? FieldTypes\ObjectPoly::GetIDTypeDBValue($id, $class) : $id;
-        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $v)));
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals("obj_$field", $v)));
     }
     
     /**
@@ -193,7 +199,7 @@ abstract class BaseObject
     public static function DeleteByObjectID(ObjectDatabase $database, string $field, string $id, ?string $class = null) : int
     {
         $v = $class ? FieldTypes\ObjectPoly::GetIDTypeDBValue($id, $class) : $id;
-        $q = new QueryBuilder(); return static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
+        $q = new QueryBuilder(); return static::DeleteByQuery($database, $q->Where($q->Equals("obj_$field", $v)));
     }
         
     /**
@@ -203,7 +209,7 @@ abstract class BaseObject
      * @param string $key the value of the field that uniquely identifies the object
      * @return static|NULL
      */
-    protected static function TryLoadUniqueByKey(ObjectDatabase $database, string $field, string $key) : ?self
+    protected static function TryLoadByUniqueKey(ObjectDatabase $database, string $field, string $key) : ?self
     {
         return $database->TryLoadObjectByUniqueKey(static::class, $field, $key);
     }
@@ -233,7 +239,7 @@ abstract class BaseObject
     public static function LoadByObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : array
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
-        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals($field, $v)));
+        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Equals("obj_$field", $v)));
     }
     
     /**
@@ -247,7 +253,7 @@ abstract class BaseObject
     public static function DeleteByObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : int
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
-        $q = new QueryBuilder(); return static::DeleteByQuery($database, $q->Where($q->Equals($field, $v)));
+        $q = new QueryBuilder(); return static::DeleteByQuery($database, $q->Where($q->Equals("obj_$field", $v)));
     }
     
     /**
@@ -261,7 +267,7 @@ abstract class BaseObject
     public static function TryLoadUniqueByObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : ?self
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
-        return static::TryLoadUniqueByKey($database, $field, $v);
+        return static::TryLoadByUniqueKey($database, "obj_$field", $v);
     }
     
     /**
@@ -275,7 +281,7 @@ abstract class BaseObject
     public static function TryDeleteByUniqueObject(ObjectDatabase $database, string $field, self $object, bool $isPoly = false) : bool
     {
         $v = $isPoly ? FieldTypes\ObjectPoly::GetObjectDBValue($object) : $object->ID();
-        $rows = static::TryDeleteByUniqueKey($database, $field, $v);
+        $rows = static::TryDeleteByUniqueKey($database, "obj_$field", $v);
         
         if ($rows > 1) throw new DuplicateUniqueKeyException(); return $rows > 0;
     }
@@ -350,6 +356,7 @@ abstract class BaseObject
      */
     protected function GetObject(string $field) : self
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -364,6 +371,7 @@ abstract class BaseObject
      */
     protected function TryGetObject(string $field) : ?self
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -378,6 +386,7 @@ abstract class BaseObject
      */
     protected function HasObject(string $field) : bool
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -393,6 +402,7 @@ abstract class BaseObject
      */
     protected function GetObjectID(string $field) : string
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -407,6 +417,7 @@ abstract class BaseObject
      */
     protected function TryGetObjectID(string $field) : ?string
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -421,6 +432,7 @@ abstract class BaseObject
      */
     protected function GetObjectType(string $field) : string
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -437,6 +449,7 @@ abstract class BaseObject
      */
     protected function TryGetObjectType(string $field) : ?string
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -450,6 +463,7 @@ abstract class BaseObject
      */
     protected function DeleteObject(string $field) : self
     {
+        $field = "obj_$field";
         if (!array_key_exists($field, $this->objects)) 
             throw new KeyNotFoundException($field);
         
@@ -466,6 +480,7 @@ abstract class BaseObject
      */
     protected function GetObjectRefs(string $field, ?int $limit = null, ?int $offset = null) : array
     {
+        $field = "objs_$field";
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
         
@@ -480,6 +495,7 @@ abstract class BaseObject
      */
     protected function CountObjectRefs(string $field) : int
     {
+        $field = "objs_$field";
         if (!array_key_exists($field, $this->objectrefs))
             throw new KeyNotFoundException($field);
         
@@ -496,6 +512,7 @@ abstract class BaseObject
      */
     protected function GetJoinObject(string $field, self $obj) : StandardObject
     {
+        $field = "objs_$field";
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
     
@@ -513,6 +530,7 @@ abstract class BaseObject
      */
     protected function TryGetJoinObject(string $field, self $obj) : ?StandardObject
     {
+        $field = "objs_$field";
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
         
@@ -529,6 +547,7 @@ abstract class BaseObject
      */
     protected function DeleteObjects(string $field) : self
     {
+        $field = "objs_$field";
         if (!array_key_exists($field, $this->objectrefs)) 
             throw new KeyNotFoundException($field);
         
@@ -597,6 +616,7 @@ abstract class BaseObject
      */
     protected function BoolSetObject(string $field, ?self $object, bool $notification = false) : bool
     {
+        $field = "obj_$field";
         if ($this->database->isReadOnly()) 
             throw new DatabaseReadOnlyException();
 
@@ -663,6 +683,7 @@ abstract class BaseObject
      */
     protected function AddObjectRef(string $field, self $object, bool $notification = false) : bool
     {
+        $field = "objs_$field";
         if ($this->database->isReadOnly()) 
             throw new DatabaseReadOnlyException();        
         
@@ -695,6 +716,7 @@ abstract class BaseObject
      */
     protected function RemoveObjectRef(string $field, self $object, bool $notification = false) : bool
     {
+        $field = "objs_$field";
         if ($this->database->isReadOnly()) 
             throw new DatabaseReadOnlyException();
         

@@ -41,21 +41,21 @@ class Share extends AuthObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'item' => new FieldTypes\ObjectPoly(Item::Class, 'shares'), // item being shared
-            'owner' => new FieldTypes\ObjectRef(Account::class),    // the account that made the share
-            'dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
+            'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'shares'), // item being shared
+            'obj_owner' => new FieldTypes\ObjectRef(Account::class),    // the account that made the share
+            'obj_dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
             'label' => null, // user-supplied label
             'password' => null, // possible password set on the share
-            'dates__accessed' => new FieldTypes\Scalar(null, true),
-            'counters__accessed' => new FieldTypes\Counter(), // the count of accesses
-            'counters_limits__accessed' => null,     // the maximum number of accesses
-            'dates__expires' => null,   // the timestamp past which the share is not valid
-            'features__read' => new FieldTypes\Scalar(true),
-            'features__upload' => new FieldTypes\Scalar(false),
-            'features__modify' => new FieldTypes\Scalar(false),
-            'features__social' => new FieldTypes\Scalar(true),
-            'features__reshare' => new FieldTypes\Scalar(false),
-            'features__keepowner' => new FieldTypes\Scalar(true)
+            'date_accessed' => new FieldTypes\Scalar(null, true),
+            'count_accessed' => new FieldTypes\Counter(), // the count of accesses
+            'limit_accessed' => null,     // the maximum number of accesses
+            'date_expires' => null,   // the timestamp past which the share is not valid
+            'read' => new FieldTypes\Scalar(true),
+            'upload' => new FieldTypes\Scalar(false),
+            'modify' => new FieldTypes\Scalar(false),
+            'social' => new FieldTypes\Scalar(true),
+            'reshare' => new FieldTypes\Scalar(false),
+            'keepowner' => new FieldTypes\Scalar(true)
         ));
     }
     
@@ -244,8 +244,8 @@ class Share extends AuthObject
     {
         $q = new QueryBuilder(); 
         
-        $q->Join($database, GroupJoin::class, 'groups', self::class, 'dest', Group::class);        
-        $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.accounts', $account->ID());
+        $q->Join($database, GroupJoin::class, 'objs_groups', self::class, 'obj_dest', Group::class);        
+        $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.objs_accounts', $account->ID());
 
         $shares = static::LoadByQuery($database, $q->Where($w));
         
@@ -313,7 +313,7 @@ class Share extends AuthObject
      * @param bool $item if true, show the item client object
      * @param bool $owner if true, we are showing the owner of the share
      * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
-        expired:bool, dates:{created:float, expires:?float}, features:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
+        expired:bool, dates:{created:float, expires:?float}, config:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
         if owner, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
      * @see Item::SubGetClientObject()
      * @see AuthObject::GetClientObject()
@@ -338,7 +338,7 @@ class Share extends AuthObject
                 'created' => $this->GetDateCreated(),
                 'expires' => $this->TryGetDate('expires')
             ),
-            'features' => array(
+            'config' => array(
                 'read' => $this->CanRead(),
                 'upload' => $this->CanUpload(),
                 'modify' => $this->CanModify(),

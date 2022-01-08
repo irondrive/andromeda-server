@@ -46,7 +46,7 @@ class Contact extends ContactBase
             'valid' => new FieldTypes\Scalar(false), // true if it has been validated
             'usefrom' => null, // true if this should be used as from
             'public' => new FieldTypes\Scalar(false), // true if this should be searchable
-            'account' => new FieldTypes\ObjectRef(Account::class, 'contacts')
+            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'contacts')
         ));
     }
     
@@ -78,7 +78,7 @@ class Contact extends ContactBase
      */
     public static function TryLoadAccountFromContact(ObjectDatabase $database, Account $account) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->IsTrue('usefrom'));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->IsTrue('usefrom'));
         
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }
@@ -94,7 +94,7 @@ class Contact extends ContactBase
     /** Attempts to load a contact by the given ID for the given account */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('account',$account->ID()));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('obj_account',$account->ID()));
         
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }

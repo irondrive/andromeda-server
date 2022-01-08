@@ -22,7 +22,7 @@ class Group extends AuthEntity
             'name' => null,
             'comment' => null,
             'priority' => new FieldTypes\Scalar(0),       
-            'accounts' => new FieldTypes\ObjectJoin(Account::class, GroupJoin::class, 'groups')
+            'objs_accounts' => new FieldTypes\ObjectJoin(Account::class, GroupJoin::class, 'groups')
         ));
     }
     
@@ -100,7 +100,7 @@ class Group extends AuthEntity
     /** Tries to load a group by name, returning null if not found */
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {
-        return static::TryLoadUniqueByKey($database, 'name', $name);
+        return static::TryLoadByUniqueKey($database, 'name', $name);
     }
     
     /**
@@ -195,7 +195,7 @@ class Group extends AuthEntity
      * @return array `{id:id, name:string}` \
         if FULL, add `{accounts:[id]}` \
         if ADMIN, add `{priority:int,comment:?string,dates:{created:float,modified:?float}, session_timeout:?int, client_timeout:?int, max_password_age:?int, \
-            features:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
+            config:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
             counters:{accounts:int}, limits:{sessions:?int,contacts:?int,recoverykeys:?int}}`
      * @see Account::GetClientObject()
      */
@@ -213,7 +213,7 @@ class Group extends AuthEntity
                     'created' => $this->GetDateCreated(),
                     'modified' => $this->TryGetDate('modified')
                 ),
-                'features' => array_merge(
+                'config' => array_merge(
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
                         array('admin','forcetf','allowcrypto','userdelete')),
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },

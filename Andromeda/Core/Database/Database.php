@@ -382,12 +382,12 @@ class Database implements Transactions
             else $result = $query->rowCount();
             
             if ($doSavepoint)
-                $this->connection->query("RELEASE SAVEPOINT mysave");
+                $this->connection->query("RELEASE SAVEPOINT a2save");
         }
         catch (\PDOException $e)
         {
             if ($doSavepoint)
-                $this->connection->query("ROLLBACK TO SAVEPOINT mysave");
+                $this->connection->query("ROLLBACK TO SAVEPOINT a2save");
                 
             $idx = count($this->queries)-1;
             $this->queries[$idx] = array($this->queries[$idx], $e->getMessage());

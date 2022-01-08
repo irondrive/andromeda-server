@@ -101,7 +101,7 @@ abstract class BaseAppLog extends BaseLog
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array
     {
-        $q->Join($database, ActionLog::class, 'applog', static::class, 'id', null, static::class);
+        $q->Join($database, ActionLog::class, 'obj_applog', static::class, 'id', null, static::class);
         
         return ActionLog::GetPropCriteria($database, $q, $input, false);
     }   

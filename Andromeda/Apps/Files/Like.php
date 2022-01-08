@@ -20,8 +20,8 @@ class Like extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'owner' => new FieldTypes\ObjectRef(Account::class),
-            'item' => new FieldTypes\ObjectPoly(Item::Class, 'likes'),
+            'obj_owner' => new FieldTypes\ObjectRef(Account::class),
+            'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'likes'),
             'value' => null // true if this is a like, false if a dislike
         ));
     }
@@ -36,13 +36,13 @@ class Like extends StandardObject
      */
     public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?self
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',$owner->ID()),$q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_owner',$owner->ID()),$q->Equals('obj_item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
         
         // load an existing like (can only like an item once)
         $likeobj = static::TryLoadUniqueByQuery($database, $q->Where($where));
         
         // create a new one if it doesn't exist
-        $likeobj ??= parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item);
+        $likeobj ??= parent::BaseCreate($database)->SetObject('obj_owner',$owner)->SetObject('obj_item',$item);
                 
         // "un-count" the old like first
         $item->CountLike($likeobj->TryGetScalar('value') ?? 0, true);

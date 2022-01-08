@@ -13,20 +13,20 @@ abstract class StandardObject extends BaseObject
 {
     public static function GetFieldTemplate() : array
     {
-        return array('dates__created' => null);
+        return array('date_created' => null);
     }
     
     /** 
      * Returns the timestamp value stored in the given date field 
      * @see BaseObject::GetScalar()
      */
-    protected function GetDate(string $name) : float { return $this->GetScalar("dates__$name"); }
+    protected function GetDate(string $name) : float { return $this->GetScalar("date_$name"); }
     
     /**
      * Returns the timestamp value stored in the given date field
      * @see BaseObject::TryGetScalar()
      */
-    protected function TryGetDate(string $name) : ?float { return $this->TryGetScalar("dates__$name"); } 
+    protected function TryGetDate(string $name) : ?float { return $this->TryGetScalar("date_$name"); } 
     
     /**
      * Sets the value of the given date field to the given value
@@ -37,7 +37,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function SetDate(string $name, ?float $value = null) : self
     { 
-        return $this->SetScalar("dates__$name", $value ?? Main::GetInstance()->GetTime()); 
+        return $this->SetScalar("date_$name", $value ?? Main::GetInstance()->GetTime()); 
     }
     
     /** Returns the timestamp when this object was created */
@@ -56,7 +56,7 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureInt(string $name, bool $allowTemp = true) : int { 
-        return (int)($this->GetScalar("features__$name", $allowTemp)); }
+        return (int)($this->GetScalar("$name", $allowTemp)); }
     
     /**
      * Gets the value of the given feature field as an int (used for config)
@@ -64,7 +64,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function TryGetFeatureInt(string $name, bool $allowTemp = true) : ?int 
     { 
-        $val = $this->TryGetScalar("features__$name", $allowTemp); 
+        $val = $this->TryGetScalar("$name", $allowTemp); 
         return ($val === null) ? null : (int)($val); 
     }
     
@@ -73,7 +73,7 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::GetScalar()
      */
     protected function GetFeatureBool(string $name, bool $allowTemp = true) : bool {
-        return (bool)($this->GetScalar("features__$name", $allowTemp)); }
+        return (bool)($this->GetScalar("$name", $allowTemp)); }
         
     /**
      * Gets the value of the given feature field as a bool (used for config)
@@ -81,7 +81,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function TryGetFeatureBool(string $name, bool $allowTemp = true) : ?bool
     {
-        $val = $this->TryGetScalar("features__$name", $allowTemp);
+        $val = $this->TryGetScalar("$name", $allowTemp);
         return ($val === null) ? null : (bool)($val);
     }
     
@@ -91,7 +91,7 @@ abstract class StandardObject extends BaseObject
      * @return $this
      */
     protected function SetFeatureInt(string $name, ?int $value, bool $temp = false) : self { 
-        return $this->SetScalar("features__$name", $value, $temp); }
+        return $this->SetScalar("$name", $value, $temp); }
         
     /**
      * Sets the value of the given feature field to the given (?bool) value
@@ -99,12 +99,12 @@ abstract class StandardObject extends BaseObject
      * @return $this
      */
     protected function SetFeatureBool(string $name, ?bool $value, bool $temp = false) : self {
-        return $this->SetScalar("features__$name", $value, $temp); }
+        return $this->SetScalar("$name", $value, $temp); }
         
     /** Returns true if the given feature has been modified */
     protected function isFeatureModified(string $name) : bool
     {
-        return $this->GetScalarDelta("features__$name") > 0;
+        return $this->GetScalarDelta("$name") > 0;
     }
     
     /**
@@ -112,14 +112,14 @@ abstract class StandardObject extends BaseObject
      * @see BaseObject::GetScalar()
      */
     protected function GetCounter(string $name) : int { 
-        return $this->GetScalar("counters__$name"); }
+        return $this->GetScalar("count_$name"); }
     
     /**
      * Gets the value of the given counter limit field
      * @see BaseObject::GetScalar()
      */
     protected function GetCounterLimit(string $name) : int { 
-        return $this->GetScalar("counters_limits__$name"); }
+        return $this->GetScalar("limit_$name"); }
     
     /**
      * Gets the value of the given counter limit field
@@ -127,7 +127,7 @@ abstract class StandardObject extends BaseObject
      */
     protected function TryGetCounterLimit(string $name) : ?int 
     { 
-        $field = "counters_limits__$name";        
+        $field = "limit_$name";        
         return array_key_exists($field, $this->scalars) 
             ? $this->TryGetScalar($field) : null;
     }
@@ -138,7 +138,7 @@ abstract class StandardObject extends BaseObject
      * @return $this
      */
     protected function SetCounterLimit(string $name, ?int $value, bool $temp = false) : self { 
-        return $this->SetScalar("counters_limits__$name", $value, $temp); }
+        return $this->SetScalar("limit_$name", $value, $temp); }
     
     /**
      * Checks whether the given counter plus a delta would exceed the limit
@@ -174,7 +174,7 @@ abstract class StandardObject extends BaseObject
     {
         if (!$ignoreLimit && $delta > 0) $this->CheckCounter($name, $delta);
             
-        return parent::DeltaCounter("counters__$name",$delta); 
+        return parent::DeltaCounter("count_$name",$delta); 
     }
     
     /**
