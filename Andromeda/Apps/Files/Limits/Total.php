@@ -24,22 +24,22 @@ abstract class Total extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'date_download' => null,
-            'date_upload' => null,
-            'itemsharing' => null,
-            'share2groups' => null,
-            'share2everyone' => null,
-            'publicupload' => null,
-            'publicmodify' => null,
-            'randomwrite' => null,
+            'date_download' => new FieldTypes\Date(),
+            'date_upload' => new FieldTypes\Date(),
+            'itemsharing' => new FieldTypes\BoolType(),
+            'share2groups' => new FieldTypes\BoolType(),
+            'share2everyone' => new FieldTypes\BoolType(),
+            'publicupload' => new FieldTypes\BoolType(),
+            'publicmodify' => new FieldTypes\BoolType(),
+            'randomwrite' => new FieldTypes\BoolType(),
             'count_pubdownloads' => new FieldTypes\Counter(),
             'count_bandwidth' => new FieldTypes\Counter(true),
             'count_size' => new FieldTypes\Counter(),
             'count_items' => new FieldTypes\Counter(),
             'count_shares' => new FieldTypes\Counter(),
-            'limit_size' => null,
-            'limit_items' => null,
-            'limit_shares' => null
+            'limit_size' => new FieldTypes\Limit(),
+            'limit_items' => new FieldTypes\Limit(),
+            'limit_shares' => new FieldTypes\Limit()
         ));
     }
     

@@ -16,9 +16,9 @@ class Config extends BaseConfig
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'createaccount' => new FieldTypes\Scalar(0),
-            'requirecontact' => new FieldTypes\Scalar(0),
-            'usernameiscontact' => new FieldTypes\Scalar(false),
+            'createaccount' => new FieldTypes\IntType(0),
+            'requirecontact' => new FieldTypes\IntType(0),
+            'usernameiscontact' => new FieldTypes\BoolType(false),
             'obj_default_group' => new FieldTypes\ObjectRef(Group::class),
             'obj_default_auth' => new FieldTypes\ObjectRef(Auth\Manager::class)
         ));

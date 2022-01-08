@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -44,9 +45,9 @@ class FTP extends FTPBase2
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'hostname' => null,
-            'port' => null,
-            'implssl' => null, // if true, use implicit SSL, else explicit/none
+            'hostname' => new FieldTypes\StringType(),
+            'port' => new FieldTypes\IntType(),
+            'implssl' => new FieldTypes\BoolType(), // if true, use implicit SSL, else explicit/none
         ));
     }
     

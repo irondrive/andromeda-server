@@ -31,7 +31,7 @@ abstract class BaseConfig extends SingletonObject
 {
     public static function GetFieldTemplate() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array( 'version'=>null ));
+        return array_merge(parent::GetFieldTemplate(), array( 'version' => new FieldTypes\StringType() ));
     }
     
     /** Returns the database schema version */
@@ -50,20 +50,20 @@ class Config extends BaseConfig
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'datadir' => null,
-            'requestlog_db' => new FieldTypes\Scalar(false),
-            'requestlog_file' => new FieldTypes\Scalar(false),
-            'requestlog_details' => new FieldTypes\Scalar(self::RQLOG_DETAILS_BASIC),
-            'debug' => new FieldTypes\Scalar(self::ERRLOG_ERRORS),
-            'debug_http' => new FieldTypes\Scalar(false),
-            'debug_dblog' => new FieldTypes\Scalar(true),
-            'debug_filelog' => new FieldTypes\Scalar(false),
-            'metrics' => new FieldTypes\Scalar(0),
-            'metrics_dblog' => new FieldTypes\Scalar(false),
-            'metrics_filelog' => new FieldTypes\Scalar(false),
-            'read_only' => new FieldTypes\Scalar(false),
-            'enabled' => new FieldTypes\Scalar(true),
-            'email' => new FieldTypes\Scalar(true),
+            'datadir' => new FieldTypes\StringType(),
+            'requestlog_db' => new FieldTypes\BoolType(false),
+            'requestlog_file' => new FieldTypes\BoolType(false),
+            'requestlog_details' => new FieldTypes\IntType(self::RQLOG_DETAILS_BASIC),
+            'debug' => new FieldTypes\IntType(self::ERRLOG_ERRORS),
+            'debug_http' => new FieldTypes\BoolType(false),
+            'debug_dblog' => new FieldTypes\BoolType(true),
+            'debug_filelog' => new FieldTypes\BoolType(false),
+            'metrics' => new FieldTypes\IntType(0),
+            'metrics_dblog' => new FieldTypes\BoolType(false),
+            'metrics_filelog' => new FieldTypes\BoolType(false),
+            'read_only' => new FieldTypes\BoolType(false),
+            'enabled' => new FieldTypes\BoolType(true),
+            'email' => new FieldTypes\BoolType(true),
             'apps' => new FieldTypes\JSON()
         ));
     }

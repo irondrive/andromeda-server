@@ -26,8 +26,8 @@ class ActionLog extends BaseLog
         return array(
             'obj_request' => new FieldTypes\ObjectRef(RequestLog::class, 'actions'),
             'obj_applog' => new FieldTypes\ObjectPoly(BaseAppLog::class),
-            'app' => null,
-            'action' => null,
+            'app' => new FieldTypes\StringType(),
+            'action' => new FieldTypes\StringType(),
             'details' => new FieldTypes\JSON()
         );
     }
@@ -107,7 +107,7 @@ class ActionLog extends BaseLog
      */
     protected function GetBaseClientObject(bool $details = false) : array
     {
-        $retval = array_map(function(FieldTypes\Scalar $e){
+        $retval = array_map(function(FieldTypes\BaseField $e){
             return $e->GetValue(); }, $this->scalars);
         
         if (!$details || !$retval['details']) unset($retval['details']);

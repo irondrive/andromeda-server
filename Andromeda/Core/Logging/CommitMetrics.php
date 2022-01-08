@@ -16,12 +16,12 @@ class CommitMetrics extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'commits'),
-            'stats_db_reads' => null,
-            'stats_db_read_time' => null,
-            'stats_db_writes' => null,
-            'stats_db_write_time' => null,
-            'stats_code_time' => null,
-            'stats_total_time' => null
+            'stats_db_reads' => new FieldTypes\IntType(),
+            'stats_db_read_time' => new FieldTypes\FloatType(),
+            'stats_db_writes' => new FieldTypes\IntType(),
+            'stats_db_write_time' => new FieldTypes\FloatType(),
+            'stats_code_time' => new FieldTypes\FloatType(),
+            'stats_total_time' => new FieldTypes\FloatType()
         ));
     }
     

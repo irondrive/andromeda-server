@@ -28,8 +28,8 @@ class Manager extends BaseObject
     public static function GetFieldTemplate() : array
     {
         return array(
-            'enabled' => new FieldTypes\Scalar(self::ENABLED_FULL),
-            'description' => null,
+            'enabled' => new FieldTypes\IntType(self::ENABLED_FULL),
+            'description' => new FieldTypes\StringType(),
             'obj_authsource' => (new FieldTypes\ObjectPoly(External::class, 'manager', false))->autoDelete(),
             'obj_default_group' => (new FieldTypes\ObjectRef(Group::class))->autoDelete()
         );

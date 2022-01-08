@@ -5,13 +5,16 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+
+class FieldTypeMismatch extends Exceptions\ServerException { public $message = "FIELD_DATA_TYPE_MISMATCH"; }
 
 /**
  * Represents a basic scalar value stored in the column of a database table
  * 
  * This class is the starting point from which all other fieldtypes must inherit.
  */
-class Scalar
+abstract class BaseField
 {
     /** The name of this field */
     protected string $myfield; 
@@ -41,7 +44,7 @@ class Scalar
     /**
      * Declares a new scalar fieldtype (use this in object templates)
      * @param mixed $defvalue the default value of the field type
-     * @see Scalar::$mandatorySave
+     * @see self::$mandatorySave
      */
     public function __construct($defvalue = null, bool $mandatorySave = false)
     {
@@ -53,9 +56,9 @@ class Scalar
 
     /**
      * Initializes this field by tying it to an actual object
-     * @see Scalar::$database
-     * @see Scalar::$parent
-     * @see Scalar::$myfield
+     * @see self::$database
+     * @see self::$parent
+     * @see self::$myfield
      */
     public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield) : void
     {
@@ -71,14 +74,14 @@ class Scalar
         $this->realvalue = $value;
         $this->delta = 0;
     }
-    
-    /** @see Scalar::$myfield */
+
+    /** @see self::$myfield */
     public function GetMyField() : string { return $this->myfield; }
     
-    /** @see Scalar::$mandatorySave */
+    /** @see self::$mandatorySave */
     public function isMandatorySave() : bool { return $this->mandatorySave; }
     
-    /** @see Scalar::$parent */
+    /** @see self::$parent */
     public function GetParent() : BaseObject { return $this->parent; }
     
     /**
@@ -87,7 +90,7 @@ class Scalar
      */
     public function GetValue(bool $allowTemp = true) { return $allowTemp ? $this->tempvalue : $this->realvalue; }
 
-    /** @see Scalar::$delta */
+    /** @see self::$delta */
     public function GetDelta() : int { return $this->delta; }
     
     /** Resets the delta of this field to 0 */
@@ -95,10 +98,7 @@ class Scalar
 
     /** Gets the serialized value of this field that will exist in the DB */
     public function GetDBValue() 
-    { 
-        if (is_bool($this->realvalue)) 
-            return (int)($this->realvalue);
-        
+    {
         return $this->realvalue; 
     }
     
@@ -122,20 +122,115 @@ class Scalar
     /** Uses sodium to securely zero the value of this field */
     public function EraseValue() : void
     {
-        if (function_exists('sodium_memzero'))
-        {
-            if (isset($this->tempvalue)) sodium_memzero($this->tempvalue);
-            if (isset($this->realvalue)) sodium_memzero($this->realvalue);
-        }
+        if (isset($this->tempvalue)) sodium_memzero($this->tempvalue);
+        if (isset($this->realvalue)) sodium_memzero($this->realvalue);
     }            
 }
 
+/** A scalar that holds a string */
+class StringType extends BaseField
+{
+    public function InitValue($value) : void
+    {
+        if ($value !== null) $value = (string)$value;
+        
+        parent::InitValue($value);
+    }
+    
+    public function GetDBValue() : ?string
+    {
+        return parent::GetDBValue();
+    }    
+    
+    public function SetValue($value, bool $temp = false) : bool
+    {        
+        if ($value !== null && !is_string($value))
+            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
+        
+        return parent::SetValue($value, $temp);
+    }
+}
+
+/** A scalar that holds a bool */
+class BoolType extends BaseField
+{
+    public function InitValue($value) : void
+    {
+        if ($value !== null) $value = (bool)$value;
+        
+        parent::InitValue($value);
+    }
+    
+    public function GetDBValue() : ?int
+    {
+        return parent::GetDBValue();
+    }
+    
+    public function SetValue($value, bool $temp = false) : bool
+    {
+        if ($value !== null && !is_bool($value))
+            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
+            
+        return parent::SetValue($value, $temp);
+    }
+}
+
+/** A scalar that holds an int */
+class IntType extends BaseField
+{
+    public function InitValue($value) : void
+    {
+        if ($value !== null) $value = (int)$value;
+        
+        parent::InitValue($value);
+    }
+    
+    public function GetDBValue() : ?int
+    {
+        return parent::GetDBValue();
+    }
+    
+    public function SetValue($value, bool $temp = false) : bool
+    {
+        if ($value !== null && !is_int($value))
+            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
+            
+        return parent::SetValue($value, $temp);
+    }
+}
+
+/** A scalar that holds a float */
+class FloatType extends BaseField
+{
+    public function InitValue($value) : void
+    {
+        if ($value !== null) $value = (float)$value;
+        
+        parent::InitValue($value);
+    }
+    
+    public function GetDBValue() : ?float
+    {
+        return parent::GetDBValue();
+    }
+    
+    public function SetValue($value, bool $temp = false) : bool
+    {
+        if ($value !== null && !is_float($value))
+            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
+        
+        return parent::SetValue($value, $temp);
+    }
+}
+
+class Date extends FloatType { }
+
 /** Stores a value that represents a thread-safe counter */
-class Counter extends Scalar
+class Counter extends IntType
 {
     /**
      * Constructs a new counter with a default value of zero
-     * @see Scalar::$mandatorySave
+     * @see BaseField::$mandatorySave
      */
     public function __construct(bool $mandatorySave = false)
     {
@@ -146,44 +241,55 @@ class Counter extends Scalar
     /** Gives the counter its value from the DB, or 0 if null */
     public function InitValue($value) : void
     {        
-        parent::InitValue((int)($value ?? 0));
+        parent::InitValue($value ?? 0);
     }        
     
     /** Increments the counter by the given delta */
     public function Delta(int $delta = 1) : bool 
     { 
         if ($delta === 0) return false;
+        
         $this->tempvalue += $delta; 
         $this->realvalue += $delta; 
         $this->delta += $delta; return true;
     }
         
     /** Returns the counter's delta as the value to be sent to the DB */
-    public function GetDBValue() { return $this->delta; }
+    public function GetDBValue() : int { return $this->delta; }
 }
+
+class Limit extends IntType { }
 
 /** Stores a value that is automatically JSON-encoded */
-class JSON extends Scalar
-{
-    /** Initializes the value of this field by decoding the given JSON string */
+class JSON extends BaseField
+{    
     public function InitValue($value) : void
     {
-        parent::InitValue($value);
+        if ($value !== null && !is_string($value))
+            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
+        
         if ($value !== null) $value = Utilities::JSONDecode($value);
-        $this->realvalue = $value; $this->tempvalue = $value;
+        
+        parent::InitValue($value);
     }
-    
+
     /** Returns this field's value as a JSON string for the DB */
-    public function GetDBValue() : string { return Utilities::JSONEncode($this->realvalue); }
+    public function GetDBValue() : string 
+    { 
+        return Utilities::JSONEncode($this->realvalue); 
+    }
 }
 
-/** Stores a reference to another BaseObject */
-class ObjectRef extends Scalar
+/** 
+ * Stores a reference to another BaseObject 
+ * @template T of BaseObject
+ */
+class ObjectRef extends StringType
 {
-    /** The object that is referenced */
+    /** @var ?T The object that is referenced */
     protected ?BaseObject $object;
     
-    /** The class of the object that is referenced */
+    /** @var class-string<T> The class of the object that is referenced */
     protected ?string $refclass; 
     
     /** The name of the field in the referenced object that cross-references our parent object */
@@ -197,6 +303,7 @@ class ObjectRef extends Scalar
 
     /**
      * Creates a new object reference field
+     * @param class-string<T> $refclass
      * @see ObjectRef::$refclass
      * @see ObjectRef::$reffield
      * @see ObjectRef::$refmany
@@ -224,7 +331,10 @@ class ObjectRef extends Scalar
     /** @see ObjectRef::$autoDelete */
     public function autoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
 
-    /** Returns the object referenced by this field, possibly loading it from the DB */
+    /** 
+     * Returns the object referenced by this field, possibly loading it from the DB 
+     * @return ?T
+     */
     public function GetObject() : ?BaseObject
     {        
         $id = $this->GetValue(); if ($id === null) return null;
@@ -238,6 +348,7 @@ class ObjectRef extends Scalar
     
     /** 
      * Sets the value of this field to reference the given object 
+     * @param ?T $object object to set
      * @return bool true if this field was modified
      */
     public function SetObject(?BaseObject $object) : bool
@@ -329,7 +440,7 @@ class ObjectPoly extends ObjectRef
     
     /**
      * Poly objects are serialized using their ID and class strings
-     * @see Scalar::GetDBValue()
+     * @see BaseField::GetDBValue()
      */
     public function GetDBValue() : ?string 
     { 
@@ -407,7 +518,11 @@ class ObjectRefs extends Counter
      */
     public function __construct(string $refclass, ?string $reffield = null, bool $parentPoly = false)
     {
-        $this->refclass = $refclass; $this->reffield = $reffield; $this->parentPoly = $parentPoly;
+        parent::__construct();
+        
+        $this->refclass = $refclass; 
+        $this->reffield = $reffield; 
+        $this->parentPoly = $parentPoly;
     }
     
     /** @return class-string<T> */

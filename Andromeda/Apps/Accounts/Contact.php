@@ -41,11 +41,11 @@ class Contact extends ContactBase
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'type' => null, // type of contact
-            'info' => null, // value of the contact
-            'valid' => new FieldTypes\Scalar(false), // true if it has been validated
-            'usefrom' => null, // true if this should be used as from
-            'public' => new FieldTypes\Scalar(false), // true if this should be searchable
+            'type' => new FieldTypes\IntType(), // type of contact
+            'info' => new FieldTypes\StringType(), // value of the contact
+            'valid' => new FieldTypes\BoolType(false), // true if it has been validated
+            'usefrom' => new FieldTypes\BoolType(), // true if this should be used as from
+            'public' => new FieldTypes\BoolType(false), // true if this should be searchable
             'obj_account' => new FieldTypes\ObjectRef(Account::class, 'contacts')
         ));
     }

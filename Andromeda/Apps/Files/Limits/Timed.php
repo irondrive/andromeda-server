@@ -34,10 +34,10 @@ abstract class Timed extends Base
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'objs_stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->autoDelete(),
-            'timeperiod' => null, // in seconds
-            'max_stats_age' => null,
-            'limit_pubdownloads' => null,
-            'limit_bandwidth' => null
+            'timeperiod' => new FieldTypes\IntType(), // in seconds
+            'max_stats_age' => new FieldTypes\IntType(),
+            'limit_pubdownloads' => new FieldTypes\Limit(),
+            'limit_bandwidth' => new FieldTypes\Limit()
         ));
     }
     

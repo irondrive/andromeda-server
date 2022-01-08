@@ -19,7 +19,7 @@ class Session extends KeySource
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'date_active' => null,
+            'date_active' => new FieldTypes\Date(null, true),
             'obj_account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
             'obj_client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
         ));

@@ -46,7 +46,7 @@ abstract class BaseObject
      * 
      * This template will be copied into the object when it is constructed.
      * If a field maps to null, a basic Scalar fieldtype will be used.
-     * @return array<string, ?FieldTypes\Scalar> array of FieldTypes indexed by field names
+     * @return array<string, FieldTypes\BaseField> array of FieldTypes indexed by field names
      */
     public abstract static function GetFieldTemplate() : array;
     
@@ -295,7 +295,7 @@ abstract class BaseObject
     /** Returns the given object's as a string if not null, else null */
     public static function toString(?self $obj) : ?string { return $obj ? (string)$obj : null; }
     
-    /** @var array<string, FieldTypes\Scalar> array of scalar properties indexed by their field names */
+    /** @var array<string, FieldTypes\BaseField> array of scalar properties indexed by their field names */
     protected array $scalars = array();
     
     /** @var array<string, FieldTypes\ObjectRef> array of properties, indexed by their field names, that reference another object */
@@ -751,11 +751,10 @@ abstract class BaseObject
         $this->database = $database;
 
         $fields = static::GetFieldTemplate();
-        $fields['id'] = new FieldTypes\Scalar();
+        $fields['id'] = new FieldTypes\StringType();
         
         foreach ($fields as $key=>$field)
         {
-            $field ??= new FieldTypes\Scalar();
             $field->Initialize($this->database, $this, $key);
             $fields[$key] = $field; $this->AddField($key, $field);            
         }
@@ -769,7 +768,7 @@ abstract class BaseObject
     }
     
     /** Adds the given field object to the correct internal array */
-    private function AddField(string $key, FieldTypes\Scalar $field)
+    private function AddField(string $key, FieldTypes\BaseField $field)
     {
         $key = $field->GetMyField();
 
@@ -841,7 +840,7 @@ abstract class BaseObject
     /** Deletes this object without sending to the DB */
     public function NotifyDBDeleted() : void { $this->dbDeleted = true; $this->Delete(); }
     
-    /** Deletes this object from the DB */
+    /** Deletes this object from the DB immediately */
     public function Delete() : void
     {
         foreach ($this->objects as $field=>$ref)
@@ -884,10 +883,9 @@ abstract class BaseObject
     {
         $obj = $database->GenerateObject(static::class); 
         
-        $obj->modified = true; $obj->created = true;
-        
-        foreach ($obj->objectrefs as $refs) $refs->InitValue(0);
-        
-        assert($obj instanceof static); return $obj;
+        $obj->modified = true; 
+        $obj->created = true;
+
+        return $obj;
     }
 }

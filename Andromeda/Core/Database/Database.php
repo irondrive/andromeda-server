@@ -407,9 +407,11 @@ class Database implements Transactions
             foreach ($data as $key=>$val)
             {
                 try { Utilities::JSONEncode(array($val)); }
-                catch (JSONEncodingException $e) { $val = "(base64)".base64_encode($val); }
+                catch (JSONEncodingException $e) { 
+                    $val = "(base64)".base64_encode($val); }
                 
-                if ($val !== null && is_string($val)) $val = str_replace('\\','\\\\',"'$val'");
+                if ($val !== null && is_string($val)) 
+                    $val = str_replace('\\','\\\\',"'$val'");
                 
                 $sql = Utilities::replace_first(":$key", ($val===null)?'NULL':$val, $sql);
             }

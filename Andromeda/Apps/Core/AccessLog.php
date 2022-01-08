@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
@@ -14,10 +15,10 @@ class AccessLog extends BaseAppLog
     public static function GetFieldTemplate() : array
     {
         return array(
-            'admin' => null,
-            'account' => null, // unused
-            'sudouser' => null, // unused
-            'client' => null // unused
+            'admin' => new FieldTypes\BoolType(),
+            'account' => new FieldTypes\BoolType(), // unused
+            'sudouser' => new FieldTypes\BoolType(), // unused
+            'client' => new FieldTypes\BoolType() // unused
         );
     }
     

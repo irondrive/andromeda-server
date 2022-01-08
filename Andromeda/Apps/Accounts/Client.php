@@ -26,11 +26,11 @@ class Client extends AuthObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'name' => null,
-            'lastaddr' => null,
-            'useragent' => null,
-            'date_loggedon' => null,            
-            'date_active' => new FieldTypes\Scalar(null, true),
+            'name' => new FieldTypes\StringType(),
+            'lastaddr' => new FieldTypes\StringType(),
+            'useragent' => new FieldTypes\StringType(),
+            'date_loggedon' => new FieldTypes\Date(),            
+            'date_active' => new FieldTypes\Date(null, true),
             'obj_account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
             'obj_session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->autoDelete()
         ));

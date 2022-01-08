@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -38,11 +39,11 @@ class SFTP extends SFTPBase2
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'hostname' => null,
-            'port' => null,
-            'hostkey' => null,
-            'privkey' => null, // private key material for auth
-            'keypass' => null, // key for unlocking the private key
+            'hostname' => new FieldTypes\StringType(),
+            'port' => new FieldTypes\IntType(),
+            'hostkey' => new FieldTypes\StringType(),
+            'privkey' => new FieldTypes\StringType(), // private key material for auth
+            'keypass' => new FieldTypes\StringType(), // key for unlocking the private key
         ));
     }
     

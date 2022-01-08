@@ -15,7 +15,7 @@ class UsedToken extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'code' => null,         
+            'code' => new FieldTypes\StringType(),         
             'obj_twofactor' => new FieldTypes\ObjectRef(TwoFactor::class, 'usedtokens')
         ));
     }
@@ -52,11 +52,11 @@ class TwoFactor extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'comment' => null,
-            'secret' => null,
-            'nonce' => null,
-            'valid' => null,
-            'date_used' => null,
+            'comment' => new FieldTypes\StringType(),
+            'secret' => new FieldTypes\StringType(),
+            'nonce' => new FieldTypes\StringType(),
+            'valid' => new FieldTypes\BoolType(),
+            'date_used' => new FieldTypes\Date(),
             'obj_account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
             'objs_usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->autoDelete()
         ));

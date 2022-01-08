@@ -23,7 +23,7 @@ class File extends Item
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'size' => null,   
+            'size' => new FieldTypes\IntType(),   
             'obj_parent' => new FieldTypes\ObjectRef(Folder::class, 'files')
         ));
     }

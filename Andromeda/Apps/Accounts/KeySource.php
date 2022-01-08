@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey, DecryptionFailedException};
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/Apps/Accounts/Account.php");
@@ -16,9 +17,9 @@ abstract class KeySource extends AuthObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'master_key' => null,
-            'master_nonce' => null,
-            'master_salt' => null
+            'master_key' => new FieldTypes\StringType(),
+            'master_nonce' => new FieldTypes\StringType(),
+            'master_salt' => new FieldTypes\StringType()
         ));
     }
 

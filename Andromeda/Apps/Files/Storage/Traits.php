@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -24,7 +25,8 @@ trait UserPass
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), self::GetFieldCryptFieldTemplate(), array(
-            'username' => null, 'password' => null,
+            'username' => new FieldTypes\StringType(), 
+            'password' => new FieldTypes\StringType(),
         ));
     }
     
@@ -117,7 +119,7 @@ trait BasePath
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'path' => null
+            'path' => new FieldTypes\StringType()
         ));
     }
     

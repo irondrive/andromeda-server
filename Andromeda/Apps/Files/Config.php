@@ -13,11 +13,11 @@ class Config extends BaseConfig
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'apiurl' => null,
-            'rwchunksize' => new FieldTypes\Scalar(4*1024*1024), // 4M
-            'crchunksize' => new FieldTypes\Scalar(1*1024*1024), // 1M
-            'upload_maxsize' => null,
-            'timedstats' => new FieldTypes\Scalar(false)
+            'apiurl' => new FieldTypes\StringType(),
+            'rwchunksize' => new FieldTypes\IntType(4*1024*1024), // 4M
+            'crchunksize' => new FieldTypes\IntType(1*1024*1024), // 1M
+            'upload_maxsize' => new FieldTypes\IntType(),
+            'timedstats' => new FieldTypes\BoolType(false)
         ));
     }
     

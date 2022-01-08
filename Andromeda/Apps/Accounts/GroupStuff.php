@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
 require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
@@ -76,20 +77,20 @@ abstract class AuthEntity extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'admin' => null, // true if the account is an admin
-            'disabled' => null, // > 0 if the account is disabled
-            'forcetf' => null, // true if two-factor is required to create sessions (not just clients)
-            'allowcrypto' => null, // true if server-side account crypto is enabled
-            'accountsearch' => null, // whether looking up accounts by name is allowed
-            'groupsearch' => null, // whether looking up groups by name is allowed
-            'userdelete' => null, // whether the user is allowed to delete their account
-            'limit_sessions' => null, // maximum number of sessions for the account
-            'limit_contacts' => null, // maximum number of contacts for the account
-            'limit_recoverykeys' => null, // maximum number of recovery keys for the account
-            'session_timeout' => null, // server-side timeout - max time for a session to be inactive
-            'client_timeout' => null, // server-side timeout - max time for a client to be inactive
-            'max_password_age' => null, // max time since the account's password changed
-            'date_modified' => null // last timestamp these properties were modified
+            'admin' => new FieldTypes\BoolType(), // true if the account is an admin
+            'disabled' => new FieldTypes\BoolType(), // > 0 if the account is disabled
+            'forcetf' => new FieldTypes\BoolType(), // true if two-factor is required to create sessions (not just clients)
+            'allowcrypto' => new FieldTypes\BoolType(), // true if server-side account crypto is enabled
+            'accountsearch' => new FieldTypes\IntType(), // whether looking up accounts by name is allowed
+            'groupsearch' => new FieldTypes\IntType(), // whether looking up groups by name is allowed
+            'userdelete' => new FieldTypes\BoolType(), // whether the user is allowed to delete their account
+            'limit_sessions' => new FieldTypes\Limit(), // maximum number of sessions for the account
+            'limit_contacts' => new FieldTypes\Limit(), // maximum number of contacts for the account
+            'limit_recoverykeys' => new FieldTypes\Limit(), // maximum number of recovery keys for the account
+            'session_timeout' => new FieldTypes\IntType(), // server-side timeout - max time for a session to be inactive
+            'client_timeout' => new FieldTypes\IntType(), // server-side timeout - max time for a client to be inactive
+            'max_password_age' => new FieldTypes\IntType(), // max time since the account's password changed
+            'date_modified' => new FieldTypes\Date() // last timestamp these properties were modified
         ));
     }
     

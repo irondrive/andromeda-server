@@ -20,11 +20,11 @@ class RequestLog extends BaseLog
     {
         return array(
             'objs_actions' => new FieldTypes\ObjectRefs(ActionLog::class, 'request'),
-            'time' => null,
-            'addr' => null,
-            'agent' => null,
-            'errcode' => null,
-            'errtext' => null,
+            'time' => new FieldTypes\FloatType(),
+            'addr' => new FieldTypes\StringType(),
+            'agent' => new FieldTypes\StringType(),
+            'errcode' => new FieldTypes\IntType(),
+            'errtext' => new FieldTypes\StringType(),
         );
     }
     
@@ -118,7 +118,7 @@ class RequestLog extends BaseLog
      */
     public function GetClientObject() : array
     {
-        $retval = array_map(function(FieldTypes\Scalar $e){ 
+        $retval = array_map(function(FieldTypes\BaseField $e){ 
             return $e->GetValue(); }, $this->scalars);
         
         if (!$retval['errcode']) unset($retval['errcode']);

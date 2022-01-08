@@ -6,6 +6,7 @@ require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
@@ -49,14 +50,14 @@ class S3 extends S3Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), self::GetFieldCryptFieldTemplate(), array(
-            'endpoint' => null,
-            'path_style' => null,
-            'port' => null,
-            'usetls' => null,
-            'region' => null,
-            'bucket' => null,
-            'accesskey' => null,
-            'secretkey' => null
+            'endpoint' => new FieldTypes\StringType(),
+            'path_style' => new FieldTypes\BoolType(),
+            'port' => new FieldTypes\IntType(),
+            'usetls' => new FieldTypes\BoolType(),
+            'region' => new FieldTypes\StringType(),
+            'bucket' => new FieldTypes\StringType(),
+            'accesskey' => new FieldTypes\StringType(),
+            'secretkey' => new FieldTypes\StringType()
         ));
     }
     

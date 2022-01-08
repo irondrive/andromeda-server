@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -18,9 +19,9 @@ class FTP extends External
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'implssl' => null, // true to use implicit SSL, false for explicit or none
-            'hostname' => null,
-            'port' => null
+            'implssl' => new FieldTypes\BoolType(), // true to use implicit SSL, false for explicit or none
+            'hostname' => new FieldTypes\StringType(),
+            'port' => new FieldTypes\IntType()
         ));
     }    
     
