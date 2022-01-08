@@ -27,8 +27,8 @@ abstract class Base extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_object' => new FieldTypes\ObjectPoly(StandardObject::class),
-            'track_items' => null,
-            'track_dlstats' => null
+            'track_items' => new FieldTypes\IntType(),
+            'track_dlstats' => new FieldTypes\IntType()
         ));
     }
 

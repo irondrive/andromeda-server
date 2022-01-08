@@ -17,8 +17,8 @@ class Comment extends StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_owner'  => new FieldTypes\ObjectRef(Account::class),
             'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
-            'comment' => null,
-            'date_modified' => null
+            'comment' => new FieldTypes\StringType(),
+            'date_modified' => new FieldTypes\Date()
         ));
     }
     

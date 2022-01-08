@@ -17,7 +17,7 @@ class Tag extends StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),
             'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'tags'),
-            'tag' => null // the text value of the tag
+            'tag' => new FieldTypes\StringType() // the text value of the tag
         ));
     }
     

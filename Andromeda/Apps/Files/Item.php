@@ -38,10 +38,10 @@ abstract class Item extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'name' => null,
-            'description' => null,
-            'date_modified' => new FieldTypes\Scalar(null, true),
-            'date_accessed' => new FieldTypes\Scalar(null, true),         
+            'name' => new FieldTypes\StringType(),
+            'description' => new FieldTypes\StringType(),
+            'date_modified' => new FieldTypes\Date(null),
+            'date_accessed' => new FieldTypes\Date(null, true),         
             'count_bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
             'count_pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),

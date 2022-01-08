@@ -64,13 +64,13 @@ class Emailer extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'type' => null,
+            'type' => new FieldTypes\IntType(),
             'hosts' => new FieldTypes\JSON(), // array of hosts to try, in-order
-            'username' => null,
-            'password' => null,
-            'from_address' => null,
-            'from_name' => null,
-            'reply' => null // if true, add a Reply-To header
+            'username' => new FieldTypes\StringType(),
+            'password' => new FieldTypes\StringType(),
+            'from_address' => new FieldTypes\StringType(),
+            'from_name' => new FieldTypes\StringType(),
+            'reply' => new FieldTypes\BoolType() // if true, add a Reply-To header
         ));
     }    
     

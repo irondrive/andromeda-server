@@ -19,9 +19,9 @@ class Group extends AuthEntity
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'name' => null,
-            'comment' => null,
-            'priority' => new FieldTypes\Scalar(0),       
+            'name' => new FieldTypes\StringType(),
+            'comment' => new FieldTypes\StringType(),
+            'priority' => new FieldTypes\IntType(0),       
             'objs_accounts' => new FieldTypes\ObjectJoin(Account::class, GroupJoin::class, 'groups')
         ));
     }

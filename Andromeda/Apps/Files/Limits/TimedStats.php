@@ -26,8 +26,8 @@ class TimedStats extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_limitobj' => new FieldTypes\ObjectPoly(Timed::class, 'stats'),
-            'date_timestart' => null,
-            'iscurrent' => null,
+            'date_timestart' => new FieldTypes\Date(),
+            'iscurrent' => new FieldTypes\BoolType(),
             'count_size' => new FieldTypes\Counter(),
             'count_items' => new FieldTypes\Counter(),
             'count_shares' => new FieldTypes\Counter(),

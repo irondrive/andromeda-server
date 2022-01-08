@@ -19,7 +19,7 @@ abstract class AuthAccessLog extends BaseAppLog
     public static function GetFieldTemplate() : array
     {
         return array(
-            'admin' => null,
+            'admin' => new FieldTypes\BoolType(),
             'obj_account' => new FieldTypes\ObjectRef(Account::class),
             'obj_sudouser' => new FieldTypes\ObjectRef(Account::class),
             'obj_client' => new FieldTypes\ObjectRef(Client::class)

@@ -57,13 +57,13 @@ class FSManager extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'name' => null, // name of the FS, null if it's the default
-            'type' => null, // enum of the type of FS impl
-            'readonly' => null,
+            'name' => new FieldTypes\StringType(), // name of the FS, null if it's the default
+            'type' => new FieldTypes\IntType(), // enum of the type of FS impl
+            'readonly' => new FieldTypes\BoolType(),
             'obj_storage' => new FieldTypes\ObjectPoly(Storage::class),
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),
-            'crypto_masterkey' => null,
-            'crypto_chunksize' => null
+            'crypto_masterkey' => new FieldTypes\StringType(),
+            'crypto_chunksize' => new FieldTypes\StringType()
         ));
     }
     

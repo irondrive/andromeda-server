@@ -22,7 +22,7 @@ class Like extends StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),
             'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'likes'),
-            'value' => null // true if this is a like, false if a dislike
+            'value' => new FieldTypes\BoolType() // true if this is a like, false if a dislike
         ));
     }
 

@@ -21,16 +21,16 @@ class ErrorLog extends BaseObject
     public static function GetFieldTemplate() : array
     {
         return array(
-            'time' => null,     // time of the request
-            'addr' => null,     // user address for the request
-            'agent' => null,    // user agent for the request
-            'app' => null,      // command app
-            'action' => null,   // command action
-            'code' => null,     // error code
-            'file' => null,     // the file with the error
-            'message' => null,  // the error message
-            'trace_basic' => new FieldTypes\JSON(),  // a basic backtrace
-            'trace_full' => new FieldTypes\JSON(),   // full backtrace including all arguments
+            'time' => new FieldTypes\FloatType(),     // time of the request
+            'addr' => new FieldTypes\StringType(),    // user address for the request
+            'agent' => new FieldTypes\StringType(),   // user agent for the request
+            'app' => new FieldTypes\StringType(),     // command app
+            'action' => new FieldTypes\StringType(),  // command action
+            'code' => new FieldTypes\StringType(),    // error code
+            'file' => new FieldTypes\StringType(),    // the file with the error
+            'message' => new FieldTypes\StringType(), // the error message
+            'trace_basic' => new FieldTypes\JSON(),   // a basic backtrace
+            'trace_full' => new FieldTypes\JSON(),    // full backtrace including all arguments
             'objects' => new FieldTypes\JSON(),  // objects in memory in the database
             'queries' => new FieldTypes\JSON(),  // db queries that were performed
             'params' => new FieldTypes\JSON(),   // all client input parameters
@@ -94,7 +94,7 @@ class ErrorLog extends BaseObject
     /** Returns the values of all fields of this error log entry */
     public function GetClientObject() : array 
     { 
-        return array_map(function(FieldTypes\Scalar $e){ return $e->GetValue(); }, $this->scalars);
+        return array_map(function(FieldTypes\BaseField $e){ return $e->GetValue(); }, $this->scalars);
     }
     
     /**

@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -24,9 +25,9 @@ class LDAP extends External
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'hostname' => null,
-            'secure' => null,    // true to use LDAP-SSL
-            'userprefix' => null // LDAP prefix for user lookup
+            'hostname' => new FieldTypes\StringType(),
+            'secure' => new FieldTypes\BoolType(),    // true to use LDAP-SSL
+            'userprefix' => new FieldTypes\StringType() // LDAP prefix for user lookup
         ));
     }
     

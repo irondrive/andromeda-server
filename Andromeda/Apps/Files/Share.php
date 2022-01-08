@@ -44,18 +44,18 @@ class Share extends AuthObject
             'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'shares'), // item being shared
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),    // the account that made the share
             'obj_dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
-            'label' => null, // user-supplied label
-            'password' => null, // possible password set on the share
-            'date_accessed' => new FieldTypes\Scalar(null, true),
+            'label' => new FieldTypes\StringType(), // user-supplied label
+            'password' => new FieldTypes\StringType(0), // possible password set on the share
+            'date_accessed' => new FieldTypes\Date(null, true),
             'count_accessed' => new FieldTypes\Counter(), // the count of accesses
-            'limit_accessed' => null,     // the maximum number of accesses
-            'date_expires' => null,   // the timestamp past which the share is not valid
-            'read' => new FieldTypes\Scalar(true),
-            'upload' => new FieldTypes\Scalar(false),
-            'modify' => new FieldTypes\Scalar(false),
-            'social' => new FieldTypes\Scalar(true),
-            'reshare' => new FieldTypes\Scalar(false),
-            'keepowner' => new FieldTypes\Scalar(true)
+            'limit_accessed' => new FieldTypes\Limit(),     // the maximum number of accesses
+            'date_expires' => new FieldTypes\Date(),   // the timestamp past which the share is not valid
+            'read' => new FieldTypes\BoolType(true),
+            'upload' => new FieldTypes\BoolType(false),
+            'modify' => new FieldTypes\BoolType(false),
+            'social' => new FieldTypes\BoolType(true),
+            'reshare' => new FieldTypes\BoolType(false),
+            'keepowner' => new FieldTypes\BoolType(true)
         ));
     }
     
