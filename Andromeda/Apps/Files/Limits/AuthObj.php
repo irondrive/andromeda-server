@@ -9,7 +9,7 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/Apps/Files/Limits/Total.php");
 require_once(ROOT."/Apps/Files/Limits/Timed.php");
 
-/** GroupTotal and AccountTotal have some extra common features not applicable to filesystems */
+/** GroupTotal and AccountTotal have some extra common config not applicable to filesystems */
 abstract class AuthEntityTotal extends Total
 {
     public static function GetDBClass() : string { return self::class; }
@@ -17,8 +17,8 @@ abstract class AuthEntityTotal extends Total
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'features__emailshare' => null,
-            'features__userstorage' => null
+            'emailshare' => null,
+            'userstorage' => null
         ));
     }
 

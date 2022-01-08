@@ -46,7 +46,7 @@ trait FilesystemCommon
     
     /**
      * @param bool $full if false, don't show track_items/track_dlstats
-     * @return array `features:{track_items:bool,track_dlstats:bool}`
+     * @return array `config:{track_items:bool,track_dlstats:bool}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
@@ -56,8 +56,8 @@ trait FilesystemCommon
         
         if ($full)
         {
-            $data['features']['track_items'] = $this->GetFeatureBool('track_items');
-            $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
+            $data['config']['track_items'] = $this->GetFeatureBool('track_items');
+            $data['config']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
         }
         
         return $data;

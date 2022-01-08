@@ -15,13 +15,13 @@ class CommitMetrics extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'commits'),
-            'stats__db_reads' => null,
-            'stats__db_read_time' => null,
-            'stats__db_writes' => null,
-            'stats__db_write_time' => null,
-            'stats__code_time' => null,
-            'stats__total_time' => null
+            'obj_request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'commits'),
+            'stats_db_reads' => null,
+            'stats_db_read_time' => null,
+            'stats_db_writes' => null,
+            'stats_db_write_time' => null,
+            'stats_code_time' => null,
+            'stats_total_time' => null
         ));
     }
     
@@ -37,7 +37,7 @@ class CommitMetrics extends StandardObject
         $obj = static::BaseCreate($database)->SetObject('request',$request);
 
         foreach ($stats->getStats() as $statkey=>$statval)
-            $obj->SetScalar("stats__$statkey", $statval);            
+            $obj->SetScalar("stats_$statkey", $statval);            
     }
     
     /**

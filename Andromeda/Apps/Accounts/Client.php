@@ -29,10 +29,10 @@ class Client extends AuthObject
             'name' => null,
             'lastaddr' => null,
             'useragent' => null,
-            'dates__loggedon' => null,            
-            'dates__active' => new FieldTypes\Scalar(null, true),
-            'account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
-            'session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->autoDelete()
+            'date_loggedon' => null,            
+            'date_active' => new FieldTypes\Scalar(null, true),
+            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'clients'),
+            'obj_session' => (new FieldTypes\ObjectRef(Session::class, 'client', false))->autoDelete()
         ));
     }
     
@@ -74,7 +74,7 @@ class Client extends AuthObject
         $mintime = Main::GetInstance()->GetTime() - $maxage;
         
         $q = new QueryBuilder(); $q->Where($q->And(
-            $q->Equals('account',$account->ID()),$q->LessThan('dates__active', $mintime)));
+            $q->Equals('obj_account',$account->ID()),$q->LessThan('date_active', $mintime)));
         
         static::DeleteByQuery($database, $q);
     }

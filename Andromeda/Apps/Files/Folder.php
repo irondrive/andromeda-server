@@ -31,20 +31,20 @@ abstract class Folder extends Item
     /** @return class-string<self> */
     public static function GetObjClass(array $row) : string 
     {
-        return $row['parent'] === null ? RootFolder::class : SubFolder::class;
+        return $row['obj_parent'] === null ? RootFolder::class : SubFolder::class;
     }
     
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'counters__pubvisits' => new FieldTypes\Counter(), // number of public visits to this folder
-            'counters__size' => new FieldTypes\Counter(),      // total size of the folder and all contents
-            'parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
-            'files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
-            'folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
-            'counters__subfiles' => new FieldTypes\Counter(),   // total number of subfiles (recursive)
-            'counters__subfolders' => new FieldTypes\Counter(), // total number of subfolders (recursive)
-            'counters__subshares' => new FieldTypes\Counter()   // total number of shares (recursive)
+            'count_pubvisits' => new FieldTypes\Counter(), // number of public visits to this folder
+            'count_size' => new FieldTypes\Counter(),      // total size of the folder and all contents
+            'obj_parent'    => new FieldTypes\ObjectRef(Folder::class, 'folders'),
+            'objs_files'     => new FieldTypes\ObjectRefs(File::class, 'parent'),
+            'objs_folders'   => new FieldTypes\ObjectRefs(Folder::class, 'parent'),
+            'count_subfiles' => new FieldTypes\Counter(),   // total number of subfiles (recursive)
+            'count_subfolders' => new FieldTypes\Counter(), // total number of subfolders (recursive)
+            'count_subshares' => new FieldTypes\Counter()   // total number of shares (recursive)
         ));
     }
 
@@ -225,10 +225,10 @@ abstract class Folder extends Item
     {
         $q = new QueryBuilder();
         
-        $q->SelfJoinWhere($database, Folder::class, 'parent', 'id', '_parent');
+        $q->SelfJoinWhere($database, Folder::class, 'obj_parent', 'id', '_parent');
         
-        $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.owner', $account->ID()),
-            $q->Equals($database->GetClassTableName(Folder::class).'.owner', $account->ID()));
+        $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.obj_owner', $account->ID()),
+            $q->Equals($database->GetClassTableName(Folder::class).'.obj_owner', $account->ID()));
 
         return array_filter(static::LoadByQuery($database, $q->Where($w)), 
             function(Folder $folder){ return !$folder->isWorldAccess(); });

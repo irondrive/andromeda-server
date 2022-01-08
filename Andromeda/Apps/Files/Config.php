@@ -17,7 +17,7 @@ class Config extends BaseConfig
             'rwchunksize' => new FieldTypes\Scalar(4*1024*1024), // 4M
             'crchunksize' => new FieldTypes\Scalar(1*1024*1024), // 1M
             'upload_maxsize' => null,
-            'features__timedstats' => new FieldTypes\Scalar(false)
+            'timedstats' => new FieldTypes\Scalar(false)
         ));
     }
     
@@ -60,7 +60,7 @@ class Config extends BaseConfig
      * @param bool $admin if true, show admin-only values
      * @return array `{uploadmax:{bytes:int, files:int}}` \
         if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, \
-            apiurl:?string, features:{timedstats:bool}}`
+            apiurl:?string, config:{timedstats:bool}}`
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -85,7 +85,7 @@ class Config extends BaseConfig
                 'rwchunksize' => $this->GetRWChunkSize(),
                 'crchunksize' => $this->GetCryptoChunkSize(),
                 'upload_maxsize' => $this->TryGetScalar('upload_maxsize'),
-                'features' => array(
+                'config' => array(
                     'timedstats'=>$this->GetAllowTimedStats()
                 )
             ));

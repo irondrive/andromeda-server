@@ -16,11 +16,11 @@ class Config extends BaseConfig
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'features__createaccount' => new FieldTypes\Scalar(0),
-            'features__requirecontact' => new FieldTypes\Scalar(0),
-            'features__usernameiscontact' => new FieldTypes\Scalar(false),
-            'default_group' => new FieldTypes\ObjectRef(Group::class),
-            'default_auth' => new FieldTypes\ObjectRef(Auth\Manager::class)
+            'createaccount' => new FieldTypes\Scalar(0),
+            'requirecontact' => new FieldTypes\Scalar(0),
+            'usernameiscontact' => new FieldTypes\Scalar(false),
+            'obj_default_group' => new FieldTypes\ObjectRef(Group::class),
+            'obj_default_auth' => new FieldTypes\ObjectRef(Auth\Manager::class)
         ));
     }
     
@@ -126,13 +126,13 @@ class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{features:{createaccount:enum, usernameiscontact:bool, requirecontact:enum}}` \
+     * @return array `{config:{createaccount:enum, usernameiscontact:bool, requirecontact:enum}}` \
          if admin, add: `{default_group:?id}`
      */
     public function GetClientObject(bool $admin) : array
     {
         $data = array(
-            'features' => array(
+            'config' => array(
                 'usernameiscontact' => $this->GetUsernameIsContact(),
                 'createaccount' => array_flip(self::CREATE_TYPES)[$this->GetAllowCreateAccount()],
                 'requirecontact' => array_flip(self::CONTACT_TYPES)[$this->GetRequireContact()]

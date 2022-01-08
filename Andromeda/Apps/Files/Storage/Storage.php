@@ -56,8 +56,8 @@ abstract class Storage extends StandardObject implements Transactions
     {
         $q = new QueryBuilder();
         
-        $q->Join($database, FSManager::class, 'id', static::class, 'filesystem');
-        $w = $q->Equals($database->GetClassTableName(FSManager::class).'.owner', $account->ID());
+        $q->Join($database, FSManager::class, 'id', static::class, 'obj_filesystem');
+        $w = $q->Equals($database->GetClassTableName(FSManager::class).'.obj_owner', $account->ID());
         
         return static::LoadByQuery($database, $q->Where($w));
     }
@@ -65,7 +65,7 @@ abstract class Storage extends StandardObject implements Transactions
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'filesystem' => new FieldTypes\ObjectRef(FSManager::class)
+            'obj_filesystem' => new FieldTypes\ObjectRef(FSManager::class)
         ));
     }
     

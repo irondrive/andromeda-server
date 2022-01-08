@@ -52,16 +52,16 @@ class Account extends AuthEntity
             'master_nonce' => null,
             'master_salt' => null,
             'password' => null,
-            'dates__passwordset' => null,
-            'dates__loggedon' => null,
-            'dates__active' => new FieldTypes\Scalar(null, true),
-            'authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
-            'sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(),
-            'contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
-            'clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
-            'twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->autoDelete(),
-            'recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->autoDelete(),
-            'groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
+            'date_passwordset' => null,
+            'date_loggedon' => null,
+            'date_active' => new FieldTypes\Scalar(null, true),
+            'obj_authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
+            'objs_sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(),
+            'objs_contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
+            'objs_clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
+            'objs_twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->autoDelete(),
+            'objs_recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->autoDelete(),
+            'objs_groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
         ));
     }
     
@@ -80,16 +80,16 @@ class Account extends AuthEntity
         'session_timeout' => null,
         'client_timeout' => null,
         'max_password_age' => null,
-        'features__admin' => false,
-        'features__disabled' => false,
-        'features__forcetf' => false,
-        'features__allowcrypto' => true,
-        'features__accountsearch' => self::DEFAULT_SEARCH_MAX,
-        'features__groupsearch' => self::DEFAULT_SEARCH_MAX,
-        'features__userdelete' => true,
-        'counters_limits__sessions' => null,
-        'counters_limits__contacts' => null,
-        'counters_limits__recoverykeys' => null
+        'admin' => false,
+        'disabled' => false,
+        'forcetf' => false,
+        'allowcrypto' => true,
+        'accountsearch' => self::DEFAULT_SEARCH_MAX,
+        'groupsearch' => self::DEFAULT_SEARCH_MAX,
+        'userdelete' => true,
+        'limit_sessions' => null,
+        'limit_contacts' => null,
+        'limit_recoverykeys' => null
     ); }
     
     /** Returns the account's username */
@@ -218,25 +218,25 @@ class Account extends AuthEntity
     public function HasTwoFactor() : bool       { return $this->CountObjectRefs('twofactors') > 0; }
     
     /** True if two factor should be required to create a session even for a pre-existing client */
-    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeatureBool('forcetf') ?? self::GetInheritedFields()['features__forcetf']; }
+    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeatureBool('forcetf') ?? self::GetInheritedFields()['forcetf']; }
     
     /** True if account-based server-side crypto is allowed */
-    public function GetAllowCrypto() : bool     { return $this->TryGetFeatureBool('allowcrypto') ?? self::GetInheritedFields()['features__allowcrypto']; }
+    public function GetAllowCrypto() : bool     { return $this->TryGetFeatureBool('allowcrypto') ?? self::GetInheritedFields()['allowcrypto']; }
     
     /** Returns 0 if account search is disabled, or N if up to N matches are allowed */
-    public function GetAllowAccountSearch() : int { return $this->TryGetFeatureInt('accountsearch') ?? self::GetInheritedFields()['features__accountsearch']; }
+    public function GetAllowAccountSearch() : int { return $this->TryGetFeatureInt('accountsearch') ?? self::GetInheritedFields()['accountsearch']; }
 
     /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
-    public function GetAllowGroupSearch() : int { return $this->TryGetFeatureInt('groupsearch') ?? self::GetInheritedFields()['features__groupsearch']; }
+    public function GetAllowGroupSearch() : int { return $this->TryGetFeatureInt('groupsearch') ?? self::GetInheritedFields()['groupsearch']; }
     
     /** Returns true if the user is allowed to delete their account */
-    public function GetAllowUserDelete() : bool { return $this->TryGetFeatureBool('userdelete') ?? self::GetInheritedFields()['features__userdelete']; }
+    public function GetAllowUserDelete() : bool { return $this->TryGetFeatureBool('userdelete') ?? self::GetInheritedFields()['userdelete']; }
     
     /** True if this account has administrator privileges */
-    public function isAdmin() : bool            { return $this->TryGetFeatureBool('admin') ?? self::GetInheritedFields()['features__admin']; }
+    public function isAdmin() : bool            { return $this->TryGetFeatureBool('admin') ?? self::GetInheritedFields()['admin']; }
     
     /** True if this account is enabled */
-    public function isEnabled() : bool       { return !(bool)($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['features__disabled']); }
+    public function isEnabled() : bool       { return !(bool)($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['disabled']); }
     
     /** Sets this account's admin-status to the given value */
     public function setAdmin(?bool $val) : self { return $this->SetFeatureBool('admin', $val); }
@@ -294,7 +294,7 @@ class Account extends AuthEntity
      */
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
     {
-        return static::TryLoadUniqueByKey($database, 'username', $username);
+        return static::TryLoadByUniqueKey($database, 'username', $username);
     }
     
     /**
@@ -459,11 +459,11 @@ class Account extends AuthEntity
      * @return array `{id:id,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:?float,loggedon:?float,active:?float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
-            limits:{sessions:?int,contacts:?int,recoverykeys:?int}, features:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
+            limits:{sessions:?int,contacts:?int,recoverykeys:?int}, config:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
                 accountsearch:int, groupsearch:int, userdelete:bool},session_timeout:?int,client_timeout:?int,max_password_age:?int} \
         if OBJECT_FULL, add: {contacts:[id:Contact], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:"id:class"], dates:{modified:?float},
-            features_from:[string:"id:class"], session_timeout_from:"id:class", client_timeout_from:"id:class", max_password_age_from:"id:class"}
+            config_from:[string:"id:class"], session_timeout_from:"id:class", client_timeout_from:"id:class", max_password_age_from:"id:class"}
      * @see Contact::GetClientObject()
      * @see TwoFactor::GetClientObject()
      * @see Client::GetClientObject()
@@ -490,7 +490,7 @@ class Account extends AuthEntity
                     'loggedon' => $this->getLoggedonDate(),
                     'active' => $this->getActiveDate()
                 ),
-                'features' => array_merge(
+                'config' => array_merge(
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
                         array('admin','forcetf','allowcrypto','userdelete')),
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },
@@ -529,11 +529,11 @@ class Account extends AuthEntity
                 'session_timeout_from' => static::toString($this->TryGetInheritsScalarFrom('session_timeout')),
                 'max_password_age_from' => static::toString($this->TryGetInheritsScalarFrom('max_password_age')),
                 
-                'features_from' => Utilities::array_map_keys(function($p){ 
-                    return static::toString($this->TryGetInheritsScalarFrom("features__$p")); }, array_keys($data['features'])),
+                'config_from' => Utilities::array_map_keys(function($p){ 
+                    return static::toString($this->TryGetInheritsScalarFrom("$p")); }, array_keys($data['config'])),
                     
                 'limits_from' => Utilities::array_map_keys(function($p){ 
-                    return static::toString($this->TryGetInheritsScalarFrom("counters_limits__$p")); }, array_keys($data['limits'])),
+                    return static::toString($this->TryGetInheritsScalarFrom("limit_$p")); }, array_keys($data['limits'])),
             ));
             
             $data['dates']['modified'] = $this->TryGetDate('modified');

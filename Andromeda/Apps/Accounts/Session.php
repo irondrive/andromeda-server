@@ -19,9 +19,9 @@ class Session extends KeySource
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'dates__active' => null,
-            'account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
-            'client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
+            'date_active' => null,
+            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'sessions'),
+            'obj_client' => new FieldTypes\ObjectRef(Client::class, 'session', false)
         ));
     }
     
@@ -37,7 +37,7 @@ class Session extends KeySource
     /** Deletes all sessions for the given account */
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
     {
-        $q = new QueryBuilder(); $w = $q->Equals('account',$account->ID());
+        $q = new QueryBuilder(); $w = $q->Equals('obj_account',$account->ID());
         
         static::DeleteByQuery($database, $q->Where($w));
     }
@@ -45,7 +45,7 @@ class Session extends KeySource
     /** Deletes all sessions for the given account except the given session */
     public static function DeleteByAccountExcept(ObjectDatabase $database, Account $account, Session $session) : void
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->NotEquals('id',$session->ID()));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->NotEquals('id',$session->ID()));
         
         static::DeleteByQuery($database, $q->Where($w));
     }
@@ -73,7 +73,7 @@ class Session extends KeySource
         $mintime = Main::GetInstance()->GetTime() - $maxage;
         
         $q = new QueryBuilder(); $q->Where($q->And(
-            $q->Equals('account',$account->ID()),$q->LessThan('dates__active', $mintime)));
+            $q->Equals('obj_account',$account->ID()),$q->LessThan('date_active', $mintime)));
         
         static::DeleteByQuery($database, $q);
     }

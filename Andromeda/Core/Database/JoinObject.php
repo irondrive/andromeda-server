@@ -29,8 +29,8 @@ abstract class JoinObject extends StandardObject
         $lfield = static::GetLeftField(); $rfield = static::GetRightField();
         
         return array_merge(parent::GetFieldTemplate(), array(
-            $lfield => new FieldTypes\ObjectRef(static::GetLeftClass(), $rfield),
-            $rfield => new FieldTypes\ObjectRef(static::GetRightClass(), $lfield)
+            "obj_$lfield" => new FieldTypes\ObjectRef(static::GetLeftClass(), $rfield),
+            "obj_$rfield" => new FieldTypes\ObjectRef(static::GetRightClass(), $lfield)
         ));
     }
     

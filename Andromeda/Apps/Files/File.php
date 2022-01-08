@@ -24,7 +24,7 @@ class File extends Item
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'size' => null,   
-            'parent' => new FieldTypes\ObjectRef(Folder::class, 'files')
+            'obj_parent' => new FieldTypes\ObjectRef(Folder::class, 'files')
         ));
     }
     
@@ -318,9 +318,9 @@ class File extends Item
     {
         $q = new QueryBuilder();
         
-        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
-            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
-            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
+        $q->Join($database, Folder::class, 'id', static::class, 'obj_parent')->Where($q->And(
+            $q->Equals($database->GetClassTableName(File::class).'.obj_owner', $account->ID()),
+            $q->NotEquals($database->GetClassTableName(Folder::class).'.obj_owner', $account->ID())));
 
         return array_filter(static::LoadByQuery($database, $q), function(File $file){ return !$file->isWorldAccess(); });
     }

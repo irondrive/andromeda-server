@@ -40,18 +40,18 @@ abstract class Item extends StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => null,
             'description' => null,
-            'dates__modified' => new FieldTypes\Scalar(null, true),
-            'dates__accessed' => new FieldTypes\Scalar(null, true),         
-            'counters__bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
-            'counters__pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
-            'owner' => new FieldTypes\ObjectRef(Account::class),
-            'filesystem' => new FieldTypes\ObjectRef(FSManager::class),
-            'likes' => (new FieldTypes\ObjectRefs(Like::class, 'item', true))->autoDelete(), // links to like objects
-            'counters__likes' => new FieldTypes\Counter(),      // recursive total # of likes
-            'counters__dislikes' => new FieldTypes\Counter(),   // recursive total # of dislikes
-            'tags' => (new FieldTypes\ObjectRefs(Tag::class, 'item', true))->autoDelete(),
-            'comments' => (new FieldTypes\ObjectRefs(Comment::class, 'item', true))->autoDelete(),
-            'shares' => (new FieldTypes\ObjectRefs(Share::class, 'item', true))->autoDelete()
+            'date_modified' => new FieldTypes\Scalar(null, true),
+            'date_accessed' => new FieldTypes\Scalar(null, true),         
+            'count_bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
+            'count_pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
+            'obj_owner' => new FieldTypes\ObjectRef(Account::class),
+            'obj_filesystem' => new FieldTypes\ObjectRef(FSManager::class),
+            'objs_likes' => (new FieldTypes\ObjectRefs(Like::class, 'item', true))->autoDelete(), // links to like objects
+            'count_likes' => new FieldTypes\Counter(),      // recursive total # of likes
+            'count_dislikes' => new FieldTypes\Counter(),   // recursive total # of dislikes
+            'objs_tags' => (new FieldTypes\ObjectRefs(Tag::class, 'item', true))->autoDelete(),
+            'objs_comments' => (new FieldTypes\ObjectRefs(Comment::class, 'item', true))->autoDelete(),
+            'objs_shares' => (new FieldTypes\ObjectRefs(Share::class, 'item', true))->autoDelete()
         ));
     }
     
@@ -465,7 +465,7 @@ abstract class Item extends StandardObject
     public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?self
     {
         $q = new QueryBuilder(); 
-        $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name));        
+        $where = $q->And($q->Equals('obj_parent',$parent->ID()), $q->Equals('name',$name));        
         return static::TryLoadUniqueByQuery($database, $q->Where($where));
     }
     
@@ -477,7 +477,7 @@ abstract class Item extends StandardObject
      */
     public static function LoadByOwner(ObjectDatabase $database, Account $account) : array
     {
-        $q = new QueryBuilder(); $where = $q->Equals('owner',$account->ID());
+        $q = new QueryBuilder(); $where = $q->Equals('obj_owner',$account->ID());
         return static::LoadByQuery($database, $q->Where($where));
     }
     

@@ -17,17 +17,17 @@ class ActionMetrics extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'actions'),
-            'actionlog' => new FieldTypes\ObjectRef(ActionLog::class),
+            'obj_request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'actions'),
+            'obj_actionlog' => new FieldTypes\ObjectRef(ActionLog::class),
             'app' => null,
             'action' => null,
-            'stats__db_reads' => null,
-            'stats__db_read_time' => null,
-            'stats__db_writes' => null,
-            'stats__db_write_time' => null,
-            'stats__code_time' => null,
-            'stats__total_time' => null,
-            'stats__queries' => new FieldTypes\JSON()
+            'stats_db_reads' => null,
+            'stats_db_read_time' => null,
+            'stats_db_writes' => null,
+            'stats_db_write_time' => null,
+            'stats_code_time' => null,
+            'stats_total_time' => null,
+            'stats_queries' => new FieldTypes\JSON()
         ));
     }
     
@@ -50,11 +50,11 @@ class ActionMetrics extends StandardObject
             ->SetScalar('action',$input->GetAction());
 
         foreach ($metrics->getStats() as $statkey=>$statval)
-            $obj->SetScalar("stats__$statkey", $statval);
+            $obj->SetScalar("stats_$statkey", $statval);
     
         if ($level >= Config::METRICS_EXTENDED)
         {
-            $obj->SetScalar('stats__queries', $metrics->getQueries());
+            $obj->SetScalar('stats_queries', $metrics->getQueries());
         }
             
     }

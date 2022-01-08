@@ -20,9 +20,9 @@ abstract class AuthAccessLog extends BaseAppLog
     {
         return array(
             'admin' => null,
-            'account' => new FieldTypes\ObjectRef(Account::class),
-            'sudouser' => new FieldTypes\ObjectRef(Account::class),
-            'client' => new FieldTypes\ObjectRef(Client::class)
+            'obj_account' => new FieldTypes\ObjectRef(Account::class),
+            'obj_sudouser' => new FieldTypes\ObjectRef(Account::class),
+            'obj_client' => new FieldTypes\ObjectRef(Client::class)
         );
     }
     
@@ -63,7 +63,7 @@ abstract class AuthAccessLog extends BaseAppLog
             ? $q->IsTrue("$table.admin") : $q->Not($q->IsTrue("$table.admin"));
         
         foreach (array('account','sudouser','client') as $prop) if ($input->HasParam($prop)) 
-            $criteria[] = $q->Equals("$table.$prop", $input->GetParam($prop,SafeParam::TYPE_RANDSTR));       
+            $criteria[] = $q->Equals("$table.obj_$prop", $input->GetParam($prop,SafeParam::TYPE_RANDSTR));       
 
         return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));
     }

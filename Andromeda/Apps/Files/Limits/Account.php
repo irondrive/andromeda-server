@@ -54,7 +54,7 @@ trait AccountCommon
     /**
      * Returns a printable client object that includes property inherit sources
      * @param bool $full if true, show property inherit sources - always show $full for parent!
-     * @return array `{features:{track_items:bool,track_dlstats:bool}, features_from:"id:class", limits_from:"id:class"}`
+     * @return array `{config:{track_items:bool,track_dlstats:bool}, config_from:"id:class", limits_from:"id:class"}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
@@ -62,16 +62,16 @@ trait AccountCommon
     {
         $data = parent::GetClientObject(true);
 
-        $data['features']['track_items'] = $this->GetFeatureBool('track_items');
-        $data['features']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
+        $data['config']['track_items'] = $this->GetFeatureBool('track_items');
+        $data['config']['track_dlstats'] = $this->GetFeatureBool('track_dlstats');
         
         if ($full)
         {
-            $data['features_from'] = Utilities::array_map_keys(function($p){
-                return static::toString($this->TryGetInheritsScalarFrom("features__$p")); }, array_keys($data['features']));
+            $data['config_from'] = Utilities::array_map_keys(function($p){
+                return static::toString($this->TryGetInheritsScalarFrom("$p")); }, array_keys($data['config']));
             
             $data['limits_from'] = Utilities::array_map_keys(function($p){
-                return static::toString($this->TryGetInheritsScalarFrom("counters_limits__$p")); }, array_keys($data['limits']));
+                return static::toString($this->TryGetInheritsScalarFrom("limit_$p")); }, array_keys($data['limits']));
         }
         
         return $data;
@@ -150,8 +150,8 @@ class AccountTotal extends AuthEntityTotal
         {
             $q = new QueryBuilder();
             
-            $q->Where($q->Equals($this->database->GetClassTableName(GroupJoin::class).'.accounts', $this->GetAccountID()))
-                ->Join($this->database, GroupJoin::class, 'groups', GroupTotal::class, 'object', Group::class);
+            $q->Where($q->Equals($this->database->GetClassTableName(GroupJoin::class).'.objs_accounts', $this->GetAccountID()))
+                ->Join($this->database, GroupJoin::class, 'objs_groups', GroupTotal::class, 'obj_object', Group::class);
             
             $this->grouplims = GroupTotal::LoadByQuery($this->database, $q);
             
@@ -181,19 +181,19 @@ class AccountTotal extends AuthEntityTotal
     }
 
     protected function GetInheritedFields() : array { return array(
-        'features__itemsharing' => true,
-        'features__share2groups' => true,
-        'features__share2everyone' => true,
-        'features__emailshare' => true,
-        'features__publicupload' => true,
-        'features__publicmodify' => true,
-        'features__randomwrite' => true,
-        'features__userstorage' => true,
-        'features__track_items' => false,
-        'features__track_dlstats' => false,
-        'counters_limits__size' => null,
-        'counters_limits__items' => null,
-        'counters_limits__shares' => null,
+        'itemsharing' => true,
+        'share2groups' => true,
+        'share2everyone' => true,
+        'emailshare' => true,
+        'publicupload' => true,
+        'publicmodify' => true,
+        'randomwrite' => true,
+        'userstorage' => true,
+        'track_items' => false,
+        'track_dlstats' => false,
+        'limit_size' => null,
+        'limit_items' => null,
+        'limit_shares' => null,
     ); }
     
     public function GetAllowRandomWrite() : bool { return $this->GetFeatureBool('randomwrite'); }
@@ -221,7 +221,7 @@ class AccountTotal extends AuthEntityTotal
     {
         $obj = ($account !== null) ? $obj = self::LoadByClient($database, $account) : null;
         
-        // optionally return a fake object so the caller can get default limits/features
+        // optionally return a fake object so the caller can get default limits/config
         if ($obj === null && $require) $obj = new AccountTotalDefault($database);
         
         return $obj;
@@ -310,8 +310,8 @@ class AccountTimed extends AuthEntityTimed
         {
             $q = new QueryBuilder();
             
-            $q->Where($q->And($q->Equals('timeperiod',$this->GetTimePeriod()),$q->Equals($this->database->GetClassTableName(GroupJoin::class).'.accounts', $this->GetAccountID())))
-                ->Join($this->database, GroupJoin::class, 'groups', GroupTimed::class, 'object', Group::class);
+            $q->Where($q->And($q->Equals('timeperiod',$this->GetTimePeriod()),$q->Equals($this->database->GetClassTableName(GroupJoin::class).'.objs_accounts', $this->GetAccountID())))
+                ->Join($this->database, GroupJoin::class, 'objs_groups', GroupTimed::class, 'obj_object', Group::class);
             
             $this->grouplims = GroupTimed::LoadByQuery($this->database, $q);
             
@@ -342,10 +342,10 @@ class AccountTimed extends AuthEntityTimed
     
     protected function GetInheritedFields() : array { return array(
         'max_stats_age' => null,
-        'features__track_items' => false,
-        'features__track_dlstats' => false,
-        'counters_limits__pubdownloads' => null,
-        'counters_limits__bandwidth' => null
+        'track_items' => false,
+        'track_dlstats' => false,
+        'limit_pubdownloads' => null,
+        'limit_bandwidth' => null
     ); }
     
     /** Returns the Timed limits for the given account and time period */

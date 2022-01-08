@@ -54,8 +54,8 @@ class RootFolder extends Folder
     {
         $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
         
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'),
-            $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_filesystem',$filesystem->ID()), $q->IsNull('obj_parent'),
+            $q->Or($q->IsNull('obj_owner'),$q->Equals('obj_owner',$account->ID())));
         
         $loaded = static::TryLoadUniqueByQuery($database, $q->Where($where));
         if ($loaded) return $loaded;
@@ -77,7 +77,7 @@ class RootFolder extends Folder
      */
     public static function LoadRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : array
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('filesystem',$filesystem->ID()), $q->IsNull('parent'));
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_filesystem',$filesystem->ID()), $q->IsNull('obj_parent'));
         
         return static::LoadByQuery($database, $q->Where($where));
     }
@@ -90,7 +90,7 @@ class RootFolder extends Folder
      */
     public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',$account->ID()), $q->IsNull('parent'));
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_owner',$account->ID()), $q->IsNull('obj_parent'));
         
         return static::LoadByQuery($database, $q->Where($where));
     }

@@ -32,7 +32,7 @@ abstract class External extends BaseObject implements ISource
     public static function GetFieldTemplate() : array
     {
         return array(
-            'manager' => new FieldTypes\ObjectRef(Manager::class, 'authsource', false)
+            'obj_manager' => new FieldTypes\ObjectRef(Manager::class, 'authsource', false)
         );
     }
     

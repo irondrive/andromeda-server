@@ -70,7 +70,7 @@ class Emailer extends StandardObject
             'password' => null,
             'from_address' => null,
             'from_name' => null,
-            'features__reply' => null // if true, add a Reply-To header
+            'reply' => null // if true, add a Reply-To header
         ));
     }    
     
@@ -131,7 +131,7 @@ class Emailer extends StandardObject
     /**
      * Gets the config as a printable client object
      * @return array `{type:enum, hosts:?string, username:?string, password:bool,
-         from_address:string, from_name:?string, features:{reply:bool}, dates:{created:float}}`
+         from_address:string, from_name:?string, config:{reply:bool}, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
@@ -145,7 +145,7 @@ class Emailer extends StandardObject
             'dates' => array(
                 'created' => $this->GetDateCreated(),
             ),
-            'features' => array(
+            'config' => array(
                 'reply' => $this->GetUseReply()
             )
         );        

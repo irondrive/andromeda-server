@@ -15,10 +15,10 @@ class Comment extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'owner'  => new FieldTypes\ObjectRef(Account::class),
-            'item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
+            'obj_owner'  => new FieldTypes\ObjectRef(Account::class),
+            'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
             'comment' => null,
-            'dates__modified' => null
+            'date_modified' => null
         ));
     }
     
@@ -33,7 +33,8 @@ class Comment extends StandardObject
     /** Tries to load a comment object by the given account and comment ID */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('owner',FieldTypes\ObjectPoly::GetObjectDBValue($account)),$q->Equals('id',$id));
+        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_owner',FieldTypes\ObjectPoly::GetObjectDBValue($account)),$q->Equals('id',$id));
+        
         return static::TryLoadUniqueByQuery($database, $q->Where($where));
     }
     

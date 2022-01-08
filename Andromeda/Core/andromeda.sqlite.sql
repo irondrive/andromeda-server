@@ -2,9 +2,9 @@ PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2obj_apps_core_accesslog` (
   `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL
-,  `account` char(12) DEFAULT NULL
-,  `sudouser` char(12) DEFAULT NULL
-,  `client` char(12) DEFAULT NULL
+,  `obj_account` char(12) DEFAULT NULL
+,  `obj_sudouser` char(12) DEFAULT NULL
+,  `obj_client` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_config` (
@@ -12,20 +12,20 @@ CREATE TABLE `a2obj_core_config` (
 ,  `version` varchar(255) NOT NULL
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
-,  `dates__created` double NOT NULL
-,  `features__requestlog_db` integer NOT NULL
-,  `features__requestlog_file` integer NOT NULL
-,  `features__requestlog_details` integer NOT NULL
-,  `features__debug` integer NOT NULL
-,  `features__debug_http` integer NOT NULL
-,  `features__debug_dblog` integer NOT NULL
-,  `features__debug_filelog` integer NOT NULL
-,  `features__metrics` integer NOT NULL
-,  `features__metrics_dblog` integer NOT NULL
-,  `features__metrics_filelog` integer NOT NULL
-,  `features__read_only` integer NOT NULL
-,  `features__enabled` integer NOT NULL
-,  `features__email` integer NOT NULL
+,  `date_created` double NOT NULL
+,  `requestlog_db` integer NOT NULL
+,  `requestlog_file` integer NOT NULL
+,  `requestlog_details` integer NOT NULL
+,  `debug` integer NOT NULL
+,  `debug_http` integer NOT NULL
+,  `debug_dblog` integer NOT NULL
+,  `debug_filelog` integer NOT NULL
+,  `metrics` integer NOT NULL
+,  `metrics_dblog` integer NOT NULL
+,  `metrics_filelog` integer NOT NULL
+,  `read_only` integer NOT NULL
+,  `enabled` integer NOT NULL
+,  `email` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_emailer` (
@@ -36,8 +36,8 @@ CREATE TABLE `a2obj_core_emailer` (
 ,  `password` text DEFAULT NULL
 ,  `from_address` varchar(255) NOT NULL
 ,  `from_name` varchar(255) DEFAULT NULL
-,  `features__reply` integer DEFAULT NULL
-,  `dates__created` double NOT NULL
+,  `reply` integer DEFAULT NULL
+,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_exceptions_errorlog` (
@@ -60,44 +60,44 @@ CREATE TABLE `a2obj_core_exceptions_errorlog` (
 );
 CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL
-,  `request` char(20) NOT NULL
+,  `obj_request` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
-,  `applog` varchar(64) DEFAULT NULL
+,  `obj_applog` varchar(64) DEFAULT NULL
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_actionmetrics` (
   `id` char(20) NOT NULL
-,  `request` char(20) NOT NULL
-,  `actionlog` char(20) NOT NULL
+,  `obj_request` char(20) NOT NULL
+,  `obj_actionlog` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
-,  `dates__created` double NOT NULL
-,  `stats__db_reads` integer NOT NULL
-,  `stats__db_read_time` double NOT NULL
-,  `stats__db_writes` integer NOT NULL
-,  `stats__db_write_time` double NOT NULL
-,  `stats__code_time` double NOT NULL
-,  `stats__total_time` double NOT NULL
-,  `stats__queries` longtext DEFAULT NULL
+,  `date_created` double NOT NULL
+,  `stats_db_reads` integer NOT NULL
+,  `stats_db_read_time` double NOT NULL
+,  `stats_db_writes` integer NOT NULL
+,  `stats_db_write_time` double NOT NULL
+,  `stats_code_time` double NOT NULL
+,  `stats_total_time` double NOT NULL
+,  `stats_queries` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_commitmetrics` (
   `id` char(20) NOT NULL
-,  `request` char(20) NOT NULL
-,  `dates__created` double NOT NULL
-,  `stats__db_reads` integer NOT NULL
-,  `stats__db_read_time` double NOT NULL
-,  `stats__db_writes` integer NOT NULL
-,  `stats__db_write_time` double NOT NULL
-,  `stats__code_time` double NOT NULL
-,  `stats__total_time` double NOT NULL
+,  `obj_request` char(20) NOT NULL
+,  `date_created` double NOT NULL
+,  `stats_db_reads` integer NOT NULL
+,  `stats_db_read_time` double NOT NULL
+,  `stats_db_writes` integer NOT NULL
+,  `stats_db_write_time` double NOT NULL
+,  `stats_code_time` double NOT NULL
+,  `stats_total_time` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_requestlog` (
   `id` char(20) NOT NULL
-,  `actions` integer NOT NULL DEFAULT 0
+,  `objs_actions` integer NOT NULL DEFAULT 0
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
 ,  `agent` text NOT NULL
@@ -107,26 +107,26 @@ CREATE TABLE `a2obj_core_logging_requestlog` (
 );
 CREATE TABLE `a2obj_core_logging_requestmetrics` (
   `id` char(20) NOT NULL
-,  `actions` integer NOT NULL DEFAULT 0
-,  `commits` integer NOT NULL DEFAULT 0
-,  `requestlog` char(20) DEFAULT NULL
-,  `dates__created` double NOT NULL
+,  `objs_actions` integer NOT NULL DEFAULT 0
+,  `objs_commits` integer NOT NULL DEFAULT 0
+,  `obj_requestlog` char(20) DEFAULT NULL
+,  `date_created` double NOT NULL
 ,  `peak_memory` integer NOT NULL
 ,  `nincludes` integer NOT NULL
 ,  `nobjects` integer NOT NULL
-,  `construct__db_reads` integer NOT NULL
-,  `construct__db_read_time` double NOT NULL
-,  `construct__db_writes` integer NOT NULL
-,  `construct__db_write_time` double NOT NULL
-,  `construct__code_time` double NOT NULL
-,  `construct__total_time` double NOT NULL
-,  `construct__queries` text DEFAULT NULL
-,  `total__db_reads` integer NOT NULL
-,  `total__db_read_time` double NOT NULL
-,  `total__db_writes` integer NOT NULL
-,  `total__db_write_time` double NOT NULL
-,  `total__code_time` double NOT NULL
-,  `total__total_time` double NOT NULL
+,  `construct_db_reads` integer NOT NULL
+,  `construct_db_read_time` double NOT NULL
+,  `construct_db_writes` integer NOT NULL
+,  `construct_db_write_time` double NOT NULL
+,  `construct_code_time` double NOT NULL
+,  `construct_total_time` double NOT NULL
+,  `construct_queries` text DEFAULT NULL
+,  `total_db_reads` integer NOT NULL
+,  `total_db_read_time` double NOT NULL
+,  `total_db_writes` integer NOT NULL
+,  `total_db_write_time` double NOT NULL
+,  `total_code_time` double NOT NULL
+,  `total_total_time` double NOT NULL
 ,  `gcstats` text DEFAULT NULL
 ,  `rusage` text DEFAULT NULL
 ,  `includes` longtext DEFAULT NULL
@@ -136,13 +136,13 @@ CREATE TABLE `a2obj_core_logging_requestmetrics` (
 ,  PRIMARY KEY (`id`)
 );
 CREATE INDEX "idx_a2obj_core_logging_actionmetrics_app_action" ON "a2obj_core_logging_actionmetrics" (`app`,`action`);
-CREATE INDEX "idx_a2obj_core_logging_actionmetrics_request" ON "a2obj_core_logging_actionmetrics" (`request`);
+CREATE INDEX "idx_a2obj_core_logging_actionmetrics_request" ON "a2obj_core_logging_actionmetrics" (`obj_request`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_time" ON "a2obj_core_exceptions_errorlog" (`time`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_code" ON "a2obj_core_exceptions_errorlog" (`code`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_app" ON "a2obj_core_exceptions_errorlog" (`app`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_action" ON "a2obj_core_exceptions_errorlog" (`action`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_addr" ON "a2obj_core_exceptions_errorlog" (`addr`);
-CREATE INDEX "idx_a2obj_core_logging_actionlog_request" ON "a2obj_core_logging_actionlog" (`request`);
-CREATE INDEX "idx_a2obj_core_logging_actionlog_applog" ON "a2obj_core_logging_actionlog" (`applog`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_request" ON "a2obj_core_logging_actionlog" (`obj_request`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_applog" ON "a2obj_core_logging_actionlog" (`obj_applog`);
 CREATE INDEX "idx_a2obj_core_logging_actionlog_app_action" ON "a2obj_core_logging_actionlog" (`app`,`action`);
-CREATE INDEX "idx_a2obj_core_logging_commitmetrics_request" ON "a2obj_core_logging_commitmetrics" (`request`);
+CREATE INDEX "idx_a2obj_core_logging_commitmetrics_request" ON "a2obj_core_logging_commitmetrics" (`obj_request`);

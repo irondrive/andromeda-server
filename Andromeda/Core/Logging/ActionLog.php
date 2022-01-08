@@ -24,8 +24,8 @@ class ActionLog extends BaseLog
     public static function GetFieldTemplate() : array
     {
         return array(
-            'request' => new FieldTypes\ObjectRef(RequestLog::class, 'actions'),
-            'applog' => new FieldTypes\ObjectPoly(BaseAppLog::class),
+            'obj_request' => new FieldTypes\ObjectRef(RequestLog::class, 'actions'),
+            'obj_applog' => new FieldTypes\ObjectPoly(BaseAppLog::class),
             'app' => null,
             'action' => null,
             'details' => new FieldTypes\JSON()
@@ -93,9 +93,9 @@ class ActionLog extends BaseLog
         
         if ($withapp && $input->HasParam('appname')) $criteria[] = $q->Equals("$table.app", $input->GetParam('appname',SafeParam::TYPE_ALPHANUM));
         
-        if ($input->HasParam('action')) $criteria[] = $q->Equals("$table.action", $input->GetParam('action',SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('action')) $criteria[] = $q->Equals("$table.obj_action", $input->GetParam('obj_action',SafeParam::TYPE_ALPHANUM));
         
-        $q->Join($database, RequestLog::class, 'id', static::class, 'request');
+        $q->Join($database, RequestLog::class, 'id', static::class, 'obj_request');
         
         return array_merge($criteria, RequestLog::GetPropCriteria($database, $q, $input));
     }

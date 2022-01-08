@@ -28,12 +28,12 @@ class AccessLog extends AuthAccessLog
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'file' => new FieldTypes\ObjectRef(File::class),
-            'folder' => new FieldTypes\ObjectRef(Folder::class),
-            'parent' => new FieldTypes\ObjectRef(Folder::class),
-            'file_share' => new FieldTypes\ObjectRef(Share::class),
-            'folder_share' => new FieldTypes\ObjectRef(Share::class),
-            'parent_share' => new FieldTypes\ObjectRef(Share::class)
+            'obj_file' => new FieldTypes\ObjectRef(File::class),
+            'obj_folder' => new FieldTypes\ObjectRef(Folder::class),
+            'obj_parent' => new FieldTypes\ObjectRef(Folder::class),
+            'obj_file_share' => new FieldTypes\ObjectRef(Share::class),
+            'obj_folder_share' => new FieldTypes\ObjectRef(Share::class),
+            'obj_parent_share' => new FieldTypes\ObjectRef(Share::class)
         ));
     }
     
@@ -75,21 +75,21 @@ class AccessLog extends AuthAccessLog
     {
         $criteria = array(); $table = $database->GetClassTableName(static::class);
         
-        if ($input->HasParam('file')) $criteria[] = $q->Equals("$table.file", $input->GetParam('file',SafeParam::TYPE_RANDSTR));
-        if ($input->HasParam('file_share')) $criteria[] = $q->Equals("$table.file_share", $input->GetParam('file_share',SafeParam::TYPE_RANDSTR));
+        if ($input->HasParam('file')) $criteria[] = $q->Equals("$table.obj_file", $input->GetParam('file',SafeParam::TYPE_RANDSTR));
+        if ($input->HasParam('file_share')) $criteria[] = $q->Equals("$table.obj_file_share", $input->GetParam('file_share',SafeParam::TYPE_RANDSTR));
         
         if ($input->HasParam('folder')) 
         {
             $folder = $input->GetParam("folder",SafeParam::TYPE_RANDSTR);
-            $criteria[] = $q->Or($q->Equals("$table.folder",$folder), 
-                                 $q->Equals("$table.parent",$folder));
+            $criteria[] = $q->Or($q->Equals("$table.obj_folder",$folder), 
+                                 $q->Equals("$table.obj_parent",$folder));
         }
         
         if ($input->HasParam('folder_share'))
         {
             $folder = $input->GetParam("folder_share",SafeParam::TYPE_RANDSTR);
-            $criteria[] = $q->Or($q->Equals("$table.folder_share",$folder),
-                                 $q->Equals("$table.parent_share",$folder));
+            $criteria[] = $q->Or($q->Equals("$table.obj_folder_share",$folder),
+                                 $q->Equals("$table.obj_parent_share",$folder));
         }
         
         return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));

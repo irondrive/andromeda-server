@@ -16,7 +16,7 @@ class UsedToken extends StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'code' => null,         
-            'twofactor' => new FieldTypes\ObjectRef(TwoFactor::class, 'usedtokens')
+            'obj_twofactor' => new FieldTypes\ObjectRef(TwoFactor::class, 'usedtokens')
         ));
     }
     
@@ -30,7 +30,7 @@ class UsedToken extends StandardObject
     public static function PruneOldCodes(ObjectDatabase $database) : void
     {
         $mintime = Main::GetInstance()->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
-        $q = new QueryBuilder(); $q->Where($q->LessThan('dates__created', $mintime));
+        $q = new QueryBuilder(); $q->Where($q->LessThan('date_created', $mintime));
         static::DeleteByQuery($database, $q);
     }
     
@@ -56,9 +56,9 @@ class TwoFactor extends StandardObject
             'secret' => null,
             'nonce' => null,
             'valid' => null,
-            'dates__used' => null,
-            'account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
-            'usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->autoDelete()
+            'date_used' => null,
+            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
+            'objs_usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->autoDelete()
         ));
     }
     
@@ -91,7 +91,7 @@ class TwoFactor extends StandardObject
      * @return ?self the loaded object or null if not found */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->Equals('id',$id));
         return self::TryLoadUniqueByQuery($database, $q->Where($w));
     }
     

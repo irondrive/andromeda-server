@@ -33,11 +33,11 @@ abstract class Timed extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->autoDelete(),
+            'objs_stats' => (new FieldTypes\ObjectRefs(TimedStats::class, 'limitobj', true))->autoDelete(),
             'timeperiod' => null, // in seconds
             'max_stats_age' => null,
-            'counters_limits__pubdownloads' => null,
-            'counters_limits__bandwidth' => null
+            'limit_pubdownloads' => null,
+            'limit_bandwidth' => null
         ));
     }
     
@@ -114,7 +114,7 @@ abstract class Timed extends Base
     /** Deletes all limit objects corresponding to the given limited object and time period */
     public static function DeleteByClientAndPeriod(ObjectDatabase $database, StandardObject $obj, int $period) : void
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('object',FieldTypes\ObjectPoly::GetObjectDBValue($obj)),$q->Equals('timeperiod',$period));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_object',FieldTypes\ObjectPoly::GetObjectDBValue($obj)),$q->Equals('timeperiod',$period));
         
         static::DeleteByQuery($database, $q->Where($w));
     }
@@ -194,7 +194,7 @@ abstract class Timed extends Base
             'dates' => array(
                 'created' => $this->GetDateCreated()
             ),
-            'features' => array(), // need track_items/track_dlstats
+            'config' => array(), // need track_items/track_dlstats
             'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                 array('pubdownloads','bandwidth')
             )

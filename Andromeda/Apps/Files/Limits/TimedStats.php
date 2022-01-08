@@ -25,14 +25,14 @@ class TimedStats extends StandardObject
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'limitobj' => new FieldTypes\ObjectPoly(Timed::class, 'stats'),
-            'dates__timestart' => null,
+            'obj_limitobj' => new FieldTypes\ObjectPoly(Timed::class, 'stats'),
+            'date_timestart' => null,
             'iscurrent' => null,
-            'counters__size' => new FieldTypes\Counter(),
-            'counters__items' => new FieldTypes\Counter(),
-            'counters__shares' => new FieldTypes\Counter(),
-            'counters__pubdownloads' => new FieldTypes\Counter(),
-            'counters__bandwidth' => new FieldTypes\Counter(true)
+            'count_size' => new FieldTypes\Counter(),
+            'count_items' => new FieldTypes\Counter(),
+            'count_shares' => new FieldTypes\Counter(),
+            'count_pubdownloads' => new FieldTypes\Counter(),
+            'count_bandwidth' => new FieldTypes\Counter(true)
         ));
     }
     
@@ -56,7 +56,7 @@ class TimedStats extends StandardObject
     {
         $q = new QueryBuilder(); 
         
-        $w = $q->And($q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit)),$q->IsTrue('iscurrent'));
+        $w = $q->And($q->Equals('obj_limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit)),$q->IsTrue('iscurrent'));
         
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }
@@ -137,9 +137,9 @@ class TimedStats extends StandardObject
 
         $q = new QueryBuilder();
         
-        $w = $q->And($q->Equals('limitobj',
+        $w = $q->And($q->Equals('obj_limitobj',
             FieldTypes\ObjectPoly::GetObjectDBValue($limit)), 
-            $q->LessThan('dates__timestart',$minstart));
+            $q->LessThan('date_timestart',$minstart));
         
         static::DeleteByQuery($database, $q->Where($w));
     }
@@ -156,7 +156,7 @@ class TimedStats extends StandardObject
     {
         $q = new QueryBuilder();
         
-        $w = $q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit));
+        $w = $q->Equals('obj_limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit));
 
         return static::LoadByQuery($database, $q->Where($w)->Limit($count)->Offset($offset));
     }
@@ -172,9 +172,9 @@ class TimedStats extends StandardObject
     {
         $q = new QueryBuilder();
         
-        $w = $q->Equals('limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit));
-        $w = $q->And($w, $q->LessThan('dates__timestart', $time + 1), 
-                         $q->GreaterThan('dates__timestart', $time - $limit->GetTimePeriod()));
+        $w = $q->Equals('obj_limitobj',FieldTypes\ObjectPoly::GetObjectDBValue($limit));
+        $w = $q->And($w, $q->LessThan('date_timestart', $time + 1), 
+                         $q->GreaterThan('date_timestart', $time - $limit->GetTimePeriod()));
         
         return static::TryLoadUniqueByQuery($database, $q->Where($w));
     }
