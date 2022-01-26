@@ -16,7 +16,7 @@ class CryptoKey
         return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
     }
     
-    const FAST_OPS = 1; const FAST_MEMORY = 16*1024;
+    private const FAST_OPS = 1; private const FAST_MEMORY = 16*1024;
     
     /**
      * Generates an encryption key from a password 
@@ -31,7 +31,8 @@ class CryptoKey
         $key = sodium_crypto_pwhash(
             $bytes, $password, $salt,
             $fast ? static::FAST_OPS : SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            $fast ? static::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE);
+            $fast ? static::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13 );
         sodium_memzero($password); return $key;
     }
 }
@@ -93,31 +94,45 @@ class CryptoSecret
     }
 }
 
+/** A public/private key pair */
+class KeyPair
+{
+    public string $public;
+    public string $private;
+}
+
 /** libsodium wrapper class for public-key authenticated crypto */
 class CryptoPublic
 {
+    /** Returns the length of a nonce for use with this class */
+    public static function NonceLength() : int { return SODIUM_CRYPTO_BOX_NONCEBYTES; }
+
+    /** Generates a crypto nonce for use with this class */
+    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
+    
     /**
      * Generates a public/private keypair
-     * @return array `{public:string, private:string}`
+     * @return KeyPair key pair
      */
-    public static function GenerateKeyPair() : array
+    public static function GenerateKeyPair() : KeyPair
     {
         $keypair = sodium_crypto_box_keypair();
-        return array(
-            'public' => sodium_crypto_box_publickey($keypair),
-            'private' => sodium_crypto_box_secretkey($keypair),
-        );
+        
+        $retval = new KeyPair();
+        $retval->public = sodium_crypto_box_publickey($keypair);
+        $retval->private = sodium_crypto_box_secretkey($keypair);
+        return $retval;
     }
     
     /**
      * Encrypts and signs data from a sender to a recipient
      * @param string $message the plaintext to encrypt
      * @param string $nonce the nonce to encrypt with
-     * @param string $recipient_public the recipient's public key
      * @param string $sender_private the sender's private key
+     * @param string $recipient_public the recipient's public key
      * @return string the encrypted and signed ciphertext
      */
-    public static function Encrypt(string $message, string $nonce, string $recipient_public, string $sender_private)
+    public static function Encrypt(string $message, string $nonce, string $sender_private, string $recipient_public)
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($sender_private, $recipient_public);
         $output = sodium_crypto_box($message, $nonce, $keypair);
@@ -149,6 +164,9 @@ class CryptoAuth
 {
     /** Returns the length of a key for use with this class */
     public static function KeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
+    
+    /** Returns the length of the authentication tag generated */
+    public static function AuthLength() : int { return SODIUM_CRYPTO_AUTH_BYTES; }
     
     /** Generates a crypto key for use with this class */
     public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
