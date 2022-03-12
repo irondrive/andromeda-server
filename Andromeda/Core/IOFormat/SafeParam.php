@@ -266,7 +266,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_FSPATH)
         {
-            if (strlen($value) >= 65536 || preg_match("%[?*:;{}]+%",$value) ||
+            if (strlen($value) >= 65536 || preg_match("%[?*;{}]+%",$value) ||
                 ($value = filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW)) === false)
                     throw new SafeParamInvalidException($key, $type);
         }
@@ -284,7 +284,7 @@ class SafeParam
         }
         else if ($type === self::TYPE_TEXT)
         {
-            if (strlen($value) >= 65536 || !preg_match('//u',$value) /* UTF-8 */ ||
+            if (strlen($value) >= 65536 || !Utilities::isUTF8($value) ||
                 ($value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS)) === false)
                 throw new SafeParamInvalidException($key, $type);
         }

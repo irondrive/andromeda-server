@@ -1,7 +1,5 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
-
 /** The base class for Andromeda exceptions */
 abstract class BaseException extends \Exception
 {
@@ -20,13 +18,13 @@ trait Copyable
         parent::__construct($details); 
     }
     
-    /** Copy another exception, converting its type */
+    /** Copy the message another exception, converting its type */
     public static function Copy(\Throwable $e) : self
     {
         $e2 = new static(); $e2->message = $e->getMessage(); return $e2;
     }
     
-    /** Copy another exception, converting its type */
+    /** Append the message from another exception, converting its type */
     public static function Append(\Throwable $e) : self
     {
         $e2 = new static(); $e2->message .= ": ".$e->getMessage(); return $e2;

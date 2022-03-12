@@ -854,7 +854,7 @@ class ObjectDatabase
             {
                 $this->uniqueKeyValues[$objstr][$key] = $validx;
                 
-                $bclass = $this->keyBaseClasses[$class][$key];
+                $bclass = $this->keyBaseClasses[$class][$key] ?? $class;
                 $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
             }
         }

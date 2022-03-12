@@ -14,6 +14,7 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\OutputHandler;
 require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputStream;
 
+/** A test server exception */
 class TestServerException extends Exceptions\ServerException { public $message = "TEST_SERVER_EXCEPTION"; }
 
 /**
