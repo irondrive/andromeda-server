@@ -57,15 +57,6 @@ class JSONEncodingException extends JSONException { public $message = "JSON_ENCO
 /** Exception indicating that JSON decoding failed */
 class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
 
-/** 
- * Simple interface with rollback() and commit() 
- * 
- * The Andromeda transaction model is that there is always a global commit
- * or rollback at the end of the request. A rollback may follow a bad commit.
- * There will NEVER be a rollback followed by a commit. There may be > 1 commit.
- */
-interface Transactions { public function rollback(); public function commit(); }
-
 /** Exception indicating that the given version string is invalid */
 class InvalidVersionException extends Exceptions\ServerException { public $message = "VERSION_STRING_INVALID"; }
 
@@ -79,7 +70,7 @@ class VersionInfo
     public int $patch;
     public string $extra;
     
-    public function __construct(string $version = andromeda_version)
+    public function __construct(string $version)
     {
         $this->version = $version;
         
@@ -111,39 +102,45 @@ class VersionInfo
 abstract class Utilities
 {   
     private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; // 36 (5 bits/char)
-    
-    /** Returns the number of possible characters for a digit in Random */
-    public static function RandomRange() : int { return strlen(self::$chars); }
-    
+
     /** Returns a random string with the given length */
     public static function Random(int $length) : string
     {
-        $string = ""; $range = static::RandomRange() - 1;
+        $string = ""; $range = strlen(self::$chars)-1;
         for ($i = 0; $i < $length; $i++)
             $string .= self::$chars[random_int(0, $range)];
         return $string;        
     }
     
-
+    /** Returns true iff $data is valid UTF-8 */
+    public static function isUTF8(string $data) : bool
+    {
+        return mb_check_encoding($data,'UTF-8');
+    }
+    
     /**
      * Encodes the data as JSON
+     * @param mixed $data
      * @throws JSONEncodingException
+     * @return string
      */
     public static function JSONEncode($data) : string
     {
-        if (!($data = json_encode($data))) {
-            throw new JSONEncodingException(); };
+        if (($data = json_encode($data)) === false)
+            throw new JSONEncodingException();
         return $data;
     }
     
     /**
      * Decodes the JSON data as an array
+     * @param string $data
      * @throws JSONDecodingException
+     * @return mixed
      */
     public static function JSONDecode(string $data)
     {
-        if (($data = json_decode($data, true)) === null) {
-            throw new JSONDecodingException(); };
+        if (($data = json_decode($data, true)) === null)
+            throw new JSONDecodingException();
         return $data;
     }
     
@@ -155,12 +152,16 @@ abstract class Utilities
         else return PASSWORD_DEFAULT;
     }
     
-    /** Returns the last element of an array or null if it's empty */
+    /**
+     * @template T
+     * @param ?array<?T> $arr array input 
+     * @return ?T the last element of an array or null if it's empty 
+     */
     public static function array_last(?array $arr)
     {
-        if ($arr === null) return null;
+        if (!$arr) return null; // empty or null
         
-        $size = count($arr); return $size ? $arr[$size-1] : null;
+        return $arr[array_key_last($arr)];
     }
     
     /** Deletes any of the given value from the given array reference */
@@ -170,12 +171,16 @@ abstract class Utilities
     }
     
     /** Returns a class name with the namespace stripped */
-    public static function ShortClassName(?string $class) : ?string { 
-        return $class ? self::array_last(explode("\\",$class)) : null; }
+    public static function ShortClassName(string $class) : ?string 
+    { 
+        return self::array_last(explode("\\",$class));
+    }
         
     /** Returns the given string with the first character capitalized */
-    public static function FirstUpper(string $str) : string {
-        return mb_strtoupper(mb_substr($str,0,1)).mb_substr($str,1); }
+    public static function FirstUpper(string $str) : string 
+    {
+        return mb_strtoupper(mb_substr($str,0,1)).mb_substr($str,1); 
+    }
     
     /**
      * Returns a size string converted to bytes
@@ -227,8 +232,14 @@ abstract class Utilities
     /** Returns all classes that are a $match type */
     public static function getClassesMatching(string $match) : array
     {
-        return array_values(array_filter(get_declared_classes(), function(string $class)use($match){
-            return $class !== $match && is_a($class, $match, true) && !(new \ReflectionClass($class))->isAbstract(); }));
+        $retval = array(); foreach (get_declared_classes() as $class)
+        {
+            if ($class !== $match && is_a($class, $match, true) 
+                && !(new \ReflectionClass($class))->isAbstract())
+            {
+                $retval[] = $class;
+            }
+        } return $retval;
     }
     
     /** Runs the given function with no execution timeouts or user aborts */

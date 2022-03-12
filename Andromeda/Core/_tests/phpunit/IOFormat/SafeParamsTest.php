@@ -8,7 +8,7 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php");
 
 class SafeParamsTest extends \PHPUnit\Framework\TestCase
 {
-    public function testBasic()
+    public function testBasic() : void
     {
         $obj = new SafeParams();
         
@@ -19,7 +19,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($obj->HasParam('test'));
     }    
     
-    public function testBadType()
+    public function testBadType() : void
     {
         $obj = (new SafeParams())->AddParam('test','value');
         
@@ -28,7 +28,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetParam('test', SafeParam::TYPE_INT);
     }
     
-    public function testGetParamSuccess()
+    public function testGetParamSuccess() : void
     {
         $obj = (new SafeParams())->AddParam('test','value');
         
@@ -38,7 +38,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj->GetOptNullParam('test', SafeParam::TYPE_RAW), 'value');
     }
     
-    public function testGetParamMissingGood()
+    public function testGetParamMissingGood() : void
     {
         $obj = (new SafeParams())->AddParam('test','value');
         
@@ -46,7 +46,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj->GetOptNullParam('test2', SafeParam::TYPE_RAW), null);
     }
     
-    public function testGetParamMissingBad1()
+    public function testGetParamMissingBad1() : void
     {
         $obj = (new SafeParams())->AddParam('test','value');
         
@@ -55,7 +55,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetParam('test2', SafeParam::TYPE_RAW);
     }
     
-    public function testGetParamMissingBad2()
+    public function testGetParamMissingBad2() : void
     {
         $obj = (new SafeParams())->AddParam('test','value');
         
@@ -64,7 +64,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetNullParam('test2', SafeParam::TYPE_RAW);
     }    
     
-    public function testGetParamNullGood()
+    public function testGetParamNullGood() : void
     {
         $obj = (new SafeParams())->AddParam('test',null);
         
@@ -72,7 +72,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj->GetOptNullParam('test', SafeParam::TYPE_RAW), null);
     }    
     
-    public function testGetParamNullBad1()
+    public function testGetParamNullBad1() : void
     {
         $obj = (new SafeParams())->AddParam('test',null);
         
@@ -81,7 +81,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetParam('test', SafeParam::TYPE_RAW);
     }
     
-    public function testGetParamNullBad2()
+    public function testGetParamNullBad2() : void
     {
         $obj = (new SafeParams())->AddParam('test',null);
         
@@ -90,7 +90,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetOptParam('test', SafeParam::TYPE_RAW);
     }
     
-    public function testGetClientObject()
+    public function testGetClientObject() : void
     {       
         $obj = (new SafeParams())->AddParam('test1',75)->AddParam('test2',99);
         
@@ -106,7 +106,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         return array_key_exists('test', $log) && $log['test'] === 55;
     }
     
-    public function testLogging()
+    public function testLogging() : void
     {
         $this->assertFalse($this->isLogged(Config::RQLOG_DETAILS_FULL, SafeParams::PARAMLOG_ALWAYS, SafeParam::TYPE_RAW));
         
@@ -123,7 +123,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($this->isLogged(0, SafeParams::PARAMLOG_NEVER));
     }
     
-    public function testNestedLog()
+    public function testNestedLog() : void
     {
         $log = array(); $obj = (new SafeParams())->SetLogRef($log, Config::RQLOG_DETAILS_FULL);
         
@@ -132,7 +132,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(array('obj'=>array('test'=>75)), $log);
     }
     
-    public function testArrayLog()
+    public function testArrayLog() : void
     {
         $log = array(); $obj = (new SafeParams())->SetLogRef($log, Config::RQLOG_DETAILS_FULL);
         

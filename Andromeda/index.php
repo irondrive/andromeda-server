@@ -27,7 +27,8 @@ require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Excep
  * command given, commit the transaction, and display output
  */
 
-$interface = IOInterface::TryGet(); if (!$interface) die('Unknown Interface');
+$interface = IOInterface::TryGet(); 
+if (!$interface) die('INTERFACE_ERROR');
 
 $main = new Main($interface, new ErrorManager($interface)); 
 
@@ -42,6 +43,6 @@ $main->commit();
 
 if ($interface->UserOutput($output)) $main->commit();
 
-$main->FinalizeOutput($output);
+$main->FinalMetrics($output);
 
 $interface->WriteOutput($output);
