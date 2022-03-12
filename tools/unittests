@@ -1,5 +1,3 @@
 #!/bin/bash
 
-cd Andromeda; find . -iname phpunit | while read -r dir; do
-    ../vendor/bin/phpunit $dir
-done
+cd Andromeda; ../vendor/bin/phpunit . -c ../tools/phpunit.xml "$@"

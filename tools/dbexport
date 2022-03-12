@@ -17,6 +17,6 @@ cd Andromeda; for i in Apps/* Core; do if [ -f $i/andromeda.mysql.sql ]; then
    sed -i "s/DEFAULT '\\\x4e554c4c'::bytea/DEFAULT NULL::bytea/" $i/andromeda.pgsql.sql
 
    ../tools/mysql2sqlite/mysql2sqlite "$i"/andromeda.mysql.sql \
-      | grep -v TRANSACTION | grep -v "PRAGMA synchronous" > $i/andromeda.sqlite.sql
+      | grep -v TRANSACTION > $i/andromeda.sqlite.sql
 
 fi; done
