@@ -1,759 +1,814 @@
 <?php namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, ObjectTypeException};
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, ConcurrencyException};
+require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\DatabaseReadOnlyException;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class FieldTypeMismatch extends Exceptions\ServerException { public $message = "FIELD_DATA_TYPE_MISMATCH"; }
+/** Exception indicating that the given counter exceeded its limit */
+class CounterOverLimitException extends Exceptions\ClientDeniedException { public $message = "COUNTER_EXCEEDS_LIMIT"; }
 
-/**
- * Represents a basic scalar value stored in the column of a database table
- * 
- * This class is the starting point from which all other fieldtypes must inherit.
- */
+/** Exception indicating the given value is the wrong type for this field */
+class FieldDataTypeMismatch extends Exceptions\ServerException { public $message = "FIELD_DATA_TYPE_MISMATCH"; }
+
+/** Exception indicating that loading via a foreign key link failed */
+class ForeignKeyException extends ConcurrencyException { public $message = "DB_FOREIGN_KEY_FAILED"; }
+
+/** Base class representing a database column ("field") */
 abstract class BaseField
 {
-    /** The name of this field */
-    protected string $myfield; 
-    
-    /** 
-     * The possibly-temporary-only value of this field 
-     * 
-     * Intended to be used e.g. when a field needs to be decrypted
-     */
-    protected $tempvalue;
-    
-    /** The actual value of this field that will exist in the DB */
-    protected $realvalue; 
-    
-    /** Count of how many times this field has been modified */
-    protected int $delta = 0; 
-    
-    /** If true, this field should always be saved even in a rollback */
-    protected bool $mandatorySave = false;
-    
-    /** Reference to the database */
+    /** database reference */
     protected ObjectDatabase $database;
     
-    /** Reference to this field's parent object */
+    /** parent object reference */
     protected BaseObject $parent;
 
+    /** name of the field/column in the DB */
+    protected string $name;
+    
+    /** if true, save even on rollback */
+    protected bool $saveOnRollback;
+    
+    /** number of times the field is modified */
+    protected int $delta = 0;
+    
     /**
-     * Declares a new scalar fieldtype (use this in object templates)
-     * @param mixed $defvalue the default value of the field type
-     * @see self::$mandatorySave
+     * @param string $name field name in DB
+     * @param bool $saveOnRollback if true, save even on rollback
      */
-    public function __construct($defvalue = null, bool $mandatorySave = false)
+    public function __construct(string $name, bool $saveOnRollback = false)
     {
-        $this->mandatorySave = $mandatorySave;
-        $this->tempvalue = $defvalue;
-        $this->realvalue = $defvalue;
-        $this->delta = ($defvalue !== null) ? 1 : 0;
-    }
-
-    /**
-     * Initializes this field by tying it to an actual object
-     * @see self::$database
-     * @see self::$parent
-     * @see self::$myfield
-     */
-    public function Initialize(ObjectDatabase $database, BaseObject $parent, string $myfield) : void
-    {
-        $this->database = $database; 
-        $this->parent = $parent; 
-        $this->myfield = $myfield;
+        $this->name = $name;
+        $this->saveOnRollback = $saveOnRollback;
     }
     
-    /** Gives the field its value loaded from the database */
-    public function InitValue($value) : void
+    /** Returns this field as a string */
+    public function __toString() : string
     {
+        return $this->parent->__toString().':'.
+            $this->name.':'.Utilities::ShortClassName(static::class);
+    }
+    
+    /** Returns the unique ID of this field */
+    public function ID() : string
+    {
+        return $this->parent->ID().':'.$this->name;
+    }
+    
+    /**
+     * @param BaseObject $parent parent object reference
+     * @return $this
+     */
+    public function SetParent(BaseObject $parent) : self
+    {
+        $this->database = $parent->GetDatabase();
+        $this->parent = $parent; return $this;
+    }
+    
+    /**
+     * Returns an exception for the given bad value type
+     * @param mixed $value bad value
+     * @return FieldDataTypeMismatch
+     */
+    protected function BadValue($value) : FieldDataTypeMismatch
+    {
+        return new FieldDataTypeMismatch($this->name.' '.gettype($value));
+    }
+    
+    /** @return string field name in the DB */
+    final public function GetName() : string { return $this->name; }
+
+    /** @return int number of times modified */
+    public function GetDelta() : int { return $this->delta; }
+    
+    /** @return bool true if was modified from DB */
+    public function isModified() : bool { return $this->delta > 0; }
+    
+    /** Returns true if this field should be saved on rollback */
+    public function isSaveOnRollback() : bool { return $this->saveOnRollback; }
+    
+    /**
+     * Initializes the field's value from the DB
+     * @param mixed $value database value
+     * @return $this
+     */
+    public abstract function InitDBValue($value);
+    
+    /**
+     * Returns the field's DB value
+     * @return ?scalar
+     */
+    public abstract function GetDBValue();
+    
+    /** 
+     * Returns the field's DB value and resets its delta
+     * @return ?scalar
+     */
+    public function SaveDBValue()
+    {
+        $retval = $this->GetDBValue();
+        $this->delta = 0;
+        return $retval;
+    }
+    
+    /** Restores this field to its initial value */
+    public abstract function RestoreDefault() : void;
+}
+
+/** 
+ * The typed template of a base field
+ * @template T 
+ */
+trait BaseBaseT
+{
+    /** @var T value, possibly temporary only */
+    protected $tempvalue;
+    /** @var T value, non-temporary (DB) */
+    protected $realvalue;
+    /** @var T hardcoded default value */
+    protected $default;
+
+    /**
+     * Type-checks the input value
+     * @param mixed $value input value
+     * @param bool $isInit true if this is from the DB
+     * @return T the type-checked value
+     */
+    protected abstract function CheckValue($value, bool $isInit);
+    
+    /**
+     * Initializes the field's value from the DB
+     * @param mixed $value database value
+     * @return $this
+     */
+    public function InitDBValue($value) : self
+    {
+        $value = $this->CheckValue($value, true);
+        
         $this->tempvalue = $value;
         $this->realvalue = $value;
         $this->delta = 0;
-    }
-
-    /** @see self::$myfield */
-    public function GetMyField() : string { return $this->myfield; }
-    
-    /** @see self::$mandatorySave */
-    public function isMandatorySave() : bool { return $this->mandatorySave; }
-    
-    /** @see self::$parent */
-    public function GetParent() : BaseObject { return $this->parent; }
-    
-    /**
-     * Gets the actual (possibly unserialized) value of this field
-     * @param bool $allowTemp if false, force getting the real (non-temporary) value
-     */
-    public function GetValue(bool $allowTemp = true) { return $allowTemp ? $this->tempvalue : $this->realvalue; }
-
-    /** @see self::$delta */
-    public function GetDelta() : int { return $this->delta; }
-    
-    /** Resets the delta of this field to 0 */
-    public function ResetDelta() : self { $this->delta = 0; return $this; }
-
-    /** Gets the serialized value of this field that will exist in the DB */
-    public function GetDBValue() 
-    {
-        return $this->realvalue; 
+        
+        return $this;
     }
     
-    /**
-     * @param mixed $value the value to set for this field
-     * @param bool $temp if true, the value is temporary only
-     * @return bool if false, the value was not modified
+    /** 
+     * Returns the field's type-checked value
+     * @param bool $allowTemp if true, the value can be temporary
+     * @return T the type-checked value
      */
-    public function SetValue($value, bool $temp = false) : bool
+    public function GetValue(bool $allowTemp = true)
     {
-        $this->tempvalue = $value;
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+}
 
-        if (!$temp && $value !== $this->realvalue)
+/**
+ * The maybe-null typed template of a base field
+ * @template T
+ */
+abstract class BaseNullT extends BaseField
+{
+    /** @use BaseBaseT<?T> */
+    use BaseBaseT;
+    
+    /**
+     * @param T $default default value, default null
+     */
+    public function __construct(string $name, bool $saveOnRollback = false, $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->default = $this->CheckValue($default, false);
+        
+        $this->RestoreDefault();
+    }
+    
+    /** @return ?scalar */
+    public function GetDBValue() { return $this->realvalue; }
+    
+    public function RestoreDefault() : void
+    {
+        $this->tempvalue = $this->default;
+        $this->realvalue = $this->default;
+        
+        if ($this->default !== null) $this->delta = 1;
+    }
+}
+
+/**
+ * The non-null typed template of a base field
+ * @template T
+ */
+abstract class BaseT extends BaseField
+{
+    /** @use BaseBaseT<T> */
+    use BaseBaseT;
+    
+    /**
+     * @param T $default default value, default none
+     */
+    public function __construct(string $name, bool $saveOnRollback = false, $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        if ($default !== null)
         {
+            $this->default = $this->CheckValue($default, false);
+            
+            $this->RestoreDefault();
+        }
+    }
+    
+    /** @return scalar */
+    public function GetDBValue() { return $this->realvalue; }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized() { return isset($this->tempvalue); }
+    
+    /** Restores this field to its default value */
+    public function RestoreDefault() : void
+    {
+        if (isset($this->default))
+        {
+            $this->tempvalue = $this->default;
+            $this->realvalue = $this->default;
+            $this->delta = 1;
+        }
+        else
+        {
+            unset($this->tempvalue);
+            unset($this->realvalue);
+            $this->delta = 0;
+        }
+    }
+}
+
+/** @template T */
+trait BaseSettableT
+{
+    /**
+     * Sets the field's value
+     * @param T $value typed value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue($value, bool $isTemp = false) : bool
+    {
+        $value = $this->CheckValue($value, false);
+        
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && (!isset($this->realvalue) || $value !== $this->realvalue))
+        {
+            if (isset($this->database))
+            {
+                if ($this->database->isReadOnly())
+                    throw new DatabaseReadOnlyException();
+            
+                $this->database->notifyModified($this->parent);
+            }
+                
             $this->realvalue = $value; $this->delta++; return true;
         }
         
         return false;
     }
-    
-    /** Uses sodium to securely zero the value of this field */
-    public function EraseValue() : void
-    {
-        if (isset($this->tempvalue)) sodium_memzero($this->tempvalue);
-        if (isset($this->realvalue)) sodium_memzero($this->realvalue);
-    }            
 }
 
-/** A scalar that holds a string */
-class StringType extends BaseField
+/**
+ * A possibly-null field that can have its value set directly
+ * @template T
+ * @extends BaseNullT<?T>
+ */
+abstract class SettableNullT extends BaseNullT 
+{ 
+    /** @use BaseSettableT<T> */
+    use BaseSettableT; 
+}
+
+/**
+ * A non-null field that can have its value set directly
+ * @template T
+ * @extends BaseT<T>
+ */
+abstract class SettableT extends BaseT
 {
-    public function InitValue($value) : void
-    {
-        if ($value !== null) $value = (string)$value;
-        
-        parent::InitValue($value);
-    }
-    
-    public function GetDBValue() : ?string
-    {
-        return parent::GetDBValue();
-    }    
-    
-    public function SetValue($value, bool $temp = false) : bool
-    {        
-        if ($value !== null && !is_string($value))
-            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
-        
-        return parent::SetValue($value, $temp);
-    }
+    /** @use BaseSettableT<T> */
+    use BaseSettableT;
 }
 
-/** A scalar that holds a bool */
-class BoolType extends BaseField
-{
-    public function InitValue($value) : void
-    {
-        if ($value !== null) $value = (bool)$value;
-        
-        parent::InitValue($value);
-    }
-    
-    public function GetDBValue() : ?int
-    {
-        return parent::GetDBValue();
-    }
-    
-    public function SetValue($value, bool $temp = false) : bool
-    {
-        if ($value !== null && !is_bool($value))
-            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
-            
-        return parent::SetValue($value, $temp);
-    }
-}
-
-/** A scalar that holds an int */
-class IntType extends BaseField
-{
-    public function InitValue($value) : void
-    {
-        if ($value !== null) $value = (int)$value;
-        
-        parent::InitValue($value);
-    }
-    
-    public function GetDBValue() : ?int
-    {
-        return parent::GetDBValue();
-    }
-    
-    public function SetValue($value, bool $temp = false) : bool
-    {
-        if ($value !== null && !is_int($value))
-            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
-            
-        return parent::SetValue($value, $temp);
-    }
-}
-
-/** A scalar that holds a float */
-class FloatType extends BaseField
-{
-    public function InitValue($value) : void
-    {
-        if ($value !== null) $value = (float)$value;
-        
-        parent::InitValue($value);
-    }
-    
-    public function GetDBValue() : ?float
-    {
-        return parent::GetDBValue();
-    }
-    
-    public function SetValue($value, bool $temp = false) : bool
-    {
-        if ($value !== null && !is_float($value))
-            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
-        
-        return parent::SetValue($value, $temp);
-    }
-}
-
-class Date extends FloatType { }
-
-/** Stores a value that represents a thread-safe counter */
-class Counter extends IntType
+/** 
+ * A possibly-null string
+ * @extends SettableNullT<?string> 
+ */
+class NullStringType extends SettableNullT
 {
     /**
-     * Constructs a new counter with a default value of zero
-     * @see BaseField::$mandatorySave
+     * @param mixed $value
+     * @return ?string
      */
-    public function __construct(bool $mandatorySave = false)
+    protected function CheckValue($value, bool $isInit)
     {
-        parent::__construct(0, $mandatorySave);
-        $this->ResetDelta(); // using default values sets the delta
-    }
-    
-    /** Gives the counter its value from the DB, or 0 if null */
-    public function InitValue($value) : void
-    {        
-        parent::InitValue($value ?? 0);
-    }        
-    
-    /** Increments the counter by the given delta */
-    public function Delta(int $delta = 1) : bool 
-    { 
-        if ($delta === 0) return false;
+        if ($value === '' || ($value !== null && !is_string($value)))
+            throw parent::BadValue($value);
         
-        $this->tempvalue += $delta; 
-        $this->realvalue += $delta; 
-        $this->delta += $delta; return true;
-    }
-        
-    /** Returns the counter's delta as the value to be sent to the DB */
-    public function GetDBValue() : int { return $this->delta; }
-}
-
-class Limit extends IntType { }
-
-/** Stores a value that is automatically JSON-encoded */
-class JSON extends BaseField
-{    
-    public function InitValue($value) : void
-    {
-        if ($value !== null && !is_string($value))
-            throw new FieldTypeMismatch($this->myfield.' '.gettype($value));
-        
-        if ($value !== null) $value = Utilities::JSONDecode($value);
-        
-        parent::InitValue($value);
-    }
-
-    /** Returns this field's value as a JSON string for the DB */
-    public function GetDBValue() : string 
-    { 
-        return Utilities::JSONEncode($this->realvalue); 
+        return $value;
     }
 }
 
 /** 
- * Stores a reference to another BaseObject 
- * @template T of BaseObject
+ * A non-null (and non-empty) string
+ * @extends SettableT<string> 
  */
-class ObjectRef extends StringType
+class StringType extends SettableT
 {
-    /** @var ?T The object that is referenced */
-    protected ?BaseObject $object;
-    
-    /** @var class-string<T> The class of the object that is referenced */
-    protected ?string $refclass; 
-    
-    /** The name of the field in the referenced object that cross-references our parent object */
-    protected ?string $reffield; 
-    
-    /** if true and reffield is null, the referenced object's reffield is an array of objects rather than a single reference */
-    protected bool $refmany;
-    
-    /** if true, delete the linked object when unsetting our reference to it */
-    protected bool $autoDelete = false;
-
     /**
-     * Creates a new object reference field
-     * @param class-string<T> $refclass
-     * @see ObjectRef::$refclass
-     * @see ObjectRef::$reffield
-     * @see ObjectRef::$refmany
+     * @param mixed $value
+     * @return string
      */
-    public function __construct(string $refclass, ?string $reffield = null, bool $refmany = true)
+    protected function CheckValue($value, bool $isInit)
     {
-        $this->refclass = $refclass; $this->reffield = $reffield; $this->refmany = $refmany;
-    }
-
-    /** Returns the base class that the referenced object must be */
-    public function GetBaseClass() : string { return $this->refclass; }
-    
-    /** @see ObjectRef::$refclass */
-    public function GetRefClass() : ?string { return $this->refclass; }
-    
-    /** @see ObjectRef::$reffield */
-    public function GetRefField() : ?string { return $this->reffield; }
-    
-    /** @see ObjectRef::$refmany */
-    public function GetRefIsMany() : bool { return $this->refmany; }
-    
-    /** @see ObjectRef::$autoDelete */
-    public function isAutoDelete() : bool { return $this->autoDelete; }
-    
-    /** @see ObjectRef::$autoDelete */
-    public function autoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
-
-    /** 
-     * Returns the object referenced by this field, possibly loading it from the DB 
-     * @return ?T
-     */
-    public function GetObject() : ?BaseObject
-    {        
-        $id = $this->GetValue(); if ($id === null) return null;
+        if ($value === null || !is_string($value) || $value === '')
+            throw parent::BadValue($value);
         
-        $class = $this->GetRefClass(); if (!class_exists($class)) return null;
-        
-        if (!isset($this->object)) $this->object = $class::TryLoadByID($this->database, $id);
-        
-        return $this->object;
-    }
-    
-    /** 
-     * Sets the value of this field to reference the given object 
-     * @param ?T $object object to set
-     * @return bool true if this field was modified
-     */
-    public function SetObject(?BaseObject $object) : bool
-    {        
-        if (isset($this->object) && $object === $this->object) return false;
-        
-        if ($object !== null && !is_a($object, $this->GetBaseClass())) 
-            throw new ObjectTypeException();
-        
-        $this->object = $object; 
-
-        return $this->SetValue( ($object !== null) ? $object->ID() : null );
-    }
-    
-    /** Deletes the object referenced by this field */
-    public function DeleteObject() : void
-    {
-        $id = $this->GetValue(); if ($id === null) return;
-        
-        if (isset($this->object)) $this->object->Delete();
-        else $this->GetRefClass()::DeleteByID($this->database, $id);
+        return $value;
     }
 }
 
-/** Represents a reference to a polymorphic object that implements a base class */
-class ObjectPoly extends ObjectRef
+/** 
+ * A possibly-null boolean
+ * @extends SettableNullT<?bool> 
+ */
+class NullBoolType extends SettableNullT
 {
-    /** The base class that the referenced object must inherit */
-    protected string $baseclass;
-    
-    /** Returns the given class name minus the first namespace */
-    private static function ShortClass(string $class) : string
-    {
-        return implode('\\',array_slice(explode('\\', $class),1)); 
-    }
-    
     /**
-     * Creates a new object reference field
-     * @see ObjectPoly::$baseclass
-     * @see ObjectRef::$reffield
-     * @see ObjectRef::$refmany
+     * @param mixed $value
+     * @return ?bool
      */
-    public function __construct(string $baseclass, ?string $reffield = null, bool $refmany = true)
+    protected function CheckValue($value, bool $isInit)
     {
-        $this->baseclass = $baseclass; $this->reffield = $reffield; $this->refmany = $refmany;
-    }
-    
-    /** Initializes the poly reference using the DB string with the reference's ID and class */
-    public function InitValue($value) : void
-    {
-        parent::InitValue($value);
-        if ($value === null) return;
+        if ($isInit && is_int($value)) $value = (bool)$value;
         
-        $value = explode(':',$value);
-        parent::InitValue($value[0]);
-        $this->refclass = "Andromeda\\".$value[1];
-    }
-    
-    /** @see ObjectPoly::$baseclass */
-    public function GetBaseClass() : string { return $this->baseclass; }
-    
-    /** @see ObjectRef::GetRefClass() */
-    public function GetRefClass() : ?string
-    {
-        if (!isset($this->refclass)) return null;
+        if ($value !== null && !is_bool($value))
+            throw parent::BadValue($value);
         
-        return parent::GetRefClass();
+        return $value;
     }
     
-    /**
-     * Returns the serialized database value of the given object ID and type
-     * 
-     * Exposed for use in building QueryBuilder WHERE statements with poly objects
-     */
-    public static function GetIDTypeDBValue(string $id, string $type) : string 
+    /** @return ?int */
+    public function GetDBValue() : ?int 
     { 
-        return $id.':'.self::ShortClass($type); 
+        $val = parent::GetDBValue();
+        return ($val !== null) ? (int)$val : null;
     }
-    
+}
+
+/** 
+ * A non-null boolean
+ * @extends SettableT<bool> 
+ */
+class BoolType extends SettableT
+{
     /**
-     * Returns the serialized database value of the given object
-     * 
-     * Exposed for use in building QueryBuilder WHERE statements with poly objects
+     * @param mixed $value
+     * @return bool
      */
-    public static function GetObjectDBValue(?BaseObject $obj) : ?string
+    protected function CheckValue($value, bool $isInit)
     {
-        return ($obj === null) ? null : static::GetIDTypeDBValue($obj->ID(), get_class($obj));
+        if ($isInit && is_int($value)) $value = (bool)$value;
+        
+        if ($value === null || !is_bool($value))
+            throw parent::BadValue($value);
+            
+        return $value;
     }
     
-    /**
-     * Poly objects are serialized using their ID and class strings
-     * @see BaseField::GetDBValue()
-     */
-    public function GetDBValue() : ?string 
+    /** @return int */
+    public function GetDBValue() : int
     { 
-        if ($this->GetValue() === null) return null; 
+        return (int)parent::GetDBValue(); 
+    }
+}
+
+/** 
+ * A possibly-null integer
+ * @extends SettableNullT<?int> 
+ */
+class NullIntType extends SettableNullT
+{
+    /**
+     * @param mixed $value
+     * @return ?int
+     */
+    protected function CheckValue($value, bool $isInit)
+    {
+        if ($value !== null && !is_int($value))
+            throw parent::BadValue($value);
+            
+        return $value;
+    }
+}
+
+/** 
+ * A non-null integer
+ * @extends SettableT<int> 
+ */
+class IntType extends SettableT
+{
+    /**
+     * @param mixed $value
+     * @return int
+     */
+    protected function CheckValue($value, bool $isInit)
+    {
+        if ($value === null || !is_int($value))
+            throw parent::BadValue($value);
         
-        return static::GetIDTypeDBValue($this->GetValue(), $this->refclass); 
+        return $value;
+    }
+}
+
+/** 
+ * A possibly-null float
+ * @extends SettableNullT<?float> 
+ */
+class NullFloatType extends SettableNullT
+{
+    /**
+     * @param mixed $value
+     * @return ?float
+     */
+    protected function CheckValue($value, bool $isInit)
+    {
+        if ($value !== null && !is_float($value))
+            throw parent::BadValue($value);
+        
+        return $value;
+    }
+}
+
+/** 
+ * A non-null float
+ * @extends SettableT<float> 
+ */
+class FloatType extends SettableT
+{
+    /**
+     * @param mixed $value
+     * @return float
+     */
+    protected function CheckValue($value, bool $isInit)
+    {
+        if ($value === null || !is_float($value))
+            throw parent::BadValue($value);
+        
+        return $value;
+    }
+}
+
+trait BaseDate
+{
+    /** Sets the value to the current timestamp */
+    public function SetDateNow() : bool
+    {
+        return parent::SetValue(Main::GetInstance()->GetTime());
+    }
+}
+
+/** A field that stores a possibly-null timestamp */
+class NullDate extends NullFloatType { use BaseDate; }
+
+/** A field that stores a non-null timestamp (default now) */
+class Date extends FloatType 
+{ 
+    use BaseDate;
+
+    public function __construct(string $name, bool $saveOnRollback = false)
+    {
+        $def = Main::GetInstance()->GetTime();
+        parent::__construct($name, $saveOnRollback, $def);
+    }
+}
+
+/** 
+ * A field that stores a thread-safe integer counter
+ * @extends BaseT<int> 
+ */
+class Counter extends BaseT
+{
+    private ?NullIntType $limit = null;
+    
+    /**
+     * @param string $name
+     * @param bool $saveOnRollback
+     * @param ?NullIntType $limit optional counter limiting field
+     */
+    public function __construct(
+        string $name, bool $saveOnRollback = false, 
+        ?NullIntType $limit = null)
+    {
+        parent::__construct($name, $saveOnRollback, 0);
+        
+        $this->delta = 0; // implicit
+        $this->limit = $limit;
     }
     
     /**
-     * Also updates the class name of the object
-     * @see ObjectRef::SetObject()
+     * @param mixed $value
+     * @return int
      */
-    public function SetObject(?BaseObject $object) : bool
+    protected function CheckValue($value, bool $isInit)
     {
-        if (!parent::SetObject($object)) return false;
+        if ($value === null || !is_int($value))
+            throw parent::BadValue($value);
         
-        $this->refclass = ($object === null) ? null : get_class($object);
+        return $value;
+    }
+    
+    public function GetDBValue() : int { return $this->delta; }
+
+    /**
+     * Checks if the given delta would exceed the limit (if it exists)
+     * @param int $delta delta to check
+     * @param bool $throw if true, throw, else return
+     * @throws CounterOverLimitException if $throw and the limit is exceeded
+     * @return bool if $throw, return false if the limit was exceeded
+     */
+    public function CheckDelta(int $delta = 1, bool $throw = true) : bool
+    {
+        if ($delta > 0 && $this->limit !== null)
+        {
+            $limit = $this->limit->GetValue();
+            
+            if ($limit !== null && $this->tempvalue + $delta > $limit)
+            {
+                if ($throw) 
+                    throw new CounterOverLimitException($this->name); 
+                else return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Increments the counter by the given value
+     * @param int $delta amount to increment
+     * @param bool $ignoreLimit true to ignore the limit
+     * @return bool true if the field was modified
+     */
+    public function DeltaValue(int $delta = 1, bool $ignoreLimit = false) : bool
+    {
+        if ($delta === 0) return false;
         
+        if ($this->database->isReadOnly())
+            throw new DatabaseReadOnlyException();
+        
+        $this->database->notifyModified($this->parent);
+        
+        if (!$ignoreLimit) $this->CheckDelta($delta);
+        
+        $this->tempvalue += $delta;
+        $this->realvalue += $delta;
+        $this->delta += $delta;
         return true;
     }
 }
 
 /** 
- * Represents a collection of (non-polymorphic) objects that reference this one.
- * 
- * Essentially is a syntactic-sugar/caching field that allows loading the array 
- * of objects without having to call into their class to load ones that reference us.  
- * The practical value is that the field stores a reference counter and acts as a cache.
- * @template T of BaseObject
+ * A field that stores a JSON-encoded array
+ * @extends SettableT<array> 
  */
-class ObjectRefs extends Counter
+class JsonArray extends SettableT
 {
     /**
-     * array of objects that reference this field 
-     * @var array<string, T>
+     * @param mixed $value
+     * @return array<mixed>
      */
-    protected array $objects; 
-    
-    /** true if the objects array is fully loaded */
-    protected bool $isLoaded = false;
-    
-    /** @var class-string<T> The class of the object that is referenced */
-    protected string $refclass;
-    
-    /** The name of the field in the referenced object that references our parent object */
-    protected ?string $reffield; 
-    
-    /** True if our object is referenced as a polymorphic field */
-    protected bool $parentPoly;
-    
-    /** if true, delete the linked object when removing our reference to it */
-    protected bool $autoDelete = false;
-    
-    /** @var T[] array of references that have been added */
-    protected array $refs_added = array();
-    
-    /** @var T[] array of references that have been deleted */
-    protected array $refs_deleted = array();
-
-    /** return false - referenced objects refer to us as a single object */
-    public static function GetIsRefsMany() : bool { return false; }    
-    
-    /** @see ObjectRefs::$autoDelete */
-    public function isAutoDelete() : bool { return $this->autoDelete; }
-    
-    /** @see ObjectRefs::$autoDelete */
-    public function autoDelete(bool $val = true) : self { $this->autoDelete = $val; return $this; }
-    
-    /**
-     * Creates a new object reference array field
-     * @param class-string<T> $refclass
-     * @see ObjectRefs::$refclass
-     * @see ObjectRefs::$reffield
-     * @see ObjectRefs::$parentPoly
-     */
-    public function __construct(string $refclass, ?string $reffield = null, bool $parentPoly = false)
+    protected function CheckValue($value, bool $isInit)
     {
-        parent::__construct();
-        
-        $this->refclass = $refclass; 
-        $this->reffield = $reffield; 
-        $this->parentPoly = $parentPoly;
-    }
-    
-    /** @return class-string<T> */
-    public function GetRefClass() : string { return $this->refclass; }
-    
-    /** @see ObjectRefs::$reffield */
-    public function GetRefField() : string { return $this->reffield; }
-
-    /**
-     * Load the array of objects referencing this field
-     * 
-     * If offset or limit are not null, the array will not be fully loaded and will need to be queried again
-     * @param int $limit max number of objects to load
-     * @param int $offset number of objects to skip loading
-     * @return array<string, T> objects indexed by their ID
-     */
-    public function GetObjects(?int $limit = null, ?int $offset = null) : array
-    {
-        if (!$this->isLoaded) { $this->LoadObjects($limit, $offset); return $this->objects; }
-        
-        else return array_slice($this->objects, $offset??0, $limit);
-    }
-    
-    /** Gives the counter its value from the DB, or 0 if null */
-    public function InitValue($value) : void
-    {
-        parent::InitValue((int)($value ?? 0));
-
-        if (!$this->GetValue()) { $this->isLoaded = true; $this->objects = array(); }
-    }
-    
-    /** Populate the objects array, merging with changes */
-    protected function LoadObjects(?int $limit = null, ?int $offset = null) : void
-    {
-        $this->objects = array();
-        if ($limit !== null && $limit <= 0) return;
-        if ($offset !== null && $offset <= 0) $offset = 0;
-
-        $this->InnerLoadObjects($limit, $offset);
-        $this->isLoaded = ($limit === null && $offset === null);
-        
-        if ($limit === null || count($this->objects) < $limit)
+        if ($isInit) 
         {
-            if ($offset !== null) $offset = max(0, $offset-count($this->objects));
+            if ($value === null || !is_string($value)) 
+                throw parent::BadValue($value);
+            $value = Utilities::JSONDecode($value);
+        }
+        
+        if ($value === null || !is_array($value))
+            throw parent::BadValue($value);
+        
+        return $value;
+    }
+    
+    public function GetDBValue() : string 
+    {
+        return Utilities::JSONEncode(parent::GetDBValue()); 
+    }    
+}
+
+/**
+ * A field that stores a JSON-encoded array or null
+ * @extends SettableNullT<?array>
+ */
+class NullJsonArray extends SettableNullT
+{
+    /**
+     * @param mixed $value
+     * @return array<mixed>
+     */
+    protected function CheckValue($value, bool $isInit)
+    {
+        if ($isInit && $value !== null)
+        {
+            if (!is_string($value))
+                throw parent::BadValue($value);
+            $value = Utilities::JSONDecode($value);
+        }
+        
+        if ($value !== null && !is_array($value))
+            throw parent::BadValue($value);
+        
+        return $value;
+    }
+    
+    public function GetDBValue() : ?string
+    {
+        $val = parent::GetDBValue();
+        if ($val === null) return null;
+        return Utilities::JSONEncode($val);
+    }   
+}
+
+/** @template T of BaseObject */
+trait BaseObjectRefT
+{
+    /**
+     * @param class-string<T> $class object class
+     * @param string $name
+     */
+    public function __construct(string $class, string $name)
+    {
+        parent::__construct($name);
+        
+        $this->class = $class;
+    }
+    
+    public function GetValue(bool $allowTemp = true)
+    {
+        if ($allowTemp && isset($this->tempvalue)) /** @phpstan-ignore-line */
+            return $this->tempvalue;
             
-            $this->MergeWithObjectChanges();
-            
-            if ($limit || $offset) $this->objects = array_slice($this->objects, $offset, $limit);            
-        }        
+        if (!$allowTemp && isset($this->realvalue)) /** @phpstan-ignore-line */
+            return $this->realvalue;
+        
+        return $this->FetchObject();
     }
-    
-    /** Perform the inner/core object array loading query using a WHERE references us on the target class */
-    protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
-    {
-        $myval = $this->parentPoly ? ObjectPoly::GetObjectDBValue($this->parent) : $this->parent->ID();
-        $q = new QueryBuilder(); $q->Where($q->Equals('obj_'.$this->reffield, $myval));
-        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
-    }
-    
-    /** Merge changed references with the object array from the DB */
-    protected function MergeWithObjectChanges() : void
-    {
-        foreach ($this->refs_added as $object) $this->objects[$object->ID()] = $object;
-        foreach ($this->refs_deleted as $object) unset($this->objects[$object->ID()]);
-    }
-    
-    /** Deletes all objects that reference this field in a single query */
-    public function DeleteObjects() : void
-    {
-        if (!$this->GetValue()) return;
-        
-        $this->GetRefClass()::DeleteByObject($this->database, $this->reffield, $this->parent, $this->parentPoly);
-        
-        foreach ($this->refs_added as $obj) $obj->Delete(); 
-        
-        $this->isLoaded = true; $this->objects = array();
-    }
-    
-    /**
-     * Add the given object to this field's object array
-     * @param T $object the object to add
-     * @return bool true if this field was modified
-     */
-    public function AddObject(BaseObject $object) : bool
-    {        
-        if (!is_a($object, $this->GetRefClass()))
-            throw new ObjectTypeException();
-        
-        $modified = false;
-        
-        if (($idx = array_search($object, $this->refs_deleted, true)) !== false)
-        {
-            unset($this->refs_deleted[$idx]);
-            parent::Delta(); $modified = true;
-        }
 
-        if (!in_array($object, $this->refs_added, true))
-        {
-            $this->refs_added[] = $object; 
-            parent::Delta(); $modified = true;
-        }
-        
-        if (isset($this->objects))
-            $this->objects[$object->ID()] = $object; 
-
-        return $modified;
-    }
-    
-    /**
-     * Deletes the given object from this field's object array
-     * @param T $object the object to remove
-     * @return bool true if this field was modified
-     */
-    public function RemoveObject(BaseObject $object) : bool
+    public function SaveDBValue()
     {
-        $modified = false;
-
-        if (($idx = array_search($object, $this->refs_added, true)) !== false)
-        {
-            unset($this->refs_added[$idx]);
-            parent::Delta(-1); $modified = true;
-        }
-        
-        if (!in_array($object, $this->refs_deleted, true))
-        {
-            $this->refs_deleted[] = $object; 
-            parent::Delta(-1); $modified = true;
-        }
-        
-        if (isset($this->objects))
-            unset($this->objects[$object->ID()]);
-
-        return $modified;
+        //temp/real are used to hold the dirty value        
+        unset($this->tempvalue);
+        unset($this->realvalue);
+        return parent::SaveDBValue();
     }
 }
 
 /**
- * A field that represents a many-to-many relationship with another object.
- * 
- * Like ObjectRefs this field type is mainly syntactic sugar but has the added
- * benefit of automatically managing the sub-objects that join the two classes together.
- * Example - joining together Accounts and Groups requires a GroupMembership join object.
- * The class is basically an ObjectRefs to a collection of join objects, but that uses
- * an SQL JOIN query to load the actual joined class in LoadObjects()
+ * A field stores a possibly-null reference to another object
+ * @template T of BaseObject
+ * @extends SettableNullT<?T>
  */
-class ObjectJoin extends ObjectRefs
+class NullObjectRefT extends SettableNullT
 {
-    /** The name of the class that we are joined to */
-    protected string $joinclass;
+    /** @use BaseObjectRefT<T> */
+    use BaseObjectRefT;
     
-    /**
-     * array cache of join objects
-     * @var array<string, JoinObject>
-     */
-    protected array $joinobjs = array(); 
+    /** @var class-string<T> */
+    private string $class;
     
-    /** return true - referenced objects refer to us in an array */
-    public static function GetIsRefsMany() : bool { return true; }
-    
-    /** @see ObjectRefs::$autoDelete - returns false */
-    public function isAutoDelete() : bool { return false; }
-    
-    /** @see ObjectJoin::$joinclass */
-    public function GetJoinClass() : string { return $this->joinclass; }
-    
-    /**
-     * Construct a new object join field
-     * 
-     * The join objects that join us to the joined class must reference the destination
-     * using the same field name that our class uses to reference the join objects.
-     * The join objects must reference objects using their IDs.
-     * @example Account groups -> GroupMembership accounts, GroupMembership groups <- Group id
-     * @example Group accounts -> GroupMembership groups, GroupMembership accounts <- Account id
-     * @see ObjectRefs::$refclass
-     * @see ObjectJoin::$joinclass
-     * @see ObjectRefs::$reffield
-     */
-    public function __construct(string $refclass, string $joinclass, string $reffield)
-    {
-        parent::__construct($refclass, $reffield);
-        
-        $this->joinclass = $joinclass;
-    }
-    
-    /** Perform the inner/core object array loading query using WHERE the join class references us and JOIN the target class */
-    protected function InnerLoadObjects(?int $limit = null, ?int $offset = null) : void
-    {
-        $q = new QueryBuilder(); $key = $this->database->GetClassTableName($this->joinclass).'.objs_'.$this->reffield;
+    private ?string $objId = null;
 
-        $q->Where($q->Equals($key, $this->parent->ID()))
-            ->Join($this->database, $this->joinclass, $this->myfield, $this->refclass, 'id');
-        
-        $this->objects = $this->refclass::LoadByQuery($this->database, $q->Limit($limit)->Offset($offset));
+    protected function CheckValue($value, bool $isInit)
+    {
+        // $isInit must be false, we override InitDBValue
+        if ($value !== null && !($value instanceof $this->class))
+            throw parent::BadValue($value);
+        return $value;
     }
     
-    /** Return the actual join object used to join us to the given object */
-    public function GetJoinObject(BaseObject $object) : ?JoinObject
+    /**
+     * Initializes the field's value from the DB
+     * @param mixed $value database value
+     * @return $this
+     */
+    public function InitDBValue($value) : self
     {
-        if (!array_key_exists($object->ID(), $this->joinobjs)) 
-        {
-            $this->joinobjs[$object->ID()] = ($this->joinclass)::TryLoadJoin($this->database, $this, $object);
-        }
+        if ($value !== null && !is_string($value))
+            throw parent::BadValue($value);
+        
+        $this->objId = $value;
+        $this->delta = 0;
+        return $this;
+    }
+    
+    public function GetDBValue() : ?string { return $this->objId; }
+    
+    /** 
+     * Loads the reference from the DB
+     * @return ?T loaded object
+     */
+    protected function FetchObject() : ?BaseObject
+    {
+        if ($this->objId === null) return null;
+        
+        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
+        
+        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
+    }
+
+    public function SetValue($value, bool $isTemp = false) : bool
+    {
+        $retval = parent::SetValue($value, $isTemp); // check type
+        
+        if (!$isTemp) $this->objId = ($value !== null) ? $value->ID() : null;
             
-        return $this->joinobjs[$object->ID()];
+        return $retval;
     }
     
-    /**
-     * Also creates a new join object joining us to the given object
-     * @param bool $notification if true this is a notification from another object
-     * @see ObjectRefs::AddObject()
-     */
-    public function AddObject(BaseObject $object, bool $notification = false) : bool
+    public function RestoreDefault() : void
     {
-        if ($notification) return parent::AddObject($object);
+        $this->tempvalue = null;
+        $this->realvalue = null;
+        $this->objId = null;
+    }
+}
+
+/**
+ * A field that stores a non-null reference to another object
+ * @template T of BaseObject
+ * @extends SettableT<T>
+ */
+class ObjectRefT extends SettableT
+{
+    /** @use BaseObjectRefT<T> */
+    use BaseObjectRefT;
+    
+    /** @var class-string<T> */
+    private string $class;
+    
+    private string $objId;
+
+    protected function CheckValue($value, bool $isInit)
+    {
+        // $isInit must be false, we override InitDBValue
+        if ($value === null || !($value instanceof $this->class))
+            throw parent::BadValue($value);
+        return $value;
+    }
+
+    /**
+     * Initializes the field's value from the DB
+     * @param mixed $value database value
+     * @return $this
+     */
+    public function InitDBValue($value) : self
+    {
+        if ($value === null || !is_string($value))
+            throw parent::BadValue($value);
         
-        $obj = ($this->joinclass)::CreateJoin($this->database, $this, $object);
-        
-        $this->joinobjs[$object->ID()] = $obj; return false;
+        $this->objId = $value;
+        $this->delta = 0;
+        return $this;
     }
     
+    public function GetDBValue() : string { return $this->objId; }
+    
     /**
-     * Also deletes the join object joining us to the given object
-     * @param bool $notification if true this is a notification from another object
-     * @see ObjectRefs::RemoveObject()
+     * Loads the reference from the DB
+     * @return T loaded object
      */
-    public function RemoveObject(BaseObject $object, bool $notification = false) : bool
+    protected function FetchObject() : BaseObject
     {
-        if ($notification) return parent::RemoveObject($object);       
+        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
-        ($this->joinclass)::TryDeleteJoin($this->database, $this, $object);
+        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
+    }
+
+    public function SetValue($value, bool $isTemp = false) : bool
+    {
+        $retval = parent::SetValue($value, $isTemp); // check type
         
-        unset($this->joinobjs[$object->ID()]); return false;
+        if (!$isTemp) $this->objId = $value->ID();
+        
+        return $retval;
+    }
+    
+    public function RestoreDefault() : void
+    {
+        unset($this->tempvalue);
+        unset($this->realvalue);
+        unset($this->objId);
     }
 }

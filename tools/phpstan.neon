@@ -1,9 +1,11 @@
 parameters:
     level: 5
+    phpVersion: 70400
     paths: 
         - ../Andromeda
     bootstrapFiles:
         - ../Andromeda/init.php
-
-includes:
-	- ./phpstan-baseline.neon
+    excludePaths:
+        analyse:
+            - ../Andromeda/Apps/Accounts
+            - ../Andromeda/Apps/Files

@@ -16,12 +16,11 @@ class QueryBuilder
     { 
         $query = $this->fromalias ?? "";
         
-        if (count($this->joins)) $query .= implode(array_map(function($str){ 
-            return " JOIN $str "; }, $this->joins));
+        if (count($this->joins)) $query .= implode(array_map(
+            function(string $str){ return " JOIN $str"; }, $this->joins));
         
         if ($this->where !== null) $query .= " WHERE ".$this->where;
         if ($this->orderby !== null) $query .= " ORDER BY ".$this->orderby;
-        
         if ($this->orderdesc !== null) $query .= $this->orderdesc ? " DESC" : " ASC";
         
         if ($this->limit !== null) $query .= " LIMIT ".$this->limit;
@@ -84,8 +83,14 @@ class QueryBuilder
     /** Returns a query string asserting the given column is less than the given value */
     public function LessThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'<'); }
     
+    /** Returns a query string asserting the given column is less or equal to the given value */
+    public function LessThanEquals(string $key, $val) : string { return $this->BaseCompare($key,$val,'<='); }
+    
     /** Returns a query string asserting the given column is greater than the given value */
     public function GreaterThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'>'); }
+    
+    /** Returns a query string asserting the given column is greater than or equal to the given value */
+    public function GreaterThanEquals(string $key, $val) : string { return $this->BaseCompare($key,$val,'>='); }
     
     /** Returns a query string asserting the given column is "true" (greater than zero) */
     public function IsTrue(string $key) : string { return $this->GreaterThan($key,0); }
@@ -139,49 +144,61 @@ class QueryBuilder
         return $this->And(...$retval);
     }
     
-    /** Assigns a WHERE clause to the query */
-    public function Where(string $where) : self { $this->where = $where; return $this; }
+    /** Assigns a WHERE clause to the query - if null, resets */
+    public function Where(?string $where) : self 
+    {
+        if ($where !== null && $this->where !== null)
+            $where = $this->And($this->where, $where);
+            
+        $this->where = $where; return $this;
+    }
     
     /** Returns the current WHERE string */
     public function GetWhere() : ?string { return $this->where; }
-    
+        
     /** Assigns an ORDER BY clause to the query */
-    public function OrderBy(string $orderby, ?bool $desc = null) : self { 
-        $this->orderby = $orderby; $this->orderdesc = $desc; return $this; }
+    public function OrderBy(string $orderby, ?bool $desc = null) : self 
+    { 
+        $this->orderby = $orderby; 
+        $this->orderdesc = $desc; return $this; 
+    }
     
     /** Assigns a LIMIT clause to the query */
-    public function Limit(?int $limit) : self { if ($limit < 0) $limit = 0; $this->limit = $limit; return $this; }
+    public function Limit(?int $limit) : self 
+    { 
+        if ($limit < 0) $limit = 0; 
+        $this->limit = $limit; return $this; 
+    }
     
     /** Assigns an OFFSET clause to the query (use with LIMIT) */
-    public function Offset(?int $offset) : self { if ($offset < 0) $offset = 0; $this->offset = $offset; return $this; }
+    public function Offset(?int $offset) : self 
+    { 
+        if ($offset < 0) $offset = 0; 
+        $this->offset = $offset; return $this; 
+    }
+
+    /** Returns the set query limit */
+    public function GetLimit() : ?int { return $this->limit; }
+    
+    /** Returns the set query offset */
+    public function GetOffset() : ?int { return $this->offset; }
     
     /**
      * Adds a JOIN clause to the query (can have > 1)
      * @param ObjectDatabase $database reference to the database
-     * @param string $joinclass the class of the objects that join us to the destination class
+     * @param class-string<BaseObject> $joinclass the class of the objects that join us to the destination class
      * @param string $joinprop the column name of the join table that matches the destprop
-     * @param string $destclass the class of the destination object
+     * @param class-string<BaseObject> $destclass the class of the destination object
      * @param string $destprop the column name of the destination object that matches the joinprop
-     * @param string $destpoly if not null, the destprop is a polymorphic reference to this class
-     * @param string $joinpoly if not null, the joinprop is a polymorphic reference to this class
      * @return $this
      */
-    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop, ?string $destpoly = null, ?string $joinpoly = null) : self
+    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop) : self
     {
         $joinclass = $database->GetClassTableName($joinclass); 
         $destclass = $database->GetClassTableName($destclass);
         
-        $joinstr = "$joinclass.$joinprop"; if ($destpoly !== null)
-        {
-            $classsym = $this->AddData(FieldTypes\ObjectPoly::GetIDTypeDBValue("",$destpoly));
-            $joinstr = $database->SQLConcat($joinstr, $classsym);
-        }
-        
-        $deststr = "$destclass.$destprop"; if ($joinpoly !== null)
-        {
-            $classsym = $this->AddData(FieldTypes\ObjectPoly::GetIDTypeDBValue("",$joinpoly));
-            $deststr = $database->SQLConcat($deststr, $classsym);
-        }
+        $joinstr = "$joinclass.$joinprop";
+        $deststr = "$destclass.$destprop";
         
         $this->joins[] = "$joinclass ON $joinstr = $deststr"; return $this;
     }
@@ -191,19 +208,18 @@ class QueryBuilder
      * 
      * If you need to add extra WHERE to the query, you must add to GetWhere()
      * @param ObjectDatabase $database database reference
-     * @param string $joinclass the table to join to itself 
+     * @param class-string<BaseObject> $joinclass the table to join to itself 
      * @param string $prop1 the column to match to prop2
      * @param string $prop2 the column to match to prop1
-     * @param string $tmptable the name of the temp table to join to (has prop2)
      * @return $this
      */
-    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2, string $tmptable = '_tmptable') : self
+    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2) : self
     {
         $joinclass = $database->GetClassTableName($joinclass); 
         
-        $this->fromalias = ", $joinclass $tmptable";
+        $this->fromalias = ", $joinclass _tmptable"; // TODO not likely to work correctly now - at least make this more general
         
-        $this->where = "$joinclass.$prop1 = $tmptable.$prop2";
+        $this->where = "$joinclass.$prop1 = _tmptable.$prop2";
         
         return $this;
     }
