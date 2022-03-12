@@ -277,8 +277,8 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("test/test", $t);
         $this->testGood("test/../test", $t);
         $this->testGood("test\\test", $t);
+        $this->testGood("C:\\test", $t);
         
-        $this->testBad("test:", $t);
         $this->testBad("test?", $t);
     }
     

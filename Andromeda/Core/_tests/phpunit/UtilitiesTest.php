@@ -19,6 +19,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    public function testInit() : void 
    {
        $this->assertTrue(Andromeda);
+       $this->assertIsString(andromeda_version);
    }
    
    public function testSingletonEmpty() : void
@@ -84,12 +85,23 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        Utilities::JSONDecode("nothing here!");
    }
    
+   public function testIsUTF8() : void
+   {
+       $this->assertTrue(Utilities::isUTF8(""));
+       $this->assertTrue(Utilities::isUTF8("test"));
+       $this->assertTrue(Utilities::isUTF8("\u{9999}"));
+       
+       $this->assertFalse(Utilities::isUTF8(hex2bin("deadbeef")));
+   }
+   
    public function testArrayLast() : void
    {
        $this->assertSame(Utilities::array_last(null), null);
        $this->assertSame(Utilities::array_last(array()), null);
        $this->assertSame(Utilities::array_last(array(5)), 5);
        $this->assertSame(Utilities::array_last(array(1,2,3)), 3);
+       $this->assertSame(Utilities::array_last(array(4=>'test',7=>'test2')), 'test2');
+       $this->assertSame(Utilities::array_last(array('b'=>5,'a'=>4)), 4);
    }
    
    public function testDeleteValue() : void

@@ -4,8 +4,9 @@ require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 
 require_once(ROOT."/Core/Database/DBStats.php");
+require_once(ROOT."/Core/Database/Database.php"); 
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
-use Andromeda\Core\Database\{ObjectDatabase, DBStats, DatabaseException, DatabaseConfigException};
+use Andromeda\Core\Database\{Database, ObjectDatabase, DBStats, DatabaseException, DatabaseConfigException};
 
 require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
@@ -32,11 +33,8 @@ class MaintenanceException extends Exceptions\ClientException { public $code = 5
 /** Exception indicating that the server failed to load a configured app */
 class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
 
-/** Andromeda cannot rollback and then commit since database/objects state is not sufficiently reset */
-class CommitAfterRollbackException extends Exceptions\ServerException { public $message = "COMMIT_AFTER_ROLLBACK"; }
-
-/** FinalizeOutput requires the database to not already be undergoing a transaction */
-class FinalizeTransactionException extends Exceptions\ServerException { public $message = "FINALIZE_OUTPUT_IN_TRANSACTION"; }
+/** FinalMetrics requires the database to not already be undergoing a transaction */
+class FinalizeTransactionException extends Exceptions\ServerException { public $message = "OUTPUT_IN_TRANSACTION"; }
 
 class RunContext 
 { 
@@ -59,6 +57,10 @@ class RunContext
  * 
  * Main is also a Singleton so it can be fetched anywhere with GetInstance().
  * A Main handles a single request, with an arbitrary number of appruns.
+ * 
+ * The Andromeda transaction model is that there is always a global commit
+ * or rollback at the end of the request. A rollback may follow a bad commit.
+ * There will NEVER be a rollback followed by a commit. There may be > 1 commit.
  */
 final class Main extends Singleton
 {
@@ -71,10 +73,8 @@ final class Main extends Singleton
     /** @var array<DBStats> commit stats */
     private array $commit_stats = array();
     
-    /** @var DBStats total request time */
     private DBStats $total_stats;
     
-    /** @var RequestLog */
     private RequestLog $reqlog;
     
     /** @var float time of request */
@@ -86,16 +86,10 @@ final class Main extends Singleton
     /** @var RunContext[] stack frames for nested Run() calls */
     private array $stack = array(); 
     
-    /** @var ?Config */
-    private ?Config $config = null; 
+    private ?ObjectDatabase $database = null;
+    private ?Config $config = null;
     
-    /** @var ?ObjectDatabase */
-    private ?ObjectDatabase $database = null; 
-    
-    /** @var ErrorManager */
     private ErrorManager $error_manager;
-    
-    /** @var IOInterface */
     private IOInterface $interface;
     
     /** @var bool true if Run() has been called since the last commit or rollback */
@@ -122,6 +116,15 @@ final class Main extends Singleton
             throw $class::Copy($this->dbException); // new trace
         }
         else return $this->database;
+    }
+    
+    /** Instantiates and returns a new ObjectDatabase connection */
+    public function InitDatabase() : ObjectDatabase
+    {
+        $dbconf = Database::LoadConfig(
+            $this->interface->GetDBConfigFile());
+        
+        return new ObjectDatabase(new Database($dbconf));
     }
     
     /** Returns the global config object or null if not installed */
@@ -181,13 +184,13 @@ final class Main extends Singleton
         
         try 
         {
-            $dbconf = $interface->GetDBConfigFile();
-            $this->database = new ObjectDatabase($dbconf);
-            $this->database->pushStatsContext();
+            $this->database = $this->InitDatabase();
+            $this->database->GetInternal()->pushStatsContext();
         }
         catch (DatabaseConfigException $e)
         {
-            if ($dbconf !== null) throw $e;
+            if ($interface->GetDBConfigFile() !== null) throw $e;
+            
             $this->dbException = $e;
         }
         
@@ -198,7 +201,7 @@ final class Main extends Singleton
             if (!$this->isEnabled()) throw new MaintenanceException();
             
             if ($this->config->isReadOnly()) 
-                $this->database->setReadOnly();
+                $this->database->GetInternal()->setReadOnly();
             
             if ($this->config->getVersion() === andromeda_version)
                 $apps = array_merge($apps, $this->config->GetApps());
@@ -215,8 +218,9 @@ final class Main extends Singleton
             if ($this->config && !$this->config->isReadOnly()
                     && $this->config->GetEnableRequestLog())
                 $this->reqlog = RequestLog::Create($this);
+        
+            $this->construct_stats = $this->database->GetInternal()->popStatsContext();
             
-            $this->construct_stats = $this->database->popStatsContext();
             $this->total_stats->Add($this->construct_stats);
         }
         
@@ -269,7 +273,7 @@ final class Main extends Singleton
         $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DETAILS;
         
         if ($dbstats && $this->database) 
-            $this->database->pushStatsContext();
+            $this->database->GetInternal()->pushStatsContext();
         
         $actionlog = isset($this->reqlog) ? $this->reqlog->LogAction($input) : null;
             
@@ -284,11 +288,11 @@ final class Main extends Singleton
         
         if ($dbstats && $this->database)
         {
-            $stats = $this->database->popStatsContext();
-            $this->total_stats->Add($stats);
+            $stats = $this->database->GetInternal()->popStatsContext();
             
-            $context->SetMetrics($stats);
+            $this->total_stats->Add($stats);
             $this->action_stats[] = $context;
+            $context->SetMetrics($stats);
         }
         
         return $data;
@@ -308,16 +312,7 @@ final class Main extends Singleton
 
         return Output::ParseArray($data)->GetAppdata();
     }
-    
-    private bool $rolledback = false;
-    
-    /** Runs the given $func in try/catch and logs if exception */
-    public static function LoggedTry(callable $func)
-    {
-        try { return $func(); } catch (\Throwable $e) { 
-            ErrorManager::GetInstance()->LogException($e); }
-    }
-    
+
     /**
      * Rolls back the current transaction. Internal only, do not call via apps.
      * 
@@ -328,9 +323,7 @@ final class Main extends Singleton
     {
         Utilities::RunAtomic(function()use($e)
         {
-            $this->rolledback = true;
-            
-            foreach ($this->apps as $app) $this->LoggedTry(
+            foreach ($this->apps as $app) $this->error_manager->LoggedTry(
                 function()use($app) { $app->rollback(); });
             
             if ($this->database) 
@@ -338,7 +331,7 @@ final class Main extends Singleton
                 $this->database->rollback();
                 
                 if ($e instanceof ClientException) 
-                    $this->LoggedTry(function()use($e)
+                    $this->error_manager->LoggedTry(function()use($e)
                 {
                     if (isset($this->reqlog)) 
                         $this->reqlog->SetError($e);
@@ -357,18 +350,15 @@ final class Main extends Singleton
      * 
      * First commits each app, then the database.  Does a rollback 
      * instead if the request was specified as a dry run.
-     * @throws CommitAfterRollbackException if a rollback was previously performed
      */
     public function commit() : void
     {
-        if ($this->rolledback) throw new CommitAfterRollbackException();
-        
         Utilities::RunAtomic(function()
         {
             if ($this->database)
             {
                 if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
-                    $this->database->pushStatsContext();
+                    $this->database->GetInternal()->pushStatsContext();
                 
                 $this->database->saveObjects();
                 
@@ -376,7 +366,8 @@ final class Main extends Singleton
                 
                 if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
                 {
-                    $commit_stats = $this->database->popStatsContext();
+                    $commit_stats = $this->database->GetInternal()->popStatsContext();
+                    
                     $this->commit_stats[] = $commit_stats;
                     $this->total_stats->Add($commit_stats);
                 }
@@ -411,14 +402,17 @@ final class Main extends Singleton
         return $this->config->isEnabled() || $this->interface->isPrivileged();
     }
     
-    /** Returns the configured debug level, or the interface's default */
-    public function GetDebugLevel() : int
+    /** 
+     * Returns the configured debug level, or the interface's default 
+     * @param bool $output if true, adjust level to interface privilege
+     */
+    public function GetDebugLevel(bool $output = false) : int
     {
         if ($this->config)
         {            
             $debug = $this->config->GetDebugLevel();
             
-            if (!$this->config->GetDebugOverHTTP() && 
+            if ($output && !$this->config->GetDebugOverHTTP() && 
                 !$this->interface->isPrivileged()) $debug = 0;
             
             return $debug;
@@ -431,19 +425,15 @@ final class Main extends Singleton
      * @param Output $output the output object to add metrics to
      * @param bool $isError if true, the output is an error response
      */
-    public function FinalizeOutput(Output $output, bool $isError = false) : void
+    public function FinalMetrics(Output $output, bool $isError = false) : void
     {
         $mlevel = $this->config ? $this->config->GetMetricsLevel() : $this->interface->GetMetricsLevel();
         
         if (!$this->database || !$mlevel) return;
         
-        if  ($this->GetDebugLevel() < Config::ERRLOG_DETAILS &&
-             !$this->interface->isPrivileged()) return;
-        // TODO should check debug over HTTP config?
-        
-        if ($this->database->inTransaction())
+         if ($this->database->GetInternal()->inTransaction())
             throw new FinalizeTransactionException();
-            
+        
         try
         {
             $metrics = RequestMetrics::Create(
@@ -451,7 +441,8 @@ final class Main extends Singleton
                 $this->construct_stats, $this->action_stats,
                 $this->commit_stats, $this->total_stats);
             
-            $output->SetMetrics($metrics->GetClientObject($isError));
+            if ($this->interface->isPrivileged() || $this->config->GetDebugOverHTTP())
+                $output->SetMetrics($metrics->GetClientObject($isError));
             
             $metrics->Save(); $this->innerCommit(false);
         }
