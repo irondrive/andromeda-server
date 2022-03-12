@@ -19,7 +19,7 @@ class UpgradeRequiredException extends Exceptions\ClientException { public $mess
 class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
 
 /** The base class from which apps must inherit */
-abstract class BaseApp implements Transactions
+abstract class BaseApp
 {
     /** Reference to the main API, for convenience */
     protected Main $API;
@@ -101,6 +101,7 @@ abstract class BaseApp implements Transactions
 /** 
  * Describes an app that needs database installation
  * and has upgrade scripts for upgrading the database
+ * and has a BaseConfig that stores the schema version
  */
 abstract class InstalledApp extends BaseApp
 {    
@@ -195,7 +196,7 @@ abstract class InstalledApp extends BaseApp
     {
         $this->API->GetInterface()->DisallowBatch();
         
-        $this->database->importTemplate(static::getTemplateFolder());
+        $this->database->GetInternal()->importTemplate(static::getTemplateFolder());
         
         $this->config = (static::getConfigClass())::Create($this->database)->Save();
     }

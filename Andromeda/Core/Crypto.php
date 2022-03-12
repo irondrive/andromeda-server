@@ -30,8 +30,8 @@ class CryptoKey
     {
         $key = sodium_crypto_pwhash(
             $bytes, $password, $salt,
-            $fast ? static::FAST_OPS : SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            $fast ? static::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            $fast ? self::FAST_OPS : SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
+            $fast ? self::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13 );
         sodium_memzero($password); return $key;
     }

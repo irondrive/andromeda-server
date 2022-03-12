@@ -74,9 +74,9 @@ class CLI extends IOInterface
     }  
     
     /** Strips -- off the given string and returns (or false if not found) */
-    private static function getKey(string $str)
+    private static function getKey(string $str) : ?string
     {
-        if (mb_substr($str,0,2) !== "--") return false; else return mb_substr($str,2);
+        if (mb_substr($str,0,2) !== "--") return null; else return mb_substr($str,2);
     }
     
     /** Returns the next args value (or null if not found) and increments $i */
@@ -165,41 +165,37 @@ class CLI extends IOInterface
         
         global $argv;
         
-        // process flags that are relevant for $config
         $i = 1; for (; $i < count($argv); $i++)
         {
             $key = self::getKey($argv[$i]);
             
-            if (!$key) break; else switch ($key)
+            if ($key !== null) switch ($key) // process flags that are relevant for $config
             {
                 case 'json': break;
                 case 'printr': break;
                 case 'debug': $i++; break;
                 case 'metrics': $i++; break;
                 case 'dbconf': $i++; break;
-                    
+                
                 case 'dryrun': if ($config) $config->setDryRun(); break;
-
+                
                 default: throw new IncorrectCLIUsageException();
             }
-        }
-        
-        // build an Input command from the rest of the command line
-        for (; $i < count($argv); $i++)
-        {
-            switch($argv[$i])
-            {                
-                case 'version': die("Andromeda ".andromeda_version.PHP_EOL); break;
+            else switch ($argv[$i]) // build an Input command from the rest of the command line
+            {
+                case 'version': die("Andromeda ".andromeda_version.PHP_EOL);
                 
                 case 'batch':
-                    if (($val = self::getNextValue($argv,$i)) === null) 
+                {
+                    if (($val = self::getNextValue($argv,$i)) === null)
                         throw new IncorrectCLIUsageException();
-                    return self::GetBatch($val); break;
-                    
-                default: return array(self::GetInput(array_slice($argv, $i))); break;
+                    else return self::GetBatch($val);
+                }
+                        
+                default: return array(self::GetInput(array_slice($argv, $i)));
             }
         }
-        
+
         throw new IncorrectCLIUsageException();
     }
     
