@@ -6,13 +6,17 @@ require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
-/** Exception indicating that a mailer was requested but none are configured (or it is disabled) */
-class EmailUnavailableException extends Exceptions\ClientErrorException { public $message = "EMAIL_UNAVAILABLE"; }
+/** Exception indicating that a mailer was requested but it is disabled */
+class EmailDisabledException extends Exceptions\ClientErrorException { public $message = "EMAIL_DISABLED"; }
+
+/** Exception indicating that a mailer was requested but none are configured */
+class EmailerUnavailableException extends Exceptions\ClientErrorException { public $message = "EMAILER_UNAVAILABLE"; }
 
 /** Exception indicating that the configured data directory is not valid */
 class UnwriteableDatadirException extends Exceptions\ClientErrorException { public $message = "DATADIR_NOT_WRITEABLE"; }
@@ -29,53 +33,119 @@ class AppVersionException extends Exceptions\ClientErrorException { public $mess
 /** A singleton object that stores a version field */
 abstract class BaseConfig extends SingletonObject
 {
-    public static function GetFieldTemplate() : array
+    protected FieldTypes\Date $date_created;
+    protected FieldTypes\StringType $version; // TODO comments
+    
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array( 'version' => new FieldTypes\StringType() ));
+        $fields = array();
+        
+        $this->date_created = $fields[] = new FieldTypes\Date('date_created');
+        $this->version = $fields[] = new FieldTypes\StringType('version');
+        
+        $this->RegisterFields($fields);
+        
+        parent::CreateFields();
     }
     
     /** Returns the database schema version */
-    public function getVersion() : string { return $this->GetScalar('version'); }
+    public function getVersion() : string 
+    {
+        return $this->version->GetValue(); 
+    }
     
     /** 
-     * Sets the database schema version to the given value 
+     * Sets the database schema version to the given value
+     * @param string $version schema version
      * @return $this
      */
-    public function setVersion(string $version) : self { return $this->SetScalar('version',$version); }
+    public function setVersion(string $version) : self 
+    { 
+        $this->version->SetValue($version); return $this; 
+    }
+    
+    /**
+     * Gets the config as a printable client object
+     * @param bool $admin if true, show sensitive admin-only values
+     * @return array if admin: `{date_created:float}`
+     */
+    public function GetClientObject(bool $admin = false) : array
+    {
+        $data = array();
+
+        if ($admin)
+        {
+            $data['date_created'] = $this->date_created->GetValue();
+            // TODO what about version? not sure how accounts/files handle it
+            // TODO don't forget to have files/accounts call this also
+        }
+        
+        return $data;
+    }
 }
 
 /** The global framework config stored in the database */
-class Config extends BaseConfig
+final class Config extends BaseConfig
 {
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'datadir' => new FieldTypes\StringType(),
-            'requestlog_db' => new FieldTypes\BoolType(false),
-            'requestlog_file' => new FieldTypes\BoolType(false),
-            'requestlog_details' => new FieldTypes\IntType(self::RQLOG_DETAILS_BASIC),
-            'debug' => new FieldTypes\IntType(self::ERRLOG_ERRORS),
-            'debug_http' => new FieldTypes\BoolType(false),
-            'debug_dblog' => new FieldTypes\BoolType(true),
-            'debug_filelog' => new FieldTypes\BoolType(false),
-            'metrics' => new FieldTypes\IntType(0),
-            'metrics_dblog' => new FieldTypes\BoolType(false),
-            'metrics_filelog' => new FieldTypes\BoolType(false),
-            'read_only' => new FieldTypes\BoolType(false),
-            'enabled' => new FieldTypes\BoolType(true),
-            'email' => new FieldTypes\BoolType(true),
-            'apps' => new FieldTypes\JSON()
-        ));
-    }
+    use TableNoChildren;
+    
+    private FieldTypes\NullStringType $datadir;
+    private FieldTypes\BoolType $read_only;
+    private FieldTypes\BoolType $enabled; // TODO comments
+    private FieldTypes\BoolType $email;
+    private FieldTypes\JsonArray $apps;
+    
+    private FieldTypes\BoolType $requestlog_db;
+    private FieldTypes\BoolType $requestlog_file;
+    private FieldTypes\IntType $requestlog_details;
+    private FieldTypes\IntType $debug;
+    private FieldTypes\BoolType $debug_http;
+    private FieldTypes\BoolType $debug_dblog;
+    private FieldTypes\BoolType $debug_filelog;
+    private FieldTypes\IntType $metrics;
+    private FieldTypes\BoolType $metrics_dblog;
+    private FieldTypes\BoolType $metrics_filelog;
     
     /** Creates a new config singleton with default values */
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->SetScalar('apps',array())->setVersion(andromeda_version); }
+    public static function Create(ObjectDatabase $database) : self
+    {
+        $obj = parent::BaseCreate($database);
+        $obj->version->SetValue(andromeda_version);
+        return $obj;
+    }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".
-                                                                 "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
-                                                                 "[--metrics ".implode('|',array_keys(self::METRICS_TYPES))."] [--metrics_dblog bool] [--metrics_filelog bool] ".
-                                                                 "[--read_only bool] [--enabled bool] [--email bool] [--datadir ?text]"; }
+    public static function GetSetConfigUsage() : string { return 
+        "[--read_only bool] [--enabled bool] [--email bool] [--datadir ?fspath] ".
+        "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".
+        "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
+        "[--metrics ".implode('|',array_keys(self::METRICS_TYPES))."] [--metrics_dblog bool] [--metrics_filelog bool]"; }
+    
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->datadir = $fields[] =            new FieldTypes\NullStringType('datadir');
+        $this->read_only = $fields[] =          new FieldTypes\BoolType('read_only',false, false);
+        $this->enabled = $fields[] =            new FieldTypes\BoolType('enabled',false, true);
+        $this->email = $fields[] =              new FieldTypes\BoolType('email',false, true);
+        $this->apps = $fields[] =               new FieldTypes\JsonArray('apps',false, array());
+        
+        $this->requestlog_db = $fields[] =      new FieldTypes\BoolType('requestlog_db',false, false);
+        $this->requestlog_file  = $fields[] =   new FieldTypes\BoolType('requestlog_file',false, false);
+        $this->requestlog_details = $fields[] = new FieldTypes\IntType ('requestlog_details',false, self::RQLOG_DETAILS_BASIC);
+        $this->debug = $fields[] =              new FieldTypes\IntType ('debug',false, self::ERRLOG_ERRORS);
+        $this->debug_http = $fields[] =         new FieldTypes\BoolType('debug_http',false, false);
+        $this->debug_dblog = $fields[] =        new FieldTypes\BoolType('debug_dblog',false, true);
+        $this->debug_filelog = $fields[] =      new FieldTypes\BoolType('debug_filelog',false, false);
+        $this->metrics = $fields[] =            new FieldTypes\IntType ('metrics',false, 0);
+        $this->metrics_dblog = $fields[] =      new FieldTypes\BoolType('metrics_dblog',false, false);
+        $this->metrics_filelog = $fields[] =    new FieldTypes\BoolType('metrics_filelog',false, false);
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
@@ -88,20 +158,20 @@ class Config extends BaseConfig
         if ($input->HasParam('datadir')) 
         {
             $datadir = $input->GetNullParam('datadir',SafeParam::TYPE_FSPATH);
-            if ($datadir !== null && !is_readable($datadir) || !is_writeable($datadir)) 
+            if ($datadir !== null && (!is_readable($datadir) || !is_writeable($datadir)))
                 throw new UnwriteableDatadirException();
-            $this->SetScalar('datadir', $datadir);
+            $this->datadir->SetValue($datadir);
         }
         
-        if ($input->HasParam('requestlog_db')) $this->SetFeatureBool('requestlog_db',$input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('requestlog_file')) $this->SetFeatureBool('requestlog_file',$input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('requestlog_db')) $this->requestlog_db->SetValue($input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('requestlog_file')) $this->requestlog_file->SetValue($input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
 
         if ($input->HasParam('requestlog_details'))
         {
             $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::RQLOG_DETAILS_TYPES));
             
-            $this->SetFeatureInt('requestlog_details', self::RQLOG_DETAILS_TYPES[$param]);
+            $this->requestlog_details->SetValue(self::RQLOG_DETAILS_TYPES[$param]);
         }
         
         if ($input->HasParam('debug'))
@@ -109,37 +179,37 @@ class Config extends BaseConfig
             $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::DEBUG_TYPES));
             
-            $this->SetFeatureInt('debug', self::DEBUG_TYPES[$param]);
+            $this->debug->SetValue(self::DEBUG_TYPES[$param]);
         }
         
-        if ($input->HasParam('debug_http')) $this->SetFeatureBool('debug_http',$input->GetParam('debug_http',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_dblog')) $this->SetFeatureBool('debug_dblog',$input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_filelog')) $this->SetFeatureBool('debug_filelog',$input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_http')) $this->debug_http->SetValue($input->GetParam('debug_http',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_dblog')) $this->debug_dblog->SetValue($input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('debug_filelog')) $this->debug_filelog->SetValue($input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
 
         if ($input->HasParam('metrics'))
         {
             $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, 
                 SafeParams::PARAMLOG_ONLYFULL, array_keys(self::METRICS_TYPES));
             
-            $this->SetFeatureInt('metrics', self::METRICS_TYPES[$param]);
+            $this->metrics->SetValue(self::METRICS_TYPES[$param]);
         }
         
-        if ($input->HasParam('metrics_dblog')) $this->SetFeatureBool('metrics_dblog',$input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('metrics_filelog')) $this->SetFeatureBool('metrics_filelog',$input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('metrics_dblog')) $this->metrics_dblog->SetValue($input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('metrics_filelog')) $this->metrics_filelog->SetValue($input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
         
         if ($input->HasParam('read_only')) 
         {
             $ro = $input->GetParam('read_only',SafeParam::TYPE_BOOL);
             
-            if (!$ro) $this->database->setReadOnly(false); // make DB writable
+            if (!$ro) $this->database->GetInternal()->setReadOnly(false); // make DB writable
             
-            $this->SetFeatureBool('read_only',$ro);
+            $this->read_only->SetValue($ro);
             
-            if ($ro) $this->SetFeatureBool('read_only',false,true); // not really RO yet 
+            if ($ro) $this->read_only->SetValue(false,true); // not really RO yet 
         }
         
-        if ($input->HasParam('enabled')) $this->SetFeatureBool('enabled',$input->GetParam('enabled',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('email')) $this->SetFeatureBool('email',$input->GetParam('email',SafeParam::TYPE_BOOL));        
+        if ($input->HasParam('enabled')) $this->enabled->SetValue($input->GetParam('enabled',SafeParam::TYPE_BOOL));
+        if ($input->HasParam('email')) $this->email->SetValue($input->GetParam('email',SafeParam::TYPE_BOOL));        
        
         return $this;
     }
@@ -148,7 +218,7 @@ class Config extends BaseConfig
      * returns the array of registered apps
      * @return String[]
      */
-    public function GetApps() : array { return $this->GetScalar('apps'); }
+    public function GetApps() : array { return $this->apps->GetValue(); }
     
     /** List all installable app folders that exist in the filesystem */
     public static function ListApps() : array
@@ -178,15 +248,15 @@ class Config extends BaseConfig
         }
         
         $appver = BaseApp::getAppApiVersion($app);
-        $ourver = (new VersionInfo())->getCompatVer();
+        $ourver = (new VersionInfo(andromeda_version))->getCompatVer();
         if ($appver !== $ourver) 
-            throw new AppVersionException("$app:$appver core:$ourver");
+            throw new AppVersionException("$app($appver) core($ourver)");
         
         Main::GetInstance()->LoadApp($app);
         
         $capps = $this->GetApps();        
         if (!in_array($app, $capps)) $capps[] = $app;        
-        return $this->SetScalar('apps', $capps);
+        $this->apps->SetValue($capps); return $this;
     }
     
     /** Unregisters the specified app name */
@@ -205,14 +275,14 @@ class Config extends BaseConfig
         
         $capps = $this->GetApps(); unset($capps[$key]);
         
-        return $this->SetScalar('apps', array_values($capps));
+        $this->apps->SetValue(array_values($capps)); return $this;
     }
     
     /** Returns whether the server is allowed to respond to requests */
-    public function isEnabled() : bool { return $this->GetFeatureBool('enabled'); }
+    public function isEnabled() : bool { return $this->enabled->GetValue(); }
     
     /** Set whether the server is allowed to respond to requests */
-    public function setEnabled(bool $enable) : self { return $this->SetFeatureBool('enabled',$enable); }
+    public function setEnabled(bool $enable) : self { $this->enabled->SetValue($enable); return $this; }
     
     private bool $dryrun = false;
 
@@ -223,16 +293,16 @@ class Config extends BaseConfig
     public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
-    public function isReadOnly() : bool { return $this->GetFeatureBool('read_only'); }
+    public function isReadOnly() : bool { return $this->read_only->GetValue(); }
     
     /** Returns the configured global data directory path */
-    public function GetDataDir() : ?string { $dir = $this->TryGetScalar('datadir'); if ($dir) $dir .= '/'; return $dir; }
+    public function GetDataDir() : ?string { $dir = $this->datadir->GetValue(); if ($dir) $dir .= '/'; return $dir; }
     
     /** Returns true if request logging to DB is enabled */
-    public function GetEnableRequestLogDB() : bool { return $this->GetFeatureBool('requestlog_db'); }
+    public function GetEnableRequestLogDB() : bool { return $this->requestlog_db->GetValue(); }
     
     /** Returns true if request logging to data dir file is enabled */
-    public function GetEnableRequestLogFile() : bool { return $this->GetFeatureBool('requestlog_file'); }
+    public function GetEnableRequestLogFile() : bool { return $this->requestlog_file->GetValue(); }
     
     /** Returns true if request logging is enabled */
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
@@ -246,7 +316,7 @@ class Config extends BaseConfig
     const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
-    public function GetRequestLogDetails() : int { return $this->GetFeatureInt('requestlog_details'); }
+    public function GetRequestLogDetails() : int { return $this->requestlog_details->GetValue(); }
     
     /** show a basic back trace */ 
     const ERRLOG_ERRORS = 1; 
@@ -260,22 +330,22 @@ class Config extends BaseConfig
     const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
-    public function GetDebugLevel() : int { return $this->GetFeatureInt('debug'); }
+    public function GetDebugLevel() : int { return $this->debug->GetValue(); }
     
     /**
      * Sets the current debug level
      * @param bool $temp if true, only for this request
      */
-    public function SetDebugLevel(int $data, bool $temp = true) : self { return $this->SetFeatureInt('debug', $data, $temp); }
+    public function SetDebugLevel(int $data, bool $temp = true) : self { $this->debug->SetValue($data, $temp); return $this; }
     
     /** Gets whether the server should log errors to the database */
-    public function GetDebugLog2DB()   : bool { return $this->GetFeatureBool('debug_dblog'); }
+    public function GetDebugLog2DB()   : bool { return $this->debug_dblog->GetValue(); }
     
     /** Gets whether the server should log errors to a log file in the datadir */
-    public function GetDebugLog2File() : bool { return $this->GetFeatureBool('debug_filelog'); } 
+    public function GetDebugLog2File() : bool { return $this->debug_filelog->GetValue(); } 
     
-    /** Gets whether debug should be allowed over a non-privileged interface */
-    public function GetDebugOverHTTP() : bool { return $this->GetFeatureBool('debug_http'); }    
+    /** Gets whether debug should be allowed over a non-privileged interface (also affects metrics) */
+    public function GetDebugOverHTTP() : bool { return $this->debug_http->GetValue(); }    
     
     /** Show basic performance metrics */
     const METRICS_BASIC = 1;
@@ -283,51 +353,55 @@ class Config extends BaseConfig
     /** Show extended performance metrics */
     const METRICS_EXTENDED = 2;
     
-    const METRICS_TYPES = array('none'=>0, 'basic'=>1, 'extended'=>2);
+    const METRICS_TYPES = array('none'=>0, 'basic'=>self::METRICS_BASIC, 'extended'=>self::METRICS_EXTENDED);
     
     /** Returns the current metrics log level */
-    public function GetMetricsLevel() : int { return $this->GetFeatureInt('metrics'); }
+    public function GetMetricsLevel() : int { return $this->metrics->GetValue(); }
     
     /**
      * Sets the current metrics log level
      * @param bool $temp if true, only for this request
      */
-    public function SetMetricsLevel(int $data, bool $temp = true) : self { return $this->SetFeatureInt('metrics', $data, $temp); }
+    public function SetMetricsLevel(int $data, bool $temp = true) : self { $this->metrics->SetValue($data, $temp); return $this; }
     
     /** Gets whether the server should log metrics to the database */
-    public function GetMetricsLog2DB()   : bool { return $this->GetFeatureBool('metrics_dblog'); }
+    public function GetMetricsLog2DB()   : bool { return $this->metrics_dblog->GetValue(); }
     
     /** Gets whether the server should log errors to a log file in the datadir */
-    public function GetMetricsLog2File() : bool { return $this->GetFeatureBool('metrics_filelog'); } 
+    public function GetMetricsLog2File() : bool { return $this->metrics_filelog->GetValue(); } 
     
     /** Gets whether using configured emailers is currently allowed */
-    public function GetEnableEmail() : bool { return $this->GetFeatureBool('email'); }
+    public function GetEnableEmail() : bool { return $this->email->GetValue(); }
 
     /**
      * Retrieves a configured mailer service, picking one randomly 
-     * @throws EmailUnavailableException if not configured or not allowed
+     * @throws EmailDisabledException if email is disabled
+     * @throws EmailerUnavailableException if not configured
      */
     public function GetMailer() : Emailer
     {
-        if (!$this->GetEnableEmail()) throw new EmailUnavailableException();
+        if (!$this->GetEnableEmail()) throw new EmailDisabledException();
         
         $mailers = Emailer::LoadAll($this->database);
-        if (count($mailers) == 0) throw new EmailUnavailableException();
+        if (count($mailers) == 0) throw new EmailerUnavailableException();
         return $mailers[array_rand($mailers)]->Activate();
     }
     
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{api:int, config: {read_only:bool, enabled:bool}, apps:[{string:string}]}` \
-         if admin, add: `{datadir:?string, config:{ \
+     * @return array `{apiver:int, apps:[{string:string}], read_only:bool, enabled:bool}` \
+         if admin, add: `{datadir:?string, \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
-            debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }}`
+            debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }`
+     * @see BaseConfig::GetClientObject()
      */
     public function GetClientObject(bool $admin = false) : array
     { 
-        $data = array( 'api' => (new VersionInfo())->major, 'apps' => array() );
+        $data = parent::GetClientObject($admin);
+        
+        $data['apiver'] = (new VersionInfo(andromeda_version))->major;
         
         foreach (Main::GetInstance()->GetApps() as $name=>$app)
         {
@@ -335,29 +409,24 @@ class Config extends BaseConfig
                 (new VersionInfo($app::getVersion()))->getCompatVer();
         }
         
-        $data['config'] = array(
-            'enabled' => $this->isEnabled(),
-            'read_only' => $this->GetFeatureBool('read_only',false) // no temp
-        );
+        $data['enabled'] = $this->enabled->GetValue();
+        $data['read_only'] = $this->read_only->GetValue(false);
         
         if ($admin)
         {
-            $data['datadir'] = $this->GetDataDir();
-            
-            $data['config'] = array_merge($data['config'], array(
-                'requestlog_file' => $this->GetEnableRequestLogFile(),
-                'requestlog_db' => $this->GetEnableRequestLogDB(),
-                'requestlog_details' => array_flip(self::RQLOG_DETAILS_TYPES)[$this->GetRequestLogDetails()],
-                'metrics' => array_flip(self::METRICS_TYPES)[$this->GetFeatureInt('metrics',false)], // no temp
-                'metrics_dblog' => $this->GetMetricsLog2DB(),
-                'metrics_filelog' => $this->GetMetricsLog2File(),
-                'email' => $this->GetEnableEmail(),
-                'debug' => array_flip(self::DEBUG_TYPES)[$this->GetFeatureInt('debug',false)], // no temp
-                'debug_http' => $this->GetDebugOverHTTP(),
-                'debug_dblog' => $this->GetDebugLog2DB(),
-                'debug_filelog' => $this->GetDebugLog2File()
-            ));
-            
+            $data['datadir'] =            $this->datadir->GetValue();
+            $data['email'] =              $this->email->GetValue();
+            $data['requestlog_file'] =    $this->requestlog_file->GetValue();
+            $data['requestlog_db'] =      $this->requestlog_db->GetValue();
+            $data['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->requestlog_details->GetValue()];
+            $data['metrics'] =            array_flip(self::METRICS_TYPES)[$this->metrics->GetValue(false)]; // no temp
+            $data['metrics_dblog'] =      $this->metrics_dblog->GetValue();
+            $data['metrics_filelog'] =    $this->metrics_filelog->GetValue();
+            $data['debug'] =              array_flip(self::DEBUG_TYPES)[$this->debug->GetValue(false)]; // no temp
+            $data['debug_http'] =         $this->debug_http->GetValue();
+            $data['debug_dblog'] =        $this->debug_dblog->GetValue();
+            $data['debug_filelog'] =      $this->debug_filelog->GetValue();
+
             foreach ($this->GetApps() as $app) 
                 if (!array_key_exists($app, $data['apps']))
                     $data['apps'][$app] = "FAILED_LOAD";

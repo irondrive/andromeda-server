@@ -1,14 +1,15 @@
+PRAGMA synchronous = OFF;
 PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2obj_apps_core_accesslog` (
   `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL
-,  `obj_account` char(12) DEFAULT NULL
-,  `obj_sudouser` char(12) DEFAULT NULL
-,  `obj_client` char(12) DEFAULT NULL
+,  `account` char(12) DEFAULT NULL
+,  `sudouser` char(12) DEFAULT NULL
+,  `client` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_config` (
-  `id` char(12) NOT NULL
+  `id` char(1) NOT NULL
 ,  `version` varchar(255) NOT NULL
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
@@ -36,7 +37,7 @@ CREATE TABLE `a2obj_core_emailer` (
 ,  `password` text DEFAULT NULL
 ,  `from_address` varchar(255) NOT NULL
 ,  `from_name` varchar(255) DEFAULT NULL
-,  `reply` integer DEFAULT NULL
+,  `use_reply` integer DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
@@ -60,44 +61,42 @@ CREATE TABLE `a2obj_core_exceptions_errorlog` (
 );
 CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL
-,  `obj_request` char(20) NOT NULL
+,  `request` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
-,  `obj_applog` varchar(64) DEFAULT NULL
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_actionmetrics` (
   `id` char(20) NOT NULL
-,  `obj_request` char(20) NOT NULL
-,  `obj_actionlog` char(20) NOT NULL
+,  `requestmet` char(20) NOT NULL
+,  `actionlog` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
 ,  `date_created` double NOT NULL
-,  `stats_db_reads` integer NOT NULL
-,  `stats_db_read_time` double NOT NULL
-,  `stats_db_writes` integer NOT NULL
-,  `stats_db_write_time` double NOT NULL
-,  `stats_code_time` double NOT NULL
-,  `stats_total_time` double NOT NULL
-,  `stats_queries` longtext DEFAULT NULL
+,  `db_reads` integer NOT NULL
+,  `db_read_time` double NOT NULL
+,  `db_writes` integer NOT NULL
+,  `db_write_time` double NOT NULL
+,  `code_time` double NOT NULL
+,  `total_time` double NOT NULL
+,  `queries` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_commitmetrics` (
   `id` char(20) NOT NULL
-,  `obj_request` char(20) NOT NULL
+,  `request` char(20) NOT NULL
 ,  `date_created` double NOT NULL
-,  `stats_db_reads` integer NOT NULL
-,  `stats_db_read_time` double NOT NULL
-,  `stats_db_writes` integer NOT NULL
-,  `stats_db_write_time` double NOT NULL
-,  `stats_code_time` double NOT NULL
-,  `stats_total_time` double NOT NULL
+,  `db_reads` integer NOT NULL
+,  `db_read_time` double NOT NULL
+,  `db_writes` integer NOT NULL
+,  `db_write_time` double NOT NULL
+,  `code_time` double NOT NULL
+,  `total_time` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_core_logging_requestlog` (
   `id` char(20) NOT NULL
-,  `objs_actions` integer NOT NULL DEFAULT 0
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
 ,  `agent` text NOT NULL
@@ -107,9 +106,7 @@ CREATE TABLE `a2obj_core_logging_requestlog` (
 );
 CREATE TABLE `a2obj_core_logging_requestmetrics` (
   `id` char(20) NOT NULL
-,  `objs_actions` integer NOT NULL DEFAULT 0
-,  `objs_commits` integer NOT NULL DEFAULT 0
-,  `obj_requestlog` char(20) DEFAULT NULL
+,  `requestlog` char(20) DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  `peak_memory` integer NOT NULL
 ,  `nincludes` integer NOT NULL
@@ -136,13 +133,12 @@ CREATE TABLE `a2obj_core_logging_requestmetrics` (
 ,  PRIMARY KEY (`id`)
 );
 CREATE INDEX "idx_a2obj_core_logging_actionmetrics_app_action" ON "a2obj_core_logging_actionmetrics" (`app`,`action`);
-CREATE INDEX "idx_a2obj_core_logging_actionmetrics_request" ON "a2obj_core_logging_actionmetrics" (`obj_request`);
+CREATE INDEX "idx_a2obj_core_logging_actionmetrics_request" ON "a2obj_core_logging_actionmetrics" (`requestmet`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_time" ON "a2obj_core_exceptions_errorlog" (`time`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_code" ON "a2obj_core_exceptions_errorlog" (`code`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_app" ON "a2obj_core_exceptions_errorlog" (`app`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_action" ON "a2obj_core_exceptions_errorlog" (`action`);
 CREATE INDEX "idx_a2obj_core_exceptions_errorlog_addr" ON "a2obj_core_exceptions_errorlog" (`addr`);
-CREATE INDEX "idx_a2obj_core_logging_actionlog_request" ON "a2obj_core_logging_actionlog" (`obj_request`);
-CREATE INDEX "idx_a2obj_core_logging_actionlog_applog" ON "a2obj_core_logging_actionlog" (`obj_applog`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_request" ON "a2obj_core_logging_actionlog" (`request`);
 CREATE INDEX "idx_a2obj_core_logging_actionlog_app_action" ON "a2obj_core_logging_actionlog" (`app`,`action`);
-CREATE INDEX "idx_a2obj_core_logging_commitmetrics_request" ON "a2obj_core_logging_commitmetrics" (`obj_request`);
+CREATE INDEX "idx_a2obj_core_logging_commitmetrics_request" ON "a2obj_core_logging_commitmetrics" (`request`);

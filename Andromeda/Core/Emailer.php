@@ -1,8 +1,11 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
+require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
@@ -21,7 +24,7 @@ class EmptyRecipientsException extends MailSendException { public $message = "NO
 class InvalidMailTypeException extends MailSendException { public $message = "INVALID_MAILER_TYPE"; }
 
 /** A name and address pair email recipient */
-class EmailRecipient
+final class EmailRecipient
 {
     private ?string $name; 
     private string $address;
@@ -44,11 +47,16 @@ class EmailRecipient
  * 
  * Manages PHPMailer configuration and wraps its usage
  */
-class Emailer extends StandardObject
-{    
+final class Emailer extends BaseObject
+{
+    use TableNoChildren;
+    
+    protected const IDLength = 4;
+    
     private PHPMailer\PHPMailer $mailer;
     
     private const SMTP_TIMEOUT = 15;
+    private const DEFAULT_FROM = 'Andromeda';
     
     public const TYPE_PHPMAIL = 0; 
     public const TYPE_SENDMAIL = 1; 
@@ -61,24 +69,46 @@ class Emailer extends StandardObject
         'qmail'=>self::TYPE_QMAIL, 
         'smtp'=>self::TYPE_SMTP);
     
-    public static function GetFieldTemplate() : array
+    /** Date of object creation */
+    private FieldTypes\Date $date_created;
+    /** Type of emailer (see usage) */
+    private FieldTypes\IntType $type;
+    /** Array of hostnames to try, in order */
+    private FieldTypes\NullJsonArray $hosts;
+    /** Optional SMTP username */
+    private FieldTypes\NullStringType $username;
+    /** Optional SMTP password */
+    private FieldTypes\NullStringType $password;
+    /** From email address */
+    private FieldTypes\StringType $from_address;
+    /** Optional from email name */
+    private FieldTypes\NullStringType $from_name;
+    /** If true, add a Reply-To header */
+    private FieldTypes\NullBoolType $use_reply;
+    
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'type' => new FieldTypes\IntType(),
-            'hosts' => new FieldTypes\JSON(), // array of hosts to try, in-order
-            'username' => new FieldTypes\StringType(),
-            'password' => new FieldTypes\StringType(),
-            'from_address' => new FieldTypes\StringType(),
-            'from_name' => new FieldTypes\StringType(),
-            'reply' => new FieldTypes\BoolType() // if true, add a Reply-To header
-        ));
-    }    
+        $fields = array();
+        
+        $this->date_created = $fields[] = new FieldTypes\Date('date_created');
+        $this->type = $fields[] =         new FieldTypes\IntType('type');
+        $this->hosts = $fields[] =        new FieldTypes\NullJsonArray('hosts');
+        $this->username = $fields[] =     new FieldTypes\NullStringType('username');
+        $this->password = $fields[] =     new FieldTypes\NullStringType('password');
+        $this->from_address = $fields[] = new FieldTypes\StringType('from_address');
+        $this->from_name = $fields[] =    new FieldTypes\NullStringType('from_name');
+        $this->use_reply = $fields[] =    new FieldTypes\NullBoolType('use_reply');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
     
     /** Returns a string with the CLI usage for creating an emailer */
     public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
     
     /** Returns a array of strings with the CLI usage for each specific driver */
-    public static function GetCreateUsages() : array { return array("--type smtp ((--host alphanum [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
+    public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
     
     /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, Input $input) : self
@@ -89,27 +119,39 @@ class Emailer extends StandardObject
             SafeParams::PARAMLOG_ONLYFULL, array_keys(self::MAIL_TYPES));
         
         $type = self::MAIL_TYPES[$type];
+        $mailer->type->SetValue($type);
         
-        $mailer->SetScalar('type',$type)
-            ->SetScalar('from_address',$input->GetParam('from_address',SafeParam::TYPE_EMAIL))
-            ->SetScalar('from_name',$input->GetOptParam('from_name',SafeParam::TYPE_NAME))
-            ->SetFeatureBool('reply',$input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
-        
+        $mailer->from_name->SetValue($input->GetOptParam('from_name',SafeParam::TYPE_NAME));
+        $mailer->from_address->SetValue($input->GetParam('from_address',SafeParam::TYPE_EMAIL));
+        $mailer->use_reply->SetValue($input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
+
         if ($type == self::TYPE_SMTP)
         {
-            $mailer->SetScalar('username',$input->GetOptParam('username',SafeParam::TYPE_TEXT));
-            $mailer->SetScalar('password',$input->GetOptParam('password',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
+            $mailer->username->SetValue($input->GetOptParam('username',SafeParam::TYPE_TEXT));
+            $mailer->password->SetValue($input->GetOptParam('password',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
             
-            if (($hosts = $input->GetParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY)) !== null)
+            if (($hosts = $input->GetOptParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY)) !== null)
             {
                 $hosts = array_map(function($i){ return self::BuildHostFromParams($i); }, $hosts);
             }
             else $hosts = array(self::BuildHostFromParams($input->GetParams()));
                 
-            $mailer->SetScalar('hosts',$hosts);
+            $mailer->hosts->SetValue($hosts);
         }
         
         return $mailer;
+    }
+    
+    /** Returns all available Emailer objects */
+    public static function LoadAll(ObjectDatabase $database) : array
+    {
+        return $database->LoadObjectsByQuery(static::class, new QueryBuilder());
+    }
+    
+    /** Tries to load an Emailer object by its ID */
+    public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
+    {
+        return $database->TryLoadByID(self::class, $id);
     }
     
     /** Build a PHPMailer-formatted host string from an input */
@@ -126,28 +168,25 @@ class Emailer extends StandardObject
     }
     
     /** Returns whether or not to use the server from address for reply-to */
-    private function GetUseReply() : bool { return $this->TryGetFeatureBool('reply') ?? false; }
+    private function GetUseReply() : bool { return $this->use_reply->GetValue() ?? false; }
     
     /**
      * Gets the config as a printable client object
-     * @return array `{type:enum, hosts:?string, username:?string, password:bool,
-         from_address:string, from_name:?string, config:{reply:bool}, dates:{created:float}}`
+     * @return array `{id:string, type:enum, hosts:?string, username:?string, password:bool,
+         from_address:string, from_name:?string, use_reply:bool, date_created:float}`
      */
     public function GetClientObject() : array
     {
         return array(
-            'type' => array_flip(self::MAIL_TYPES)[$this->GetScalar('type')],
-            'hosts' => $this->TryGetScalar('hosts'),
-            'username' => $this->TryGetScalar('username'),
-            'password' => (bool)($this->TryGetScalar('password')),
-            'from_address' => $this->GetScalar('from_address'),
-            'from_name' => $this->TryGetScalar('from_name'),
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-            ),
-            'config' => array(
-                'reply' => $this->GetUseReply()
-            )
+            'id'           => $this->ID(),
+            'date_created' => $this->date_created->GetValue(),
+            'type' =>         array_flip(self::MAIL_TYPES)[$this->type->GetValue()],
+            'hosts' =>        $this->hosts->GetValue(),
+            'username' =>     $this->username->GetValue(),
+            'password' =>     (bool)($this->password->GetValue()),
+            'from_address' => $this->from_address->GetValue(),
+            'from_name' =>    $this->from_name->GetValue(),
+            'use_reply' =>    $this->use_reply->GetValue()
         );        
     }
     
@@ -158,8 +197,7 @@ class Emailer extends StandardObject
         
         $mailer->Timeout = self::SMTP_TIMEOUT;
         
-        $type = $this->GetScalar('type');
-        switch ($type)
+        switch ($type = $this->type->GetValue())
         {
             case self::TYPE_PHPMAIL: $mailer->isMail(); break;
             case self::TYPE_SENDMAIL: $mailer->isSendmail(); break;
@@ -171,18 +209,20 @@ class Emailer extends StandardObject
         $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
         
         $mailer->Debugoutput = function($str, $level){ 
-            if (!preg_match('//u', $str)) $str = base64_encode($str); // check UTF-8
-            ErrorManager::GetInstance()->LogDebug("PHPMailer $level: $str"); };
+            if (!Utilities::isUTF8($str)) $str = base64_encode($str);
+            ErrorManager::GetInstance()->LogDebugInfo("PHPMailer $level: $str"); };
         
-        $mailer->setFrom($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');
+        $mailer->setFrom(
+            $this->from_address->GetValue(), 
+            $this->from_name->GetValue() ?? self::DEFAULT_FROM);
         
         if ($type == self::TYPE_SMTP)
         {
-            $mailer->Username = $this->TryGetScalar('username');
-            $mailer->Password = $this->TryGetScalar('password');
+            $mailer->Username = $this->username->GetValue();
+            $mailer->Password = $this->password->GetValue();
             if ($mailer->Username !== null) $mailer->SMTPAuth = true;
 
-            $mailer->Host = implode(';', $this->TryGetScalar('hosts'));
+            $mailer->Host = implode(';', $this->hosts->GetValue());
         }
     
         $this->mailer = $mailer;
@@ -207,7 +247,11 @@ class Emailer extends StandardObject
         $mailer = $this->mailer;
         
         if ($from === null && $this->GetUseReply())
-            $mailer->addReplyTo($this->GetScalar('from_address'), $this->TryGetScalar('from_name') ?? 'Andromeda');        
+        {
+            $mailer->addReplyTo(
+                $this->from_address->GetValue(),
+                $this->from_name->GetValue() ?? self::DEFAULT_FROM); 
+        }
         else if ($from !== null) $mailer->addReplyTo($from->GetAddress(), $from->GetName());
         
         foreach ($recipients as $recipient) 

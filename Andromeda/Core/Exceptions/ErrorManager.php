@@ -7,7 +7,6 @@ require_once(ROOT."/Core/Exceptions/ErrorLog.php");
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 /** Internal-only exception used for getting a backtrace */
 class BreakpointException extends Exceptions\ServerException { public $message = "BREAKPOINT_EXCEPTION"; }
@@ -23,67 +22,94 @@ class ErrorManager extends Singleton
     private ?Main $API = null; 
     
     private IOInterface $interface;
-
-    /** Returns true if the configured debug state is >= the requested level */
-    private function GetDebugState(int $minlevel) : bool
-    {
-        if ($this->API !== null) 
-            return $this->API->GetDebugLevel() >= $minlevel;
-        else return $this->interface->isPrivileged();
-    }
-    
-    /** Handles a client exception, rolling back the DB, displaying debug data and returning an Output */
-    private function HandleClientException(ClientException $e) : Output
-    {
-        if ($this->API !== null) $this->API->rollback($e);
-            
-        $debug = null; if ($this->GetDebugState(Config::ERRLOG_DETAILS)) 
-            $debug = ErrorLog::GetDebugData($this->API, $e, $this->GetDebugLog());
-            
-        return Output::ClientException($e, $debug);
-    }
-    
-    /** Handles a non-client exception, rolling back the DB, logging debug data and returning an Output */
-    private function HandleThrowable(\Throwable $e) : Output
-    {
-        if ($this->API !== null) $this->API->rollback($e);
-
-        try { $debug = $this->LogException($e, false); }
-        catch (\Throwable $e) { $debug = null; }
-
-        return Output::Exception($debug);
-    }
     
     /** Registers PHP error and exception handlers */
     public function __construct(IOInterface $interface)
     {
-        parent::__construct();        
+        parent::__construct();
         
         $this->interface = $interface;
         
-        set_error_handler( function(int $code, string $string, string $file, int $line){
-           throw new Exceptions\PHPError($code,$string,$file,$line); }, E_ALL); 
-
+        set_error_handler( function(int $code, string $msg, string $file, int $line){
+            throw new Exceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
+            
         set_exception_handler(function(\Throwable $e)
         {
-            if ($e instanceof ClientException) 
+            if ($e instanceof ClientException)
             {
                 $output = $this->HandleClientException($e);
                 
-                $this->API->FinalizeOutput($output, true);
+                $this->API->FinalMetrics($output, true);
             }
             else $output = $this->HandleThrowable($e);
             
-            $this->interface->WriteOutput($output); die();  
+            $this->interface->WriteOutput($output); die();
         });
         
-        assert_options(ASSERT_ACTIVE, 1);
+        ini_set('assert.active','1');
+        ini_set('assert.exception','1');
     }
     
-    public function __destruct() { set_error_handler(null, E_ALL); }
+    public function __destruct()
+    {
+        set_error_handler(null, E_ALL);
+        set_exception_handler(null);
+    }
     
     public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
     
+    /** Returns the debug level for internal logging */
+    private function GetDebugLogLevel() : int
+    {
+        return $this->API ? $this->API->GetDebugLevel() : Config::ERRLOG_ERRORS;
+    }
+    
+    /** Returns the debug level to be show in output */
+    private function GetDebugOutputLevel() : int
+    {
+        return $this->API ? $this->API->GetDebugLevel(true) : $this->interface->GetDebugLevel();
+    }
+
+    /** Handles a client exception, rolling back the DB, 
+     * displaying debug data and returning an Output */
+    private function HandleClientException(ClientException $e) : Output
+    {
+        if ($this->API !== null) $this->API->rollback($e);
+            
+        $debug = null; if ($this->GetDebugOutputLevel() >= Config::ERRLOG_DETAILS) 
+        {
+            $debug = ErrorLog::Create($this->API, $e)
+                ->SetDebugLog($this->GetDebugLogLevel(), $this->GetDebugLog())
+                ->GetClientObject($this->GetDebugOutputLevel());
+        }
+            
+        return Output::ClientException($e, $debug);
+    }
+    
+    /** Handles a non-client exception, rolling back the DB, 
+     * logging debug data and returning an Output */
+    private function HandleThrowable(\Throwable $e) : Output
+    {
+        if ($this->API !== null) $this->API->rollback($e);
+
+        $debug = null; try 
+        {
+            if (($errlog = $this->LogException($e, false)) !== null) 
+                $debug = $errlog->GetClientObject($this->GetDebugOutputLevel());
+        }
+        catch (\Throwable $e2) 
+        { 
+            if ($this->GetDebugOutputLevel() >= Config::ERRLOG_ERRORS)
+            {
+                $debug = array('message'=>
+                    'ErrorLog failed: '.$e2->getMessage().' in '.
+                    $e2->getFile()."(".$e2->getLine().")"); 
+            }
+        }
+        
+        return Output::Exception($debug);
+    }
+
     /** if false, the file-based log encountered an error on the last entry */
     private bool $filelogok = true;
     
@@ -96,60 +122,73 @@ class ErrorManager extends Singleton
      * A new database connection is used for the log entry
      * @param \Throwable $e the exception to log
      * @param bool $mainlog if true, display this in the API's message log
-     * @return array<string, mixed>|NULL array of debug data or null if not logged
+     * @return ?ErrorLog error log object or null if not logged
      */
-    public function LogException(\Throwable $e, bool $mainlog = true) : ?array
+    public function LogException(\Throwable $e, bool $mainlog = true) : ?ErrorLog
     {
-        if (!$this->GetDebugState(Config::ERRLOG_ERRORS)) return null;
+        $loglevel = $this->GetDebugLogLevel(); if ($loglevel < Config::ERRLOG_ERRORS) return null;
 
-        $debug = ErrorLog::GetDebugData($this->API, $e, !$mainlog ? $this->GetDebugLog() : null);
+        $errlog = ErrorLog::Create($this->API, $e);
+        $errlog->SetDebugLog($loglevel, $this->GetDebugLog());
         
-        if ($this->API !== null && $mainlog) $this->LogDebug($debug);
+        $debug = $errlog->GetClientObject($loglevel);
+        if ($mainlog) $this->LogDebugInfo($debug);
         
-        if ($e instanceof ClientException) return $debug;
+        if ($e instanceof ClientException) return $errlog;
         
         $config = ($this->API !== null) ? $this->API->TryGetConfig() : null;
         
-        try
+        try // save to file
         {
             if ($this->filelogok && $config !== null && $config->GetDebugLog2File())
             {
                 if (($logdir = $config->GetDataDir()) !== null)
                 {
-                    $data = Utilities::JSONEncode($debug);
-                    file_put_contents("$logdir/error.log", $data."\r\n", FILE_APPEND); 
+                    file_put_contents("$logdir/error.log", 
+                        Utilities::JSONEncode($debug)."\r\n", FILE_APPEND); 
                 }
             }
         }
-        catch (\Throwable $e2) { $this->filelogok = false; $this->LogException($e2); }
+        catch (\Throwable $e2) 
+        { 
+            $this->filelogok = false; $this->LogException($e2);
+            $errlog->SetDebugLog($loglevel, $this->GetDebugLog()); // update from e2
+        }
         
-        try
+        try // save to database
         {
             if ($this->dblogok && $config !== null && $config->GetDebugLog2DB()) 
             {
-                $db = new ObjectDatabase();
-
-                $log = ErrorLog::LogDebugData($db, $debug);
+                $db2 = $this->API->InitDatabase();
                 
-                $log->Save(); $db->commit();
+                $errlog->SaveToDatabase($db2); $db2->commit();
             }
         }
-        catch (\Throwable $e2) { $this->dblogok = false; $this->LogException($e2); }
+        catch (\Throwable $e2)
+        {
+            $this->dblogok = false; $this->LogException($e2);
+            $errlog->SetDebugLog($loglevel, $this->GetDebugLog()); // update from e2
+        }
 
         if (($e = $e->getPrevious()) instanceof \Throwable) $this->LogException($e);
         
-        return $debug;
+        return $errlog;
     }
     
     private array $debuglog = array();
     
     /** Adds an entry to the custom debug log, saved with exceptions */
-    public function LogDebug($data) : self { $this->debuglog[] = $data; return $this; }
+    public function LogDebugInfo($data) : self { $this->debuglog[] = $data; return $this; }
     
-    /** Returns the debug log if allowed by the debug state, else null */
-    public function GetDebugLog() : ?array { return $this->GetDebugState(Config::ERRLOG_DETAILS) ? $this->debuglog : null; }
+    /** Returns the internal supplemental debug log */
+    public function GetDebugLog() : array { return $this->debuglog; }
     
     /** Creates an exception and logs it to the main error log (to get a backtrace) */
-    public function LogBreakpoint() : self { return $this->LogDebug((new BreakpointException())->getTraceAsString()); }
+    public function LogBreakpoint() : self { return $this->LogDebugInfo((new BreakpointException())->getTraceAsString()); }
     
+    /** Runs the given $func in try/catch and logs if exception */
+    public function LoggedTry(callable $func)
+    {
+        try { return $func(); } catch (\Throwable $e) { $this->LogException($e); }
+    }
 }
