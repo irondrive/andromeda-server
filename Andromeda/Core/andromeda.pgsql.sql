@@ -17,7 +17,7 @@ SET default_table_access_method = heap;
 
 
 CREATE TABLE public.a2obj_core_config (
-    id character(12) NOT NULL,
+    id character(1) NOT NULL,
     version character varying(255) NOT NULL,
     datadir text,
     apps text NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE public.a2obj_core_emailer (
     password text,
     from_address character varying(255) NOT NULL,
     from_name character varying(255) DEFAULT NULL::character varying,
-    reply boolean,
+    use_reply boolean,
     date_created double precision NOT NULL
 );
 
@@ -75,10 +75,9 @@ CREATE TABLE public.a2obj_core_exceptions_errorlog (
 
 CREATE TABLE public.a2obj_core_logging_actionlog (
     id character(20) NOT NULL,
-    obj_request character(20) NOT NULL,
+    request character(20) NOT NULL,
     app character varying(255) NOT NULL,
     action character varying(255) NOT NULL,
-    obj_applog character varying(64) DEFAULT NULL::character varying,
     details text
 );
 
@@ -86,39 +85,38 @@ CREATE TABLE public.a2obj_core_logging_actionlog (
 
 CREATE TABLE public.a2obj_core_logging_actionmetrics (
     id character(20) NOT NULL,
-    obj_request character(20) NOT NULL,
-    obj_actionlog character(20) NOT NULL,
+    requestmet character(20) NOT NULL,
+    actionlog character(20) NOT NULL,
     app character varying(255) NOT NULL,
     action character varying(255) NOT NULL,
     date_created double precision NOT NULL,
-    stats_db_reads bigint NOT NULL,
-    stats_db_read_time double precision NOT NULL,
-    stats_db_writes bigint NOT NULL,
-    stats_db_write_time double precision NOT NULL,
-    stats_code_time double precision NOT NULL,
-    stats_total_time double precision NOT NULL,
-    stats_queries text
+    db_reads bigint NOT NULL,
+    db_read_time double precision NOT NULL,
+    db_writes bigint NOT NULL,
+    db_write_time double precision NOT NULL,
+    code_time double precision NOT NULL,
+    total_time double precision NOT NULL,
+    queries text
 );
 
 
 
 CREATE TABLE public.a2obj_core_logging_commitmetrics (
     id character(20) NOT NULL,
-    obj_request character(20) NOT NULL,
+    request character(20) NOT NULL,
     date_created double precision NOT NULL,
-    stats_db_reads bigint NOT NULL,
-    stats_db_read_time double precision NOT NULL,
-    stats_db_writes bigint NOT NULL,
-    stats_db_write_time double precision NOT NULL,
-    stats_code_time double precision NOT NULL,
-    stats_total_time double precision NOT NULL
+    db_reads bigint NOT NULL,
+    db_read_time double precision NOT NULL,
+    db_writes bigint NOT NULL,
+    db_write_time double precision NOT NULL,
+    code_time double precision NOT NULL,
+    total_time double precision NOT NULL
 );
 
 
 
 CREATE TABLE public.a2obj_core_logging_requestlog (
     id character(20) NOT NULL,
-    objs_actions smallint DEFAULT '0'::smallint NOT NULL,
     "time" double precision NOT NULL,
     addr character varying(255) NOT NULL,
     agent text NOT NULL,
@@ -130,9 +128,7 @@ CREATE TABLE public.a2obj_core_logging_requestlog (
 
 CREATE TABLE public.a2obj_core_logging_requestmetrics (
     id character(20) NOT NULL,
-    objs_actions smallint DEFAULT '0'::smallint NOT NULL,
-    objs_commits smallint DEFAULT '0'::smallint NOT NULL,
-    obj_requestlog character(20) DEFAULT NULL::bpchar,
+    requestlog character(20) DEFAULT NULL::bpchar,
     date_created double precision NOT NULL,
     peak_memory bigint NOT NULL,
     nincludes smallint NOT NULL,
@@ -161,86 +157,82 @@ CREATE TABLE public.a2obj_core_logging_requestmetrics (
 
 
 ALTER TABLE ONLY public.a2obj_core_config
-    ADD CONSTRAINT idx_283162_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316775_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_emailer
-    ADD CONSTRAINT idx_283168_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316781_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_exceptions_errorlog
-    ADD CONSTRAINT idx_283176_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316789_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_actionlog
-    ADD CONSTRAINT idx_283184_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316797_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_actionmetrics
-    ADD CONSTRAINT idx_283191_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316803_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_commitmetrics
-    ADD CONSTRAINT idx_283197_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316809_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_requestlog
-    ADD CONSTRAINT idx_283200_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316812_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_requestmetrics
-    ADD CONSTRAINT idx_283207_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_316818_primary PRIMARY KEY (id);
 
 
 
-CREATE INDEX idx_283176_action ON public.a2obj_core_exceptions_errorlog USING btree (action);
+CREATE INDEX idx_316789_action ON public.a2obj_core_exceptions_errorlog USING btree (action);
 
 
 
-CREATE INDEX idx_283176_addr ON public.a2obj_core_exceptions_errorlog USING btree (addr);
+CREATE INDEX idx_316789_addr ON public.a2obj_core_exceptions_errorlog USING btree (addr);
 
 
 
-CREATE INDEX idx_283176_app ON public.a2obj_core_exceptions_errorlog USING btree (app);
+CREATE INDEX idx_316789_app ON public.a2obj_core_exceptions_errorlog USING btree (app);
 
 
 
-CREATE INDEX idx_283176_code ON public.a2obj_core_exceptions_errorlog USING btree (code);
+CREATE INDEX idx_316789_code ON public.a2obj_core_exceptions_errorlog USING btree (code);
 
 
 
-CREATE INDEX idx_283176_time ON public.a2obj_core_exceptions_errorlog USING btree ("time");
+CREATE INDEX idx_316789_time ON public.a2obj_core_exceptions_errorlog USING btree ("time");
 
 
 
-CREATE INDEX idx_283184_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
+CREATE INDEX idx_316797_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
 
 
 
-CREATE INDEX idx_283184_applog ON public.a2obj_core_logging_actionlog USING btree (obj_applog);
+CREATE INDEX idx_316797_request ON public.a2obj_core_logging_actionlog USING btree (request);
 
 
 
-CREATE INDEX idx_283184_request ON public.a2obj_core_logging_actionlog USING btree (obj_request);
+CREATE INDEX idx_316803_app_action ON public.a2obj_core_logging_actionmetrics USING btree (app, action);
 
 
 
-CREATE INDEX idx_283191_app_action ON public.a2obj_core_logging_actionmetrics USING btree (app, action);
+CREATE INDEX idx_316803_request ON public.a2obj_core_logging_actionmetrics USING btree (requestmet);
 
 
 
-CREATE INDEX idx_283191_request ON public.a2obj_core_logging_actionmetrics USING btree (obj_request);
-
-
-
-CREATE INDEX idx_283197_request ON public.a2obj_core_logging_commitmetrics USING btree (obj_request);
+CREATE INDEX idx_316809_request ON public.a2obj_core_logging_commitmetrics USING btree (request);
 
 
 

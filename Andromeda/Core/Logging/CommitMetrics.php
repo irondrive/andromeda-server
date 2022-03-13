@@ -3,26 +3,33 @@
 require_once(ROOT."/Core/Database/DBStats.php"); use Andromeda\Core\Database\DBStats;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 
 require_once(ROOT."/Core/Logging/RequestMetrics.php");
+require_once(ROOT."/Core/Logging/CommonMetrics.php");
 
 /** Log entry representing metrics for a commit */
-class CommitMetrics extends StandardObject
-{    
-    public const IDLength = 20;
+class CommitMetrics extends BaseObject
+{
+    use TableNoChildren;
+    use CommonMetrics;
     
-    public static function GetFieldTemplate() : array
+    protected const IDLength = 20;
+    
+    /** The request metrics object for this commit */
+    private FieldTypes\ObjectRefT $requestmet;
+
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'obj_request' => new FieldTypes\ObjectRef(RequestMetrics::class, 'commits'),
-            'stats_db_reads' => new FieldTypes\IntType(),
-            'stats_db_read_time' => new FieldTypes\FloatType(),
-            'stats_db_writes' => new FieldTypes\IntType(),
-            'stats_db_write_time' => new FieldTypes\FloatType(),
-            'stats_code_time' => new FieldTypes\FloatType(),
-            'stats_total_time' => new FieldTypes\FloatType()
-        ));
+        $fields = array();
+        
+        $this->requestmet = $fields[] = new FieldTypes\ObjectRefT(RequestMetrics::class,'requestmet');
+
+        $this->RegisterFields($fields, self::class);
+        $this->CommonCreateFields();
+        
+        parent::CreateFields();
     }
     
     /**
@@ -30,23 +37,31 @@ class CommitMetrics extends StandardObject
      * @param int $level logging level
      * @param ObjectDatabase $database database reference
      * @param RequestMetrics $request the main request metrics
-     * @param DBStats $stats stats for the commit
+     * @param DBStats $metrics stats for the commit
      */
-    public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, DBStats $stats)
+    public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, DBStats $metrics) : self
     {
-        $obj = static::BaseCreate($database)->SetObject('request',$request);
-
-        foreach ($stats->getStats() as $statkey=>$statval)
-            $obj->SetScalar("stats_$statkey", $statval);            
+        $obj = parent::BaseCreate($database);
+        $obj->requestmet->SetValue($request);
+        
+        $obj->CommonSetMetrics($metrics);
+        
+        return $obj;
+    }
+    
+    /** Loads objects matching the given request metrics */
+    public static function LoadByRequest(ObjectDatabase $database, RequestMetrics $requestmet) : array
+    {
+        return $database->LoadObjectsByKey(static::class, 'requestmet', $requestmet->ID());
     }
     
     /**
      * Gets the printable client object for this object
-     * @return array `DBStats`
-     * @see DBStats::getStats()
+     * @return array CommonMetrics
+     * @see CommonMetrics::GetCommonClientObject()
      */
     public function GetClientObject() : array
     {
-        return $this->GetAllScalars('stats');
+        return $this->GetCommonClientObject();
     }
 }

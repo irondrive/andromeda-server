@@ -213,14 +213,15 @@ final class Main extends Singleton
         
         foreach ($apps as $app) $this->TryLoadApp($app);
 
+        if ($this->config && !$this->config->isReadOnly()
+            && $this->config->GetEnableRequestLog())
+        {
+            $this->reqlog = RequestLog::Create($this);
+        }
+        
         if ($this->database)
         {
-            if ($this->config && !$this->config->isReadOnly()
-                    && $this->config->GetEnableRequestLog())
-                $this->reqlog = RequestLog::Create($this);
-        
             $this->construct_stats = $this->database->GetInternal()->popStatsContext();
-            
             $this->total_stats->Add($this->construct_stats);
         }
         
@@ -268,17 +269,18 @@ final class Main extends Singleton
     {        
         $app = $input->GetApp();
         
-        if (!array_key_exists($app, $this->apps)) throw new UnknownAppException();
-        
-        $dbstats = $this->GetDebugLevel() >= Config::ERRLOG_DETAILS;
-        
-        if ($dbstats && $this->database) 
+        if (!array_key_exists($app, $this->apps)) 
+            throw new UnknownAppException();
+
+        if ($this->GetMetricsLevel()) 
             $this->database->GetInternal()->pushStatsContext();
         
         $actionlog = isset($this->reqlog) ? $this->reqlog->LogAction($input) : null;
             
         $context = new RunContext($input, $actionlog);
-        $this->stack[] = $context; $this->dirty = true;
+        $this->stack[] = $context; 
+        
+        $this->dirty = true;
         
         $data = $this->apps[$app]->Run($input);
 
@@ -286,7 +288,7 @@ final class Main extends Singleton
         
         array_pop($this->stack);
         
-        if ($dbstats && $this->database)
+        if ($this->GetMetricsLevel())
         {
             $stats = $this->database->GetInternal()->popStatsContext();
             
@@ -357,14 +359,14 @@ final class Main extends Singleton
         {
             if ($this->database)
             {
-                if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
+                if ($this->GetMetricsLevel()) 
                     $this->database->GetInternal()->pushStatsContext();
                 
                 $this->database->saveObjects();
                 
                 $this->innerCommit(true);
                 
-                if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) 
+                if ($this->GetMetricsLevel()) 
                 {
                     $commit_stats = $this->database->GetInternal()->popStatsContext();
                     
@@ -421,30 +423,51 @@ final class Main extends Singleton
     }
     
     /**
+     * Returns the configured metrics level, or the interface's default
+     * Returns 0 automatically if the database is not present
+     * @param bool $output if true, adjust level to interface privilege
+     */
+    public function GetMetricsLevel(bool $output = false) : int
+    {
+        if (!$this->database) return 0; // required
+        
+        if ($this->config)
+        {
+            $metrics = $this->config->GetMetricsLevel();
+            
+            if ($output && !$this->config->GetDebugOverHTTP() &&
+                !$this->interface->isPrivileged()) $metrics = 0;
+            
+            return $metrics;
+        }
+        else return $this->interface->GetMetricsLevel();
+    }
+    
+    /**
      * Compiles performance metrics and adds them to the given output
      * @param Output $output the output object to add metrics to
      * @param bool $isError if true, the output is an error response
      */
     public function FinalMetrics(Output $output, bool $isError = false) : void
     {
-        $mlevel = $this->config ? $this->config->GetMetricsLevel() : $this->interface->GetMetricsLevel();
+        if (!$this->database || !($mlevel = $this->GetMetricsLevel())) return;
         
-        if (!$this->database || !$mlevel) return;
-        
-         if ($this->database->GetInternal()->inTransaction())
+        if ($this->database->GetInternal()->inTransaction())
             throw new FinalizeTransactionException();
         
         try
         {
+            $this->total_stats->stopTiming();
+            
             $metrics = RequestMetrics::Create(
                 $mlevel, $this->database, $this->reqlog ?? null,
                 $this->construct_stats, $this->action_stats,
                 $this->commit_stats, $this->total_stats);
             
-            if ($this->interface->isPrivileged() || $this->config->GetDebugOverHTTP())
-                $output->SetMetrics($metrics->GetClientObject($isError));
-            
             $metrics->Save(); $this->innerCommit(false);
+            
+            if ($this->GetMetricsLevel(true))
+                $output->SetMetrics($metrics->GetClientObject($isError));
         }
         catch (\Throwable $e)
         {
