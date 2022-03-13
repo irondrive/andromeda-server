@@ -10,9 +10,6 @@ mb_internal_encoding("UTF-8");
 
 use \PDO; use \PDOStatement; use \PDOException;
 
-require_once(ROOT."/Core/Database/DBStats.php");
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONEncodingException};
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Base class for database initialization exceptions */
@@ -47,6 +44,10 @@ class DatabaseFetchException extends DatabaseException { public $message = "DATA
 
 /** Exception indicating the database had an integrity violation */
 class DatabaseIntegrityException extends DatabaseException { public $message = "DATABASE_INTEGRITY_VIOLATION"; }
+
+require_once(ROOT."/Core/Database/DBStats.php");
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONEncodingException};
 
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -267,11 +268,12 @@ class Database
      * returns the array of config that was loaded from the config file 
      * @return array<string, mixed> `{driver:string, connect:string, ?username:string, ?password:true, ?persistent:bool}`
      */
-    public function GetClientObject() : array
+    public function GetConfig() : array
     {
         $config = $this->config;
         
-        if ($config['PASSWORD'] ?? null) $config['PASSWORD'] = true;
+        if ($config['PASSWORD'] ?? null) 
+            $config['PASSWORD'] = true;
         
         return $config;
     }

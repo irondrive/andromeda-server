@@ -407,6 +407,7 @@ class ObjectDatabase
         if (!empty($tables)) $base = $tables[0];
         else throw new MissingTableException($class);
         
+        $this->RegisterUniqueKey($base, 'id');
         $this->objectsByBase[$base] ??= array();
         
         // if this object is already loaded, don't replace it
@@ -528,6 +529,13 @@ class ObjectDatabase
      */
     public function InsertObject(BaseObject $object, array $fieldsByClass) : self
     {
+        $tables = $object::GetTableClasses();
+        if (!empty($tables)) $base = $tables[0];
+        else throw new MissingTableException($object);
+        
+        $this->RegisterUniqueKey($base, 'id');
+        $this->objectsByBase[$base][$object->ID()] = $object;
+        
         foreach (array_reverse($fieldsByClass) as $class=>$fields)
         {
             $columns = array(); $indexes = array();
@@ -558,9 +566,6 @@ class ObjectDatabase
             
             $this->SetObjectKeyFields($object, $fields);
         }
-        
-        $base = $object::GetTableClasses()[0];
-        $this->objectsByBase[$base][$object->ID()] = $object;
         
         unset($this->created[$object->ID()]);
         unset($this->modified[$object->ID()]);
@@ -633,7 +638,6 @@ class ObjectDatabase
     public function LoadObjectsByKey(string $class, string $key, $value) : array
     {
         $validx = self::ValueToIndex($value);
-        $this->objectsByKey[$class] ??= array();
         $this->objectsByKey[$class][$key] ??= array();
         
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
@@ -661,7 +665,6 @@ class ObjectDatabase
     public function DeleteObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
-        $this->objectsByKey[$class] ??= array();
         $this->objectsByKey[$class][$key] ??= array();
         
         if (array_key_exists($validx, $this->objectsByKey[$class][$key]))
@@ -693,7 +696,6 @@ class ObjectDatabase
     public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
     {
         $validx = self::ValueToIndex($value);
-        $this->uniqueByKey[$class] ??= array();
         $this->uniqueByKey[$class][$key] ??= array();
         
         if (!array_key_exists($validx, $this->uniqueByKey[$class][$key]))
@@ -723,7 +725,6 @@ class ObjectDatabase
     public function DeleteUniqueByKey(string $class, string $key, $value) : bool
     {
         $validx = self::ValueToIndex($value);
-        $this->uniqueByKey[$class] ??= array();
         $this->uniqueByKey[$class][$key] ??= array();
         
         if (array_key_exists($validx, $this->uniqueByKey[$class][$key]))
@@ -741,7 +742,22 @@ class ObjectDatabase
         
         $this->uniqueByKey[$class][$key][$validx] = null; return $count > 0;
     }
-
+    
+    /**
+     * Sets the registered base class for a class key if not already set or lower than existing
+     * @param string $class class to register the key for
+     * @param string $key key name being registered
+     * @param string $bclass key's base class to register
+     */
+    private function SetKeyBaseClass(string $class, string $key, string $bclass) : void
+    {
+        if (!array_key_exists($key, $this->keyBaseClasses[$class] ?? array()) ||
+            is_a($this->keyBaseClasses[$class][$key], $bclass, true))
+        {
+            $this->keyBaseClasses[$class][$key] = $bclass;
+        }
+    }
+    
     /**
      * Sets the given array of objects for a non-unique key cache
      * @template T of BaseObject
@@ -754,7 +770,7 @@ class ObjectDatabase
     private function SetNonUniqueKeyObjects(string $class, string $key, string $validx, array $objs, ?string $bclass = null) : void
     {
         $bclass ??= $class;
-        $this->keyBaseClasses[$class][$key] = $bclass;
+        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx] = $objs;
         
         if (($childmap = $class::GetChildMap()) !== null)
@@ -780,7 +796,7 @@ class ObjectDatabase
     private function AddNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $obj, ?string $bclass = null) : void
     {
         $bclass ??= $class;
-        $this->keyBaseClasses[$class][$key] = $bclass;
+        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx][$obj->ID()] = $obj;
         
         if (($childmap = $class::GetChildMap()) !== null)
@@ -795,6 +811,36 @@ class ObjectDatabase
     }
     
     /**
+     * Registers a unique key ahead of time so the DB can cache a unique object
+     * when it is saved or updated without an initial load
+     * @template T of BaseObject
+     * @param class-string<T> $class class being cached (recurses on children)
+     * @param string $key name of the key field
+     * @param ?class-string<T> $bclass base class for property
+     * @return self
+     */
+    public function RegisterUniqueKey(string $class, string $key, ?string $bclass = null) : self
+    {
+        $bclass ??= $class;
+        
+        $this->SetKeyBaseClass($class, $key, $bclass);
+        
+        if (!array_key_exists($key, $this->uniqueByKey[$class] ?? array()))
+        {
+            $this->uniqueByKey[$class][$key] = array();
+            
+            if (($childmap = $class::GetChildMap()) !== null)
+                foreach ($childmap as $child)
+            {
+                if ($child !== $class)
+                    $this->RegisterUniqueKey($child, $key, $class);
+            }
+        }
+        
+        return $this;
+    }
+
+    /**
      * Sets the given object to a unique key cache
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
@@ -806,7 +852,7 @@ class ObjectDatabase
     private function SetUniqueKeyObject(string $class, string $key, string $validx, ?BaseObject $obj, ?string $bclass = null) : void
     {
         $bclass ??= $class;
-        $this->keyBaseClasses[$class][$key] = $bclass;
+        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->uniqueByKey[$class][$key][$validx] = $obj;
         
         if (($childmap = $class::GetChildMap()) !== null)

@@ -473,6 +473,13 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
         "WHERE testprop5 = :d0", array('d0'=>55));
     
+    private const polySelect2 = array(
+        "SELECT * FROM a2obj_core_database_polyobject1 ".
+        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)", array('d0'=>75,'d1'=>101));
+    
     public function testUniqueKeyLoad() : void
     {
         $database = $this->createMock(Database::class);
@@ -494,6 +501,21 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         //should return the same object w/o loading from DB
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
+    }
+    
+    public function testUniqueKeyInsertLoadID() : void
+    {
+        // ID is always considered unique w/o pre-registering or loading
+        
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(0))->method('read');
+        $database->expects($this->exactly(1))->method('write')->willReturn(1);
+        
+        $obj = EasyObject::Create($objdb)->Save();
+        
+        $this->assertSame($obj, $objdb->TryLoadByID(EasyObject::class, $obj->ID()));
     }
     
     public function testNonUniqueKeyPolyLoad() : void
@@ -617,12 +639,16 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
-            ->willReturn([array('id'=>'test123','type'=>101,'testprop5'=>55)]);
+        $database->expects($this->exactly(2))->method('read')
+            ->withConsecutive(self::polySelect1, self::polySelect2)
+            ->willReturnOnConsecutiveCalls([array('id'=>'test123','type'=>101,'testprop5'=>55)], []);
         $database->method('write')->willReturn(1);
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1); assert($obj1 !== null);
+        
+        // check that loading via 5aa leaves the registered base class as 5a
+        $objdb->TryLoadUniqueByKey(PolyObject5aa::class, 'testprop5', 75);
         
         $obj1->Delete();
         
@@ -781,7 +807,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj1, $objs2[$id1]);
         $this->assertSame($obj2, $objs2[$id2]);
     }
-    
+
     public function testUniqueKeyInsert() : void
     {
         $database = $this->createMock(Database::class);
@@ -793,12 +819,29 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             ->with("SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
             ->willReturn(array());
         
-        // have to do a uniqueKey query so the DB knows it's a unique key
+        // have to do a uniqueKey query so the DB knows it's a unique key (not registered ahead of time)
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6)); // different value!
 
         $database->expects($this->exactly(1))->method('write')
             ->with("INSERT INTO a2obj_core_database_easyobject (uniqueKey,id) VALUES (:d0,:d1)", array('d0'=>5,'d1'=>$obj->ID()))
             ->willReturn(1);
+        
+        $obj->SetUniqueKey(5)->Save();
+        
+        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
+    }
+    
+    public function testUniqueKeyInsertRegistered() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $obj = EasyObject::Create($objdb);
+        
+        $database->expects($this->exactly(0))->method('read');
+        $database->expects($this->exactly(1))->method('write')->willReturn(1);
+        
+        $objdb->RegisterUniqueKey(EasyObject::class, 'uniqueKey');
         
         $obj->SetUniqueKey(5)->Save();
         

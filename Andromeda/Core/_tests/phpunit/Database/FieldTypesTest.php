@@ -33,14 +33,13 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($field->isSaveOnRollback());
     }
     
-    public function testToString() : void
+    public function testID() : void
     {
         $database = $this->CreateMock(ObjectDatabase::class);
         $parent = new TestObject1($database, array('id'=>$id='test123'));
         $field = (new StringType('myfield'))->SetParent($parent);
         
         $this->assertSame("$id:myfield", $field->ID());
-        $this->assertSame("$id:TestObject1:myfield:StringType", (string)$field);
     }
     
     public function testNullDefault() : void
