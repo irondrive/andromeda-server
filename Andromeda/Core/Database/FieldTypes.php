@@ -43,14 +43,7 @@ abstract class BaseField
         $this->name = $name;
         $this->saveOnRollback = $saveOnRollback;
     }
-    
-    /** Returns this field as a string */
-    public function __toString() : string
-    {
-        return $this->parent->__toString().':'.
-            $this->name.':'.Utilities::ShortClassName(static::class);
-    }
-    
+
     /** Returns the unique ID of this field */
     public function ID() : string
     {

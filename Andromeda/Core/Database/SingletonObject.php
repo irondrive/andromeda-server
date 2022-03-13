@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/Database.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/BaseObject.php");
 

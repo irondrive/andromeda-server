@@ -10,6 +10,9 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 /** Exception indicating that the class cannot select from child classes */
 class NotMultiTableException extends Exceptions\ServerException { public $message = "TABLE_NOT_MULTI_CLASS"; }
 
+/** Exception indicating that no fields were previously registered with a table */
+class NoPrevTableException extends Exceptions\ServerException { public $message = "NO_PREVIOUS_TABLE"; }
+
 /**
  * The base class for objects that can be saved/loaded from the database.
  * Objects can be a single table or be split into base/child class database tables.
@@ -147,10 +150,14 @@ abstract class BaseObject
     /**
      * Registers fields for the object so the DB can save/load objects
      * @param array<FieldTypes\BaseField> $fields array of fields to register
-     * @param ?string $table class table the fields belong to, null to use the last registered
+     * @param ?string $table class table the fields belong to, null to use the last registered (child)
+     * @throws NoPrevTableException if $table is null and no previously registered table
      */
     final protected function RegisterFields(array $fields, ?string $table = null) : void
     {
+        if ($table === null && empty($this->fieldsByClass))
+            throw new NoPrevTableException(static::class);
+        
         $table ??= array_key_last($this->fieldsByClass);
         $this->fieldsByClass[$table] ??= array();
         
