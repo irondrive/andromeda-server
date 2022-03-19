@@ -29,8 +29,7 @@ abstract class BaseObject
     /**
      * Returns the list of classes with database tables for loading this class, ordered base->derived
      * Only classes with a table should implement this (add to result from parent)
-     * Defaults to static::class (no polymorphism)
-     * @return array<class-string<BaseObject>>
+     * @return array<class-string<self>>
      */
     public static function GetTableClasses() : array { return array(); }
 
@@ -38,7 +37,9 @@ abstract class BaseObject
      * Returns the array of subclasses that exist for this base class, so we can load via it
      * Non-abstract base classes can include self if non-child rows exist
      * Non-abstract final classes (no children) should always return null
-     * @return ?non-empty-array<class-string<static>>
+     * If using auto-typed rows, the mapping must be stable across versions
+     * Classes must have the @ return line in order to pass type checking!
+     * @return ?non-empty-array<class-string<self>>
      */
     public static function GetChildMap() : ?array { return null; }
     
@@ -48,11 +49,13 @@ abstract class BaseObject
     /**
      * Given a child class, return a query clause selecting rows for it
      * Only for base classes that are the final table for > 1 class (TypedChildren)
+     * Classes must have the @ return line in order to pass type checking!
+     * @param ObjectDatabase $db database reference
      * @param QueryBuilder $q query to add WHERE clause to
      * @param class-string<self> $class child class we want to filter by
      * @return string the clause for row matching (e.g. 'type = 5')
      */
-    public static function GetWhereChild(QueryBuilder $q, string $class) : string { 
+    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string { 
         throw new NotMultiTableException(self::class); }
     
     /**
@@ -173,7 +176,7 @@ abstract class BaseObject
     
     /** Returns this object's base-unique ID */
     public function ID() : string { return $this->idfield->GetValue(); }
-    
+
     /** Returns the string "id:class" where id is the object ID and class is its short class name */
     final public function __toString() : string { return $this->ID().':'.Utilities::ShortClassName(static::class); }
     
@@ -199,7 +202,7 @@ abstract class BaseObject
     }
 
     /** Deletes this object from the DB */
-    public function Delete() : void
+    protected function Delete() : void
     {
         if ($this->isDeleted) return;
         
@@ -218,7 +221,7 @@ abstract class BaseObject
     }
     
     /** 
-     * INTERNAL - notifies this object that the DB has deleted it 
+     * Notifies this object that the DB has deleted it - internal call only
      * Child classes can extend this if they need extra on-delete logic
      */
     public function notifyDeleted() : void

@@ -80,7 +80,7 @@ final class ErrorLog extends BaseObject
     public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text]"; }
     
     /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint] [--desc bool]"; }
+    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint] [--asc bool]"; }
     
     /** Returns the command usage for CountByInput() */
     public static function GetCountUsage() : string { return "[--logic and|or]"; }
@@ -114,11 +114,11 @@ final class ErrorLog extends BaseObject
     {
         $q = static::GetWhereQuery($database, $input);
         
-        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 1000);
+        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 100);
         
         if ($input->HasParam('offset')) $q->Offset($input->GetParam('offset',SafeParam::TYPE_UINT));
         
-        $q->OrderBy('time', $input->GetOptParam('desc',SafeParam::TYPE_BOOL));
+        $q->OrderBy('time', !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false));
         
         return $database->LoadObjectsByQuery(static::class, $q);
     }
@@ -127,6 +127,7 @@ final class ErrorLog extends BaseObject
     public static function CountByInput(ObjectDatabase $database, Input $input) : int
     {
         $q = static::GetWhereQuery($database, $input);
+        
         return $database->CountObjectsByQuery(static::class, $q);
     }
 
@@ -256,8 +257,8 @@ final class ErrorLog extends BaseObject
             'code' => $this->code->GetValue(),
             'file' => $this->file->GetValue(),
             'message' => $this->message->GetValue(),
-            'app' => $this->app->GetValue(),
-            'action' => $this->action->GetValue(),
+            'app' => $this->app->TryGetValue(),
+            'action' => $this->action->TryGetValue(),
             'trace_basic' => $this->trace_basic->GetValue()
         );
         
@@ -266,18 +267,18 @@ final class ErrorLog extends BaseObject
 
         if ($details)
         {
-            $trace_full = $this->trace_full->GetValue();
+            $trace_full = $this->trace_full->TryGetValue();
             if (!$sensitive) foreach ($trace_full as &$val) unset($val['args']);
             $retval['trace_full'] = $trace_full;
             
-            $retval['objects'] = $this->objects->GetValue();
-            $retval['queries'] = $this->queries->GetValue();
-            $retval['log'] = $this->log->GetValue();
+            $retval['objects'] = $this->objects->TryGetValue();
+            $retval['queries'] = $this->queries->TryGetValue();
+            $retval['log'] = $this->log->TryGetValue();
         }
 
         if ($sensitive)
         {
-            $retval['params'] = $this->params->GetValue();
+            $retval['params'] = $this->params->TryGetValue();
         }
         
         return $retval;

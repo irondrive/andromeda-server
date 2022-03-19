@@ -7,13 +7,13 @@ require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 
 require_once(ROOT."/Core/Logging/RequestMetrics.php");
-require_once(ROOT."/Core/Logging/CommonMetrics.php");
+require_once(ROOT."/Core/Logging/DBStatsLog.php");
 
 /** Log entry representing metrics for a commit */
-class CommitMetrics extends BaseObject
+final class CommitMetrics extends BaseObject
 {
     use TableNoChildren;
-    use CommonMetrics;
+    use DBStatsLog;
     
     protected const IDLength = 20;
     
@@ -27,7 +27,7 @@ class CommitMetrics extends BaseObject
         $this->requestmet = $fields[] = new FieldTypes\ObjectRefT(RequestMetrics::class,'requestmet');
 
         $this->RegisterFields($fields, self::class);
-        $this->CommonCreateFields();
+        $this->DBStatsCreateFields();
         
         parent::CreateFields();
     }
@@ -44,7 +44,7 @@ class CommitMetrics extends BaseObject
         $obj = parent::BaseCreate($database);
         $obj->requestmet->SetValue($request);
         
-        $obj->CommonSetMetrics($metrics);
+        $obj->SetDBStats($metrics);
         
         return $obj;
     }
@@ -57,11 +57,11 @@ class CommitMetrics extends BaseObject
     
     /**
      * Gets the printable client object for this object
-     * @return array CommonMetrics
-     * @see CommonMetrics::GetCommonClientObject()
+     * @return array DBStatsLog
+     * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject() : array
     {
-        return $this->GetCommonClientObject();
+        return $this->GetDBStatsClientObject();
     }
 }

@@ -9,13 +9,13 @@ require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 
 require_once(ROOT."/Core/Logging/RequestMetrics.php");
-require_once(ROOT."/Core/Logging/CommonMetrics.php");
+require_once(ROOT."/Core/Logging/DBStatsLog.php");
 
 /** Log entry representing metrics for an app action */
 final class ActionMetrics extends BaseObject
 {
     use TableNoChildren;
-    use CommonMetrics;
+    use DBStatsLog;
     
     protected const IDLength = 20;
     
@@ -42,7 +42,9 @@ final class ActionMetrics extends BaseObject
         $this->queries = $fields[] = new FieldTypes\NullJsonArray('queries');
 
         $this->RegisterFields($fields, self::class);
-        $this->CommonCreateFields();
+        $this->DBStatsCreateFields();
+        
+        $this->database->RegisterUniqueKey(self::class, 'actionlog');
         
         parent::CreateFields();
     }
@@ -61,7 +63,7 @@ final class ActionMetrics extends BaseObject
         $obj->actionlog->SetValue($context->GetActionLog());
         
         $metrics = $context->GetMetrics();
-        $obj->CommonSetMetrics($metrics);
+        $obj->SetDBStats($metrics);
 
         $input = $context->GetInput();
         $obj->app->SetValue($input->GetApp());
@@ -81,17 +83,17 @@ final class ActionMetrics extends BaseObject
     
     /**
      * Gets the printable client object for this object
-     * @return array CommonMetrics + `{app:string,action:string,queries:[string]}`
-     * @see CommonMetrics::GetCommonClientObject()
+     * @return array DBStatsLog + `{app:string,action:string,queries:[{time:float,query:string}]}`
+     * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject() : array
     {
-        $retval = $this->GetCommonClientObject();
+        $retval = $this->GetDBStatsClientObject();
 
         $retval['app'] = $this->app->GetValue();
         $retval['action'] = $this->action->GetValue();
         
-        if (($queries = $this->queries->GetValue()) !== null)
+        if (($queries = $this->queries->TryGetValue()) !== null)
             $retval['queries'] = $queries;
         
         return $retval;

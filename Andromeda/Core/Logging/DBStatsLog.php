@@ -4,7 +4,7 @@ require_once(ROOT."/Core/Database/DBStats.php"); use Andromeda\Core\Database\DBS
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
 /** Log entry representing DBStats */
-trait CommonMetrics
+trait DBStatsLog
 {
     private FieldTypes\IntType $db_reads;
     private FieldTypes\FloatType $db_read_time;
@@ -13,7 +13,7 @@ trait CommonMetrics
     private FieldTypes\FloatType $code_time;
     private FieldTypes\FloatType $total_time; // TODO comments
     
-    protected function CommonCreateFields() : void
+    protected function DBStatsCreateFields() : void
     {
         $fields = array();
 
@@ -31,7 +31,7 @@ trait CommonMetrics
      * Set metrics from a DBStats
      * @param DBStats $metrics stats
      */
-    protected function CommonSetMetrics(DBStats $metrics) : self
+    protected function SetDBStats(DBStats $metrics) : self
     {
         $this->db_reads->SetValue($metrics->GetReads());
         $this->db_read_time->SetValue($metrics->GetReadTime());
@@ -48,7 +48,7 @@ trait CommonMetrics
      * @return array `{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}`
      * @see DBStats::getStats()
      */
-    protected function GetCommonClientObject() : array
+    protected function GetDBStatsClientObject() : array
     {
         return array(
             'reads' =>      $this->db_reads->GetValue(),

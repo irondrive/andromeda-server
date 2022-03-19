@@ -15,16 +15,24 @@ class QueryBuilder
     public function GetText() : string 
     { 
         $query = $this->fromalias ?? "";
+
+        foreach ($this->joins as $joinstr)
+            $query .= " JOIN $joinstr";
         
-        if (count($this->joins)) $query .= implode(array_map(
-            function(string $str){ return " JOIN $str"; }, $this->joins));
+        if ($this->where !== null) 
+            $query .= " WHERE ".$this->where;
+
+        if ($this->orderby !== null) 
+        {
+            $query .= " ORDER BY ".$this->orderby;
+            if ($this->orderdesc) $query .= " DESC"; // default is ASC
+        }
         
-        if ($this->where !== null) $query .= " WHERE ".$this->where;
-        if ($this->orderby !== null) $query .= " ORDER BY ".$this->orderby;
-        if ($this->orderdesc !== null) $query .= $this->orderdesc ? " DESC" : " ASC";
+        if ($this->limit !== null) 
+            $query .= " LIMIT ".$this->limit;
         
-        if ($this->limit !== null) $query .= " LIMIT ".$this->limit;
-        if ($this->offset !== null) $query .= " OFFSET ".$this->offset;
+        if ($this->offset !== null) 
+            $query .= " OFFSET ".$this->offset;
         
         return trim($query);
     }
@@ -35,7 +43,7 @@ class QueryBuilder
     private array $joins = array();
     private ?string $where = null;
     private ?string $orderby = null;
-    private ?bool $orderdesc = null;
+    private bool $orderdesc = false;
     private ?int $limit = null;
     private ?int $offset = null;
 
@@ -48,7 +56,7 @@ class QueryBuilder
     {
         $idx = "d".count($this->data);
         $this->data[$idx] = $val;
-        return ":$idx";
+        return ':'.$idx;
     }
     
     /** Base function for safely comparing columns to values */
@@ -106,7 +114,7 @@ class QueryBuilder
     public function NotEquals(string $key, $val) : string 
     { 
         if ($val === null) return $this->Not($this->IsNull($key));
-        return $this->BaseCompare($key,$val,'!='); 
+        return $this->BaseCompare($key,$val,'<>'); 
     }
     
     /** Returns a query string that inverts the logic of the given query */
@@ -122,59 +130,70 @@ class QueryBuilder
      * Syntactic sugar function to check many OR conditions at once
      * @param string $key the column to compare against
      * @param array $vals array of possible values for the column
-     * @param string $func the function to use to check if the values match
      * @return string the built query string
      */
-    public function ManyOr(string $key, array $vals, string $func='Equals') 
+    public function ManyEqualsOr(string $key, array $vals) 
     { 
-        return $this->Or(...array_map(function($val)use($key,$func){ 
-            return $this->$func($key,$val); },$vals)); 
+        return $this->Or(...array_map(function($val)use($key){ 
+            return $this->Equals($key,$val); },$vals)); 
     }    
     
     /**
      * Syntactic sugar function to check many AND conditions at once
      * @param array $pairs associative array mapping column names to their desired values
-     * @param string $func the function to use to check if the values match
      * @return string the built query string
      */
-    public function ManyAnd(array $pairs, string $func='Equals') 
+    public function ManyEqualsAnd(array $pairs) 
     {
         $retval = array(); foreach($pairs as $key=>$val){ 
-            $retval[] = $this->$func($key, $val); }
+            $retval[] = $this->Equals($key, $val); }
         return $this->And(...$retval);
     }
     
-    /** Assigns a WHERE clause to the query - if null, resets */
+    /** 
+     * Assigns/adds a WHERE clause to the query
+     * if null, resets - if called > once, uses AND 
+     * */
     public function Where(?string $where) : self 
     {
         if ($where !== null && $this->where !== null)
             $where = $this->And($this->where, $where);
             
-        $this->where = $where; return $this;
+        $this->where = $where; 
+        return $this;
     }
     
     /** Returns the current WHERE string */
     public function GetWhere() : ?string { return $this->where; }
         
-    /** Assigns an ORDER BY clause to the query */
-    public function OrderBy(string $orderby, ?bool $desc = null) : self 
+    /** Assigns an ORDER BY clause to the query, optionally descending */
+    public function OrderBy(?string $orderby, ?bool $desc = null) : self 
     { 
         $this->orderby = $orderby; 
-        $this->orderdesc = $desc; return $this; 
+        $this->orderdesc = ($desc === true); 
+        return $this; 
     }
+    
+    /** Returns the current ORDER BY key or null */
+    public function GetOrderBy() : ?string { return $this->orderby; }
+    
+    /** Returns true if the order is descending */
+    public function GetOrderDesc() : bool { return $this->orderdesc; }
     
     /** Assigns a LIMIT clause to the query */
     public function Limit(?int $limit) : self 
     { 
         if ($limit < 0) $limit = 0; 
-        $this->limit = $limit; return $this; 
+        $this->limit = $limit; 
+        return $this; 
     }
     
     /** Assigns an OFFSET clause to the query (use with LIMIT) */
     public function Offset(?int $offset) : self 
     { 
         if ($offset < 0) $offset = 0; 
-        $this->offset = $offset; return $this; 
+        $this->offset = $offset; 
+        return $this; 
     }
 
     /** Returns the set query limit */
@@ -202,7 +221,7 @@ class QueryBuilder
         
         $this->joins[] = "$joinclass ON $joinstr = $deststr"; return $this;
     }
-    
+
     /**
      * Performs a self join on a table (selects an alias table and sets the WHERE query)
      * 
@@ -218,7 +237,6 @@ class QueryBuilder
         $joinclass = $database->GetClassTableName($joinclass); 
         
         $this->fromalias = ", $joinclass _tmptable"; // TODO not likely to work correctly now - at least make this more general
-        
         $this->where = "$joinclass.$prop1 = _tmptable.$prop2";
         
         return $this;

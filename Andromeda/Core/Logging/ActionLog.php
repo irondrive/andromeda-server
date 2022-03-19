@@ -1,16 +1,17 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Config, InvalidAppException};
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\HasTable;
 
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/Core/Logging/BaseLog.php");
-require_once(ROOT."/Core/Logging/BaseAppLog.php");
 require_once(ROOT."/Core/Logging/RequestLog.php");
 
 /** 
@@ -20,139 +21,252 @@ require_once(ROOT."/Core/Logging/RequestLog.php");
  * filter by request parameters and action parameters simulataneously.
  */
 class ActionLog extends BaseLog
-{    
-    public static function GetFieldTemplate() : array
+{
+    use HasTable;
+    
+    /** @var FieldTypes\ObjectRefT<RequestLog> The request log this action was a part of */
+    private FieldTypes\ObjectRefT $requestlog;
+    /** Action app name */
+    private FieldTypes\StringType $app;
+    /** Action action name */
+    private FieldTypes\StringType $action;
+    /** Optional input parameter logging */
+    private FieldTypes\NullJsonArray $inputs;
+    /** Optional app-specific details if no subtable */
+    private FieldTypes\NullJsonArray $details;
+    
+    /** Temporary array of logged inputs to be saved */
+    private array $inputs_tmp;
+    /** Temporary array of logged details to be saved */
+    private array $details_tmp;
+    
+    /** @return ?array<class-string<self>> */
+    public static function GetChildMap() : ?array 
     {
-        return array(
-            'obj_request' => new FieldTypes\ObjectRef(RequestLog::class, 'actions'),
-            'obj_applog' => new FieldTypes\ObjectPoly(BaseAppLog::class),
-            'app' => new FieldTypes\StringType(),
-            'action' => new FieldTypes\StringType(),
-            'details' => new FieldTypes\JSON()
-        );
+        $map = array("" => self::class); 
+        
+        foreach (Main::GetInstance()->GetApps() as $name=>$app)
+        {
+            $logclass = $app::getLogClass();
+            if ($logclass !== null) $map[$name] = $logclass;
+        } 
+        return $map;
+    }
+
+    public static function HasTypedRows() : bool { return true; }
+    
+    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string
+    {
+        $map = array_flip(self::GetChildMap());
+        $table = $db->GetClassTableName(self::class);
+        
+        if ($class !== self::class && array_key_exists($class, $map))
+            return $q->Equals("$table.app", $map[$class]);
+        else 
+        {
+            return $q->Not($q->ManyEqualsOr("$table.app",
+                array_keys(Main::GetInstance()->GetApps())));
+        }
     }
     
+    public static function GetRowClass(array $row) : string
+    {
+        $map = self::GetChildMap(); $app = $row['app'];
+        return array_key_exists($app, $map) ? $map[$app] : self::class;
+    }
+    
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->requestlog = $fields[] = new FieldTypes\ObjectRefT(RequestLog::class, 'requestlog');
+        
+        $this->app = $fields[] =     new FieldTypes\StringType('app');
+        $this->action = $fields[] =  new FieldTypes\StringType('action');
+        $this->inputs = $fields[] =  new FieldTypes\NullJsonArray('inputs');
+        $this->details = $fields[] = new FieldTypes\NullJsonArray('details');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
+
     /** Creates a new action log with the given input and request log */
     public static function Create(ObjectDatabase $database, RequestLog $reqlog, Input $input) : self
     {
-        return parent::BaseCreate($database)->SetObject('request', $reqlog)
-            ->SetScalar('app', $input->GetApp())->SetScalar('action',$input->GetAction());
+        $obj = parent::BaseCreate($database);
+        
+        $obj->requestlog->SetValue($reqlog);
+        $obj->app->SetValue($input->GetApp());
+        $obj->action->SetValue($input->GetAction());
+        
+        $input->SetLogger($obj);
+        
+        return $obj;
     }
-    
-    /** Returns the ActionLog corresponding to the given BaseAppLog */
-    public static function LoadByApplog(ObjectDatabase $database, BaseAppLog $applog) : self
+
+    /**
+     * Returns all action logs for a request log
+     * @param ObjectDatabase $database database reference
+     * @param RequestLog $reqlog request log
+     * @return array<static> loaded ActionLogs
+     */
+    public static function LoadByRequest(ObjectDatabase $database, RequestLog $reqlog) : array
     {
-        return static::TryLoadUniqueByObject($database, 'applog', $applog, true);
+        return $database->LoadObjectsByObject(static::class, 'requestlog', $reqlog);
     }
     
-    /** @return RequestLog the parent request log */
-    private function GetRequestLog() : RequestLog { return $this->GetObject('request'); }
+    /**
+     * Returns the configured details log detail level
+     *
+     * If 0, details logs will be discarded, else see Config enum
+     * @see \Andromeda\Core\Config::GetRequestLogDetails()
+     */
+    public static function GetDetailsLevel() : int { return Main::GetInstance()->GetConfig()->GetRequestLogDetails(); }
     
-    /** @return ?BaseAppLog the relevant BaseAppLog if it exists */
-    private function TryGetApplog() : ?BaseAppLog { return $this->TryGetObject('applog'); }
-    
-    /** Sets an extended BaseAppLog to accompany this ActionLog */
-    public function SetApplog(BaseAppLog $applog) : self { return $this->SetObject('applog', $applog); }
-    
-    /** Returns the log's app-specific "details" field */
-    public function GetDetails() : array { return $this->TryGetScalar('details') ?? array(); }
+    /**
+     * Returns true if the configured details log detail level is >= full
+     * @see \Andromeda\Core\Config::GetRequestLogDetails()
+     */
+    public static function isFullDetails() : bool { return static::GetDetailsLevel() >= Config::RQLOG_DETAILS_FULL; }
     
     /** 
-     * Sets the log's app-specific "details" field
+     * Log to the app-specific "details" field
      * 
      * This should be used for data that doesn't make sense to have its own DB column.
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
      * 
-     * @param array $details the data values to log
+     * @param string $key array key in log
+     * @param mixed $value the data value
+     * @return $this
      */
-    public function SetDetails(array $details) : self
+    public function LogDetails(string $key, $value) : self
     {
-        return $this->SetScalar('details', $details);
-    }
-    
-    public function Save(bool $onlyMandatory = false) : self
-    {
-        $applog = $this->TryGetApplog();
-        
-        if ($applog !== null) $applog->SaveDetails();
-        
-        if (Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
-            parent::Save(); // ignore $onlyMandatory
-        
-        // make sure the applog is saved also in case of rollback
-        if ($applog !== null) $applog->Save();
-        
+        $this->details_tmp ??= array();
+        $this->details_tmp[$key] = $value;
         return $this;
     }
 
-    public static function GetPropUsage(bool $withapp = true) : string { return RequestLog::GetPropUsage()." ".($withapp?"[--appname alphanum] ":'')."[--action alphanum]"; }
-    
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $withapp = true) : array
+    /** Returns a direct reference to the inputs log array */
+    public function &GetInputLogRef() : ?array
     {
-        $criteria = array(); $table = $database->GetClassTableName(static::class);
+        $this->inputs_tmp ??= array();
+        return $this->inputs_tmp;
+    }
+    
+    public function Save(bool $isRollback = false) : self
+    {
+        if (!empty($this->inputs_tmp))
+            $this->inputs->SetValue($this->inputs_tmp);
         
-        if ($withapp && $input->HasParam('appname')) $criteria[] = $q->Equals("$table.app", $input->GetParam('appname',SafeParam::TYPE_ALPHANUM));
+        if (!empty($this->details_tmp))
+            $this->details->SetValue($this->details_tmp);
+            
+        if (!Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
+            return $this; // might only be doing file logging
         
-        if ($input->HasParam('action')) $criteria[] = $q->Equals("$table.obj_action", $input->GetParam('obj_action',SafeParam::TYPE_ALPHANUM));
-        
-        $q->Join($database, RequestLog::class, 'id', static::class, 'obj_request');
-        
-        return array_merge($criteria, RequestLog::GetPropCriteria($database, $q, $input));
+        return parent::Save(); // ignore isRollback
+    }
+    
+    public static function GetPropUsage(bool $join = true) : string 
+    {
+        $appstr = implode("|",array_filter(array_keys(self::GetChildMap())));
+        return "[--lapp $appstr] [--laction alphanum]".($join ? ' '.RequestLog::GetPropUsage(false):''); 
+    }
+    
+    /** Returns the app-specific usage for classes that extend this one */
+    protected static function GetAppPropUsage() : string { return ""; }
+    
+    /** 
+     * Returns the array of app-specific propUsage strings
+      * @return array<string> 
+      */
+    public static function GetAppPropUsages() : array
+    {
+        $retval = array();
+        foreach (self::GetChildMap() as $appname=>$logclass)
+            if ($appname) $retval[] = "--lapp $appname ".$logclass::GetAppPropUsage();
+        return $retval;
     }
 
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    {
+        $criteria = array();
+
+        if ($input->HasParam('lapp')) $criteria[] = $q->Equals("app", $input->GetParam('lapp',SafeParam::TYPE_ALPHANUM));
+        if ($input->HasParam('laction')) $criteria[] = $q->Equals("action", $input->GetParam('laction',SafeParam::TYPE_ALPHANUM));
+        
+        if (!$join) return $criteria;
+        
+        $q->Join($database, RequestLog::class, 'id', self::class, 'requestlog'); // enable loading by RequestLog criteria
+        return array_merge($criteria, RequestLog::GetPropCriteria($database, $q, $input, false));
+    }
+    
+    /** @return class-string<self> */
+    public static function GetPropClass(Input $input) : string
+    {
+        if ($input->HasParam('lapp'))
+        {
+            $map = self::GetChildMap();
+            $app = $input->GetParam('lapp',SafeParam::TYPE_ALPHANUM);
+            if (array_key_exists($app, $map)) return $map[$app];
+        }
+        
+        return self::class;
+    }
+
+    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
+    {
+        RequestLog::LoadByInput($database, $input); // pre-load in one query
+        
+        $objs = parent::LoadByInput($database, $input);
+        
+        // now we need to re-sort by time as loading via child classes may not sort the result
+        $desc = !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false);
+
+        uasort($objs, function(self $a, self $b)use($desc)
+        {
+            $v1 = $a->requestlog->GetValue()->GetTime();
+            $v2 = $b->requestlog->GetValue()->GetTime();
+            return $desc ? ($v2 <=> $v1) : ($v1 <=> $v2);
+        });
+ 
+        return $objs;
+    }
+    
     /**
      * Returns the printable client object of this action log
-     * @return array `{app:string, action:string}`
-        if details, add: `{details:array}`
+     * @param bool $expand if true, expand linked objects
+     * @return array `{app:string, action:string, ?inputs:array, ?details:array}`
      */
-    protected function GetBaseClientObject(bool $details = false) : array
+    public function GetClientObject(bool $expand = false) : array
     {
-        $retval = array_map(function(FieldTypes\BaseField $e){
-            return $e->GetValue(); }, $this->scalars);
+        $retval = array(
+            'app' => $this->app->GetValue(),
+            'action' => $this->action->GetValue()
+        );
         
-        if (!$details || !$retval['details']) unset($retval['details']);
+        if (($inputs = $this->inputs->TryGetValue()) !== null)
+            $retval['inputs'] = $inputs;
+        
+        if (($details = $this->details->TryGetValue()) !== null)
+            $retval['details'] = $details;
         
         return $retval;
     }
     
     /**
-     * Returns the printable client object of this action log, with the request log
-     * @see ActionLog::GetBaseClientObject()
-     * @see RequestLog::GetClientObject()
-     * @return array add `{request:RequestLog}`
+     * Returns the printable client object of this action log + its request
+     * @see RequestLog::GetClientObject
+     * @see ActionLog::GetClientObject
+     * @return array ActionLog + `{request:RequestLog}`
      */
-    public function GetReqClientObject() : array
+    public function GetFullClientObject(bool $expand = false) : array
     {
-        $retval = $this->GetBaseClientObject(true);
+        $retval = $this->GetClientObject($expand);
         
-        $retval['request'] = $this->GetRequestLog()->GetClientObject();
-        
-        return $retval;
-    }
-    
-    /**
-     * Returns the printable client object of this action log, with the applog
-     * @see ActionLog::GetBaseClientObject()
-     * @return array add `{applog:BaseAppLog}`
-     */
-    public function GetAppClientObject(bool $expand = false, bool $applogs = false) : array
-    {
-        $retval = $this->GetBaseClientObject($applogs);
-
-        if ($applogs && ($applog = $this->TryGetApplog()) !== null)
-            $retval['applog'] = $applog->GetClientObject($expand);
+        $retval['request'] = $this->requestlog->GetValue()->GetClientObject();
         
         return $retval;
-    }
-
-    /**
-     * Returns the printable client object of this action log, with both the request and applogs
-     * @see ActionLog::GetAppClientObject()
-     * @see ActionLog::GetReqClientObject()
-     */
-    public function GetFullClientObject(bool $expand = false, bool $applogs = false) : array
-    {
-        return array_merge($this->GetReqClientObject(),
-                           $this->GetAppClientObject($expand, $applogs));
     }
 }

@@ -11,13 +11,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_core_accesslog` (
+CREATE TABLE `a2obj_apps_core_actionlog` (
   `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   `account` char(12) DEFAULT NULL,
   `sudouser` char(12) DEFAULT NULL,
   `client` char(12) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `a2obj_apps_core_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -92,6 +93,7 @@ CREATE TABLE `a2obj_core_logging_actionlog` (
   `requestlog` char(20) NOT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
+  `inputs` text DEFAULT NULL,
   `details` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `requestlog` (`requestlog`),

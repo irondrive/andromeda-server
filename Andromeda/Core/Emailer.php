@@ -154,6 +154,8 @@ final class Emailer extends BaseObject
         return $database->TryLoadByID(self::class, $id);
     }
     
+    public function Delete() : void { parent::Delete(); }
+    
     /** Build a PHPMailer-formatted host string from an input */
     private static function BuildHostFromParams(SafeParams $input) : string
     {
@@ -168,7 +170,7 @@ final class Emailer extends BaseObject
     }
     
     /** Returns whether or not to use the server from address for reply-to */
-    private function GetUseReply() : bool { return $this->use_reply->GetValue() ?? false; }
+    private function GetUseReply() : bool { return $this->use_reply->TryGetValue() ?? false; }
     
     /**
      * Gets the config as a printable client object
@@ -181,12 +183,12 @@ final class Emailer extends BaseObject
             'id'           => $this->ID(),
             'date_created' => $this->date_created->GetValue(),
             'type' =>         array_flip(self::MAIL_TYPES)[$this->type->GetValue()],
-            'hosts' =>        $this->hosts->GetValue(),
-            'username' =>     $this->username->GetValue(),
-            'password' =>     (bool)($this->password->GetValue()),
+            'hosts' =>        $this->hosts->TryGetValue(),
+            'username' =>     $this->username->TryGetValue(),
+            'password' =>     (bool)($this->password->TryGetValue()),
             'from_address' => $this->from_address->GetValue(),
-            'from_name' =>    $this->from_name->GetValue(),
-            'use_reply' =>    $this->use_reply->GetValue()
+            'from_name' =>    $this->from_name->TryGetValue(),
+            'use_reply' =>    $this->use_reply->TryGetValue()
         );        
     }
     
@@ -214,15 +216,15 @@ final class Emailer extends BaseObject
         
         $mailer->setFrom(
             $this->from_address->GetValue(), 
-            $this->from_name->GetValue() ?? self::DEFAULT_FROM);
+            $this->from_name->TryGetValue() ?? self::DEFAULT_FROM);
         
         if ($type == self::TYPE_SMTP)
         {
-            $mailer->Username = $this->username->GetValue();
-            $mailer->Password = $this->password->GetValue();
+            $mailer->Username = $this->username->TryGetValue();
+            $mailer->Password = $this->password->TryGetValue();
             if ($mailer->Username !== null) $mailer->SMTPAuth = true;
 
-            $mailer->Host = implode(';', $this->hosts->GetValue());
+            $mailer->Host = implode(';', $this->hosts->TryGetValue());
         }
     
         $this->mailer = $mailer;
@@ -250,7 +252,7 @@ final class Emailer extends BaseObject
         {
             $mailer->addReplyTo(
                 $this->from_address->GetValue(),
-                $this->from_name->GetValue() ?? self::DEFAULT_FROM); 
+                $this->from_name->TryGetValue() ?? self::DEFAULT_FROM); 
         }
         else if ($from !== null) $mailer->addReplyTo($from->GetAddress(), $from->GetName());
         

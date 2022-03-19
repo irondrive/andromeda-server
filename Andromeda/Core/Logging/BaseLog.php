@@ -12,12 +12,12 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
  * Base class for access logs, providing some common DB functions for user viewing 
  * 
  * The access log system starts with a RequestLog to represent a request. A request log
- * then creates one ActionLog for each app action run in the transaction.  An action log
- * can be accompanied by a BaseAppLog if the app implements it and has extra data to log.
+ * then creates one ActionLog for each app action run in the transaction.  The action log
+ * can be extended by an app-specific action log if it has extra data to log.
  */
 abstract class BaseLog extends BaseObject
 {
-    public const IDLength = 20;
+    protected const IDLength = 20;
     
     /** Returns the CLI usage string for loading objects by properties */
     public static abstract function GetPropUsage() : string;
@@ -32,6 +32,13 @@ abstract class BaseLog extends BaseObject
      * @return array<string> array of WHERE strings
      */
     public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array;
+    
+    /**
+     * Returns the class we should load logs as
+     * @param Input $input input to determine class
+     * @return class-string<static>
+     */
+    public static function GetPropClass(Input $input) : string { return static::class; }
     
     /** Returns the common CLI usage for loading log entries */
     public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint]"; }
@@ -51,10 +58,12 @@ abstract class BaseLog extends BaseObject
         
         $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
             SafeParams::PARAMLOG_ONLYFULL, array('and','or')) === 'or'; // default AND
-            
-        if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
         
-        return $q->Where($or ? $q->Or(...$criteria) : $q->And(...$criteria));
+        if (!count($criteria))
+        {
+            if ($or) $q->Where("FALSE"); return $q; // match nothing
+        }
+        else return $q->Where($or ? $q->Or(...$criteria) : $q->And(...$criteria));
     }
     
     /**
@@ -65,13 +74,15 @@ abstract class BaseLog extends BaseObject
      */
     public static function LoadByInput(ObjectDatabase $database, Input $input) : array
     {
-        $q = static::GetWhereQuery($database, $input);
+        $class = static::GetPropClass($input);
         
-        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 1000);
+        $q = $class::GetWhereQuery($database, $input);
+        
+        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 100);
         
         if ($input->HasParam('offset')) $q->Offset($input->GetParam('offset',SafeParam::TYPE_UINT));
         
-        return static::LoadByQuery($database, $q);
+        return $database->LoadObjectsByQuery($class, $q);
     }
     
     /**
@@ -82,6 +93,10 @@ abstract class BaseLog extends BaseObject
      */
     public static function CountByInput(ObjectDatabase $database, Input $input) : int
     {
-        return static::CountByQuery($database, static::GetWhereQuery($database, $input));
+        $class = static::GetPropClass($input);
+        
+        $q = static::GetWhereQuery($database, $input);
+        
+        return $database->CountObjectsByQuery($class, $q);
     }
 }

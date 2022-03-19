@@ -49,12 +49,12 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field = (new NullIntType('myfield', false))->SetParent($parent);
         $this->assertFalse($field->isModified());
         $this->assertSame(0, $field->GetDelta());
-        $this->assertSame(null, $field->GetValue());
+        $this->assertSame(null, $field->TryGetValue());
         
         $field = (new NullIntType('myfield', false, 5))->SetParent($parent);
         $this->assertTrue($field->isModified());
         $this->assertSame(1, $field->GetDelta());
-        $this->assertSame(5, $field->GetValue());
+        $this->assertSame(5, $field->TryGetValue());
     }
     
     public function testDefault() : void
@@ -85,13 +85,13 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new NullIntType('myfield'))->SetParent($parent);
         
-        $this->assertSame(null, $field->GetValue());
+        $this->assertSame(null, $field->TryGetValue());
         
         $field->SetValue(10);
-        $this->assertSame(10, $field->GetValue());
+        $this->assertSame(10, $field->TryGetValue());
         
         $field->RestoreDefault();
-        $this->assertSame(null, $field->GetValue());
+        $this->assertSame(null, $field->TryGetValue());
     }
     
     public function testDelta() : void
@@ -145,7 +145,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($field->isModified());
         $this->assertSame(0, $field->GetDelta());
     }
-    
+
     public function testSaveDBValue() : void
     {
         $parent = $this->getMockParent();
@@ -381,7 +381,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $parent = $this->getMockParent();
         
         $limit = (new NullIntType('mylimit', false, 10))->SetParent($parent);
-        $this->assertSame(10, $limit->GetValue());
+        $this->assertSame(10, $limit->TryGetValue());
         
         $counter = (new Counter('mycounter', false, $limit))->SetParent($parent);
         
@@ -421,20 +421,20 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field->InitDBValue(null);
         $this->assertSame(null, $field->GetDBValue());
-        $this->assertSame(null, $field->GetValue());
+        $this->assertSame(null, $field->TryGetValue());
 
         $json = '{"key1":"val1","key2":5}';
         $field->InitDBValue($json);
-        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->GetValue());
+        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->TryGetValue());
         $this->assertSame($json, $field->GetDBValue());
 
         $field->SetValue(null);
         $this->assertSame(null, $field->GetDBValue());
-        $this->assertSame(null, $field->GetValue());
+        $this->assertSame(null, $field->TryGetValue());
         
         $array = array('key3'=>'val3','key4'=>7);
         $field->SetValue($array);
-        $this->assertSame($array, $field->GetValue());
+        $this->assertSame($array, $field->TryGetValue());
         $this->assertSame('{"key3":"val3","key4":7}', $field->GetDBValue());
     }
     
@@ -543,6 +543,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetValue($obj);
         $this->assertSame($obj, $field->GetValue()); // no DB call (have temp obj)
         $this->assertSame($obj->ID(), $field->GetDBValue());
+        $this->assertSame($obj->ID(), $field->GetObjectID());
         $this->assertSame($obj->ID(), $field->SaveDBValue());
         $this->assertSame($obj, $field->GetValue()); // calls DB (no temp obj)
     }

@@ -4,7 +4,7 @@ cd Andromeda;
 
 find . -iname phpunit | while read -r dir; do
     echo running $dir
-    ../vendor/bin/phpunit $dir -c ../tools/phpunit.xml "$@" || exit 1
+    ../vendor/bin/phpunit $dir -c ../tools/phpunit.xml "$@" || exit 1; echo
 done
 
 #../vendor/bin/phpunit . -c ../tools/phpunit.xml "$@"
