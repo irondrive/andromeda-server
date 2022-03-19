@@ -4,7 +4,7 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php");
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
 require_once(ROOT."/Core/IOFormat/InputFile.php");
 
-require_once(ROOT."/Core/Logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
+require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 
 class InputFileMissingException extends SafeParamException {
     public function __construct(string $key) { $this->message = "INPUT_FILE_MISSING: $key"; } }
@@ -47,19 +47,16 @@ class Input
     /** The basic authentication to be used */
     public function GetAuth() : ?InputAuth { return $this->auth; }
     
-    public const LoggerKey = 'input';
-    
-    /** Sets the optional param logger to the given BaseAppLog */
-    public function SetLogger(?BaseAppLog $logger) : self 
+    /** Sets the optional param logger to the given ActionLog */
+    public function SetLogger(?ActionLog $logger) : self 
     { 
-        if ($logger !== null && ($level = $logger::GetDetailsLevel()))
+        if ($logger !== null && ($level = $logger::GetDetailsLevel()) > 0)
         {
-            $logref = &$logger->GetDetailsRef(); 
+            $logref = &$logger->GetInputLogRef(); 
             
-            $logref[self::LoggerKey] ??= array();
+            $logref ??= array();
             
-            $this->GetParams()->SetLogRef(
-                $logref[self::LoggerKey], $level);
+            $this->GetParams()->SetLogRef($logref, $level);
         }        
         return $this; 
     }
@@ -71,28 +68,40 @@ class Input
     public function GetParams() : SafeParams { return $this->params; }
     
     /** @see SafeParams::HasParam() */
-    public function HasParam(string $key) : bool {
-        return $this->params->HasParam($key); }
+    public function HasParam(string $key) : bool 
+    {
+        return $this->params->HasParam($key); 
+    }
         
     /** @see SafeParams::AddParam() */
-    public function AddParam(string $key, $value) : self { 
-        $this->params->AddParam($key, $value); return $this; }
+    public function AddParam(string $key, $value) : self 
+    { 
+        $this->params->AddParam($key, $value); return $this; 
+    }
     
     /** @see SafeParams::GetParam() */
-    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
-        return $this->params->GetParam($key, $type, $minlog, $values, $valfunc); }
+    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
+    {
+        return $this->params->GetParam($key, $type, $minlog, $values, $valfunc); 
+    }
     
     /** @see SafeParams::GetOptParam() */
-    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
-        return $this->params->GetOptParam($key, $type, $minlog, $values, $valfunc); }
+    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
+    {
+        return $this->params->GetOptParam($key, $type, $minlog, $values, $valfunc); 
+    }
 
     /** @see SafeParams::GetNullParam() */
-    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
-        return $this->params->GetNullParam($key, $type, $minlog, $values, $valfunc); }
+    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
+    {
+        return $this->params->GetNullParam($key, $type, $minlog, $values, $valfunc); 
+    }
     
     /** @see SafeParams::GetOptNullParam() */
-    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) {
-        return $this->params->GetOptNullParam($key, $type, $minlog, $values, $valfunc); }
+    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
+    {
+        return $this->params->GetOptNullParam($key, $type, $minlog, $values, $valfunc); 
+    }
     
     /** @see Input::GetFiles() */
     private array $files;

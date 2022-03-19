@@ -85,5 +85,8 @@ class DBStats
         $this->read_time += $stats->read_time;
         $this->writes += $stats->writes;
         $this->write_time += $stats->write_time;
+        
+        foreach ($stats->queries as $query)
+            $this->queries[] = $query;
     }
 }

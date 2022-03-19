@@ -35,11 +35,25 @@ final class EasyObject extends BaseObject
     
     public function Delete() : void { parent::Delete(); }
     
-    public function GetUniqueKey() : ?int { return $this->uniqueKey->GetValue(); }
+    public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
     public function SetUniqueKey(?int $val) : self { $this->uniqueKey->SetValue($val); return $this; }
     
-    public function GetGeneralKey() : ?int { return $this->generalKey->GetValue(); }
+    public function GetGeneralKey() : ?int { return $this->generalKey->TryGetValue(); }
     public function SetGeneralKey(?int $val) : self { $this->generalKey->SetValue($val); return $this; }
+}
+
+abstract class MyObjectBase extends BaseObject
+{
+    use TableLinkedChildren;
+    
+    /** @return ?array<class-string<self>> */
+    public static function GetChildMap() : ?array { 
+        return array(MyObjectChild::class); }
+}
+
+final class MyObjectChild extends MyObjectBase
+{
+    use TableNoChildren;
 }
 
 abstract class PolyObject_ extends BaseObject { }

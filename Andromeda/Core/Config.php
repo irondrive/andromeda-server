@@ -48,6 +48,9 @@ abstract class BaseConfig extends SingletonObject
         parent::CreateFields();
     }
     
+    /** Create a new config singleton in the given database */
+    public abstract static function Create(ObjectDatabase $database);
+    
     /** Returns the database schema version */
     public function getVersion() : string 
     {
@@ -221,7 +224,7 @@ final class Config extends BaseConfig
     public function GetApps() : array { return $this->apps->GetValue(); }
     
     /** List all installable app folders that exist in the filesystem */
-    public static function ListApps() : array
+    public static function ScanApps() : array
     {
         $valid = function(string $app)
         {
@@ -296,7 +299,7 @@ final class Config extends BaseConfig
     public function isReadOnly() : bool { return $this->read_only->GetValue(); }
     
     /** Returns the configured global data directory path */
-    public function GetDataDir() : ?string { $dir = $this->datadir->GetValue(); if ($dir) $dir .= '/'; return $dir; }
+    public function GetDataDir() : ?string { $dir = $this->datadir->TryGetValue(); if ($dir) $dir .= '/'; return $dir; }
     
     /** Returns true if request logging to DB is enabled */
     public function GetEnableRequestLogDB() : bool { return $this->requestlog_db->GetValue(); }
@@ -414,7 +417,7 @@ final class Config extends BaseConfig
         
         if ($admin)
         {
-            $data['datadir'] =            $this->datadir->GetValue();
+            $data['datadir'] =            $this->datadir->TryGetValue();
             $data['email'] =              $this->email->GetValue();
             $data['requestlog_file'] =    $this->requestlog_file->GetValue();
             $data['requestlog_db'] =      $this->requestlog_db->GetValue();

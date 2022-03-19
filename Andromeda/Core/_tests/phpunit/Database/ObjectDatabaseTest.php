@@ -27,20 +27,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     }
 
     private const select1 = array(
-        'SELECT * FROM a2obj_core_database_polyobject1 '.
+        'SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* '.
+        'FROM a2obj_core_database_polyobject1 '.
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
         'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
         'WHERE testprop1 > :d0', array('d0'=>3));
         
     private const select2 = array(
-        'SELECT * FROM a2obj_core_database_polyobject1 '.
+        'SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.* '.
+        'FROM a2obj_core_database_polyobject1 '.
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
         'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>18));
     
     private const select3 = array(
-        'SELECT * FROM a2obj_core_database_polyobject1 '.
+        'SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.* '.
+        'FROM a2obj_core_database_polyobject1 '.
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
         'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>5));
@@ -52,12 +55,12 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         /*1*/'id'=>self::id1,'testprop1'=>5,'type'=>27, /** @phpstan-ignore-line */ 
         /*2*/'id'=>self::id1,'testprop15'=>15,'type'=>27,
         /*4*/'id'=>self::id1,'testprop4'=>41,'type'=>13, 
-        /*5*/'id'=>self::id1,'testprop5'=>7,'type'=>101);
+        /*5*/'id'=>self::id1,'testprop5'=>7,'type'=>101); // PolyObject5aa
     
     private const row2 = array(
         /*1*/'id'=>self::id2,'testprop1'=>10,'type'=>27, /** @phpstan-ignore-line */ 
         /*2*/'id'=>self::id2,'testprop15'=>16,'type'=>27, 
-        /*4*/'id'=>self::id2,'testprop4'=>42,'type'=>18);
+        /*4*/'id'=>self::id2,'testprop4'=>42,'type'=>18); // PolyObject5b
 
     public function testLoadByQuery() : void
     {
@@ -68,33 +71,68 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             $objdb = new ObjectDatabase($database);
             
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-
+            
+            $rows[0] = self::row2; $rows[0]['type'] = 18;  // 5b
+            $rows[1] = self::row2; $rows[1]['type'] = 5;   // 4
+            $rows[2] = self::row1; $rows[2]['type'] = 100; // 5a
+            $rows[3] = self::row2; $rows[3]['type'] = 18;  // 5b
+            $rows[4] = self::row1; $rows[4]['type'] = 102; // 5ab
+            $rows[5] = self::row1; $rows[5]['type'] = 101; // 5aa
+            $rows[6] = self::row2; $rows[6]['type'] = 5;   // 4
+            $rows[7] = self::row1; $rows[7]['type'] = 101; // 5aa
+            $rows[8] = self::row2; $rows[8]['type'] = 18;  // 5b
+            $rows[9] = self::row1; $rows[9]['type'] = 102; // 5ab
+            
+            foreach ($rows as $idx=>&$arr)
+            {
+                $arr['id'] = $arr['id'].$idx;
+                $arr['testprop4'] = $idx;
+            }
+            
             $database->expects($this->exactly(3))->method('read')
-                ->withConsecutive(self::select1, self::select2, self::select3)
-                ->willReturnOnConsecutiveCalls([self::row1], [self::row2], []);
+                ->withConsecutive(
+                    self::select1, // PolyObject5a/5aa/5ab
+                    self::select2, // PolyObject5b (4 type)
+                    self::select3) // PolyObject4 (4 type)
+                ->willReturnOnConsecutiveCalls(
+                    [$rows[2], $rows[4], $rows[5], $rows[7], $rows[9]],
+                    [$rows[0], $rows[3], $rows[8]],
+                    [$rows[1], $rows[6]]);
                 
             $objs = $objdb->LoadObjectsByQuery($class, $q);
+            $this->assertSame(count($rows), count($objs));
             
-            $this->assertSame(2, count($objs));
-            $id1 = self::id1; $obj1 = $objs[$id1];
-            $id2 = self::id2; $obj2 = $objs[$id2];
+            foreach ($rows as $idx=>$row)
+            {
+                $id = $row['id']; $obj = $objs[$id];
+                $this->assertInstanceOf(PolyObject4::class, $obj);
+                assert($obj instanceof PolyObject4);
+                
+                $this->assertSame($idx, $obj->GetTestProp4());
+                
+                if ($obj instanceof PolyObject5a)
+                {
+                    $this->assertSame(5, $obj->GetTestProp1());
+                    $this->assertSame(15, $obj->GetTestProp15());
+                    $this->assertSame(7, $obj->GetTestProp5());
+                }
+                else
+                {
+                    $this->assertSame(10, $obj->GetTestProp1());
+                    $this->assertSame(16, $obj->GetTestProp15());
+                }
+            }
             
-            $this->assertInstanceof(PolyObject5a::class, $obj1);
-            assert($obj1 instanceof PolyObject5a);
-            
-            $this->assertSame($id1, $obj1->ID());
-            $this->assertSame(5, $obj1->GetTestProp1());
-            $this->assertSame(15, $obj1->GetTestProp15());
-            $this->assertSame(41, $obj1->GetTestProp4());
-            $this->assertSame(7, $obj1->GetTestProp5());
-            
-            $this->assertInstanceof(PolyObject5b::class, $obj2);
-            assert($obj2 instanceof PolyObject5b);
-            
-            $this->assertSame($id2, $obj2->ID());
-            $this->assertSame(10, $obj2->GetTestProp1());
-            $this->assertSame(16, $obj2->GetTestProp15());
-            $this->assertSame(42, $obj2->GetTestProp4());
+            $this->assertSame(PolyObject5b::class,  get_class($objs[$rows[0]['id']]));
+            $this->assertSame(PolyObject4::class,   get_class($objs[$rows[1]['id']]));
+            $this->assertSame(PolyObject5a::class,  get_class($objs[$rows[2]['id']]));
+            $this->assertSame(PolyObject5b::class,  get_class($objs[$rows[3]['id']]));
+            $this->assertSame(PolyObject5ab::class, get_class($objs[$rows[4]['id']]));
+            $this->assertSame(PolyObject5aa::class, get_class($objs[$rows[5]['id']]));
+            $this->assertSame(PolyObject4::class,   get_class($objs[$rows[6]['id']]));
+            $this->assertSame(PolyObject5aa::class, get_class($objs[$rows[7]['id']]));
+            $this->assertSame(PolyObject5b::class,  get_class($objs[$rows[8]['id']]));
+            $this->assertSame(PolyObject5ab::class, get_class($objs[$rows[9]['id']]));
         }
     }
 
@@ -105,7 +143,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $q = new QueryBuilder(); $id = 'testid5678';
         
-        $qstr = 'SELECT * FROM a2obj_core_database_easyobject ';
+        $qstr = 'SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject ';
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
@@ -135,10 +173,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder(); $q->Where($q->Equals('mytest',5));
         
         $qstr1 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 WHERE mytest = :d0';
-        $qstr2 = 'SELECT COUNT(a2obj_core_database_polyobject2.id) FROM a2obj_core_database_polyobject2 WHERE mytest = :d0';
-        $qstr4 = 'SELECT COUNT(a2obj_core_database_polyobject4.id) FROM a2obj_core_database_polyobject4 WHERE mytest = :d0';
-        $qstr5a = 'SELECT COUNT(a2obj_core_database_polyobject5a.id) FROM a2obj_core_database_polyobject5a WHERE mytest = :d0';
-        $qstr5b = 'SELECT COUNT(a2obj_core_database_polyobject4.id) FROM a2obj_core_database_polyobject4 WHERE (mytest = :d0 AND a2obj_core_database_polyobject4.type = :d1)';
+        
+        $qstr2 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE mytest = :d0';
+        
+        $qstr4 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE mytest = :d0';
+        
+        $qstr5a = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
+            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id WHERE mytest = :d0';
+        
+        $qstr5b = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
+            'WHERE (mytest = :d0 AND a2obj_core_database_polyobject4.type = :d1)';
         
         $database->expects($this->exactly(7))->method('read')
             ->withConsecutive(
@@ -150,15 +201,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
                 [ $qstr5a, array('d0'=>5) ],
                 [ $qstr5b, array('d0'=>5,'d1'=>18) ],
              )
-            ->willReturnOnConsecutiveCalls(
-                array(array('COUNT(a2obj_core_database_polyobject1.id)'=>1)), // count PolyObject0
-                array(array('COUNT(a2obj_core_database_polyobject1.id)'=>1)), // count PolyObject1
-                array(array('COUNT(a2obj_core_database_polyobject2.id)'=>1)), // count PolyObject2
-                array(array('COUNT(a2obj_core_database_polyobject4.id)'=>1)), // count PolyObject3
-                array(array('COUNT(a2obj_core_database_polyobject4.id)'=>1)), // count PolyObject4
-                array(array('COUNT(a2obj_core_database_polyobject5a.id)'=>1)), // count PolyObject5a
-                array(array('COUNT(a2obj_core_database_polyobject4.id)'=>1)), // count PolyObject5b
-             );
+            ->willReturn([array('COUNT(a2obj_core_database_polyobject1.id)'=>1)]);
             
         $this->assertSame(1, $objdb->CountObjectsByQuery(PolyObject0::class, $q));
         $this->assertSame(1, $objdb->CountObjectsByQuery(PolyObject1::class, $q));
@@ -424,8 +467,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT * FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)],
-                ["SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)])
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)])
             ->willReturnOnConsecutiveCalls([], []);
         
         $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5));
@@ -440,7 +483,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT * FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)], [$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)], []);
@@ -467,14 +510,16 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     }
     
     private const polySelect1 = array(
-        "SELECT * FROM a2obj_core_database_polyobject1 ".
+        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
+        "FROM a2obj_core_database_polyobject1 ".
         "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
         "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
         "WHERE testprop5 = :d0", array('d0'=>55));
     
     private const polySelect2 = array(
-        "SELECT * FROM a2obj_core_database_polyobject1 ".
+        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
+        "FROM a2obj_core_database_polyobject1 ".
         "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
         "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
@@ -485,7 +530,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id='test123','uniqueKey'=>5)], []);
@@ -567,7 +612,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT * FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5))
             ->willReturn([array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)]);
         
         $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5);
@@ -576,7 +621,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(EasyObject::class, $obj1);
         $this->assertInstanceOf(EasyObject::class, $obj2);
         
-        $delstr = "DELETE FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0";
+        $delstr = "DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$delstr, array('d0'=>$id1)], [$delstr, array('d0'=>$id2)])
             ->willReturn(1);
@@ -598,14 +643,14 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
             ->willReturn([array('id'=>$id='test123','uniqueKey'=>5)]);
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj); assert($obj !== null);
 
         $database->expects($this->once())->method('write')
-            ->with("DELETE FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
             ->willReturn(1);
             
         $obj->Delete();
@@ -664,7 +709,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
 
-        $selstr = "SELECT * FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([$ar1=array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)], [$ar1]);
@@ -707,7 +752,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id='test123','uniqueKey'=>5)], []);
@@ -782,7 +827,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = EasyObject::Create($objdb); $id1 = $obj1->ID();
         $obj2 = EasyObject::Create($objdb); $id2 = $obj2->ID();
         
-        $selstr = "SELECT * FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>33)], [$selstr, array('d0'=>5)])
             ->willReturnOnConsecutiveCalls([], [array('id'=>$id1,'generalKey'=>5)]);
@@ -816,7 +861,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = EasyObject::Create($objdb);
         
         $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
             ->willReturn(array());
         
         // have to do a uniqueKey query so the DB knows it's a unique key (not registered ahead of time)
@@ -846,6 +891,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj->SetUniqueKey(5)->Save();
         
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
+    }
+    
+    public function testUniqueKeyConstructID() : void
+    {
+        // when constructing objects, ID is an automatic unique key
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(1))->method('read')
+            ->with(...self::select1)->willReturn([array('id'=>$id='test123','testprop1'=>3,'type'=>101)]);
+            
+        $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
+        
+        $objs = $objdb->LoadObjectsByQuery(PolyObject5a::class, $q);
+        $this->assertCount(1, $objs); $obj = $objs[$id];
+        
+        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(PolyObject1::class, 'id', $obj->ID()));
     }
     
     public function testNonUniqueKeyPolyInsert() : void
@@ -927,9 +989,9 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(3))->method('read')
             ->withConsecutive(
-                ["SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
-                ["SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()], // LoadObjectsByKey
-                ["SELECT * FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()]) // TryLoadUniqueByKey
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()], // LoadObjectsByKey
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()]) // TryLoadUniqueByKey
             ->willReturnOnConsecutiveCalls(
                 [array('id'=>$id1='test123','uniqueKey'=>5)], 
                 [array('id'=>$id2='test456','uniqueKey'=>null), array('id'=>$id3='test789','uniqueKey'=>null)], 
@@ -957,64 +1019,80 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->expectException(UniqueKeyException::class);
         $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', null); /** @phpstan-ignore-line */
     }
-    
-    public function testLimitOffset() : void
+
+    public function testLimitOffsetBaseSubquery() : void
     {
-        $sel1 = 'SELECT * FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-            'WHERE a2obj_core_database_polyobject1.id IN (SELECT id FROM (SELECT id FROM a2obj_core_database_polyobject1 '.
-                'WHERE testprop1 > :d0 LIMIT 3 OFFSET 2) AS t)';
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
         
-        $sel2 = 'SELECT * FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'WHERE a2obj_core_database_polyobject1.id IN (SELECT id FROM (SELECT id FROM a2obj_core_database_polyobject1 '.
-                'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1) LIMIT 3 OFFSET 2) AS t)';
+        $q = new QueryBuilder(); $q->Limit(3)->Offset(2);
         
-        $sel3a = 'SELECT * FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'WHERE a2obj_core_database_polyobject1.id IN (SELECT id FROM (SELECT id FROM a2obj_core_database_polyobject1 '.
-                'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1) LIMIT 3 OFFSET 2) AS t)';
+        $q->Join($objdb, EasyObject::class, 'prop1', MyObjectBase::class, 'prop2'); // test preserved in subquery
         
-        $sel3b = 'SELECT * FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1) LIMIT 3 OFFSET 2';
-            
-        // loading by every base class should yield the same results!
-        foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
-        {
-            $database = $this->createMock(Database::class);
-            $objdb = new ObjectDatabase($database);
-            
-            $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3))->Limit(3)->Offset(2);
-            
-            $sel3 = ($class === PolyObject4::class) ? $sel3b : $sel3a;
-            
-            $database->expects($this->exactly(3))->method('read')
-                ->withConsecutive(
-                    array($sel1, array('d0'=>3)), 
-                    array($sel2, array('d0'=>3, 'd1'=>18)), 
-                    array($sel3, array('d0'=>3, 'd1'=>5)))
-                ->willReturnOnConsecutiveCalls([self::row1], [self::row2], []);
-                
-            $objs = $objdb->LoadObjectsByQuery($class, $q);
-            
-            $this->assertSame(2, count($objs));
-            $id1 = self::id1; $obj1 = $objs[$id1];
-            $id2 = self::id2; $obj2 = $objs[$id2];
-            
-            $this->assertInstanceof(PolyObject5a::class, $obj1);
-            assert($obj1 instanceof PolyObject5a);
-            $this->assertSame($id1, $obj1->ID());
-            
-            $this->assertInstanceof(PolyObject5b::class, $obj2);
-            assert($obj2 instanceof PolyObject5b);
-            $this->assertSame($id2, $obj2->ID());
-        }
+        $database->expects($this->once())->method('read')
+            ->with('SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase '.
+                'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject.prop1 = a2obj_core_database_myobjectbase.prop2 '.
+                'JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id '.
+                'WHERE a2obj_core_database_myobjectbase.id IN '.
+                    '(SELECT id FROM (SELECT a2obj_core_database_myobjectbase.id '.
+                    'FROM a2obj_core_database_myobjectbase '. // no child class join in subquery
+                    'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject.prop1 = a2obj_core_database_myobjectbase.prop2 '.
+                    'LIMIT 3 OFFSET 2) AS t)', []);
+        
+        $objdb->LoadObjectsByQuery(MyObjectBase::class, $q);
+    }
+    
+    public function testLimitOffsetChildTableSubquery() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $q = new QueryBuilder(); $q->Limit(3)->Offset(2)->OrderBy('testprop');
+        
+        $database->expects($this->once())->method('read')
+        ->with("SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* FROM a2obj_core_database_polyobject1 ".
+            "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+            "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+            "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+            "WHERE a2obj_core_database_polyobject5a.id IN ".
+                '(SELECT id FROM (SELECT a2obj_core_database_polyobject5a.id '.
+                'FROM a2obj_core_database_polyobject5a '.
+                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
+                'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
+                'ORDER BY testprop LIMIT 3 OFFSET 2) AS t)', []);
+        
+        $objdb->LoadObjectsByQuery(PolyObject5a::class, $q);
+    }
+    
+    public function testLimitOffsetChildTableNoSubquery() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $q = new QueryBuilder(); $q->Limit(3)->Offset(2);
+        
+        $database->expects($this->once())->method('read')
+        ->with("SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
+            "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id LIMIT 3 OFFSET 2", []);
+        
+        $objdb->LoadObjectsByQuery(MyObjectChild::class, $q);
+    }
+
+    public function testLimitOffsetChildNoTableNoSubquery() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $q = new QueryBuilder(); $q->Limit(3)->Offset(2);
+        
+        $database->expects($this->once())->method('read')
+        ->with("SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* FROM a2obj_core_database_polyobject1 ".
+            "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+            "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+            "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+            "WHERE a2obj_core_database_polyobject5a.type = :d0 LIMIT 3 OFFSET 2", array('d0'=>101));
+        
+        $objdb->LoadObjectsByQuery(PolyObject5aa::class, $q);
     }
 }
-

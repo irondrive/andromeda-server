@@ -146,16 +146,6 @@ trait BaseBaseT
         
         return $this;
     }
-    
-    /** 
-     * Returns the field's type-checked value
-     * @param bool $allowTemp if true, the value can be temporary
-     * @return T the type-checked value
-     */
-    public function GetValue(bool $allowTemp = true)
-    {
-        return $allowTemp ? $this->tempvalue : $this->realvalue;
-    }
 }
 
 /**
@@ -189,6 +179,16 @@ abstract class BaseNullT extends BaseField
         
         if ($this->default !== null) $this->delta = 1;
     }
+    
+    /**
+     * Returns the field's type-checked value (maybe null)
+     * @param bool $allowTemp if true, the value can be temporary
+     * @return T the type-checked value
+     */
+    public function TryGetValue(bool $allowTemp = true)
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
 }
 
 /**
@@ -218,9 +218,6 @@ abstract class BaseT extends BaseField
     /** @return scalar */
     public function GetDBValue() { return $this->realvalue; }
     
-    /** Returns true if this field's value is initialized */
-    public function isInitialized() { return isset($this->tempvalue); }
-    
     /** Restores this field to its default value */
     public function RestoreDefault() : void
     {
@@ -237,6 +234,19 @@ abstract class BaseT extends BaseField
             $this->delta = 0;
         }
     }
+    
+    /**
+     * Returns the field's type-checked value
+     * @param bool $allowTemp if true, the value can be temporary
+     * @return T the type-checked value
+     */
+    public function GetValue(bool $allowTemp = true)
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized() { return isset($this->tempvalue); }
 }
 
 /** @template T */
@@ -534,7 +544,7 @@ class Counter extends BaseT
     {
         if ($delta > 0 && $this->limit !== null)
         {
-            $limit = $this->limit->GetValue();
+            $limit = $this->limit->TryGetValue();
             
             if ($limit !== null && $this->tempvalue + $delta > $limit)
             {
@@ -598,7 +608,7 @@ class JsonArray extends SettableT
     public function GetDBValue() : string 
     {
         return Utilities::JSONEncode(parent::GetDBValue()); 
-    }    
+    }
 }
 
 /**
@@ -631,7 +641,7 @@ class NullJsonArray extends SettableNullT
         $val = parent::GetDBValue();
         if ($val === null) return null;
         return Utilities::JSONEncode($val);
-    }   
+    }
 }
 
 /** @template T of BaseObject */
@@ -708,6 +718,9 @@ class NullObjectRefT extends SettableNullT
     
     public function GetDBValue() : ?string { return $this->objId; }
     
+    /** Returns the ID of the object pointed to by this field */
+    public function TryGetObjectID() : ?string { return $this->objId; }
+    
     /** 
      * Loads the reference from the DB
      * @return ?T loaded object
@@ -777,6 +790,9 @@ class ObjectRefT extends SettableT
     }
     
     public function GetDBValue() : string { return $this->objId; }
+    
+    /** Returns the ID of the object pointed to by this field */
+    public function GetObjectID() : string { return $this->objId; }
     
     /**
      * Loads the reference from the DB

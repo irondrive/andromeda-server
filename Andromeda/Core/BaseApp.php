@@ -2,9 +2,10 @@
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
+require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 /** An exception indicating that the requested action is invalid for this app */
 class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
@@ -46,8 +47,11 @@ abstract class BaseApp
     /** @return string the lowercase name of the app */
     public abstract static function getName() : string;
     
-    /** Return this app's BaseAppLog class name, if used (or null) */
-    protected static function getLogClass() : ?string { return null; }
+    /** 
+     * Return this app's ActionLog extension class name, if used (or null)
+     * @return ?class-string<ActionLog>
+     */
+    public static function getLogClass() : ?string { return null; }
     
     private static array $metadata = array();
     
@@ -102,6 +106,7 @@ abstract class BaseApp
  * Describes an app that needs database installation
  * and has upgrade scripts for upgrading the database
  * and has a BaseConfig that stores the schema version
+ * @template ConfigType of BaseConfig
  */
 abstract class InstalledApp extends BaseApp
 {    
@@ -118,10 +123,15 @@ abstract class InstalledApp extends BaseApp
     
     public static function getUsage() : array { return static::getInstallUsage(); }
     
-    /** Return the BaseConfig class for this app */
+    /**
+     * Return the BaseConfig class for this app 
+     * @return class-string<ConfigType>
+     */
     protected abstract static function getConfigClass() : string;
     
+    /** @var ConfigType */
     protected BaseConfig $config;    
+    
     protected ObjectDatabase $database;
     
     public function __construct(Main $API)

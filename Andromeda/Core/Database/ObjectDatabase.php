@@ -139,15 +139,16 @@ class ObjectDatabase
     public function CountObjectsByQuery(string $class, QueryBuilder $query) : int
     {
         $classes = $class::GetTableClasses();
-        $subquery = empty($classes);
         
-        if (!$subquery)
+        $countChildren = empty($classes); // no topclass
+        
+        if (!$countChildren)
         {
             $topclass = $classes[array_key_last($classes)];
-            $subquery = ($class !== $topclass && !$topclass::HasTypedRows());
+            $countChildren = ($class !== $topclass && !$topclass::HasTypedRows());
         }
         
-        if ($subquery) // count foreach child
+        if ($countChildren) // count foreach child
         {
             if (($childmap = $class::GetChildMap()) === null)
                 throw new MissingTableException($class);
@@ -162,62 +163,63 @@ class ObjectDatabase
         else // count from the table directly
         {
             $query = clone $query;
-            
-            $topclass = $classes[array_key_last($classes)];
+
+            $this->GetFromAndSetJoins($class, $query, false);
             
             // if not the top table, filter only the type we want
-            if ($topclass !== $class)
-            {
-                $eqstr = $topclass::GetWhereChild($query, $class);
-                $query->Where($this->GetClassTableName($topclass).'.'.$eqstr);
-            }
-            
-            $table = $this->GetClassTableName($topclass);
-            
-            $querystr = "SELECT ".($prop = "COUNT($table.id)")." FROM $table ".$query->GetText();
-            
+            if (($topclass = $classes[array_key_last($classes)]) !== $class)
+                $query->Where($topclass::GetWhereChild($this, $query, $class));
+
+            $ftable = $this->GetClassTableName($classes[0]);
+            $querystr = "SELECT ".($prop = "COUNT($ftable.id)")." FROM $ftable ".$query->GetText();
+        
             return $this->db->read($querystr, $query->GetData())[0][$prop];
         }
     }
 
     /**
      * Loads an array of objects using the given query
+     * If using ORDER BY and there are child tables, the returned array may not be sorted!
+     * But, the ORDER BY will apply correctly as far as LIMIT/OFFSET and WHAT gets loaded
      * @template T of BaseObject
      * @param class-string<T> $class the class of the objects
      * @param QueryBuilder $query the query used to match objects
-     * @param ?class-string<T> $limClass the class to limit/offset by, default $class
+     * @param ?class-string<T> $baseClass the base class being loaded (internal!)
      * @return array<string, T> array of objects indexed by their IDs
      */
-    public function LoadObjectsByQuery(string $class, QueryBuilder $query, ?string $limClass = null) : array
+    public function LoadObjectsByQuery(string $class, QueryBuilder $query, ?string $baseClass = null) : array
     {
-        $limClass ??= $class;
+        $baseClass ??= $class;
+        $childmap = $class::GetChildMap();
+        $castRows = self::CanLoadByUpcast($class);
         
-        // if this is a base class, need to load for each child with a table
-        $objects = array(); $castRows = self::CanLoadByUpcast($class);
+        $doChildren = !$castRows && $childmap !== null;
+        $doSelf = !$doChildren;
+        $objects = array();
         
-        if (!$castRows && ($childmap = $class::GetChildMap()) !== null)
+        if ($doChildren) // need to load for each child with a table
         {
-            $hasSelf = false; foreach ($childmap as $child)
+            foreach ($childmap as $child)
             {
-                if ($child === $class) { $hasSelf = true; continue; }
-                $objs = $this->LoadObjectsByQuery($child, $query, $limClass);
+                if ($child === $class) { $doSelf = true; continue; }
+                $objs = $this->LoadObjectsByQuery($child, $query, $baseClass);
                 foreach ($objs as $obj) $objects[$obj->ID()] = $obj; // merge
             }
-            
-            // if self is in the child map then the base is also concrete
-            if (!$hasSelf) return $objects;
         }
         
-        $query = clone $query;
-        
-        // now we do an actual load for this class
-        $querystr = "SELECT * ".$this->BaseFromQuery($class, $query, false, !$castRows, $limClass);
-        
-        foreach ($this->db->read($querystr, $query->GetData()) as $row)
+        if ($doSelf) // if concrete, do an actual load for this class
         {
-            $object = $this->ConstructObject($class, $row, $castRows);
+            $selfQuery = clone $query;
             
-            $objects[$object->ID()] = $object;
+            $selstr = $this->GetFromAndSetJoins($class, $selfQuery, true);
+            $this->SetFilterCriteria($class, $baseClass, $selfQuery, $query, !$castRows);
+            $querystr = 'SELECT '.$selstr.' '.$selfQuery->GetText();
+            
+            foreach ($this->db->read($querystr, $selfQuery->GetData()) as $row)
+            {
+                $object = $this->ConstructObject($class, $row, $castRows);
+                $objects[$object->ID()] = $object;
+            }
         }
 
         return $objects;
@@ -226,58 +228,64 @@ class ObjectDatabase
     /**
      * Immediately delete objects matching the given query
      * The objects will be loaded and have their notifyDeleted() run
+     * If using ORDER BY and there are child tables, objects may not be deleted in order!
+     * But, the ORDER BY will apply correctly as far as LIMIT/OFFSET and WHAT gets deleted
      * @template T of BaseObject
      * @param class-string<T> $class the class of the objects to delete
      * @param QueryBuilder $query the query used to match objects
-     * @param ?class-string<T> $limClass the class to limit/offset by, default $class
+     * @param ?class-string<T> $baseClass the base class being loaded (internal!)
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByQuery(string $class, QueryBuilder $query, ?string $limClass = null) : int
+    public function DeleteObjectsByQuery(string $class, QueryBuilder $query, ?string $baseClass = null) : int
     {
-        $limClass ??= $class;
+        $baseClass ??= $class;
         
         if (!$this->db->SupportsRETURNING())
         {
             // if we can't use RETURNING, just load the objects and delete individually
-            $objs = $this->LoadObjectsByQuery($class, $query, $limClass);
-            
+            $objs = $this->LoadObjectsByQuery($class, $query, $baseClass);
             foreach ($objs as $obj) $this->DeleteObject($obj);
             
             return count($objs);
         }
         
-        // if this is a base class, need to delete for each child
-        $count = 0; $castRows = self::CanLoadByUpcast($class);
+        $childmap = $class::GetChildMap();
+        $castRows = self::CanLoadByUpcast($class);
         
-        if (!$castRows && ($childmap = $class::GetChildMap()) !== null)
+        $doChildren = !$castRows && $childmap !== null;
+        $doSelf = !$doChildren;
+        $count = 0;
+        
+        if ($doChildren) // need to delete for each child with a table
         {
-            $hasSelf = false; foreach ($childmap as $child)
+            foreach ($childmap as $child)
             {
-                if ($child === $class) { $hasSelf = true; continue; }
-                $count += $this->DeleteObjectsByQuery($child, $query, $limClass);
+                if ($child === $class) { $doSelf = true; continue; }
+                $count += $this->DeleteObjectsByQuery($child, $query, $baseClass);
             }
-            
-            // if self is in the child map then the base is also concrete
-            if (!$hasSelf) return $count;
         }
         
-        $query = clone $query;
-        
-        // now we do an actual delete/load for this class
-        $querystr = "DELETE ".$this->BaseFromQuery($class, $query, true, !$castRows, $limClass)." RETURNING *";
-        
-        $rows = $this->db->readwrite($querystr, $query->GetData());
-        
-        foreach ($rows as $row)
+        if ($doSelf) // if concrete, do an actual delete for this class
         {
-            $object = $this->ConstructObject($class, $row, $castRows);
+            $selfQuery = clone $query;
             
-            $this->RemoveObject($object);
+            $selstr = $this->GetFromAndSetJoins($class, $selfQuery, false);
+            $this->SetFilterCriteria($class, $baseClass, $selfQuery, $query, !$castRows);
+            $querystr = 'DELETE '.$selstr.' '.$selfQuery->GetText().' RETURNING *';
+            
+            $rows = $this->db->readwrite($querystr, $selfQuery->GetData());
+            $count += count($rows);
+            
+            foreach ($rows as $row)
+            {
+                $object = $this->ConstructObject($class, $row, $castRows);
+                $this->RemoveObject($object);
+            }
         }
         
-        return $count + count($rows);
+        return $count;
     }
-    
+
     /**
      * Returns true iff the given class should be loaded by upcasting rows
      * to child classes rather than doing per-child queries
@@ -286,13 +294,13 @@ class ObjectDatabase
      */
     private static function CanLoadByUpcast(string $class) : bool
     {
+        if (!$class::HasTypedRows()) return false;
+        
         $childmap = $class::GetChildMap();
         if ($childmap === null) return false;
         
         $tables = $class::GetTableClasses();
         if (empty($tables)) return false;
-        
-        if (!$class::HasTypedRows()) return false;
         
         foreach ($childmap as $child)
         {
@@ -306,62 +314,73 @@ class ObjectDatabase
     }
 
     /**
-     * Returns a from query with the proper table joining and type selections
+     * Compiles JOINs for a class and returns the FROM table list
      * @template T of BaseObject
      * @param class-string<T> $class class name to build a query for
-     * @param QueryBuilder $query pre-existing query to add to (may modify!)
-     * @param bool $fromTables true if we need table names before FROM
-     * @param bool $selectType if true, allow selecting where child type
-     * @param ?class-string<T> $limClass the class we want to limit/offset by
-     * @return string compiled SQL query
+     * @param QueryBuilder $query pre-existing query to add JOINS to
+     * @param bool $selectFields if true, add .* after SELECT table names
+     * @return string (table list) FROM (base table)
      */
-    private function BaseFromQuery(string $class, QueryBuilder $query, bool $fromTables, bool $selectType, ?string $limClass = null) : string
+    private function GetFromAndSetJoins(string $class, QueryBuilder $query, bool $selectFields) : string
     {
         $classes = $class::GetTableClasses();
         if (empty($classes)) throw new MissingTableException($class);
-        $topclass = $classes[array_key_last($classes)];
-
+        
+        // specify which tables to select in case of extra joins
+        $selstr = implode(', ',array_map(function(string $sclass)use($selectFields){
+            return $this->GetClassTableName($sclass).($selectFields?'.*':''); }, $classes));
+        
         // join together every base class table
         $bclass = null; foreach ($classes as $pclass)
         {
-            if ($bclass !== null) // join to base to child
+            if ($bclass !== null) // join base -> parent (child fields override)
                 $query->Join($this, $pclass,'id', $bclass,'id');
             $bclass = $pclass;
         }
         
-        // if not the top table, filter only the type we want
-        if ($selectType && $topclass::HasTypedRows())
-        {
-            $eqstr = $topclass::GetWhereChild($query, $class);
-            $query->Where($this->GetClassTableName($topclass).'.'.$eqstr);
-        }
-        
-        // add the list of tables if requested (required for DELETE..JOIN)
-        $selstr = ""; if ($fromTables && count($classes) > 1)
-        {
-            $selstr = implode(', ',array_map(function(string $sclass){
-                return $this->GetClassTableName($sclass); }, $classes)).' ';
-        }
-
-        $fromstr = $this->GetClassTableName($classes[0]);
-        
-        // we want the limit/offset to apply to the class being loaded as, 
-        // not the current child table... use an ugly subquery to accomplish this
-        if ($limClass !== null && $class !== $limClass &&
-            ($query->GetLimit() !== null || $query->GetOffset() !== null))
-        {
-            $subquery = new QueryBuilder();
-            
-            $subquery->Where($query->GetWhere()); $query->Where(null);
-            $subquery->Limit($query->GetLimit()); $query->Limit(null);
-            $subquery->Offset($query->GetOffset()); $query->Offset(null);
-            
-            $query->Where("$fromstr.id IN (SELECT id FROM (SELECT id FROM $fromstr $subquery) AS t)");
-        }
-    
-        return $selstr."FROM $fromstr ".$query->GetText();
+        return $selstr.' FROM '.$this->GetClassTableName($classes[0]);
     }
     
+    /**
+     * Sets/fixes the WHERE/LIMIT/OFFSET/ORDER for polymorphism
+     * @template T of BaseObject
+     * @param class-string<T> $class class name to build a query for
+     * @param class-string<T> $bclass the base class the user requested
+     * @param QueryBuilder $query pre-existing query to add to (may modify!)
+     * @param QueryBuilder $userQuery the original query sent by the caller
+     * @param bool $selectType if true, allow selecting where child type
+     */
+    private function SetFilterCriteria(string $class, string $bclass, QueryBuilder $query, QueryBuilder $userQuery, bool $selectType) : void
+    {       
+        $classes = $class::GetTableClasses();
+        if (empty($classes)) throw new MissingTableException($class);
+        
+        // we want the limit/offset to apply to the class being loaded as,
+        // not the current child table... use a subquery to accomplish this
+        if (($class !== $bclass || $class::HasTypedRows()) &&
+            ($query->GetLimit() !== null || $query->GetOffset() !== null))
+        {            
+            // the limited base class must have a table
+            $bclasses = $bclass::GetTableClasses();
+            if (empty($bclasses) || $bclass !== $bclasses[array_key_last($bclasses)])
+                throw new MissingTableException($bclass);
+            
+            $subquery = clone $userQuery;
+            
+            $query->Where(null)->Limit(null)->Offset(null)->OrderBy(null);
+
+            $this->GetFromAndSetJoins($bclass, $subquery, false);
+            $btable = $this->GetClassTableName($bclass);
+            
+            $query->Where("$btable.id IN (SELECT id FROM (SELECT $btable.id FROM $btable $subquery) AS t)");
+        }
+        
+        // if not the top table, filter only the type we want
+        $topclass = $classes[array_key_last($classes)];
+        if ($selectType && $topclass::HasTypedRows())
+            $query->Where($topclass::GetWhereChild($this, $query, $class));
+    }
+
     /** master array of objects in memory to prevent duplicates
      * @var array<class-string<BaseObject>, array<string, BaseObject>> */
     private array $objectsByBase = array();
@@ -406,8 +425,7 @@ class ObjectDatabase
         $tables = $class::GetTableClasses();
         if (!empty($tables)) $base = $tables[0];
         else throw new MissingTableException($class);
-        
-        $this->RegisterUniqueKey($base, 'id');
+
         $this->objectsByBase[$base] ??= array();
         
         // if this object is already loaded, don't replace it
@@ -419,11 +437,15 @@ class ObjectDatabase
             
             $retobj = new $class($this, $row);
             $this->objectsByBase[$base][$id] = $retobj;
+            
+            $this->RegisterUniqueKey($base, 'id');
+            $this->SetUniqueKeyObject($base, 'id', 
+                self::ValueToIndex($id), $retobj);
         }
         
         if (!($retobj instanceof $class))
             throw new ObjectTypeException("$retobj not $class");
-        
+
         return $retobj;
     }
     
@@ -459,7 +481,8 @@ class ObjectDatabase
         $query->Where($query->Equals($basetbl.'.id',$object->ID()));
         
         $class = get_class($object);
-        $querystr = "DELETE ".$this->BaseFromQuery($class, $query, true, false);
+        $selstr = $this->GetFromAndSetJoins($class, $query, false);
+        $querystr = 'DELETE '.$selstr.' '.$query;
         
         if ($this->db->write($querystr, $query->GetData()) !== 1)
             throw new DeleteFailedException($class);

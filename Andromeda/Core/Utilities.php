@@ -175,7 +175,7 @@ abstract class Utilities
     { 
         return self::array_last(explode("\\",$class));
     }
-        
+    
     /** Returns the given string with the first character capitalized */
     public static function FirstUpper(string $str) : string 
     {
@@ -243,7 +243,7 @@ abstract class Utilities
     }
     
     /** Runs the given function with no execution timeouts or user aborts */
-    public static function RunAtomic(callable $func)
+    public static function RunNoTimeout(callable $func)
     {
         $tl = (int)ini_get('max_execution_time'); set_time_limit(0);
         $ua = (bool)ignore_user_abort(); ignore_user_abort(true);

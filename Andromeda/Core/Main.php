@@ -67,15 +67,17 @@ final class Main extends Singleton
     /** @var DBStats performance metrics for construction */
     private DBStats $construct_stats; 
     
-    /** @var array<RunContext> logged actions w/ stats */
-    private array $action_stats = array(); 
+    /** @var array<RunContext> action/context history */
+    private array $action_history = array();
     
     /** @var array<DBStats> commit stats */
     private array $commit_stats = array();
     
+    /** @var DBStats total request performance metrics */
     private DBStats $total_stats;
     
-    private RequestLog $reqlog;
+    /** Optional request log for this request */
+    private ?RequestLog $requestlog = null;
     
     /** @var float time of request */
     private float $time;
@@ -152,6 +154,9 @@ final class Main extends Singleton
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
+    /** Returns the request log entry for this request */
+    public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
+    
     private DatabaseConfigException $dbException; // reason DB did not init
     private DatabaseException $cfgException; // reason config did not init
 
@@ -185,7 +190,6 @@ final class Main extends Singleton
         try 
         {
             $this->database = $this->InitDatabase();
-            $this->database->GetInternal()->pushStatsContext();
         }
         catch (DatabaseConfigException $e)
         {
@@ -216,7 +220,7 @@ final class Main extends Singleton
         if ($this->config && !$this->config->isReadOnly()
             && $this->config->GetEnableRequestLog())
         {
-            $this->reqlog = RequestLog::Create($this);
+            $this->requestlog = RequestLog::Create($this);
         }
         
         if ($this->database)
@@ -274,31 +278,32 @@ final class Main extends Singleton
 
         if ($this->GetMetricsLevel()) 
             $this->database->GetInternal()->pushStatsContext();
-        
-        $actionlog = isset($this->reqlog) ? $this->reqlog->LogAction($input) : null;
-            
+
+        $logclass = $this->apps[$app]::getLogClass();
+        $actionlog = ($logclass === null && $this->requestlog !== null)
+            ? $this->requestlog->LogAction($input, ActionLog::class) : null;
+
         $context = new RunContext($input, $actionlog);
         $this->stack[] = $context; 
-        
         $this->dirty = true;
         
-        $data = $this->apps[$app]->Run($input);
-
+        $retval = $this->apps[$app]->Run($input);
+        
         if ($this->database) $this->database->saveObjects();
         
         array_pop($this->stack);
-        
+
         if ($this->GetMetricsLevel())
         {
             $stats = $this->database->GetInternal()->popStatsContext();
             
             $this->total_stats->Add($stats);
-            $this->action_stats[] = $context;
+            $this->action_history[] = $context;
             $context->SetMetrics($stats);
         }
         
-        return $data;
-    }     
+        return $retval;
+    }
 
     /**
      * Calls into a remote API to run the given Input command
@@ -323,7 +328,7 @@ final class Main extends Singleton
      */
     public function rollback(?\Throwable $e = null) : void
     {
-        Utilities::RunAtomic(function()use($e)
+        Utilities::RunNoTimeout(function()use($e)
         {
             foreach ($this->apps as $app) $this->error_manager->LoggedTry(
                 function()use($app) { $app->rollback(); });
@@ -335,11 +340,15 @@ final class Main extends Singleton
                 if ($e instanceof ClientException) 
                     $this->error_manager->LoggedTry(function()use($e)
                 {
-                    if (isset($this->reqlog)) 
-                        $this->reqlog->SetError($e);
-                    
+                    if ($this->requestlog !== null)
+                        $this->requestlog->SetError($e);
+                        
                     $this->database->saveObjects(true);
-                    $this->innerCommit(false);
+                    
+                    if ($this->requestlog !== null) 
+                        $this->requestlog->WriteFile();
+                    
+                    $this->commitDatabase(false);
                 });
             }
             
@@ -355,7 +364,7 @@ final class Main extends Singleton
      */
     public function commit() : void
     {
-        Utilities::RunAtomic(function()
+        Utilities::RunNoTimeout(function()
         {
             if ($this->database)
             {
@@ -364,7 +373,10 @@ final class Main extends Singleton
                 
                 $this->database->saveObjects();
                 
-                $this->innerCommit(true);
+                if ($this->requestlog !== null)
+                    $this->requestlog->WriteFile();
+                        
+                $this->commitDatabase(true);
                 
                 if ($this->GetMetricsLevel()) 
                 {
@@ -384,7 +396,7 @@ final class Main extends Singleton
      * Commits the database or does a rollback if readOnly/dryrun
      * @param bool $apps if true, commit/rollback apps also
      */
-    private function innerCommit(bool $apps) : void
+    private function commitDatabase(bool $apps) : void
     {
         $rollback = $this->database->isReadOnly() || 
             ($this->config && $this->config->isDryRun());
@@ -460,11 +472,11 @@ final class Main extends Singleton
             $this->total_stats->stopTiming();
             
             $metrics = RequestMetrics::Create(
-                $mlevel, $this->database, $this->reqlog ?? null,
-                $this->construct_stats, $this->action_stats,
-                $this->commit_stats, $this->total_stats);
+                $mlevel, $this->database, $this->requestlog,
+                $this->construct_stats, $this->action_history,
+                $this->commit_stats, $this->total_stats)->Save();
             
-            $metrics->Save(); $this->innerCommit(false);
+            $this->commitDatabase(false);
             
             if ($this->GetMetricsLevel(true))
                 $output->SetMetrics($metrics->GetClientObject($isError));

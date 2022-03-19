@@ -34,7 +34,7 @@ trait NoTypedChildren
 {
     public static function HasTypedRows() : bool { return false; }
     
-    public static function GetWhereChild(QueryBuilder $q, string $class) : string
+    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string
     {
         throw new NotMultiTableException(self::class);
     }
@@ -67,14 +67,15 @@ trait TableTypedChildren
     
     public static function HasTypedRows() : bool { return true; }
     
-    public static function GetWhereChild(QueryBuilder $q, string $class) : string
+    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string
     {
         $map = array_flip(self::GetChildMap());
         
         if (!array_key_exists($class, $map))
             throw new BadPolyClassException($class);
         
-        return $q->Equals('type',$map[$class]);
+        $table = $db->GetClassTableName(self::class);
+        return $q->Equals("$table.type",$map[$class]);
     }
     
     public static function GetRowClass(array $row) : string

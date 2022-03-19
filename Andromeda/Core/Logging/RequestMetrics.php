@@ -12,7 +12,7 @@ require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/Core/Logging/RequestLog.php");
-require_once(ROOT."/Core/Logging/CommonMetrics.php");
+require_once(ROOT."/Core/Logging/DBStatsLog.php");
 require_once(ROOT."/Core/Logging/ActionMetrics.php");
 require_once(ROOT."/Core/Logging/CommitMetrics.php");
 
@@ -20,7 +20,7 @@ require_once(ROOT."/Core/Logging/CommitMetrics.php");
 final class RequestMetrics extends BaseObject
 {
     use TableNoChildren;
-    use CommonMetrics;
+    use DBStatsLog;
     
     protected const IDLength = 20;
     
@@ -77,7 +77,9 @@ final class RequestMetrics extends BaseObject
         $this->debuglog = $fields[] = new FieldTypes\NullJsonArray('debuglog');
         
         $this->RegisterFields($fields, self::class);
-        $this->CommonCreateFields();
+        $this->DBStatsCreateFields();
+        
+        $this->database->RegisterUniqueKey(self::class, 'requestlog');
          
         parent::CreateFields();
     }
@@ -110,7 +112,7 @@ final class RequestMetrics extends BaseObject
         $obj->construct_code_time->SetValue($construct->GetCodeTime());
         $obj->construct_total_time->SetValue($construct->GetTotalTime());
 
-        $obj->CommonSetMetrics($total);
+        $obj->SetDBStats($total);
 
         if ($level >= Config::METRICS_EXTENDED)
         {
@@ -119,7 +121,7 @@ final class RequestMetrics extends BaseObject
             $obj->rusage->SetValue(getrusage());
             $obj->includes->SetValue(get_included_files());
             $obj->objects->SetValue($database->getLoadedObjects());
-            $obj->queries->SetValue($database->GetInternal()->getAllQueries());
+            $obj->queries->SetValue($total->getQueries());
             $obj->debuglog->SetValue(ErrorManager::GetInstance()->GetDebugLog());
         }
         
@@ -168,11 +170,11 @@ final class RequestMetrics extends BaseObject
     /**
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
-     * @return array `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:CommonMetrics, action_stats:[ActionMetrics] \
+     * @return array `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:DBStatsLog, action_stats:[ActionMetrics] \
            construct_stats:{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}}`
-        if extended, add `{gcstats:array,rusage:array,includes:array,construct_stats:{queries:[string]}}`
+        if extended, add `{gcstats:array,rusage:array,includes:array,construct_stats:{queries:[{time:float,query:string}]}}`
         if extended and not accompanying debug output, omit add `{objects:array<class,[string]>,queries:array,debuglog:array}`
-     * @see CommonMetrics::GetCommonClientObject()
+     * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject(bool $isError = false) : array
     {
@@ -197,22 +199,22 @@ final class RequestMetrics extends BaseObject
                 return $o->GetClientObject(); }, $actions)),
             'commit_stats' => array_values(array_map(function(CommitMetrics $o){
                 return $o->GetClientObject(); }, $commits)),
-            'total_stats' => $this->GetCommonClientObject()
+            'total_stats' => $this->GetDBStatsClientObject()
         );
         
-        if ($this->gcstats->GetValue() !== null) // is EXTENDED
+        if ($this->gcstats->TryGetValue() !== null) // is EXTENDED
         {
-            $retval['construct_stats']['queries'] = $this->construct_queries->GetValue();
+            $retval['construct_stats']['queries'] = $this->construct_queries->TryGetValue();
             
-            $retval['gcstats'] = $this->gcstats->GetValue();
-            $retval['rusage'] = $this->rusage->GetValue();
-            $retval['includes'] = $this->includes->GetValue();
+            $retval['gcstats'] = $this->gcstats->TryGetValue();
+            $retval['rusage'] = $this->rusage->TryGetValue();
+            $retval['includes'] = $this->includes->TryGetValue();
             
             if (!$isError) // duplicated in error log
             {
-                $retval['objects'] = $this->objects->GetValue();
-                $retval['queries'] = $this->queries->GetValue();
-                $retval['debuglog'] = $this->debuglog->GetValue();
+                $retval['objects'] = $this->objects->TryGetValue();
+                $retval['queries'] = $this->queries->TryGetValue();
+                $retval['debuglog'] = $this->debuglog->TryGetValue();
             }
         }
 

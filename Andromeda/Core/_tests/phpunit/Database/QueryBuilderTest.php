@@ -56,7 +56,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $this->testQuery($q, array('myval'), "WHERE mykey = :d0");
         
         $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey','myval'));
-        $this->testQuery($q, array('myval'), "WHERE mykey != :d0");
+        $this->testQuery($q, array('myval'), "WHERE mykey <> :d0");
     }
     
     public function testLike() : void
@@ -79,10 +79,10 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder(); $q->Where($q->Or($q->Equals('mykey1','myval1'), $q->Equals('mykey2','myval2')));
         $this->testQuery($q, array('myval1','myval2'), "WHERE (mykey1 = :d0 OR mykey2 = :d1)");
         
-        $q = new QueryBuilder(); $q->Where($q->ManyAnd(array('mykey1'=>'myval1','mykey2'=>'myval2')));
+        $q = new QueryBuilder(); $q->Where($q->ManyEqualsAnd(array('mykey1'=>'myval1','mykey2'=>'myval2')));
         $this->testQuery($q, array('myval1','myval2'), "WHERE (mykey1 = :d0 AND mykey2 = :d1)");
         
-        $q = new QueryBuilder(); $q->Where($q->ManyOr('mykey',array('myval1','myval2')));
+        $q = new QueryBuilder(); $q->Where($q->ManyEqualsOr('mykey',array('myval1','myval2')));
         $this->testQuery($q, array('myval1','myval2'), "WHERE (mykey = :d0 OR mykey = :d1)");
     }
     
