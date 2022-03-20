@@ -38,7 +38,9 @@ class AJAX(Interface):
                 print(resp.content.decode('utf-8')); raise
         else: retval = resp.content
 
-        if self.verbose: print("\tAPI ->", retval)
+        if self.verbose: 
+            print("\tAPI ->", json.dumps(retval, indent=4))
+
         return retval        
 
     def runTests(self):
@@ -83,7 +85,9 @@ class CLI(Interface):
             except CliJsonError: 
                 print(retval); raise
 
-        if self.verbose: print("\tAPI ->", retval)
+        if self.verbose: 
+            print("\tAPI ->", json.dumps(retval, indent=4))
+            
         return retval
         
     def runTests(self):
