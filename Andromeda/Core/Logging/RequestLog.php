@@ -18,6 +18,9 @@ require_once(ROOT."/Core/Logging/BaseLog.php");
 /** Exception indicating that it was requested to modify the log after it was written to disk */
 class LogAfterWriteException extends Exceptions\ServerException { public $message = "REQLOG_AFTER_WRITE"; }
 
+/** Exception indicating the log file cannot be written more than once */
+class MultiFileWriteException extends Exceptions\ServerException { public $message = "LOG_FILE_MULTI_WRITE"; }
+
 /** Log entry representing an API request */
 final class RequestLog extends BaseLog
 {
@@ -105,17 +108,27 @@ final class RequestLog extends BaseLog
         if ($config->GetEnableRequestLogDB())
         {
             parent::Save(); // ignore isRollback
-            
-            if (isset($this->actions)) foreach ($this->actions as $action) $action->Save();
         }
-        
-        if ($config->GetEnableRequestLogFile() &&
-            ($logdir = $config->GetDataDir()) !== null && !$this->writtenToFile)
-        {
-            $this->writtenToFile = true;
 
+        return $this;
+    }
+    
+    /** 
+     * Writes the log to the log file 
+     * @throws MultiFileWriteException if called > once
+     */
+    public function WriteFile() : self
+    {
+        $config = Main::GetInstance()->GetConfig();
+
+        if ($config->GetEnableRequestLogFile() &&
+            ($logdir = $config->GetDataDir()) !== null)
+        {
+            if ($this->writtenToFile)
+                throw new MultiFileWriteException();
+            $this->writtenToFile = true;
+        
             $data = Utilities::JSONEncode($this->GetFullClientObject(true));
-            
             file_put_contents("$logdir/access.log", $data."\r\n", FILE_APPEND);
         }
         

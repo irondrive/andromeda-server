@@ -115,15 +115,15 @@ class Database
         {
             if (!file_exists($path)) $path = null;
         }
-        else foreach ($paths as $path)
+        else foreach ($paths as $ipath)
         {
-            if ($path === null)
+            if ($ipath === null)
             {
                 $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
-                if ($home) $path = "$home/andromeda/DBConfig.php";
+                if ($home) $ipath = "$home/andromeda/DBConfig.php";
             }
             
-            if (file_exists($path)) break;
+            if (file_exists($ipath)) { $path = $ipath; break; }
         }
         
         if ($path !== null) return require($path);
@@ -232,17 +232,18 @@ class Database
             $options = array(
                 PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false,
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_EMULATE_PREPARES => false
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_STRINGIFY_FETCHES => false
             );
             
             // match rowCount behavior of postgres and sqlite
             if ($this->driver === self::DRIVER_MYSQL)
                 $options[PDO::MYSQL_ATTR_FOUND_ROWS] = true;
                 
-                $username = $config['USERNAME'] ?? null;
-                $password = $config['PASSWORD'] ?? null;
-                
-                $this->connection = new PDO($connect, $username, $password, $options);
+            $username = $config['USERNAME'] ?? null;
+            $password = $config['PASSWORD'] ?? null;
+            
+            $this->connection = new PDO($connect, $username, $password, $options);
         }
         catch (PDOException $e)
         {
