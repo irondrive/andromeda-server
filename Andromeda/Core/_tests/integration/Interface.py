@@ -71,8 +71,6 @@ class CLI(Interface):
             if value is not None:
                 command.append(str(value))
 
-        # TODO handling files - input names or handles or what?
-
         if self.verbose: print("\t(CLI)"," ".join(command))
 
         if stdin is not None: stdin = bytes(stdin,'utf-8')
