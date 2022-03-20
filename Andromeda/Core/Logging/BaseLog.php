@@ -38,7 +38,7 @@ abstract class BaseLog extends BaseObject
      * @param Input $input input to determine class
      * @return class-string<static>
      */
-    public static function GetPropClass(Input $input) : string { return static::class; }
+    protected static function GetPropClass(Input $input) : string { return static::class; }
     
     /** Returns the common CLI usage for loading log entries */
     public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint]"; }

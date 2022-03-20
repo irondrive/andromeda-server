@@ -203,7 +203,7 @@ class ActionLog extends BaseLog
     }
     
     /** @return class-string<self> */
-    public static function GetPropClass(Input $input) : string
+    protected static function GetPropClass(Input $input) : string
     {
         if ($input->HasParam('lapp'))
         {

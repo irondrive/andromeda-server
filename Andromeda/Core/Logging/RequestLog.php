@@ -23,11 +23,16 @@ final class RequestLog extends BaseLog
 {
     use TableNoChildren;
     
+    /** Timestamp of the request */
     private FieldTypes\Date $time;
+    /** Interface address used for the request */
     private FieldTypes\StringType $addr;
+    /** Interface user-agent used for the request */
     private FieldTypes\StringType $agent;
+    /** Error code if response was an error (or null) */
     private FieldTypes\NullIntType $errcode;
-    private FieldTypes\NullStringType $errtext; // TODO comments
+    /** Error message if response was an error (or null) */
+    private FieldTypes\NullStringType $errtext;
     
     private bool $writtenToFile = false;
     
@@ -95,40 +100,28 @@ final class RequestLog extends BaseLog
 
     public function Save(bool $isRollback = false) : self
     {
-        if (!Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
-            return $this; // might only be doing file logging
-        
-        if (isset($this->actions)) foreach ($this->actions as $action) $action->Save();
-        
-        return parent::Save(); // ignore isRollback
-    }
-    
-    // TODO comment
-    public function WriteFile() : self
-    {
-        if ($this->writtenToFile) return $this;
-        else $this->writtenToFile = true;
-        
         $config = Main::GetInstance()->GetConfig();
         
-        if ($config->GetEnableRequestLogFile() &&
-            ($logdir = $config->GetDataDir()) !== null)
+        if ($config->GetEnableRequestLogDB())
         {
-            $data = $this->GetFullClientObject(true);
+            parent::Save(); // ignore isRollback
             
-            // condense the text-version of the log a bit
-            unset($data['id']); 
-            $data['actions'] = array_values($data['actions']);
-            foreach ($data['actions'] as &$action) unset($action['id']);
-            
-            $data = Utilities::JSONEncode($data);
+            if (isset($this->actions)) foreach ($this->actions as $action) $action->Save();
+        }
+        
+        if ($config->GetEnableRequestLogFile() &&
+            ($logdir = $config->GetDataDir()) !== null && !$this->writtenToFile)
+        {
+            $this->writtenToFile = true;
+
+            $data = Utilities::JSONEncode($this->GetFullClientObject(true));
             
             file_put_contents("$logdir/access.log", $data."\r\n", FILE_APPEND);
         }
-
+        
         return $this;
     }
-        
+   
     public static function GetPropUsage(bool $join = true) : string 
     { 
         return "[--mintime float] [--maxtime float] [--addr raw] [--agent raw] ".

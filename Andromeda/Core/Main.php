@@ -344,10 +344,6 @@ final class Main extends Singleton
                         $this->requestlog->SetError($e);
                         
                     $this->database->saveObjects(true);
-                    
-                    if ($this->requestlog !== null) 
-                        $this->requestlog->WriteFile();
-                    
                     $this->commitDatabase(false);
                 });
             }
@@ -372,10 +368,6 @@ final class Main extends Singleton
                     $this->database->GetInternal()->pushStatsContext();
                 
                 $this->database->saveObjects();
-                
-                if ($this->requestlog !== null)
-                    $this->requestlog->WriteFile();
-                        
                 $this->commitDatabase(true);
                 
                 if ($this->GetMetricsLevel()) 

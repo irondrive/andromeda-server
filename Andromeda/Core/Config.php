@@ -33,8 +33,10 @@ class AppVersionException extends Exceptions\ClientErrorException { public $mess
 /** A singleton object that stores a version field */
 abstract class BaseConfig extends SingletonObject
 {
+    /** Date the config object was created */
     protected FieldTypes\Date $date_created;
-    protected FieldTypes\StringType $version; // TODO comments
+    /** Version of the app that owns this config */
+    protected FieldTypes\StringType $version;
     
     protected function CreateFields() : void
     {
@@ -66,25 +68,6 @@ abstract class BaseConfig extends SingletonObject
     { 
         $this->version->SetValue($version); return $this; 
     }
-    
-    /**
-     * Gets the config as a printable client object
-     * @param bool $admin if true, show sensitive admin-only values
-     * @return array if admin: `{date_created:float}`
-     */
-    public function GetClientObject(bool $admin = false) : array
-    {
-        $data = array();
-
-        if ($admin)
-        {
-            $data['date_created'] = $this->date_created->GetValue();
-            // TODO what about version? not sure how accounts/files handle it
-            // TODO don't forget to have files/accounts call this also
-        }
-        
-        return $data;
-    }
 }
 
 /** The global framework config stored in the database */
@@ -92,21 +75,35 @@ final class Config extends BaseConfig
 {
     use TableNoChildren;
     
+    /** Directory for basic server data (logs) */
     private FieldTypes\NullStringType $datadir;
+    /** True if the server is read-only */
     private FieldTypes\BoolType $read_only;
-    private FieldTypes\BoolType $enabled; // TODO comments
+    /** True if the server is enabled for HTTP */
+    private FieldTypes\BoolType $enabled;
+    /** True if outgoing email is allowed */
     private FieldTypes\BoolType $email;
+    /** List of installed+enabled apps */
     private FieldTypes\JsonArray $apps;
-    
+    /** True if requests should be logged to DB */
     private FieldTypes\BoolType $requestlog_db;
+    /** True if requests should be logged to a file */
     private FieldTypes\BoolType $requestlog_file;
+    /** The details level enum for request logging */
     private FieldTypes\IntType $requestlog_details;
+    /** The debug logging level enum */
     private FieldTypes\IntType $debug;
+    /** True if debug/metrics can be sent over HTTP */
     private FieldTypes\BoolType $debug_http;
+    /** True if server errors should be logged to the DB */
     private FieldTypes\BoolType $debug_dblog;
+    /** True if server errors should be logged to a file */
     private FieldTypes\BoolType $debug_filelog;
+    /** The performance metrics logging level enum */
     private FieldTypes\IntType $metrics;
+    /** True if metrics should be logged to the DB */
     private FieldTypes\BoolType $metrics_dblog;
+    /** True if metrics should be logged to a file */
     private FieldTypes\BoolType $metrics_filelog;
     
     /** Creates a new config singleton with default values */
@@ -394,7 +391,7 @@ final class Config extends BaseConfig
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
      * @return array `{apiver:int, apps:[{string:string}], read_only:bool, enabled:bool}` \
-         if admin, add: `{datadir:?string, \
+         if admin, add: `{date_created:float, datadir:?string, \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
             debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }`
@@ -402,21 +399,21 @@ final class Config extends BaseConfig
      */
     public function GetClientObject(bool $admin = false) : array
     { 
-        $data = parent::GetClientObject($admin);
-        
-        $data['apiver'] = (new VersionInfo(andromeda_version))->major;
-        
+        $data = array(
+            'apiver' => (new VersionInfo(andromeda_version))->major,
+            'enabled' => $this->enabled->GetValue(),
+            'read_only' => $this->read_only->GetValue(false)
+        );
+
         foreach (Main::GetInstance()->GetApps() as $name=>$app)
         {
             $data['apps'][$name] = $admin ? $app::getVersion() : 
                 (new VersionInfo($app::getVersion()))->getCompatVer();
         }
-        
-        $data['enabled'] = $this->enabled->GetValue();
-        $data['read_only'] = $this->read_only->GetValue(false);
-        
+
         if ($admin)
         {
+            $data['date_created'] =       $this->date_created->GetValue();
             $data['datadir'] =            $this->datadir->TryGetValue();
             $data['email'] =              $this->email->GetValue();
             $data['requestlog_file'] =    $this->requestlog_file->GetValue();

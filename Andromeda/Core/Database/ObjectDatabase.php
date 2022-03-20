@@ -211,7 +211,7 @@ class ObjectDatabase
         {
             $selfQuery = clone $query;
             
-            $this->SetFilterCriteria($class, $baseClass, $selfQuery, !$castRows);
+            $this->SetTypeFiltering($class, $baseClass, $selfQuery, !$castRows);
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, true);
             $querystr = 'SELECT '.$selstr.' '.$selfQuery->GetText();
             
@@ -269,7 +269,7 @@ class ObjectDatabase
         {
             $selfQuery = clone $query;
             
-            $this->SetFilterCriteria($class, $baseClass, $selfQuery, !$castRows);
+            $this->SetTypeFiltering($class, $baseClass, $selfQuery, !$castRows);
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, false);
             $querystr = 'DELETE '.$selstr.' '.$selfQuery->GetText().' RETURNING *';
             
@@ -349,7 +349,7 @@ class ObjectDatabase
      * @param QueryBuilder $query pre-existing query to add to (may modify!)
      * @param bool $selectType if true, allow selecting where child type
      */
-    private function SetFilterCriteria(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
+    private function SetTypeFiltering(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
     {       
         $classes = $class::GetTableClasses();
         if (empty($classes)) throw new MissingTableException($class);
