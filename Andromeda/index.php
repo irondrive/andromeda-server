@@ -39,7 +39,7 @@ $retvals = array_map(function(Input $input)use($main){
 
 $output = Output::Success($retvals);
 
-$main->commit();
+$main->commit(true);
 
 if ($interface->UserOutput($output)) $main->commit();
 

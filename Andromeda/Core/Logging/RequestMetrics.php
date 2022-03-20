@@ -162,12 +162,13 @@ final class RequestMetrics extends BaseObject
         }
         
         if ($config && $config->GetMetricsLog2File() &&
-            ($logdir = $config->GetDataDir()) !== null && !$this->writtenToFile)
+            ($logdir = $config->GetDataDir()) !== null)
         {
+            if ($this->writtenToFile) 
+                throw new MultiFileWriteException();
             $this->writtenToFile = true;
             
             $data = Utilities::JSONEncode($this->GetClientObject());
-            
             file_put_contents("$logdir/metrics.log", $data."\r\n", FILE_APPEND); 
         }
 

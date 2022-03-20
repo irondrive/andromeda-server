@@ -220,7 +220,7 @@ final class Main extends Singleton
         if ($this->config && !$this->config->isReadOnly()
             && $this->config->GetEnableRequestLog())
         {
-            $this->requestlog = RequestLog::Create($this);
+            $this->requestlog = RequestLog::Create($this)->Save();
         }
         
         if ($this->database)
@@ -344,6 +344,10 @@ final class Main extends Singleton
                         $this->requestlog->SetError($e);
                         
                     $this->database->saveObjects(true);
+                    
+                    if ($this->requestlog !== null)
+                        $this->requestlog->WriteFile();
+                    
                     $this->commitDatabase(false);
                 });
             }
@@ -357,10 +361,11 @@ final class Main extends Singleton
      * 
      * First commits each app, then the database.  Does a rollback 
      * instead if the request was specified as a dry run.
+     * @param bool $main true if this is the main index.php commit
      */
-    public function commit() : void
+    public function commit(bool $main = false) : void
     {
-        Utilities::RunNoTimeout(function()
+        Utilities::RunNoTimeout(function()use($main)
         {
             if ($this->database)
             {
@@ -368,6 +373,10 @@ final class Main extends Singleton
                     $this->database->GetInternal()->pushStatsContext();
                 
                 $this->database->saveObjects();
+                
+                if ($main && $this->requestlog !== null)
+                    $this->requestlog->WriteFile();
+                
                 $this->commitDatabase(true);
                 
                 if ($this->GetMetricsLevel()) 
