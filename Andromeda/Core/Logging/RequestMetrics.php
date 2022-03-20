@@ -16,7 +16,7 @@ require_once(ROOT."/Core/Logging/DBStatsLog.php");
 require_once(ROOT."/Core/Logging/ActionMetrics.php");
 require_once(ROOT."/Core/Logging/CommitMetrics.php");
 
-/** Log entry representing an metrics for a request */
+/** Log entry representing a performance metrics for a request */
 final class RequestMetrics extends BaseObject
 {
     use TableNoChildren;
@@ -26,9 +26,13 @@ final class RequestMetrics extends BaseObject
     
     /** @var FieldTypes\NullObjectRefT<RequestLog> */
     private FieldTypes\NullObjectRefT $requestlog;
+    /** Timestamp of the request */
     private FieldTypes\Date $date_created;
+    /** Peak memory usage reported by PHP */
     private FieldTypes\IntType $peak_memory;
-    private FieldTypes\IntType $nincludes; // TODO comments
+    /** The number of included PHP files */
+    private FieldTypes\IntType $nincludes;
+    /** The number of objects loaded in database memory */
     private FieldTypes\IntType $nobjects;
     
     private FieldTypes\IntType $construct_db_reads;
@@ -39,12 +43,20 @@ final class RequestMetrics extends BaseObject
     private FieldTypes\FloatType $construct_total_time;
     private FieldTypes\NullJsonArray $construct_queries;
     
+    /** Garbage collection stats reported by PHP */
     private FieldTypes\NullJsonArray $gcstats;
+    /** Resource usage reported by PHP */
     private FieldTypes\NullJsonArray $rusage;
+    /** List of files included by PHP */
     private FieldTypes\NullJsonArray $includes;
+    /** List of objects in database memory */
     private FieldTypes\NullJsonArray $objects;
+    /** List of database queries */
     private FieldTypes\NullJsonArray $queries;
+    /** The main debug log supplement */
     private FieldTypes\NullJsonArray $debuglog;
+    
+    private bool $writtenToFile = false;
     
     /** Array of action metrics if not saved */
     private array $actions;
@@ -136,12 +148,7 @@ final class RequestMetrics extends BaseObject
             
         return $obj;
     }
-    
-    /**
-     * Saves this metrics log, either to DB or file (or both)
-     * {@inheritDoc}
-     * @see BaseObject::Save()
-     */
+
     public function Save(bool $isRollback = false) : self
     {
         $config = Main::GetInstance()->TryGetConfig();
@@ -155,11 +162,11 @@ final class RequestMetrics extends BaseObject
         }
         
         if ($config && $config->GetMetricsLog2File() &&
-            ($logdir = $config->GetDataDir()) !== null)
+            ($logdir = $config->GetDataDir()) !== null && !$this->writtenToFile)
         {
-            $data = $this->GetClientObject(); 
+            $this->writtenToFile = true;
             
-            $data = Utilities::JSONEncode($data);
+            $data = Utilities::JSONEncode($this->GetClientObject());
             
             file_put_contents("$logdir/metrics.log", $data."\r\n", FILE_APPEND); 
         }

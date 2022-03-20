@@ -53,7 +53,7 @@ class DBStats
     
     /** 
      * Returns the array of queries issued to the database 
-     * @return array<array>
+     * @return array<array> `[{time:float,query:string}]`
      */
     public function getQueries() : array   { return $this->queries; }
 
@@ -69,10 +69,10 @@ class DBStats
     /** Return the time spend writing to the database */
     public function GetWriteTime() : float { return $this->write_time; }
     
-    /** Return the total elapsed time */
+    /** Return the total elapsed time from construct to stopTiming() */
     public function GetTotalTime() : float { return $this->total_timens/1e9; }
     
-    /** Return the total non-query (code) time */
+    /** Return the total non-query (code) time (total-query) */
     public function GetCodeTime() : float
     {
         return $this->GetTotalTime() - $this->read_time - $this->write_time;

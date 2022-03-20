@@ -3,19 +3,22 @@
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
+require_once(ROOT."/Core/Logging/BaseLog.php"); use Andromeda\Core\Logging\BaseLog;
+
 require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 
 /** Represents an error log entry in the database */
-final class ErrorLog extends BaseObject
+final class ErrorLog extends BaseLog
 {
     use TableNoChildren;
     
@@ -77,17 +80,11 @@ final class ErrorLog extends BaseObject
     }
     
     /** Returns the common command usage for LoadByInput() and CountByInput() */
-    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text]"; }
+    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text] [--asc bool]"; }
     
-    /** Returns the command usage for LoadByInput() */
-    public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint] [--asc bool]"; }
-    
-    /** Returns the command usage for CountByInput() */
-    public static function GetCountUsage() : string { return "[--logic and|or]"; }
-    
-    protected static function GetWhereQuery(ObjectDatabase $database, Input $input) : QueryBuilder
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
     {
-        $q = new QueryBuilder(); $criteria = array();
+        $criteria = array();
         
         if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));
         if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_FLOAT));
@@ -101,44 +98,20 @@ final class ErrorLog extends BaseObject
         
         if ($input->HasParam('message')) $criteria[] = $q->Like('message', $input->GetParam('message',SafeParam::TYPE_TEXT));
         
-        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array('and','or')) === 'or'; // default AND
-            
-        if (!count($criteria)) $criteria[] = ($or ? "FALSE" : "TRUE");
+        $q->OrderBy("time", !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false)); // always sort by time, default desc
         
-        return $q->Where($or ? $q->Or(...$criteria) : $q->And(...$criteria));
-    }
-    
-    /** Returns all error log entries matching the given input */
-    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
-    {
-        $q = static::GetWhereQuery($database, $input);
-        
-        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 100);
-        
-        if ($input->HasParam('offset')) $q->Offset($input->GetParam('offset',SafeParam::TYPE_UINT));
-        
-        $q->OrderBy('time', !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false));
-        
-        return $database->LoadObjectsByQuery(static::class, $q);
-    }
-    
-    /** Counts error log entries matching the given input */
-    public static function CountByInput(ObjectDatabase $database, Input $input) : int
-    {
-        $q = static::GetWhereQuery($database, $input);
-        
-        return $database->CountObjectsByQuery(static::class, $q);
+        return $criteria;
     }
 
     /** Converts all objects in the array to strings and checks UTF-8 */
-    private static function arrayStrings(array &$data) : void
+    private static function &arrayStrings(array &$data) : array
     {
         foreach ($data as &$val)
         {
             if (is_object($val)) 
             {
-                $val = method_exists($val,'__toString') ? (string)$val : get_class($val);
+                $val = method_exists($val,'__toString') 
+                    ? (string)$val : get_class($val);
             }
             else if (is_array($val)) 
                 self::arrayStrings($val);
@@ -146,6 +119,7 @@ final class ErrorLog extends BaseObject
             if (!Utilities::isUTF8($val))
                 $val = base64_encode($val);
         }
+        return $data;
     }
     
     /**
@@ -190,7 +164,8 @@ final class ErrorLog extends BaseObject
         
         if ($sensitive && $input !== null)
         {
-            $obj->params->SetValue($input->GetParams()->GetClientObject());
+            $params = $input->GetParams()->GetClientObject();
+            $obj->params->SetValue(self::arrayStrings($params));
         }
         
         $obj->trace_basic->SetValue(explode("\n",$e->getTraceAsString()));

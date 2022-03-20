@@ -6,12 +6,18 @@ require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\
 /** Log entry representing DBStats */
 trait DBStatsLog
 {
+    /** The number of read queries */
     private FieldTypes\IntType $db_reads;
+    /** Time spent on read queries */
     private FieldTypes\FloatType $db_read_time;
+    /** The number of write queries */
     private FieldTypes\IntType $db_writes;
+    /** Time spent on write queries */
     private FieldTypes\FloatType $db_write_time;
+    /** Time spent on PHP code (non-query) */
     private FieldTypes\FloatType $code_time;
-    private FieldTypes\FloatType $total_time; // TODO comments
+    /** Total time measured by the DBStats */
+    private FieldTypes\FloatType $total_time;
     
     protected function DBStatsCreateFields() : void
     {
