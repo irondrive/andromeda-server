@@ -211,8 +211,8 @@ class ObjectDatabase
         {
             $selfQuery = clone $query;
             
+            $this->SetFilterCriteria($class, $baseClass, $selfQuery, !$castRows);
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, true);
-            $this->SetFilterCriteria($class, $baseClass, $selfQuery, $query, !$castRows);
             $querystr = 'SELECT '.$selstr.' '.$selfQuery->GetText();
             
             foreach ($this->db->read($querystr, $selfQuery->GetData()) as $row)
@@ -269,8 +269,8 @@ class ObjectDatabase
         {
             $selfQuery = clone $query;
             
+            $this->SetFilterCriteria($class, $baseClass, $selfQuery, !$castRows);
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, false);
-            $this->SetFilterCriteria($class, $baseClass, $selfQuery, $query, !$castRows);
             $querystr = 'DELETE '.$selstr.' '.$selfQuery->GetText().' RETURNING *';
             
             $rows = $this->db->readwrite($querystr, $selfQuery->GetData());
@@ -347,10 +347,9 @@ class ObjectDatabase
      * @param class-string<T> $class class name to build a query for
      * @param class-string<T> $bclass the base class the user requested
      * @param QueryBuilder $query pre-existing query to add to (may modify!)
-     * @param QueryBuilder $userQuery the original query sent by the caller
      * @param bool $selectType if true, allow selecting where child type
      */
-    private function SetFilterCriteria(string $class, string $bclass, QueryBuilder $query, QueryBuilder $userQuery, bool $selectType) : void
+    private function SetFilterCriteria(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
     {       
         $classes = $class::GetTableClasses();
         if (empty($classes)) throw new MissingTableException($class);
@@ -365,7 +364,7 @@ class ObjectDatabase
             if (empty($bclasses) || $bclass !== $bclasses[array_key_last($bclasses)])
                 throw new MissingTableException($bclass);
             
-            $subquery = clone $userQuery;
+            $subquery = clone $query;
             
             $query->Where(null)->Limit(null)->Offset(null)->OrderBy(null);
 
