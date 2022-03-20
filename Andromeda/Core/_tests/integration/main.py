@@ -153,7 +153,7 @@ class Main():
 
             # test installing everything separately
             appNames = TestUtils.assertOk(interface.run(app='core',action='install',params={'noapps':True}))
-            TestUtils.assertEquals(set(self.servApps), set(appNames))
+            TestUtils.assertEquals(set(['core']), set(appNames))
             for app in appTests: app.install()
 
         # run all test modules
