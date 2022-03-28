@@ -1,0 +1,3 @@
+#!/bin/sh
+
+tools/analyze && sleep 1 && tools/unittests && sleep 1 && tools/pytests && tools/count total

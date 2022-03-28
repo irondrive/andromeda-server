@@ -1,0 +1,30 @@
+{
+    "install": true,
+    "interfaces":
+    {
+        "cli": ".",
+        "ajax": "http://localhost/api/index.php"
+    },
+    "databases":
+    {
+        "sqlite": 
+        {
+            "dbpath":"./integration.s3db"
+        },
+        "mysql":
+        {
+            "dbname": "a2test",
+            "host": "localhost",
+            "dbuser": "root", 
+            "dbpass": "password", 
+            "persistent": true
+        },
+        "pgsql":
+        {
+            "dbname": "a2test",
+            "host": "localhost",
+            "dbuser": "postgres",
+            "dbpass": "password" 
+        }
+    }
+}
