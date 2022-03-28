@@ -3,7 +3,7 @@ import tempfile, json, os
 
 from TestUtils import *
 
-class AJAXTests(BaseTest):
+class HTTPTests(BaseTest):
     pass
 
 class CLITests(BaseTest):
@@ -21,12 +21,14 @@ class CLITests(BaseTest):
         return self.interface.cliRun(app=app, action=action, params=params, files=files, 
             flags=flags, isJson=isJson, stdin=stdin)
     
+    #################################################
+
     def testDebugFlag(self):
         rval = self.fullCliRun(debug="none")
         assertEquals(rval['code'], 400)
         assertNotIn('debug', rval)
 
-        rval = self.fullCliRun(debug="basic")
+        rval = self.fullCliRun(debug="errors")
         assertEquals(rval['code'], 400)
         assertNotIn('debug', rval)
 
@@ -60,12 +62,13 @@ class CLITests(BaseTest):
         assert(rval.startswith('Andromeda')), rval
 
     def testDryrunFlag(self):
-        if not 'test' in self.main.servApps: return False
+        if not 'testutil' in self.main.appList: return False
         assert(not assertOk(self.fullCliRun(app='testutil',action='check-dryrun')))
         assert(assertOk(self.fullCliRun(app='testutil',action='check-dryrun',dryrun=True)))
 
     def testFileInput(self):
         # tests only the --file@ specific to CLI
+        if not 'testutil' in self.main.appList: return False
         with tempfile.NamedTemporaryFile() as tmp:
             val = "myvalue!"
             with open(tmp.name,'w') as tmpfile:
@@ -76,9 +79,10 @@ class CLITests(BaseTest):
             assertEquals(val, rval['params']['myfile'])
 
     def testStdinInput(self):
+        if not 'testutil' in self.main.appList: return False
+
         key = "mystdin"
         val = "myvalue"
-
         rval = self.fullCliRun(
             app='testutil', action='getinput', isJson=False,
             params={key+'!':None}, stdin=val).decode('utf-8')

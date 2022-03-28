@@ -46,17 +46,30 @@ class BaseTest():
         self.main = interface.main
 
     def runTests(self):
-        for attr in (getattr(self, name) for name in dir(self)): # run all test* methods
-            if inspect.ismethod(attr) and attr.__name__.startswith("test"):
-                if self.main.testMatch is None or re.search(self.main.testMatch, attr.__name__) is not None:
-                    if self.main.verbose: 
-                        print('RUNNING',attr.__name__+'()')
-                    rval = attr()
-                    if not self.main.verbose: 
-                        print('S' if rval is False else '.',end='')
-                    elif rval is False: 
-                        print('SKIPPED',attr.__name__+'()')
+        testCount = 0
+
+        attrs = (getattr(self, name) for name in dir(self))
+        funcs = list(filter(lambda attr: 
+            inspect.ismethod(attr) and attr.__name__.startswith("test"), attrs))
+        funcs = list(filter(lambda func: self.main.testMatch is None or
+            re.search(self.main.testMatch, func.__name__) is not None, funcs))
+        self.main.random.shuffle(funcs)
+
+        for func in funcs:
+            if self.main.verbose: 
+                print('RUN TEST: ',func.__name__+'()')
+            rval = func()
+            if rval is False: # return False is skipped test
+                if self.main.verbose:
+                    print('SKIPPED',func.__name__+'()')
+                else: print('S',end='')
+            else:
+                testCount += 1
+                if self.main.verbose:
+                    print('COMPLETE',func.__name__+'()')
+                else: print('.',end='')
         if not self.main.verbose: print()
+        return testCount
 
 class BaseAppTest(BaseTest):
 
