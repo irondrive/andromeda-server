@@ -2,7 +2,7 @@
 
 rm -rf docs/doctum_*
 
-php vendor/bin/doctum.php update tools/doctum-conf.php -v
+php vendor/bin/doctum.php update tools/conf/doctum-conf.php -v
 
 TEMPDB=$(mktemp); TEMPCONF=$(mktemp)
 unset andromeda_auth_sessionid
