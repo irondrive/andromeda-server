@@ -11,7 +11,7 @@ class AppTests(BaseAppTest):
         return { }
 
     def install(self):
-        pass # no install routine
+        assertOk(self.interface.run(app='core',action='enableapp',params={'appname':'testutil'}))
 
     def runBinOutput(self, data:str, times:int):
         return self.interface.run(
@@ -34,6 +34,8 @@ class AppTests(BaseAppTest):
         for i, piece in enumerate(retval[:-1]):
             assertEquals(piece, data*i)
         assertOk(json.loads(retval[-1]))
+
+    #################################################
 
     def testBinaryOutput(self):
         data = "123456789deadbeef"

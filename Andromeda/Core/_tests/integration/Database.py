@@ -6,10 +6,12 @@ import TestUtils
 class Database():
     def __str__(self):
         return self.__class__.__name__
+
     def __init__(self, config):
         self.config = config
+
     def install(self, interface):
-        self.config['outfile'] = None
+        self.config['outfile'] = None # flag
         TestUtils.assertOk(interface.run(
             app='core',action='dbconf',params=self.config))
 
@@ -17,8 +19,14 @@ class Database():
 class SQLite(Database):
     def install(self, interface):        
         self.config['driver'] = 'sqlite'
-        self.deinstall()
+
+        path = self.config['dbpath']
+        if not os.path.isabs(path):
+            path = os.getcwd()+'/'+path
+            self.config['dbpath'] = path
+
         super().install(interface)
+
     def deinstall(self):
         if os.path.exists(self.config['dbpath']):
             os.remove(self.config['dbpath'])
@@ -26,7 +34,6 @@ class SQLite(Database):
 
 class MySQL(Database):
     def install(self, interface):
-
         params = {}
         if 'host' in self.config:
             params['host'] = self.config['host']
@@ -38,7 +45,6 @@ class MySQL(Database):
             params['unix_socket'] = self.config['unix_socket']
 
         self.db = mysql.connector.connect(**params)
-
         self.db.cursor().execute(
             "CREATE DATABASE {}".format(self.config['dbname']))
 
@@ -63,7 +69,6 @@ class PostgreSQL(Database):
 
         self.db = psycopg2.connect(**params)
         self.db.autocommit = True
-
         self.db.cursor().execute(
             "CREATE DATABASE {}".format(self.config['dbname']))
 
