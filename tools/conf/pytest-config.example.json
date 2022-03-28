@@ -1,9 +1,8 @@
 {
-    "install": true,
     "interfaces":
     {
         "cli": ".",
-        "ajax": "http://localhost/api/index.php"
+        "http": "http://localhost/api/index.php"
     },
     "databases":
     {
