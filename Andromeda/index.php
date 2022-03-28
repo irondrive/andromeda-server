@@ -1,7 +1,7 @@
 <?php require_once(__DIR__.'/init.php');
 
-if (file_exists(ROOT.'/user-defs.php'))
-    require_once(ROOT.'/user-defs.php');
+if (file_exists(ROOT.'/userInit.php'))
+    require_once(ROOT.'/userInit.php');
 
 /** 
  * An Andromeda API is a pure-PHP transactional REST-ish API.

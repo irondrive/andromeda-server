@@ -16,14 +16,12 @@ combined.php
 test.s3db
 
 Andromeda/DBConfig.php
-Andromeda/user-defs.php
-
-tools/pytest-config.json
+Andromeda/userInit.php
 
 __pycache__
 
 tools/mysql2sqlite
-tools/phpDocumentor.phar
-tools/doctum.phar
-tools/phpunit-9.phar
-tools/.phpunit*
+
+pytest-config.json
+.phpunit.result.cache
+

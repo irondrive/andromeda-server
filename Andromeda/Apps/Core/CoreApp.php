@@ -14,8 +14,9 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\S
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
 require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
-require_once(ROOT."/Core/Logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
+require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
+
+require_once(ROOT."/Apps/Core/ActionLog.php");
 
 use Andromeda\Core\{UnknownActionException, MailSendException};
 
@@ -35,12 +36,27 @@ class AdminRequiredException extends Exceptions\ClientDeniedException { public $
  * Server management/info app included with the framework.
  * 
  * Handles DB config, install, and getting/setting config/logs.
+ * @extends InstalledApp<Config>
  */
 class CoreApp extends InstalledApp
 {
     public static function getName() : string { return 'core'; }
     
-    protected static function getLogClass() : string { return AccessLog::class; }
+    /** Returns true if the accounts app is available to use */
+    private static function hasAccountsApp() : bool
+    {
+        return array_key_exists('accounts', Main::GetInstance()->GetApps());
+    }
+    
+    public static function getLogClass() : string
+    { 
+        if (self::hasAccountsApp())
+        {
+            require_once(ROOT."/Apps/Core/ActionLogFull.php");
+            return ActionLogFull::class;
+        }
+        else return ActionLog::class;
+    }
     
     protected static function getConfigClass() : string { return Config::class; }
     
@@ -54,6 +70,10 @@ class CoreApp extends InstalledApp
     {
         return require_once(ROOT.'/Core/_upgrade/scripts.php');
     }
+    
+    protected static function getInstallFlags() : string { return '[--noapps bool]'; }
+    
+    protected static function getUpgradeFlags() : string { return '[--noapps bool]'; }
     
     protected static function getInstallUsage() : array
     {
@@ -74,7 +94,7 @@ class CoreApp extends InstalledApp
             'usage [--appname alphanum]',
             'dbconf '.Database::GetInstallUsage(),
             ...array_map(function($u){ return "(dbconf) $u"; }, Database::GetInstallUsages()),
-            'listapps',
+            'scanapps',
             'phpinfo',
             'serverinfo',
             'testmail [--mailid id] [--dest email]',
@@ -89,26 +109,14 @@ class CoreApp extends InstalledApp
             'deletemailer --mailid id',
             'geterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetLoadUsage(),
             'counterrors '.ErrorLog::GetPropUsage().' '.ErrorLog::GetCountUsage(),
-            'getrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetLoadUsage().' [--expand bool] [--applogs bool]',
+            'getrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetLoadUsage().' [--actions bool [--expand bool]]',
             'countrequests '.RequestLog::GetPropUsage().' '.RequestLog::GetCountUsage(),
-            'getallactions '.ActionLog::GetPropUsage().' '.ActionLog::GetLoadUsage().' [--expand bool] [--applogs bool]',
-            'countallactions '.ActionLog::GetPropUsage().' '.ActionLog::GetCountUsage()
+            'getactions '.BaseActionLog::GetPropUsage().' '.BaseActionLog::GetLoadUsage().' [--expand bool]',
+            ...array_map(function($u){ return "(getactions) $u"; },BaseActionLog::GetAppPropUsages()),
+            'countactions '.BaseActionLog::GetPropUsage().' '.BaseActionLog::GetCountUsage(),
+            ...array_map(function($u){ return "(countactions) $u"; },BaseActionLog::GetAppPropUsages()),
         ));
-        
-        $logGet = array(); $logCount = array(); $logApps = array();
-        foreach (Main::GetInstance()->GetApps() as $appname=>$app)
-        {
-            if (($class = $app::getLogClass()) !== null)
-            {
-                $logApps[] = $appname;
-                $logGet[] = "(getactions) --appname $appname ".$class::GetPropUsage();
-                $logCount[] = "(countactions) --appname $appname ".$class::GetPropUsage();
-            }
-        }
-        
-        $retval[] = 'getactions --appname '.implode('|',$logApps).' '.BaseAppLog::GetBasePropUsage().' '.BaseAppLog::GetLoadUsage().' [--expand bool]'; array_push($retval, ...$logGet);
-        $retval[] = 'countactions --appname '.implode('|',$logApps).' '.BaseAppLog::GetBasePropUsage().' '.BaseAppLog::GetCountUsage().' [--expand bool]'; array_push($retval, ...$logCount);
-        
+
         return $retval;
     }
 
@@ -131,7 +139,6 @@ class CoreApp extends InstalledApp
         if ($useAuth)
         {
             require_once(ROOT."/Apps/Accounts/Authenticator.php");
-            require_once(ROOT."/Apps/Core/FullAccessLog.php");
             
             $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
@@ -140,46 +147,47 @@ class CoreApp extends InstalledApp
         }
         else // not using the accounts app
         {
-            require_once(ROOT."/Apps/Core/AccessLog.php");
-            
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
-        
-        $accesslog = null; if (isset($this->database))
-            $accesslog = AccessLog::Create($this->database, $authenticator, $isAdmin); 
-        
-        $input->SetLogger($accesslog);
-                
+
+        if (($reqlog = $this->API->GetRequestLog()) !== null)
+        {
+            $actionlog = $reqlog->LogAction($input, self::getLogClass());
+            
+            if ($actionlog instanceof ActionLog)
+                $actionlog->SetAdmin($isAdmin);
+            else if ($actionlog instanceof ActionLogFull)
+                $actionlog->SetAuth($authenticator);
+        }
+        else $actionlog = null;
+
         switch ($action)
         {
             case 'usage':    return $this->GetUsages($input);
             case 'dbconf':   return $this->ConfigDB($input, $isAdmin);
-            case 'listapps': return $this->ListApps($input, $isAdmin);
+            case 'scanapps': return $this->ScanApps($input, $isAdmin);
             
             case 'phpinfo':    $this->PHPInfo($input, $isAdmin); return;
             case 'serverinfo': return $this->ServerInfo($input, $isAdmin);
             
-            case 'testmail':   $this->TestMail($input, $isAdmin, $authenticator, $accesslog); return;
+            case 'testmail':   $this->TestMail($input, $isAdmin, $authenticator, $actionlog); return;
             
-            case 'enableapp':  return $this->EnableApp($input, $isAdmin, $accesslog);
-            case 'disableapp': return $this->DisableApp($input, $isAdmin, $accesslog);
+            case 'enableapp':  return $this->EnableApp($input, $isAdmin);
+            case 'disableapp': return $this->DisableApp($input, $isAdmin);
             
             case 'getconfig':   return $this->RunGetConfig($input, $isAdmin);
             case 'getdbconfig': return $this->GetDBConfig($input, $isAdmin);
-            case 'setconfig':   return $this->RunSetConfig($input, $isAdmin, $accesslog);
+            case 'setconfig':   return $this->RunSetConfig($input, $isAdmin);
             
             case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
-            case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $accesslog);
-            case 'deletemailer': $this->DeleteMailer($input, $isAdmin, $accesslog); return;
+            case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $actionlog);
+            case 'deletemailer': $this->DeleteMailer($input, $isAdmin, $actionlog); return;
             
             case 'geterrors':     return $this->GetErrors($input, $isAdmin);
             case 'counterrors':   return $this->CountErrors($input, $isAdmin);
             
             case 'getrequests':   return $this->GetRequests($input, $isAdmin);
             case 'countrequests': return $this->CountRequests($input, $isAdmin);
-            
-            case 'getallactions':   return $this->GetAllActions($input, $isAdmin);
-            case 'countallactions': return $this->CountAllActions($input, $isAdmin);
             
             case 'getactions':    return $this->GetActions($input, $isAdmin);
             case 'countactions':  return $this->CountActions($input, $isAdmin);            
@@ -231,21 +239,23 @@ class CoreApp extends InstalledApp
     {
         $retval = array('core'=>parent::Install($input));
         
-        // enable all existing apps
-        foreach (Config::ListApps() as $app)
+        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false))
         {
-            $retval[$app] = null;
-            $this->GetConfig()->EnableApp($app);
+            // enable all existing apps
+            foreach (Config::ScanApps() as $app)
+            {
+                $retval[$app] = null;
+                $this->GetConfig()->EnableApp($app);
+            }
+            
+            // install all enabled apps
+            foreach ($this->API->GetApps() as $name=>$app)
+            {
+                if ($app instanceof InstalledApp && $app !== $this)
+                    $retval[$name] = $app->Install($input);
+            }
         }
 
-        // install all enabled apps
-        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false)) 
-            foreach ($this->API->GetApps() as $name=>$app)
-        {
-            if ($app instanceof InstalledApp && $app !== $this) 
-                $retval[$name] = $app->Install($input);
-        }
-        
         return $retval;
     }
 
@@ -269,10 +279,12 @@ class CoreApp extends InstalledApp
         return $retval;
     }
     
-    /** @see Config::ListApps() */
-    public function ListApps(Input $input, bool $isAdmin) : array
+    /** @see Config::ScanApps() */
+    public function ScanApps(Input $input, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException(); return Config::ListApps();
+        if (!$isAdmin) throw new AdminRequiredException(); 
+        
+        return Config::ScanApps();
     }
     
     /**
@@ -308,9 +320,9 @@ class CoreApp extends InstalledApp
         unset($server['argv']); unset($server['argc']);
         
         return array(
-            'uname' => php_uname(),
+            'uname' => php_uname(), 
             'server' => $server,
-            'db' => $this->database->getInfo()
+            'db' => $this->database->GetInternal()->getInfo()
         );
     }
     
@@ -320,7 +332,7 @@ class CoreApp extends InstalledApp
      * @throws UnknownMailerException if the given mailer is invalid
      * @throws MailSendFailException if sending the email fails
      */
-    protected function TestMail(Input $input, bool $isAdmin, $authenticator, ?AccessLog $accesslog) : void
+    protected function TestMail(Input $input, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -342,18 +354,18 @@ class CoreApp extends InstalledApp
         }
         else $mailer = $this->GetConfig()->GetMailer();
         
-        if ($accesslog) $accesslog->LogDetails('mailer',$mailer->ID());
+        if ($actionlog) $actionlog->LogDetails('mailer',$mailer->ID());
         
         try { $mailer->SendMail($subject, $body, false, $dests, false); }
         catch (MailSendException $e) { throw MailSendFailException::Copy($e); }
     }
-    
+
     /**
      * Registers (enables) an app
      * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function EnableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
+    protected function EnableApp(Input $input, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -371,7 +383,7 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function DisableApp(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
+    protected function DisableApp(Input $input, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -401,7 +413,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->database->GetClientObject();
+        return $this->database->GetInternal()->GetConfig();
     }
 
     /**
@@ -410,7 +422,7 @@ class CoreApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunSetConfig(Input $input, bool $isAdmin, ?AccessLog $accesslog) : array
+    protected function RunSetConfig(Input $input, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -437,20 +449,20 @@ class CoreApp extends InstalledApp
      * @return array Emailer
      * @see Emailer::GetClientObject()
      */
-    protected function CreateMailer(Input $input, bool $isAdmin, $authenticator, ?AccessLog $accesslog) : array
+    protected function CreateMailer(Input $input, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $emailer = Emailer::Create($this->database, $input);
+        $emailer = Emailer::Create($this->database, $input)->Save();
         
         if (($dest = $input->GetOptParam('test',SafeParam::TYPE_EMAIL)) !== null)
         {
             $input->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
             
-            $this->TestMail($input, $isAdmin, $authenticator, $accesslog);
+            $this->TestMail($input, $isAdmin, $authenticator, $actionlog);
         }
 
-        if ($accesslog) $accesslog->LogDetails('mailer',$emailer->ID()); 
+        if ($actionlog) $actionlog->LogDetails('mailer',$emailer->ID()); 
         
         return $emailer->GetClientObject();
     }
@@ -460,7 +472,7 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin 
      * @throws UnknownMailerException if given an invalid emailer
      */
-    protected function DeleteMailer(Input $input, bool $isAdmin, ?AccessLog $accesslog) : void
+    protected function DeleteMailer(Input $input, bool $isAdmin, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -469,8 +481,8 @@ class CoreApp extends InstalledApp
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
         
-        if ($accesslog && AccessLog::isFullDetails()) 
-            $accesslog->LogDetails('mailer', $mailer->GetClientObject());
+        if ($actionlog && ActionLog::isFullDetails()) 
+            $actionlog->LogDetails('mailer', $mailer->GetClientObject());
         
         $mailer->Delete();
     }
@@ -509,14 +521,14 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
+        $actions = $input->GetOptParam('actions',SafeParam::TYPE_BOOL) ?? false;
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
-        $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
-        
+
         $logs = RequestLog::LoadByInput($this->database, $input);
         
         $retval = array(); foreach ($logs as $log)
         {
-            $retval[] = $log->GetFullClientObject($expand,$applogs);
+            $retval[] = $log->GetFullClientObject($actions,$expand);
         }
         
         return $retval;
@@ -540,57 +552,13 @@ class CoreApp extends InstalledApp
      * @return array ActionLog
      * @see ActionLog::GetFullClientObject()
      */
-    protected function GetAllActions(Input $input, bool $isAdmin) : array
-    {
-        if (!$isAdmin) throw new AdminRequiredException();
-        
-        $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
-        $applogs = $input->GetOptParam('applogs',SafeParam::TYPE_BOOL) ?? false;
-        
-        $logs = ActionLog::LoadByInput($this->database, $input);
-        
-        $retval = array(); foreach ($logs as $log)
-        {
-            $retval[] = $log->GetFullClientObject($expand,$applogs);
-        }
-        
-        return $retval;
-    }
-    
-    /**
-     * Counts all action logs matching the given input
-     * @throws AdminRequiredException if not admin
-     * @return int log entry count
-     */
-    protected function CountAllActions(Input $input, bool $isAdmin) : int
-    {
-        if (!$isAdmin) throw new AdminRequiredException();
-        
-        return ActionLog::CountByInput($this->database, $input);
-    }
-    
-    /**
-     * Returns all app action logs matching the given input
-     * @throws AdminRequiredException if not admin
-     * @throws InvalidAppException if the given app is invalid
-     * @return array BaseAppLog
-     * @see BaseAppLog::GetFullClientObject()
-     */
     protected function GetActions(Input $input, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $appname = $input->GetParam("appname",SafeParam::TYPE_ALPHANUM);
-        
-        $apps = $this->API->GetApps(); 
-        
-        if (!array_key_exists($appname, $apps) ||
-            ($class = $apps[$appname]::getLogClass()) === null)
-            throw new InvalidAppException();        
-        
         $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
         
-        $logs = $class::LoadByInput($this->database, $input);
+        $logs = BaseActionLog::LoadByInput($this->database, $input);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -601,24 +569,15 @@ class CoreApp extends InstalledApp
     }
     
     /**
-     * Counts all app action logs matching the given input
+     * Counts all action logs matching the given input
      * @throws AdminRequiredException if not admin
-     * @throws InvalidAppException if the given app is invalid
      * @return int log entry count
      */
     protected function CountActions(Input $input, bool $isAdmin) : int
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $appname = $input->GetParam("appname",SafeParam::TYPE_ALPHANUM);
-        
-        $apps = $this->API->GetApps();
-        
-        if (!array_key_exists($appname, $apps) ||
-            ($class = $apps[$appname]::getLogClass()) === null)
-            throw new InvalidAppException();   
-        
-        return $class::CountByInput($this->database, $input);
+        return BaseActionLog::CountByInput($this->database, $input);
     }
 }
 

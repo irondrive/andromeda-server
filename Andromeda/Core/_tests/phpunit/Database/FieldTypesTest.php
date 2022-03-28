@@ -7,6 +7,7 @@ require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
+require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Database;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 class TestObject1 extends BaseObject { use TableNoChildren; }
@@ -14,348 +15,681 @@ class TestObject2 extends BaseObject { use TableNoChildren; }
 
 class FieldTypesTest extends \PHPUnit\Framework\TestCase
 {
-    protected function getMockParent() : BaseObject
-    {
-        $database = $this->createMock(ObjectDatabase::class);
-        $parent = $this->createMock(BaseObject::class);
-        $parent->method('GetDatabase')->willReturn($database);
-        return $parent;
-    }
-    
-    public function testSaveOnRollback() : void
-    {
-        $parent = $this->getMockParent();
-        
-        $field = (new StringType('myfield'))->SetParent($parent);
-        $this->assertFalse($field->isSaveOnRollback());
-        
-        $field = (new StringType('myfield', true))->SetParent($parent);
-        $this->assertTrue($field->isSaveOnRollback());
-    }
-    
-    public function testID() : void
+    public function testBasic() : void
     {
         $database = $this->CreateMock(ObjectDatabase::class);
         $parent = new TestObject1($database, array('id'=>$id='test123'));
         $field = (new StringType('myfield'))->SetParent($parent);
         
         $this->assertSame("$id:myfield", $field->ID());
+        $this->assertSame("myfield", $field->GetName());
+        
+        $this->assertSame(0, $field->GetDelta());
+        $this->assertFalse($field->isModified());
     }
     
-    public function testNullDefault() : void
+    public function testSaveOnRollback() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         
-        $field = (new NullIntType('myfield', false))->SetParent($parent);
-        $this->assertFalse($field->isModified());
+        $field = (new StringType('myfield'))->SetParent($parent);
+        $this->assertFalse($field->isSaveOnRollback());
+        
+        $field = (new StringType('myfield',true))->SetParent($parent);
+        $this->assertTrue($field->isSaveOnRollback());
+    }
+    
+    public function testResetDelta() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new StringType('myfield'))->SetParent($parent);
+
+        $field->SetValue('test');
+        $this->assertSame(1, $field->GetDelta());
+        
+        $field->ResetDelta();
         $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testNotifyModified() : void
+    {
+        $database = $this->CreateMock(ObjectDatabase::class);
+        $parent = new TestObject1($database, array());
+        $field = (new StringType('myfield'))->SetParent($parent);
+        
+        $database->expects($this->once())->method('notifyModified');
+        
+        $this->assertTrue($field->SetValue('test'));
+        $this->assertFalse($field->SetValue('test'));
+        $this->assertTrue($field->isModified());
+    }
+    
+    protected function getParentWithDbStrings(bool $dbStrings) : BaseObject
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        $parent = $this->createMock(BaseObject::class);
+        
+        $parent->method('GetDatabase')->willReturn($objdb);
+        $database->method('DataAlwaysStrings')->willReturn($dbStrings);
+        
+        return $parent;
+    }
+    
+    public function testNullStringValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullStringType('myfield'))->SetParent($parent);
+        
+        $this->assertFalse($field->SetValue(null)); 
         $this->assertSame(null, $field->TryGetValue());
         
-        $field = (new NullIntType('myfield', false, 5))->SetParent($parent);
-        $this->assertTrue($field->isModified());
-        $this->assertSame(1, $field->GetDelta());
-        $this->assertSame(5, $field->TryGetValue());
+        $this->assertTrue($field->SetValue('test')); 
+        $this->assertSame('test', $field->TryGetValue());
+        
+        $this->assertFalse($field->SetValue('test')); 
+        $this->assertSame('test', $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue('test2'));
+        $this->assertSame('test2', $field->TryGetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
     }
     
-    public function testDefault() : void
+    public function testNullStringTempValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield', false, 5))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullStringType('myfield'))->SetParent($parent);
         
-        $this->assertTrue($field->isModified());
-        $this->assertSame(1, $field->GetDelta());
-        $this->assertSame(5, $field->GetValue());
+        $this->assertFalse($field->SetValue('test',true));
+        $this->assertSame('test', $field->TryGetValue());
+        $this->assertSame(null, $field->TryGetValue(false));
+        $this->assertSame(null, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testNullStringDBValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullStringType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(''); $this->assertSame('', $field->TryGetValue()); $this->assertSame('', $field->GetDBValue());
+        $field->InitDBValue('5'); $this->assertSame('5', $field->TryGetValue()); $this->assertSame('5', $field->GetDBValue());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field = (new IntType('myfield', false, "test"))->SetParent($parent); /** @phpstan-ignore-line */
+        $field->InitDBValue(0);
     }
     
-    public function testRestoreDefault() : void
+    public function testNullStringDefault() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield', false, 5))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
         
-        $this->assertSame(5, $field->GetValue());
-        
-        $field->SetValue(10);
-        $this->assertSame(10, $field->GetValue());
-        
-        $field->RestoreDefault();
-        $this->assertSame(5, $field->GetValue());
-        
-        $field = (new NullIntType('myfield'))->SetParent($parent);
-        
-        $this->assertSame(null, $field->TryGetValue());
-        
-        $field->SetValue(10);
-        $this->assertSame(10, $field->TryGetValue());
-        
-        $field->RestoreDefault();
-        $this->assertSame(null, $field->TryGetValue());
+        $field = (new NullStringType('myfield'))->SetParent($parent);
+        $this->assertNull($field->TryGetValue());
+
+        $field = (new NullStringType('myfield', false, 'a'))->SetParent($parent);
+        $this->assertSame('a', $field->TryGetValue());
     }
     
-    public function testDelta() : void
+    public function testStringValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new StringType('myfield'))->SetParent($parent);
         
-        $this->assertSame(0, $field->GetDelta());
-        $this->assertFalse($field->isModified());
+        $this->assertTrue($field->SetValue('test'));
+        $this->assertSame('test', $field->GetValue());
         
-        $this->assertTrue($field->SetValue(5)); 
-        $this->assertSame(1, $field->GetDelta());
-        $this->assertTrue($field->isModified());
+        $this->assertFalse($field->SetValue('test'));
+        $this->assertSame('test', $field->GetValue());
         
-        $this->assertTrue($field->SetValue(6)); 
+        $this->assertTrue($field->SetValue('test2'));
+        $this->assertSame('test2', $field->GetValue());
+        
         $this->assertSame(2, $field->GetDelta());
-        
-        $this->assertTrue($field->SetValue(7)); 
-        $this->assertSame(3, $field->GetDelta());
-        
-        $this->assertFalse($field->SetValue(7)); 
-        $this->assertSame(3, $field->GetDelta());
-    }
-
-    public function testInitValue() : void
-    {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
-            
-        $field->InitDBValue(75);
-        
-        $this->assertSame(0, $field->GetDelta());
-        $this->assertFalse($field->isModified());
-        $this->assertSame(75, $field->GetDBValue());
-        $this->assertSame(75, $field->GetValue());
-        $this->assertSame(75, $field->GetValue(false));
     }
     
-    public function testTempValue() : void
+    public function testStringTempValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new StringType('myfield'))->SetParent($parent);
         
-        $field->InitDBValue(75);
+        $field->InitDBValue('init');
         
-        $field->SetValue(22, true);
-        $this->assertSame(22, $field->GetValue());
-        $this->assertSame(75, $field->GetValue(false));
-        $this->assertSame(75, $field->GetDBValue());
-        
-        $this->assertFalse($field->isModified());
-        $this->assertSame(0, $field->GetDelta());
-    }
-
-    public function testSaveDBValue() : void
-    {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
-        
-        $this->assertSame(0, $field->GetDelta());
-        
-        $field->SetValue(5);
-        
-        $this->assertSame(1, $field->GetDelta());
-        $this->assertSame(5, $field->GetDBValue());
-        $this->assertSame(5, $field->SaveDBValue());
+        $this->assertFalse($field->SetValue('test',true));
+        $this->assertSame('test', $field->GetValue());
+        $this->assertSame('init', $field->GetValue(false));
+        $this->assertSame('init', $field->GetDBValue());
         $this->assertSame(0, $field->GetDelta());
     }
     
-    public function testCheckValueInit() : void
+    public function testStringDBValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new StringType('myfield'))->SetParent($parent);
         
-        $this->assertFalse($field->isInitialized());
-        $field->InitDBValue(75);
+        $field->SetValue('tmp',true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(''); $this->assertSame('', $field->GetValue()); $this->assertSame('', $field->GetDBValue());
+        $field->InitDBValue('5'); $this->assertSame('5', $field->GetValue()); $this->assertSame('5', $field->GetDBValue());
+        
         $this->assertTrue($field->isInitialized());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->InitDBValue("test");
+        $field->InitDBValue(0);
     }
     
-    public function testInitBool() : void
+    public function testStringDefault() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
+
+        $field = (new StringType('myfield', false, 'a'))->SetParent($parent);
+        $this->assertSame('a', $field->GetValue());
+    }
+    
+    public function testNullBoolValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        
+        $this->assertFalse($field->SetValue(null));
+        $this->assertSame(null, $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue(true));
+        $this->assertSame(true, $field->TryGetValue());
+        
+        $this->assertFalse($field->SetValue(true));
+        $this->assertSame(true, $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue(false));
+        $this->assertSame(false, $field->TryGetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
+    }
+    
+    public function testNullBoolTempValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        
+        $this->assertFalse($field->SetValue(true,true));
+        $this->assertSame(true, $field->TryGetValue());
+        $this->assertSame(null, $field->TryGetValue(false));
+        $this->assertSame(null, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testNullBoolDBValue() : void
+    {
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(''); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+    }
+    
+    public function testNullBoolDBValueStrict() : void
+    {
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(0); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue(1); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue(99); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        
+        $this->expectException(FieldDataTypeMismatch::class);
+        $field->InitDBValue('1');
+    }
+    
+    public function testNullBoolDefault() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        
+        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        $this->assertNull($field->TryGetValue());
+        
+        $field = (new NullBoolType('myfield', false, false))->SetParent($parent);
+        $this->assertSame(false, $field->TryGetValue());
+        
+        $field = (new NullBoolType('myfield', false, true))->SetParent($parent);
+        $this->assertSame(true, $field->TryGetValue());
+    }
+    
+    public function testBoolValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
         $field = (new BoolType('myfield'))->SetParent($parent);
         
-        $field->InitDBValue(3);
+        $this->assertTrue($field->SetValue(false));
+        $this->assertSame(false, $field->GetValue());
         
+        $this->assertFalse($field->SetValue(false));
+        $this->assertSame(false, $field->GetValue());
+        
+        $this->assertTrue($field->SetValue(true));
+        $this->assertSame(true, $field->GetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
+    }
+    
+    public function testBoolTempValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new BoolType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(0);
+        
+        $this->assertFalse($field->SetValue(true,true));
+        $this->assertSame(true, $field->GetValue());
+        $this->assertSame(false, $field->GetValue(false));
+        $this->assertSame(0, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testBoolDBValue() : void
+    {
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new BoolType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(true,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(''); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
+    }
+    
+    public function testBoolDBValueStrict() : void
+    {
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new BoolType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(false,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(0); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue(1); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue(99); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
+        
+        $this->expectException(FieldDataTypeMismatch::class);
+        $field->InitDBValue('1');
+    }
+    
+    public function testBoolDefault() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        
+        $field = (new BoolType('myfield', false, false))->SetParent($parent);
+        $this->assertSame(false, $field->GetValue());
+        
+        $field = (new BoolType('myfield', false, true))->SetParent($parent);
         $this->assertSame(true, $field->GetValue());
     }
     
-    public function testCheckValueSet() : void
+    public function testNullIntValue() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullIntType('myfield'))->SetParent($parent);
+        
+        $this->assertFalse($field->SetValue(null));
+        $this->assertSame(null, $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue(1));
+        $this->assertSame(1, $field->TryGetValue());
+        
+        $this->assertFalse($field->SetValue(1));
+        $this->assertSame(1, $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue(0));
+        $this->assertSame(0, $field->TryGetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
+    }
+    
+    public function testNullIntTempValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullIntType('myfield'))->SetParent($parent);
+        
+        $this->assertFalse($field->SetValue(1,true));
+        $this->assertSame(1, $field->TryGetValue());
+        $this->assertSame(null, $field->TryGetValue(false));
+        $this->assertSame(null, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testNullIntDBValue() : void
+    {
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new NullIntType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(''); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
+    }
+    
+    public function testNullIntDBValueStrict() : void
+    {
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new NullIntType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(0); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue(1); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue(99); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
+        
+        $this->expectException(FieldDataTypeMismatch::class);
+        $field->InitDBValue('1');
+    }
+    
+    public function testNullIntDefault() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        
+        $field = (new NullIntType('myfield'))->SetParent($parent);
+        $this->assertNull($field->TryGetValue());
+
+        $field = (new NullIntType('myfield', false, 0))->SetParent($parent);
+        $this->assertSame(0, $field->TryGetValue());
+        
+        $field = (new NullIntType('myfield', false, 1))->SetParent($parent);
+        $this->assertSame(1, $field->TryGetValue());
+    }
+    
+    public function testIntValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
         $field = (new IntType('myfield'))->SetParent($parent);
         
-        $this->assertFalse($field->isInitialized());
-        $field->SetValue(75);
+        $this->assertTrue($field->SetValue(0));
+        $this->assertSame(0, $field->GetValue());
+        
+        $this->assertFalse($field->SetValue(0));
+        $this->assertSame(0, $field->GetValue());
+        
+        $this->assertTrue($field->SetValue(1));
+        $this->assertSame(1, $field->GetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
+    }
+    
+    public function testIntTempValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new IntType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(0);
+        
+        $this->assertFalse($field->SetValue(1,true));
+        $this->assertSame(1, $field->GetValue());
+        $this->assertSame(0, $field->GetValue(false));
+        $this->assertSame(0, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testIntDBValue() : void
+    {
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new IntType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(1,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(''); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(1, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(99, $field->GetValue()); $this->assertSame(99, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
+    }
+    
+    public function testIntDBValueStrict() : void
+    {
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new IntType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(0,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(0); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue(1); $this->assertSame(1, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue(99); $this->assertSame(99, $field->GetValue()); $this->assertSame(99, $field->GetDBValue());
+        
         $this->assertTrue($field->isInitialized());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue("test"); /** @phpstan-ignore-line */
+        $field->InitDBValue('1');
     }
     
-    public function testNullString() : void
+    public function testIntDefault() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new NullStringType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
         
-        $field->SetValue(null);
-        $field->SetValue("test");
+        $field = (new IntType('myfield', false, 0))->SetParent($parent);
+        $this->assertSame(0, $field->GetValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(57); /** @phpstan-ignore-line */
+        $field = (new IntType('myfield', false, 1))->SetParent($parent);
+        $this->assertSame(1, $field->GetValue());
     }
     
-    public function testNullEmptyString() : void
+    public function testNullFloatValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new NullStringType('myfield'))->SetParent($parent);
-        
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue("");
-    }
-    
-    public function testNullBool() : void
-    {
-        $parent = $this->getMockParent();
-        $field = (new NullBoolType('myfield'))->SetParent($parent);
-        
-        $field->SetValue(null);
-        $this->assertSame(null, $field->GetDBValue());
-        
-        $field->SetValue(false);
-        $field->SetValue(true);
-        
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(57); /** @phpstan-ignore-line */
-    }
-    
-    public function testNullInt() : void
-    {
-        $parent = $this->getMockParent();
-        $field = (new NullIntType('myfield'))->SetParent($parent);
-        
-        $field->SetValue(null);
-        $field->SetValue(0);
-        $field->SetValue(57);
-        
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(57.123); /** @phpstan-ignore-line */
-    }
-    
-    public function testNullFloat() : void
-    {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         $field = (new NullFloatType('myfield'))->SetParent($parent);
         
-        $field->SetValue(null);
-        $field->SetValue(0.0);
-        $field->SetValue(57.123);
+        $this->assertFalse($field->SetValue(null));
+        $this->assertSame(null, $field->TryGetValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(57);
+        $this->assertTrue($field->SetValue(1.1));
+        $this->assertSame(1.1, $field->TryGetValue());
+        
+        $this->assertFalse($field->SetValue(1.1));
+        $this->assertSame(1.1, $field->TryGetValue());
+        
+        $this->assertTrue($field->SetValue(0));
+        $this->assertSame(0.0, $field->TryGetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
     }
     
-    public function testString() : void
+    public function testNullFloatTempValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new StringType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new NullFloatType('myfield'))->SetParent($parent);
         
-        $field->SetValue("test");
-        
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
+        $this->assertFalse($field->SetValue(1.1,true));
+        $this->assertSame(1.1, $field->TryGetValue());
+        $this->assertSame(null, $field->TryGetValue(false));
+        $this->assertSame(null, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
     }
     
-    public function testEmptyString() : void
+    public function testNullFloatDBValue() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new StringType('myfield'))->SetParent($parent);
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new NullFloatType('myfield'))->SetParent($parent);
         
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue("");
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(''); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
     }
     
-    public function testBool() : void
+    public function testNullFloatDBValueStrict() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new BoolType('myfield'))->SetParent($parent);
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new NullFloatType('myfield'))->SetParent($parent);
         
-        $field->SetValue(false);
-        $this->assertSame(0, $field->GetDBValue());
-        
-        $field->SetValue(true);
-        $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
+        $field->InitDBValue(0.0); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue(1.1); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
+        $field->InitDBValue('1.1');
     }
     
-    public function testInt() : void
+    public function testNullFloatDefault() : void
     {
-        $parent = $this->getMockParent();
-        $field = (new IntType('myfield'))->SetParent($parent);
+        $parent = $this->createMock(BaseObject::class);
         
-        $field->SetValue(0);
-        $field->SetValue(57);
+        $field = (new NullFloatType('myfield'))->SetParent($parent);
+        $this->assertNull($field->TryGetValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
+        $field = (new NullFloatType('myfield', false, 0.0))->SetParent($parent);
+        $this->assertSame(0.0, $field->TryGetValue());
+        
+        $field = (new NullFloatType('myfield', false, 1.1))->SetParent($parent);
+        $this->assertSame(1.1, $field->TryGetValue());
     }
     
-    public function testFloat() : void
+    public function testFloatValue() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         $field = (new FloatType('myfield'))->SetParent($parent);
         
-        $field->SetValue(0.0);
-        $field->SetValue(57.123);
+        $this->assertTrue($field->SetValue(0.0));
+        $this->assertSame(0.0, $field->GetValue());
+        
+        $this->assertFalse($field->SetValue(0.0));
+        $this->assertSame(0.0, $field->GetValue());
+        
+        $this->assertTrue($field->SetValue(1.1));
+        $this->assertSame(1.1, $field->GetValue());
+        
+        $this->assertSame(2, $field->GetDelta());
+    }
+    
+    public function testFloatTempValue() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $field = (new FloatType('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(0.0);
+        
+        $this->assertFalse($field->SetValue(1.1,true));
+        $this->assertSame(1.1, $field->GetValue());
+        $this->assertSame(0.0, $field->GetValue(false));
+        $this->assertSame(0.0, $field->GetDBValue());
+        $this->assertSame(0, $field->GetDelta());
+    }
+    
+    public function testFloatDBValue() : void
+    {
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new FloatType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(1.1,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(''); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->GetValue()); $this->assertSame(1.1, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
+    }
+    
+    public function testFloatDBValueStrict() : void
+    {
+        $parent = $this->getParentWithDbStrings(false);
+        $field = (new FloatType('myfield'))->SetParent($parent);
+        
+        $field->SetValue(0.0,true);
+        $this->assertTrue($field->isInitialized());
+        $this->assertFalse($field->isInitialized(false));
+        
+        $field->InitDBValue(0.0); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue(1.1); $this->assertSame(1.1, $field->GetValue()); $this->assertSame(1.1, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
+        $field->InitDBValue('1');
     }
-
+    
+    public function testFloatDefault() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        
+        $field = (new FloatType('myfield', false, 0.0))->SetParent($parent);
+        $this->assertSame(0.0, $field->GetValue());
+        
+        $field = (new FloatType('myfield', false, 1.1))->SetParent($parent);
+        $this->assertSame(1.1, $field->GetValue());
+    }
+    
     public function testCounter() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->getParentWithDbStrings(false);
         $field = (new Counter('myfield'))->SetParent($parent);
         
         $this->assertFalse($field->isModified());
+        
         $this->assertSame(0, $field->GetValue());
         $this->assertSame(0, $field->GetDelta());
         $this->assertSame(0, $field->GetDBValue());
         
         $field->DeltaValue(5);
+        $this->assertTrue($field->isModified());
         $this->assertSame(5, $field->GetDelta());
+        $this->assertSame(5, $field->GetDBValue());
+        $this->assertSame(5, $field->GetValue());
         
         $field->InitDBValue(100);
         $this->assertFalse($field->isModified());
+        $this->assertSame(0, $field->GetDelta());
         $this->assertSame(0, $field->GetDBValue());
+        $this->assertSame(100, $field->GetValue());
         
         $field->DeltaValue();
-        $this->assertSame(101, $field->GetValue());
         $this->assertSame(1, $field->GetDelta());
         $this->assertSame(1, $field->GetDBValue());
+        $this->assertSame(101, $field->GetValue());
         
         $field->DeltaValue(49);
         $this->assertSame(50, $field->GetDelta());
+        $this->assertSame(50, $field->GetDBValue());
         $this->assertSame(150, $field->GetValue());
         
         $field->DeltaValue(-100);
         $this->assertSame(-50, $field->GetDelta());
+        $this->assertSame(-50, $field->GetDBValue());
         $this->assertSame(50, $field->GetValue());
         
-        $this->assertSame(-50, $field->SaveDBValue());
-        $this->assertSame(50, $field->GetValue());
+        $field->ResetDelta();
         $this->assertSame(0, $field->GetDelta());
+        $this->assertSame(0, $field->GetDBValue());
+        $this->assertSame(50, $field->GetValue());
+
+        $parent = $this->getParentWithDbStrings(true);
+        $field = (new Counter('myfield'))->SetParent($parent);
+        
+        $field->InitDBValue(''); $this->assertSame(0, $field->GetValue());
+        $field->InitDBValue('0'); $this->assertSame(0, $field->GetValue());
+        $field->InitDBValue('1'); $this->assertSame(1, $field->GetValue());
+        $field->InitDBValue('99'); $this->assertSame(99, $field->GetValue());
     }
     
     public function testCounterLimitCheck() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         
         $limit = (new NullIntType('mylimit'))->SetParent($parent);
         $counter = (new Counter('mycounter', false, $limit))->SetParent($parent);
@@ -378,7 +712,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testCounterLimitDelta() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         
         $limit = (new NullIntType('mylimit', false, 10))->SetParent($parent);
         $this->assertSame(10, $limit->TryGetValue());
@@ -394,47 +728,53 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $counter->InitDBValue(0);
         $counter->DeltaValue(20);
     }
-    
+
     public function testJsonArray() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         $field = (new JsonArray('myjson'))->SetParent($parent);
+        
+        $this->assertSame(array(), $field->GetArray()); // default
+        $this->assertSame('[]', $field->GetDBValue()); // default
+        
+        $field->InitDBValue("");
+        $this->assertSame(array(), $field->GetArray());
         
         $json = '{"key1":"val1","key2":5}';
         $field->InitDBValue($json);
-        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->GetValue());
+        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->GetArray());
         $this->assertSame($json, $field->GetDBValue());
         
         $array = array('key3'=>'val3','key4'=>7);
-        $field->SetValue($array);
-        $this->assertSame($array, $field->GetValue());
+        $field->SetArray($array);
+        $this->assertSame($array, $field->GetArray());
         $this->assertSame('{"key3":"val3","key4":7}', $field->GetDBValue());
-        
-        $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
     }
     
     public function testNullJsonArray() : void
     {
-        $parent = $this->getMockParent();
+        $parent = $this->createMock(BaseObject::class);
         $field = (new NullJsonArray('myjson'))->SetParent($parent);
         
-        $field->InitDBValue(null);
-        $this->assertSame(null, $field->GetDBValue());
-        $this->assertSame(null, $field->TryGetValue());
-
+        $this->assertSame(null, $field->TryGetArray()); // default
+        $this->assertSame(null, $field->GetDBValue()); // default
+        
+        $field->InitDBValue("");
+        $this->assertSame(null, $field->TryGetArray());
+        $this->assertSame(null, $field->GetDBValue()); 
+        
         $json = '{"key1":"val1","key2":5}';
         $field->InitDBValue($json);
-        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->TryGetValue());
+        $this->assertSame(array('key1'=>'val1','key2'=>5), $field->TryGetArray());
         $this->assertSame($json, $field->GetDBValue());
 
-        $field->SetValue(null);
+        $field->SetArray(null);
         $this->assertSame(null, $field->GetDBValue());
-        $this->assertSame(null, $field->TryGetValue());
+        $this->assertSame(null, $field->TryGetArray());
         
         $array = array('key3'=>'val3','key4'=>7);
-        $field->SetValue($array);
-        $this->assertSame($array, $field->TryGetValue());
+        $field->SetArray($array);
+        $this->assertSame($array, $field->TryGetArray());
         $this->assertSame('{"key3":"val3","key4":7}', $field->GetDBValue());
     }
     
@@ -446,9 +786,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
  
         $field = (new NullObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $this->assertNull($field->GetValue());
-
+        $this->assertNull($field->TryGetObject()); // default
+        $this->assertNull($field->TryGetObjectID());
+        
         $field->InitDBValue($id='test123');
+        $this->assertSame($id, $field->TryGetObjectID());
         $this->assertSame($id, $field->GetDBValue());
         
         $database->expects($this->once())
@@ -456,7 +798,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
             ->with(TestObject1::class, 'id', $id)
             ->willReturn($obj = $this->createMock(TestObject1::class));
         
-        $this->assertSame($obj, $field->GetValue());
+        $this->assertSame($obj, $field->TryGetObject());
     }
     
     public function testNullObjectValue() : void
@@ -467,21 +809,21 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new NullObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $database->expects($this->exactly(0))
-            ->method('TryLoadUniqueByKey');
-    
-        $field->InitDBValue('test123');
+        $obj = new TestObject1($database, array('id'=>$id='test456'));
         
-        $obj = new TestObject1($database, array('id'=>'test456'));
+        $database->expects($this->once())
+            ->method('TryLoadUniqueByKey')->willReturn($obj);
         
-        $field->SetValue($obj);
-        $this->assertSame($obj, $field->GetValue());
+        $field->SetObject($obj);
+        $this->assertSame($obj, $field->TryGetObject());
+        $this->assertSame($id, $field->TryGetObjectID());
         
-        $field->SetValue(null);
-        $this->assertSame(null, $field->GetValue());
+        $field->SetObject(null);
+        $this->assertSame(null, $field->TryGetObject());
+        $this->assertSame(null, $field->TryGetObjectID());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
+        $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
     
     public function testObjectInit() : void
@@ -492,17 +834,22 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new ObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $obj = $this->createStub(TestObject1::class);
+        $this->assertFalse($field->isInitialized());
         
         $field->InitDBValue($id='test123');
+        $this->assertSame($id, $field->GetObjectID());
         $this->assertSame($id, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
+        
+        $obj = $this->createStub(TestObject1::class);
         
         $database->expects($this->once())
             ->method('TryLoadUniqueByKey')
             ->with(TestObject1::class, 'id', $id)
             ->willReturn($obj);
             
-        $this->assertSame($obj, $field->GetValue());
+        $this->assertSame($obj, $field->GetObject());
     }
     
     public function testObjectValue() : void
@@ -513,38 +860,16 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new ObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $database->expects($this->exactly(0))
-            ->method('TryLoadUniqueByKey');
+        $obj = new TestObject1($database, array('id'=>$id='test456'));
         
-        $field->InitDBValue('test123');
-        
-        $obj = new TestObject1($database, array('id'=>'test456'));
-        
-        $field->SetValue($obj);
-        $this->assertSame($obj, $field->GetValue());
-        
-        $field->RestoreDefault();
+        $database->expects($this->once())
+            ->method('TryLoadUniqueByKey')->willReturn($obj);
+
+        $field->SetObject($obj);
+        $this->assertSame($obj, $field->GetObject());
+        $this->assertSame($id, $field->GetObjectID());
         
         $this->expectException(FieldDataTypeMismatch::class);
-        $field->SetValue(null); /** @phpstan-ignore-line */
-    }
-
-    public function testObjectDBValue() : void
-    {
-        $database = $this->createMock(ObjectDatabase::class);
-        $parent = $this->createMock(BaseObject::class);
-        $parent->method('GetDatabase')->willReturn($database);
-        
-        $field = (new ObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
-        $obj = new TestObject1($database, array('id'=>'test123'));
-        
-        $database->expects($this->once())->method('TryLoadUniqueByKey')->willReturn($obj);
-        
-        $field->SetValue($obj);
-        $this->assertSame($obj, $field->GetValue()); // no DB call (have temp obj)
-        $this->assertSame($obj->ID(), $field->GetDBValue());
-        $this->assertSame($obj->ID(), $field->GetObjectID());
-        $this->assertSame($obj->ID(), $field->SaveDBValue());
-        $this->assertSame($obj, $field->GetValue()); // calls DB (no temp obj)
+        $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
 }

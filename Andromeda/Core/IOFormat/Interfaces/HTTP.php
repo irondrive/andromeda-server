@@ -28,7 +28,7 @@ class RemoteInvalidException extends Exceptions\ServerException { public $messag
 class MethodNotAllowedException extends Exceptions\ClientException { public $code = 405; public $message = "METHOD_NOT_ALLOWED"; }
 
 /** The interface for using Andromeda over a web server */
-class AJAX extends IOInterface
+class HTTP extends IOInterface
 {
     public static function isApplicable() : bool
     {
@@ -185,9 +185,8 @@ class AJAX extends IOInterface
             
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true);
-        }        
-        
-        if ($this->outmode === self::OUTPUT_JSON)
+        }
+        else if ($this->outmode === self::OUTPUT_JSON)
         {
             if (!$multi && !headers_sent()) 
             {
@@ -200,7 +199,7 @@ class AJAX extends IOInterface
             $outdata = Utilities::JSONEncode($outdata);
             
             if ($this->isMultiOutput()) 
-                echo static::formatSize(strlen($outdata));
+                echo parent::formatSize(strlen($outdata));
             
             echo $outdata;
         }

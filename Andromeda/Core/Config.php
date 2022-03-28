@@ -129,7 +129,7 @@ final class Config extends BaseConfig
         $this->read_only = $fields[] =          new FieldTypes\BoolType('read_only',false, false);
         $this->enabled = $fields[] =            new FieldTypes\BoolType('enabled',false, true);
         $this->email = $fields[] =              new FieldTypes\BoolType('email',false, true);
-        $this->apps = $fields[] =               new FieldTypes\JsonArray('apps',false, array());
+        $this->apps = $fields[] =               new FieldTypes\JsonArray('apps',false);
         
         $this->requestlog_db = $fields[] =      new FieldTypes\BoolType('requestlog_db',false, false);
         $this->requestlog_file  = $fields[] =   new FieldTypes\BoolType('requestlog_file',false, false);
@@ -218,7 +218,7 @@ final class Config extends BaseConfig
      * returns the array of registered apps
      * @return String[]
      */
-    public function GetApps() : array { return $this->apps->GetValue(); }
+    public function GetApps() : array { return $this->apps->GetArray(); }
     
     /** List all installable app folders that exist in the filesystem */
     public static function ScanApps() : array
@@ -256,7 +256,7 @@ final class Config extends BaseConfig
         
         $capps = $this->GetApps();        
         if (!in_array($app, $capps)) $capps[] = $app;        
-        $this->apps->SetValue($capps); return $this;
+        $this->apps->SetArray($capps); return $this;
     }
     
     /** Unregisters the specified app name */
@@ -275,7 +275,7 @@ final class Config extends BaseConfig
         
         $capps = $this->GetApps(); unset($capps[$key]);
         
-        $this->apps->SetValue(array_values($capps)); return $this;
+        $this->apps->SetArray(array_values($capps)); return $this;
     }
     
     /** Returns whether the server is allowed to respond to requests */

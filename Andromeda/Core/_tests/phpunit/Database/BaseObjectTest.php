@@ -13,6 +13,8 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
     {
         // test BaseCreate, construct, ID()
         $database = $this->createMock(ObjectDatabase::class);
+        $database->expects($this->once())->method('notifyCreated');
+        
         $obj = EasyObject::Create($database);
         
         $this->assertInstanceOf(EasyObject::class, $obj);
@@ -57,14 +59,10 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($obj->isDeleted());
         
         $obj = new EasyObject($database, array());
-        
-        $obj->SetGeneralKey(5);
-        $this->assertSame(5, $obj->GetGeneralKey());
+        $this->assertSame(5, $obj->SetGeneralKey(5)->GetGeneralKey());
         
         $obj->notifyDeleted();
         $this->assertTrue($obj->isDeleted());
-        
-        $this->assertSame(null, $obj->GetGeneralKey()); //default
     }
     
     public function testDeleteCreated() : void

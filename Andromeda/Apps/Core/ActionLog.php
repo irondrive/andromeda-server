@@ -3,50 +3,51 @@
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
-require_once(ROOT."/Core/Logging/BaseAppLog.php"); use Andromeda\Core\Logging\BaseAppLog;
+require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
 /** Core app access log for use without the accounts app installed */
-class AccessLog extends BaseAppLog
-{    
-    public static function GetFieldTemplate() : array
-    {
-        return array(
-            'admin' => new FieldTypes\BoolType(),
-            'account' => new FieldTypes\BoolType(), // unused
-            'sudouser' => new FieldTypes\BoolType(), // unused
-            'client' => new FieldTypes\BoolType() // unused
-        );
-    }
+final class ActionLog extends BaseActionLog
+{
+    use TableNoChildren;
     
-    /** 
-     * Creates a new log object that logs whether or not the request was done as admin - may return null
-     * 
-     * $auth is unused - just to retain signature compatibility with FullAccessLog::Create()
-     * @see BaseAppLog::BaseRunCreate()
-     */
-    public static function Create(ObjectDatabase $database, $auth, bool $isAdmin) : ?self
+    /** True if the action was done as admin */
+    private FieldTypes\NullBoolType $admin;
+    
+    protected function CreateFields() : void
     {
-        $obj = parent::BaseRunCreate($database);
+        $fields = array();
         
-        if ($obj !== null) $obj->SetScalar('admin', $isAdmin);
+        $this->admin = $fields[] = new FieldTypes\NullBoolType('admin');
         
-        return $obj;
+        $fields[] = new FieldTypes\NullStringType('account'); // unused 
+        $fields[] = new FieldTypes\NullStringType('sudouser'); // unused
+        $fields[] = new FieldTypes\NullStringType('client'); // unused
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
     }
 
-    public static function GetPropUsage() : string { return "[--admin bool]"; }
-    
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array
+    public function SetAdmin(bool $isAdmin) : self
     {
-        $criteria = array(); $table = $database->GetClassTableName(static::class);
+        $this->admin->SetValue($isAdmin ? true : null); return $this;
+    }
+    
+    protected static function GetAppPropUsage() : string { return "[--admin bool]"; }
+    
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    {
+        $criteria = array();
         
         if ($input->HasParam('admin')) $criteria[] = $input->GetParam('admin',SafeParam::TYPE_BOOL)
-            ? $q->IsTrue("$table.admin") : $q->Not($q->IsTrue("$table.admin"));
+            ? $q->IsTrue("admin") : $q->Not($q->IsTrue("admin"));
             
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $input, $join));
     }
     
     /**
@@ -55,6 +56,10 @@ class AccessLog extends BaseAppLog
      */
     public function GetClientObject(bool $expand = false) : array
     {
-        return array('admin' => (bool)$this->GetScalar('admin'));
+        $retval = parent::GetClientObject($expand);
+        
+        $retval['admin'] = (bool)$this->admin->TryGetValue();
+        
+        return $retval;
     }
 }

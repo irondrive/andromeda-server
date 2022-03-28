@@ -10,7 +10,7 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 /** Exception indicating that the given counter exceeded its limit */
 class CounterOverLimitException extends Exceptions\ClientDeniedException { public $message = "COUNTER_EXCEEDS_LIMIT"; }
 
-/** Exception indicating the given value is the wrong type for this field */
+/** Exception indicating the given data is the wrong type for this field */
 class FieldDataTypeMismatch extends Exceptions\ServerException { public $message = "FIELD_DATA_TYPE_MISMATCH"; }
 
 /** Exception indicating that loading via a foreign key link failed */
@@ -60,16 +60,6 @@ abstract class BaseField
         $this->parent = $parent; return $this;
     }
     
-    /**
-     * Returns an exception for the given bad value type
-     * @param mixed $value bad value
-     * @return FieldDataTypeMismatch
-     */
-    protected function BadValue($value) : FieldDataTypeMismatch
-    {
-        return new FieldDataTypeMismatch($this->name.' '.gettype($value));
-    }
-    
     /** @return string field name in the DB */
     final public function GetName() : string { return $this->name; }
 
@@ -94,51 +84,145 @@ abstract class BaseField
      * @return ?scalar
      */
     public abstract function GetDBValue();
+
+    /** Resets this field's delta 
+     * @return $this */
+    public function ResetDelta() : self { $this->delta = 0; return $this; }
     
-    /** 
-     * Returns the field's DB value and resets its delta
-     * @return ?scalar
-     */
-    public function SaveDBValue()
+    /** Unsets the field's value so it cannot be used */
+    public abstract function Uninitialize() : void;
+    
+    /** Notify the DB that this field was modified */
+    protected function NotifyModified() : void
     {
-        $retval = $this->GetDBValue();
-        $this->delta = 0;
-        return $retval;
+        if (isset($this->database))
+        {
+            if ($this->database->isReadOnly())
+                throw new DatabaseReadOnlyException();
+            
+            $this->database->notifyModified($this->parent);
+        }
     }
     
-    /** Restores this field to its initial value */
-    public abstract function RestoreDefault() : void;
+    /** True if given DB values are always strings */
+    protected function isDBValueString() : bool
+    {
+        return $this->database->GetInternal()->DataAlwaysStrings();
+    }
+    
+    /** Gets a type mismatch exception for the given value */
+    protected function GetTypeMismatchException($value) : FieldDataTypeMismatch
+    {
+        return new FieldDataTypeMismatch($this->name.' '.
+            (is_object($value)?get_class($value):gettype($value)));
+    }
 }
 
-/** 
- * The typed template of a base field
- * @template T 
- */
-trait BaseBaseT
+/** A common Uninitialize function for scalar types */
+trait ScalarCommon
 {
-    /** @var T value, possibly temporary only */
-    protected $tempvalue;
-    /** @var T value, non-temporary (DB) */
-    protected $realvalue;
-    /** @var T hardcoded default value */
-    protected $default;
+    public function Uninitialize() : void
+    {
+        unset($this->default);
+        unset($this->tempvalue);
+        unset($this->realvalue);
+        unset($this->delta);
+    }
+}
 
-    /**
-     * Type-checks the input value
-     * @param mixed $value input value
-     * @param bool $isInit true if this is from the DB
-     * @return T the type-checked value
-     */
-    protected abstract function CheckValue($value, bool $isInit);
+/** A possibly-null string */
+class NullStringType extends BaseField
+{
+    use ScalarCommon;
     
-    /**
-     * Initializes the field's value from the DB
-     * @param mixed $value database value
-     * @return $this
-     */
+    /** @var ?string value, possibly temporary only */
+    protected ?string $tempvalue;
+    /** @var ?string value, non-temporary (DB) */
+    protected ?string $realvalue;
+
+    /** @param ?string $default default value, default null */
+    public function __construct(string $name, bool $saveOnRollback = false, ?string $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->tempvalue = $default;
+        $this->realvalue = $default;
+        $this->delta = ($default !== null) ? 1 : 0;
+    }
+
     public function InitDBValue($value) : self
     {
-        $value = $this->CheckValue($value, true);
+        if ($value !== null && !is_string($value))
+            throw $this->GetTypeMismatchException($value);
+
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : ?string { return $this->realvalue; }
+    
+    /**
+     * Returns the field's value (maybe null)
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function TryGetValue(bool $allowTemp = true) : ?string
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /**
+     * Sets the field's value
+     * @param ?string $value string value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(?string $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && $value !== $this->realvalue)
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+/** A non-null string */
+class StringType extends BaseField
+{
+    use ScalarCommon;
+    
+    /** @var string value, possibly temporary only */
+    protected string $tempvalue;
+    /** @var string value, non-temporary (DB) */
+    protected string $realvalue;
+
+    /** @param string $default default value, default none */
+    public function __construct(string $name, bool $saveOnRollback = false, ?string $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        if ($default !== null)
+        {
+            $this->tempvalue = $default;
+            $this->realvalue = $default;
+            $this->delta = 1;
+        }
+    }
+
+    public function InitDBValue($value) : self
+    {
+        if ($value === null || !is_string($value))
+            throw $this->GetTypeMismatchException($value);
         
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -146,334 +230,497 @@ trait BaseBaseT
         
         return $this;
     }
-}
 
-/**
- * The maybe-null typed template of a base field
- * @template T
- */
-abstract class BaseNullT extends BaseField
-{
-    /** @use BaseBaseT<?T> */
-    use BaseBaseT;
-    
-    /**
-     * @param T $default default value, default null
-     */
-    public function __construct(string $name, bool $saveOnRollback = false, $default = null)
-    {
-        parent::__construct($name, $saveOnRollback);
-        
-        $this->default = $this->CheckValue($default, false);
-        
-        $this->RestoreDefault();
-    }
-    
-    /** @return ?scalar */
-    public function GetDBValue() { return $this->realvalue; }
-    
-    public function RestoreDefault() : void
-    {
-        $this->tempvalue = $this->default;
-        $this->realvalue = $this->default;
-        
-        if ($this->default !== null) $this->delta = 1;
-    }
-    
-    /**
-     * Returns the field's type-checked value (maybe null)
-     * @param bool $allowTemp if true, the value can be temporary
-     * @return T the type-checked value
-     */
-    public function TryGetValue(bool $allowTemp = true)
-    {
-        return $allowTemp ? $this->tempvalue : $this->realvalue;
-    }
-}
+    public function GetDBValue() : string { return $this->realvalue; }
 
-/**
- * The non-null typed template of a base field
- * @template T
- */
-abstract class BaseT extends BaseField
-{
-    /** @use BaseBaseT<T> */
-    use BaseBaseT;
-    
     /**
-     * @param T $default default value, default none
-     */
-    public function __construct(string $name, bool $saveOnRollback = false, $default = null)
-    {
-        parent::__construct($name, $saveOnRollback);
-        
-        if ($default !== null)
-        {
-            $this->default = $this->CheckValue($default, false);
-            
-            $this->RestoreDefault();
-        }
-    }
-    
-    /** @return scalar */
-    public function GetDBValue() { return $this->realvalue; }
-    
-    /** Restores this field to its default value */
-    public function RestoreDefault() : void
-    {
-        if (isset($this->default))
-        {
-            $this->tempvalue = $this->default;
-            $this->realvalue = $this->default;
-            $this->delta = 1;
-        }
-        else
-        {
-            unset($this->tempvalue);
-            unset($this->realvalue);
-            $this->delta = 0;
-        }
-    }
-    
-    /**
-     * Returns the field's type-checked value
+     * Returns the field's value
      * @param bool $allowTemp if true, the value can be temporary
-     * @return T the type-checked value
      */
-    public function GetValue(bool $allowTemp = true)
+    public function GetValue(bool $allowTemp = true) : string
     {
         return $allowTemp ? $this->tempvalue : $this->realvalue;
     }
     
     /** Returns true if this field's value is initialized */
-    public function isInitialized() { return isset($this->tempvalue); }
-}
-
-/** @template T */
-trait BaseSettableT
-{
+    public function isInitialized(bool $allowTemp = true) : bool
+    {
+        return $allowTemp ? isset($this->tempvalue) : isset($this->realvalue);
+    }
+    
     /**
      * Sets the field's value
-     * @param T $value typed value
+     * @param string $value string value
      * @param bool $isTemp if true, only temp (don't save)
      * @return bool true if the field was modified
      */
-    public function SetValue($value, bool $isTemp = false) : bool
+    public function SetValue(string $value, bool $isTemp = false) : bool
     {
-        $value = $this->CheckValue($value, false);
-        
         $this->tempvalue = $value;
         
         if (!$isTemp && (!isset($this->realvalue) || $value !== $this->realvalue))
         {
-            if (isset($this->database))
-            {
-                if ($this->database->isReadOnly())
-                    throw new DatabaseReadOnlyException();
+            $this->NotifyModified();
             
-                $this->database->notifyModified($this->parent);
-            }
-                
-            $this->realvalue = $value; $this->delta++; return true;
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
         }
         
         return false;
     }
 }
 
-/**
- * A possibly-null field that can have its value set directly
- * @template T
- * @extends BaseNullT<?T>
- */
-abstract class SettableNullT extends BaseNullT 
-{ 
-    /** @use BaseSettableT<T> */
-    use BaseSettableT; 
-}
-
-/**
- * A non-null field that can have its value set directly
- * @template T
- * @extends BaseT<T>
- */
-abstract class SettableT extends BaseT
+/** A possibly-null boolean */
+class NullBoolType extends BaseField
 {
-    /** @use BaseSettableT<T> */
-    use BaseSettableT;
-}
-
-/** 
- * A possibly-null string
- * @extends SettableNullT<?string> 
- */
-class NullStringType extends SettableNullT
-{
-    /**
-     * @param mixed $value
-     * @return ?string
-     */
-    protected function CheckValue($value, bool $isInit)
-    {
-        if ($value === '' || ($value !== null && !is_string($value)))
-            throw parent::BadValue($value);
-        
-        return $value;
-    }
-}
-
-/** 
- * A non-null (and non-empty) string
- * @extends SettableT<string> 
- */
-class StringType extends SettableT
-{
-    /**
-     * @param mixed $value
-     * @return string
-     */
-    protected function CheckValue($value, bool $isInit)
-    {
-        if ($value === null || !is_string($value) || $value === '')
-            throw parent::BadValue($value);
-        
-        return $value;
-    }
-}
-
-/** 
- * A possibly-null boolean
- * @extends SettableNullT<?bool> 
- */
-class NullBoolType extends SettableNullT
-{
-    /**
-     * @param mixed $value
-     * @return ?bool
-     */
-    protected function CheckValue($value, bool $isInit)
-    {
-        if ($isInit && is_int($value)) $value = (bool)$value;
-        
-        if ($value !== null && !is_bool($value))
-            throw parent::BadValue($value);
-        
-        return $value;
-    }
+    use ScalarCommon;
     
-    /** @return ?int */
+    /** @var ?bool value, possibly temporary only */
+    protected ?bool $tempvalue;
+    /** @var ?bool value, non-temporary (DB) */
+    protected ?bool $realvalue;
+
+    /** @param ?bool $default default value, default null */
+    public function __construct(string $name, bool $saveOnRollback = false, ?bool $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->tempvalue = $default;
+        $this->realvalue = $default;
+        $this->delta = ($default !== null) ? 1 : 0;
+    }
+
+    public function InitDBValue($value) : self
+    {
+        if ($value !== null)
+        {
+            if (!is_int($value) && !$this->isDBValueString())
+                throw $this->GetTypeMismatchException($value);
+            else $value = boolval($value); // always cast
+        }
+
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
     public function GetDBValue() : ?int 
-    { 
-        $val = parent::GetDBValue();
-        return ($val !== null) ? (int)$val : null;
-    }
-}
-
-/** 
- * A non-null boolean
- * @extends SettableT<bool> 
- */
-class BoolType extends SettableT
-{
-    /**
-     * @param mixed $value
-     * @return bool
-     */
-    protected function CheckValue($value, bool $isInit)
     {
-        if ($isInit && is_int($value)) $value = (bool)$value;
-        
-        if ($value === null || !is_bool($value))
-            throw parent::BadValue($value);
-            
-        return $value;
+        return ($this->realvalue === null) 
+            ? $this->realvalue : (int)$this->realvalue;
+    }
+
+    /**
+     * Returns the field's value (maybe null)
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function TryGetValue(bool $allowTemp = true) : ?bool
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
     }
     
-    /** @return int */
-    public function GetDBValue() : int
-    { 
-        return (int)parent::GetDBValue(); 
-    }
-}
-
-/** 
- * A possibly-null integer
- * @extends SettableNullT<?int> 
- */
-class NullIntType extends SettableNullT
-{
     /**
-     * @param mixed $value
-     * @return ?int
+     * Sets the field's value
+     * @param ?bool $value bool value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
      */
-    protected function CheckValue($value, bool $isInit)
+    public function SetValue(?bool $value, bool $isTemp = false) : bool
     {
-        if ($value !== null && !is_int($value))
-            throw parent::BadValue($value);
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && $value !== $this->realvalue)
+        {
+            $this->NotifyModified();
             
-        return $value;
-    }
-}
-
-/** 
- * A non-null integer
- * @extends SettableT<int> 
- */
-class IntType extends SettableT
-{
-    /**
-     * @param mixed $value
-     * @return int
-     */
-    protected function CheckValue($value, bool $isInit)
-    {
-        if ($value === null || !is_int($value))
-            throw parent::BadValue($value);
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
         
-        return $value;
+        return false;
     }
 }
 
-/** 
- * A possibly-null float
- * @extends SettableNullT<?float> 
- */
-class NullFloatType extends SettableNullT
+/** A non-null boolean */
+class BoolType extends BaseField
 {
-    /**
-     * @param mixed $value
-     * @return ?float
-     */
-    protected function CheckValue($value, bool $isInit)
+    use ScalarCommon;
+    
+    /** @var bool value, possibly temporary only */
+    protected bool $tempvalue;
+    /** @var bool value, non-temporary (DB) */
+    protected bool $realvalue;
+
+    /** @param bool $default default value, default none */
+    public function __construct(string $name, bool $saveOnRollback = false, ?bool $default = null)
     {
-        if ($value !== null && !is_float($value))
-            throw parent::BadValue($value);
+        parent::__construct($name, $saveOnRollback);
         
-        return $value;
+        if ($default !== null)
+        {
+            $this->tempvalue = $default;
+            $this->realvalue = $default;
+            $this->delta = 1;
+        }
     }
-}
 
-/** 
- * A non-null float
- * @extends SettableT<float> 
- */
-class FloatType extends SettableT
-{
-    /**
-     * @param mixed $value
-     * @return float
-     */
-    protected function CheckValue($value, bool $isInit)
+    public function InitDBValue($value) : self
     {
-        if ($value === null || !is_float($value))
-            throw parent::BadValue($value);
+        $isStr = $this->isDBValueString();
+        if ($value === null || (!$isStr && !is_int($value)))
+            throw $this->GetTypeMismatchException($value);
+        else $value = boolval($value); // always cast
+    
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
         
-        return $value;
+        return $this;
+    }
+
+    public function GetDBValue() : int { return (int)$this->realvalue; }
+
+    /**
+     * Returns the field's value
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function GetValue(bool $allowTemp = true) : bool
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized(bool $allowTemp = true) : bool
+    {
+        return $allowTemp ? isset($this->tempvalue) : isset($this->realvalue);
+    }
+    
+    /**
+     * Sets the field's value
+     * @param bool $value bool value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(bool $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && (!isset($this->realvalue) || $value !== $this->realvalue))
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
     }
 }
 
-trait BaseDate
+/** A possibly-null integer */
+class NullIntType extends BaseField
 {
+    use ScalarCommon;
+    
+    /** @var ?int value, possibly temporary only */
+    protected ?int $tempvalue;
+    /** @var ?int value, non-temporary (DB) */
+    protected ?int $realvalue;
+
+    /** @param ?int $default default value, default null */
+    public function __construct(string $name, bool $saveOnRollback = false, ?int $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->tempvalue = $default;
+        $this->realvalue = $default;
+        $this->delta = ($default !== null) ? 1 : 0;
+    }
+
+    public function InitDBValue($value) : self
+    {
+        if ($value !== null)
+        {
+            if ($this->isDBValueString())
+                $value = intval($value);
+            else if (!is_int($value))
+                throw $this->GetTypeMismatchException($value);
+        }
+        
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : ?int { return $this->realvalue; }
+
+    /**
+     * Returns the field's value (maybe null)
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function TryGetValue(bool $allowTemp = true) : ?int
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /**
+     * Sets the field's value
+     * @param ?int $value int value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(?int $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && $value !== $this->realvalue)
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+/** A non-null integer */
+class IntType extends BaseField
+{
+    use ScalarCommon;
+    
+    /** @var int value, possibly temporary only */
+    protected int $tempvalue;
+    /** @var int value, non-temporary (DB) */
+    protected int $realvalue;
+
+    /** @param int $default default value, default none */
+    public function __construct(string $name, bool $saveOnRollback = false, ?int $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        if ($default !== null)
+        {
+            $this->tempvalue = $default;
+            $this->realvalue = $default;
+            $this->delta = 1;
+        }
+    }
+
+    public function InitDBValue($value) : self
+    {
+        $isStr = $this->isDBValueString();
+        if ($value === null || (!$isStr && !is_int($value)))
+            throw $this->GetTypeMismatchException($value);
+        else if ($isStr) $value = intval($value);
+
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : int { return $this->realvalue; }
+    
+    /**
+     * Returns the field's value
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function GetValue(bool $allowTemp = true) : int
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized(bool $allowTemp = true) : bool
+    {
+        return $allowTemp ? isset($this->tempvalue) : isset($this->realvalue);
+    }
+    
+    /**
+     * Sets the field's value
+     * @param int $value int value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(int $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && (!isset($this->realvalue) || $value !== $this->realvalue))
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+/** A possibly-null float */
+class NullFloatType extends BaseField
+{
+    use ScalarCommon;
+    
+    /** @var ?float value, possibly temporary only */
+    protected ?float $tempvalue;
+    /** @var ?float value, non-temporary (DB) */
+    protected ?float $realvalue;
+
+    /** @param ?float $default default value, default null */
+    public function __construct(string $name, bool $saveOnRollback = false, ?float $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->tempvalue = $default;
+        $this->realvalue = $default;
+        $this->delta = ($default !== null) ? 1 : 0;
+    }
+
+    public function InitDBValue($value) : self
+    {
+        if ($value !== null)
+        {
+            if ($this->isDBValueString())
+                $value = floatval($value);
+            else if (!is_float($value))
+                throw $this->GetTypeMismatchException($value);
+        }
+        
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : ?float { return $this->realvalue; }
+
+    /**
+     * Returns the field's value (maybe null)
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function TryGetValue(bool $allowTemp = true) : ?float
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /**
+     * Sets the field's value
+     * @param ?float $value float value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(?float $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && $value !== $this->realvalue)
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+/** A non-null float */
+class FloatType extends BaseField
+{
+    use ScalarCommon;
+    
+    /** @var float value, possibly temporary only */
+    protected float $tempvalue;
+    /** @var float value, non-temporary (DB) */
+    protected float $realvalue;
+
+    /** @param float $default default value, default none */
+    public function __construct(string $name, bool $saveOnRollback = false, ?float $default = null)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        if ($default !== null)
+        {
+            $this->tempvalue = $default;
+            $this->realvalue = $default;
+            $this->delta = 1;
+        }
+    }
+
+    public function InitDBValue($value) : self
+    {
+        $isStr = $this->isDBValueString();
+        if ($value === null || (!$isStr && !is_float($value)))
+            throw $this->GetTypeMismatchException($value);
+        else if ($isStr) $value = floatval($value);
+    
+        $this->tempvalue = $value;
+        $this->realvalue = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : float { return $this->realvalue; }
+
+    /**
+     * Returns the field's value
+     * @param bool $allowTemp if true, the value can be temporary
+     */
+    public function GetValue(bool $allowTemp = true) : float
+    {
+        return $allowTemp ? $this->tempvalue : $this->realvalue;
+    }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized(bool $allowTemp = true) : bool
+    {
+        return $allowTemp ? isset($this->tempvalue) : isset($this->realvalue);
+    }
+    
+    /**
+     * Sets the field's value
+     * @param float $value float value
+     * @param bool $isTemp if true, only temp (don't save)
+     * @return bool true if the field was modified
+     */
+    public function SetValue(float $value, bool $isTemp = false) : bool
+    {
+        $this->tempvalue = $value;
+        
+        if (!$isTemp && (!isset($this->realvalue) || $value !== $this->realvalue))
+        {
+            $this->NotifyModified();
+            
+            $this->realvalue = $value;
+            $this->delta++;
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+/** A field that stores a possibly-null timestamp */
+class NullDate extends NullFloatType
+{ 
     /** Sets the value to the current timestamp */
     public function SetDateNow() : bool
     {
@@ -481,57 +728,62 @@ trait BaseDate
     }
 }
 
-/** A field that stores a possibly-null timestamp */
-class NullDate extends NullFloatType { use BaseDate; }
-
 /** A field that stores a non-null timestamp (default now) */
 class Date extends FloatType 
-{ 
-    use BaseDate;
-
+{
     public function __construct(string $name, bool $saveOnRollback = false)
     {
         $def = Main::GetInstance()->GetTime();
         parent::__construct($name, $saveOnRollback, $def);
     }
+    
+    /** Sets the value to the current timestamp */
+    public function SetDateNow() : bool
+    {
+        return parent::SetValue(Main::GetInstance()->GetTime());
+    }
 }
 
-/** 
- * A field that stores a thread-safe integer counter
- * @extends BaseT<int> 
- */
-class Counter extends BaseT
+/**  A field that stores a thread-safe integer counter */
+class Counter extends BaseField
 {
     private ?NullIntType $limit = null;
     
-    /**
-     * @param string $name
-     * @param bool $saveOnRollback
-     * @param ?NullIntType $limit optional counter limiting field
-     */
-    public function __construct(
-        string $name, bool $saveOnRollback = false, 
-        ?NullIntType $limit = null)
+    protected int $value;
+    
+    /** @param ?NullIntType $limit optional counter limiting field */
+    public function __construct(string $name, bool $saveOnRollback = false, ?NullIntType $limit = null)
     {
-        parent::__construct($name, $saveOnRollback, 0);
+        parent::__construct($name, $saveOnRollback);
         
+        $this->value = 0;
         $this->delta = 0; // implicit
         $this->limit = $limit;
     }
-    
-    /**
-     * @param mixed $value
-     * @return int
-     */
-    protected function CheckValue($value, bool $isInit)
+
+    public function InitDBValue($value) : self
     {
-        if ($value === null || !is_int($value))
-            throw parent::BadValue($value);
+        $isStr = $this->isDBValueString();
+        if ($value === null || (!$isStr && !is_int($value)))
+            throw $this->GetTypeMismatchException($value);
+        else if ($isStr) $value = intval($value);
         
-        return $value;
+        $this->value = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : int { return $this->delta; }
+    
+    public function Uninitialize() : void
+    {
+        unset($this->value);
+        unset($this->delta);
     }
     
-    public function GetDBValue() : int { return $this->delta; }
+    /** Returns the field's total count value */
+    public function GetValue() : int { return $this->value; }
 
     /**
      * Checks if the given delta would exceed the limit (if it exists)
@@ -546,11 +798,11 @@ class Counter extends BaseT
         {
             $limit = $this->limit->TryGetValue();
             
-            if ($limit !== null && $this->tempvalue + $delta > $limit)
+            if ($limit !== null && $this->value + $delta > $limit)
             {
-                if ($throw) 
-                    throw new CounterOverLimitException($this->name); 
-                else return false;
+                if (!$throw) return false;
+                
+                throw new CounterOverLimitException($this->name);
             }
         }
         return true;
@@ -565,88 +817,234 @@ class Counter extends BaseT
     public function DeltaValue(int $delta = 1, bool $ignoreLimit = false) : bool
     {
         if ($delta === 0) return false;
-        
-        if ($this->database->isReadOnly())
-            throw new DatabaseReadOnlyException();
-        
-        $this->database->notifyModified($this->parent);
-        
+
         if (!$ignoreLimit) $this->CheckDelta($delta);
         
-        $this->tempvalue += $delta;
-        $this->realvalue += $delta;
+        $this->NotifyModified();
+        
+        $this->value += $delta;
         $this->delta += $delta;
         return true;
     }
 }
 
-/** 
- * A field that stores a JSON-encoded array
- * @extends SettableT<array> 
- */
-class JsonArray extends SettableT
+/** A field that stores a JSON-encoded array (or null) */
+class NullJsonArray extends BaseField
 {
-    /**
-     * @param mixed $value
-     * @return array<mixed>
-     */
-    protected function CheckValue($value, bool $isInit)
-    {
-        if ($isInit) 
-        {
-            if ($value === null || !is_string($value)) 
-                throw parent::BadValue($value);
-            $value = Utilities::JSONDecode($value);
-        }
-        
-        if ($value === null || !is_array($value))
-            throw parent::BadValue($value);
-        
-        return $value;
-    }
+    protected ?array $value;
     
-    public function GetDBValue() : string 
+    public function __construct(string $name, bool $saveOnRollback = false)
     {
-        return Utilities::JSONEncode(parent::GetDBValue()); 
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->value = null;
     }
-}
 
-/**
- * A field that stores a JSON-encoded array or null
- * @extends SettableNullT<?array>
- */
-class NullJsonArray extends SettableNullT
-{
-    /**
-     * @param mixed $value
-     * @return array<mixed>
-     */
-    protected function CheckValue($value, bool $isInit)
+    public function InitDBValue($value) : self
     {
-        if ($isInit && $value !== null)
-        {
-            if (!is_string($value))
-                throw parent::BadValue($value);
-            $value = Utilities::JSONDecode($value);
-        }
+        if ($value !== null && !is_string($value))
+            throw $this->GetTypeMismatchException($value);
         
-        if ($value !== null && !is_array($value))
-            throw parent::BadValue($value);
+        if ($value !== null && $value !== "")
+            $this->value = Utilities::JSONDecode($value);
         
-        return $value;
+        $this->delta = 0;
+        
+        return $this;
     }
     
     public function GetDBValue() : ?string
     {
-        $val = parent::GetDBValue();
-        if ($val === null) return null;
-        return Utilities::JSONEncode($val);
+        if ($this->value === null) return null;
+        
+        return Utilities::JSONEncode($this->value);
+    }
+    
+    public function Uninitialize() : void 
+    { 
+        unset($this->value);
+        unset($this->delta);
+    }
+    
+    /** Returns the field's array value */
+    public function TryGetArray() : ?array { return $this->value; }
+
+    /**
+     * Sets the field's value
+     * @param ?array $value array value
+     * @return bool true if the field was modified
+     */
+    public function SetArray(?array $value) : bool
+    {
+        if ($value === null && $this->value === null) return false;
+        
+        $this->NotifyModified();
+        
+        $this->value = $value;
+        $this->delta++;
+        
+        return true;
     }
 }
 
-/** @template T of BaseObject */
-trait BaseObjectRefT
+/** A field that stores a JSON-encoded array */
+class JsonArray extends BaseField
 {
+    protected array $value;
+    
+    public function __construct(string $name, bool $saveOnRollback = false)
+    {
+        parent::__construct($name, $saveOnRollback);
+        
+        $this->value = array();
+        $this->delta = 1; // not default
+    }
+    
+    public function InitDBValue($value) : self
+    {
+        if ($value === null || !is_string($value))
+            throw $this->GetTypeMismatchException($value);
+        
+        if ($value !== "")
+            $this->value = Utilities::JSONDecode($value);
+        
+        $this->delta = 0;
+        
+        return $this;
+    }
+
+    public function GetDBValue() : string
+    { 
+        return Utilities::JSONEncode($this->value); 
+    }
+    
+    public function Uninitialize() : void 
+    { 
+        unset($this->value);
+        unset($this->delta);
+    }
+    
+    /** Returns the field's array value */
+    public function GetArray() : array { return $this->value; }
+
+    /**
+     * Sets the field's value
+     * @param array $value array value
+     * @return bool true if the field was modified
+     */
+    public function SetArray(array $value) : bool
+    {
+        $this->NotifyModified();
+        
+        $this->value = $value;
+        $this->delta++;
+        
+        return true;
+    }
+}
+
+/**
+ * A field stores a possibly-null reference to another object
+ * @template T of BaseObject
+ */
+class NullObjectRefT extends BaseField
+{
+    /** @var ?class-string<T> ID reference */
+    protected ?string $objId;
+    
+    /** @var class-string<T> field class */
+    protected string $class;
+
+    /**
+     * @param class-string<T> $class object class
+     * @param string $name
+     */
+    public function __construct(string $class, string $name)
+    {
+        parent::__construct($name);
+        
+        $this->objId = null;
+        $this->class = $class;
+    }
+    
+    /** @return $this */
+    public function InitDBValue($value) : self
+    {
+        if ($value !== null && !is_string($value))
+            throw $this->GetTypeMismatchException($value);
+        
+        $this->objId = $value;
+        $this->delta = 0;
+        
+        return $this;
+    }
+    
+    public function GetDBValue() : ?string { return $this->objId; }
+    
+    public function Uninitialize() : void
+    {
+        unset($this->objId);
+        unset($this->class);
+        unset($this->delta);
+    }
+
+    /** 
+     * Returns the field's object (maybe null) 
+     * @return ?T
+     */
+    public function TryGetObject() : ?BaseObject
+    {
+        if ($this->objId === null) return null;
+        
+        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
+        
+        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
+    }
+    
+    /** Returns the ID of the object pointed to by this field 
+     * @return ?class-string<T> */
+    public function TryGetObjectID() : ?string { return $this->objId; }
+    
+    /**
+     * Sets the field's value
+     * @param ?T $value object value
+     * @return bool true if the field was modified
+     */
+    public function SetObject(?BaseObject $value) : bool
+    {
+        if ($value === null)
+        {
+            if ($this->objId === null) 
+                return false;
+            
+            $this->objId = null;
+            $this->delta++;
+            return true;
+        }
+        
+        if ($value->ID() === $this->objId) return false;
+        
+        if (!($value instanceof $this->class))
+            throw $this->GetTypeMismatchException($value);
+            
+        $this->objId = $value->ID();
+        $this->delta++;
+        return true;
+    }
+}
+
+/**
+ * A field stores a possibly-null reference to another object
+ * @template T of BaseObject
+ */
+class ObjectRefT extends BaseField
+{
+    /** @var class-string<T> ID reference */
+    protected string $objId;
+    
+    /** @var class-string<T> field class */
+    protected string $class;
+    
     /**
      * @param class-string<T> $class object class
      * @param string $name
@@ -658,166 +1056,59 @@ trait BaseObjectRefT
         $this->class = $class;
     }
     
-    public function GetValue(bool $allowTemp = true)
-    {
-        if ($allowTemp && isset($this->tempvalue)) /** @phpstan-ignore-line */
-            return $this->tempvalue;
-            
-        if (!$allowTemp && isset($this->realvalue)) /** @phpstan-ignore-line */
-            return $this->realvalue;
-        
-        return $this->FetchObject();
-    }
-
-    public function SaveDBValue()
-    {
-        //temp/real are used to hold the dirty value        
-        unset($this->tempvalue);
-        unset($this->realvalue);
-        return parent::SaveDBValue();
-    }
-}
-
-/**
- * A field stores a possibly-null reference to another object
- * @template T of BaseObject
- * @extends SettableNullT<?T>
- */
-class NullObjectRefT extends SettableNullT
-{
-    /** @use BaseObjectRefT<T> */
-    use BaseObjectRefT;
-    
-    /** @var class-string<T> */
-    private string $class;
-    
-    private ?string $objId = null;
-
-    protected function CheckValue($value, bool $isInit)
-    {
-        // $isInit must be false, we override InitDBValue
-        if ($value !== null && !($value instanceof $this->class))
-            throw parent::BadValue($value);
-        return $value;
-    }
-    
-    /**
-     * Initializes the field's value from the DB
-     * @param mixed $value database value
-     * @return $this
-     */
-    public function InitDBValue($value) : self
-    {
-        if ($value !== null && !is_string($value))
-            throw parent::BadValue($value);
-        
-        $this->objId = $value;
-        $this->delta = 0;
-        return $this;
-    }
-    
-    public function GetDBValue() : ?string { return $this->objId; }
-    
-    /** Returns the ID of the object pointed to by this field */
-    public function TryGetObjectID() : ?string { return $this->objId; }
-    
-    /** 
-     * Loads the reference from the DB
-     * @return ?T loaded object
-     */
-    protected function FetchObject() : ?BaseObject
-    {
-        if ($this->objId === null) return null;
-        
-        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
-        
-        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
-    }
-
-    public function SetValue($value, bool $isTemp = false) : bool
-    {
-        $retval = parent::SetValue($value, $isTemp); // check type
-        
-        if (!$isTemp) $this->objId = ($value !== null) ? $value->ID() : null;
-            
-        return $retval;
-    }
-    
-    public function RestoreDefault() : void
-    {
-        $this->tempvalue = null;
-        $this->realvalue = null;
-        $this->objId = null;
-    }
-}
-
-/**
- * A field that stores a non-null reference to another object
- * @template T of BaseObject
- * @extends SettableT<T>
- */
-class ObjectRefT extends SettableT
-{
-    /** @use BaseObjectRefT<T> */
-    use BaseObjectRefT;
-    
-    /** @var class-string<T> */
-    private string $class;
-    
-    private string $objId;
-
-    protected function CheckValue($value, bool $isInit)
-    {
-        // $isInit must be false, we override InitDBValue
-        if ($value === null || !($value instanceof $this->class))
-            throw parent::BadValue($value);
-        return $value;
-    }
-
-    /**
-     * Initializes the field's value from the DB
-     * @param mixed $value database value
-     * @return $this
-     */
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null || !is_string($value))
-            throw parent::BadValue($value);
+            throw $this->GetTypeMismatchException($value);
         
         $this->objId = $value;
         $this->delta = 0;
+        
         return $this;
     }
     
     public function GetDBValue() : string { return $this->objId; }
-    
-    /** Returns the ID of the object pointed to by this field */
-    public function GetObjectID() : string { return $this->objId; }
+
+    public function Uninitialize() : void
+    {
+        unset($this->objId);
+        unset($this->class);
+        unset($this->delta);
+    }
     
     /**
-     * Loads the reference from the DB
-     * @return T loaded object
+     * Returns the field's object
+     * @return T
      */
-    protected function FetchObject() : BaseObject
+    public function GetObject() : BaseObject
     {
         $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
         if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
     }
-
-    public function SetValue($value, bool $isTemp = false) : bool
-    {
-        $retval = parent::SetValue($value, $isTemp); // check type
-        
-        if (!$isTemp) $this->objId = $value->ID();
-        
-        return $retval;
-    }
     
-    public function RestoreDefault() : void
+    /** Returns the ID of the object pointed to by this field
+     * @return class-string<T> */
+    public function GetObjectID() : string { return $this->objId; }
+    
+    /** Returns true if this field's value is initialized */
+    public function isInitialized() : bool { return isset($this->objId); }
+    
+    /**
+     * Sets the field's value
+     * @param T $value object value
+     * @return bool true if the field was modified
+     */
+    public function SetObject(BaseObject $value) : bool
     {
-        unset($this->tempvalue);
-        unset($this->realvalue);
-        unset($this->objId);
+        if (isset($this->objId) && $value->ID() === $this->objId) return false;
+        
+        if (!($value instanceof $this->class))
+            throw $this->GetTypeMismatchException($value);
+        
+        $this->objId = $value->ID();
+        $this->delta++;
+        return true;
     }
 }

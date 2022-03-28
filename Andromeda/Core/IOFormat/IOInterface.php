@@ -6,7 +6,7 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/Interfaces/AJAX.php");
+require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
@@ -35,7 +35,7 @@ abstract class IOInterface extends Singleton
     /** Constructs and returns a singleton of the appropriate interface type */
     public static function TryGet() : ?self
     {
-        if (Interfaces\AJAX::isApplicable()) return new Interfaces\AJAX();
+        if (Interfaces\HTTP::isApplicable()) return new Interfaces\HTTP();
         else if (Interfaces\CLI::isApplicable()) return new Interfaces\CLI();
         else return null;
     }

@@ -103,25 +103,6 @@ final class ErrorLog extends BaseLog
         return $criteria;
     }
 
-    /** Converts all objects in the array to strings and checks UTF-8 */
-    private static function &arrayStrings(array &$data) : array
-    {
-        foreach ($data as &$val)
-        {
-            if (is_object($val)) 
-            {
-                $val = method_exists($val,'__toString') 
-                    ? (string)$val : get_class($val);
-            }
-            else if (is_array($val)) 
-                self::arrayStrings($val);
-            
-            if (!Utilities::isUTF8($val))
-                $val = base64_encode($val);
-        }
-        return $data;
-    }
-    
     /**
      * Creates an errorLog object from the given exception
      *
@@ -157,18 +138,18 @@ final class ErrorLog extends BaseLog
         {
             if ($api && $api->HasDatabase())
             {
-                $obj->objects->SetValue($api->GetDatabase()->getLoadedObjects());
-                $obj->queries->SetValue($api->GetDatabase()->GetInternal()->getAllQueries());
+                $obj->objects->SetArray($api->GetDatabase()->getLoadedObjects());
+                $obj->queries->SetArray($api->GetDatabase()->GetInternal()->getAllQueries());
             }
         }
         
         if ($sensitive && $input !== null)
         {
             $params = $input->GetParams()->GetClientObject();
-            $obj->params->SetValue(self::arrayStrings($params));
+            $obj->params->SetArray(Utilities::arrayStrings($params));
         }
         
-        $obj->trace_basic->SetValue(explode("\n",$e->getTraceAsString()));
+        $obj->trace_basic->SetArray(explode("\n",$e->getTraceAsString()));
         
         if ($details)
         {
@@ -179,10 +160,10 @@ final class ErrorLog extends BaseLog
                 if (!$sensitive) unset($val['args']);
                 
                 else if (array_key_exists('args', $val))
-                    self::arrayStrings($val['args']);
+                    Utilities::arrayStrings($val['args']);
             }
             
-            $obj->trace_full->SetValue($trace_full);
+            $obj->trace_full->SetArray($trace_full);
         }
         
         return $obj;
@@ -197,7 +178,7 @@ final class ErrorLog extends BaseLog
     public function SetDebugLog(int $level, array $debuglog) : self
     {   
         if ($level >= Config::ERRLOG_DETAILS && $debuglog !== null)
-            $this->log->SetValue($debuglog);
+            $this->log->SetArray($debuglog);
         
         return $this;
     }
@@ -234,7 +215,7 @@ final class ErrorLog extends BaseLog
             'message' => $this->message->GetValue(),
             'app' => $this->app->TryGetValue(),
             'action' => $this->action->TryGetValue(),
-            'trace_basic' => $this->trace_basic->GetValue()
+            'trace_basic' => $this->trace_basic->GetArray()
         );
         
         $details = $level === null || $level >= Config::ERRLOG_DETAILS;
@@ -242,18 +223,18 @@ final class ErrorLog extends BaseLog
 
         if ($details)
         {
-            $trace_full = $this->trace_full->TryGetValue();
+            $trace_full = $this->trace_full->TryGetArray();
             if (!$sensitive) foreach ($trace_full as &$val) unset($val['args']);
             $retval['trace_full'] = $trace_full;
             
-            $retval['objects'] = $this->objects->TryGetValue();
-            $retval['queries'] = $this->queries->TryGetValue();
-            $retval['log'] = $this->log->TryGetValue();
+            $retval['objects'] = $this->objects->TryGetArray();
+            $retval['queries'] = $this->queries->TryGetArray();
+            $retval['log'] = $this->log->TryGetArray();
         }
 
         if ($sensitive)
         {
-            $retval['params'] = $this->params->TryGetValue();
+            $retval['params'] = $this->params->TryGetArray();
         }
         
         return $retval;

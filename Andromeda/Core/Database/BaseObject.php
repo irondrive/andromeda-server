@@ -229,7 +229,7 @@ abstract class BaseObject
         $this->isDeleted = true;
         
         foreach ($this->fieldsByName as $field)
-            $field->RestoreDefault();
+            $field->Uninitialize();
     }
     
     /**
@@ -242,19 +242,26 @@ abstract class BaseObject
         if ($this->isDeleted || ($isRollback && $this->isCreated)) return $this;
         
         if ($this->deleteLater) { $this->Delete(); return $this; }
-        
-        $fieldsByClass = $this->fieldsByClass;
-        
-        foreach ($fieldsByClass as &$fields)
+
+        if ($this->isCreated)
         {
-            $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($isRollback) {
-                return $field->isModified() && (!$isRollback || $field->isSaveOnRollback()); });
+            $this->database->InsertObject($this, $this->fieldsByClass);
+            
+            $this->isCreated = false;
+        }
+        else 
+        {
+            $fieldsByClass = $this->fieldsByClass;
+            
+            foreach ($fieldsByClass as &$fields)
+            {
+                $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($isRollback) {
+                    return $field->isModified() && (!$isRollback || $field->isSaveOnRollback()); });
+            }
+            
+            $this->database->UpdateObject($this, $fieldsByClass);
         }
         
-        if ($this->isCreated)
-            $this->database->InsertObject($this, $fieldsByClass);
-        else $this->database->UpdateObject($this, $fieldsByClass);
-        
-        $this->isCreated = false; return $this;
+        return $this;
     }
 }

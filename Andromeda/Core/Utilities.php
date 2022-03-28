@@ -112,10 +112,10 @@ abstract class Utilities
         return $string;        
     }
     
-    /** Returns true iff $data is valid UTF-8 */
-    public static function isUTF8(string $data) : bool
+    /** Returns true iff $data is valid UTF-8 or null */
+    public static function isUTF8(?string $data) : bool
     {
-        return mb_check_encoding($data,'UTF-8');
+        return $data === null || mb_check_encoding($data,'UTF-8');
     }
     
     /**
@@ -168,6 +168,31 @@ abstract class Utilities
     public static function delete_value(array &$arr, $value) : array
     {
         return $arr = array_filter($arr, function($val)use($value){ return $val !== $value; });
+    }
+    
+    /** Converts all objects in the array to strings and checks UTF-8, to make it printable */
+    public static function arrayStrings(array $data) : array
+    {
+        foreach ($data as &$val)
+        {
+            if (is_array($val))
+            {
+                $val = self::arrayStrings($val);
+            }
+            else if (is_object($val))
+            {
+                $val = method_exists($val,'__toString')
+                    ? (string)$val : get_class($val);
+            }
+            else 
+            {
+                $val = strval($val);
+                
+                if (!Utilities::isUTF8($val))
+                    $val = base64_encode($val);
+            }
+        }
+        return $data;
     }
     
     /** Returns a class name with the namespace stripped */

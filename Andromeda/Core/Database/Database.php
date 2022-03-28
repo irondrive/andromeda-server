@@ -258,7 +258,7 @@ class Database
         if ($this->driver === self::DRIVER_SQLITE)
             $this->connection->query("PRAGMA foreign_keys = ON");
         
-        $this->instanceId = "Database_".Utilities::Random(2);
+        $this->instanceId = "Database_".Utilities::Random(4);
     }
     
     /** @see Database::$driver */
@@ -327,11 +327,7 @@ class Database
     }
     
     /** Whether or not the DB supports the RETURNING keyword */
-    public function SupportsRETURNING() : bool 
-    { 
-        return $this->getDriver() === self::DRIVER_MYSQL || 
-               $this->getDriver() === self::DRIVER_POSTGRESQL; 
-    }
+    public function SupportsRETURNING() : bool { return $this->getDriver() !== self::DRIVER_SQLITE; }
     
     /** Whether or not the DB aborts transactions after an error and requires use of SAVEPOINTs */
     private function RequiresSAVEPOINT() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
@@ -344,6 +340,9 @@ class Database
     
     /** Whether or not the DB expects using public. as a prefix for table names */
     public function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
+    
+    /** Whether or not the returned data rows are always string values (false if the are proper types) */
+    public function DataAlwaysStrings() : bool { return $this->getDriver() !== self::DRIVER_MYSQL; }
     
     /** Returns the given arguments concatenated in SQL */
     public function SQLConcat(string ...$args) : string
@@ -375,7 +374,7 @@ class Database
         $result = $query->fetchAll(PDO::FETCH_ASSOC);
         
         if ($result === false) throw new DatabaseFetchException();
-        
+
         if ($this->BinaryAsStreams()) $this->fetchStreams($result);
         
         $this->stopTimingQuery($sql, DBStats::QUERY_READ);
