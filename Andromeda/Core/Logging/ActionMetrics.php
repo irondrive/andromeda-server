@@ -59,8 +59,8 @@ final class ActionMetrics extends BaseObject
     public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, RunContext $context) : self
     {
         $obj = parent::BaseCreate($database);
-        $obj->requestmet->SetValue($request);
-        $obj->actionlog->SetValue($context->GetActionLog());
+        $obj->requestmet->SetObject($request);
+        $obj->actionlog->SetObject($context->GetActionLog());
         
         $metrics = $context->GetMetrics();
         $obj->SetDBStats($metrics);
@@ -70,7 +70,7 @@ final class ActionMetrics extends BaseObject
         $obj->action->SetValue($input->GetAction());
 
         if ($level >= Config::METRICS_EXTENDED)
-            $obj->queries->SetValue($metrics->getQueries());
+            $obj->queries->SetArray($metrics->getQueries());
         
         return $obj;
     }
@@ -93,7 +93,7 @@ final class ActionMetrics extends BaseObject
         $retval['app'] = $this->app->GetValue();
         $retval['action'] = $this->action->GetValue();
         
-        if (($queries = $this->queries->TryGetValue()) !== null)
+        if (($queries = $this->queries->TryGetArray()) !== null)
             $retval['queries'] = $queries;
         
         return $retval;

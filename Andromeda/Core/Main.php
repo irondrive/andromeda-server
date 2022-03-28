@@ -15,9 +15,9 @@ use Andromeda\Core\Exceptions\{ErrorManager, ClientException};
 require_once(ROOT."/Core/IOFormat/IOInterface.php");
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/Interfaces/AJAX.php");
+require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
-use Andromeda\Core\IOFormat\Interfaces\AJAX;
+use Andromeda\Core\IOFormat\Interfaces\HTTP;
 
 require_once(ROOT."/Core/Logging/RequestLog.php");
 require_once(ROOT."/Core/Logging/ActionLog.php");
@@ -315,7 +315,7 @@ final class Main extends Singleton
      */
     public function RunRemote(string $url, Input $input)
     {
-        $data = AJAX::RemoteRequest($url, $input);
+        $data = HTTP::RemoteRequest($url, $input);
 
         return Output::ParseArray($data)->GetAppdata();
     }

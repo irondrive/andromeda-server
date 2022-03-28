@@ -96,7 +96,7 @@ class ActionLog extends BaseLog
     {
         $obj = parent::BaseCreate($database);
         
-        $obj->requestlog->SetValue($reqlog);
+        $obj->requestlog->SetObject($reqlog);
         $obj->app->SetValue($input->GetApp());
         $obj->action->SetValue($input->GetAction());
         
@@ -157,10 +157,10 @@ class ActionLog extends BaseLog
     public function Save(bool $isRollback = false) : self
     {
         if (!empty($this->inputs_tmp))
-            $this->inputs->SetValue($this->inputs_tmp);
+            $this->inputs->SetArray($this->inputs_tmp);
         
         if (!empty($this->details_tmp))
-            $this->details->SetValue($this->details_tmp);
+            $this->details->SetArray($this->details_tmp);
             
         if (!Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
             return $this; // might only be doing file logging
@@ -226,8 +226,8 @@ class ActionLog extends BaseLog
 
         uasort($objs, function(self $a, self $b)use($desc)
         {
-            $v1 = $a->requestlog->GetValue()->GetTime();
-            $v2 = $b->requestlog->GetValue()->GetTime();
+            $v1 = $a->requestlog->GetObject()->GetTime();
+            $v2 = $b->requestlog->GetObject()->GetTime();
             return $desc ? ($v2 <=> $v1) : ($v1 <=> $v2);
         });
  
@@ -246,10 +246,10 @@ class ActionLog extends BaseLog
             'action' => $this->action->GetValue()
         );
         
-        if (($inputs = $this->inputs->TryGetValue()) !== null)
+        if (($inputs = $this->inputs->TryGetArray()) !== null)
             $retval['inputs'] = $inputs;
         
-        if (($details = $this->details->TryGetValue()) !== null)
+        if (($details = $this->details->TryGetArray()) !== null)
             $retval['details'] = $details;
         
         return $retval;
@@ -265,7 +265,7 @@ class ActionLog extends BaseLog
     {
         $retval = $this->GetClientObject($expand);
         
-        $retval['request'] = $this->requestlog->GetValue()->GetClientObject();
+        $retval['request'] = $this->requestlog->GetObject()->GetClientObject();
         
         return $retval;
     }

@@ -10,7 +10,7 @@ class MySingleton extends Singleton { }
 abstract class TestBase0 { }
 abstract class TestBase1 { }
 abstract class TestBase2 { }
-class TestClass1 extends TestBase1 { }
+class TestClass1 extends TestBase1 { public function __toString() : string { return "TestClass1..."; } }
 class TestClass2 extends TestBase2 { }
 class TestClass3 extends TestBase2 { }
 
@@ -193,5 +193,40 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(Utilities::getClassesMatching(TestBase0::class), array());
        $this->assertSame(Utilities::getClassesMatching(TestBase1::class), array(TestClass1::class));
        $this->assertSame(Utilities::getClassesMatching(TestBase2::class), array(TestClass2::class, TestClass3::class));
+   }
+   
+   public function testArrayStrings() : void
+   {
+       $in = array(
+           'a' => 5,
+           'b' => 'mytest',
+           'c' => array(
+               'c0' => 6,
+               'c1' => array(
+                  'test',
+                   new TestClass3(),
+                   hex2bin("deadbeef") // not UTF-8
+               ),
+               'c2' => new TestClass2()
+           ),
+           'd' => new TestClass1()
+       );
+       
+       $out = array(
+           'a' => '5',
+           'b' => 'mytest',
+           'c' => array(
+               'c0' => '6',
+               'c1' => array(
+                   'test',
+                   'Andromeda\Core\TestClass3',
+                   '3q2+7w==' // base64
+               ),
+               'c2' => 'Andromeda\Core\TestClass2'
+           ),
+           'd' => 'TestClass1...'
+       );
+       
+       $this->assertSame($out, Utilities::arrayStrings($in));
    }
 }

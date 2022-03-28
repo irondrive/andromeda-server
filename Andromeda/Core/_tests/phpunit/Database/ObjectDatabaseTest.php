@@ -220,16 +220,17 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = PolyObject5a::Create($objdb);
         
         $id = $obj->ID();
+        // not steting TestProp1, default null
         $obj->SetTestProp15(15); // part of 2's table!
         $obj->SetTestProp4(100); 
-        $obj->SetTestProp4n(null); // set null
+        $obj->SetTestProp4n(null); // set null (default!)
         $obj->DeltaTestProp4c(5); // counter
         
         $database->expects($this->exactly(4))->method('write')
             ->withConsecutive(
                 [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject2 (testprop15,id) VALUES (:d0,:d1)', array('d0'=>15,'d1'=>$id) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,testprop4n,testprop4c,id) VALUES (:d0,:d1,NULL,:d2,:d3)', array('d0'=>13,'d1'=>100,'d2'=>5,'d3'=>$id) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,testprop4c,id) VALUES (:d0,:d1,:d2,:d3)', array('d0'=>13,'d1'=>100,'d2'=>5,'d3'=>$id) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id) ]
             )->willReturn(1);
         
@@ -265,21 +266,21 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $obj1 = PolyObject5a::Create($objdb); $id1 = $obj1->ID();
-        $obj2 = new PolyObject5a($objdb, array('id'=>($id2='testid1234'),'testprop1'=>5,'testprop5'=>7)); $obj2->SetTestProp1(55);
-        $obj3 = new PolyObject5a($objdb, array('id'=>($id3='testid5678'),'testprop1'=>15,'testprop5'=>17)); $obj3->SetTestProp1(65);
-        $obj4 = PolyObject5ab::Create($objdb); $id4 = $obj4->ID();
-        $obj5 = new PolyObject5a($objdb, array('id'=>($id5='testid9999'),'testprop1'=>15,'testprop5'=>17)); $obj5->DeltaTestProp4c(10);
+        $obj1 = PolyObject5a::Create($objdb); $id1 = $obj1->ID(); $obj1->SetTestProp4(100);
+        $obj2 = new PolyObject5a($objdb, array('id'=>($id2='testid1234'),'testprop1'=>5,'testprop4'=>101,'testprop5'=>7)); $obj2->SetTestProp1(55);
+        $obj3 = new PolyObject5a($objdb, array('id'=>($id3='testid5678'),'testprop1'=>15,'testprop4'=>102,'testprop5'=>17)); $obj3->SetTestProp1(65);
+        $obj4 = PolyObject5ab::Create($objdb); $id4 = $obj4->ID(); $obj4->SetTestProp4(103);
+        $obj5 = new PolyObject5a($objdb, array('id'=>($id5='testid9999'),'testprop1'=>15,'testprop4'=>104,'testprop5'=>17)); $obj5->DeltaTestProp4c(10);
         
         $database->expects($this->exactly(11))->method('write')
             ->withConsecutive( // insert first, in order, then updates
                 [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id1) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject2 (id) VALUES (:d0)', array('d0'=>$id1) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,id) VALUES (:d0,:d1)', array('d0'=>13,'d1'=>$id1) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,id) VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>100,'d2'=>$id1) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id1) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id4) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject2 (id) VALUES (:d0)', array('d0'=>$id4) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,id) VALUES (:d0,:d1)', array('d0'=>13,'d1'=>$id4) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,id) VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>103,'d2'=>$id4) ],
                 [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>102,'d1'=>$id4) ],
                 [ 'UPDATE a2obj_core_database_polyobject1 SET testprop1=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id2) ],
                 [ 'UPDATE a2obj_core_database_polyobject1 SET testprop1=:d0 WHERE id=:id', array('d0'=>65,'id'=>$id3) ],
@@ -548,7 +549,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
     
-    public function testUniqueKeyInsertLoadID() : void
+    public function testUniqueKeyInsertID() : void
     {
         // ID is always considered unique w/o pre-registering or loading
         
@@ -563,6 +564,32 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $objdb->TryLoadByID(EasyObject::class, $obj->ID()));
     }
     
+    public function testUniqueKeyInsertUnique() : void
+    {
+        // check that loading the object adds its registered unique keys
+                
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $selstr1 = "SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
+            "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id WHERE mykey = :d0";
+        
+        $selstr2 = "SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
+            "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id";
+        
+        $database->expects($this->exactly(2))->method('read')
+            ->withConsecutive([$selstr1, array('d0'=>5)],[$selstr2, array()])
+            ->willReturnOnConsecutiveCalls([], [array('id'=>$id='test123','mykey'=>7)]);
+            
+        $this->assertNull($objdb->TryLoadUniqueByKey(MyObjectBase::class, 'mykey', 5));
+        
+        $objs = $objdb->LoadObjectsByQuery(MyObjectChild::class, new QueryBuilder());
+        $this->assertCount(1, $objs); $obj = $objs[$id];
+
+        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(MyObjectBase::class, 'mykey', 7));
+        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(MyObjectChild::class, 'mykey', 7));
+    }
+
     public function testNonUniqueKeyPolyLoad() : void
     {
         $database = $this->createMock(Database::class);
@@ -920,7 +947,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $this->assertEmpty($objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55));
         
-        $obj = PolyObject5aa::Create($objdb)->SetTestProp5(55)->Save();
+        $obj = PolyObject5aa::Create($objdb)->SetTestProp5(55); $obj->SetTestProp4(0)->Save();
         
         $this->assertEmpty($objdb->LoadObjectsByKey(PolyObject5ab::class, 'testprop5', 55));
         
@@ -941,7 +968,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55));
         
-        $obj = PolyObject5aa::Create($objdb)->SetTestProp5(55)->Save();
+        $obj = PolyObject5aa::Create($objdb)->SetTestProp5(55); $obj->SetTestProp4(0)->Save();
         
         $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5ab::class, 'testprop5', 55));
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(PolyObject5aa::class, 'testprop5', 55));
@@ -962,7 +989,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = EasyObject::Create($objdb)->SetGeneralKey(null); $id1 = $obj1->ID();
         $obj2 = EasyObject::Create($objdb)->SetGeneralKey(0); $id2 = $obj2->ID();
         
-        $insstr1 = "INSERT INTO a2obj_core_database_easyobject (generalKey,id) VALUES (NULL,:d0)";
+        $insstr1 = "INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)";
         $insstr2 = "INSERT INTO a2obj_core_database_easyobject (generalKey,id) VALUES (:d0,:d1)";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$insstr1, array('d0'=>$id1)], [$insstr2, array('d0'=>0,'d1'=>$id2)])
@@ -980,22 +1007,20 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     public function testUniqueNullKey() : void
     {
         // NULL is not actually a unique value! can have more than one
-        // setting a unique key to/from null should move it from/to the unique cache
+        // setting a unique key to/from null should move it between the cache types
         
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
         $database->method('write')->willReturn(1);
         
-        $database->expects($this->exactly(3))->method('read')
+        $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
                 ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()], // LoadObjectsByKey
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()]) // TryLoadUniqueByKey
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()]) // LoadObjectsByKey
             ->willReturnOnConsecutiveCalls(
                 [array('id'=>$id1='test123','uniqueKey'=>5)], 
-                [array('id'=>$id2='test456','uniqueKey'=>null), array('id'=>$id3='test789','uniqueKey'=>null)], 
-                [array('id'=>$id1='test123','uniqueKey'=>null), array('id'=>$id3='test789','uniqueKey'=>null)]);
+                [array('id'=>$id2='test456','uniqueKey'=>null), array('id'=>$id3='test789','uniqueKey'=>null)]);
         
         $obj1 = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj1); assert($obj1 !== null);
@@ -1010,10 +1035,10 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($obj2->GetUniqueKey());
         $this->assertNull($obj3->GetUniqueKey());
         
-        $obj1->SetUniqueKey(null)->Save();
+        $obj1->SetUniqueKey(null)->Save(); // move obj1 to non-unique array
         $this->assertCount(3, $objdb->LoadObjectsByKey(EasyObject::class, 'uniqueKey', null));
         
-        $obj2->SetUniqueKey(5)->Save();
+        $obj2->SetUniqueKey(5)->Save(); // move obj2 to unique array
         $this->assertSame($obj2, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
         
         $this->expectException(UniqueKeyException::class);

@@ -46,9 +46,25 @@ abstract class MyObjectBase extends BaseObject
 {
     use TableLinkedChildren;
     
+    private FieldTypes\NullIntType $mykey;
+    
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->mykey = $fields[] = new FieldTypes\NullIntType('mykey');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
+    
     /** @return ?array<class-string<self>> */
     public static function GetChildMap() : ?array { 
         return array(MyObjectChild::class); }
+    
+    public function GetMyKey() : ?int { return $this->mykey->TryGetValue(); }
+    public function SetMyKey(?int $val) : self { $this->mykey->SetValue($val); return $this; }
 }
 
 final class MyObjectChild extends MyObjectBase
@@ -90,25 +106,25 @@ abstract class PolyObject1 extends PolyObject0
         return array(27=>PolyObject2::class); // skip over PolyObject15
     }
     
-    private FieldTypes\IntType $testprop1;
+    private FieldTypes\NullIntType $testprop1;
 
     protected function CreateFields() : void
     {
         $fields = array();
         
-        $this->testprop1 = $fields[] = new FieldTypes\IntType('testprop1');
+        $this->testprop1 = $fields[] = new FieldTypes\NullIntType('testprop1');
         
         $this->RegisterFields($fields, self::class);
         
         parent::CreateFields();
     }
     
-    public function GetTestProp1() : int
+    public function GetTestProp1() : ?int
     { 
-        return $this->testprop1->GetValue(); 
+        return $this->testprop1->TryGetValue(); 
     }
     
-    public function SetTestProp1(int $val) : self
+    public function SetTestProp1(?int $val) : self
     {
         $this->testprop1->SetValue($val); return $this;
     }
@@ -118,25 +134,25 @@ abstract class PolyObject15 extends PolyObject1
 {
     // not part of the "loadable" chain - transparent to DB
     
-    private FieldTypes\IntType $testprop15;
+    private FieldTypes\NullIntType $testprop15;
     
     protected function CreateFields() : void
     {
         $fields = array();
         
-        $this->testprop15 = $fields[] = new FieldTypes\IntType('testprop15');
+        $this->testprop15 = $fields[] = new FieldTypes\NullIntType('testprop15');
         
         $this->RegisterFields($fields); // part of PolyObject2's table
         
         parent::CreateFields();
     }
     
-    public function GetTestProp15() : int
+    public function GetTestProp15() : ?int
     {
-        return $this->testprop15->GetValue();
+        return $this->testprop15->TryGetValue();
     }
     
-    public function SetTestProp15(int $val) : self
+    public function SetTestProp15(?int $val) : self
     {
         $this->testprop15->SetValue($val); return $this;
     }
@@ -238,25 +254,25 @@ class PolyObject5a extends PolyObject4
         return self::BaseCreate($database);
     }
     
-    private FieldTypes\IntType $testprop5;
+    private FieldTypes\NullIntType $testprop5;
     
     protected function CreateFields() : void
     {
         $fields = $this->GetTypeFields();
         
-        $this->testprop5 = $fields[] = new FieldTypes\IntType('testprop5');
+        $this->testprop5 = $fields[] = new FieldTypes\NullIntType('testprop5');
         
         $this->RegisterFields($fields, self::class);
         
         parent::CreateFields();
     }
     
-    public function GetTestProp5() : int
+    public function GetTestProp5() : ?int
     {
-        return $this->testprop5->GetValue();
+        return $this->testprop5->TryGetValue();
     }
     
-    public function SetTestProp5(int $val) : self
+    public function SetTestProp5(?int $val) : self
     {
         $this->testprop5->SetValue($val); return $this;
     }

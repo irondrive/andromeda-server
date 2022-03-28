@@ -42,7 +42,7 @@ final class CommitMetrics extends BaseObject
     public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, DBStats $metrics) : self
     {
         $obj = parent::BaseCreate($database);
-        $obj->requestmet->SetValue($request);
+        $obj->requestmet->SetObject($request);
         
         $obj->SetDBStats($metrics);
         

@@ -111,7 +111,7 @@ final class RequestMetrics extends BaseObject
                                   DBStats $construct, array $actions, array $commits, DBStats $total) : self
     {        
         $obj = parent::BaseCreate($database);
-        $obj->requestlog->SetValue($reqlog);
+        $obj->requestlog->SetObject($reqlog);
         
         $obj->peak_memory->SetValue(memory_get_peak_usage());
         $obj->nincludes->SetValue(count(get_included_files()));
@@ -128,13 +128,13 @@ final class RequestMetrics extends BaseObject
 
         if ($level >= Config::METRICS_EXTENDED)
         {
-            $obj->construct_queries->SetValue($construct->getQueries());
-            $obj->gcstats->SetValue(gc_status());
-            $obj->rusage->SetValue(getrusage());
-            $obj->includes->SetValue(get_included_files());
-            $obj->objects->SetValue($database->getLoadedObjects());
-            $obj->queries->SetValue($total->getQueries());
-            $obj->debuglog->SetValue(ErrorManager::GetInstance()->GetDebugLog());
+            $obj->construct_queries->SetArray($construct->getQueries());
+            $obj->gcstats->SetArray(gc_status());
+            $obj->rusage->SetArray(getrusage());
+            $obj->includes->SetArray(get_included_files());
+            $obj->objects->SetArray($database->getLoadedObjects());
+            $obj->queries->SetArray($total->getQueries());
+            $obj->debuglog->SetArray(ErrorManager::GetInstance()->GetDebugLog());
         }
         
         $obj->actions = array();
@@ -210,19 +210,19 @@ final class RequestMetrics extends BaseObject
             'total_stats' => $this->GetDBStatsClientObject()
         );
         
-        if ($this->gcstats->TryGetValue() !== null) // is EXTENDED
+        if ($this->gcstats->TryGetArray() !== null) // is EXTENDED
         {
-            $retval['construct_stats']['queries'] = $this->construct_queries->TryGetValue();
+            $retval['construct_stats']['queries'] = $this->construct_queries->TryGetArray();
             
-            $retval['gcstats'] = $this->gcstats->TryGetValue();
-            $retval['rusage'] = $this->rusage->TryGetValue();
-            $retval['includes'] = $this->includes->TryGetValue();
+            $retval['gcstats'] = $this->gcstats->TryGetArray();
+            $retval['rusage'] = $this->rusage->TryGetArray();
+            $retval['includes'] = $this->includes->TryGetArray();
             
             if (!$isError) // duplicated in error log
             {
-                $retval['objects'] = $this->objects->TryGetValue();
-                $retval['queries'] = $this->queries->TryGetValue();
-                $retval['debuglog'] = $this->debuglog->TryGetValue();
+                $retval['objects'] = $this->objects->TryGetArray();
+                $retval['queries'] = $this->queries->TryGetArray();
+                $retval['debuglog'] = $this->debuglog->TryGetArray();
             }
         }
 

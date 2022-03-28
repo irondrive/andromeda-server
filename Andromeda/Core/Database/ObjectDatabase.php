@@ -1,5 +1,7 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Core/Database/Database.php");
@@ -384,6 +386,17 @@ class ObjectDatabase
      * @var array<class-string<BaseObject>, array<string, BaseObject>> */
     private array $objectsByBase = array();
     
+    /** Prints internal data structures for debugging */
+    private function printDataStructures() : void // TODO remove
+    {
+        echo "objectsByBase: ";    print_r(Utilities::arrayStrings($this->objectsByBase));
+        echo "keyBaseClasses: ";   print_r(Utilities::arrayStrings($this->keyBaseClasses));
+        echo "objectsByKey: ";     print_r(Utilities::arrayStrings($this->objectsByKey));
+        echo "objectsKeyValues: "; print_r(Utilities::arrayStrings($this->objectsKeyValues));
+        echo "uniqueByKey: ";      print_r(Utilities::arrayStrings($this->uniqueByKey));
+        echo "uniqueKeyValues: ";  print_r(Utilities::arrayStrings($this->uniqueKeyValues));
+    }
+    
     /**
      * Returns an array of loaded object info for debugging, by class
      * @return array<class-string<BaseObject>, array<string, class-string<BaseObject>>>
@@ -438,8 +451,7 @@ class ObjectDatabase
             $this->objectsByBase[$base][$id] = $retobj;
             
             $this->RegisterUniqueKey($base, 'id');
-            $this->SetUniqueKeyObject($base, 'id', 
-                self::ValueToIndex($id), $retobj);
+            $this->SetUniqueKeysFromData($retobj, $row);
         }
         
         if (!($retobj instanceof $class))
@@ -493,7 +505,7 @@ class ObjectDatabase
      * Updates the given object in the database
      * @param BaseObject $object object to update
      * @param array<class-string<BaseObject>, FieldTypes\BaseField[]> $fieldsByClass 
-        fields to save of object for each table class, order derived->base
+        fields to save of object for each table class, order derived->base (modified only)
      * @throws UpdateFailedException if the update row fails
      * @return $this
      */
@@ -507,7 +519,8 @@ class ObjectDatabase
             foreach ($fields as $field)
             {
                 $key = $field->GetName();
-                $val = $field->SaveDBValue();
+                $val = $field->GetDBValue();
+                $field->ResetDelta();
                 
                 if ($field instanceof FieldTypes\Counter)
                 {
@@ -545,7 +558,7 @@ class ObjectDatabase
      * Inserts the given object to the database
      * @param BaseObject $object object to insert
      * @param array<class-string<BaseObject>, FieldTypes\BaseField[]> $fieldsByClass 
-          fields to save of object for each table class, order derived->base
+          fields to save of object for each table class, order derived->base (ALL)
      * @throws InsertFailedException if the insert row fails
      * @return $this
      */
@@ -566,16 +579,15 @@ class ObjectDatabase
             foreach ($fields as $field)
             {
                 $key = $field->GetName();
-                $val = $field->SaveDBValue();
+                $val = $field->GetDBValue();
                 
-                $columns[] = $key;
-                
-                if ($val !== null)
+                if ($key === 'id' || $field->isModified())
                 {
+                    $field->ResetDelta();
+                    $columns[] = $key;
                     $indexes[] = ':d'.$i;
                     $data['d'.$i++] = $val;
                 }
-                else $indexes[] = 'NULL';
             }
             
             $colstr = implode(',',$columns);
@@ -717,6 +729,8 @@ class ObjectDatabase
      */
     public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
     {
+        if ($value === null) throw new UniqueKeyException("$class $key"); /** @phpstan-ignore-line */
+        
         $validx = self::ValueToIndex($value);
         $this->uniqueByKey[$class][$key] ??= array();
         
@@ -746,6 +760,8 @@ class ObjectDatabase
      */
     public function DeleteUniqueByKey(string $class, string $key, $value) : bool
     {
+        if ($value === null) throw new UniqueKeyException("$class $key"); /** @phpstan-ignore-line */
+        
         $validx = self::ValueToIndex($value);
         $this->uniqueByKey[$class][$key] ??= array();
         
@@ -855,7 +871,7 @@ class ObjectDatabase
                 foreach ($childmap as $child)
             {
                 if ($child !== $class)
-                    $this->RegisterUniqueKey($child, $key, $class);
+                    $this->RegisterUniqueKey($child, $key, $bclass);
             }
         }
         
@@ -929,6 +945,31 @@ class ObjectDatabase
     }
     
     /**
+     * Adds the given object's row data to any existing unique key caches
+     * @param BaseObject $object object being created
+     * @param array<string, mixed> $data row from database
+     */
+    private function SetUniqueKeysFromData(BaseObject $object, array $data) : void
+    {
+        $objstr = (string)$object;
+        $class = get_class($object);
+        
+        $this->uniqueByKey[$class] ??= array();
+        
+        foreach ($data as $key=>$value)
+        {
+            if ($value !== null && array_key_exists($key, $this->uniqueByKey[$class]))
+            {
+                $validx = self::ValueToIndex($value);
+                $this->uniqueKeyValues[$objstr][$key] = $validx;
+                
+                $bclass = $this->keyBaseClasses[$class][$key] ?? $class;
+                $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
+            }
+        }
+    }
+    
+    /**
      * Removes an object from a non-unique key cache
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
@@ -977,17 +1018,16 @@ class ObjectDatabase
     {
         $objstr = (string)$object;
         $class = get_class($object);
-        
-        $isObjects = array_key_exists($objstr, $this->objectsKeyValues);
-        $isUnique = array_key_exists($objstr, $this->uniqueKeyValues);
-        
-        if (!$isObjects && !$isUnique) return;
-        
+
+        $this->objectsKeyValues[$objstr] ??= array();
+        $this->uniqueKeyValues[$objstr] ??= array();
+
         foreach ($fields as $field)
         {
             $key = $field->GetName();
             
-            if ($isObjects && array_key_exists($key, $this->objectsByKey[$class]))
+            if (array_key_exists($key, $this->objectsKeyValues[$objstr]) &&
+                array_key_exists($key, $this->objectsByKey[$class]))
             {
                 $validx = $this->objectsKeyValues[$objstr][$key];
                 unset($this->objectsKeyValues[$objstr][$key]);
@@ -996,7 +1036,8 @@ class ObjectDatabase
                 $this->RemoveNonUniqueKeyObject($bclass, $key, $validx, $object);
             }
             
-            if ($isUnique && array_key_exists($key, $this->uniqueByKey[$class]))
+            if (array_key_exists($key, $this->uniqueKeyValues[$objstr]) &&
+                array_key_exists($key, $this->uniqueByKey[$class]))
             {
                 $validx = $this->uniqueKeyValues[$objstr][$key];
                 unset($this->uniqueKeyValues[$objstr][$key]);

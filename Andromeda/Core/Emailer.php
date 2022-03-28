@@ -136,7 +136,7 @@ final class Emailer extends BaseObject
             }
             else $hosts = array(self::BuildHostFromParams($input->GetParams()));
                 
-            $mailer->hosts->SetValue($hosts);
+            $mailer->hosts->SetArray($hosts);
         }
         
         return $mailer;
@@ -183,7 +183,7 @@ final class Emailer extends BaseObject
             'id'           => $this->ID(),
             'date_created' => $this->date_created->GetValue(),
             'type' =>         array_flip(self::MAIL_TYPES)[$this->type->GetValue()],
-            'hosts' =>        $this->hosts->TryGetValue(),
+            'hosts' =>        $this->hosts->TryGetArray(),
             'username' =>     $this->username->TryGetValue(),
             'password' =>     (bool)($this->password->TryGetValue()),
             'from_address' => $this->from_address->GetValue(),
@@ -224,7 +224,7 @@ final class Emailer extends BaseObject
             $mailer->Password = $this->password->TryGetValue();
             if ($mailer->Username !== null) $mailer->SMTPAuth = true;
 
-            $mailer->Host = implode(';', $this->hosts->TryGetValue());
+            $mailer->Host = implode(';', $this->hosts->TryGetArray());
         }
     
         $this->mailer = $mailer;

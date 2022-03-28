@@ -1,21 +1,18 @@
 <?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Apps/Core/ActionLog.php");
 
-require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
-require_once(ROOT."/Apps/Accounts/AuthAccessLog.php"); use Andromeda\Apps\Accounts\AuthAccessLog;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\NoChildren;
+require_once(ROOT."/Apps/Accounts/AuthActionLog.php"); use Andromeda\Apps\Accounts\AuthActionLog;
 
 /** Core app access log for use with the accounts app installed */
-class AccessLog extends AuthAccessLog
-{    
-    /** 
-     * Creates a new log object that logs the given $auth and $admin values 
-     * @see AuthAccessLog::BaseAuthCreate()
-     */
-    public static function Create(ObjectDatabase $database, ?Authenticator $auth, bool $admin) : ?self
-    {        
-        if (($obj = parent::BaseAuthCreate($database, $auth)) === null) return null;
-        
-        return $obj->SetScalar('admin', $admin);
+final class ActionLogFull extends AuthActionLog
+{
+    use NoChildren;
+    
+    public static function GetTableClasses() : array
+    {
+        $tables = parent::GetTableClasses();
+        $tables[] = ActionLog::class; return $tables;
     }
 }
