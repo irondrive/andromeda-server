@@ -846,6 +846,26 @@ class ObjectDatabase
     }
     
     /**
+     * Removes an object from a non-unique key cache
+     * @template T of BaseObject
+     * @param class-string<T> $class class being cached (recurses on children)
+     * @param string $key name of the key field
+     * @param string $validx value of the key field
+     * @param T $object object being removed
+     */
+    private function RemoveNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $object) : void
+    {
+        unset($this->objectsByKey[$class][$key][$validx][$object->ID()]);
+        
+        if (($childmap = $class::GetChildMap()) !== null)
+            foreach ($childmap as $child)
+        {
+            if ($child !== $class)
+                $this->RemoveNonUniqueKeyObject($child, $key, $validx, $object);
+        }
+    }
+    
+    /**
      * Registers a class's unique keys so caching can happen
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
@@ -899,6 +919,29 @@ class ObjectDatabase
     }
     
     /**
+     * Adds the given object's row data to any existing unique key caches
+     * @param BaseObject $object object being created
+     * @param array<string, mixed> $data row from database
+     */
+    private function SetUniqueKeysFromData(BaseObject $object, array $data) : void
+    {
+        $objstr = (string)$object;
+        $class = get_class($object);
+        
+        foreach ($data as $key=>$value)
+        {
+            if ($value !== null && array_key_exists($key, $this->uniqueByKey[$class]))
+            {
+                $validx = self::ValueToIndex($value);
+                $this->uniqueKeyValues[$objstr][$key] = $validx;
+                
+                $bclass = $this->keyBaseClasses[$class][$key];
+                $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
+            }
+        }
+    }
+    
+    /**
      * Adds the given object's fields to any existing key caches
      * @param BaseObject $object object being created
      * @param FieldTypes\BaseField[] $fields field values
@@ -937,50 +980,7 @@ class ObjectDatabase
             }
         }
     }
-    
-    /**
-     * Adds the given object's row data to any existing unique key caches
-     * @param BaseObject $object object being created
-     * @param array<string, mixed> $data row from database
-     */
-    private function SetUniqueKeysFromData(BaseObject $object, array $data) : void
-    {
-        $objstr = (string)$object;
-        $class = get_class($object);
-        
-        foreach ($data as $key=>$value)
-        {
-            if ($value !== null && array_key_exists($key, $this->uniqueByKey[$class]))
-            {
-                $validx = self::ValueToIndex($value);
-                $this->uniqueKeyValues[$objstr][$key] = $validx;
-                
-                $bclass = $this->keyBaseClasses[$class][$key];
-                $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
-            }
-        }
-    }
-    
-    /**
-     * Removes an object from a non-unique key cache
-     * @template T of BaseObject
-     * @param class-string<T> $class class being cached (recurses on children)
-     * @param string $key name of the key field
-     * @param string $validx value of the key field
-     * @param T $object object being removed
-     */
-    private function RemoveNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $object) : void
-    {
-        unset($this->objectsByKey[$class][$key][$validx][$object->ID()]);
-        
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
-        {
-            if ($child !== $class)
-                $this->RemoveNonUniqueKeyObject($child, $key, $validx, $object);
-        }
-    }
-    
+
     /**
      * Unsets the value of a unique key cache (to null)
      * @template T of BaseObject
@@ -1001,7 +1001,7 @@ class ObjectDatabase
     }
 
     /**
-     * Removes the given object's fields from any existing key-based caches
+     * Removes the fields for the given object from any existing key-based caches
      * Uses the cached "old-value" for the fields rather than their current value
      * @param BaseObject $object object being created
      * @param FieldTypes\BaseField[] $fields field values
