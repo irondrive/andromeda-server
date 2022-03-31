@@ -9,6 +9,63 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php");
 
 class BaseObjectTest extends \PHPUnit\Framework\TestCase
 {
+    public function testGetUniqueKeys() : void
+    {
+        $this->assertSame(array(
+            EasyObject::class => array('uniqueKey','id')
+        ), EasyObject::GetUniqueKeys());
+        
+        $this->assertSame(array(
+            PolyObject5a::class => array('testprop5'),
+            PolyObject1::class => array('id')
+        ), PolyObject5aa::GetUniqueKeys());
+    }
+    
+    public function testGetRowClass() : void
+    {
+        $this->assertSame(PolyObject4::class, PolyObject4::GetRowClass(array('type'=>5)));
+        $this->assertSame(PolyObject5a::class, PolyObject4::GetRowClass(array('type'=>13)));
+        
+        $this->expectException(BadPolyTypeException::class);
+        PolyObject4::GetRowClass(array('type'=>99));
+    }
+    
+    public function testGetWhereChild() : void
+    {
+        $db = new ObjectDatabase($this->createMock(Database::class));
+        
+        $q = new QueryBuilder();
+        $this->assertSame("a2obj_core_database_polyobject4.type = :d0", 
+            PolyObject4::GetWhereChild($db, $q, PolyObject4::class));
+        $this->assertSame(array('d0'=>5), $q->GetData());
+        
+        $q = new QueryBuilder();
+        $this->assertSame("a2obj_core_database_polyobject4.type = :d0",
+            PolyObject4::GetWhereChild($db, $q, PolyObject5a::class));
+        $this->assertSame(array('d0'=>13), $q->GetData());
+        
+        $q = new QueryBuilder();
+        $this->expectException(BadPolyClassException::class);
+        PolyObject4::GetWhereChild($db, $q, PolyObject3::class);
+    }
+    
+    public function testGetTableClasses() : void
+    {
+        $this->assertSame(array(EasyObject::class), 
+            EasyObject::GetTableClasses());
+        
+        $this->assertSame(array(
+            PolyObject1::class, PolyObject2::class,
+            PolyObject4::class, PolyObject5a::class
+        ), PolyObject5a::GetTableClasses());
+        
+        $this->assertSame(EasyObject::class, EasyObject::GetBaseTableClass());
+        $this->assertSame(PolyObject1::class, PolyObject5a::GetBaseTableClass());
+        
+        $this->expectException(NoBaseTableException::class);
+        PolyObject0::GetBaseTableClass();
+    }
+    
     public function testBasic() : void
     {
         // test BaseCreate, construct, ID()

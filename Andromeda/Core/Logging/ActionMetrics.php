@@ -44,9 +44,14 @@ final class ActionMetrics extends BaseObject
         $this->RegisterFields($fields, self::class);
         $this->DBStatsCreateFields();
         
-        $this->database->RegisterUniqueKey(self::class, 'actionlog');
-        
         parent::CreateFields();
+    }
+    
+    protected static function AddUniqueKeys(array& $keymap) : void
+    {
+        $keymap[self::class] = array('actionlog');
+        
+        parent::AddUniqueKeys($keymap);
     }
 
     /**

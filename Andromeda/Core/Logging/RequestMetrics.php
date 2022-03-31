@@ -90,12 +90,17 @@ final class RequestMetrics extends BaseObject
         
         $this->RegisterFields($fields, self::class);
         $this->DBStatsCreateFields();
-        
-        $this->database->RegisterUniqueKey(self::class, 'requestlog');
          
         parent::CreateFields();
     }
-
+    
+    protected static function AddUniqueKeys(array& $keymap) : void
+    {
+        $keymap[self::class] = array('requestlog');
+        
+        parent::AddUniqueKeys($keymap);
+    }
+    
     /**
      * Logs metrics and returns a metrics object
      * @param int $level logging level

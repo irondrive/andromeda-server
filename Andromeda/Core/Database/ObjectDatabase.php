@@ -1,7 +1,5 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Core/Database/Database.php");
@@ -11,14 +9,17 @@ require_once(ROOT."/Core/Database/FieldTypes.php");
 /** Andromeda cannot rollback and then commit/save since database/objects state is not sufficiently reset */
 class SaveAfterRollbackException extends DatabaseException { public $message = "SAVE_AFTER_ROLLBACK"; }
 
-/** Exception indicating the class does not have a base table and no children (improper setup) */
-class MissingTableException extends DatabaseException { public $message = "CLASS_MISSING_TABLE"; }
-
 /** Exception indicating that the requested class does not match the loaded object */
 class ObjectTypeException extends DatabaseException { public $message = "DBOBJECT_TYPE_MISMATCH"; }
 
 /** Exception indicating that multiple objects were loaded for by-unique query */
-class UniqueKeyException extends DatabaseException { public $message = "MULTIPLE_UNIQUE_OBJECTS"; }
+class MultipleUniqueKeyException extends DatabaseException { public $message = "MULTIPLE_UNIQUE_OBJECTS"; }
+
+/** Exception indicating the given unique key is not registered for this class */
+class UnknownUniqueKeyException extends DatabaseException { public $message = "UNKNOWN_UNIQUE_KEY"; }
+
+/** Exception indicating that null was given as a unique key value */
+class NullUniqueKeyException extends DatabaseException { public $message = "NULL_UNIQUE_VALUE"; }
 
 /** Base exception indicating that something went wrong due to concurrency, try again */
 abstract class ConcurrencyException extends Exceptions\ClientException { public $code = 503; }
@@ -153,11 +154,11 @@ class ObjectDatabase
         if ($countChildren) // count foreach child
         {
             if (($childmap = $class::GetChildMap()) === null)
-                throw new MissingTableException($class);
+                throw new NoBaseTableException($class);
             
             $count = 0; foreach ($childmap as $child)
             {
-                if ($class === $child) throw new MissingTableException($class);
+                if ($class === $child) throw new NoBaseTableException($class);
                 $count += $this->CountObjectsByQuery($child, $query);
             }
             return $count;
@@ -326,7 +327,7 @@ class ObjectDatabase
     private function GetFromAndSetJoins(string $class, QueryBuilder $query, bool $selectFields) : string
     {
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new MissingTableException($class);
+        if (empty($classes)) throw new NoBaseTableException($class);
         
         // specify which tables to select in case of extra joins
         $selstr = implode(', ',array_map(function(string $sclass)use($selectFields){
@@ -354,17 +355,17 @@ class ObjectDatabase
     private function SetTypeFiltering(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
     {       
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new MissingTableException($class);
+        if (empty($classes)) throw new NoBaseTableException($class);
         
         // we want the limit/offset to apply to the class being loaded as,
         // not the current child table... use a subquery to accomplish this
-        if (($class !== $bclass || $class::HasTypedRows()) &&
-            ($query->GetLimit() !== null || $query->GetOffset() !== null))
+        if (($query->GetLimit() !== null || $query->GetOffset() !== null) &&
+            ($class !== $bclass || ($class::HasTypedRows() && $selectType)))
         {            
             // the limited base class must have a table
             $bclasses = $bclass::GetTableClasses();
             if (empty($bclasses) || $bclass !== $bclasses[array_key_last($bclasses)])
-                throw new MissingTableException($bclass);
+                throw new NoBaseTableException($bclass);
             
             $subquery = clone $query;
             
@@ -385,18 +386,7 @@ class ObjectDatabase
     /** master array of objects in memory to prevent duplicates
      * @var array<class-string<BaseObject>, array<string, BaseObject>> */
     private array $objectsByBase = array();
-    
-    /** Prints internal data structures for debugging */
-    private function printDataStructures() : void // TODO remove
-    {
-        echo "objectsByBase: ";    print_r(Utilities::arrayStrings($this->objectsByBase));
-        echo "keyBaseClasses: ";   print_r(Utilities::arrayStrings($this->keyBaseClasses));
-        echo "objectsByKey: ";     print_r(Utilities::arrayStrings($this->objectsByKey));
-        echo "objectsKeyValues: "; print_r(Utilities::arrayStrings($this->objectsKeyValues));
-        echo "uniqueByKey: ";      print_r(Utilities::arrayStrings($this->uniqueByKey));
-        echo "uniqueKeyValues: ";  print_r(Utilities::arrayStrings($this->uniqueKeyValues));
-    }
-    
+
     /**
      * Returns an array of loaded object info for debugging, by class
      * @return array<class-string<BaseObject>, array<string, class-string<BaseObject>>>
@@ -434,10 +424,7 @@ class ObjectDatabase
     {
         $id = (string)$row['id'];
         
-        $tables = $class::GetTableClasses();
-        if (!empty($tables)) $base = $tables[0];
-        else throw new MissingTableException($class);
-
+        $base = $class::GetBaseTableClass();
         $this->objectsByBase[$base] ??= array();
         
         // if this object is already loaded, don't replace it
@@ -450,7 +437,7 @@ class ObjectDatabase
             $retobj = new $class($this, $row);
             $this->objectsByBase[$base][$id] = $retobj;
             
-            $this->RegisterUniqueKey($base, 'id');
+            $this->RegisterUniqueKeys($base);
             $this->SetUniqueKeysFromData($retobj, $row);
         }
         
@@ -471,7 +458,7 @@ class ObjectDatabase
         unset($this->created[$id]);
         unset($this->modified[$id]);
         
-        $base = $object::GetTableClasses()[0];
+        $base = $object::GetBaseTableClass();
         unset($this->objectsByBase[$base][$id]);
         
         $this->UnsetAllObjectKeyFields($object);
@@ -488,7 +475,7 @@ class ObjectDatabase
     public function DeleteObject(BaseObject $object) : self
     {
         $query = new QueryBuilder();
-        $basetbl = $this->GetClassTableName($object::GetTableClasses()[0]);
+        $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
         $query->Where($query->Equals($basetbl.'.id',$object->ID()));
         
         $class = get_class($object);
@@ -564,11 +551,9 @@ class ObjectDatabase
      */
     public function InsertObject(BaseObject $object, array $fieldsByClass) : self
     {
-        $tables = $object::GetTableClasses();
-        if (!empty($tables)) $base = $tables[0];
-        else throw new MissingTableException($object);
+        $base = $object::GetBaseTableClass();
         
-        $this->RegisterUniqueKey($base, 'id');
+        $this->RegisterUniqueKeys($base);
         $this->objectsByBase[$base][$object->ID()] = $object;
         
         foreach (array_reverse($fieldsByClass) as $class=>$fields)
@@ -724,21 +709,27 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws UniqueKeyException if > 1 object is loaded
+     * @throws NullUniqueKeyException if $value is null
+     * @throws UnknownUniqueKeyException if the key is not registered
+     * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
     public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
     {
-        if ($value === null) throw new UniqueKeyException("$class $key"); /** @phpstan-ignore-line */
+        if ($value === null) throw new NullUniqueKeyException("$class $key"); /** @phpstan-ignore-line */
+        
+        $this->RegisterUniqueKeys($class);
+        
+        if (!array_key_exists($key, $this->uniqueByKey[$class]))
+            throw new UnknownUniqueKeyException("$class $key");
         
         $validx = self::ValueToIndex($value);
-        $this->uniqueByKey[$class][$key] ??= array();
-        
+
         if (!array_key_exists($validx, $this->uniqueByKey[$class][$key]))
         {
             $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $objs = $this->LoadObjectsByQuery($class, $q);
-            if (count($objs) > 1) throw new UniqueKeyException("$class $key");
+            if (count($objs) > 1) throw new MultipleUniqueKeyException("$class $key");
             
             $obj = (count($objs) === 1) ? array_values($objs)[0] : null;
             
@@ -755,16 +746,22 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws UniqueKeyException if > 1 object is deleted
+     * @throws NullUniqueKeyException if $value is null
+     * @throws UnknownUniqueKeyException if the key is not registered
+     * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
     public function DeleteUniqueByKey(string $class, string $key, $value) : bool
     {
-        if ($value === null) throw new UniqueKeyException("$class $key"); /** @phpstan-ignore-line */
+        if ($value === null) throw new NullUniqueKeyException("$class $key"); /** @phpstan-ignore-line */
         
+        $this->RegisterUniqueKeys($class);
+        
+        if (!array_key_exists($key, $this->uniqueByKey[$class]))
+            throw new UnknownUniqueKeyException("$class $key");
+            
         $validx = self::ValueToIndex($value);
-        $this->uniqueByKey[$class][$key] ??= array();
-        
+
         if (array_key_exists($validx, $this->uniqueByKey[$class][$key]))
         {
             $obj = $this->uniqueByKey[$class][$key][$validx];
@@ -775,7 +772,7 @@ class ObjectDatabase
         {
             $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $count = $this->DeleteObjectsByQuery($class, $q);
-            if ($count > 1) throw new UniqueKeyException("$class $key");
+            if ($count > 1) throw new MultipleUniqueKeyException("$class $key");
         }
         
         $this->uniqueByKey[$class][$key][$validx] = null; return $count > 0;
@@ -849,33 +846,30 @@ class ObjectDatabase
     }
     
     /**
-     * Registers a unique key ahead of time so the DB can cache a unique object
-     * when it is saved or updated without an initial load
+     * Registers a class's unique keys so caching can happen
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
-     * @param string $key name of the key field
-     * @param ?class-string<T> $bclass base class for property
-     * @return self
      */
-    public function RegisterUniqueKey(string $class, string $key, ?string $bclass = null) : self
+    private function RegisterUniqueKeys(string $class) : void
     {
-        $bclass ??= $class;
-        
-        $this->SetKeyBaseClass($class, $key, $bclass);
-        
-        if (!array_key_exists($key, $this->uniqueByKey[$class] ?? array()))
+        if (!array_key_exists($class, $this->uniqueByKey))
         {
-            $this->uniqueByKey[$class][$key] = array();
+            $this->uniqueByKey[$class] = array();
             
-            if (($childmap = $class::GetChildMap()) !== null)
-                foreach ($childmap as $child)
+            foreach ($class::GetUniqueKeys() as $bclass=>$keys) 
+                foreach ($keys as $key)
             {
-                if ($child !== $class)
-                    $this->RegisterUniqueKey($child, $key, $bclass);
+                $this->SetKeyBaseClass($class, $key, $bclass);
+                $this->uniqueByKey[$class][$key] = array();
+                
+                if (($childmap = $class::GetChildMap()) !== null)
+                    foreach ($childmap as $child)
+                {
+                    if ($child !== $class)
+                        $this->RegisterUniqueKeys($child);
+                }
             }
         }
-        
-        return $this;
     }
 
     /**
@@ -938,7 +932,7 @@ class ObjectDatabase
             {
                 $this->uniqueKeyValues[$objstr][$key] = $validx;
                 
-                $bclass = $this->keyBaseClasses[$class][$key] ?? $class;
+                $bclass = $this->keyBaseClasses[$class][$key];
                 $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
             }
         }
@@ -954,8 +948,6 @@ class ObjectDatabase
         $objstr = (string)$object;
         $class = get_class($object);
         
-        $this->uniqueByKey[$class] ??= array();
-        
         foreach ($data as $key=>$value)
         {
             if ($value !== null && array_key_exists($key, $this->uniqueByKey[$class]))
@@ -963,7 +955,7 @@ class ObjectDatabase
                 $validx = self::ValueToIndex($value);
                 $this->uniqueKeyValues[$objstr][$key] = $validx;
                 
-                $bclass = $this->keyBaseClasses[$class][$key] ?? $class;
+                $bclass = $this->keyBaseClasses[$class][$key];
                 $this->SetUniqueKeyObject($bclass, $key, $validx, $object);
             }
         }
@@ -1026,8 +1018,7 @@ class ObjectDatabase
         {
             $key = $field->GetName();
             
-            if (array_key_exists($key, $this->objectsKeyValues[$objstr]) &&
-                array_key_exists($key, $this->objectsByKey[$class]))
+            if (array_key_exists($key, $this->objectsKeyValues[$objstr]))
             {
                 $validx = $this->objectsKeyValues[$objstr][$key];
                 unset($this->objectsKeyValues[$objstr][$key]);
@@ -1036,8 +1027,7 @@ class ObjectDatabase
                 $this->RemoveNonUniqueKeyObject($bclass, $key, $validx, $object);
             }
             
-            if (array_key_exists($key, $this->uniqueKeyValues[$objstr]) &&
-                array_key_exists($key, $this->uniqueByKey[$class]))
+            if (array_key_exists($key, $this->uniqueKeyValues[$objstr]))
             {
                 $validx = $this->uniqueKeyValues[$objstr][$key];
                 unset($this->uniqueKeyValues[$objstr][$key]);
@@ -1057,7 +1047,7 @@ class ObjectDatabase
         $objstr = (string)$object;
         $class = get_class($object);
         
-        if (array_key_exists($objstr, $this->objectsKeyValues)) // isObjects
+        if (array_key_exists($objstr, $this->objectsKeyValues))
         {
             foreach ($this->objectsKeyValues[$objstr] as $key=>$validx)
             {
@@ -1066,7 +1056,7 @@ class ObjectDatabase
             }
         }
         
-        if (array_key_exists($objstr, $this->uniqueKeyValues)) // isUnique
+        if (array_key_exists($objstr, $this->uniqueKeyValues))
         {
             foreach ($this->uniqueKeyValues[$objstr] as $key=>$validx)
             {

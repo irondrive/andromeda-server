@@ -547,11 +547,14 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         //should return the same object w/o loading from DB
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
+        
+        $this->expectException(UnknownUniqueKeyException::class);
+        $objdb->TryLoadUniqueByKey(EasyObject::class, 'testKey', 5);
     }
     
     public function testUniqueKeyInsertID() : void
     {
-        // ID is always considered unique w/o pre-registering or loading
+        // ID should always considered unique
         
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -887,39 +890,16 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj = EasyObject::Create($objdb);
         
-        $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
-            ->willReturn(array());
-        
-        // have to do a uniqueKey query so the DB knows it's a unique key (not registered ahead of time)
-        $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6)); // different value!
-
-        $database->expects($this->exactly(1))->method('write')
-            ->with("INSERT INTO a2obj_core_database_easyobject (uniqueKey,id) VALUES (:d0,:d1)", array('d0'=>5,'d1'=>$obj->ID()))
-            ->willReturn(1);
-        
-        $obj->SetUniqueKey(5)->Save();
-        
-        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
-    }
-    
-    public function testUniqueKeyInsertRegistered() : void
-    {
-        $database = $this->createMock(Database::class);
-        $objdb = new ObjectDatabase($database);
-        
-        $obj = EasyObject::Create($objdb);
-        
         $database->expects($this->exactly(0))->method('read');
-        $database->expects($this->exactly(1))->method('write')->willReturn(1);
-        
-        $objdb->RegisterUniqueKey(EasyObject::class, 'uniqueKey');
+
+        $database->expects($this->exactly(1))->method('write')->willReturn(1)
+            ->with("INSERT INTO a2obj_core_database_easyobject (uniqueKey,id) VALUES (:d0,:d1)", array('d0'=>5,'d1'=>$obj->ID()));
         
         $obj->SetUniqueKey(5)->Save();
         
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
-    
+
     public function testUniqueKeyConstructID() : void
     {
         // when constructing objects, ID is an automatic unique key
@@ -1041,7 +1021,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj2->SetUniqueKey(5)->Save(); // move obj2 to unique array
         $this->assertSame($obj2, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
         
-        $this->expectException(UniqueKeyException::class);
+        $this->expectException(NullUniqueKeyException::class);
         $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', null); /** @phpstan-ignore-line */
     }
 
@@ -1079,15 +1059,9 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
             "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
             "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-            "WHERE a2obj_core_database_polyobject5a.id IN ".
-                '(SELECT id FROM (SELECT a2obj_core_database_polyobject5a.id '.
-                'FROM a2obj_core_database_polyobject5a '.
-                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-                'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-                'ORDER BY testprop LIMIT 3 OFFSET 2) AS t)', []);
+            "ORDER BY testprop LIMIT 3 OFFSET 2", []);
         
-        $objdb->LoadObjectsByQuery(PolyObject5a::class, $q);
+        $objdb->LoadObjectsByQuery(PolyObject5a::class, $q); // loading via cast, no subquery
     }
     
     public function testLimitOffsetChildTableNoSubquery() : void
@@ -1101,7 +1075,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         ->with("SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
             "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id LIMIT 3 OFFSET 2", []);
         
-        $objdb->LoadObjectsByQuery(MyObjectChild::class, $q);
+        $objdb->LoadObjectsByQuery(MyObjectChild::class, $q); // final table, no subquery
     }
 
     public function testLimitOffsetChildNoTableNoSubquery() : void
@@ -1118,6 +1092,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
             "WHERE a2obj_core_database_polyobject5a.type = :d0 LIMIT 3 OFFSET 2", array('d0'=>101));
         
-        $objdb->LoadObjectsByQuery(PolyObject5aa::class, $q);
+        $objdb->LoadObjectsByQuery(PolyObject5aa::class, $q); // final table, no subquery
     }
 }
