@@ -11,7 +11,10 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 class NotMultiTableException extends Exceptions\ServerException { public $message = "TABLE_NOT_MULTI_CLASS"; }
 
 /** Exception indicating that no fields were previously registered with a table */
-class NoPrevTableException extends Exceptions\ServerException { public $message = "NO_PREVIOUS_TABLE"; }
+class NoChildTableException extends Exceptions\ServerException { public $message = "NO_CHILD_TABLE"; }
+
+/** Exception indicating a base table is not given for this class */
+class NoBaseTableException extends Exceptions\ServerException { public $message = "NO_BASE_TABLE"; }
 
 /**
  * The base class for objects that can be saved/loaded from the database.
@@ -32,6 +35,18 @@ abstract class BaseObject
      * @return array<class-string<self>>
      */
     public static function GetTableClasses() : array { return array(); }
+    
+    /**
+     * Returns the base table for this class
+     * @throws NoBaseTableException if none
+     * @return class-string<self>
+     */
+    final public static function GetBaseTableClass() : string
+    {
+        $tables = static::GetTableClasses();
+        if (!empty($tables)) return $tables[0];
+        else throw new NoBaseTableException(static::class);
+    }
 
     /**
      * Returns the array of subclasses that exist for this base class, so we can load via it
@@ -43,11 +58,48 @@ abstract class BaseObject
      */
     public static function GetChildMap() : ?array { return null; }
     
+    /**
+     * Returns this class's unique key map (with parents)
+     * @return array<class-string<self>, array<string>>
+     */
+    final public static function GetUniqueKeys() : array
+    {
+        $keymap = array(); static::AddUniqueKeys($keymap); return $keymap;
+    }
+    
+    /**
+     * Method for children to override to add their unique keys to the array
+     * Children MUST call parent::AddUniqueKeys(), AFTER adding their keys
+     * @param array<class-string<self>, array<string>> $keymap key map
+     */
+    protected static function AddUniqueKeys(array& $keymap) : void 
+    { 
+        $btable = self::GetBaseTableClass();
+        $keymap[$btable] ??= array();
+        $keymap[$btable][] = 'id';
+    }
+    
+    /**
+     * Helper function for base classes to add unique keys to child classes if they don't have a table
+     * Same idea as calling RegisterFields() with $table = null
+     * @param array<class-string<self>, array<string>> $keymap key map
+     * @param array<string> $keys keys for this class
+     * @throws NoChildTableException if no child has registered
+     */
+    final protected static function AddChildUniqueKeys(array& $keymap, array $keys)
+    {
+        if (empty($keymap)) throw new NoChildTableException(static::class);
+            
+        $table = array_key_last($keymap);
+        
+        $keymap[$table] = array_merge($keymap[$table], $keys);
+    }
+    
     /** Returns true iff GetWhereChild/GetRowClass can be used */
     public static function HasTypedRows() : bool { return false; }
     
     /**
-     * Given a child class, return a query clause selecting rows for it
+     * Given a child class, return a query clause selecting rows for it (and adds token data to the query)
      * Only for base classes that are the final table for > 1 class (TypedChildren)
      * Classes must have the @ return line in order to pass type checking!
      * @param ObjectDatabase $db database reference
@@ -154,12 +206,12 @@ abstract class BaseObject
      * Registers fields for the object so the DB can save/load objects
      * @param array<FieldTypes\BaseField> $fields array of fields to register
      * @param ?string $table class table the fields belong to, null to use the last registered (child)
-     * @throws NoPrevTableException if $table is null and no previously registered table
+     * @throws NoChildTableException if $table is null and no previously registered table
      */
     final protected function RegisterFields(array $fields, ?string $table = null) : void
     {
         if ($table === null && empty($this->fieldsByClass))
-            throw new NoPrevTableException(static::class);
+            throw new NoChildTableException(static::class);
         
         $table ??= array_key_last($this->fieldsByClass);
         $this->fieldsByClass[$table] ??= array();

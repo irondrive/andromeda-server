@@ -83,7 +83,7 @@ trait TableTypedChildren
         $type = $row['type']; $map = self::GetChildMap();
         
         if (!array_key_exists($type, $map))
-            throw new BadPolyClassException($type);
+            throw new BadPolyTypeException($type);
         
         return $map[$type];
     }

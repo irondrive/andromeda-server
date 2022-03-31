@@ -33,6 +33,13 @@ final class EasyObject extends BaseObject
         parent::CreateFields();
     }
     
+    protected static function AddUniqueKeys(array& $keymap) : void
+    {
+        $keymap[self::class] = array('uniqueKey');
+        
+        parent::AddUniqueKeys($keymap);
+    }
+    
     public function Delete() : void { parent::Delete(); }
     
     public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
@@ -57,6 +64,13 @@ abstract class MyObjectBase extends BaseObject
         $this->RegisterFields($fields, self::class);
         
         parent::CreateFields();
+    }
+    
+    protected static function AddUniqueKeys(array& $keymap) : void
+    {
+        $keymap[self::class] = array('mykey');
+        
+        parent::AddUniqueKeys($keymap);
     }
     
     /** @return ?array<class-string<self>> */
@@ -265,6 +279,13 @@ class PolyObject5a extends PolyObject4
         $this->RegisterFields($fields, self::class);
         
         parent::CreateFields();
+    }
+    
+    protected static function AddUniqueKeys(array& $keymap) : void
+    {
+        $keymap[self::class] = array('testprop5');
+        
+        parent::AddUniqueKeys($keymap);
     }
     
     public function GetTestProp5() : ?int
