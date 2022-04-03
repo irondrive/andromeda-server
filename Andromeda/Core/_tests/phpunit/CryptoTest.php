@@ -6,14 +6,14 @@ require_once(ROOT."/Core/Crypto.php");
 
 class CryptoTest extends \PHPUnit\Framework\TestCase
 {
-    public function testGenerateSalt()
+    public function testGenerateSalt() : void
     {
         $salt = CryptoKey::GenerateSalt();
         $this->assertIsString($salt);
         $this->assertSame(16, strlen($salt));
     }
 
-    public function testDeriveKey()
+    public function testDeriveKey() : void
     {
         $password = "mypassword123";
         $salt = "0123456789ABCDEF";
@@ -43,14 +43,14 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
             bin2hex(CryptoKey::DeriveKey($password, $salt, 32, true)));
     }
     
-    public function testSodiumException()
+    public function testSodiumException() : void
     {
         $this->expectException(\SodiumException::class);
         
         CryptoKey::DeriveKey("", "", 16);
     }
     
-    public function testCryptoSecret()
+    public function testCryptoSecret() : void
     {
         $this->assertSame(32, CryptoSecret::KeyLength());
         $this->assertSame(24, CryptoSecret::NonceLength());
@@ -83,7 +83,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         CryptoSecret::Decrypt($enc, $nonce, $badkey, $extra);
     }
     
-    public function testCryptoPublic()
+    public function testCryptoPublic() : void
     {
         $this->assertSame(24, CryptoPublic::NonceLength());
         $this->assertSame(24, strlen(CryptoPublic::GenerateNonce()));
@@ -111,7 +111,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         CryptoPublic::Decrypt($enc, $nonce, $priv1, $pub1);
     }
     
-    public function testCryptoAuth()
+    public function testCryptoAuth() : void
     {
         $this->assertSame(32, CryptoAuth::KeyLength());  
         $this->assertSame(32, CryptoAuth::AuthLength());
