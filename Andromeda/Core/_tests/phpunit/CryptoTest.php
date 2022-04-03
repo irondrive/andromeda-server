@@ -92,11 +92,11 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(32, strlen($pair->public));
         $this->assertSame(32, strlen($pair->private));
         
-        $pub1 = hex2bin("3dc676268fc36f9fe45b065186390adbcd88fadcb8f9e6384da5dd362a80ac2d");
-        $priv1 = hex2bin("292053109b4f6f89ebbde27771dc4b40bdddffb7c420064cd86d1e805f2659a4");
+        $pub1 = strval(hex2bin("3dc676268fc36f9fe45b065186390adbcd88fadcb8f9e6384da5dd362a80ac2d"));
+        $priv1 = strval(hex2bin("292053109b4f6f89ebbde27771dc4b40bdddffb7c420064cd86d1e805f2659a4"));
         
-        $pub2 = hex2bin("62d8459524005df5f4db734453e8069926b5631435545a81df45852f032d1447");
-        $priv2 = hex2bin("cf05a70e088db92bf3a0ee12e2e85f9f6f73bea2d73ab3c3d90c789123f3d3e0");        
+        $pub2 = strval(hex2bin("62d8459524005df5f4db734453e8069926b5631435545a81df45852f032d1447"));
+        $priv2 = strval(hex2bin("cf05a70e088db92bf3a0ee12e2e85f9f6f73bea2d73ab3c3d90c789123f3d3e0"));
         
         $data = "my super secret data...";
         $nonce = "0123456789ABCDEF01234567";
@@ -126,7 +126,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue(CryptoAuth::TryCheckAuthCode($mac, $data, $key));
         
-        $badmac = hex2bin("abc6a1077b910511bb3f9af766e469726d3e461783f48cf156e8d9966434dbc4");
+        $badmac = strval(hex2bin("abc6a1077b910511bb3f9af766e469726d3e461783f48cf156e8d9966434dbc4"));
         $this->assertFalse(CryptoAuth::TryCheckAuthCode($badmac, $data, $key));
         
         CryptoAuth::CheckAuthCode($mac, $data, $key);

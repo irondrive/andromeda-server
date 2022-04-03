@@ -21,6 +21,7 @@ class MissingSingletonException extends Exceptions\ServerException
 /** Abstract class implementing a singleton */
 abstract class Singleton
 {
+    /** @var array<class-string<static>, static> */
     private static $instances = array();
     
     /**
@@ -67,7 +68,7 @@ class VersionInfo
     public int $major;
     public int $minor;
     public int $patch;
-    public string $extra;
+    public ?string $extra;
     
     public function __construct(string $version)
     {
@@ -91,10 +92,12 @@ class VersionInfo
             $this->patch = intval($version[2]);
     }
     
-    public function __toString(){ return $this->version; }
+    public function __toString() : string { 
+        return $this->version; }
     
     /** Returns the Major.Minor compatibility version string */
-    public function getCompatVer(){ return $this->major.'.'.$this->minor; }
+    public function getCompatVer() : string { 
+        return $this->major.'.'.$this->minor; }
 }
 
 /** Converts a JSON failure into an exception */
@@ -112,12 +115,17 @@ abstract class Utilities
 {   
     private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; // 36 (5 bits/char)
 
-    /** Returns a random string with the given length */
+    /** 
+     * Returns a random string with the given length 
+     * @param positive-int $length
+     */
     public static function Random(int $length) : string
     {
-        $string = ""; $range = strlen(self::$chars)-1;
-        for ($i = 0; $i < $length; $i++)
+        $range = strlen(self::$chars)-1; assert($range > 1);
+        
+        $string = ""; for ($i = 0; $i < $length; $i++)
             $string .= self::$chars[random_int(0, $range)];
+        
         return $string;        
     }
     
@@ -154,7 +162,7 @@ abstract class Utilities
     }
     
     /** Returns the best password_hash algorithm available */
-    public static function GetHashAlgo()
+    public static function GetHashAlgo() : string
     {
         if (defined('PASSWORD_ARGON2ID')) return PASSWORD_ARGON2ID;
         if (defined('PASSWORD_ARGON2I')) return PASSWORD_ARGON2I;
@@ -173,13 +181,24 @@ abstract class Utilities
         return $arr[array_key_last($arr)];
     }
     
-    /** Deletes any of the given value from the given array reference */
+    /** 
+     * Deletes any of the given value from the given array reference 
+     * @template T of array
+     * @param T $arr
+     * @param mixed $value
+     * @return T
+     */
     public static function delete_value(array &$arr, $value) : array
     {
         return $arr = array_filter($arr, function($val)use($value){ return $val !== $value; });
     }
     
-    /** Converts all objects in the array to strings and checks UTF-8, to make it printable */
+    /** 
+     * Converts all objects in the array to strings and checks UTF-8, to make it printable
+     * @template T of array
+     * @param T $data
+     * @return T
+     */
     public static function arrayStrings(array $data) : array
     {
         foreach ($data as &$val)
@@ -250,20 +269,33 @@ abstract class Utilities
     /** Captures and returns any echoes or prints in the given function */
     public static function CaptureOutput(callable $func) : string
     {
-        ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); return $retval;
+        ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); 
+        
+        // ASSERT: retval must be string when buffering is active
+        assert(is_string($retval)); return $retval;
     }
     
     /** 
      * Performs a key-based array map
-     * @param callable $func function to map onto each key
-     * @param array $keys array of keys to use in result
+     * @template T
+     * @param callable(string):T $func function to map onto each key
+     * @param array<string> $keys array of keys to feed into $func
+     * @return array<string, T>
      */
     public static function array_map_keys(callable $func, array $keys) : array
     {
-        return array_combine($keys, array_map($func, $keys));
+        $retval = array_combine($keys, array_map($func, $keys)); 
+        
+        // ASSERT: array_combine must be an array when both arrays have the same size
+        assert(is_array($retval)); return $retval;
     }
     
-    /** Returns all classes that are a $match type */
+    /** 
+     * Returns all classes that are a $match type 
+     * @template T
+     * @param class-string<T> $match
+     * @return array<class-string<T>>
+     */
     public static function getClassesMatching(string $match) : array
     {
         $retval = array(); foreach (get_declared_classes() as $class)
@@ -276,7 +308,12 @@ abstract class Utilities
         } return $retval;
     }
     
-    /** Runs the given function with no execution timeouts or user aborts */
+    /** 
+     * Runs the given function with no execution timeouts or user aborts 
+     * @template T
+     * @param callable():T $func function to run
+     * @return T returned value from $func
+     */
     public static function RunNoTimeout(callable $func)
     {
         $tl = (int)ini_get('max_execution_time'); set_time_limit(0);
