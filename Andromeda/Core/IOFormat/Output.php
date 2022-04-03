@@ -77,26 +77,30 @@ class Output
     
     private function __construct(bool $ok = true, int $code = 200)
     {
-        $this->ok = $ok; $this->code = $code;
+        $this->ok = $ok; 
+        $this->code = $code;
     }
     
     /** Constructs an Output object representing a success response */
     public static function Success(array $appdata) : Output
     {
         // if we only ran a single input, make the output array be that result
-        if (count($appdata) === 1 && array_key_exists(0,$appdata)) $appdata = $appdata[0];
+        if (count($appdata) === 1 && array_key_exists(0,$appdata)) 
+            $appdata = $appdata[0];
         
-        $output = new Output(); $output->appdata = $appdata; return $output;
+        $output = new Output();
+        $output->appdata = $appdata; 
+        return $output;
     }
     
     /** Constructs an Output object representing a client error, showing the exception and possibly extra debug */
     public static function ClientException(Exceptions\ClientException $e, ?array $debug = null) : Output
     {
         $output = new Output(false, $e->getCode());
-        
         $output->message = $e->getMessage();
         
-        if ($debug !== null) $output->debug = $debug;
+        if ($debug !== null) 
+            $output->debug = $debug;
         
         return $output;
     }
@@ -104,11 +108,12 @@ class Output
     /** Constructs an Output object representing a non-client error, possibly with debug */
     public static function Exception(?array $debug = null) : Output
     {
+        // hide the code/message by default
         $output = new Output(false, 500);
-        
         $output->message = 'SERVER_ERROR';
         
-        if ($debug !== null) $output->debug = $debug;
+        if ($debug !== null) 
+            $output->debug = $debug;
         
         return $output;
     }
@@ -121,23 +126,31 @@ class Output
      */
     public static function ParseArray(array $data) : Output
     {
-        if (!array_key_exists('ok',$data) || !array_key_exists('code',$data)) throw new InvalidParseException();
+        if (!array_key_exists('ok',$data) || !array_key_exists('code',$data)) 
+            throw new InvalidParseException();
         
-        if (!is_bool($data['ok']) || !is_int($data['code'])) throw new InvalidParseException();
+        if (!is_bool($data['ok']) || !is_int($data['code'])) 
+            throw new InvalidParseException();
 
-        $ok = (bool)$data['ok']; $code = (int)$data['code'];
+        $ok = (bool)$data['ok']; 
+        $code = (int)$data['code'];
 
         if ($ok === true)
         {
-            if (!array_key_exists('appdata',$data)) throw new InvalidParseException();
+            if (!array_key_exists('appdata',$data)) 
+                throw new InvalidParseException();
 
-            $output = new Output($ok, $code); $output->appdata = $data['appdata']; return $output;
+            $output = new Output($ok, $code); 
+            $output->appdata = $data['appdata']; 
+            return $output;
         }
         else
         {
-            if (!array_key_exists('message',$data)) throw new InvalidParseException();
+            if (!array_key_exists('message',$data)) 
+                throw new InvalidParseException();
             
-            if (!is_string($data['message'])) throw new InvalidParseException();
+            if (!is_string($data['message'])) 
+                throw new InvalidParseException();
             
             throw Exceptions\CustomClientException::Create($code, (string)$data['message']);
         }
