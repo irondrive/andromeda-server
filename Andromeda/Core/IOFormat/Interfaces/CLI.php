@@ -40,13 +40,28 @@ class IncorrectCLIUsageException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the given batch file is not valid */
-class UnknownBatchFileException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_BATCH_FILE"; }
+class UnknownBatchFileException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_BATCH_FILE", $details);
+    }
+}
 
 /** Exception indicating that the given batch file's syntax is not valid */
-class BatchFileParseException extends Exceptions\ClientErrorException { public $message = "BATCH_FILE_PARSE_ERROR"; }
+class BatchFileParseException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BATCH_FILE_PARSE_ERROR", $details);
+    }
+}
 
 /** Exception indicating that the given file is not valid */
-class InvalidFileException extends Exceptions\ClientErrorException { public $message = "INACCESSIBLE_FILE"; }
+class InvalidFileException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INACCESSIBLE_FILE", $details);
+    }
+}
 
 /** The interface for using Andromeda via local console */
 class CLI extends IOInterface

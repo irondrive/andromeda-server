@@ -5,7 +5,12 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/BaseObject.php");
 
 /** Exception indicating that the requested object is null */
-class SingletonNotFoundException extends DatabaseException { public $message = "SINGLETON_NOT_FOUND"; }
+class SingletonNotFoundException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SINGLETON_NOT_FOUND", $details);
+    }
+}
 
 /** A class with a constant ID so there can only exist one instance */
 abstract class SingletonObject extends BaseObject

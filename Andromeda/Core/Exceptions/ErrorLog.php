@@ -18,6 +18,8 @@ require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 /** Represents an error log entry in the database */
 final class ErrorLog extends BaseLog
 {
+    protected const IDLength = 12;
+    
     use TableNoChildren;
     
     /** time of the request */

@@ -8,13 +8,28 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that the class cannot select from child classes */
-class NotMultiTableException extends Exceptions\ServerException { public $message = "TABLE_NOT_MULTI_CLASS"; }
+class NotMultiTableException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("TABLE_NOT_MULTI_CLASS", $details);
+    }
+}
 
 /** Exception indicating that no fields were previously registered with a table */
-class NoChildTableException extends Exceptions\ServerException { public $message = "NO_CHILD_TABLE"; }
+class NoChildTableException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("NO_CHILD_TABLE", $details);
+    }
+}
 
 /** Exception indicating a base table is not given for this class */
-class NoBaseTableException extends Exceptions\ServerException { public $message = "NO_BASE_TABLE"; }
+class NoBaseTableException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("NO_BASE_TABLE", $details);
+    }
+}
 
 /**
  * The base class for objects that can be saved/loaded from the database.

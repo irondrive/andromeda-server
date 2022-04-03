@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONDecodingException};
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONException};
 
 require_once(ROOT."/Core/IOFormat/Input.php"); 
 require_once(ROOT."/Core/IOFormat/Output.php"); 
@@ -13,19 +13,44 @@ use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafePa
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that the app or action parameters are missing */
-class NoAppActionException extends Exceptions\ClientErrorException { public $message = "APP_OR_ACTION_MISSING"; }
+class NoAppActionException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_OR_ACTION_MISSING", $details);
+    }
+}
 
 /** Exception indicating that the parameter cannot be part of $_GET */
-class IllegalGetFieldException extends Exceptions\ClientErrorException { public $message = "ILLEGAL_GET_FIELD"; }
+class IllegalGetFieldException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ILLEGAL_GET_FIELD", $details);
+    }
+}
 
 /** Exception indicating the given batch sequence has too many actions */
-class LargeBatchException extends Exceptions\ClientErrorException { public $message = "BATCH_TOO_LARGE"; }
+class LargeBatchException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BATCH_TOO_LARGE", $details);
+    }
+}
 
 /** Exception indicating that the remote response is invalid */
-class RemoteInvalidException extends Exceptions\ServerException { public $message = "INVALID_REMOTE_RESPONSE"; }
+class RemoteInvalidException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_REMOTE_RESPONSE", $details);
+    }
+}
 
 /** Exception indicating the HTTP method used is not allowed */
-class MethodNotAllowedException extends Exceptions\ClientException { public $code = 405; public $message = "METHOD_NOT_ALLOWED"; }
+class MethodNotAllowedException extends Exceptions\ClientException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("METHOD_NOT_ALLOWED", 405, $details);
+    }
+}
 
 /** The interface for using Andromeda over a web server */
 class HTTP extends IOInterface
@@ -234,7 +259,7 @@ class HTTP extends IOInterface
         if ($data === null) throw new RemoteInvalidException();
 
         try { return Utilities::JSONDecode($data); }
-        catch (JSONDecodingException $e) { throw new RemoteInvalidException(); }
+        catch (JSONException $e) { throw new RemoteInvalidException(); }
     }
 
     /**

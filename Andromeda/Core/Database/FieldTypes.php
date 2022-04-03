@@ -8,13 +8,28 @@ require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Da
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that the given counter exceeded its limit */
-class CounterOverLimitException extends Exceptions\ClientDeniedException { public $message = "COUNTER_EXCEEDS_LIMIT"; }
+class CounterOverLimitException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("COUNTER_EXCEEDS_LIMIT", $details);
+    }
+}
 
 /** Exception indicating the given data is the wrong type for this field */
-class FieldDataTypeMismatch extends Exceptions\ServerException { public $message = "FIELD_DATA_TYPE_MISMATCH"; }
+class FieldDataTypeMismatch extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
+    }
+}
 
 /** Exception indicating that loading via a foreign key link failed */
-class ForeignKeyException extends ConcurrencyException { public $message = "DB_FOREIGN_KEY_FAILED"; }
+class ForeignKeyException extends ConcurrencyException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
+    }
+}
 
 /** Base class representing a database column ("field") */
 abstract class BaseField

@@ -13,13 +13,36 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php");
 use \PHPMailer\PHPMailer; // via autoloader
 
 /** Exception indicating that sending mail failed */
-class MailSendException extends Exceptions\ServerException { public $message = "MAIL_SEND_FAILURE"; use Exceptions\Copyable; }
+abstract class MailSendException extends Exceptions\ServerException
+{
+    public function __construct(string $message = "MAIL_SEND_FAILURE", ?string $details = null) {
+        parent::__construct($message, $details);
+    }
+}
+
+/** Exception thrown by the PHPMailer library when sending */
+class PHPMailerException extends MailSendException
+{
+    public function __construct(PHPMailer\Exception $e) {
+        parent::__construct(); $this->FromException($e,true);
+    }
+}
 
 /** Exception indicating that no recipients were given */
-class EmptyRecipientsException extends MailSendException { public $message = "NO_RECIPIENTS_GIVEN"; }
+class EmptyRecipientsException extends MailSendException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("NO_RECIPIENTS_GIVEN", $details);
+    }
+}
 
 /** Exception indicating that the configured mailer driver is invalid */
-class InvalidMailTypeException extends MailSendException { public $message = "INVALID_MAILER_TYPE"; }
+class InvalidMailTypeException extends MailSendException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_MAILER_TYPE", $details);
+    }
+}
 
 /** A name and address pair email recipient */
 final class EmailRecipient
@@ -262,7 +285,8 @@ final class Emailer extends BaseObject
                 $this->from_address->GetValue(),
                 $this->from_name->TryGetValue() ?? self::DEFAULT_FROM); 
         }
-        else if ($from !== null) $mailer->addReplyTo($from->GetAddress(), $from->GetName());
+        else if ($from !== null) 
+            $mailer->addReplyTo($from->GetAddress(), $from->GetName());
         
         foreach ($recipients as $recipient) 
         {
@@ -275,9 +299,11 @@ final class Emailer extends BaseObject
         if ($isHtml) $mailer->msgHTML($message);
         else $mailer->Body = $message;
         
-        try { if (!$mailer->send()) throw new MailSendException($mailer->ErrorInfo); }
-        catch (\Throwable $e) { throw MailSendException::Append($e); }
+        try { if (!$mailer->send()); }
+        catch (PHPMailer\Exception $e) { 
+            throw new PHPMailerException($e); }
         
-        $mailer->clearAddresses(); $mailer->clearAttachments();
+        $mailer->clearAddresses(); 
+        $mailer->clearAttachments();
     }
 }

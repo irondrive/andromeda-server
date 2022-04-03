@@ -10,12 +10,8 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\OutputHandler;
 require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputStream;
-
-/** A test server exception */
-class TestServerException extends Exceptions\ServerException { public $message = "TEST_SERVER_EXCEPTION"; }
 
 /**
  * Utility app for the python test framework
@@ -82,7 +78,7 @@ class TestUtilApp extends BaseApp
     
     protected function ServerException() : void
     {
-        throw new TestServerException();
+        throw new Exceptions\ServerException('TEST_MESSAGE', 'some details', 5000);
     }    
     
     protected function CheckDryRun() : bool

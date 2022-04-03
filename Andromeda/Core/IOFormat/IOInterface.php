@@ -12,7 +12,12 @@ require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
 
 /** Exception indicating that an app action does not allow batches */
-class BatchNotAllowedException extends Exceptions\ClientErrorException { public $message = "METHOD_DISALLOWS_BATCH"; }
+class BatchNotAllowedException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ACTION_DISALLOWS_BATCH", $details);
+    }
+}
 
 /** Class for custom app output routines */
 class OutputHandler

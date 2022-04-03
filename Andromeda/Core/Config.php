@@ -7,28 +7,56 @@ require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 /** Exception indicating that a mailer was requested but it is disabled */
-class EmailDisabledException extends Exceptions\ClientErrorException { public $message = "EMAIL_DISABLED"; }
+class EmailDisabledException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("EMAIL_DISABLED", $details);
+    }
+}
 
 /** Exception indicating that a mailer was requested but none are configured */
-class EmailerUnavailableException extends Exceptions\ClientErrorException { public $message = "EMAILER_UNAVAILABLE"; }
+class EmailerUnavailableException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("EMAILER_UNAVAILABLE", $details);
+    }
+}
 
 /** Exception indicating that the configured data directory is not valid */
-class UnwriteableDatadirException extends Exceptions\ClientErrorException { public $message = "DATADIR_NOT_WRITEABLE"; }
+class UnwriteableDatadirException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DATADIR_NOT_WRITEABLE", $details);
+    }
+}
 
 /** Exception indicating an invalid app name was given */
-class InvalidAppException extends Exceptions\ClientErrorException { public $message = "INVALID_APPNAME"; }
+class InvalidAppException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_APPNAME", $details);
+    }
+}
 
 /** Exception indicating that an app dependency was not met */
-class AppDependencyException extends Exceptions\ClientErrorException { public $message = "APP_DEPENDENCY_FAILURE"; }
+class AppDependencyException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_DEPENDENCY_FAILURE", $details);
+    }
+}
 
 /** Exception indicating that the app is not compatible with this framework version */
-class AppVersionException extends Exceptions\ClientErrorException { public $message = "APP_VERSION_MISMATCH"; }
+class AppVersionException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_VERSION_MISMATCH", $details);
+    }
+}
 
 /** A singleton object that stores a version field */
 abstract class BaseConfig extends SingletonObject

@@ -13,44 +13,94 @@ use \PDO; use \PDOStatement; use \PDOException;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Base class for database initialization exceptions */
-abstract class DatabaseConfigException extends Exceptions\ClientException { public $code = 503; use Exceptions\Copyable; }
+abstract class DatabaseConfigException extends Exceptions\ServiceUnavailableException { }
 
 /** Exception indicating that the database configuration is not found */
-class DatabaseMissingException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_MISSING"; }
+class DatabaseMissingException extends DatabaseConfigException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DATABASE_CONFIG_MISSING", $details);
+    }
+}
 
 /** Exception indicating that the database connection failed to initialize */
-class DatabaseInvalidException extends DatabaseConfigException { public $message = "DATABASE_CONFIG_ERROR"; }
+class DatabaseConnectException extends DatabaseConfigException
+{
+    public function __construct(?PDOException $e = null) {
+        parent::__construct("DATABASE_CONNECT_FAILED"); 
+        if ($e) $this->FromException($e, true);
+    }
+}
 
 /** Exception indicating that the database was requested to use an unknkown driver */
-class InvalidDriverException extends DatabaseConfigException { public $message = "PDO_UNKNOWN_DRIVER"; }
+class InvalidDriverException extends DatabaseConfigException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("PDO_UNKNOWN_DRIVER", $details);
+    }
+}
 
 /** Exception indicating that the a write was requested to a read-only database */
-class DatabaseReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_DATABASE"; }
+class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("READ_ONLY_DATABASE", $details);
+    }
+}
 
 /** Exception indicating that database install config failed */
-class DatabaseInstallException extends Exceptions\ClientErrorException { use Exceptions\Copyable; }
+class DatabaseInstallException extends Exceptions\ClientErrorException
+{
+    public function __construct(DatabaseConfigException $e) {
+        parent::__construct(""); $this->FromException($e);
+    }
+}
 
 /** Exception indicating the file could not be imported because it's missing */
-class ImportFileMissingException extends Exceptions\ServerException { public $message = "IMPORT_FILE_MISSING"; }
+class ImportFileMissingException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("IMPORT_FILE_MISSING", $details);
+    }
+}
 
 /** Base class representing a run-time database error */
-class DatabaseException extends Exceptions\ServerException { public $message = "DATABASE_ERROR"; use Exceptions\Copyable; }
+abstract class DatabaseException extends Exceptions\ServerException
+{
+    public function __construct(string $message = "DATABASE_ERROR", ?string $details = null) {
+        parent::__construct($message, $details);
+    }
+}
 
 /** Exception indicating that PDO failed to execute the given query */
-class DatabaseQueryException extends DatabaseException { public $message = "DATABASE_QUERY_ERROR"; }
+class DatabaseQueryException extends DatabaseException
+{
+    public function __construct(PDOException $e) {
+        parent::__construct("DATABASE_QUERY_ERROR");
+        $this->FromException($e, true);
+    }
+}
 
 /** Exception indicating that fetching results from the query failed */
-class DatabaseFetchException extends DatabaseException { public $message = "DATABASE_FETCH_FAILED"; }
+class DatabaseFetchException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DATABASE_FETCH_FAILED", $details);
+    }
+}
 
 /** Exception indicating the database had an integrity violation */
-class DatabaseIntegrityException extends DatabaseException { public $message = "DATABASE_INTEGRITY_VIOLATION"; }
+class DatabaseIntegrityException extends DatabaseException
+{
+    public function __construct(PDOException $e) {
+        parent::__construct("DATABASE_INTEGRITY_VIOLATION");
+        $this->FromException($e, true);
+    }
+}
 
 require_once(ROOT."/Core/Database/DBStats.php");
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONEncodingException};
-
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONException};
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /**
@@ -203,8 +253,12 @@ class Database
             $tmpnam = "$outnam.tmp.php";
             file_put_contents($tmpnam, $output);
             
-            try { new self(self::LoadConfig($tmpnam)); } catch (DatabaseConfigException $e) {
-                unlink($tmpnam); throw DatabaseInstallException::Copy($e); }
+            try { new self(self::LoadConfig($tmpnam)); }
+            catch (DatabaseConfigException $e) 
+            {
+                unlink($tmpnam); 
+                throw new DatabaseInstallException($e); 
+            }
             
             rename($tmpnam, $outnam); return null;
         }
@@ -250,8 +304,8 @@ class Database
         catch (PDOException $e)
         {
             if (Main::GetInstance()->GetInterface()->isPrivileged())
-                throw DatabaseInvalidException::Append($e);
-                else throw new DatabaseInvalidException();
+                throw new DatabaseConnectException($e);
+            else throw new DatabaseConnectException();
         }
         
         if ($this->connection->inTransaction())
@@ -484,8 +538,8 @@ class Database
             $eclass = substr($e->getCode(),0,2);
             
             if ($eclass === '23') 
-                throw DatabaseIntegrityException::Append($e);
-            else throw DatabaseQueryException::Append($e); 
+                throw new DatabaseIntegrityException($e);
+            else throw new DatabaseQueryException($e); 
         }
     }
 
@@ -497,7 +551,7 @@ class Database
             foreach ($data as $key=>$val)
             {
                 try { Utilities::JSONEncode(array($val)); }
-                catch (JSONEncodingException $e) { 
+                catch (JSONException $e) { 
                     $val = 'b64:'.base64_encode($val); }
                 
                 if ($val !== null && is_string($val)) 

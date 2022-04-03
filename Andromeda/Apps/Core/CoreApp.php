@@ -10,7 +10,6 @@ require_once(ROOT."/Core/Exceptions/ErrorLog.php"); use Andromeda\Core\Exception
 require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException};
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\{IOInterface, OutputHandler};
 require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
@@ -21,16 +20,35 @@ require_once(ROOT."/Apps/Core/ActionLog.php");
 use Andromeda\Core\{UnknownActionException, MailSendException};
 
 /** Exception indicating that the specified mailer object does not exist */
-class UnknownMailerException extends Exceptions\ClientNotFoundException { public $message = "UNKNOWN_MAILER"; }
+class UnknownMailerException extends Exceptions\ClientNotFoundException 
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_MAILER", $details);
+    }
+}
 
 /** Client error indicating that the mailer config failed */
-class MailSendFailException extends Exceptions\ClientErrorException { public $message = "MAIL_SEND_FAILURE"; use Exceptions\Copyable; }
+class MailSendFailException extends Exceptions\ClientErrorException
+{
+    public function __construct(MailSendException $e) {
+        parent::__construct(""); $this->FromException($e);
+    }
+}
 
 /** Client error indicating that the database config failed */
-class DatabaseFailException extends Exceptions\ClientErrorException { public $message = "INVALID_DATABASE"; }
-
+class DatabaseFailException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_DATABASE", $details);
+    }
+}
 /** Exception indicating that admin-level access is required */
-class AdminRequiredException extends Exceptions\ClientDeniedException { public $message = "ADMIN_REQUIRED"; }
+class AdminRequiredException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ADMIN_REQUIRED", $details);
+    }
+}
 
 /**
  * Server management/info app included with the framework.
@@ -366,7 +384,7 @@ class CoreApp extends InstalledApp
         if ($actionlog) $actionlog->LogDetails('mailer',$mailer->ID());
         
         try { $mailer->SendMail($subject, $body, false, $dests, false); }
-        catch (MailSendException $e) { throw MailSendFailException::Copy($e); }
+        catch (MailSendException $e) { throw new MailSendFailException($e); }
     }
 
     /**

@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONDecodingException};
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONException};
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Base exception indicating a problem with a client parameter */
@@ -492,7 +492,7 @@ class SafeParam
         }
         
         try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONDecodingException $e) {
+        catch (JSONException $e) {
             throw new SafeParamInvalidException($this->key, 'json');
         }
         
@@ -527,7 +527,7 @@ class SafeParam
         }
   
         try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONDecodingException $e) {
+        catch (JSONException $e) {
             throw new SafeParamInvalidException($this->key, 'json');
         }
 
@@ -554,7 +554,7 @@ class SafeParam
         }
         
         try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONDecodingException $e) {
+        catch (JSONException $e) {
             throw new SafeParamInvalidException($this->key, 'json');
         }
         

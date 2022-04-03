@@ -6,10 +6,20 @@ require_once(ROOT."/Core/Database/QueryBuilder.php");
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating the requested class is not a child */
-class BadPolyClassException extends Exceptions\ServerException { public $message = "BAD_POLY_CLASS"; }
+class BadPolyClassException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BAD_POLY_CLASS", $details);
+    }
+}
 
 /** Exception indicating the given row has a bad type value */
-class BadPolyTypeException extends Exceptions\ServerException { public $message = "BAD_POLY_TYPE"; }
+class BadPolyTypeException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BAD_POLY_TYPE", $details);
+    }
+}
 
 /** A trait for classes that have a database table */
 trait HasTable
