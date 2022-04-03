@@ -4,8 +4,6 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
@@ -79,26 +77,26 @@ final class ErrorLog extends BaseLog
         parent::CreateFields();
     }
     
-    /** Returns the common command usage for LoadByInput() and CountByInput() */
-    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code raw] [--addr raw] [--agent raw] [--app alphanum] [--action alphanum] [--message text] [--asc bool]"; }
+    /** Returns the common command usage for LoadByParams() and CountByParams() */
+    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code utf8] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {
         $criteria = array();
         
-        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));
-        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $input->GetParam('mintime',SafeParam::TYPE_FLOAT));
+        if ($params->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $params->GetParam('maxtime')->GetFloat());
+        if ($params->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $params->GetParam('mintime')->GetFloat());
         
-        if ($input->HasParam('code')) $criteria[] = $q->Equals('code', $input->GetParam('code',SafeParam::TYPE_RAW));
-        if ($input->HasParam('addr')) $criteria[] = $q->Equals('addr', $input->GetParam('addr',SafeParam::TYPE_RAW));
-        if ($input->HasParam('agent')) $criteria[] = $q->Like('agent', $input->GetParam('agent',SafeParam::TYPE_RAW));
+        if ($params->HasParam('code')) $criteria[] = $q->Equals('code', $params->GetParam('code')->GetUTF8String());
+        if ($params->HasParam('addr')) $criteria[] = $q->Equals('addr', $params->GetParam('addr')->GetUTF8String());
+        if ($params->HasParam('agent')) $criteria[] = $q->Like('agent', $params->GetParam('agent')->GetUTF8String());
         
-        if ($input->HasParam('app')) $criteria[] = $q->Equals('app', $input->GetNullParam('app',SafeParam::TYPE_ALPHANUM));
-        if ($input->HasParam('action')) $criteria[] = $q->Equals('action', $input->GetNullParam('action',SafeParam::TYPE_ALPHANUM));
+        if ($params->HasParam('app')) $criteria[] = $q->Equals('app', $params->GetParam('app')->GetNullAlphanum());
+        if ($params->HasParam('action')) $criteria[] = $q->Equals('action', $params->GetParam('action')->GetNullAlphanum());
         
-        if ($input->HasParam('message')) $criteria[] = $q->Like('message', $input->GetParam('message',SafeParam::TYPE_TEXT));
+        if ($params->HasParam('message')) $criteria[] = $q->Like('message', $params->GetParam('message')->GetUTF8String());
         
-        $q->OrderBy("time", !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false)); // always sort by time, default desc
+        $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
         
         return $criteria;
     }

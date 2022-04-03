@@ -5,12 +5,12 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php");
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 /** An exception indicating that the requested parameter name does not exist */
-class SafeParamKeyMissingException extends SafeParamException {
-    public function __construct(string $key) { $this->message = "SAFEPARAM_KEY_MISSING: $key"; } }
-    
-/** An exception indicating that the requested parameter has a null value */
-class SafeParamNullValueException extends SafeParamException {
-    public function __construct(string $key) { $this->message = "SAFEPARAM_VALUE_NULL: $key"; } }
+class SafeParamKeyMissingException extends SafeParamException 
+{
+    public function __construct(string $key) { 
+        $this->message = "SAFEPARAM_KEY_MISSING: $key"; 
+    } 
+}
 
 /**
  * A thin class that manages a collection of SafeParam objects
@@ -21,6 +21,7 @@ class SafeParamNullValueException extends SafeParamException {
  */
 class SafeParams
 {
+    /** @var array<SafeParam> */
     private array $params = array();
     
     /** Returns true if the named parameter exists */
@@ -30,35 +31,27 @@ class SafeParams
     }
     
     /** Adds the parameter to this object with the given name and value */
-    public function AddParam(string $key, $value) : self
-    { 
-        $param = new SafeParam($key, $value);
-        $this->params[$param->GetKey()] = $param; 
+    public function AddParam(string $key, ?string $value) : self
+    {
+        $this->params[$key] = new SafeParam($key, $value); return $this;
+    }
+
+    private int $loglevel;
+    
+    /** @var ?array<string, mixed> */
+    private ?array $logref = null;
+    
+    /** 
+     * Takes an array reference for logging fetched parameters 
+     * @param ?array<string, mixed> $logref
+     */
+    public function SetLogRef(?array &$logref, int $loglevel) : self
+    {
+        $this->logref = &$logref;
+        $this->loglevel = $loglevel;
         return $this;
     }
     
-    private ?array $logref = null; private int $loglevel;
-    
-    /** Takes an array reference for logging fetched parameters */
-    public function SetLogRef(?array &$logref, int $loglevel) : self {
-        $this->logref = &$logref; $this->loglevel = $loglevel; return $this; }
-    
-    /** Logs the given $data as $key or sets a sub-log reference if it's a SafeParams */
-    protected function LogData(?int $minlog, int $type, string $key, $data) : void
-    {
-        if ($type === SafeParam::TYPE_RAW || $this->logref === null) return;
-
-        if (!$minlog || $minlog > $this->loglevel) return;
-        
-        if ($data instanceof self)
-        {
-            $this->logref[$key] = array();
-            
-            $data->SetLogRef($this->logref[$key], $this->loglevel);
-        }
-        else $this->logref[$key] = $data;
-    }
-        
     /** Never log this input parameter (always used for RAW) */
     const PARAMLOG_NEVER = 0;
     
@@ -70,55 +63,57 @@ class SafeParams
     
     /**
      * Gets the requested parameter (present and not null)
-     * @param int $minlog minimum log level for logging (0 for never) - RAW is never logged!
+     * @param string $key the parameter key name
+     * @param int $minlog minimum log level for logging (0 for never)
      * @throws SafeParamKeyMissingException if the parameter is missing
-     * @throws SafeParamNullValueException if the parameter is null
-     * @see SafeParam::GetValue()
      */
-    public function GetParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
+    public function GetParam(string $key, int $minlog = self::PARAMLOG_ONLYFULL) : SafeParam
     {
-        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
+        if (!$this->HasParam($key))
+            throw new SafeParamKeyMissingException($key);
         
-        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
-        if ($data === null) throw new SafeParamNullValueException($key);
+        $param = $this->params[$key];
         
-        $this->LogData($minlog, $type, $key, $data); return $data;
+        if ($this->logref !== null && $minlog && $this->loglevel >= $minlog)
+        {
+            $param->SetLogRef($this->logref, $this->loglevel);
+        }
+        
+        return $param;
     }
     
-    /** Same as GetParam() but returns null if the param is not present */
-    public function GetOptParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
+    /**
+    * Gets the requested parameter ($default if not present)
+    * @param string $key the parameter key name
+    * @param mixed $default parameter value if not given
+    * @param int $minlog minimum log level for logging (0 for never)
+    */
+    public function GetOptParam(string $key, $default, int $minlog = self::PARAMLOG_ONLYFULL) : SafeParam
     {
-        if (!$this->HasParam($key)) return null;
+        if (!$this->HasParam($key))
+        {
+            // strval(false) is '', which is null, which is true for GetBool()!
+            $defstr = ($default === false) ? 'false' : strval($default);
+            
+            return new SafeParam($key, $defstr);
+        }
         
-        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
-        if ($data === null) throw new SafeParamNullValueException($key);
+        $param = $this->params[$key];
+        
+        if ($this->logref !== null && $minlog && $this->loglevel >= $minlog)
+        {
+            $param->SetLogRef($this->logref, $this->loglevel);
+        }
 
-        $this->LogData($minlog, $type, $key, $data); return $data;
+        return $param;
     }
-    
-    /** Same as GetParam() but returns null if the param is present and null */
-    public function GetNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
-    {
-        if (!$this->HasParam($key)) throw new SafeParamKeyMissingException($key);
-        
-        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
-        
-        $this->LogData($minlog, $type, $key, $data); return $data;
-    }
-    
-    /** Same as GetParam() but returns null if the param is not present, or is present and null */
-    public function GetOptNullParam(string $key, int $type, int $minlog = self::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null)
-    {
-        if (!$this->HasParam($key)) return null;
-        
-        $data = $this->params[$key]->GetValue($type, $values, $valfunc);
-        
-        $this->LogData($minlog, $type, $key, $data); return $data;
-    }
-    
-    /** Returns a plain associative array of each parameter's name mapped to its raw value */
+
+    /** 
+     * Returns a plain associative array of each parameter's name mapped to its raw value 
+     * @return array<string, ?string>
+     */
     public function GetClientObject() : array
     {
-        return array_map(function($param){ return $param->GetRawValue(); }, $this->params);
+        return array_map(function($param){ return $param->GetRawString(); }, $this->params);
     }
 }

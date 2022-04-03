@@ -148,55 +148,57 @@ class Database
     
     /**
      * Creates and tests a new database config from the given user input
-     * @param Input $input input parameters
+     * @param SafeParams $params input parameters
      * @see Database::GetInstallUsage()
      * @throws \Throwable if the database config is not valid and PDO fails
      * @return string the database config file contents
      */
-    public static function Install(Input $input) : ?string
+    public static function Install(SafeParams $params) : ?string
     {
-        $driver = $input->GetParam('driver',SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::DRIVERS));
+        $driver = $params->GetParam('driver')->FromWhitelist(array_keys(self::DRIVERS));
         
-        $params = array('DRIVER'=>$driver);
+        $config = array('DRIVER'=>$driver);
         
         if ($driver === 'mysql' || $driver === 'pgsql')
         {
-            $connect = "dbname=".$input->GetParam('dbname',SafeParam::TYPE_ALPHANUM);
+            $connect = "dbname=".$params->GetParam('dbname')->GetAlphanum();
             
-            if ($driver === 'mysql' && $input->HasParam('unix_socket'))
+            if ($driver === 'mysql' && $params->HasParam('unix_socket'))
             {
-                $connect .= ";unix_socket=".$input->GetParam('unix_socket',SafeParam::TYPE_FSPATH);
+                $connect .= ";unix_socket=".$params->GetParam('unix_socket')->GetFSPath();
             }
             else 
             {
-                $connect .= ";host=".$input->GetParam('host',SafeParam::TYPE_HOSTNAME);
+                $connect .= ";host=".$params->GetParam('host')->GetHostname();
                 
-                $port = $input->GetOptParam('port',SafeParam::TYPE_UINT16);
-                if ($port !== null) $connect .= ";port=$port";
+                if ($params->HasParam('port'))
+                {
+                    $port = $params->GetParam('port')->GetUint16();
+                    $connect .= ";port=$port";
+                }
             }
             
             if ($driver === 'mysql') $connect .= ";charset=utf8mb4";
             
-            $params['CONNECT'] = $connect;
+            $config['CONNECT'] = $connect;
             
-            $params['PERSISTENT'] = $input->GetOptParam('persistent',SafeParam::TYPE_BOOL);
+            $config['PERSISTENT'] = $params->HasParam('persistent') ? $params->GetParam('persistent')->GetBool() : null;
             
-            $params['USERNAME'] = $input->GetOptParam('dbuser',SafeParam::TYPE_NAME);
-            $params['PASSWORD'] = $input->GetOptParam('dbpass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+            $config['USERNAME'] = $params->HasParam('dbuser') ? $params->GetParam('dbuser')->GetName() : null;
+            $config['PASSWORD'] = $params->HasParam('dbpass') ? $params->GetParam('dbpass',SafeParams::PARAMLOG_NEVER)->GetRawString() : null;
         }
         else if ($driver === 'sqlite')
         {
-            $params['CONNECT'] = $input->GetParam('dbpath',SafeParam::TYPE_FSPATH);    
+            $config['CONNECT'] = $params->GetParam('dbpath')->GetFSPath();    
         }
         
-        $params = var_export($params,true);
+        $config = var_export($config,true);
         
-        $output = "<?php if (!defined('Andromeda')) die(); return $params;";
+        $output = "<?php if (!defined('Andromeda')) die(); return $config;";
         
-        if ($input->HasParam('outfile'))
+        if ($params->HasParam('outfile'))
         {
-            $outnam = $input->GetNullParam('outfile',SafeParam::TYPE_FSPATH) ?? self::CONFIG_PATHS[0];
+            $outnam = $params->GetParam('outfile')->GetNullFSPath() ?? self::CONFIG_PATHS[0];
 
             $tmpnam = "$outnam.tmp.php";
             file_put_contents($tmpnam, $output);

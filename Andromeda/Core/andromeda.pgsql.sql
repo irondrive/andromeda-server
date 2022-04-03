@@ -119,7 +119,7 @@ CREATE TABLE public.a2obj_core_logging_requestlog (
     "time" double precision NOT NULL,
     addr character varying(255) NOT NULL,
     agent text NOT NULL,
-    errcode smallint,
+    errcode character varying(255),
     errtext text
 );
 

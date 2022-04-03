@@ -56,53 +56,16 @@ class Input
             
             $logref ??= array();
             
-            $this->GetParams()->SetLogRef($logref, $level);
+            $this->params->SetLogRef($logref, $level);
         }        
         return $this; 
     }
     
-    /** @see Input::GetParams() */
     private SafeParams $params;
     
     /** The inner collection of parameters to be used */
     public function GetParams() : SafeParams { return $this->params; }
-    
-    /** @see SafeParams::HasParam() */
-    public function HasParam(string $key) : bool 
-    {
-        return $this->params->HasParam($key); 
-    }
-        
-    /** @see SafeParams::AddParam() */
-    public function AddParam(string $key, $value) : self 
-    { 
-        $this->params->AddParam($key, $value); return $this; 
-    }
-    
-    /** @see SafeParams::GetParam() */
-    public function GetParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
-    {
-        return $this->params->GetParam($key, $type, $minlog, $values, $valfunc); 
-    }
-    
-    /** @see SafeParams::GetOptParam() */
-    public function GetOptParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
-    {
-        return $this->params->GetOptParam($key, $type, $minlog, $values, $valfunc); 
-    }
 
-    /** @see SafeParams::GetNullParam() */
-    public function GetNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
-    {
-        return $this->params->GetNullParam($key, $type, $minlog, $values, $valfunc); 
-    }
-    
-    /** @see SafeParams::GetOptNullParam() */
-    public function GetOptNullParam(string $key, int $type, int $minlog = SafeParams::PARAMLOG_ONLYFULL, ?array $values = null, ?callable $valfunc = null) 
-    {
-        return $this->params->GetOptNullParam($key, $type, $minlog, $values, $valfunc); 
-    }
-    
     /** @see Input::GetFiles() */
     private array $files;
     
@@ -115,7 +78,9 @@ class Input
      * @return bool true if the param exists as an input file
      */
     public function HasFile(string $key) : bool {
-        return array_key_exists($key, $this->files); }
+        
+        return array_key_exists($key, $this->files); 
+    }
         
     /**
      * Adds the given InputStream to the file array
@@ -123,8 +88,10 @@ class Input
      * @param InputStream $file input file stream
      * @return $this
      */
-    public function AddFile(string $key, InputStream $file) : self {
-        $this->files[$key] = $file; return $this; }
+    public function AddFile(string $key, InputStream $file) : self 
+    {
+        $this->files[$key] = $file; return $this; 
+    }
     
     /**
      * Gets the file mapped to the parameter name
@@ -158,7 +125,7 @@ class Input
         
         $this->auth = $auth;
 
-        $this->app = (new SafeParam("app", strtolower($app)))->GetValue(SafeParam::TYPE_ALPHANUM);
-        $this->action = (new SafeParam("action", strtolower($action)))->GetValue(SafeParam::TYPE_ALPHANUM);
+        $this->app = (new SafeParam("app", strtolower($app)))->GetAlphanum();
+        $this->action = (new SafeParam("action", strtolower($action)))->GetAlphanum();
     }
 }
