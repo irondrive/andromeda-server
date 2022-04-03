@@ -69,7 +69,7 @@ class RunContext
         $this->input = $input; $this->actionlog = $actionlog; }
         
     public function GetMetrics() : ?DBStats { return $this->metrics; }
-    public function SetMetrics(DBStats $metrics) { $this->metrics = $metrics; }
+    public function SetMetrics(DBStats $metrics) : void { $this->metrics = $metrics; }
 }
 
 /**
