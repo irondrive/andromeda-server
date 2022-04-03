@@ -151,55 +151,51 @@ final class Config extends BaseConfig
      * Updates config with the parameters in the given input (see CLI usage)
      * @throws UnwriteableDatadirException if given a new datadir that is invalid
      * @return $this
-     * @source show source
      */
-    public function SetConfig(Input $input) : self
+    public function SetConfig(SafeParams $params) : self
     {
-        if ($input->HasParam('datadir')) 
+        if ($params->HasParam('datadir')) 
         {
-            $datadir = $input->GetNullParam('datadir',SafeParam::TYPE_FSPATH);
+            $datadir = $params->GetParam('datadir')->GetNullFSPath();
             if ($datadir !== null && (!is_readable($datadir) || !is_writeable($datadir)))
                 throw new UnwriteableDatadirException();
             $this->datadir->SetValue($datadir);
         }
         
-        if ($input->HasParam('requestlog_db')) $this->requestlog_db->SetValue($input->GetParam('requestlog_db',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('requestlog_file')) $this->requestlog_file->SetValue($input->GetParam('requestlog_file',SafeParam::TYPE_BOOL));
+        if ($params->HasParam('requestlog_db')) $this->requestlog_db->SetValue($params->GetParam('requestlog_db')->GetBool());
+        if ($params->HasParam('requestlog_file')) $this->requestlog_file->SetValue($params->GetParam('requestlog_file')->GetBool());
 
-        if ($input->HasParam('requestlog_details'))
+        if ($params->HasParam('requestlog_details'))
         {
-            $param = $input->GetParam('requestlog_details',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::RQLOG_DETAILS_TYPES));
+            $param = $params->GetParam('requestlog_details')->FromWhitelist(array_keys(self::RQLOG_DETAILS_TYPES));
             
             $this->requestlog_details->SetValue(self::RQLOG_DETAILS_TYPES[$param]);
         }
         
-        if ($input->HasParam('debug'))
+        if ($params->HasParam('debug'))
         {
-            $param = $input->GetParam('debug',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::DEBUG_TYPES));
+            $param = $params->GetParam('debug')->FromWhitelist(array_keys(self::DEBUG_TYPES));
             
             $this->debug->SetValue(self::DEBUG_TYPES[$param]);
         }
         
-        if ($input->HasParam('debug_http')) $this->debug_http->SetValue($input->GetParam('debug_http',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_dblog')) $this->debug_dblog->SetValue($input->GetParam('debug_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('debug_filelog')) $this->debug_filelog->SetValue($input->GetParam('debug_filelog',SafeParam::TYPE_BOOL));
+        if ($params->HasParam('debug_http')) $this->debug_http->SetValue($params->GetParam('debug_http')->GetBool());
+        if ($params->HasParam('debug_dblog')) $this->debug_dblog->SetValue($params->GetParam('debug_dblog')->GetBool());
+        if ($params->HasParam('debug_filelog')) $this->debug_filelog->SetValue($params->GetParam('debug_filelog')->GetBool());
 
-        if ($input->HasParam('metrics'))
+        if ($params->HasParam('metrics'))
         {
-            $param = $input->GetParam('metrics',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::METRICS_TYPES));
+            $param = $params->GetParam('metrics')->FromWhitelist(array_keys(self::METRICS_TYPES));
             
             $this->metrics->SetValue(self::METRICS_TYPES[$param]);
         }
         
-        if ($input->HasParam('metrics_dblog')) $this->metrics_dblog->SetValue($input->GetParam('metrics_dblog',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('metrics_filelog')) $this->metrics_filelog->SetValue($input->GetParam('metrics_filelog',SafeParam::TYPE_BOOL));
+        if ($params->HasParam('metrics_dblog')) $this->metrics_dblog->SetValue($params->GetParam('metrics_dblog')->GetBool());
+        if ($params->HasParam('metrics_filelog')) $this->metrics_filelog->SetValue($params->GetParam('metrics_filelog')->GetBool());
         
-        if ($input->HasParam('read_only')) 
+        if ($params->HasParam('read_only')) 
         {
-            $ro = $input->GetParam('read_only',SafeParam::TYPE_BOOL);
+            $ro = $params->GetParam('read_only')->GetBool();
             
             if (!$ro) $this->database->GetInternal()->setReadOnly(false); // make DB writable
             
@@ -208,8 +204,8 @@ final class Config extends BaseConfig
             if ($ro) $this->read_only->SetValue(false,true); // not really RO yet 
         }
         
-        if ($input->HasParam('enabled')) $this->enabled->SetValue($input->GetParam('enabled',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('email')) $this->email->SetValue($input->GetParam('email',SafeParam::TYPE_BOOL));        
+        if ($params->HasParam('enabled')) $this->enabled->SetValue($params->GetParam('enabled')->GetBool());
+        if ($params->HasParam('email')) $this->email->SetValue($params->GetParam('email')->GetBool());
        
         return $this;
     }

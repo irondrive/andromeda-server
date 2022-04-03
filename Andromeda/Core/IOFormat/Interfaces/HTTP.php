@@ -121,7 +121,7 @@ class HTTP extends IOInterface
         {
             if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
             
-            $fname = (new SafeParam('name',$file['name']))->GetValue(SafeParam::TYPE_FSNAME);
+            $fname = (new SafeParam('name',$file['name']))->GetFSName();
             
             $pfiles[$key] = new InputPath($file['tmp_name'], $fname, true); 
         }

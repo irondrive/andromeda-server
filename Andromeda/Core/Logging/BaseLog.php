@@ -6,7 +6,6 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 /** 
  * Base class for access logs, providing some common DB functions for user viewing 
@@ -28,17 +27,17 @@ abstract class BaseLog extends BaseObject
      * MUST prefix column names with the appropriate table name
      * @param ObjectDatabase $database database reference
      * @param QueryBuilder $q query to create params with
-     * @param Input $input input with user supplied criteria
+     * @param SafeParams $params params with user supplied criteria
      * @return array<string> array of WHERE strings
      */
-    public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array;
+    public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array;
     
     /**
      * Returns the class we should load logs as
-     * @param Input $input input to determine class
+     * @param SafeParams $params input to determine class
      * @return class-string<static>
      */
-    protected static function GetPropClass(Input $input) : string { return static::class; }
+    protected static function GetPropClass(SafeParams $params) : string { return static::class; }
     
     /** Returns the common CLI usage for loading log entries */
     public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint]"; }
@@ -49,15 +48,15 @@ abstract class BaseLog extends BaseObject
     /**
      * Returns a compiled query selecting rows from the given input
      * @param ObjectDatabase $database database reference
-     * @param Input $input input with user filter params
+     * @param SafeParams $params params with user filter params
      * @return QueryBuilder built query with WHERE set
      */
-    protected static function GetWhereQuery(ObjectDatabase $database, Input $input) : QueryBuilder
+    protected static function GetWhereQuery(ObjectDatabase $database, SafeParams $params) : QueryBuilder
     {
-        $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $input);
+        $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $params);
         
-        $or = $input->GetOptParam('logic',SafeParam::TYPE_ALPHANUM,
-            SafeParams::PARAMLOG_ONLYFULL, array('and','or')) === 'or'; // default AND
+        $or = ($params->HasParam('logic') ? $params->GetParam('logic', SafeParams::PARAMLOG_ONLYFULL)
+            ->FromWhitelist(array('and','or')) : null) === 'or'; // default AND
         
         if (!count($criteria))
         {
@@ -69,18 +68,18 @@ abstract class BaseLog extends BaseObject
     /**
      * Loads log entries the given input
      * @param ObjectDatabase $database database reference
-     * @param Input $input user input with selectors
+     * @param SafeParams $params user input with selectors
      * @return array<string, static> loaded log entries indexed by ID
      */
-    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
+    public static function LoadByParams(ObjectDatabase $database, SafeParams $params) : array
     {
-        $class = static::GetPropClass($input);
+        $class = static::GetPropClass($params);
         
-        $q = $class::GetWhereQuery($database, $input);
+        $q = $class::GetWhereQuery($database, $params);
         
-        $q->Limit($input->GetOptParam('limit',SafeParam::TYPE_UINT) ?? 100);
+        $q->Limit($params->GetOptParam('limit',100)->GetUint());
         
-        if ($input->HasParam('offset')) $q->Offset($input->GetParam('offset',SafeParam::TYPE_UINT));
+        if ($params->HasParam('offset')) $q->Offset($params->GetParam('offset')->GetUint());
         
         return $database->LoadObjectsByQuery($class, $q);
     }
@@ -88,14 +87,14 @@ abstract class BaseLog extends BaseObject
     /**
      * Counts log entries by the given input
      * @param ObjectDatabase $database database reference
-     * @param Input $input user input with selectors
+     * @param SafeParams $params user input with selectors
      * @return int number of log entries that match
      */
-    public static function CountByInput(ObjectDatabase $database, Input $input) : int
+    public static function CountByParams(ObjectDatabase $database, SafeParams $params) : int
     {
-        $class = static::GetPropClass($input);
+        $class = static::GetPropClass($params);
         
-        $q = static::GetWhereQuery($database, $input);
+        $q = static::GetWhereQuery($database, $params);
         
         return $database->CountObjectsByQuery($class, $q);
     }

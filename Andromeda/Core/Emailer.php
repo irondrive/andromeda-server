@@ -6,8 +6,6 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
@@ -108,33 +106,42 @@ final class Emailer extends BaseObject
     public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
     
     /** Returns a array of strings with the CLI usage for each specific driver */
-    public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username text] [--password raw]"); }
+    public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username utf8] [--password raw]"); }
     
     /** Creates a new email backend in the database with the given input (see CLI usage) */
-    public static function Create(ObjectDatabase $database, Input $input) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
         $mailer = parent::BaseCreate($database);
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::MAIL_TYPES));
+        $type = $params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES));
         
         $type = self::MAIL_TYPES[$type];
         $mailer->type->SetValue($type);
         
-        $mailer->from_name->SetValue($input->GetOptParam('from_name',SafeParam::TYPE_NAME));
-        $mailer->from_address->SetValue($input->GetParam('from_address',SafeParam::TYPE_EMAIL));
-        $mailer->use_reply->SetValue($input->GetOptParam('use_reply',SafeParam::TYPE_BOOL));
+        $mailer->from_address->SetValue($params->GetParam('from_address')->GetEmail());
+        
+        if ($params->HasParam('from_name'))
+            $mailer->from_name->SetValue($params->GetParam('from_name')->GetName());
+
+        if ($params->HasParam('use_reply'))
+            $mailer->use_reply->SetValue($params->GetParam('use_reply')->GetBool());
 
         if ($type == self::TYPE_SMTP)
         {
-            $mailer->username->SetValue($input->GetOptParam('username',SafeParam::TYPE_TEXT));
-            $mailer->password->SetValue($input->GetOptParam('password',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
+            if ($params->HasParam('username'))
+                $mailer->username->SetValue($params->GetParam('username')->GetUTF8String());
             
-            if (($hosts = $input->GetOptParam('hosts',SafeParam::TYPE_OBJECT | SafeParam::TYPE_ARRAY)) !== null)
+            if ($params->HasParam('password'))
+                $mailer->password->SetValue($params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetRawString());
+
+            if ($params->HasParam('hosts'))
             {
-                $hosts = array_map(function($i){ return self::BuildHostFromParams($i); }, $hosts);
+                $hosts = $params->GetParam('hosts')->GetObjectArray();
+                
+                $hosts = array_map(function(SafeParams $p){ 
+                    return self::BuildHostFromParams($p); }, $hosts);
             }
-            else $hosts = array(self::BuildHostFromParams($input->GetParams()));
+            else $hosts = array(self::BuildHostFromParams($params));
                 
             $mailer->hosts->SetArray($hosts);
         }
@@ -157,12 +164,13 @@ final class Emailer extends BaseObject
     public function Delete() : void { parent::Delete(); }
     
     /** Build a PHPMailer-formatted host string from an input */
-    private static function BuildHostFromParams(SafeParams $input) : string
+    private static function BuildHostFromParams(SafeParams $params) : string
     {
-        $host = $input->GetParam('host',SafeParam::TYPE_HOSTNAME);
-        $port = $input->GetOptParam('port',SafeParam::TYPE_UINT16);
-        $proto = $input->GetOptParam('proto',SafeParam::TYPE_ALPHANUM,
-            SafeParams::PARAMLOG_ONLYFULL, array('tls','ssl'));
+        $host = $params->GetParam('host')->GetHostname();
+        
+        $port = $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null;
+        
+        $proto = $params->HasParam('proto') ? $params->GetParam('proto')->FromWhitelist(array('tls','ssl')) : null;
         
         if ($port) $host .= ":$port";
         if ($proto) $host = "$proto://$host";        

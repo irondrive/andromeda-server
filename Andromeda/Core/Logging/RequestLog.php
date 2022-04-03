@@ -9,8 +9,8 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Core/Logging/ActionLog.php");
 require_once(ROOT."/Core/Logging/BaseLog.php");
@@ -33,7 +33,7 @@ final class RequestLog extends BaseLog
     /** Interface user-agent used for the request */
     private FieldTypes\StringType $agent;
     /** Error code if response was an error (or null) */
-    private FieldTypes\NullIntType $errcode;
+    private FieldTypes\NullStringType $errcode;
     /** Error message if response was an error (or null) */
     private FieldTypes\NullStringType $errtext;
     
@@ -49,7 +49,7 @@ final class RequestLog extends BaseLog
         $this->time = $fields[] =    new FieldTypes\Date('time');
         $this->addr = $fields[] =    new FieldTypes\StringType('addr');
         $this->agent = $fields[] =   new FieldTypes\StringType('agent');
-        $this->errcode = $fields[] = new FieldTypes\NullIntType('errcode');
+        $this->errcode = $fields[] = new FieldTypes\NullStringType('errcode');
         $this->errtext = $fields[] = new FieldTypes\NullStringType('errtext');
         
         $this->RegisterFields($fields, self::class);
@@ -137,29 +137,29 @@ final class RequestLog extends BaseLog
    
     public static function GetPropUsage(bool $join = true) : string 
     { 
-        return "[--mintime float] [--maxtime float] [--addr raw] [--agent raw] ".
-            "[--errcode int] [--errtext alphanum] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
+        return "[--mintime float] [--maxtime float] [--addr utf8] [--agent utf8] ".
+               "[--errcode utf8] [--errtext utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
     }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {       
         $criteria = array();
         
-        if ($input->HasParam('maxtime')) $criteria[] = $q->LessThan("time", $input->GetParam('maxtime',SafeParam::TYPE_FLOAT));
-        if ($input->HasParam('mintime')) $criteria[] = $q->GreaterThan("time", $input->GetParam('mintime',SafeParam::TYPE_FLOAT));
+        if ($params->HasParam('maxtime')) $criteria[] = $q->LessThan("time", $params->GetParam('maxtime')->GetFloat());
+        if ($params->HasParam('mintime')) $criteria[] = $q->GreaterThan("time", $params->GetParam('mintime')->GetFloat());
         
-        if ($input->HasParam('addr')) $criteria[] = $q->Equals("addr", $input->GetParam('addr',SafeParam::TYPE_TEXT));
-        if ($input->HasParam('agent')) $criteria[] = $q->Like("agent", $input->GetParam('agent',SafeParam::TYPE_TEXT));
+        if ($params->HasParam('addr')) $criteria[] = $q->Equals("addr", $params->GetParam('addr')->GetUTF8String());
+        if ($params->HasParam('agent')) $criteria[] = $q->Like("agent", $params->GetParam('agent')->GetUTF8String());
         
-        if ($input->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $input->GetParam('errcode',SafeParam::TYPE_INT));
-        if ($input->HasParam('errtext')) $criteria[] = $q->Equals("errtext", $input->GetParam('errtext',SafeParam::TYPE_INT));
+        if ($params->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $params->GetParam('errcode')->GetUTF8String());
+        if ($params->HasParam('errtext')) $criteria[] = $q->Equals("errtext", $params->GetParam('errtext')->GetUTF8String());
         
-        $q->OrderBy("time", !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false)); // always sort by time, default desc
-        
+        $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
+
         if (!$join) return $criteria;
         
         $q->Join($database, ActionLog::class, 'requestlog', self::class, 'id'); // enable loading by ActionLog criteria
-        return array_merge($criteria, ActionLog::GetPropCriteria($database, $q, $input, false));
+        return array_merge($criteria, ActionLog::GetPropCriteria($database, $q, $params, false));
     }
 
     /**

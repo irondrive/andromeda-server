@@ -8,318 +8,488 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php");
 
 class SafeParamTest extends \PHPUnit\Framework\TestCase
 {
-    public function testNoKey() : void
+    public function testEmptyKey() : void
     {
         $this->expectException(SafeParamInvalidException::class);
-        
         new SafeParam("", null);
     }
     
     public function testBadKey1() : void
     {
         $this->expectException(SafeParamInvalidException::class);
-        
         new SafeParam("test\0", null);
     }
     
     public function testBadKey2() : void
     {
         $this->expectException(SafeParamInvalidException::class);
-        
         new SafeParam("--test", null);
     }
     
     public function testBadKey3() : void
     {
         $this->expectException(SafeParamInvalidException::class);
-        
         new SafeParam("test 0", null);
     }
     
-    public function testGetKey() : void
+    public function testBadKey4() : void
     {
-        $this->assertSame((new SafeParam("mykey",null))->GetKey(), "mykey");       
+        $this->expectException(SafeParamInvalidException::class);
+        new SafeParam("%test", null);
     }
     
-    public function testRawValue() : void
+    /** 
+     * @template T
+     * @param T $want
+     * @param callable(SafeParam):T $func 
+     */
+    protected function testGood(?string $value, $want, callable $func, bool $willlog = true) : void
+    {
+        $param = new SafeParam("key",$value);
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999); // test logging
+        
+        $this->assertSame($want, $func($param));
+        
+        if (!$willlog) $this->assertEmpty($logarr); 
+        else $this->assertSame(array('key'=>$want),$logarr);
+    }
+    
+    /** @param callable(SafeParam):mixed $func */
+    protected function testBad(?string $value, callable $func) : void
+    {            
+        $param = new SafeParam("key", $value);
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999); // test logging
+        
+        $caught = false; try { $func($param); }
+        catch (SafeParamInvalidException $e){ $caught = true; }
+        
+        $this->assertTrue($caught);
+        $this->assertEmpty($logarr); // not logged!
+    }
+    
+    protected function testNulls(callable $get, callable $getn) : void
+    {
+        $param = new SafeParam('key', null);
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999); // test logging
+        
+        $this->assertNull($getn($param));
+        $this->assertSame(array('key'=>null),$logarr);
+        
+        $caught = false; try { $get($param); }
+        catch (SafeParamNullValueException $e){ $caught = true; }
+        
+        $this->assertTrue($caught);
+    }
+    
+    public function testRawString() : void
     {
         $val = CryptoSecret::GenerateKey();
         
-        $this->assertSame((new SafeParam("key", $val))->GetRawValue(), $val);
+        $this->testGood($val, $val, function(SafeParam $p){ return $p->GetRawString(); }, false);
     }
-    
-    public function testValueList() : void
+
+    public function testCheckFunction() : void
     {
-        $val = 5; $param = new SafeParam('key',$val);
+        $param = new SafeParam("mykey",$val="testval");
         
-        $this->assertSame($param->GetValue(SafeParam::TYPE_INT, array($val,6,7)), $val);
-        
-        $this->expectException(SafeParamInvalidEnumException::class);
-        
-        $param->GetValue(SafeParam::TYPE_INT, array(1,2,3));
-    }
-    
-    public function testMaxLength() : void
-    {
-        $val = "123456789"; $param = new SafeParam("key", $val);
-        
-        $this->assertSame($param->GetValue(SafeParam::TYPE_RAW, null, SafeParam::MaxLength(99)), $val);
+        $param->CheckFunction(function(string $p)use($val)
+        {
+            $this->assertSame($p,$val); return true;
+        });
         
         $this->expectException(SafeParamInvalidException::class);
         
-        $param->GetValue(SafeParam::TYPE_RAW, null, SafeParam::MaxLength(5));
-    }
-    
-    protected function testGood($value, int $type) : void
-    {
-        $this->testGoodMatch($value, $type, $value);
-    }
-    
-    protected function testGoodMatch($value, int $type, $want) : void
-    {        
-        $this->assertSame((new SafeParam("key",$value))->GetValue($type), $want);
-    }
-    
-    protected function testBad($value, int $type) : void
-    {
-        $rval = false; try { (new SafeParam("key", $value))->GetValue($type); }
-            catch (SafeParamInvalidException $e){ $rval = true; }
-        
-        $this->assertTrue($rval);
+        $param->CheckFunction(function(string $p){ return false; });
     }
 
-    public function testNull() : void
+    public function testCheckLength() : void
     {
-        $this->testGoodMatch("", SafeParam::TYPE_ALPHANUM, null);
-        $this->testGoodMatch("null", SafeParam::TYPE_ALPHANUM, null);
+        $val = "123456789"; $param = new SafeParam("key", $val);
+        
+        $this->assertSame($val, $param->CheckLength(99)->GetRawString());
+        
+        $this->expectException(SafeParamInvalidException::class);
+        
+        $param->CheckLength(5);
+    }
+
+    public function testAutoNull() : void
+    {
+        $this->assertTrue((new SafeParam("key", ""))->isNull());
+        $this->assertTrue((new SafeParam("key", "null"))->isNull());
+        $this->assertTrue((new SafeParam("key", "NULL"))->isNull());
+        $this->assertFalse((new SafeParam("key", "test"))->isNull());
+        
+        $getRaw = function(SafeParam $p){ return $p->GetRawString(); };
+        
+        $this->testGood("", null, $getRaw, false);
+        $this->testGood("null", null, $getRaw, false);
     }
     
-    public function testTrimming() : void
+    public function testFromWhitelist() : void
     {
-        $this->testGoodMatch("  true", SafeParam::TYPE_ALPHANUM, "true");
-        $this->testGoodMatch("true  ", SafeParam::TYPE_ALPHANUM, "true");
+        $getVal = function(SafeParam $p){ return $p->FromWhitelist(array('a')); };
+        $getValN = function(SafeParam $p){ return $p->FromWhitelistNull(array('a')); };
         
-        $this->testGoodMatch(" true ", SafeParam::TYPE_ALPHANUM, "true");
-        $this->testGoodMatch(" true ", SafeParam::TYPE_RAW, " true ");
-    }
-    
-    public function testUnknown() : void
-    {
-        $this->expectException(SafeParamUnknownTypeException::class);
+        $this->testNulls($getVal, $getValN);
         
-        (new SafeParam("key", "value"))->GetValue(9999);
+        $val = "test"; $param = new SafeParam('mykey',$val);
+        
+        $this->assertSame($val, $param->FromWhitelist(array($val,'a','b')));
+        
+        $this->expectException(SafeParamInvalidException::class);
+        $param->FromWhitelist(array('a','b','c'));
     }
     
     public function testBool() : void
     {
-        $t = SafeParam::TYPE_BOOL;
+        $getVal = function(SafeParam $p){ return $p->GetBool(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullBool(); };
         
-        foreach (array("true", "1", "yes", "null") as $val) 
-            $this->testGoodMatch($val, $t, true);
+        $this->testGood("", true, $getVal);
+        $this->testGood("", null, $getValN);
+        $this->testGood("null", true, $getVal);
+        $this->testGood("null", null, $getValN);
         
-        foreach (array("false", "0", "no") as $val)
-            $this->testGoodMatch($val, $t, false);
+        foreach (array("true", "1", "yes ") as $val)
+        {
+            $this->testGood($val, true, $getVal);
+            $this->testGood($val, true, $getValN);
+        }
         
-        $this->testBad("75", $t);
-        $this->testBad("badvalue", $t);
-        $this->testBad("anything else?", $t);
+        foreach (array("false", "0", " no") as $val)
+        {
+            $this->testGood($val, false, $getVal);
+            $this->testGood($val, false, $getValN);
+        }
+        
+        $this->testBad("75", $getVal);
+        $this->testBad("badvalue", $getVal);
+        $this->testBad("anything else?", $getVal);
     }
 
-    protected function testNumeric(int $t) : void
+    public function testBaseInt() : void
     {
-        $this->testBad("text", $t);
-        $this->testBad("47t", $t);
-        $this->testBad("t47", $t);
+        $getVal = function(SafeParam $p){ return $p->GetInt(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullInt(); };
+        
+        $this->testNulls($getVal, $getValN);
+        
+        $this->testGood("0", 0, $getVal);
+        $this->testGood(" 1", 1, $getVal);
+        $this->testGood("123  ", 123, $getVal);
+        $this->testGood(" -123 \n", -123, $getVal);
+        
+        $this->testBad("text", $getVal);
+        $this->testBad("47t", $getVal);
+        $this->testBad("t47", $getVal);
     }
-    
-    public function testInt() : void
+
+    public function testIntRanges() : void
     {
-        $t = SafeParam::TYPE_INT;
+        $getInt = function(SafeParam $p){ return $p->GetInt(); };
+        $getInt32 = function(SafeParam $p){ return $p->GetInt32(); };
+        $getInt16 = function(SafeParam $p){ return $p->GetInt16(); };
+        $getInt8 = function(SafeParam $p){ return $p->GetInt8(); };
         
-        $this->testNumeric($t);
-    
-        $this->testGoodMatch("0", $t, 0);
-        $this->testGoodMatch("123", $t, 123);
-        $this->testGoodMatch("-123", $t, -123);
-    }
-    
-    public function testUint() : void
-    {
-        $t = SafeParam::TYPE_UINT;
+        $getUint = function(SafeParam $p){ return $p->GetUint(); };
+        $getUint32 = function(SafeParam $p){ return $p->GetUint32(); };
+        $getUint16 = function(SafeParam $p){ return $p->GetUint16(); };
+        $getUint8 = function(SafeParam $p){ return $p->GetUint8(); };
+
+        $this->testBad('-1', $getUint);
+        $this->testGood('0', 0, $getUint);
+        $this->testGood('1', 1, $getUint);
         
-        $this->testNumeric($t);
+        $this->testBad('-1', $getUint8);
+        $this->testGood('0', 0, $getUint8);
+        $this->testGood('255', 255, $getUint8);
+        $this->testBad('256', $getUint8);
         
-        $this->testGoodMatch("0", $t, 0);
-        $this->testGoodMatch("123", $t, 123);
+        $this->testBad('-1', $getUint16);
+        $this->testGood('0', 0, $getUint16);
+        $this->testGood('65535', 65535, $getUint16);
+        $this->testBad('65536', $getUint16);
         
-        $this->testBad("-123", $t);        
-    }
-    
-    public function testMaxValue() : void
-    {
-        $this->testBad(-1, SafeParam::TYPE_UINT8);
-        $this->testGood(0, SafeParam::TYPE_UINT8);
-        $this->testGood(255, SafeParam::TYPE_UINT8);
-        $this->testBad(256, SafeParam::TYPE_UINT8);
+        $this->testBad('-1', $getUint32);
+        $this->testGood('0', 0, $getUint32);
+        $this->testGood('4294967295', 4294967295, $getUint32);
+        $this->testBad('4294967296', $getUint32);
         
-        $this->testBad(-1, SafeParam::TYPE_UINT16);
-        $this->testGood(0, SafeParam::TYPE_UINT16);
-        $this->testGood(65535, SafeParam::TYPE_UINT16);
-        $this->testBad(65536, SafeParam::TYPE_UINT16);
+        $this->testGood('-1', -1, $getInt);
+        $this->testGood('0', 0, $getInt);
+        $this->testGood('1', 1, $getInt);
         
-        $this->testBad(-1, SafeParam::TYPE_UINT32);
-        $this->testGood(0, SafeParam::TYPE_UINT32);
-        $this->testGood(4294967295, SafeParam::TYPE_UINT32);
-        $this->testBad(4294967296, SafeParam::TYPE_UINT32);
+        $this->testBad('-129', $getInt8);
+        $this->testGood('-128', -128, $getInt8);
+        $this->testGood('127', 127, $getInt8);
+        $this->testBad('128', $getInt8);
         
-        $this->testBad(-129, SafeParam::TYPE_INT8);
-        $this->testGood(-128, SafeParam::TYPE_INT8);
-        $this->testGood(127, SafeParam::TYPE_INT8);
-        $this->testBad(128, SafeParam::TYPE_INT8);
+        $this->testBad('-32769', $getInt16);
+        $this->testGood('-32768', -32768, $getInt16);
+        $this->testGood('32767', 32767, $getInt16);
+        $this->testBad('32768', $getInt16);
         
-        $this->testBad(-32769, SafeParam::TYPE_INT16);
-        $this->testGood(-32768, SafeParam::TYPE_INT16);
-        $this->testGood(32767, SafeParam::TYPE_INT16);
-        $this->testBad(32768, SafeParam::TYPE_INT16);
-        
-        $this->testBad(-2147483649, SafeParam::TYPE_INT32);
-        $this->testGood(-2147483648, SafeParam::TYPE_INT32);
-        $this->testGood(2147483647, SafeParam::TYPE_INT32);
-        $this->testBad(2147483648, SafeParam::TYPE_INT32);
+        $this->testBad('-2147483649', $getInt32);
+        $this->testGood('-2147483648', -2147483648, $getInt32);
+        $this->testGood('2147483647', 2147483647, $getInt32);
+        $this->testBad('2147483648', $getInt32);
     }
     
     public function testFloat() : void
     {
-        $t = SafeParam::TYPE_FLOAT;
+        $getVal = function(SafeParam $p){ return $p->GetFloat(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullFloat(); };
         
-        $this->testNumeric($t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testGoodMatch("0", $t, 0.0);
-        $this->testGoodMatch("123", $t, 123.0);
-        $this->testGoodMatch("-123", $t, -123.0);
+        $this->testBad("text", $getVal);
+        $this->testBad("47t", $getVal);
+        $this->testBad("t47", $getVal);
         
-        $this->testGoodMatch("123.45", $t, 123.45);
-        $this->testGoodMatch("-123.45", $t, -123.45);
+        $this->testGood("0", 0.0, $getVal);
+        $this->testGood("123", 123.0, $getVal);
+        $this->testGood("-123", -123.0, $getVal);
+        
+        $this->testGood("123.45", 123.45, $getVal);
+        $this->testGood("-123.45", -123.45, $getVal);
     }
     
     public function testRandstr() : void
     {
-        $t = SafeParam::TYPE_RANDSTR;
+        $getVal = function(SafeParam $p){ return $p->GetRandStr(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullRandStr(); };
         
-        $this->testGood("9a8s7dn8_s7n", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->TestBad("23 45", $t);
-        $this->testBad("234a<", $t);
-        $this->testBad("234a'", $t);
-        $this->testBad("234a\"", $t);
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood("9a8s7dn8_s7n", "9a8s7dn8_s7n", $getVal);
+        
+        $this->TestBad("23 45", $getVal);
+        $this->testBad("234a<", $getVal);
+        $this->testBad("234a'", $getVal);
+        $this->testBad("234a\"", $getVal);
     }
     
     public function testAlphanum() : void
     {
-        $t = SafeParam::TYPE_ALPHANUM;
+        $getVal = function(SafeParam $p){ return $p->GetAlphanum(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullAlphanum(); };
         
-        $this->testGood("987n927_83..n4-928", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->TestBad("23 45", $t);
-        $this->testBad("234a<", $t);
-        $this->testBad("234a'", $t);
-        $this->testBad("234a\"", $t);
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood($val="987n927_83..n4-928", $val, $getVal);
+        
+        $this->TestBad("23 45", $getVal);
+        $this->testBad("234a<", $getVal);
+        $this->testBad("234a'", $getVal);
+        $this->testBad("234a\"", $getVal);
     }
     
     public function testName() : void
     {
-        $t = SafeParam::TYPE_NAME;
+        $getVal = function(SafeParam $p){ return $p->GetName(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullName(); };
         
-        $this->testGood("(my'te_st..) test", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testBad("234a<", $t);
-        $this->testBad("234a\"", $t);
-        $this->testBad("234a;", $t);
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood($val="(my'te_st..) test", $val, $getVal);
+        
+        $this->testBad("234a<", $getVal);
+        $this->testBad("234a\"", $getVal);
+        $this->testBad("234a;", $getVal);
     }
     
     public function testEmail() : void
     {
-        $t = SafeParam::TYPE_EMAIL;
+        $getVal = function(SafeParam $p){ return $p->GetEmail(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullEmail(); };
         
-        $this->testGood("mytest123_123@test.mytest.edu", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testBad("0", $t);
-        $this->testBad("yoooo", $t);
-        $this->testBad("nothing@", $t);
-        $this->testBad("mytest@serv", $t);
-        $this->testBad("test<12@test.com", $t);
+        $this->testGood("  test@mytest.io\n", "test@mytest.io", $getVal); // trim
+        $this->testGood($val="mytest123_123@test.mytest.edu", $val, $getVal);
+        
+        $this->testBad("0", $getVal);
+        $this->testBad("yoooo", $getVal);
+        $this->testBad("nothing@", $getVal);
+        $this->testBad("mytest@serv", $getVal);
+        $this->testBad("test<12@test.com", $getVal);
     }
     
     public function testFSName() : void
     {
-        $t = SafeParam::TYPE_FSNAME;
+        $getVal = function(SafeParam $p){ return $p->GetFSName(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullFSName(); };
         
-        $this->testGood("my %file.txt", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testBad("./test", $t);
-        $this->testBad("../test", $t);
-        $this->testBad("test/test", $t);
-        $this->testBad("test/../test", $t);
-        $this->testBad("test\\test", $t);
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood($val="my %file.txt", $val, $getVal);
         
-        $this->testBad("test:", $t);
-        $this->testBad("test?", $t);
+        $this->testBad("./test", $getVal);
+        $this->testBad("../test", $getVal);
+        $this->testBad("test/test", $getVal);
+        $this->testBad("test/../test", $getVal);
+        $this->testBad("test\\test", $getVal);
+        
+        $this->testBad("test:", $getVal);
+        $this->testBad("test?", $getVal);
     }
     
     public function testFSPath() : void
     {
-        $t = SafeParam::TYPE_FSPATH;
+        $getVal = function(SafeParam $p){ return $p->GetFSPath(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullFSPath(); };
         
-        $this->testGood("my \$file.txt", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testGood("./test", $t);
-        $this->testGood("../test", $t);
-        $this->testGood("test/test", $t);
-        $this->testGood("test/../test", $t);
-        $this->testGood("test\\test", $t);
-        $this->testGood("C:\\test", $t);
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood($val="my \$file.txt", $val, $getVal);
         
-        $this->testBad("test?", $t);
+        $this->testGood($val="./test", $val, $getVal);
+        $this->testGood($val="../test", $val, $getVal);
+        $this->testGood($val="test/test", $val, $getVal);
+        $this->testGood($val="test/../test", $val, $getVal);
+        $this->testGood($val="test\\test", $val, $getVal);
+        $this->testGood($val="C:\\test", $val, $getVal);
+        
+        $this->testBad("test?", $getVal); 
     }
     
-    public function testText() : void
+    public function testHostname() : void
     {
-        $t = SafeParam::TYPE_TEXT;
+        $getVal = function(SafeParam $p){ return $p->GetHostname(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullHostname(); };
         
-        $this->testGood("hello! this is some text.", $t);
+        $this->testNulls($getVal, $getValN);
         
-        $this->testGoodMatch("stripping <tags>? &", $t, "stripping &#60;tags&#62;? &#38;");
+        $this->testGood("  test\n", "test", $getVal); // trim
+        $this->testGood($val='simple', $val, $getVal);
+        $this->testGood($val='test.com', $val, $getVal);
+        $this->testGood($val='sub.test1.my-test.tk', $val, $getVal);
+        
+        $this->testBad('ftp://test.com', $getVal);
+        $this->testBad('no_underscores', $getVal);
+    }
+
+    public function testHTMLText() : void
+    {
+        $getVal = function(SafeParam $p){ return $p->GetHTMLText(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullHTMLText(); };
+        
+        $this->testNulls($getVal, $getValN);
+        
+        $this->testGood($val="hello! this is some text. ", $val, $getVal); // NO trimming
+        
+        $this->testGood("stripping <tags>? &\n", "stripping &#60;tags&#62;? &#38;&#10;", $getVal);
+    }
+
+    public function testUTF8String() : void
+    {
+        $getVal = function(SafeParam $p){ return $p->GetUTF8String(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullUTF8String(); };
+        
+        $this->testNulls($getVal, $getValN);
+        
+        $this->testGood($val="hello! special chars !@#$%^&*()\u{9999}", $val, $getVal);
+        
+        $this->testBad("\0", $getVal);
+        $this->testBad(strval(hex2bin("deadbeef")), $getVal);
     }
     
     public function testObject() : void
     {
-        $t = SafeParam::TYPE_OBJECT;
-        $val = '{"key1":75,"key2":"val1"}';
+        $getVal = function(SafeParam $p){ return $p->GetObject(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullObject(); };
         
-        $obj = (new SafeParam('key',$val))->GetValue($t);
+        $this->testNulls($getVal, $getValN);
+        
+        $json = '{"key1":75,"key2":"val1"}';
+        $param = new SafeParam('key',$json);
+        $obj = $param->GetObject();
         
         $this->assertIsObject($obj);
         
-        $this->assertSame($obj->GetParam('key1',SafeParam::TYPE_INT), 75);
-        $this->assertSame($obj->GetParam('key2',SafeParam::TYPE_ALPHANUM), 'val1');
+        $this->assertSame($obj->GetParam('key1')->GetInt(), 75);
+        $this->assertSame($obj->GetParam('key2')->GetAlphanum(), 'val1');
         
-        $this->testBad("string", $t);
-        $this->testBad("{test:10}", $t);
-        $this->testBad("{'single':10}", $t);
+        $this->assertSame($obj->GetClientObject(), array('key1'=>'75','key2'=>'val1'));
+        
+        $this->testBad("string", $getVal);
+        $this->testBad("{test:10}", $getVal);
+        $this->testBad("{'single':10}", $getVal);
     }
-    
+
     public function testArray() : void
     {
-        $t = SafeParam::TYPE_ARRAY | SafeParam::TYPE_INT;
+        $getInt = function(SafeParam $p){ return $p->GetInt(); };
         
-        $arr = (new SafeParam('key',"[5,7,9,27]"))->GetValue($t);
+        $getIntArr = function(SafeParam $p)use($getInt){ return $p->GetArray($getInt); };
+        $getIntArrN = function(SafeParam $p)use($getInt){ return $p->GetNullArray($getInt); };
+        
+        $this->testNulls($getIntArr, $getIntArrN);
+        
+        $param = new SafeParam('key',"[5,7,9,27]");
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999);
+        
+        $arr = $param->GetArray($getInt);
+        $this->assertSame($arr, array(5,7,9,27));
+        
+        $this->assertSame(array('key'=>[5,7,9,27]), $logarr);
+
+        $this->testBad('a string', $getIntArr);
+        $this->testBad('[57,"mixed"]', $getIntArr);
+    }
+    
+    public function testObjectLogging() : void
+    {
+        $json = '{"key1":75,"key2":"val1"}';
+        $param = new SafeParam('key',$json);
+        
+        $obj = $param->GetObject(); // no logging
+        $obj->GetParam('key1')->GetInt();
+        $obj->GetParam('key2')->GetAlphanum();
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999); // full logging
+        
+        $obj = $param->GetObject();
+        $this->assertSame(array('key'=>array()), $logarr);
+        $obj->GetParam('key1')->GetInt();
+        $obj->GetParam('key2')->GetAlphanum();
+        $this->assertSame(array('key'=>array('key1'=>75,'key2'=>'val1')), $logarr);
+        
+        // test inherit level - SafeParam will log, sub-SafeParams will not
+        $logarr = array(); $param->SetLogRef($logarr, 0);
+        
+        $obj = $param->GetObject();
+        $this->assertSame(array('key'=>array()), $logarr);
+        $obj->GetParam('key1')->GetInt();
+        $obj->GetParam('key2')->GetAlphanum();
+        $this->assertSame(array('key'=>array()), $logarr);
+    }
+    
+    public function testObjectArray() : void
+    {
+        $json = '[{"key1":"test"},{"key2":75}]';
+        $param = new SafeParam('mykey',$json);
+        
+        $logarr = array(); $param->SetLogRef($logarr, 999); // full logging
+        
+        $arr = $param->GetObjectArray();
         
         $this->assertIsArray($arr);
-        $this->assertCount(4, $arr);
-        $this->assertSame($arr[0], 5);
-        $this->assertSame($arr[3], 27);
+        $this->assertCount(2, $arr);
         
-        $this->testBad('a string', $t);
-        $this->testBad('[57,"mixed"]', $t);
+        $this->assertSame("test", $arr[0]->GetParam("key1")->GetAlphanum());        
+        $this->assertSame(75, $arr[1]->GetParam("key2")->GetInt());
+
+        $this->assertSame(array('mykey'=>[['key1'=>'test'],['key2'=>75]]), $logarr);
     }
 }

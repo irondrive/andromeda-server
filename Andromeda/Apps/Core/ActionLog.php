@@ -5,8 +5,7 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
@@ -40,14 +39,15 @@ final class ActionLog extends BaseActionLog
     
     protected static function GetAppPropUsage() : string { return "[--admin bool]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {
         $criteria = array();
         
-        if ($input->HasParam('admin')) $criteria[] = $input->GetParam('admin',SafeParam::TYPE_BOOL)
-            ? $q->IsTrue("admin") : $q->Not($q->IsTrue("admin"));
+        if ($params->HasParam('admin'))
+            $criteria[] = $params->GetParam('admin')->GetBool() 
+                ? $q->IsTrue("admin") : $q->Not($q->IsTrue("admin"));
             
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $input, $join));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params, $join));
     }
     
     /**

@@ -110,19 +110,19 @@ class CLI extends IOInterface
                 
                 case 'debug':
                     if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $debug = (new SafeParam('debug',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::DEBUG_TYPES));
+                    $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
                     $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
                     
                 case 'metrics':
                     if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $metrics = (new SafeParam('metrics',$val))->GetValue(SafeParam::TYPE_ALPHANUM, array_keys(Config::METRICS_TYPES));
+                    $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
                     $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
                     
                 case 'dbconf':
                     if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
-                    $this->dbconf = (new SafeParam('dbconf',$val))->GetValue(SafeParam::TYPE_FSPATH);
+                    $this->dbconf = (new SafeParam('dbconf',$val))->GetFSPath();
                     break;
 
                 default: throw new IncorrectCLIUsageException();
@@ -273,7 +273,7 @@ class CLI extends IOInterface
                 if (!is_readable($val)) throw new InvalidFileException($val);
                 
                 $filename = basename(self::getNextValue($argv,$i) ?? $val);
-                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME);
+                $filename = (new SafeParam('name',$filename))->GetFSName();
                 
                 $files[$param] = new InputPath($val, $filename, false);
             }

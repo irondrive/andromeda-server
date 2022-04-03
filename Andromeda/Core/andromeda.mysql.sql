@@ -147,7 +147,7 @@ CREATE TABLE `a2obj_core_logging_requestlog` (
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
-  `errcode` smallint(6) DEFAULT NULL,
+  `errcode` varchar(255) DEFAULT NULL,
   `errtext` text DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

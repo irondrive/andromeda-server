@@ -1,14 +1,14 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Config, InvalidAppException};
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\HasTable;
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/Core/Logging/BaseLog.php");
@@ -189,40 +189,40 @@ class ActionLog extends BaseLog
         return $retval;
     }
 
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {
         $criteria = array();
 
-        if ($input->HasParam('lapp')) $criteria[] = $q->Equals("app", $input->GetParam('lapp',SafeParam::TYPE_ALPHANUM));
-        if ($input->HasParam('laction')) $criteria[] = $q->Equals("action", $input->GetParam('laction',SafeParam::TYPE_ALPHANUM));
+        if ($params->HasParam('lapp')) $criteria[] = $q->Equals("app", $params->GetParam('lapp')->GetAlphanum());
+        if ($params->HasParam('laction')) $criteria[] = $q->Equals("action", $params->GetParam('laction')->GetAlphanum());
         
         if (!$join) return $criteria;
         
         $q->Join($database, RequestLog::class, 'id', self::class, 'requestlog'); // enable loading by RequestLog criteria
-        return array_merge($criteria, RequestLog::GetPropCriteria($database, $q, $input, false));
+        return array_merge($criteria, RequestLog::GetPropCriteria($database, $q, $params, false));
     }
     
     /** @return class-string<self> */
-    protected static function GetPropClass(Input $input) : string
+    protected static function GetPropClass(SafeParams $params) : string
     {
-        if ($input->HasParam('lapp'))
+        if ($params->HasParam('lapp'))
         {
             $map = self::GetChildMap();
-            $app = $input->GetParam('lapp',SafeParam::TYPE_ALPHANUM);
+            $app = $params->GetParam('lapp')->GetAlphanum();
             if (array_key_exists($app, $map)) return $map[$app];
         }
         
         return self::class;
     }
 
-    public static function LoadByInput(ObjectDatabase $database, Input $input) : array
+    public static function LoadByParams(ObjectDatabase $database, SafeParams $params) : array
     {
-        RequestLog::LoadByInput($database, $input); // pre-load in one query
+        RequestLog::LoadByParams($database, $params); // pre-load in one query
         
-        $objs = parent::LoadByInput($database, $input);
+        $objs = parent::LoadByParams($database, $params);
         
         // now we need to re-sort by time as loading via child classes may not sort the result
-        $desc = !($input->GetOptParam('asc',SafeParam::TYPE_BOOL) ?? false);
+        $desc = !$params->GetOptParam('asc',false)->GetBool(); // default desc
 
         uasort($objs, function(self $a, self $b)use($desc)
         {

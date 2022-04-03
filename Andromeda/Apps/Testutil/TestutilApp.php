@@ -64,9 +64,11 @@ class TestUtilApp extends BaseApp
 
     protected function Random(Input $input) : string
     {
-        $length = $input->GetOptParam("length", SafeParam::TYPE_UINT);
+        $params = $input->GetParams();
+        
+        $length = $params->GetOptParam('length',16)->GetUint();
 
-        return Utilities::Random($length ?? 16);
+        return Utilities::Random($length);
     }
     
     protected function GetInput(Input $input) : array
@@ -92,9 +94,12 @@ class TestUtilApp extends BaseApp
     {
         $this->API->GetInterface()->SetOutputMode(0);
         
-        $data = $input->GetParam('data',SafeParam::TYPE_RAW);
-
-        for ($i = 0; $i < ($input->GetOptParam('times',SafeParam::TYPE_UINT) ?? 0); $i++)
+        $params = $input->GetParams();
+        
+        $data = $params->GetParam('data')->GetRawString();
+        $times = $params->GetOptParam('times',0)->GetUint();
+        
+        for ($i = 0; $i < $times; $i++)
         {
             $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
                 function()use($data,$i){ return strlen($data)*$i; },

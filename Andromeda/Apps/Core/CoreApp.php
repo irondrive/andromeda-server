@@ -201,8 +201,10 @@ class CoreApp extends InstalledApp
      * @return string[] array of possible commands
      */
     protected function GetUsages(Input $input) : array
-    {            
-        $want = $input->GetOptParam('appname',SafeParam::TYPE_ALPHANUM);
+    {
+        $params = $input->GetParams();
+        
+        $want = $params->HasParam('appname') ? $params->GetParam('appname')->GetAlphanum() : null;
         
         $output = array(); foreach ($this->API->GetApps() as $name=>$app)
         {
@@ -226,7 +228,7 @@ class CoreApp extends InstalledApp
         
         $this->API->GetInterface()->DisallowBatch();
         
-        try { return Database::Install($input); }
+        try { return Database::Install($input->GetParams()); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
 
@@ -237,9 +239,11 @@ class CoreApp extends InstalledApp
      */
     protected function Install(Input $input) : array
     {
+        $params = $input->GetParams();
+        
         $retval = array('core'=>parent::Install($input));
         
-        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false))
+        if (!$params->GetOptParam('noapps',false)->GetBool())
         {
             // enable all existing apps
             foreach (Config::ScanApps() as $app)
@@ -266,10 +270,12 @@ class CoreApp extends InstalledApp
      */
     protected function Upgrade(Input $input) : array
     {
+        $params = $input->GetParams();
+        
         $retval = array('core'=>parent::Upgrade($input));
         
         // upgrade all installed apps also
-        if (!($input->GetOptParam('noapps',SafeParam::TYPE_BOOL) ?? false))
+        if (!$params->GetOptParam('noapps',false)->GetBool())
             foreach ($this->API->GetApps() as $name=>$app)
         {
             if ($app instanceof InstalledApp && $app !== $this)
@@ -336,9 +342,10 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        if (!$authenticator)
-            $dest = $input->GetParam('dest',SafeParam::TYPE_EMAIL);
-        else $dest = $input->GetOptParam('dest',SafeParam::TYPE_EMAIL);
+        $params = $input->GetParams();
+        
+        $dest = $params->HasParam('dest') ? $params->GetParam('dest')->GetEmail() : null;
+        if (!$authenticator) $params->GetParam('dest'); // mandatory
     
         if ($dest) $dests = array(new EmailRecipient($dest));
         else $dests = $authenticator->GetAccount()->GetContactEmails();
@@ -346,9 +353,11 @@ class CoreApp extends InstalledApp
         $subject = "Andromeda Email Test";
         $body = "This is a test email from Andromeda";
         
-        if (($mailer = $input->GetOptParam('mailid', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER)) !== null)
+        if ($params->HasParam('mailid'))
         {
+            $mailer = $params->GetParam('mailid')->GetRandstr();
             $mailer = Emailer::TryLoadByID($this->database, $mailer);
+            
             if ($mailer === null) throw new UnknownMailerException();
             else $mailer->Activate();
         }
@@ -368,8 +377,8 @@ class CoreApp extends InstalledApp
     protected function EnableApp(Input $input, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
+
+        $app = $input->GetParams()->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
         try { $this->GetConfig()->EnableApp($app); }
         catch (FailedAppLoadException | MissingMetadataException $e){ 
@@ -387,7 +396,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $app = $input->GetParam('appname',SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ALWAYS);
+        $app = $input->GetParams()->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
         $this->GetConfig()->DisableApp($app);
         
@@ -426,7 +435,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->GetConfig()->SetConfig($input)->GetClientObject(true);
+        return $this->GetConfig()->SetConfig($input->GetParams())->GetClientObject(true);
     }
     
     /**
@@ -453,11 +462,15 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $emailer = Emailer::Create($this->database, $input)->Save();
+        $params = $input->GetParams();
         
-        if (($dest = $input->GetOptParam('test',SafeParam::TYPE_EMAIL)) !== null)
+        $emailer = Emailer::Create($this->database, $params)->Save();
+        
+        if ($params->HasParam('test'))
         {
-            $input->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
+            $dest = $params->GetParam('test')->GetEmail();
+            
+            $params->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
             
             $this->TestMail($input, $isAdmin, $authenticator, $actionlog);
         }
@@ -476,7 +489,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $mailid = $input->GetParam('mailid',SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_ALWAYS);
+        $mailid = $input->GetParams()->GetParam('mailid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
@@ -496,7 +509,7 @@ class CoreApp extends InstalledApp
         if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function(ErrorLog $e){ return $e->GetClientObject(); },
-            ErrorLog::LoadByInput($this->database, $input));
+            ErrorLog::LoadByParams($this->database, $input->GetParams()));
     }
     
     /**
@@ -508,7 +521,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return ErrorLog::CountByInput($this->database, $input);
+        return ErrorLog::CountByParams($this->database, $input->GetParams());
     }
     
     /**
@@ -521,10 +534,12 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $actions = $input->GetOptParam('actions',SafeParam::TYPE_BOOL) ?? false;
-        $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
+        $params = $input->GetParams();
+        
+        $actions = $params->GetOptParam('actions',false)->GetBool();
+        $expand = $params->GetOptParam('expand',false)->GetBool();
 
-        $logs = RequestLog::LoadByInput($this->database, $input);
+        $logs = RequestLog::LoadByParams($this->database, $params);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -543,7 +558,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return RequestLog::CountByInput($this->database, $input);
+        return RequestLog::CountByParams($this->database, $input->GetParams());
     }
     
     /**
@@ -556,9 +571,11 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $expand = $input->GetOptParam('expand',SafeParam::TYPE_BOOL) ?? false;
+        $params = $input->GetParams();
         
-        $logs = BaseActionLog::LoadByInput($this->database, $input);
+        $expand = $params->GetOptParam('expand',false)->GetBool();
+        
+        $logs = BaseActionLog::LoadByParams($this->database, $params);
         
         $retval = array(); foreach ($logs as $log)
         {
@@ -577,7 +594,7 @@ class CoreApp extends InstalledApp
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return BaseActionLog::CountByInput($this->database, $input);
+        return BaseActionLog::CountByParams($this->database, $input->GetParams());
     }
 }
 

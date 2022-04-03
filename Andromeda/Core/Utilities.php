@@ -85,11 +85,11 @@ class VersionInfo
         if (!isset($version[0]) || !isset($version[1]))
             throw new InvalidVersionException();
         
-        $this->major = (int)($version[0]);
-        $this->minor = (int)($version[1]);
+        $this->major = intval($version[0]);
+        $this->minor = intval($version[1]);
         
         if (isset($version[2])) 
-            $this->patch = (int)($version[2]);
+            $this->patch = intval($version[2]);
     }
     
     public function __toString(){ return $this->version; }
@@ -120,26 +120,26 @@ abstract class Utilities
     
     /**
      * Encodes the data as JSON
-     * @param mixed $data
+     * @param array<mixed> $data json array
      * @throws JSONEncodingException
-     * @return string
+     * @return string json string
      */
-    public static function JSONEncode($data) : string
+    public static function JSONEncode(array $data) : string
     {
-        if (($data = json_encode($data)) === false)
+        if (!is_string($data = json_encode($data)))
             throw new JSONEncodingException();
         return $data;
     }
     
     /**
      * Decodes the JSON data as an array
-     * @param string $data
+     * @param string $data json string
      * @throws JSONDecodingException
-     * @return mixed
+     * @return array<mixed> json array
      */
-    public static function JSONDecode(string $data)
+    public static function JSONDecode(string $data) : array
     {
-        if (($data = json_decode($data, true)) === null)
+        if (!is_array($data = json_decode($data, true)))
             throw new JSONDecodingException();
         return $data;
     }
@@ -154,12 +154,12 @@ abstract class Utilities
     
     /**
      * @template T
-     * @param ?array<?T> $arr array input 
+     * @param array<?T> $arr array input 
      * @return ?T the last element of an array or null if it's empty 
      */
-    public static function array_last(?array $arr)
+    public static function array_last(array $arr)
     {
-        if (!$arr) return null; // empty or null
+        if (empty($arr)) return null;
         
         return $arr[array_key_last($arr)];
     }
