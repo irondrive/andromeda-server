@@ -14,7 +14,7 @@ cd api; git checkout $TAG || exit 3
 
 rm -rf tools Andromeda/Apps/Testutil
 
-find . -name tests | while read -r i; do rm -rf $i; done
+find . -name _tests | while read -r i; do rm -rf $i; done
 
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
