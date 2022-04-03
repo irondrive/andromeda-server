@@ -9,7 +9,12 @@ require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Outp
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 
 /** Internal-only exception used for getting a backtrace */
-class BreakpointException extends Exceptions\ServerException { public $message = "BREAKPOINT_EXCEPTION"; }
+class BreakpointException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BREAKPOINT_EXCEPTION", $details);
+    }
+}
 
 /** 
  * The main error handler/manager 

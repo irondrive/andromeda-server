@@ -8,16 +8,36 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 /** An exception indicating that the requested action is invalid for this app */
-class UnknownActionException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_ACTION"; }
+class UnknownActionException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_ACTION", $details);
+    }
+}
 
 /** An exception indicating that the app is not installed and needs to be */
-class InstallRequiredException extends Exceptions\ClientException { public $message = "APP_INSTALL_REQUIRED"; public $code = 503; }
+class InstallRequiredException extends Exceptions\ServiceUnavailableException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_INSTALL_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that the database upgrade scripts must be run */
-class UpgradeRequiredException extends Exceptions\ClientException { public $message = "APP_UPGRADE_REQUIRED"; public $code = 503; }
+class UpgradeRequiredException extends Exceptions\ServiceUnavailableException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_UPGRADE_REQUIRED", $details);
+    }
+}
 
 /** An exception indicating that the metadata file is missing */
-class MissingMetadataException extends Exceptions\ServerException { public $message = "APP_METADATA_MISSING"; }
+class MissingMetadataException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("APP_METADATA_MISSING", $details);
+    }
+}
 
 /** The base class from which apps must inherit */
 abstract class BaseApp

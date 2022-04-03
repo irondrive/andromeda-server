@@ -2,7 +2,13 @@
 
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
-class InvalidParseException extends Exceptions\ServerException { public $message = "PARSE_OUTPUT_INVALID"; }
+/** Exception indicating the given Output to parse is invalid */
+class InvalidParseException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("PARSE_OUTPUT_INVALID", $details);
+    }
+}
 
 /** 
  * Represents the output to be shown to the user 
@@ -120,7 +126,7 @@ class Output
 
     /**
      * Parses a response from a remote Andromeda API request into an Output object
-     * @param array $data the response data from the remote request
+     * @param array<mixed> $data the response data from the remote request
      * @throws InvalidParseException if the response is malformed
      * @return Output the output object constructed from the response
      */
@@ -152,7 +158,8 @@ class Output
             if (!is_string($data['message'])) 
                 throw new InvalidParseException();
             
-            throw Exceptions\CustomClientException::Create($code, (string)$data['message']);
+            throw new Exceptions\ClientException(
+                strval($data['message']), intval($data['code']));
         }
     }   
 }

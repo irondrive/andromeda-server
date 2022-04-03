@@ -3,10 +3,20 @@
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 /** Exception indicating that a duplicate singleton was constructed */
-class DuplicateSingletonException extends Exceptions\ServerException { public $message = "DUPLICATE_SINGLETON"; }
+class DuplicateSingletonException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DUPLICATE_SINGLETON", $details);
+    }
+}
 
 /** Exception indicating that GetInstance() was called on a singleton that has not been constructed */
-class MissingSingletonException extends Exceptions\ServerException { public $message = "SINGLETON_NOT_CONSTRUCTED"; }
+class MissingSingletonException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SINGLETON_NOT_CONSTRUCTED", $details);
+    }
+}
 
 /** Abstract class implementing a singleton */
 abstract class Singleton
@@ -41,24 +51,13 @@ abstract class Singleton
     }
 }
 
-/** Converts a JSON failure into an exception */
-class JSONException extends Exceptions\ServerException
-{
-    public function __construct() 
-    {
-        $this->code = json_last_error();
-        $this->message = json_last_error_msg(); 
-    } 
-}
-
-/** Exception indicating that JSON encoding failed */
-class JSONEncodingException extends JSONException { public $message = "JSON_ENCODE_FAIL"; }
-
-/** Exception indicating that JSON decoding failed */
-class JSONDecodingException extends JSONException { public $message = "JSON_DECODE_FAIL"; }
-
 /** Exception indicating that the given version string is invalid */
-class InvalidVersionException extends Exceptions\ServerException { public $message = "VERSION_STRING_INVALID"; }
+class InvalidVersionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("VERSION_STRING_INVALID", $details);
+    }
+}
 
 /** Class for parsing a version string into components */
 class VersionInfo
@@ -98,6 +97,16 @@ class VersionInfo
     public function getCompatVer(){ return $this->major.'.'.$this->minor; }
 }
 
+/** Converts a JSON failure into an exception */
+class JSONException extends Exceptions\ServerException
+{
+    public function __construct()
+    {
+        parent::__construct("JSON_FAIL",
+            json_last_error_msg(), json_last_error());
+    }
+}
+
 /** Abstract with some global static utility functions */
 abstract class Utilities
 {   
@@ -119,28 +128,28 @@ abstract class Utilities
     }
     
     /**
-     * Encodes the data as JSON
+     * Encodes an array as a JSON string
      * @param array<mixed> $data json array
-     * @throws JSONEncodingException
+     * @throws JSONException
      * @return string json string
      */
     public static function JSONEncode(array $data) : string
     {
         if (!is_string($data = json_encode($data)))
-            throw new JSONEncodingException();
+            throw new JSONException();
         return $data;
     }
     
     /**
-     * Decodes the JSON data as an array
+     * Decodes a JSON string as an array
      * @param string $data json string
-     * @throws JSONDecodingException
+     * @throws JSONException
      * @return array<mixed> json array
      */
     public static function JSONDecode(string $data) : array
     {
         if (!is_array($data = json_decode($data, true)))
-            throw new JSONDecodingException();
+            throw new JSONException();
         return $data;
     }
     

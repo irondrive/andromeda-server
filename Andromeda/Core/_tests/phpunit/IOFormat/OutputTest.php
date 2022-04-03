@@ -6,7 +6,12 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 
 require_once(ROOT."/Core/IOFormat/Output.php");
 
-class TestClientException extends Exceptions\ClientErrorException { public $message = "TEST_EXCEPTION"; }
+class TestClientException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("TEST_EXCEPTION", $details);
+    }
+}
 
 class OutputTest extends \PHPUnit\Framework\TestCase
 {
@@ -97,7 +102,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $data = array('ok'=>false,'code'=>400,'message'=>'EXCEPTION!');
         
-        $this->expectException(Exceptions\CustomClientException::class);
+        $this->expectException(Exceptions\ClientException::class);
         $this->expectExceptionCode($data['code']); 
         $this->expectExceptionMessage($data['message']);
         

@@ -16,10 +16,20 @@ require_once(ROOT."/Core/Logging/ActionLog.php");
 require_once(ROOT."/Core/Logging/BaseLog.php");
 
 /** Exception indicating that it was requested to modify the log after it was written to disk */
-class LogAfterWriteException extends Exceptions\ServerException { public $message = "REQLOG_AFTER_WRITE"; }
+class LogAfterWriteException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("REQLOG_AFTER_WRITE", $details);
+    }
+}
 
 /** Exception indicating the log file cannot be written more than once */
-class MultiFileWriteException extends Exceptions\ServerException { public $message = "LOG_FILE_MULTI_WRITE"; }
+class MultiFileWriteException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("LOG_FILE_MULTI_WRITE", $details);
+    }
+}
 
 /** Log entry representing an API request */
 final class RequestLog extends BaseLog

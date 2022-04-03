@@ -10,7 +10,10 @@ class MySingleton extends Singleton { }
 abstract class TestBase0 { }
 abstract class TestBase1 { }
 abstract class TestBase2 { }
-class TestClass1 extends TestBase1 { public function __toString() : string { return "TestClass1..."; } }
+
+class TestClass1 extends TestBase1 { 
+    public function __toString() : string { return "TestClass1..."; } }
+    
 class TestClass2 extends TestBase2 { }
 class TestClass3 extends TestBase2 { }
 
@@ -73,14 +76,14 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testBadJSONEncode() : void
    {
-       $this->expectException(JSONEncodingException::class);
+       $this->expectException(JSONException::class);
        
        Utilities::JSONEncode(array(CryptoSecret::GenerateKey()));
    }
    
    public function testBadJSONDecode() : void
    {
-       $this->expectException(JSONDecodingException::class);
+       $this->expectException(JSONException::class);
        
        Utilities::JSONDecode("nothing here!");
    }

@@ -25,16 +25,36 @@ require_once(ROOT."/Core/Logging/RequestMetrics.php");
 use Andromeda\Core\Logging\{RequestLog, ActionLog, RequestMetrics};
 
 /** Exception indicating that the requested app is invalid */
-class UnknownAppException extends Exceptions\ClientErrorException { public $message = "UNKNOWN_APP"; }
+class UnknownAppException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_APP", $details);
+    }
+}
 
 /** Exception indicating that the server is configured as disabled */
-class MaintenanceException extends Exceptions\ClientException { public $code = 503; public $message = "SERVER_DISABLED"; }
+class MaintenanceException extends Exceptions\ServiceUnavailableException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SERVER_DISABLED", $details);
+    }
+}
 
 /** Exception indicating that the server failed to load a configured app */
-class FailedAppLoadException extends Exceptions\ServerException  { public $message = "FAILED_LOAD_APP"; }
+class FailedAppLoadException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FAILED_LOAD_APP", $details);
+    }
+}
 
 /** FinalMetrics requires the database to not already be undergoing a transaction */
-class FinalizeTransactionException extends Exceptions\ServerException { public $message = "OUTPUT_IN_TRANSACTION"; }
+class FinalizeTransactionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("OUTPUT_IN_TRANSACTION", $details);
+    }
+}
 
 class RunContext 
 { 
@@ -114,8 +134,9 @@ final class Main extends Singleton
     {
         if ($this->database === null)
         {
-            $class = get_class($this->dbException);
-            throw $class::Copy($this->dbException); // new trace
+            $this->error_manager->LogBreakpoint(); // new trace
+            
+            throw $this->dbException;
         }
         else return $this->database;
     }
@@ -139,8 +160,9 @@ final class Main extends Singleton
         {
             $this->GetDatabase(); // assert db exists
             
-            $class = get_class($this->cfgException);
-            throw $class::Copy($this->cfgException); // new trace
+            $this->error_manager->LogBreakpoint(); // new trace
+            
+            throw $this->cfgException;
         }
         else return $this->config;
     }
