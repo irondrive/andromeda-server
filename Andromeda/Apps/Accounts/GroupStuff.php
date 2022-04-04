@@ -2,8 +2,6 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
-require_once(ROOT."/Core/Database/JoinObject.php"); use Andromeda\Core\Database\JoinObject;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 
@@ -23,7 +21,7 @@ class InheritedProperty
 }
 
 /** Class representing a group membership, joining an account and a group */
-class GroupJoin extends JoinObject
+class GroupJoin //extends JoinObject
 {
     /** 
      * Return the column name of the left side of the join
@@ -66,7 +64,7 @@ class GroupJoin extends JoinObject
 }
 
 /** Base class for account/groups containing properties that can be set per-account or per-group */
-abstract class AuthEntity extends StandardObject
+abstract class AuthEntity extends BaseObject  // TODO was StandardObject
 {
     public abstract function GetDisplayName() : string;
     

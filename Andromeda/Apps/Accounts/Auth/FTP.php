@@ -10,8 +10,21 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/Apps/Accounts/Auth/External.php");
 require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 
-class FTPExtensionException extends Exceptions\ServerException   { public $message = "FTP_EXTENSION_MISSING"; }
-class FTPConnectionFailure extends Exceptions\ServerException    { public $message = "FTP_CONNECTION_FAILURE"; }
+/** Exception indicating the PHP FTP extension is missing */
+class FTPExtensionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_EXTENSION_MISSING", $details);
+    }
+}
+
+/** Exception indicating the FTP connection failed to connect */
+class FTPConnectionFailure extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_CONNECTION_FAILURE", $details);
+    }
+}
 
 /** Uses an FTP server for authentication */
 class FTP extends External

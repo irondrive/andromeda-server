@@ -15,34 +15,84 @@ require_once(ROOT."/Apps/Accounts/Session.php");
 require_once(ROOT."/Apps/Accounts/TwoFactor.php");
 
 /** Exception indicating that the request is not allowed with the given authentication */
-class AuthenticationFailedException extends Exceptions\ClientDeniedException { public $message = "AUTHENTICATION_FAILED"; }
+class AuthenticationFailedException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("AUTHENTICATION_FAILED", $details);
+    }
+}
 
 /** Exception indicating that the authenticated account is disabled */
-class AccountDisabledException extends AuthenticationFailedException { public $message = "ACCOUNT_DISABLED"; }
+class AccountDisabledException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ACCOUNT_DISABLED", $details);
+    }
+}
 
 /** Exception indicating that the specified session is invalid */
-class InvalidSessionException extends AuthenticationFailedException { public $message = "INVALID_SESSION"; }
+class InvalidSessionException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_SESSION", $details);
+    }
+}
 
 /** Exception indicating that admin-level access is required */
-class AdminRequiredException extends AuthenticationFailedException { public $message = "ADMIN_REQUIRED"; }
+class AdminRequiredException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ADMIN_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that a two factor code was required but not given */
-class TwoFactorRequiredException extends AuthenticationFailedException { public $message = "TWOFACTOR_REQUIRED"; }
+class TwoFactorRequiredException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("TWOFACTOR_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that a password for authentication was required but not given */
-class PasswordRequiredException extends AuthenticationFailedException { public $message = "PASSWORD_REQUIRED"; }
+class PasswordRequiredException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("PASSWORD_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that the request requires providing crypto details */
-class CryptoKeyRequiredException extends AuthenticationFailedException { public $message = "CRYPTO_KEY_REQUIRED"; }
+class CryptoKeyRequiredException extends AuthenticationFailedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_KEY_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that the account does not have crypto initialized */
-class CryptoInitRequiredException extends Exceptions\ClientErrorException { public $message = "CRYPTO_INIT_REQUIRED"; }
+class CryptoInitRequiredException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_INIT_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that the action requires an account to act as */
-class AccountRequiredException extends Exceptions\ClientErrorException { public $message = "ACCOUNT_REQUIRED"; }
+class AccountRequiredException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ACCOUNT_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that the action requires a session to use */
-class SessionRequiredException extends Exceptions\ClientErrorException { public $message = "SESSION_REQUIRED"; }
+class SessionRequiredException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SESSION_REQUIRED", $details);
+    }
+}
 
 use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\UpgradeRequiredException;
@@ -158,7 +208,7 @@ class Authenticator
             $sessionkey ??= $auth->GetPassword();
         }
         
-        $sudouser = $input->GetOptParam('auth_sudouser',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS);
+        $sudouser = $input->GetOptParam('auth_sudouser',SafeParam::TYPE_TEXT,SafeParams::PARAMLOG_ALWAYS); // TODO split to alphanum/email
         $sudoacct = $input->GetOptParam('auth_sudoacct',SafeParam::TYPE_RANDSTR,SafeParams::PARAMLOG_ALWAYS);
         
         $account = null; $authenticator = new Authenticator($input);
@@ -295,7 +345,7 @@ class Authenticator
         if (!$account->hasCrypto()) throw new CryptoInitRequiredException();
         
         $password = $input->GetOptParam('auth_password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
-        $recoverykey = $input->GetOptParam('auth_recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER);
+        $recoverykey = $input->GetOptParam('auth_recoverykey', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER); // TODO use UTF8String
         
         if ($session !== null)
         {

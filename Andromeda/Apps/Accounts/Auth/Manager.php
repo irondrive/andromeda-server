@@ -14,7 +14,12 @@ require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group
 require_once(ROOT."/Apps/Accounts/Config.php"); use Andromeda\Apps\Accounts\Config;
 
 /** Exception indicating that the created auth source is invalid */
-class InvalidAuthSourceException extends Exceptions\ClientErrorException { public $message = "AUTHSOURCE_FAILED"; use Exceptions\Copyable; }
+class InvalidAuthSourceException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("AUTHSOURCE_FAILED", $details);
+    }
+}
 
 /** 
  * Manages configured external authentication sources 

@@ -22,16 +22,36 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that crypto must be unlocked by the client */
-class CryptoUnlockRequiredException extends Exceptions\ServerException { public $message = "CRYPTO_UNLOCK_REQUIRED"; }
+class CryptoUnlockRequiredException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_UNLOCK_REQUIRED", $details);
+    }
+}
 
 /** Exception indicating that crypto cannot be unlocked because it does not exist */
-class CryptoNotInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_NOT_INITIALIZED"; }
+class CryptoNotInitializedException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_NOT_INITIALIZED", $details);
+    }
+}
 
 /** Exception indicating that crypto cannot be initialized because it already exists */
-class CryptoAlreadyInitializedException extends Exceptions\ServerException { public $message = "CRYPTO_ALREADY_INITIALIZED"; }
+class CryptoAlreadyInitializedException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_ALREADY_INITIALIZED", $details);
+    }
+}
 
 /** Exception indicating that the given recovery key is not valid */
-class RecoveryKeyFailedException extends Exceptions\ServerException { public $message = "RECOVERY_KEY_UNLOCK_FAILED"; }
+class RecoveryKeyFailedException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("RECOVERY_KEY_UNLOCK_FAILED", $details);
+    }
+}
 
 /**
  * Class representing a user account in the database

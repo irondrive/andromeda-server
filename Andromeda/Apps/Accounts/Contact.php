@@ -17,10 +17,20 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that a valid contact value was not given */
-class ContactNotGivenException extends Exceptions\ClientErrorException { public $message = "CONTACT_NOT_GIVEN"; }
+class ContactNotGivenException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CONTACT_NOT_GIVEN", $details);
+    }
+}
 
 /** Exception indicating that this contact is not an email address */
-class ContactNotEmailException extends Exceptions\ServerException { public $message = "CONTACT_NOT_EMAIL"; }
+class ContactNotEmailException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CONTACT_NOT_EMAIL", $details);
+    }
+}
 
 /** Pair representing a contact type and value */
 class ContactInfo 
