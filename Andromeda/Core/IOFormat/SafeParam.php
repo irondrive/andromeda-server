@@ -111,10 +111,10 @@ class SafeParam
 
     /**
      * Checks that the param's value is in the given array or null
-     * @template T of string
-     * @param array<T> $values whitelisted values
+     * @template T of array<string>
+     * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
-     * @return ?T the whitelisted value or null
+     * @return NULL|value-of<T> the whitelisted value or null
      */
     public function FromWhitelistNull(array $values) : ?string
     {
@@ -126,10 +126,10 @@ class SafeParam
     
     /**
      * Checks that the param's value is in the given array
-     * @template T of string
-     * @param array<T> $values whitelisted values
+     * @template T of array<string>
+     * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
-     * @return T the whitelisted value or null
+     * @return value-of<T> the whitelisted value or null
      */
     public function FromWhitelist(array $values) : string
     {
@@ -514,7 +514,7 @@ class SafeParam
     
     /**
      * Returns an array of scalars decoded from JSON
-     * @template T of null|scalar
+     * @template T of scalar
      * @param callable(SafeParam):T $getval function to get scalar from SafeParam
      * @return ?array<T> array of checked scalars
      * @throws SafeParamInvalidException if not valid JSON
@@ -808,7 +808,7 @@ class SafeParam
     
     /**
      * Returns an array of scalars decoded from JSON
-     * @template T of null|scalar
+     * @template T of scalar
      * @param callable(SafeParam):T $getval function to get scalar from SafeParam
      * @return array<T> array of checked scalars
      * @throws SafeParamInvalidException if not valid JSON
