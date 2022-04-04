@@ -81,7 +81,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     {
         $file = $this->createMock(File::class);
         
-        $id = Utilities::Random(File::IDLength);
+        $id = Utilities::Random(20);
         $file->method('ID')->willReturn($id);
         
         $path = self::getTmpFile(); file_put_contents($path, $data);
@@ -143,8 +143,8 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
     protected function tryWritingPair(int $size0, int $size) : void
     {
         $this->tryWriting($size, (int)($size-$size0)/2, $size0); // import, write inside file
-        $this->tryWriting($size, $size0, $size);                  // import, write from inside EOF, shrink
-        $this->tryWriting($size0, $size, $size);                  // import, extend, write at EOF, shrink
+        $this->tryWriting($size, $size0, $size);                 // import, write from inside EOF, shrink
+        $this->tryWriting($size0, $size, $size);                 // import, extend, write at EOF, shrink
     }   
     
     const CHUNK_SIZE = 10; // bytes
