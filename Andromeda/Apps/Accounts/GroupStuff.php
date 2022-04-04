@@ -21,7 +21,7 @@ class InheritedProperty
 }
 
 /** Class representing a group membership, joining an account and a group */
-class GroupJoin //extends JoinObject
+class GroupJoin //extends JoinObject // TODO
 {
     /** 
      * Return the column name of the left side of the join

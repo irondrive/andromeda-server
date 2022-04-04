@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 
@@ -27,13 +27,28 @@ require_once(ROOT."/Apps/Files/RootFolder.php"); use Andromeda\Apps\Files\RootFo
 require_once(ROOT."/Apps/Files/Limits/Account.php"); use Andromeda\Apps\Files\Limits;
 
 /** Exception indicating that the stored filesystem type is not valid */
-class InvalidFSTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_FILESYSTEM_TYPE"; }
+class InvalidFSTypeException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_FILESYSTEM_TYPE", $details);
+    }
+}
 
 /** Exception indicating that the given filesystem name is invalid */
-class InvalidNameException extends Exceptions\ClientErrorException { public $message = "INVALID_FILESYSTEM_NAME"; }
+class InvalidNameException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_FILESYSTEM_NAME", $details);
+    }
+}
 
 /** Exception indicating that the underlying storage connection failed */
-class InvalidStorageException extends Exceptions\ClientErrorException { public $message = "STORAGE_ACTIVATION_FAILED"; use Exceptions\Copyable; }
+class InvalidStorageException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("STORAGE_ACTIVATION_FAILED", $details);
+    }
+}
 
 /**
  * An object that manages and points to a filesystem manager
@@ -50,7 +65,7 @@ class InvalidStorageException extends Exceptions\ClientErrorException { public $
  * The implementation calls down into a storage, which defines at a lower
  * level how the functions are actually mapped into the underlying storage.
  */
-class FSManager extends StandardObject
+class FSManager extends BaseObject // TODO was StandardObject
 {
     const TYPE_NATIVE = 0; const TYPE_NATIVE_CRYPT = 1; const TYPE_EXTERNAL = 2;
     

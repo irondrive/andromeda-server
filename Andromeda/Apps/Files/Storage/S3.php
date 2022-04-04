@@ -20,21 +20,41 @@ require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 require_once(ROOT."/Apps/Files/Storage/Traits.php");
 
 /** Exception indicating that the S3 SDK is missing */
-class S3AwsSdkException extends ActivateException { public $message = "S3_AWS_SDK_MISSING"; }
+class S3AwsSdkException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("S3_AWS_SDK_MISSING", $details);
+    }
+}
 
 /** Exception indicating that S3 failed to connect or read the base path */
-class S3ConnectException extends ActivateException { public $message = "S3_CONNECT_FAILED"; }
+class S3ConnectException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("S3_CONNECT_FAILED", $details);
+    }
+}
 
 /** Exception that wraps S3 SDK exceptions */
-class S3ErrorException extends StorageException { public $message = "S3_SDK_EXCEPTION"; use Exceptions\Copyable; }
+class S3ErrorException extends StorageException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("S3_SDK_EXCEPTION", $details);
+    }
+}
 
 /** Exception indicating that objects cannot be modified */
-class S3ModifyException extends Exceptions\ClientErrorException { public $message = "S3_OBJECTS_IMMUTABLE"; }
+class S3ModifyException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("S3_OBJECTS_IMMUTABLE", $details);
+    }
+}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) S3::DecryptAccount($database, $account); });
 
-abstract class S3Base extends FWrapper { use NoFolders; }
+abstract class S3Base extends FWrapper { use NoFolders; } // TODO does not need to be a trait?
 
 /**
  * Allows using an S3-compatible server for backend storage
@@ -191,7 +211,7 @@ class S3 extends S3Base
         
         if ($debug >= Config::ERRLOG_SENSITIVE)
             $params['debug'] = array('logfn'=>function(string $str){
-                ErrorManager::GetInstance()->LogDebug("S3 SDK: $str"); });
+                ErrorManager::GetInstance()->LogDebugInfo("S3 SDK: $str"); });
                 
         $this->s3 = new \Aws\S3\S3Client($params);
         
@@ -274,7 +294,7 @@ class S3 extends S3Base
         
         if (strlen($data) !== $length)
         {
-            ErrorManager::GetInstance()->LogDebug(array(
+            ErrorManager::GetInstance()->LogDebugInfo(array(
                 'read'=>strlen($data), 'wanted'=>$length));
             
             throw new FileReadFailedException();

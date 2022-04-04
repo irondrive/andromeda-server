@@ -14,7 +14,12 @@ require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Acc
 require_once(ROOT."/Apps/Files/Item.php");
 
 /** Exception indicating that the folder destination is invalid */
-class InvalidDestinationException extends Exceptions\ClientErrorException { public $message = "INVALID_FOLDER_DESTINATION"; }
+class InvalidDestinationException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_FOLDER_DESTINATION", $details);
+    }
+}
 
 /** 
  * Defines a user-stored folder which groups other items 
@@ -225,7 +230,7 @@ abstract class Folder extends Item
     {
         $q = new QueryBuilder();
         
-        $q->SelfJoinWhere($database, Folder::class, 'obj_parent', 'id', '_parent');
+        $q->SelfJoinWhere($database, Folder::class, 'obj_parent', 'id');
         
         $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.obj_owner', $account->ID()),
             $q->Equals($database->GetClassTableName(Folder::class).'.obj_owner', $account->ID()));

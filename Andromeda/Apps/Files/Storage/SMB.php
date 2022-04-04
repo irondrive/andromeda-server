@@ -13,13 +13,28 @@ require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
 /** Exception indicating that the libsmbclient extension is missing */
-class SMBExtensionException extends ActivateException { public $message = "SMB_EXTENSION_MISSING"; }
+class SMBExtensionException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SMB_EXTENSION_MISSING", $details);
+    }
+}
 
 /** Exception indicating that the SMB state initialization failed */
-class SMBStateInitException extends ActivateException { public $message = "SMB_STATE_INIT_FAILED"; }
+class SMBStateInitException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SMB_STATE_INIT_FAILED", $details);
+    }
+}
 
 /** Exception indicating that SMB failed to connect or read the base path */
-class SMBConnectException extends ActivateException { public $message = "SMB_CONNECT_FAILED"; }
+class SMBConnectException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SMB_CONNECT_FAILED", $details);
+    }
+}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) SMB::DecryptAccount($database, $account); });

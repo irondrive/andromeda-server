@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -72,7 +72,7 @@ abstract class Timed extends Base
      * @param StandardObject $obj the limited object
      * @return array<string, static> limits indexed by ID
      */
-    public static function LoadAllForClient(ObjectDatabase $database, StandardObject $obj) : array
+    public static function LoadAllForClient(ObjectDatabase $database, BaseObject $obj) : array
     {
         if (!array_key_exists($obj->ID(), static::$cache))
         {
@@ -94,7 +94,7 @@ abstract class Timed extends Base
      * @param int $period the time period
      * @return static|NULL limit object or null if none
      */
-    public static function LoadByClientAndPeriod(ObjectDatabase $database, StandardObject $obj, int $period) : ?self
+    public static function LoadByClientAndPeriod(ObjectDatabase $database, BaseObject $obj, int $period) : ?self
     {
         foreach (static::LoadAllForClient($database, $obj) as $lim)
         {
@@ -104,7 +104,7 @@ abstract class Timed extends Base
     }
     
     /** Deletes all limit objects corresponding to the given limited object */
-    public static function DeleteByClient(ObjectDatabase $database, StandardObject $obj) : void
+    public static function DeleteByClient(ObjectDatabase $database, BaseObject $obj) : void
     {
         if (array_key_exists($obj->ID(), static::$cache)) static::$cache[$obj->ID()] = array();
         
@@ -112,7 +112,7 @@ abstract class Timed extends Base
     }
     
     /** Deletes all limit objects corresponding to the given limited object and time period */
-    public static function DeleteByClientAndPeriod(ObjectDatabase $database, StandardObject $obj, int $period) : void
+    public static function DeleteByClientAndPeriod(ObjectDatabase $database, BaseObject $obj, int $period) : void
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_object',FieldTypes\ObjectPoly::GetObjectDBValue($obj)),$q->Equals('timeperiod',$period));
         
@@ -126,7 +126,7 @@ abstract class Timed extends Base
      * @param int $timeperiod time period for limit
      * @return static new limit object
      */
-    protected static function CreateTimed(ObjectDatabase $database, StandardObject $obj, int $timeperiod) : self
+    protected static function CreateTimed(ObjectDatabase $database, BaseObject $obj, int $timeperiod) : self
     {
         $newobj = parent::BaseCreate($database)->SetObject('object',$obj)->SetScalar('timeperiod',$timeperiod);
         
@@ -158,7 +158,7 @@ abstract class Timed extends Base
     public static function BaseConfigUsage() : string { return "--timeperiod uint32 [--max_pubdownloads ?uint32] [--max_bandwidth ?uint]"; }
     
     /** @return static */
-    protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
     {
         $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT32);
         

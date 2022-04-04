@@ -17,13 +17,28 @@ require_once(ROOT."/Apps/Accounts/AuthObject.php"); use Andromeda\Apps\Accounts\
 require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\{AuthEntity, GroupJoin};
 
 /** Exception indicating that the requested share has expired */
-class ShareExpiredException extends Exceptions\ClientDeniedException { public $message = "SHARE_EXPIRED"; }
+class ShareExpiredException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SHARE_EXPIRED", $details);
+    }
+}
 
 /** Exception indicating that the requested share already exists */
-class ShareExistsException extends Exceptions\ClientErrorException { public $message = "SHARE_ALREADY_EXISTS"; }
+class ShareExistsException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SHARE_EXISTS", $details);
+    }
+}
 
 /** Exception indicating that a share was requested for a public item */
-class SharePublicItemException extends Exceptions\ClientErrorException { public $message = "CANNOT_SHARE_PUBLIC_ITEM"; }
+class SharePublicItemException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CANNOT_SHARE_PUBLIC_ITEM", $details);
+    }
+}
 
 /**
  * A share granting access to an item
@@ -36,7 +51,7 @@ class SharePublicItemException extends Exceptions\ClientErrorException { public 
  */
 class Share extends AuthObject
 {
-    public const IDLength = 16;
+    protected const IDLength = 16;
     
     public static function GetFieldTemplate() : array
     {

@@ -10,7 +10,12 @@ require_once(ROOT."/Apps/Files/Folder.php");
 use Andromeda\Apps\Files\Filesystem\FSManager;
 
 /** Exception indicating that the operation is not valid on a root folder */
-class InvalidRootOpException extends Exceptions\ClientErrorException { public $message = "ROOT_FOLDER_OP_INVALID"; }
+class InvalidRootOpException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ROOT_FOLDER_OP_INVALID", $details);
+    }
+}
 
 /** A root folder has no parent or name */
 class RootFolder extends Folder

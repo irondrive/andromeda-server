@@ -9,7 +9,12 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 use Andromeda\Apps\Accounts\{Account, Authenticator, AuthenticationFailedException};
 
 /** Exception indicating that the given share password is invalid */
-class InvalidSharePasswordException extends Exceptions\ClientDeniedException { public $message = "INVALID_SHARE_PASSWORD"; }
+class InvalidSharePasswordException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_SHARE_PASSWORD", $details);
+    }
+}
 
 /** 
  * Authenticator class that implements item access rules 

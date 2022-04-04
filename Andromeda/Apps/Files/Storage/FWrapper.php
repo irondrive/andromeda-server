@@ -7,13 +7,28 @@ require_once(ROOT."/Apps/Files/Storage/Storage.php");
 require_once(ROOT."/Apps/Files/Storage/Traits.php");
 
 /** Exception indicating that the file handle failed to open */
-class FileOpenFailedException extends StorageException { public $message = "FILE_OPEN_FAILED"; }
+class FileOpenFailedException extends StorageException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILE_OPEN_FAILED", $details);
+    }
+}
 
 /** Exception indicating that the file handle failed to seek */
-class FileSeekFailedException extends StorageException { public $message = "FILE_SEEK_FAILED"; }
+class FileSeekFailedException extends StorageException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILE_SEEK_FAILED", $details);
+    }
+}
 
 /** Exception indicating that the file handle failed to close */
-class FileCloseFailedException extends StorageException { public $message = "FILE_CLOSE_FAILED"; }
+class FileCloseFailedException extends StorageException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILE_CLOSE_FAILED", $details);
+    }
+}
 
 class FileContext
 {

@@ -1,14 +1,14 @@
 <?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Main, Utilities, Transactions};
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Main, Utilities};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -16,7 +16,12 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 
 /** Client exception indicating that a write was attempted to a read-only storage */
-class ReadOnlyException extends Exceptions\ClientDeniedException { public $message = "READ_ONLY_FILESYSTEM"; }
+class ReadOnlyException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("READ_ONLY_FILESYSTEM", $details);
+    }
+}
 
 /** Class representing a stat result */
 class ItemStat
@@ -43,7 +48,7 @@ class PathRollback
  * Any "expected" exceptions should always be checked before storage actions.
  * @see FSManager 
  */
-abstract class Storage extends StandardObject implements Transactions
+abstract class Storage extends BaseObject // TODO was StandardObject
 {
     /** Returns the account that owns this storage (or null) */
     public function GetAccount() : ?Account { return $this->GetFilesystem()->GetOwner(); }

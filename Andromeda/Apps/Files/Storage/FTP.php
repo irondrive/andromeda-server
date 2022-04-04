@@ -12,19 +12,44 @@ require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
 /** Exception indicating that the FTP extension is not installed */
-class FTPExtensionException extends ActivateException    { public $message = "FTP_EXTENSION_MISSING"; }
+class FTPExtensionException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_EXTENSION_MISSING", $details);
+    }
+}
 
 /** Exception indicating that the FTP server connection failed */
-class FTPConnectionFailure extends ActivateException     { public $message = "FTP_CONNECTION_FAILURE"; }
+class FTPConnectionFailure extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_CONNECTION_FAILURE", $details);
+    }
+}
 
 /** Exception indicating that authentication on the FTP server failed */
-class FTPAuthenticationFailure extends ActivateException { public $message = "FTP_AUTHENTICATION_FAILURE"; }
+class FTPAuthenticationFailure extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_AUTHENTICATION_FAILURE", $details);
+    }
+}
 
 /** Exception indicating that a random write was requested (FTP does not support it) */
-class FTPAppendOnlyException extends Exceptions\ClientErrorException { public $message = "FTP_WRITE_APPEND_ONLY"; }
+class FTPAppendOnlyException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_WRITE_APPEND_ONLY", $details);
+    }
+}
 
 /** Exception indicating that FTP does not support file copy */
-class FTPCopyFileException extends Exceptions\ClientErrorException { public $message = "FTP_NO_COPY_SUPPORT"; }
+class FTPCopyFileException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FTP_NO_COPY_SUPPORT", $details);
+    }
+}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) FTP::DecryptAccount($database, $account); });

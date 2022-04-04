@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -47,7 +47,7 @@ abstract class Total extends Base
      * Loads the limit object corresponding to the given limited object 
      * @return static
      */
-    public static function LoadByClient(ObjectDatabase $database, StandardObject $obj) : ?self
+    public static function LoadByClient(ObjectDatabase $database, BaseObject $obj) : ?self
     {
         if (!array_key_exists($obj->ID(), static::$cache))
         {
@@ -58,7 +58,7 @@ abstract class Total extends Base
     }
     
     /** Deletes the limit object corresponding to the given limited object */
-    public static function DeleteByClient(ObjectDatabase $database, StandardObject $obj) : void
+    public static function DeleteByClient(ObjectDatabase $database, BaseObject $obj) : void
     {
         if (array_key_exists($obj->ID(), static::$cache)) static::$cache[$obj->ID()] = null;
         
@@ -93,7 +93,7 @@ abstract class Total extends Base
      * Creates and caches a new limit object for the given limited object 
      * @return static
      */
-    protected static function Create(ObjectDatabase $database, StandardObject $obj) : self
+    protected static function Create(ObjectDatabase $database, BaseObject $obj) : self
     {
         $newobj = parent::BaseCreate($database)->SetObject('object',$obj);
         
@@ -106,7 +106,7 @@ abstract class Total extends Base
                                                                "[--itemsharing ?bool] [--share2groups ?bool] [--share2everyone ?bool] ".
                                                                "[--max_size ?uint] [--max_items ?uint32] [--max_shares ?uint32]"; }
         
-    protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
     {
         $lim = static::LoadByClient($database, $obj) ?? static::Create($database, $obj);
         
