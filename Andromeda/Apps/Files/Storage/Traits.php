@@ -12,7 +12,12 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\OptFieldCrypt;
 
 /** Exception indicating that this storage does not support folder functions */
-class FoldersUnsupportedException extends Exceptions\ClientErrorException { public $message = "STORAGE_FOLDERS_UNSUPPORTED"; }
+class FoldersUnsupportedException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("STORAGE_FOLDERS_UNSUPPORTED", $details);
+    }
+}
 
 /** Trait for storage classes that store a possibly-encrypted username and password */
 trait UserPass

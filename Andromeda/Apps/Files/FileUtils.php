@@ -36,7 +36,7 @@ class FileUtils
         
         if ($strict && strlen($data) !== $bytes)
         {
-            ErrorManager::GetInstance()->LogDebug(array(
+            ErrorManager::GetInstance()->LogDebugInfo(array(
                 'read'=>strlen($data), 'wanted'=>$bytes));
             
             throw new FileReadFailedException();
@@ -67,7 +67,7 @@ class FileUtils
         
         if ($written !== strlen($data))
         {
-            ErrorManager::GetInstance()->LogDebug(array(
+            ErrorManager::GetInstance()->LogDebugInfo(array(
                 'wrote'=>$written, 'wanted'=>strlen($data)));
             
             throw new FileWriteFailedException();

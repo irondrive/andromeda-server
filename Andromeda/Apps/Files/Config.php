@@ -31,7 +31,7 @@ class Config extends BaseConfig
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(Input $input) : self
     {
-        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW));
+        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW)); // TODO add and use URL SafeParam?
         
         if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT32));
         if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT32));
@@ -62,7 +62,7 @@ class Config extends BaseConfig
         if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, \
             apiurl:?string, config:{timedstats:bool}}`
      */
-    public function GetClientObject(bool $admin) : array
+    public function GetClientObject(bool $admin = false) : array
     {
         $postmax = Utilities::return_bytes(ini_get('post_max_size'));
         $uploadmax = Utilities::return_bytes(ini_get('upload_max_size'));

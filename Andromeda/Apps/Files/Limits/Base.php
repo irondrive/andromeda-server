@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -21,12 +21,12 @@ require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
  * While not currently implemented, this infrastructure could be extended
  * to, for example, set limits on individual files and folders also.
  */
-abstract class Base extends StandardObject
+abstract class Base extends BaseObject // TODO was StandardObject
 {
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'obj_object' => new FieldTypes\ObjectPoly(StandardObject::class),
+            'obj_object' => new FieldTypes\ObjectPoly(BasedObject::class),
             'track_items' => new FieldTypes\IntType(),
             'track_dlstats' => new FieldTypes\IntType()
         ));
@@ -49,10 +49,10 @@ abstract class Base extends StandardObject
     public abstract static function BaseConfigUsage() : string;
     
     /** Configures the common (at some level) limit properites for the given object with the given input */
-    protected abstract static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input);
+    protected abstract static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input);
     
     /** Returns the object that is subject to the limits */
-    public function GetLimitedObject() : StandardObject { return $this->GetObject('object'); }
+    public function GetLimitedObject() : BaseObject { return $this->GetObject('object'); }
 
     /** Returns true if we should track size, item count, and share count */
     protected function canTrackItems() : bool { return $this->TryGetFeatureBool('track_items') ?? false; }

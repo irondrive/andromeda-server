@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -16,13 +16,28 @@ require_once(ROOT."/Apps/Files/Limits/Filesystem.php");
 require_once(ROOT."/Apps/Files/Limits/Account.php");
 
 /** Exception indicating that files cannot be moved across filessytems */
-class CrossFilesystemException extends Exceptions\ClientErrorException { public $message = "FILESYSTEM_MISMATCH"; }
+class CrossFilesystemException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILESYSTEM_MISMATCH", $details);
+    }
+}
 
 /** Exception indicating that the item target name already exists */
-class DuplicateItemException extends Exceptions\ClientErrorException   { public $message = "ITEM_ALREADY_EXISTS"; }
+class DuplicateItemException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ITEM_ALREADY_EXISTS", $details);
+    }
+}
 
 /** Exception indicating that the item was deleted when refreshed from storage */
-class DeletedByStorageException extends Exceptions\ClientNotFoundException { public $message = "ITEM_DELETED_BY_STORAGE"; }
+class DeletedByStorageException extends Exceptions\ClientNotFoundException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ITEM_DELETED_BY_STORAGE", $details);
+    }
+}
 
 /**
  * An abstract class defining a user-created item in a filesystem.
@@ -31,9 +46,9 @@ class DeletedByStorageException extends Exceptions\ClientNotFoundException { pub
  * It is therefore somewhat like an object storage, except that every item
  * must have exactly one parent (other than the root folder).
  */
-abstract class Item extends StandardObject
+abstract class Item extends BaseObject // TODO was StandardObject
 {
-    public const IDLength = 16;
+    protected const IDLength = 16;
     
     public static function GetFieldTemplate() : array
     {

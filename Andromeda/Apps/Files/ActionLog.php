@@ -5,10 +5,9 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
-require_once(ROOT."/Apps/Accounts/AuthAccessLog.php"); use Andromeda\Apps\Accounts\AuthAccessLog;
+require_once(ROOT."/Apps/Accounts/AuthActionLog.php"); use Andromeda\Apps\Accounts\AuthActionLog;
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Apps/Files/Item.php");
@@ -17,13 +16,23 @@ require_once(ROOT."/Apps/Files/Folder.php");
 require_once(ROOT."/Apps/Files/Share.php");
 
 /** Exception indicating that only one file/folder access can logged */
-class ItemLogFullException extends Exceptions\ServerException { public $message = "ITEM_LOG_SLOT_FULL"; }
+class ItemLogFullException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ITEM_LOG_SLOT_FULL", $details);
+    }
+}
 
 /** Exception indicating that an unknown item type was given */
-class BadItemTypeException extends Exceptions\ServerException { public $message = "UNKNOWN_ITEM_TYPE"; }
+class BadItemTypeException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UNKNOWN_ITEM_TYPE", $details);
+    }
+}
 
 /** Access log for the files app */
-class AccessLog extends AuthAccessLog
+class ActionLog extends AuthActionLog
 {
     public static function GetFieldTemplate() : array
     {
@@ -62,7 +71,7 @@ class AccessLog extends AuthAccessLog
 
     /**
      * Creates a new log object that logs the given $auth value
-     * @see AuthAccessLog::BaseAuthCreate()
+     * @see AuthActionLog::BaseAuthCreate()
      */
     public static function Create(ObjectDatabase $database, ?Authenticator $auth) : ?self
     {
@@ -71,7 +80,7 @@ class AccessLog extends AuthAccessLog
 
     public static function GetPropUsage() : string { return parent::GetPropUsage()." [--file id] [--folder id] [--file_share id] [--folder_share id]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, Input $input) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
     {
         $criteria = array(); $table = $database->GetClassTableName(static::class);
         
@@ -92,13 +101,13 @@ class AccessLog extends AuthAccessLog
                                  $q->Equals("$table.obj_parent_share",$folder));
         }
         
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params));
     }
     
     /**
      * @return array add `{?file:id, ?folder:id, ?parent:id,
         ?file_share:id, ?folder_share:id, ?parent_share:id}`
-       @see AuthAccessLog::GetClientObject()
+       @see AuthActionLog::GetClientObject()
      */
     public function GetClientObject(bool $expand = false) : array
     {

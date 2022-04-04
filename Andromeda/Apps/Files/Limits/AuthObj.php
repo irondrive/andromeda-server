@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -25,7 +25,7 @@ abstract class AuthEntityTotal extends Total
 
     public static function GetConfigUsage() : string { return static::GetBaseUsage()." [--emailshare ?bool] [--userstorage ?bool]"; }
     
-    public static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
+    public static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
     {
         $lim = parent::BaseConfigLimits($database, $obj, $input);
         

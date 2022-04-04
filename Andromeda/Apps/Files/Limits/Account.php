@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\BaseObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -276,7 +276,7 @@ class AccountTotal extends AuthEntityTotal
 /** A fake empty account limits that returns default property values */
 class AccountTotalDefault extends AccountTotal
 {
-    public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
+    // TODO // public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
     
     protected function GetGroups() : array { return array(); }
 }

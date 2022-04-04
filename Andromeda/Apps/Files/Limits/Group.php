@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
@@ -306,7 +306,7 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
         return $this;
     }
     
-    protected static function BaseConfigLimits(ObjectDatabase $database, StandardObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
     {
         $glim = parent::BaseConfigLimits($database, $obj, $input);
         

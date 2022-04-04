@@ -8,7 +8,12 @@ require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 
 /** Exception indicating only admins can create local storage */
-class LocalNonAdminException extends ActivateException { public $message = "LOCAL_STORAGE_ADMIN_ONLY"; }
+class LocalNonAdminException extends ActivateException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("LOCAL_STORAGE_ADMIN_ONLY", $details);
+    }
+}
 
 abstract class LocalBase extends FWrapper { use BasePath; }
 
