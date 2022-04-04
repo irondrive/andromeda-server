@@ -129,7 +129,7 @@ class Config extends BaseConfig
      * @return array `{config:{createaccount:enum, usernameiscontact:bool, requirecontact:enum}}` \
          if admin, add: `{default_group:?id}`
      */
-    public function GetClientObject(bool $admin) : array
+    public function GetClientObject(bool $admin = false) : array
     {
         $data = array(
             'config' => array(

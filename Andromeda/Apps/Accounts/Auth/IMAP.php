@@ -12,10 +12,20 @@ require_once(ROOT."/Apps/Accounts/Auth/External.php");
 require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 
 /** Exception indicating the IMAP extension does not exist */
-class IMAPExtensionException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_MISSING"; }
+class IMAPExtensionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("IMAP_EXTENSION_MISSING", $details);
+    }
+}
 
 /** Exception indicating IMAP encountered an error */
-class IMAPErrorException extends Exceptions\ServerException { public $message = "IMAP_EXTENSION_ERROR"; }
+class IMAPErrorException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("IMAP_EXTENSION_ERROR", $details);
+    }
+}
 
 /** Uses an IMAP server for authentication */
 class IMAP extends External

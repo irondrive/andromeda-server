@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -10,7 +10,7 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 require_once(ROOT."/Apps/Accounts/Account.php");
 
 /** Object for tracking used two factor codes, to prevent replay attacks */
-class UsedToken extends StandardObject
+class UsedToken extends BaseObject // TODO was StandardObject
 {
     public static function GetFieldTemplate() : array
     {
@@ -47,7 +47,7 @@ class UsedToken extends StandardObject
  * Accounts can have > 1 of these so the user is able to use multiple devices.
  * If account crypto is available, the secret is stored encrypted in the database.
  */
-class TwoFactor extends StandardObject
+class TwoFactor extends BaseObject // TODO was StandardObject
 {
     public static function GetFieldTemplate() : array
     {

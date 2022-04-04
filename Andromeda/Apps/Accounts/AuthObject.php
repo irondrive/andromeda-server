@@ -2,20 +2,25 @@
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that the raw (non-hashed) key does not exist in memory */
-class RawKeyNotAvailableException extends Exceptions\ServerException { public $message = "AUTHOBJECT_KEY_NOT_AVAILABLE"; }
+class RawKeyNotAvailableException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("AUTHOBJECT_KEY_NOT_AVAILABLE", $details);
+    }
+}
 
 /** 
  * Represents an object that holds an authentication code that can be checked 
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
  */
-abstract class AuthObject extends StandardObject
+abstract class AuthObject extends BaseObject // TODO was StandardObject
 {    
     public static function GetFieldTemplate() : array
     {

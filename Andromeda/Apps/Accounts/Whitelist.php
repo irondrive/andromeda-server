@@ -2,11 +2,11 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/StandardObject.php"); use Andromeda\Core\Database\StandardObject;
+require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 /** Whitelist entry for allowing account signups */
-class Whitelist extends StandardObject
+class Whitelist extends BaseObject // TODO was StandardObject
 {
     public const TYPE_USERNAME = 1;
     public const TYPE_CONTACT = 2;

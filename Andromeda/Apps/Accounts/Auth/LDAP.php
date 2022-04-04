@@ -11,13 +11,28 @@ require_once(ROOT."/Apps/Accounts/Auth/External.php");
 require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 
 /** Exception indicating that the LDAP extension does not exist */
-class LDAPExtensionException extends Exceptions\ServerException   { public $message = "LDAP_EXTENSION_MISSING"; }
+class LDAPExtensionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("LDAP_EXTENSION_MISSING", $details);
+    }
+}
 
 /** Exception indicating that the LDAP connection failed */
-class LDAPConnectionFailure extends Exceptions\ServerException    { public $message = "LDAP_CONNECTION_FAILURE"; }
+class LDAPConnectionFailure extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("LDAP_CONNECTION_FAILURE", $details);
+    }
+}
 
 /** Exception indicating that LDAP encountered an error */
-class LDAPErrorException extends Exceptions\ServerException       { public $message = "LDAP_EXTENSION_ERROR"; }
+class LDAPErrorException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("LDAP_EXTENSION_ERROR", $details);
+    }
+}
 
 /** Uses an LDAP server for authentication */
 class LDAP extends External
@@ -38,14 +53,14 @@ class LDAP extends External
         return parent::Create($database, $input)
             ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
             ->SetScalar('secure', $input->GetOptParam('secure', SafeParam::TYPE_BOOL) ?? false)
-            ->SetScalar('userprefix', $input->GetOptNullParam('userprefix', SafeParam::TYPE_TEXT));
+            ->SetScalar('userprefix', $input->GetOptNullParam('userprefix', SafeParam::TYPE_TEXT)); // TODO UTF8String or something better?
     }
     
     public function Edit(Input $input) : self
     {
         if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname',SafeParam::TYPE_HOSTNAME));
         if ($input->HasParam('secure')) $this->SetScalar('secure',$input->GetParam('secure',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->GetNullParam('userprefix',SafeParam::TYPE_TEXT));
+        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->GetNullParam('userprefix',SafeParam::TYPE_TEXT)); // TODO UTF8String or something better?
         
         return $this;
     }
