@@ -24,7 +24,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($obj->HasParam('test'));
 
-        $this->assertSame(null,$obj->GetOptParam('test',null)->GetRawString());
+        $this->assertSame(null,$obj->GetOptParam('test',null)->GetNullRawString());
         $this->assertSame(null,$obj->GetOptParam('test',null)->GetNullBool());
         
         $this->assertSame(0,$obj->GetOptParam('test',0)->GetInt());

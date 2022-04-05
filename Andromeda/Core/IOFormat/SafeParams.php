@@ -114,6 +114,6 @@ class SafeParams
      */
     public function GetClientObject() : array
     {
-        return array_map(function($param){ return $param->GetRawString(); }, $this->params);
+        return array_map(function($param){ return $param->GetNullRawString(); }, $this->params);
     }
 }
