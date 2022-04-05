@@ -3,6 +3,7 @@
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
@@ -206,7 +207,7 @@ abstract class InstalledApp extends BaseApp
         {
             if ($input->GetAction() === 'install' && $this->allowInstall())
             {
-                return $this->Install($input);
+                return $this->Install($input->GetParams());
             }
             else throw new InstallRequiredException(static::getName());
         }
@@ -214,7 +215,7 @@ abstract class InstalledApp extends BaseApp
         {
             if ($input->GetAction() === 'upgrade' && $this->allowInstall())
             {
-                return $this->Upgrade($input);
+                return $this->Upgrade($input->GetParams());
             }
             else throw new UpgradeRequiredException(static::getName());
         }
@@ -222,7 +223,7 @@ abstract class InstalledApp extends BaseApp
     }
     
     /** Installs the app by importing its SQL file and creating config */
-    protected function Install(Input $input)
+    protected function Install(SafeParams $params)
     {
         $this->API->GetInterface()->DisallowBatch();
         
@@ -235,7 +236,7 @@ abstract class InstalledApp extends BaseApp
      * Iterates over the list of upgrade scripts, running them
      * sequentially until the DB is up to date with the code
      */
-    protected function Upgrade(Input $input)
+    protected function Upgrade(SafeParams $params)
     {
         $this->API->GetInterface()->DisallowBatch();
         
