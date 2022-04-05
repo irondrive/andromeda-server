@@ -178,37 +178,39 @@ class CoreApp extends InstalledApp
                 $actionlog->SetAuth($authenticator);
         }
         else $actionlog = null;
+        
+        $params = $input->GetParams();
 
         switch ($action)
         {
-            case 'usage':    return $this->GetUsages($input);
-            case 'dbconf':   return $this->ConfigDB($input, $isAdmin);
-            case 'scanapps': return $this->ScanApps($input, $isAdmin);
+            case 'usage':    return $this->GetUsages($params);
+            case 'dbconf':   return $this->ConfigDB($params, $isAdmin);
+            case 'scanapps': return $this->ScanApps($isAdmin);
             
-            case 'phpinfo':    $this->PHPInfo($input, $isAdmin); return;
-            case 'serverinfo': return $this->ServerInfo($input, $isAdmin);
+            case 'phpinfo':    $this->PHPInfo($isAdmin); return;
+            case 'serverinfo': return $this->ServerInfo($isAdmin);
             
-            case 'testmail':   $this->TestMail($input, $isAdmin, $authenticator, $actionlog); return;
+            case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return;
             
-            case 'enableapp':  return $this->EnableApp($input, $isAdmin);
-            case 'disableapp': return $this->DisableApp($input, $isAdmin);
+            case 'enableapp':  return $this->EnableApp($params, $isAdmin);
+            case 'disableapp': return $this->DisableApp($params, $isAdmin);
             
-            case 'getconfig':   return $this->RunGetConfig($input, $isAdmin);
-            case 'getdbconfig': return $this->GetDBConfig($input, $isAdmin);
-            case 'setconfig':   return $this->RunSetConfig($input, $isAdmin);
+            case 'getconfig':   return $this->RunGetConfig($isAdmin);
+            case 'getdbconfig': return $this->GetDBConfig($isAdmin);
+            case 'setconfig':   return $this->RunSetConfig($params, $isAdmin);
             
-            case 'getmailers':   return $this->GetMailers($input, $isAdmin); 
-            case 'createmailer': return $this->CreateMailer($input, $isAdmin, $authenticator, $actionlog);
-            case 'deletemailer': $this->DeleteMailer($input, $isAdmin, $actionlog); return;
+            case 'getmailers':   return $this->GetMailers($isAdmin); 
+            case 'createmailer': return $this->CreateMailer($params, $isAdmin, $authenticator, $actionlog);
+            case 'deletemailer': $this->DeleteMailer($params, $isAdmin, $actionlog); return;
             
-            case 'geterrors':     return $this->GetErrors($input, $isAdmin);
-            case 'counterrors':   return $this->CountErrors($input, $isAdmin);
+            case 'geterrors':     return $this->GetErrors($params, $isAdmin);
+            case 'counterrors':   return $this->CountErrors($params, $isAdmin);
             
-            case 'getrequests':   return $this->GetRequests($input, $isAdmin);
-            case 'countrequests': return $this->CountRequests($input, $isAdmin);
+            case 'getrequests':   return $this->GetRequests($params, $isAdmin);
+            case 'countrequests': return $this->CountRequests($params, $isAdmin);
             
-            case 'getactions':    return $this->GetActions($input, $isAdmin);
-            case 'countactions':  return $this->CountActions($input, $isAdmin);            
+            case 'getactions':    return $this->GetActions($params, $isAdmin);
+            case 'countactions':  return $this->CountActions($params, $isAdmin);
             
             default: throw new UnknownActionException();
         }
@@ -218,10 +220,8 @@ class CoreApp extends InstalledApp
      * Collects usage strings from every installed app and returns them
      * @return string[] array of possible commands
      */
-    protected function GetUsages(Input $input) : array
+    protected function GetUsages(SafeParams $params) : array
     {
-        $params = $input->GetParams();
-        
         $want = $params->HasParam('appname') ? $params->GetParam('appname')->GetAlphanum() : null;
         
         $output = array(); foreach ($this->API->GetApps() as $name=>$app)
@@ -238,7 +238,7 @@ class CoreApp extends InstalledApp
      * Creates a database config with the given input
      * @throws DatabaseFailException if the config is invalid
      */
-    protected function ConfigDB(Input $input, bool $isAdmin) : ?string
+    protected function ConfigDB(SafeParams $params, bool $isAdmin) : ?string
     {
         if (isset($this->database) && !$isAdmin) throw new AdminRequiredException();
         
@@ -246,7 +246,7 @@ class CoreApp extends InstalledApp
         
         $this->API->GetInterface()->DisallowBatch();
         
-        try { return Database::Install($input->GetParams()); }
+        try { return Database::Install($params); }
         catch (DatabaseException $e) { throw new DatabaseFailException($e); }
     }
 
@@ -255,11 +255,9 @@ class CoreApp extends InstalledApp
      * @see \Andromeda\Core\InstalledApp::Install()
      * @return array map of enabled apps to their install retval
      */
-    protected function Install(Input $input) : array
+    protected function Install(SafeParams $params) : array
     {
-        $params = $input->GetParams();
-        
-        $retval = array('core'=>parent::Install($input));
+        $retval = array('core'=>parent::Install($params));
         
         if (!$params->GetOptParam('noapps',false)->GetBool())
         {
@@ -274,7 +272,7 @@ class CoreApp extends InstalledApp
             foreach ($this->API->GetApps() as $name=>$app)
             {
                 if ($app instanceof InstalledApp && $app !== $this)
-                    $retval[$name] = $app->Install($input);
+                    $retval[$name] = $app->Install($params);
             }
         }
 
@@ -286,25 +284,23 @@ class CoreApp extends InstalledApp
      * @see \Andromeda\Core\InstalledApp::Upgrade()
      * @return array map of upgraded apps to their upgrade retval
      */
-    protected function Upgrade(Input $input) : array
+    protected function Upgrade(SafeParams $params) : array
     {
-        $params = $input->GetParams();
-        
-        $retval = array('core'=>parent::Upgrade($input));
+        $retval = array('core'=>parent::Upgrade($params));
         
         // upgrade all installed apps also
         if (!$params->GetOptParam('noapps',false)->GetBool())
             foreach ($this->API->GetApps() as $name=>$app)
         {
             if ($app instanceof InstalledApp && $app !== $this)
-                $retval[$name] = $app->Upgrade($input);
+                $retval[$name] = $app->Upgrade($params);
         }
         
         return $retval;
     }
     
     /** @see Config::ScanApps() */
-    public function ScanApps(Input $input, bool $isAdmin) : array
+    public function ScanApps(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException(); 
         
@@ -315,7 +311,7 @@ class CoreApp extends InstalledApp
      * Prints the phpinfo() page
      * @throws AdminRequiredException if not admin-level access
      */
-    protected function PHPInfo(Input $input, bool $isAdmin) : void
+    protected function PHPInfo(bool $isAdmin) : void
     {
         $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
@@ -334,7 +330,7 @@ class CoreApp extends InstalledApp
      * @return array `{uname:string, server:[various], db:Database::getInfo()}`
      * @see Database::getInfo()
      */
-    protected function ServerInfo(Input $input, bool $isAdmin) : array
+    protected function ServerInfo(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -356,11 +352,9 @@ class CoreApp extends InstalledApp
      * @throws UnknownMailerException if the given mailer is invalid
      * @throws MailSendFailException if sending the email fails
      */
-    protected function TestMail(Input $input, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : void
+    protected function TestMail(SafeParams $params, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $params = $input->GetParams();
         
         $dest = $params->HasParam('dest') ? $params->GetParam('dest')->GetEmail() : null;
         if (!$authenticator) $params->GetParam('dest'); // mandatory
@@ -392,11 +386,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function EnableApp(Input $input, bool $isAdmin) : array
+    protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
 
-        $app = $input->GetParams()->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
+        $app = $params->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
         try { $this->GetConfig()->EnableApp($app); }
         catch (FailedAppLoadException | MissingMetadataException $e){ 
@@ -410,11 +404,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin
      * @return string[] array of enabled apps
      */
-    protected function DisableApp(Input $input, bool $isAdmin) : array
+    protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $app = $input->GetParams()->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
+        $app = $params->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
         $this->GetConfig()->DisableApp($app);
         
@@ -426,7 +420,7 @@ class CoreApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject() 
      */
-    protected function RunGetConfig(Input $input, bool $isAdmin) : array
+    protected function RunGetConfig(bool $isAdmin) : array
     {
         return $this->GetConfig()->GetClientObject($isAdmin);
     }
@@ -436,7 +430,7 @@ class CoreApp extends InstalledApp
      * @return array Database
      * @see Database::GetClientObject()
      */
-    protected function GetDBConfig(Input $input, bool $isAdmin) : array
+    protected function GetDBConfig(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -449,11 +443,11 @@ class CoreApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunSetConfig(Input $input, bool $isAdmin) : array
+    protected function RunSetConfig(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return $this->GetConfig()->SetConfig($input->GetParams())->GetClientObject(true);
+        return $this->GetConfig()->SetConfig($params)->GetClientObject(true);
     }
     
     /**
@@ -462,7 +456,7 @@ class CoreApp extends InstalledApp
      * @return array [id:Emailer]
      * @see Emailer::GetClientObject()
      */
-    protected function GetMailers(Input $input, bool $isAdmin) : array
+    protected function GetMailers(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -476,11 +470,9 @@ class CoreApp extends InstalledApp
      * @return array Emailer
      * @see Emailer::GetClientObject()
      */
-    protected function CreateMailer(Input $input, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : array
+    protected function CreateMailer(SafeParams $params, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $params = $input->GetParams();
         
         $emailer = Emailer::Create($this->database, $params)->Save();
         
@@ -490,7 +482,7 @@ class CoreApp extends InstalledApp
             
             $params->AddParam('mailid',$emailer->ID())->AddParam('dest',$dest);
             
-            $this->TestMail($input, $isAdmin, $authenticator, $actionlog);
+            $this->TestMail($params, $isAdmin, $authenticator, $actionlog);
         }
 
         if ($actionlog) $actionlog->LogDetails('mailer',$emailer->ID()); 
@@ -503,11 +495,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin 
      * @throws UnknownMailerException if given an invalid emailer
      */
-    protected function DeleteMailer(Input $input, bool $isAdmin, ?BaseActionLog $actionlog) : void
+    protected function DeleteMailer(SafeParams $params, bool $isAdmin, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        $mailid = $input->GetParams()->GetParam('mailid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
+        $mailid = $params->GetParam('mailid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new UnknownMailerException();
@@ -522,12 +514,12 @@ class CoreApp extends InstalledApp
      * Returns the server error log, possibly filtered
      * @throws AdminRequiredException if not an admin 
      */
-    protected function GetErrors(Input $input, bool $isAdmin) : array
+    protected function GetErrors(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
         return array_map(function(ErrorLog $e){ return $e->GetClientObject(); },
-            ErrorLog::LoadByParams($this->database, $input->GetParams()));
+            ErrorLog::LoadByParams($this->database, $params));
     }
     
     /**
@@ -535,11 +527,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not an admin
      * @return int error log entry count
      */
-    protected function CountErrors(Input $input, bool $isAdmin) : int
+    protected function CountErrors(SafeParams $params, bool $isAdmin) : int
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return ErrorLog::CountByParams($this->database, $input->GetParams());
+        return ErrorLog::CountByParams($this->database, $params);
     }
     
     /**
@@ -548,11 +540,9 @@ class CoreApp extends InstalledApp
      * @return array RequestLog
      * @see RequestLog::GetFullClientObject()
      */
-    protected function GetRequests(Input $input, bool $isAdmin) : array
+    protected function GetRequests(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $params = $input->GetParams();
         
         $actions = $params->GetOptParam('actions',false)->GetBool();
         $expand = $params->GetOptParam('expand',false)->GetBool();
@@ -572,11 +562,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not admin
      * @return int log entry count
      */
-    protected function CountRequests(Input $input, bool $isAdmin) : int
+    protected function CountRequests(SafeParams $params, bool $isAdmin) : int
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return RequestLog::CountByParams($this->database, $input->GetParams());
+        return RequestLog::CountByParams($this->database, $params);
     }
     
     /**
@@ -585,11 +575,9 @@ class CoreApp extends InstalledApp
      * @return array ActionLog
      * @see ActionLog::GetFullClientObject()
      */
-    protected function GetActions(Input $input, bool $isAdmin) : array
+    protected function GetActions(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $params = $input->GetParams();
         
         $expand = $params->GetOptParam('expand',false)->GetBool();
         
@@ -608,11 +596,11 @@ class CoreApp extends InstalledApp
      * @throws AdminRequiredException if not admin
      * @return int log entry count
      */
-    protected function CountActions(Input $input, bool $isAdmin) : int
+    protected function CountActions(SafeParams $params, bool $isAdmin) : int
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
-        return BaseActionLog::CountByParams($this->database, $input->GetParams());
+        return BaseActionLog::CountByParams($this->database, $params);
     }
 }
 

@@ -10,6 +10,7 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\OutputHandler;
 require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputStream;
 
@@ -44,24 +45,24 @@ class TestUtilApp extends BaseApp
 
     public function Run(Input $input)
     {
+        $params = $input->GetParams();
+        
         switch ($input->GetAction())
         {
-            case 'random':  return $this->Random($input);  
+            case 'random':  return $this->Random($params);  
             case 'getinput': return $this->GetInput($input);
             
             case 'exception': $this->ServerException(); return;
             
             case 'check-dryrun': return $this->CheckDryRun();
-            case 'binoutput': $this->BinaryOutput($input); return;
+            case 'binoutput': $this->BinaryOutput($params); return;
             
             default: throw new UnknownActionException();
         }
     }
 
-    protected function Random(Input $input) : string
+    protected function Random(SafeParams $params) : string
     {
-        $params = $input->GetParams();
-        
         $length = $params->GetOptParam('length',16)->GetUint();
 
         return Utilities::Random($length);
@@ -86,11 +87,9 @@ class TestUtilApp extends BaseApp
         return Config::GetInstance($this->database)->isDryRun();
     }
     
-    protected function BinaryOutput(Input $input) : void
+    protected function BinaryOutput(SafeParams $params) : void
     {
         $this->API->GetInterface()->SetOutputMode(0);
-        
-        $params = $input->GetParams();
         
         $data = $params->GetParam('data')->GetRawString();
         $times = $params->GetOptParam('times',0)->GetUint();
