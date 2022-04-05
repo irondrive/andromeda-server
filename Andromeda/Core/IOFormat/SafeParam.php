@@ -102,12 +102,20 @@ class SafeParam
             throw new SafeParamInvalidException($this->key, "max length $maxlen");
         else return $this;
     }
-
-    /** Returns the raw unchecked value string (or null), no logging */
-    public function GetRawString() : ?string { return $this->value; }
     
     /** Returns true if the param value is null */
     public function isNull() : bool { return $this->value === null; }
+    
+    /** Returns the raw unchecked value string (or null), no logging */
+    public function GetNullRawString() : ?string { return $this->value; }
+    
+    /** Returns the raw unchecked value string (NOT null), no logging */
+    public function GetRawString() : string 
+    {        
+        if ($this->value === null)
+            throw new SafeParamNullValueException($this->key);
+        return $this->value; 
+    }
 
     /**
      * Checks that the param's value is in the given array or null

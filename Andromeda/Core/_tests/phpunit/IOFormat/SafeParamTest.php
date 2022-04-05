@@ -86,9 +86,18 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     public function testRawString() : void
     {
+        $getVal = function(SafeParam $p){ return $p->GetRawString(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullRawString(); };
+        
         $val = CryptoSecret::GenerateKey();
         
-        $this->testGood($val, $val, function(SafeParam $p){ return $p->GetRawString(); }, false);
+        $this->testGood($val, $val, $getVal, false);
+        $this->testGood($val, $val, $getValN, false);
+        
+        $this->testGood(null, null, $getValN, false);
+        
+        $this->expectException(SafeParamNullValueException::class);
+        $this->testGood(null, null, $getVal, false); // not good
     }
 
     public function testCheckFunction() : void
@@ -123,7 +132,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue((new SafeParam("key", "NULL"))->isNull());
         $this->assertFalse((new SafeParam("key", "test"))->isNull());
         
-        $getRaw = function(SafeParam $p){ return $p->GetRawString(); };
+        $getRaw = function(SafeParam $p){ return $p->GetNullRawString(); };
         
         $this->testGood("", null, $getRaw, false);
         $this->testGood("null", null, $getRaw, false);
