@@ -5,6 +5,7 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamInvalidException};
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/ActionLog.php");
@@ -246,17 +247,17 @@ class AccountsApp extends InstalledApp
     public static function getUsage() : array 
     { 
         return array_merge(parent::getUsage(),array(
-            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser text | --auth_sudoacct id]',
+            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey alphanum] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
             'enablecrypto --auth_password raw [--auth_twofactor int]',
             'disablecrypto --auth_password raw',
-            'changepassword --new_password raw ((--username text --auth_password raw) | --auth_recoverykey utf8)',
-            'emailrecovery (--username text | '.Contact::GetFetchUsage().')',
+            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8)',
+            'emailrecovery (--username alphanum|email | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
-            'createsession (--username text | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
+            'createsession (--username alphanum|email | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
             '(createsession) [--auth_recoverykey utf8 | --auth_twofactor int] [--name name]',
             '(createsession) --auth_clientid id --auth_clientkey alphanum',
             'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
@@ -271,7 +272,7 @@ class AccountsApp extends InstalledApp
             'deletetwofactor --auth_password raw --twofactor id',
             'deletecontact --contact id',
             'editcontact --contact id [--usefrom bool] [--public bool]',
-            'searchaccounts --name text',
+            'searchaccounts --name alphanum|email',
             'searchgroups --name name',
             'listaccounts [--limit uint] [--offset uint]',
             'listgroups [--limit uint] [--offset uint]',
@@ -285,14 +286,14 @@ class AccountsApp extends InstalledApp
             'getauthsources',
             'createauthsource --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             ...array_map(function($u){ return "(createauthsource) $u"; }, Auth\Manager::GetPropUsages()),
-            'testauthsource --manager id [--test_username text --test_password raw]',
+            'testauthsource --manager id [--test_username alphanum|email --test_password raw]',
             'editauthsource --manager id --auth_password raw '.Auth\Manager::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',
             'setaccountprops --account id '.AuthEntity::GetPropUsage().' [--expirepw bool]',
             'setgroupprops --group id '.AuthEntity::GetPropUsage(),
             'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
-            'addwhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
-            'removewhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value text',
+            'addwhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value alphanum|email',
+            'removewhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value alphanum|email',
             'getwhitelist'
         ));
     }
@@ -380,6 +381,18 @@ class AccountsApp extends InstalledApp
             
             default: throw new UnknownActionException();
         }
+    }
+    
+    /**
+     * Get either an alphanum or email from the given param
+     * @param SafeParam $param param to extract value from
+     * @return string validated alphanum or email
+     */
+    public static function getUsername(SafeParam $param) : string
+    {
+        try { return $param->GetAlphanum(); }
+        catch (SafeParamInvalidException $e) {
+            return $param->GetEmail(); }
     }
     
     /**
@@ -494,7 +507,7 @@ class AccountsApp extends InstalledApp
         
         if ($recoverykey !== null)
         {
-            $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->GetHTMLText(); // TODO split to email/alphanum checks (here and elsewhere)
+            $username = self::getUsername($params->GetParam("username", SafeParams::PARAMLOG_ALWAYS));
             $account = Account::TryLoadByUsername($this->database, $username);
             if ($account === null) throw new AuthenticationFailedException();
         }
@@ -549,7 +562,7 @@ class AccountsApp extends InstalledApp
     {
         if ($params->HasParam('username'))
         {
-            $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->GetHTMLText(); // TODO replace with name/email or whatever
+            $username = self::getUsername($params->GetParam("username", SafeParams::PARAMLOG_ALWAYS));
             $account = Account::TryLoadByUsername($this->database, $username);
         }
         else
@@ -715,7 +728,7 @@ class AccountsApp extends InstalledApp
     {
         if ($params->HasParam('username'))
         {
-            $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->GetHTMLText();
+            $username = self::getUsername($params->GetParam("username", SafeParams::PARAMLOG_ALWAYS));
             $account = Account::TryLoadByUsername($this->database, $username);
         }
         else 
@@ -1146,8 +1159,8 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
 
-        $name = $params->GetParam('name')->CheckFunction(
-            function($v){ return mb_strlen($v) >= 3; })->GetHTMLText(); // TODO split to email/alphanum
+        $name = self::getUsername($params->GetParam('name')
+            ->CheckFunction(function($v){ return mb_strlen($v) >= 3; }));
 
         return array_map(function(Account $account){ return $account->GetClientObject(); },
             Account::LoadAllMatchingInfo($this->database, $name, $limit));
@@ -1459,7 +1472,7 @@ class AccountsApp extends InstalledApp
         $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();        
         
-        $testuser = $params->GetParam('test_username')->GetHTMLText(); // TODO split to email/alphanum
+        $testuser = self::getUsername($params->GetParam('test_username'));
         $testpass = $params->GetParam('test_password',SafeParams::PARAMLOG_NEVER)->GetRawString();
         
         if (!$manager->GetAuthSource()->VerifyUsernamePassword($testuser, $testpass))
@@ -1606,7 +1619,7 @@ class AccountsApp extends InstalledApp
         
         $type = Whitelist::TYPES[$type];
         
-        $value = $params->GetParam('value',SafeParams::PARAMLOG_ALWAYS)->GetHTMLText(); // TODO split to email/alphanum
+        $value = self::getUsername($params->GetParam('value',SafeParams::PARAMLOG_ALWAYS));
         
         return Whitelist::Create($this->database, $type, $value)->GetClientObject();
     }
@@ -1625,7 +1638,7 @@ class AccountsApp extends InstalledApp
         
         $type = Whitelist::TYPES[$type];
         
-        $value = $params->GetParam('value',SafeParams::PARAMLOG_ALWAYS)->GetHTMLText(); // TODO split to email/alphanum
+        $value = self::getUsername($params->GetParam('value',SafeParams::PARAMLOG_ALWAYS));
         
         Whitelist::DeleteByTypeAndValue($this->database, $type, $value);
     }
