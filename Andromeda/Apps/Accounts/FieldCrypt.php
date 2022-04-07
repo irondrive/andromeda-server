@@ -1,8 +1,7 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
 
 require_once(ROOT."/Apps/Accounts/Account.php");
@@ -161,9 +160,9 @@ trait OptFieldCrypt
     public static function GetFieldCryptCreateUsage() : string { return "[--fieldcrypt bool]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
-    public function FieldCryptCreate(Input $input) : self
+    public function FieldCryptCreate(SafeParams $params) : self
     {
-        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL) ?? false;
+        $fieldcrypt = $params->GetOptParam('fieldcrypt',false)->GetBool();
         
         return $this->SetEncrypted($fieldcrypt);
     }
@@ -172,10 +171,12 @@ trait OptFieldCrypt
     public static function GetFieldCryptEditUsage() : string { return "[--fieldcrypt bool]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function FieldCryptEdit(Input $input) : self
+    public function FieldCryptEdit(SafeParams $params) : self
     {
-        $fieldcrypt = $input->GetOptParam('fieldcrypt', SafeParam::TYPE_BOOL);
-        if ($fieldcrypt !== null) $this->SetEncrypted($fieldcrypt); return $this;
+        if ($params->HasParam('fieldcrypt')) 
+            $this->SetEncrypted($params->GetParam('fieldcrypt')->GetBool()); 
+        
+        return $this;
     }
     
     /**

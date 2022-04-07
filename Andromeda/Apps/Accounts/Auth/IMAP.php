@@ -2,8 +2,6 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -45,26 +43,25 @@ class IMAP extends External
     
     private const PROTOCOLS = array('imap'=>self::PROTOCOL_IMAP,'pop3'=>self::PROTOCOL_POP3,'nntp'=>self::PROTOCOL_NNTP);
     
-    public static function GetPropUsage() : string { return "--protocol imap|pop3|nntp --hostname alphanum [--port ?uint16] [--implssl bool] [--secauth bool]"; }
+    public static function GetPropUsage() : string { return "--protocol imap|pop3|nntp --hostname hostname [--port ?uint16] [--implssl bool] [--secauth bool]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        $protocol = $input->GetParam('protocol', SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::PROTOCOLS));
+        $protocol = $params->GetParam('protocol')->FromWhitelist(array_keys(self::PROTOCOLS));
 
-        return parent::Create($database, $input)->SetScalar('protocol', self::PROTOCOLS[$protocol])
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptNullParam('port', SafeParam::TYPE_UINT16))
-            ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false)
-            ->SetScalar('secauth', $input->GetOptParam('secauth', SafeParam::TYPE_BOOL) ?? false);
+        return parent::Create($database, $params)->SetScalar('protocol', self::PROTOCOLS[$protocol])
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
+            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16())
+            ->SetScalar('implssl', $params->GetOptParam('implssl',false)->GetBool())
+            ->SetScalar('secauth', $params->GetOptParam('secauth',false)->GetBool());
     }
     
-    public function Edit(Input $input) : self
+    public function Edit(SafeParams $params) : self
     {
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));       
-        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));        
-        if ($input->HasParam('secauth')) $this->SetScalar('secauth',$input->GetParam('secauth', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT16));
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
+        if ($params->HasParam('port')) $this->SetScalar('port',$params->GetParam('port')->GetNullUint16());
+        if ($params->HasParam('implssl')) $this->SetScalar('implssl',$params->GetParam('implssl')->GetBool());
+        if ($params->HasParam('secauth')) $this->SetScalar('secauth',$params->GetParam('secauth')->GetBool());
         
         return $this;
     }
@@ -111,7 +108,8 @@ class IMAP extends External
         }
         catch (Exceptions\PHPError $e) 
         {
-            $errman = ErrorManager::GetInstance(); $errman->LogException($e);
+            $errman = ErrorManager::GetInstance(); 
+            $errman->LogException($e);
             
             foreach (imap_errors() as $err) 
                 $errman->LogException(new IMAPErrorException($err)); 

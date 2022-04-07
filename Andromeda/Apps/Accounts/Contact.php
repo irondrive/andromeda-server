@@ -9,11 +9,7 @@ require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 /** Exception indicating that a valid contact value was not given */
@@ -195,13 +191,13 @@ class Contact extends ContactBase
      * @throws ContactNotGivenException if nothing valid was found
      * @return ContactInfo
      */
-   public static function FetchInfoFromInput(Input $input) : ContactInfo
+   public static function FetchInfoFromParams(SafeParams $params) : ContactInfo
     {
-        if ($input->HasParam('email')) 
+        if ($params->HasParam('email')) 
         { 
             $type = self::TYPE_EMAIL;
             
-            $info = $input->GetParam('email',SafeParam::TYPE_EMAIL, SafeParams::PARAMLOG_ALWAYS); 
+            $info = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); 
         }
         
         else throw new ContactNotGivenException();

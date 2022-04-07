@@ -3,8 +3,6 @@
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -66,51 +64,56 @@ class Manager extends BaseObject
     }
     
     /** Creates and tests a new external authentication backend, creating a manager and optionally, a default group for it */
-    public static function Create(ObjectDatabase $database, Input $input) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
         $classes = self::getAuthClasses();
         
-        $type = $input->GetParam('type', SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys($classes));
+        $type = $params->GetParam('type')->FromWhitelist(array_keys($classes));
         
-        $descr = $input->GetOptNullParam('description', SafeParam::TYPE_TEXT);
-        
-        try { $authsource = $classes[$type]::Create($database, $input)->Activate(); }
+        try { $authsource = $classes[$type]::Create($database, $params)->Activate(); }
         catch (Exceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); }
+        // TODO catch something better than ServerException
         
         $manager = parent::BaseCreate($database);
+        $manager->SetObject('authsource',$authsource);
         
-        $manager->SetObject('authsource',$authsource)->SetScalar('description',$descr);
-        
-        if ($input->HasParam('enabled'))
+        if ($params->HasParam('description'))
         {
-            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::ENABLED_TYPES));
-            
-            $manager->SetScalar('enabled', self::ENABLED_TYPES[$param]);
+            $descr = $params->GetParam('description')->GetNullHTMLText();
+            $manager->SetScalar('description', $descr);
         }
         
-        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? true) $manager->CreateDefaultGroup();
+        if ($params->HasParam('enabled'))
+        {
+            $enabled = $params->GetParam('enabled')->FromWhitelist(array_keys(self::ENABLED_TYPES));
+            $manager->SetScalar('enabled', self::ENABLED_TYPES[$enabled]);
+        }
+        
+        if ($params->GetOptParam('createdefgroup',true)->GetBool()) 
+            $manager->CreateDefaultGroup();
         
         return $manager;
     }
     
     /** Edits properties of an existing external auth backend */
-    public function Edit(Input $input) : self
+    public function Edit(SafeParams $params) : self
     {
-        if ($input->HasParam('enabled'))
+        if ($params->HasParam('enabled'))
         {
-            $param = $input->GetParam('enabled',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::ENABLED_TYPES));
-            
+            $param = $params->GetParam('enabled')->FromWhitelist(array_keys(self::ENABLED_TYPES));
             $this->SetScalar('enabled', self::ENABLED_TYPES[$param]);
         }
+
+        if ($params->HasParam('description'))
+        {
+            $descr = $params->GetParam('description')->GetNullHTMLText();
+            $this->SetScalar('description', $descr);
+        }
         
-        if ($input->HasParam('description')) $this->SetScalar('description',$input->GetNullParam('description',SafeParam::TYPE_TEXT));
+        if ($params->GetOptParam('createdefgroup',false)->GetBool()) 
+            $this->CreateDefaultGroup();
         
-        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
-        
-        $this->GetAuthSource()->Edit($input); return $this;
+        $this->GetAuthSource()->Edit($params); return $this;
     }
     
     /** Deletes the external authentication source and all accounts created by it */
