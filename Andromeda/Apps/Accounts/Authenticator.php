@@ -2,7 +2,6 @@
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -204,7 +203,7 @@ class Authenticator
             $sessionkey ??= $auth->GetPassword();
         }
         
-        $sudouser = $params->HasParam('auth_sudouser') ? $params->GetParam('auth_sudouser',SafeParams::PARAMLOG_ALWAYS)->GetHTMLText() : null; // TODO split to alphanum/email
+        $sudouser = $params->HasParam('auth_sudouser') ? AccountsApp::getUsername($params->GetParam('auth_sudouser',SafeParams::PARAMLOG_ALWAYS)) : null;
         $sudoacct = $params->HasParam('auth_sudoacct') ? $params->GetParam('auth_sudoacct',SafeParams::PARAMLOG_ALWAYS)->GetRandstr() : null;
         
         $account = null; $authenticator = new Authenticator($params);
