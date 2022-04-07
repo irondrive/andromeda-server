@@ -2,8 +2,7 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -46,21 +45,21 @@ class LDAP extends External
         ));
     }
     
-    public static function GetPropUsage() : string { return "--hostname alphanum [--secure bool] [--userprefix ?text]"; }
+    public static function GetPropUsage() : string { return "--hostname hostname [--secure bool] [--userprefix ?utf8]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        return parent::Create($database, $input)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('secure', $input->GetOptParam('secure', SafeParam::TYPE_BOOL) ?? false)
-            ->SetScalar('userprefix', $input->GetOptNullParam('userprefix', SafeParam::TYPE_TEXT)); // TODO UTF8String or something better?
+        return parent::Create($database, $params)
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
+            ->SetScalar('secure', $params->GetOptParam('secure',false)->GetBool())
+            ->SetScalar('userprefix', $params->GetOptParam('userprefix',null)->GetNullUTF8String());
     }
     
-    public function Edit(Input $input) : self
+    public function Edit(SafeParams $params) : self
     {
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname',SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('secure')) $this->SetScalar('secure',$input->GetParam('secure',SafeParam::TYPE_BOOL));
-        if ($input->HasParam('userprefix')) $this->SetScalar('userprefix',$input->GetNullParam('userprefix',SafeParam::TYPE_TEXT)); // TODO UTF8String or something better?
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
+        if ($params->HasParam('secure')) $this->SetScalar('secure',$params->GetParam('secure')->GetBool());
+        if ($params->HasParam('userprefix')) $this->SetScalar('userprefix',$params->GetParam('userprefix')->GetNullUTF8String());
         
         return $this;
     }

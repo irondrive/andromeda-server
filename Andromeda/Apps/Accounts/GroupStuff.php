@@ -2,8 +2,7 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** A value and inherit-source pair */
 class InheritedProperty
@@ -102,19 +101,19 @@ abstract class AuthEntity extends BaseObject  // TODO was StandardObject
      * Sets the value of an inherited property for the object 
      * @return $this
      */
-    public function SetProperties(Input $input) : self
+    public function SetProperties(SafeParams $params) : self
     {
         foreach (array('session_timeout','client_timeout','max_password_age') as $prop)
-            if ($input->HasParam($prop)) $this->SetScalar($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT));
+            if ($params->HasParam($prop)) $this->SetScalar($prop, $params->GetParam($prop)->GetNullUint());
         
         foreach (array('max_sessions','max_contacts','max_recoverykeys') as $prop)
-            if ($input->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $input->GetNullParam($prop, SafeParam::TYPE_UINT8));
+            if ($params->HasParam($prop)) $this->SetCounterLimit(str_replace('max_','',$prop), $params->GetParam($prop)->GetNullUint8());
         
         foreach (array('admin','disabled','forcetf','allowcrypto','userdelete') as $prop)
-            if ($input->HasParam($prop)) $this->SetFeatureBool($prop, $input->GetNullParam($prop, SafeParam::TYPE_BOOL));
+            if ($params->HasParam($prop)) $this->SetFeatureBool($prop, $params->GetParam($prop)->GetNullBool());
         
         foreach (array('accountsearch','groupsearch') as $prop)
-            if ($input->HasParam($prop)) $this->SetFeatureInt($prop, $input->GetNullParam($prop, SafeParam::TYPE_UINT8));
+            if ($params->HasParam($prop)) $this->SetFeatureInt($prop, $params->GetParam($prop)->GetNullUint8());
             
         return $this->SetDate('modified');
     }

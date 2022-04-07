@@ -56,13 +56,13 @@ abstract class AuthActionLog extends BaseActionLog
     {
         $criteria = array();
         
-        if ($input->HasParam('admin')) $criteria[] = $input->GetParam('admin',SafeParam::TYPE_BOOL) 
+        if ($params->HasParam('admin')) $criteria[] = $params->GetParam('admin')->GetBool() 
             ? $q->IsTrue("admin") : $q->Not($q->IsTrue("admin"));
         
-        foreach (array('account','sudouser','client') as $prop) if ($input->HasParam($prop)) 
-            $criteria[] = $q->Equals("$prop", $input->GetParam($prop,SafeParam::TYPE_RANDSTR));       
+        foreach (array('account','sudouser','client') as $prop) if ($params->HasParam($prop)) 
+            $criteria[] = $q->Equals("$prop", $params->GetParam($prop)->GetRandstr());       
 
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $input));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params));
     }
 
     /**

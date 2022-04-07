@@ -2,8 +2,7 @@
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
@@ -38,21 +37,21 @@ class FTP extends External
         ));
     }    
     
-    public static function GetPropUsage() : string { return "--hostname alphanum [--port ?uint16] [--implssl bool]"; }
+    public static function GetPropUsage() : string { return "--hostname hostname [--port ?uint16] [--implssl bool]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        return parent::Create($database, $input)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptNullParam('port', SafeParam::TYPE_UINT16))
-            ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
+        return parent::Create($database, $params)
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
+            ->SetScalar('implssl', $params->GetOptParam('implssl',false)->GetBool())
+            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16());
     }
     
-    public function Edit(Input $input) : self
+    public function Edit(SafeParams $params) : self
     {
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT16));
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
+        if ($params->HasParam('implssl')) $this->SetScalar('implssl',$params->GetParam('implssl')->GetBool());
+        if ($params->HasParam('port')) $this->SetScalar('port',$params->GetParam('port')->GetNullUint16());
         
         return $this;
     }

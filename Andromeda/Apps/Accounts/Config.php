@@ -6,8 +6,6 @@ require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
@@ -36,31 +34,32 @@ class Config extends BaseConfig
                                                                  "[--usernameiscontact bool] [--createdefgroup bool] [--default_auth ?id]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
-    public function SetConfig(Input $input) : self
+    public function SetConfig(SafeParams $params) : self
     {
-        if ($input->HasParam('createaccount')) 
+        if ($params->HasParam('createaccount')) 
         {
-            $param = $input->GetParam('createaccount',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CREATE_TYPES));
-
+            $param = $params->GetParam('createaccount')->FromWhitelist(array_keys(self::CREATE_TYPES));
             $this->SetFeatureInt('createaccount', self::CREATE_TYPES[$param]);
         }
         
-        if ($input->HasParam('requirecontact')) 
+        if ($params->HasParam('requirecontact')) 
         {
-            $param = $input->GetParam('requirecontact',SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, array_keys(self::CONTACT_TYPES));
-
+            $param = $params->GetParam('requirecontact')->FromWhitelist(array_keys(self::CONTACT_TYPES));
             $this->SetFeatureInt('requirecontact', self::CONTACT_TYPES[$param]);
         }
         
-        if ($input->HasParam('usernameiscontact')) $this->SetFeatureBool('usernameiscontact',$input->GetParam('usernameiscontact',SafeParam::TYPE_BOOL));
-        
-        if ($input->GetOptParam('createdefgroup',SafeParam::TYPE_BOOL) ?? false) $this->CreateDefaultGroup();
-        
-        if ($input->HasParam('default_auth'))
+        if ($params->HasParam('usernameiscontact')) 
         {
-            if (($id = $input->GetNullParam('default_auth',SafeParam::TYPE_RANDSTR)) !== null)
+            $param = $params->GetParam('usernameiscontact')->GetBool();
+            $this->SetFeatureBool('usernameiscontact', $param);
+        }
+        
+        if ($params->GetOptParam('createdefgroup',false)->GetBool()) 
+            $this->CreateDefaultGroup();
+        
+        if ($params->HasParam('default_auth'))
+        {
+            if (($id = $params->GetParam('default_auth')->GetNullRandstr()) !== null)
             {
                 $manager = Auth\Manager::TryLoadByID($this->database, $id);
                 if ($manager === null) throw new UnknownAuthSourceException();
