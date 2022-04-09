@@ -240,7 +240,8 @@ class CoreApp extends InstalledApp
      */
     protected function ConfigDB(SafeParams $params, bool $isAdmin) : ?string
     {
-        if (isset($this->database) && !$isAdmin) throw new AdminRequiredException();
+        if (isset($this->database) && !$isAdmin) 
+            throw new AdminRequiredException();
         
         if (!$this->allowInstall()) throw new UnknownActionException();
         
@@ -370,7 +371,8 @@ class CoreApp extends InstalledApp
             $mailer = $params->GetParam('mailid')->GetRandstr();
             $mailer = Emailer::TryLoadByID($this->database, $mailer);
             
-            if ($mailer === null) throw new UnknownMailerException();
+            if ($mailer === null) 
+                throw new UnknownMailerException();
             else $mailer->Activate();
         }
         else $mailer = $this->GetConfig()->GetMailer();
