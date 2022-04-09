@@ -212,11 +212,13 @@ class Authenticator
         {
             $session = Session::TryLoadByID($database, $sessionid);
             
-            if ($session === null || !$session->CheckMatch($sessionkey)) throw new InvalidSessionException();
+            if ($session === null || !$session->CheckMatch($sessionkey)) 
+                throw new InvalidSessionException();
             
             $account = $session->GetAccount();
             
-            if (!$account->isEnabled()) throw new AccountDisabledException();
+            if (!$account->isEnabled()) 
+                throw new AccountDisabledException();
             
             $authenticator->realaccount = $account->setActiveDate();
             $authenticator->session = $session->setActiveDate();
