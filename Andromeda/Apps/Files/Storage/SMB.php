@@ -3,8 +3,6 @@
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -76,20 +74,22 @@ class SMB extends SMBBase2
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
+        $params = $input->GetParams();
+        
         return parent::Create($database, $input, $filesystem)
-            ->SetScalar('workgroup', $input->GetOptParam('workgroup', 
-                SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)))
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
+            ->SetScalar('workgroup', $params->HasParam('workgroup') ? $params->GetParam('workgroup')->CheckLength(255)->GetAlphanum() : null)
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname());
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--workgroup ?alphanum]"; }
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('workgroup')) $this->SetScalar('workgroup', $input->GetNullParam('workgroup', 
-            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
+        $params = $input->GetParams();
+    
+        if ($params->HasParam('workgroup')) $this->SetScalar('workgroup', $params->GetParam('workgroup')->CheckLength(255)->GetNullAlphanum());
         
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname', $params->GetParam('hostname')->GetHostname());
         
         return parent::Edit($input);
     }

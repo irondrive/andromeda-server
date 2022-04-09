@@ -5,8 +5,7 @@ require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Limits/Base.php");
 require_once(ROOT."/Apps/Files/Limits/TimedStats.php");
@@ -140,7 +139,7 @@ abstract class Timed extends Base
     protected function GetCurrentStats() : TimedStats { return TimedStats::LoadCurrentByLimit($this->database, $this); }
     
     // pull counters from the current stats object
-    protected function GetCounter(string $name) : int     { return $this->GetCurrentStats()->GetCounter($name); }
+    protected function GetCounter(string $name) : int { return $this->GetCurrentStats()->GetCounter($name); }
     
     protected function DeltaCounter(string $name, int $delta = 1, bool $ignoreLimit = false) : self
     {
@@ -151,23 +150,28 @@ abstract class Timed extends Base
     public abstract static function GetTimedUsage() : string;
     
     /** Sets config for a timed limit */
-    protected abstract function SetTimedLimits(Input $input) : void;
+    protected abstract function SetTimedLimits(SafeParams $params) : void;
     
     public static function GetConfigUsage() : string { return static::GetBaseUsage()." ".static::GetTimedUsage(); }
     
     public static function BaseConfigUsage() : string { return "--timeperiod uint32 [--max_pubdownloads ?uint32] [--max_bandwidth ?uint]"; }
     
     /** @return static */
-    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, SafeParams $params) : self
     {
-        $period = $input->GetParam('timeperiod',SafeParam::TYPE_UINT32);
+        $period = $params->GetParam('timeperiod')->GetUint32();
         
-        $lim = static::LoadByClientAndPeriod($database, $obj, $period) ?? static::CreateTimed($database, $obj, $period);
+        $lim = static::LoadByClientAndPeriod($database, $obj, $period) 
+            ?? static::CreateTimed($database, $obj, $period);
         
-        $lim->SetBaseLimits($input); $lim->SetTimedLimits($input);
+        $lim->SetBaseLimits($params); 
+        $lim->SetTimedLimits($params);
 
-        if ($input->HasParam('max_pubdownloads')) $lim->SetCounterLimit('pubdownloads', $input->GetNullParam('max_pubdownloads', SafeParam::TYPE_UINT32));
-        if ($input->HasParam('max_bandwidth')) $lim->SetCounterLimit('bandwidth', $input->GetNullParam('max_bandwidth', SafeParam::TYPE_UINT));
+        if ($params->HasParam('max_pubdownloads')) 
+            $lim->SetCounterLimit('pubdownloads', $params->GetParam('max_pubdownloads')->GetNullUint32());
+        
+        if ($params->HasParam('max_bandwidth')) 
+            $lim->SetCounterLimit('bandwidth', $params->GetParam('max_bandwidth')->GetNullUint());
         
         if ($lim->isCreated()) $lim->Initialize();
         else TimedStats::PruneStatsByLimit($database, $lim);

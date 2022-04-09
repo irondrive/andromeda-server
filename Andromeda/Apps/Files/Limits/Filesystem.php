@@ -1,8 +1,7 @@
 <?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
@@ -20,18 +19,18 @@ trait FilesystemCommon
     
     public static function GetBaseUsage() : string { return "[--track_items bool] [--track_dlstats bool]"; }
     
-    protected function SetBaseLimits(Input $input) : void
+    protected function SetBaseLimits(SafeParams $params) : void
     {
-        if ($input->HasParam('track_items') || $this->isCreated())
+        if ($params->HasParam('track_items') || $this->isCreated())
         {
-            $this->SetFeatureBool('track_items', $input->GetParam('track_items', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_items', $params->GetParam('track_items')->GetBool());
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }
         
-        if ($input->HasParam('track_dlstats') || $this->isCreated())
+        if ($params->HasParam('track_dlstats') || $this->isCreated())
         {
-            $this->SetFeatureBool('track_dlstats', $input->GetParam('track_dlstats', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_dlstats', $params->GetParam('track_dlstats')->GetBool());
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -39,9 +38,9 @@ trait FilesystemCommon
         if ($init ?? false) $this->Initialize();
     }
         
-    public static function ConfigLimits(ObjectDatabase $database, FSManager $filesystem, Input $input) : self
+    public static function ConfigLimits(ObjectDatabase $database, FSManager $filesystem, SafeParams $params) : self
     {
-        return static::BaseConfigLimits($database, $filesystem, $input);
+        return static::BaseConfigLimits($database, $filesystem, $params);
     }
     
     /**
@@ -108,11 +107,11 @@ class FilesystemTimed extends Timed
     
     public static function GetTimedUsage() : string { return "[--max_stats_age ".static::MAX_AGE_FOREVER." (forever)|0 (none)|int]"; }
     
-    protected function SetTimedLimits(Input $input) : void
+    protected function SetTimedLimits(SafeParams $params) : void
     {
-        if ($input->HasParam('max_stats_age')) 
+        if ($params->HasParam('max_stats_age')) 
         {
-            $this->SetScalar('max_stats_age', $input->GetParam('max_stats_age', SafeParam::TYPE_INT));
+            $this->SetScalar('max_stats_age', $params->GetParam('max_stats_age')->GetInt());
         }
     }
 }

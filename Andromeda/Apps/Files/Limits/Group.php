@@ -3,7 +3,6 @@
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
@@ -73,26 +72,25 @@ trait GroupCommon
     public static function GetBaseUsage() : string { return "[--track_items ?(".implode('|',array_keys(self::TRACK_TYPES)).")] ".
                                                             "[--track_dlstats ?(".implode('|',array_keys(self::TRACK_TYPES)).")]"; }
     
-    protected static function GetTrackParam(Input $input, string $name) : ?int
+    protected static function GetTrackParam(SafeParam $param) : ?int
     {
-        $param = $input->GetNullParam($name, SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys(self::TRACK_TYPES));
+        $valstr = $param->FromWhitelistNull(array_keys(self::TRACK_TYPES));
         
-        return ($param !== null) ? self::TRACK_TYPES[$param] : null;
+        return ($valstr !== null) ? self::TRACK_TYPES[$valstr] : null;
     }
     
-    protected function SetBaseLimits(Input $input) : void
+    protected function SetBaseLimits(SafeParams $params) : void
     {        
-        if ($input->HasParam('track_items'))
+        if ($params->HasParam('track_items'))
         {
-            $this->SetFeatureInt('track_items', static::GetTrackParam($input,'track_items'));
+            $this->SetFeatureInt('track_items', static::GetTrackParam($params->GetParam('track_items')));
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }
         
-        if ($input->HasParam('track_dlstats'))
+        if ($params->HasParam('track_dlstats'))
         {
-            $this->SetFeatureInt('track_dlstats', static::GetTrackParam($input,'track_dlstats'));
+            $this->SetFeatureInt('track_dlstats', static::GetTrackParam($params->GetParam('track_dlstats')));
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -101,9 +99,9 @@ trait GroupCommon
     }
     
     /** Configures limits for the given group with the given input */
-    public static function ConfigLimits(ObjectDatabase $database, Group $group, Input $input) : self
+    public static function ConfigLimits(ObjectDatabase $database, Group $group, SafeParams $params) : self
     {
-        return static::BaseConfigLimits($database, $group, $input);
+        return static::BaseConfigLimits($database, $group, $params);
     }    
     
     /** 
@@ -306,9 +304,9 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
         return $this;
     }
     
-    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, SafeParams $params) : self
     {
-        $glim = parent::BaseConfigLimits($database, $obj, $input);
+        $glim = parent::BaseConfigLimits($database, $obj, $params);
         
         // prune stats for member accounts also
         foreach ($glim->GetAccounts() as $aclim)
