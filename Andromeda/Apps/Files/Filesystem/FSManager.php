@@ -190,7 +190,7 @@ class FSManager extends BaseObject // TODO was StandardObject
     
     /** Returns the common command usage of Create() */
     public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::getStorageClasses())).
-        " [--fstype native|crypt|external] [--name name] [--global bool] [--readonly bool] [--chunksize uint]"; }
+        " [--fstype native|crypt|external] [--name ?name] [--global bool] [--readonly bool] [--chunksize uint]"; }
     
     /** Returns the command usage of Create() specific to each storage type */
     public static function GetCreateUsages() : array 
@@ -212,7 +212,7 @@ class FSManager extends BaseObject // TODO was StandardObject
     {
         $params = $input->GetParams();
         
-        $name = $params->HasParam('name') ? $params->GetParam('name')->CheckLength(127)->GetName() : null;
+        $name = $params->GetOptParam('name',null)->CheckLength(127)->GetNullName();
         
         $readonly = $params->GetOptParam('readonly',false)->GetBool();
         

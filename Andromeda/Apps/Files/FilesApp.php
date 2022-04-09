@@ -954,7 +954,6 @@ class FilesApp extends InstalledApp
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
         $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        
         $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true);
         $parent = $access->GetFolder(); $share = $access->GetShare();
         

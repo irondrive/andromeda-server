@@ -258,10 +258,10 @@ class AccountsApp extends InstalledApp
             'emailrecovery (--username alphanum|email | '.Contact::GetFetchUsage().')',
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
             'createsession (--username alphanum|email | '.Contact::GetFetchUsage().') --auth_password raw [--authsource id] [--old_password raw] [--new_password raw]',
-            '(createsession) [--auth_recoverykey utf8 | --auth_twofactor int] [--name name]',
+            '(createsession) [--auth_recoverykey utf8 | --auth_twofactor int] [--name ?name]',
             '(createsession) --auth_clientid id --auth_clientkey randstr',
             'createrecoverykeys --auth_password raw --auth_twofactor int [--replace bool]',
-            'createtwofactor --auth_password raw [--comment text]',
+            'createtwofactor --auth_password raw [--comment ?text]',
             'verifytwofactor --auth_twofactor int',
             'createcontact '.Contact::GetFetchUsage(),
             'verifycontact --authkey utf8',
@@ -274,9 +274,9 @@ class AccountsApp extends InstalledApp
             'editcontact --contact id [--usefrom bool] [--public bool]',
             'searchaccounts --name alphanum|email',
             'searchgroups --name name',
-            'listaccounts [--limit uint] [--offset uint]',
-            'listgroups [--limit uint] [--offset uint]',
-            'creategroup --name name [--priority int8] [--comment text]',
+            'listaccounts [--limit ?uint] [--offset ?uint]',
+            'listgroups [--limit ?uint] [--offset ?uint]',
+            'creategroup --name name [--priority ?int8] [--comment ?text]',
             'editgroup --group id [--name name] [--priority int8] [--comment ?text]',
             'getgroup --group id',
             'deletegroup --group id',
@@ -814,7 +814,7 @@ class AccountsApp extends InstalledApp
             }
             else Authenticator::StaticTryRequireTwoFactor($params, $account);
             
-            $cname = $params->HasParam('name') ? $params->GetParam('name')->GetName() : null;
+            $cname = $params->GetOptParam('name',null)->GetNullName();
             $client = Client::Create($interface, $this->database, $account, $cname);
         }
         
@@ -901,7 +901,7 @@ class AccountsApp extends InstalledApp
         
         $authenticator->RequirePassword()->TryRequireCrypto();
         
-        $comment = $params->HasParam('comment') ? $params->GetParam('comment')->GetHTMLText() : null;
+        $comment = $params->GetOptParam('comment',null)->GetNullHTMLText();
         
         $twofactor = TwoFactor::Create($this->database, $account, $comment);
         
@@ -1020,7 +1020,6 @@ class AccountsApp extends InstalledApp
         $session = $authenticator->GetSession();
 
         $specify = $params->HasParam('session');
-        
         if (($authenticator->isSudoUser()) && !$specify)
             throw new UnknownSessionException();
 
@@ -1176,8 +1175,8 @@ class AccountsApp extends InstalledApp
         
         if (!$limit) throw new SearchDeniedException();
 
-        $name = self::getUsername($params->GetParam('name')
-            ->CheckFunction(function($v){ return mb_strlen($v) >= 3; }));
+        $name = self::getUsername($params->GetParam('name')->CheckFunction(
+            function(string $v){ return mb_strlen($v) >= 3; }));
 
         return array_map(function(Account $account){ return $account->GetClientObject(); },
             Account::LoadAllMatchingInfo($this->database, $name, $limit));
@@ -1204,7 +1203,7 @@ class AccountsApp extends InstalledApp
         if (!$limit) throw new SearchDeniedException();
         
         $name = $params->GetParam('name')->CheckFunction(
-            function($v){ return mb_strlen($v) >= 3; })->GetName();
+            function(string $v){ return mb_strlen($v) >= 3; })->GetName();
         
         return array_map(function(Group $group){ return $group->GetClientObject(); },
             Group::LoadAllMatchingName($this->database, $name, $limit));
@@ -1222,8 +1221,8 @@ class AccountsApp extends InstalledApp
             throw new AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $limit = $params->HasParam('limit') ? $params->GetParam('limit')->GetUint() : null;
-        $offset = $params->HasParam('offset') ? $params->GetParam('offset')->GetUint() : null;
+        $limit = $params->GetOptParam('limit',null)->GetNullUint();
+        $offset = $params->GetOptParam('offset',null)->GetNullUint();
         
         $full = $params->GetOptParam("full",false)->GetBool();
         $type = $full ? Account::OBJECT_ADMIN : 0;
@@ -1246,8 +1245,8 @@ class AccountsApp extends InstalledApp
             throw new AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $limit = $params->HasParam('limit') ? $params->GetParam('limit')->GetUint() : null;
-        $offset = $params->HasParam('offset') ? $params->GetParam('offset')->GetUint() : null;
+        $limit = $params->GetOptParam('limit',null)->GetNullUint();
+        $offset = $params->GetOptParam('offset',null)->GetNullUint();
         
         $groups = Group::LoadAll($this->database, $limit, $offset);
         
@@ -1270,8 +1269,8 @@ class AccountsApp extends InstalledApp
         
         $name = $params->GetParam("name")->CheckLength(127)->GetName();
         
-        $priority = $params->HasParam('priority') ? $params->GetParam('priority')->GetInt8() : null;
-        $comment = $params->HasParam('comment') ? $params->GetParam('comment')->GetHTMLText() : null;
+        $priority = $params->GetOptParam('priority',null)->GetNullInt8();
+        $comment = $params->GetOptParam('comment',null)->GetNullHTMLText();
         
         $duplicate = Group::TryLoadByName($this->database, $name);
         if ($duplicate !== null) throw new GroupExistsException();

@@ -89,7 +89,7 @@ class FTP extends FTPBase2
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port uint16] [--implssl bool]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?uint16] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
@@ -97,7 +97,7 @@ class FTP extends FTPBase2
         
         return parent::Create($database, $params, $filesystem)
             ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
-            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
+            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16())
             ->SetScalar('implssl', $params->GetOptParam('implssl',false)->GetBool());
     }
     

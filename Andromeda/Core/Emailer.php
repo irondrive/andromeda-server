@@ -126,10 +126,10 @@ final class Emailer extends BaseObject
     }
     
     /** Returns a string with the CLI usage for creating an emailer */
-    public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name name] [--use_reply bool]"; }
+    public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name ?name] [--use_reply ?bool]"; }
     
     /** Returns a array of strings with the CLI usage for each specific driver */
-    public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port uint16] [--proto ssl|tls]) | --hosts json[]) [--username utf8] [--password raw]"); }
+    public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port ?uint16] [--proto ?ssl|tls]) | --hosts json[]) [--username ?utf8] [--password ?raw]"); }
     
     /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
@@ -143,19 +143,13 @@ final class Emailer extends BaseObject
         
         $mailer->from_address->SetValue($params->GetParam('from_address')->GetEmail());
         
-        if ($params->HasParam('from_name'))
-            $mailer->from_name->SetValue($params->GetParam('from_name')->GetName());
-
-        if ($params->HasParam('use_reply'))
-            $mailer->use_reply->SetValue($params->GetParam('use_reply')->GetBool());
+        $mailer->from_name->SetValue($params->GetOptParam('from_name',null)->GetNullName());
+        $mailer->use_reply->SetValue($params->GetOptParam('use_reply',null)->GetNullBool());
 
         if ($type == self::TYPE_SMTP)
         {
-            if ($params->HasParam('username'))
-                $mailer->username->SetValue($params->GetParam('username')->GetUTF8String());
-            
-            if ($params->HasParam('password'))
-                $mailer->password->SetValue($params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetRawString());
+            $mailer->username->SetValue($params->GetOptParam('username',null)->GetNullUTF8String());
+            $mailer->password->SetValue($params->GetOptParam('password',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString());
 
             if ($params->HasParam('hosts'))
             {
@@ -191,9 +185,8 @@ final class Emailer extends BaseObject
     {
         $host = $params->GetParam('host')->GetHostname();
         
-        $port = $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null;
-        
-        $proto = $params->HasParam('proto') ? $params->GetParam('proto')->FromWhitelist(array('tls','ssl')) : null;
+        $port = $params->GetOptParam('port',null)->GetNullUint16();
+        $proto =  $params->GetOptParam('proto',null)->FromWhitelistNull(array('tls','ssl'));
         
         if ($port) $host .= ":$port";
         if ($proto) $host = "$proto://$host";        

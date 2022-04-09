@@ -105,7 +105,7 @@ class SFTP extends SFTPBase2
     /** Sets the cached host public key to the given value */
     protected function SetHostKey(?string $val) : self { return $this->SetScalar('hostkey',$val); }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port uint16] [--privkey% path | --privkey-] [--keypass raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?uint16] [--privkey% path | --privkey-] [--keypass ?raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     { 
@@ -113,8 +113,8 @@ class SFTP extends SFTPBase2
         
         $obj = parent::Create($database, $input, $filesystem)
             ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
-            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
-            ->SetKeypass($params->HasParam('keypass') ? $params->GetParam('keypass',SafeParams::PARAMLOG_NEVER)->GetRawString() : null);
+            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16())
+            ->SetKeypass($params->GetOptParam('keypass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString());
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey($input->GetFile('privkey')->GetData());
         
