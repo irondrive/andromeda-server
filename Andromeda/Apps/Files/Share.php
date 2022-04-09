@@ -6,9 +6,6 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -200,40 +197,45 @@ class Share extends AuthObject
     
     /** Returns the command usage for SetOptions() */
     public static function GetSetOptionsUsage() : string { return "[--read bool] [--upload bool] [--modify bool] [--social bool] [--reshare bool] [--keepowner bool] ".
-                                                                  "[--label text] [--spassword ?raw] [--expires ?uint] [--maxaccess ?uint32]"; }
+                                                                  "[--label ?text] [--spassword ?raw] [--expires ?float] [--maxaccess ?uint32]"; }
     
     /**
      * Modifies share permissions and properties from the given input
      * @param Share $access if not null, the share object granting this request access
      * @return $this
      */
-    public function SetOptions(Input $input, ?Share $access = null) : self
+    public function SetOptions(SafeParams $params, ?Share $access = null) : self
     {
-        $f_read =    $input->GetOptParam('read',SafeParam::TYPE_BOOL);
-        $f_upload =  $input->GetOptParam('upload',SafeParam::TYPE_BOOL);
-        $f_modify =  $input->GetOptParam('modify',SafeParam::TYPE_BOOL);
-        $f_social =  $input->GetOptParam('social',SafeParam::TYPE_BOOL);
-        $f_reshare = $input->GetOptParam('reshare',SafeParam::TYPE_BOOL);
-        $f_keepown = $input->GetOptParam('keepowner',SafeParam::TYPE_BOOL);
+        if ($params->HasParam('read'))
+            $this->SetFeatureBool('read', $params->GetParam('read')->GetBool() && ($access === null || $access->CanRead()));
+        // TODO double check logic here, why allow setting to false? seems weird
+    
+        if ($params->HasParam('upload'))
+            $this->SetFeatureBool('upload', $params->GetParam('upload')->GetBool() && ($access === null || $access->CanUpload()));
         
-        if ($f_read !== null)    $this->SetFeatureBool('read', $f_read && ($access === null || $access->CanRead()));
-        if ($f_upload !== null)  $this->SetFeatureBool('upload', $f_upload && ($access === null || $access->CanUpload()));
-        if ($f_modify !== null)  $this->SetFeatureBool('modify', $f_modify && ($access === null || $access->CanModify()));
-        if ($f_social !== null)  $this->SetFeatureBool('social', $f_social && ($access === null || $access->CanSocial()));
-        if ($f_reshare !== null) $this->SetFeatureBool('reshare', $f_reshare && ($access === null || $access->CanReshare()));
-        if ($f_keepown !== null) $this->SetFeatureBool('keepowner', $f_keepown && ($access === null || $access->KeepOwner()));
+        if ($params->HasParam('modify'))
+            $this->SetFeatureBool('modify', $params->GetParam('modify')->GetBool() && ($access === null || $access->CanModify()));
         
-        if ($input->HasParam('label')) $this->SetScalar('label',
-            $input->GetNullParam('label',SafeParam::TYPE_TEXT));
-                
-        if ($input->HasParam('spassword')) $this->SetPassword(
-            $input->GetNullParam('spassword',SafeParam::TYPE_RAW,SafeParams::PARAMLOG_NEVER));
+        if ($params->HasParam('social'))
+            $this->SetFeatureBool('social', $params->GetParam('social')->GetBool() && ($access === null || $access->CanSocial()));
         
-        if ($input->HasParam('expires')) $this->SetDate('expires',
-            $input->GetNullParam('expires',SafeParam::TYPE_UINT));
+        if ($params->HasParam('reshare'))
+            $this->SetFeatureBool('reshare', $params->GetParam('reshare')->GetBool() && ($access === null || $access->CanReshare()));
         
-        if ($input->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
-            $input->GetNullParam('maxaccess',SafeParam::TYPE_UINT32));
+        if ($params->HasParam('keepowner'))
+            $this->SetFeatureBool('keepowner', $params->GetParam('keepowner')->GetBool() && ($access === null || $access->KeepOwner()));
+
+        if ($params->HasParam('label')) $this->SetScalar('label',
+            $params->GetParam('label')->GetNullHTMLText());
+        
+        if ($params->HasParam('spassword')) $this->SetPassword(
+            $params->GetParam('spassword',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+        
+        if ($params->HasParam('expires')) $this->SetDate('expires',
+            $params->GetParam('expires')->GetNullFloat());
+        
+        if ($params->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
+            $params->GetParam('maxaccess')->GetNullUint32());
         
         return $this;
     }

@@ -4,8 +4,6 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -130,15 +128,17 @@ class S3 extends S3Base
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($input)
-            ->SetScalar('endpoint', self::cleanPath($input->GetParam('endpoint', SafeParam::TYPE_FSPATH)))
-            ->SetScalar('path_style', $input->GetOptParam('path_style',SafeParam::TYPE_BOOL))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
-            ->SetScalar('usetls', $input->GetOptParam('usetls', SafeParam::TYPE_BOOL))
-            ->SetScalar('region', $input->GetParam('region', SafeParam::TYPE_ALPHANUM))
-            ->SetScalar('bucket', $input->GetParam('bucket', SafeParam::TYPE_ALPHANUM))
-            ->SetAccessKey($input->GetOptParam('accesskey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER))
-            ->SetSecretKey($input->GetOptParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
+        $params = $input->GetParams();
+        
+        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($params)
+            ->SetScalar('endpoint', self::cleanPath($params->GetParam('endpoint')->GetFSPath()))
+            ->SetScalar('path_style', $params->HasParam('path_style') ? $params->GetParam('path_style')->GetBool() : null)
+            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
+            ->SetScalar('usetls', $params->HasParam('usetls') ? $params->GetParam('usetls')->GetBool() : null)
+            ->SetScalar('region', $params->GetParam('region')->GetAlphanum())
+            ->SetScalar('bucket', $params->GetParam('bucket')->GetAlphanum())
+            ->SetAccessKey($params->HasParam('accesskey') ? $params->GetParam('accesskey',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null)
+            ->SetSecretKey($params->HasParam('secretkey') ? $params->GetParam('secretkey',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null);
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." ".self::GetFieldCryptEditUsage().
@@ -147,19 +147,22 @@ class S3 extends S3Base
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('endpoint')) $this->SetScalar('endpoint', self::cleanPath($input->GetParam('endpoint', SafeParam::TYPE_FSPATH)));
+        $params = $input->GetParams();
         
-        if ($input->HasParam('region')) $this->SetScalar('region', $input->GetParam('region', SafeParam::TYPE_ALPHANUM));
-        if ($input->HasParam('bucket')) $this->SetScalar('bucket', $input->GetParam('bucket', SafeParam::TYPE_ALPHANUM));
+        if ($params->HasParam('endpoint')) $this->SetScalar('endpoint', self::cleanPath($params->GetParam('endpoint')->GetFSPath()));
         
-        if ($input->HasParam('port')) $this->SetScalar('port', $input->GetNullParam('port', SafeParam::TYPE_UINT16));
-        if ($input->HasParam('usetls')) $this->SetScalar('usetls', $input->GetNullParam('usetls', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('path_style')) $this->SetScalar('path_style', $input->GetNullParam('path_style', SafeParam::TYPE_BOOL));
+        if ($params->HasParam('region')) $this->SetScalar('region', $params->GetParam('region')->GetAlphanum());
+        if ($params->HasParam('bucket')) $this->SetScalar('bucket', $params->GetParam('bucket')->GetAlphanum());
         
-        if ($input->HasParam('accesskey')) $this->SetScalar('accesskey', $input->GetNullParam('accesskey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
-        if ($input->HasParam('secretkey')) $this->SetScalar('secretkey', $input->GetNullParam('secretkey', SafeParam::TYPE_RANDSTR, SafeParams::PARAMLOG_NEVER));
+        if ($params->HasParam('port')) $this->SetScalar('port', $params->GetParam('port')->GetNullUint16());
+        if ($params->HasParam('usetls')) $this->SetScalar('usetls', $params->GetParam('usetls')->GetNullBool());
+        if ($params->HasParam('path_style')) $this->SetScalar('path_style', $params->GetParam('path_style')->GetNullBool());
         
-        $this->FieldCryptEdit($input); return parent::Edit($input);
+        if ($params->HasParam('accesskey')) $this->SetScalar('accesskey', $params->GetParam('accesskey',SafeParams::PARAMLOG_NEVER)->GetNullRandstr());
+        if ($params->HasParam('secretkey')) $this->SetScalar('secretkey', $params->GetParam('secretkey',SafeParams::PARAMLOG_NEVER)->GetNullRandstr());
+        
+        $this->FieldCryptEdit($params); 
+        return parent::Edit($input);
     }
     
     /** s3 connection resource */ private $s3;

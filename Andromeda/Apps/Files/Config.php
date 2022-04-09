@@ -4,8 +4,7 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
 class Config extends BaseConfig
@@ -26,19 +25,19 @@ class Config extends BaseConfig
     
     /** Returns the command usage for SetConfig() */
     public static function GetSetConfigUsage() : string { return "[--rwchunksize uint32] [--crchunksize uint32]".
-                                          " [--upload_maxsize ?uint] [--timedstats bool] [--apiurl ?string]"; }
+                                          " [--upload_maxsize ?uint] [--timedstats bool] [--apiurl ?url]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
-    public function SetConfig(Input $input) : self
+    public function SetConfig(SafeParams $params) : self
     {
-        if ($input->HasParam('apiurl')) $this->SetScalar('apiurl',$input->GetNullParam('apiurl',SafeParam::TYPE_RAW)); // TODO add and use URL SafeParam?
+        if ($params->HasParam('apiurl')) $this->SetScalar('apiurl',$params->GetParam('apiurl')->GetNullUTF8String()); // TODO add and use URL SafeParam?
         
-        if ($input->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$input->GetParam('rwchunksize',SafeParam::TYPE_UINT32));
-        if ($input->HasParam('crchunksize')) $this->SetScalar('crchunksize',$input->GetParam('crchunksize',SafeParam::TYPE_UINT32));
+        if ($params->HasParam('rwchunksize')) $this->SetScalar('rwchunksize',$params->GetParam('rwchunksize')->GetUint32());
+        if ($params->HasParam('crchunksize')) $this->SetScalar('crchunksize',$params->GetParam('crchunksize')->GetUint32());
         
-        if ($input->HasParam('upload_maxsize')) $this->SetScalar('upload_maxsize',$input->GetNullParam('upload_maxsize',SafeParam::TYPE_UINT));
+        if ($params->HasParam('upload_maxsize')) $this->SetScalar('upload_maxsize',$params->GetParam('upload_maxsize')->GetNullUint());
         
-        if ($input->HasParam('timedstats')) $this->SetFeatureBool('timedstats',$input->GetParam('timedstats',SafeParam::TYPE_BOOL));
+        if ($params->HasParam('timedstats')) $this->SetFeatureBool('timedstats',$params->GetParam('timedstats')->GetBool());
         
         return $this;
     }

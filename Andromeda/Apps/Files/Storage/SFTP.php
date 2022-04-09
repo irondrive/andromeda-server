@@ -109,10 +109,12 @@ class SFTP extends SFTPBase2
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     { 
+        $params = $input->GetParams();
+        
         $obj = parent::Create($database, $input, $filesystem)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
-            ->SetKeypass($input->GetOptParam('keypass', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));         
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
+            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
+            ->SetKeypass($params->HasParam('keypass') ? $params->GetParam('keypass',SafeParams::PARAMLOG_NEVER)->GetRawString() : null);
         
         if ($input->HasFile('privkey')) $obj->SetPrivkey($input->GetFile('privkey')->GetData());
         
@@ -123,13 +125,15 @@ class SFTP extends SFTPBase2
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT16));
+        $params = $input->GetParams();
         
-        if ($input->HasParam('keypass')) $this->SetKeypass($input->GetNullParam('keypass',SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
-        if ($input->HasFile('privkey')) $this->SetPrivkey($input->GetFile('privkey')->GetData());
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
+        if ($params->HasParam('port')) $this->SetScalar('port',$params->GetParam('port')->GetNullUint16());
         
-        if ($input->GetOptParam('resethost',SafeParam::TYPE_BOOL)) $this->SetHostKey(null);
+        if ($params->HasParam('keypass')) $this->SetKeypass($params->GetParam('keypass',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+        if ($params->HasFile('privkey')) $this->SetPrivkey($input->GetFile('privkey')->GetData());
+        
+        if ($params->GetOptParam('resethost',false)->GetBool()) $this->SetHostKey(null);
         
         return parent::Edit($input);
     }

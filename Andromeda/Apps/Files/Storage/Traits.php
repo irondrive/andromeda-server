@@ -4,7 +4,6 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Excepti
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
@@ -54,10 +53,11 @@ trait UserPass
     /** Performs cred-crypt level initialization on a new storage */
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
-        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($input)
-            ->SetPassword($input->GetOptParam('password', SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER))
-            ->SetUsername($input->GetOptParam('username', SafeParam::TYPE_ALPHANUM, 
-                SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
+        $params = $input->GetParams();
+        
+        return parent::Create($database, $input, $filesystem)->FieldCryptCreate($params)
+            ->SetPassword($params->HasParam('password') ? $params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetRawString() : null)
+            ->SetUsername($params->HasParam('username') ? $params->GetParam('username')->CheckLength(255)->GetAlphanum() : null);
     }
     
     /** Returns the command usage for Edit() */
@@ -66,12 +66,13 @@ trait UserPass
     /** Performs cred-crypt level edit on an existing storage */
     public function Edit(Input $input) : Storage
     {
-        if ($input->HasParam('password')) $this->SetPassword($input->GetNullParam('password', 
-            SafeParam::TYPE_RAW, SafeParams::PARAMLOG_NEVER));
-        if ($input->HasParam('username')) $this->SetUsername($input->GetNullParam('username', 
-            SafeParam::TYPE_ALPHANUM, SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(255)));
+        $params = $input->GetParams();
+        
+        if ($params->HasParam('password')) $this->SetPassword($params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+        if ($params->HasParam('username')) $this->SetUsername($params->GetParam('username')->CheckLength(255)->GetNullAlphanum());
 
-        $this->FieldCryptEdit($input); return parent::Edit($input);
+        $this->FieldCryptEdit($params);
+        return parent::Edit($input);
     }
     
     /** Returns the decrypted username */
@@ -139,7 +140,8 @@ trait BasePath
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
     {
-        $path = $input->GetParam('path', SafeParam::TYPE_FSPATH);
+        $path = $input->GetParams()->GetParam('path')->GetFSPath();
+        
         return parent::Create($database, $input, $filesystem)->SetPath($path);
     }
     
@@ -147,8 +149,11 @@ trait BasePath
     
     public function Edit(Input $input) : Storage
     {
-        $path = $input->GetOptParam('path', SafeParam::TYPE_FSPATH);
-        if ($path !== null) $this->SetPath($path);
+        $params = $input->GetParams();
+        
+        if ($params->HasParam('path')) 
+            $this->SetPath($params->GetParam('path')->GetFSPath());
+        
         return parent::Edit($input);
     }
     

@@ -3,7 +3,6 @@
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
@@ -94,21 +93,25 @@ class FTP extends FTPBase2
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
-        return parent::Create($database, $input, $filesystem)
-            ->SetScalar('hostname', $input->GetParam('hostname', SafeParam::TYPE_HOSTNAME))
-            ->SetScalar('port', $input->GetOptParam('port', SafeParam::TYPE_UINT16))
-            ->SetScalar('implssl', $input->GetOptParam('implssl', SafeParam::TYPE_BOOL) ?? false);
+        $params = $input->GetParams();
+        
+        return parent::Create($database, $params, $filesystem)
+            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
+            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
+            ->SetScalar('implssl', $params->GetOptParam('implssl',false)->GetBool());
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." [--hostname alphanum] [--port ?uint16] [--implssl bool]"; }
     
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('hostname')) $this->SetScalar('hostname',$input->GetParam('hostname', SafeParam::TYPE_HOSTNAME));
-        if ($input->HasParam('implssl')) $this->SetScalar('implssl',$input->GetParam('implssl', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('port')) $this->SetScalar('port',$input->GetNullParam('port', SafeParam::TYPE_UINT16));
+        $params = $input->GetParams();
         
-        return parent::Edit($input);
+        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
+        if ($params->HasParam('port')) $this->SetScalar('port',$params->GetParam('port')->GetNullUint16());
+        if ($params->HasParam('implssl')) $this->SetScalar('implssl',$params->GetParam('implssl')->GetBool());
+        
+        return parent::Edit($params);
     }
     
     /** Check for the FTP extension */

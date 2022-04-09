@@ -38,10 +38,10 @@ class ActionLog extends AuthActionLog
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_file' => new FieldTypes\ObjectRef(File::class),
-            'obj_folder' => new FieldTypes\ObjectRef(Folder::class),
+            'obj_folder' => new FieldTypes\ObjectRef(Folder::class), // TODO combine to item?
             'obj_parent' => new FieldTypes\ObjectRef(Folder::class),
             'obj_file_share' => new FieldTypes\ObjectRef(Share::class),
-            'obj_folder_share' => new FieldTypes\ObjectRef(Share::class),
+            'obj_folder_share' => new FieldTypes\ObjectRef(Share::class), // TODO combine to item_share
             'obj_parent_share' => new FieldTypes\ObjectRef(Share::class)
         ));
     }
@@ -50,7 +50,7 @@ class ActionLog extends AuthActionLog
      * Links this log to the given item accessor
      * @param bool $isParent if true, log as a parent folder access
      */
-    public function LogAccess(Item $item, ?Share $share, bool $isParent = false) : self
+    public function LogAccess(Item $item, ?Share $share, bool $isParent = false) : self // TODO replace with LogItemAccess and LogParentAccess
     {        
         if ($isParent) return $this->SetObject('parent',$item)->SetObject('parent_share',$share);   
         
@@ -78,25 +78,25 @@ class ActionLog extends AuthActionLog
         return parent::BaseAuthCreate($database, $auth);
     }
 
-    public static function GetPropUsage() : string { return parent::GetPropUsage()." [--file id] [--folder id] [--file_share id] [--folder_share id]"; }
+    public static function GetPropUsage() : string { return parent::GetPropUsage()." [--file id] [--folder id] [--file_share id] [--folder_share id]"; } // TODO combine to item_share?
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
     {
         $criteria = array(); $table = $database->GetClassTableName(static::class);
         
-        if ($input->HasParam('file')) $criteria[] = $q->Equals("$table.obj_file", $input->GetParam('file',SafeParam::TYPE_RANDSTR));
-        if ($input->HasParam('file_share')) $criteria[] = $q->Equals("$table.obj_file_share", $input->GetParam('file_share',SafeParam::TYPE_RANDSTR));
+        if ($params->HasParam('file')) $criteria[] = $q->Equals("$table.obj_file", $params->GetParam('file')->GetRandstr());
+        if ($params->HasParam('file_share')) $criteria[] = $q->Equals("$table.obj_file_share", $params->GetParam('file_share')->GetRandstr());
         
-        if ($input->HasParam('folder')) 
+        if ($params->HasParam('folder')) 
         {
-            $folder = $input->GetParam("folder",SafeParam::TYPE_RANDSTR);
+            $folder = $params->GetParam("folder")->GetRandstr();
             $criteria[] = $q->Or($q->Equals("$table.obj_folder",$folder), 
                                  $q->Equals("$table.obj_parent",$folder));
         }
         
-        if ($input->HasParam('folder_share'))
+        if ($params->HasParam('folder_share'))
         {
-            $folder = $input->GetParam("folder_share",SafeParam::TYPE_RANDSTR);
+            $folder = $params->GetParam("folder_share")->GetRandstr();
             $criteria[] = $q->Or($q->Equals("$table.obj_folder_share",$folder),
                                  $q->Equals("$table.obj_parent_share",$folder));
         }

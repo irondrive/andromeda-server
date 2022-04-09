@@ -4,8 +4,7 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\{Account, GroupInherit};
 require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
@@ -79,18 +78,18 @@ trait AccountCommon
 
     public static function GetBaseUsage() : string { return "[--track_items ?bool] [--track_dlstats ?bool]"; }
     
-    protected function SetBaseLimits(Input $input) : void
+    protected function SetBaseLimits(SafeParams $params) : void
     {
-        if ($input->HasParam('track_items'))
+        if ($params->HasParam('track_items'))
         {
-            $this->SetFeatureBool('track_items', $input->GetNullParam('track_items', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_items', $params->GetParam('track_items')->GetNullBool());
             
             if ($this->isFeatureModified('track_items')) $init = true;
         }        
         
-        if ($input->HasParam('track_dlstats')) 
+        if ($params->HasParam('track_dlstats')) 
         {
-            $this->SetFeatureBool('track_dlstats', $input->GetNullParam('track_dlstats', SafeParam::TYPE_BOOL));
+            $this->SetFeatureBool('track_dlstats', $params->GetParam('track_dlstats')->GetNullBool());
             
             if ($this->isFeatureModified('track_dlstats')) $init = true;
         }
@@ -99,9 +98,9 @@ trait AccountCommon
     }    
     
     /** Configures limits for the given account with the given input */
-    public static function ConfigLimits(ObjectDatabase $database, Account $account, Input $input) : self
+    public static function ConfigLimits(ObjectDatabase $database, Account $account, SafeParams $params) : self
     {
-        return static::BaseConfigLimits($database, $account, $input);
+        return static::BaseConfigLimits($database, $account, $params);
     }    
 
     /**

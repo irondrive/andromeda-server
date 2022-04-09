@@ -7,13 +7,12 @@ require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Databas
 
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
+require_once(ROOT."/Apps/Files/FilesApp.php"); use Andromeda\Apps\Files\RandomWriteDisabledException;
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\ActivateException;
 
@@ -211,20 +210,18 @@ class FSManager extends BaseObject // TODO was StandardObject
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
-        $name = $input->GetOptParam('name', SafeParam::TYPE_NAME, 
-            SafeParams::PARAMLOG_ONLYFULL, null, SafeParam::MaxLength(127));
+        $params = $input->GetParams();
         
-        $readonly = $input->GetOptParam('readonly', SafeParam::TYPE_BOOL) ?? false;
+        $name = $params->HasParam('name') ? $params->GetParam('name')->CheckLength(127)->GetName() : null;
+        
+        $readonly = $params->GetOptParam('readonly',false)->GetBool();
         
         $classes = self::getStorageClasses();
         
-        $sttype = $input->GetParam('sttype', SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array_keys($classes));
-        
-        $fstype = $input->GetOptParam('fstype', SafeParam::TYPE_ALPHANUM, 
-            SafeParams::PARAMLOG_ONLYFULL, array('native','crypt','external'));  
-        
-        switch ($fstype ?? 'native')
+        $sttype = $params->GetParam('sttype')->FromWhitelist(array_keys($classes));
+
+        switch ($params->GetOptParam('fstype','native')
+            ->FromWhitelist(array('native','crypt','external')))
         {
             case 'native': $fstype = self::TYPE_NATIVE; break;
             case 'crypt':  $fstype = self::TYPE_NATIVE_CRYPT; break;
@@ -237,13 +234,18 @@ class FSManager extends BaseObject // TODO was StandardObject
         
         if ($filesystem->isEncrypted())
         {
-            if (Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
+            $chunksize = null; if ($params->HasParam('chunksize'))
             {
-                $chunksize = $input->GetOptParam('chunksize',SafeParam::TYPE_UINT,SafeParams::PARAMLOG_ONLYFULL, null,
-                    function($v){ return $v >= 4*1024 && $v <= 1*1024*1024; });
+                if (!Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
+                    throw new RandomWriteDisabledException();
+                
+                $checkSize = function(string $v){ $v = intval($v); 
+                    return $v >= 4*1024 && $v <= 1*1024*1024; }; // check in range [4K,1M]
+                $chunksize = $params->GetParam('chunksize')->CheckFunction($checkSize)->GetUint();
+                    
             }
             
-            if (!($chunksize ?? false)) $chunksize = Config::GetInstance($database)->GetCryptoChunkSize();
+            $chunksize ??= Config::GetInstance($database)->GetCryptoChunkSize();
             
             $filesystem->SetScalar('crypto_chunksize', $chunksize);
             $filesystem->SetScalar('crypto_masterkey', CryptoSecret::GenerateKey());
@@ -274,8 +276,10 @@ class FSManager extends BaseObject // TODO was StandardObject
     /** Edits an existing filesystem with the given values, and tests it */
     public function Edit(Input $input) : self
     {
-        if ($input->HasParam('name')) $this->SetName($input->GetNullParam('name',SafeParam::TYPE_NAME));
-        if ($input->HasParam('readonly')) $this->SetReadOnly($input->GetParam('readonly',SafeParam::TYPE_BOOL));
+        $params = $input->GetParams();
+        
+        if ($params->HasParam('name')) $this->SetName($params->GetParam('name')->GetNullName());
+        if ($params->HasParam('readonly')) $this->SetReadOnly($params->GetParam('readonly')->GetBool());
         
         $this->EditStorage($input)->Test(); return $this;
     }

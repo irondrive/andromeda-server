@@ -4,8 +4,7 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Limits/Base.php");
 
@@ -106,22 +105,22 @@ abstract class Total extends Base
                                                                "[--itemsharing ?bool] [--share2groups ?bool] [--share2everyone ?bool] ".
                                                                "[--max_size ?uint] [--max_items ?uint32] [--max_shares ?uint32]"; }
         
-    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input) : self
+    protected static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, SafeParams $params) : self
     {
         $lim = static::LoadByClient($database, $obj) ?? static::Create($database, $obj);
         
-        $lim->SetBaseLimits($input);
+        $lim->SetBaseLimits($params);
         
-        if ($input->HasParam('randomwrite')) $lim->SetFeatureBool('randomwrite', $input->GetNullParam('randomwrite', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicmodify')) $lim->SetFeatureBool('publicmodify', $input->GetNullParam('publicmodify', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('publicupload')) $lim->SetFeatureBool('publicupload', $input->GetNullParam('publicupload', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('itemsharing')) $lim->SetFeatureBool('itemsharing', $input->GetNullParam('itemsharing', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('share2groups')) $lim->SetFeatureBool('share2groups', $input->GetNullParam('share2groups', SafeParam::TYPE_BOOL));
-        if ($input->HasParam('share2everyone')) $lim->SetFeatureBool('share2everyone', $input->GetNullParam('share2everyone', SafeParam::TYPE_BOOL));
+        if ($params->HasParam('randomwrite')) $lim->SetFeatureBool('randomwrite', $params->GetParam('randomwrite')->GetNullBool());
+        if ($params->HasParam('publicmodify')) $lim->SetFeatureBool('publicmodify', $params->GetParam('publicmodify')->GetNullBool());
+        if ($params->HasParam('publicupload')) $lim->SetFeatureBool('publicupload', $params->GetParam('publicupload')->GetNullBool());
+        if ($params->HasParam('itemsharing')) $lim->SetFeatureBool('itemsharing', $params->GetParam('itemsharing')->GetNullBool());
+        if ($params->HasParam('share2groups')) $lim->SetFeatureBool('share2groups', $params->GetParam('share2groups')->GetNullBool());
+        if ($params->HasParam('share2everyone')) $lim->SetFeatureBool('share2everyone', $params->GetParam('share2everyone')->GetNullBool());
         
-        if ($input->HasParam('max_size')) $lim->SetCounterLimit('size', $input->GetNullParam('max_size', SafeParam::TYPE_UINT));
-        if ($input->HasParam('max_items')) $lim->SetCounterLimit('items', $input->GetNullParam('max_items', SafeParam::TYPE_UINT32));
-        if ($input->HasParam('max_shares')) $lim->SetCounterLimit('shares', $input->GetNullParam('max_shares', SafeParam::TYPE_UINT32));
+        if ($params->HasParam('max_size')) $lim->SetCounterLimit('size', $params->GetParam('max_size')->GetNullUint());
+        if ($params->HasParam('max_items')) $lim->SetCounterLimit('items', $params->GetParam('max_items')->GetNullUint32());
+        if ($params->HasParam('max_shares')) $lim->SetCounterLimit('shares', $params->GetParam('max_shares')->GetNullUint32());
 
         if ($lim->isCreated()) $lim->Initialize();
         
