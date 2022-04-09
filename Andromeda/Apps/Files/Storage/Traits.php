@@ -48,7 +48,7 @@ trait UserPass
     }
     
     /** Returns the command usage for Create() */
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".self::GetFieldCryptCreateUsage()." [--username alphanum] [--password raw]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".self::GetFieldCryptCreateUsage()." [--username ?alphanum] [--password ?raw]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : Storage
@@ -56,8 +56,8 @@ trait UserPass
         $params = $input->GetParams();
         
         return parent::Create($database, $input, $filesystem)->FieldCryptCreate($params)
-            ->SetPassword($params->HasParam('password') ? $params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetRawString() : null)
-            ->SetUsername($params->HasParam('username') ? $params->GetParam('username')->CheckLength(255)->GetAlphanum() : null);
+            ->SetPassword($params->GetOptParam('password',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString())
+            ->SetUsername($params->GetOptParam('username',null)->CheckLength(255)->GetNullAlphanum());
     }
     
     /** Returns the command usage for Edit() */

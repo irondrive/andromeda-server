@@ -4,6 +4,7 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
@@ -123,8 +124,8 @@ class S3 extends S3Base
     protected static function cleanPath(string $path) : string { return implode('/',array_filter(explode('/',$path))); }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." ".self::GetFieldCryptCreateUsage().
-        " --endpoint fspath --bucket alphanum --region alphanum [--path_style bool]".
-        " [--port uint16] [--usetls bool] [--accesskey randstr] [--secretkey randstr]"; }
+        " --endpoint fspath --bucket alphanum --region alphanum [--path_style ?bool]".
+        " [--port ?uint16] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
@@ -132,13 +133,13 @@ class S3 extends S3Base
         
         return parent::Create($database, $input, $filesystem)->FieldCryptCreate($params)
             ->SetScalar('endpoint', self::cleanPath($params->GetParam('endpoint')->GetFSPath()))
-            ->SetScalar('path_style', $params->HasParam('path_style') ? $params->GetParam('path_style')->GetBool() : null)
-            ->SetScalar('port', $params->HasParam('port') ? $params->GetParam('port')->GetUint16() : null)
-            ->SetScalar('usetls', $params->HasParam('usetls') ? $params->GetParam('usetls')->GetBool() : null)
+            ->SetScalar('path_style', $params->GetOptParam('path_style',null)->GetNullBool())
+            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16())
+            ->SetScalar('usetls', $params->GetOptParam('usetls',null)->GetNullBool())
             ->SetScalar('region', $params->GetParam('region')->GetAlphanum())
             ->SetScalar('bucket', $params->GetParam('bucket')->GetAlphanum())
-            ->SetAccessKey($params->HasParam('accesskey') ? $params->GetParam('accesskey',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null)
-            ->SetSecretKey($params->HasParam('secretkey') ? $params->GetParam('secretkey',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null);
+            ->SetAccessKey($params->GetOptParam('accesskey',null,SafeParams::PARAMLOG_NEVER)->GetNullRandstr())
+            ->SetSecretKey($params->GetOptParam('secretkey',null,SafeParams::PARAMLOG_NEVER)->GetNullRandstr());
     }
     
     public static function GetEditUsage() : string { return parent::GetEditUsage()." ".self::GetFieldCryptEditUsage().

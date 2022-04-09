@@ -70,14 +70,14 @@ class SMB extends SMBBase2
         ));
     }
     
-    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup alphanum]"; }
+    public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup ?alphanum]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, FSManager $filesystem) : self
     {
         $params = $input->GetParams();
         
         return parent::Create($database, $input, $filesystem)
-            ->SetScalar('workgroup', $params->HasParam('workgroup') ? $params->GetParam('workgroup')->CheckLength(255)->GetAlphanum() : null)
+            ->SetScalar('workgroup', $params->GetOptParam('workgroup',null)->CheckLength(255)->GetNullAlphanum())
             ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname());
     }
     

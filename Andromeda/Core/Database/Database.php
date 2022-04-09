@@ -191,7 +191,7 @@ class Database
     {
         return array(
             "--driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port uint16])) [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "--driver pgsql --dbname alphanum --host hostname [--port uint16] [--dbuser name] [--dbpass raw] [--persistent bool]",
+            "--driver pgsql --dbname alphanum --host hostname [--port ?uint16] [--dbuser ?name] [--dbpass ?raw] [--persistent ?bool]",
             "--driver sqlite --dbpath fspath"
         );
     }
@@ -221,9 +221,8 @@ class Database
             {
                 $connect .= ";host=".$params->GetParam('host')->GetHostname();
                 
-                if ($params->HasParam('port'))
+                if ($port = ($params->GetOptParam('port',null)->GetNullUint16()) !== null)
                 {
-                    $port = $params->GetParam('port')->GetUint16();
                     $connect .= ";port=$port";
                 }
             }
@@ -232,10 +231,10 @@ class Database
             
             $config['CONNECT'] = $connect;
             
-            $config['PERSISTENT'] = $params->HasParam('persistent') ? $params->GetParam('persistent')->GetBool() : null;
+            $config['PERSISTENT'] = $params->GetOptParam('persistent',null)->GetNullBool();
             
-            $config['USERNAME'] = $params->HasParam('dbuser') ? $params->GetParam('dbuser')->GetName() : null;
-            $config['PASSWORD'] = $params->HasParam('dbpass') ? $params->GetParam('dbpass',SafeParams::PARAMLOG_NEVER)->GetRawString() : null;
+            $config['USERNAME'] = $params->GetOptParam('dbuser',null)->GetNullName();
+            $config['PASSWORD'] = $params->GetOptParam('dbpass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString();
         }
         else if ($driver === 'sqlite')
         {
