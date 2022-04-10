@@ -182,12 +182,14 @@ class Group extends AuthEntity
         foreach ($this->GetDefaultAccounts() ?? array() as $account)
             Account::RunGroupChangeHandlers($this->database, $account, $this, false);
             
-        foreach (self::$delete_handlers as $func) $func($this->database, $this);
+        foreach (self::$delete_handlers as $func) 
+            $func($this->database, $this);
             
         parent::Delete();
     }
     
-    const OBJECT_FULL = 1; const OBJECT_ADMIN = 2;
+    public const OBJECT_FULL = 1; 
+    public const OBJECT_ADMIN = 2;
     
     /**
      * Gets this group as a printable object

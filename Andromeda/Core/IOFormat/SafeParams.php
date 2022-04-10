@@ -53,13 +53,13 @@ class SafeParams
     }
     
     /** Never log this input parameter (always used for RAW) */
-    const PARAMLOG_NEVER = 0;
+    public const PARAMLOG_NEVER = 0;
     
     /** Log the parameter only if details is full */
-    const PARAMLOG_ONLYFULL = Config::RQLOG_DETAILS_FULL;
+    public const PARAMLOG_ONLYFULL = Config::RQLOG_DETAILS_FULL;
     
     /** Log the parameter if log details are enabled */
-    const PARAMLOG_ALWAYS = Config::RQLOG_DETAILS_BASIC;
+    public const PARAMLOG_ALWAYS = Config::RQLOG_DETAILS_BASIC;
     
     /**
      * Gets the requested parameter (present and not null)

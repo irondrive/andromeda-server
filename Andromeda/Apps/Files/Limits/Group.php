@@ -17,12 +17,12 @@ require_once(ROOT."/Apps/Files/Limits/AuthObj.php");
 interface IGroupCommon 
 { 
     /** Track stats for component accounts by inheriting this property */
-    const TRACK_ACCOUNTS = 1;
+    private const TRACK_ACCOUNTS = 1;
     
     /** Track stats for components accounts and also the group as a whole */
-    const TRACK_WHOLE_GROUP = 2;
+    private const TRACK_WHOLE_GROUP = 2;
     
-    const TRACK_TYPES = array('none'=>0,
+    private const TRACK_TYPES = array('none'=>0,
         'accounts'=>self::TRACK_ACCOUNTS, 
         'wholegroup'=>self::TRACK_WHOLE_GROUP);  
 }

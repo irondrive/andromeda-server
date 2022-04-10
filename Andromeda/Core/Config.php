@@ -137,9 +137,7 @@ final class Config extends BaseConfig
     /** Creates a new config singleton with default values */
     public static function Create(ObjectDatabase $database) : self
     {
-        $obj = parent::BaseCreate($database);
-        $obj->version->SetValue(andromeda_version);
-        return $obj;
+        return parent::BaseCreate($database)->setVersion(andromeda_version);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
@@ -332,26 +330,26 @@ final class Config extends BaseConfig
     public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
     
     /** log basic details params and object IDs */
-    const RQLOG_DETAILS_BASIC = 1;
+    public const RQLOG_DETAILS_BASIC = 1;
     
     /** log more detailed info, and full objects when deleted */
-    const RQLOG_DETAILS_FULL = 2;
+    public const RQLOG_DETAILS_FULL = 2;
     
-    const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
+    private const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
     public function GetRequestLogDetails() : int { return $this->requestlog_details->GetValue(); }
     
     /** show a basic back trace */ 
-    const ERRLOG_ERRORS = 1; 
+    public const ERRLOG_ERRORS = 1; 
     
     /** show a full back trace, loaded objects, SQL queries */
-    const ERRLOG_DETAILS = 2;
+    public const ERRLOG_DETAILS = 2;
     
     /** also show input params, function arguments, SQL values */ 
-    const ERRLOG_SENSITIVE = 3;
+    public const ERRLOG_SENSITIVE = 3;
     
-    const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
+    public const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->debug->GetValue(); }
@@ -372,12 +370,12 @@ final class Config extends BaseConfig
     public function GetDebugOverHTTP() : bool { return $this->debug_http->GetValue(); }    
     
     /** Show basic performance metrics */
-    const METRICS_BASIC = 1;
+    public const METRICS_BASIC = 1;
     
     /** Show extended performance metrics */
-    const METRICS_EXTENDED = 2;
+    public const METRICS_EXTENDED = 2;
     
-    const METRICS_TYPES = array('none'=>0, 'basic'=>self::METRICS_BASIC, 'extended'=>self::METRICS_EXTENDED);
+    public const METRICS_TYPES = array('none'=>0, 'basic'=>self::METRICS_BASIC, 'extended'=>self::METRICS_EXTENDED);
     
     /** Returns the current metrics log level */
     public function GetMetricsLevel() : int { return $this->metrics->GetValue(); }

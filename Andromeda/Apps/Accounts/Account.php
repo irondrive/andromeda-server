@@ -171,7 +171,8 @@ class Account extends AuthEntity
     /** Runs all functions registered to handle the account being added to or removed from a group */
     public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
         { foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
-
+        // TODO check that it has the group first?
+        
     protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         $modified = parent::AddObjectRef($field, $object, $notification);
@@ -472,7 +473,8 @@ class Account extends AuthEntity
         parent::Delete();
     }
     
-    const OBJECT_FULL = 1; const OBJECT_ADMIN = 2;
+    public const OBJECT_FULL = 1; 
+    public const OBJECT_ADMIN = 2;
     
     /**
      * Gets this account as a printable object

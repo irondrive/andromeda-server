@@ -63,10 +63,10 @@ class TwoFactor extends BaseObject // TODO was StandardObject
     }
     
     /** The length of the OTP secret */
-    const SECRET_LENGTH = 32; 
+    private const SECRET_LENGTH = 32; 
     
     /** the time tolerance for codes, as a multiple of 30-seconds */
-    const TIME_TOLERANCE = 2;
+    private const TIME_TOLERANCE = 2;
     
     /** Gets the account that owns this object */
     public function GetAccount() : Account { return $this->GetObject('account'); }

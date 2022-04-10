@@ -147,7 +147,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $this->tryWriting($size0, $size, $size);                 // import, extend, write at EOF, shrink
     }   
     
-    const CHUNK_SIZE = 10; // bytes
+    private const CHUNK_SIZE = 10; // bytes
     
     public function testTruncateZeroes() : void
     {

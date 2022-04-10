@@ -39,7 +39,9 @@ class IMAP extends External
         ));
     }
     
-    const PROTOCOL_IMAP = 1; const PROTOCOL_POP3 = 2; const PROTOCOL_NNTP = 3;
+    private const PROTOCOL_IMAP = 1; 
+    private const PROTOCOL_POP3 = 2; 
+    private const PROTOCOL_NNTP = 3;
     
     private const PROTOCOLS = array('imap'=>self::PROTOCOL_IMAP,'pop3'=>self::PROTOCOL_POP3,'nntp'=>self::PROTOCOL_NNTP);
     
