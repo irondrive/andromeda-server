@@ -92,7 +92,9 @@ abstract class IOInterface extends Singleton
     /** Returns the path to the DB config file requested by the interface */
     public function GetDBConfigFile() : ?string { return null; }
     
-    const OUTPUT_PLAIN = 1; const OUTPUT_JSON = 2; const OUTPUT_PRINTR = 3;
+    public const OUTPUT_PLAIN = 1; 
+    public const OUTPUT_JSON = 2; 
+    public const OUTPUT_PRINTR = 3;
 
     /** Gets the default output mode for the interface */
     abstract public static function GetDefaultOutmode() : int;

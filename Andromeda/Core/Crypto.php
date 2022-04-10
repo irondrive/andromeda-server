@@ -21,7 +21,8 @@ class CryptoKey
         return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
     }
     
-    private const FAST_OPS = 1; private const FAST_MEMORY = 16*1024;
+    private const FAST_OPS = 1;
+    private const FAST_MEMORY = 16*1024;
     
     /**
      * Generates an encryption key from a password 

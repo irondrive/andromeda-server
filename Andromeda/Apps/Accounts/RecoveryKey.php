@@ -25,7 +25,7 @@ class RecoveryKey extends RecoveryKeyBase
         ));
     }      
 
-    const SET_SIZE = 8;
+    private const SET_SIZE = 8;
 
     /**
      * Returns a new array of recovery keys of the default set size

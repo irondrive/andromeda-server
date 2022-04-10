@@ -66,7 +66,9 @@ class InvalidStorageException extends Exceptions\ClientErrorException
  */
 class FSManager extends BaseObject // TODO was StandardObject
 {
-    const TYPE_NATIVE = 0; const TYPE_NATIVE_CRYPT = 1; const TYPE_EXTERNAL = 2;
+    private const TYPE_NATIVE = 0; 
+    private const TYPE_NATIVE_CRYPT = 1; 
+    private const TYPE_EXTERNAL = 2;
     
     public static function GetFieldTemplate() : array
     {

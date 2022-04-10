@@ -153,10 +153,10 @@ class Manager extends BaseObject
     /** Returns the class-only (no namespace) of the auth source */
     private function GetShortSourceType() : string { return Utilities::ShortClassName($this->GetAuthSourceType()); }
     
-    const ENABLED_EXIST = 1; /** Only allow users that already exist in the DB to sign in */
-    const ENABLED_FULL = 2;  /** Allow auto-creating new accounts for all external signins */
+    public const ENABLED_EXIST = 1; /** Only allow users that already exist in the DB to sign in */
+    public const ENABLED_FULL = 2;  /** Allow auto-creating new accounts for all external signins */
     
-    const ENABLED_TYPES = array('disable'=>0, 'exist'=>self::ENABLED_EXIST, 'full'=>self::ENABLED_FULL);
+    private const ENABLED_TYPES = array('disable'=>0, 'exist'=>self::ENABLED_EXIST, 'full'=>self::ENABLED_FULL);
     
     /** Returns the enum of how/if this is enabled */
     public function GetEnabled() : int { return $this->GetScalar('enabled'); }
