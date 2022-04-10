@@ -6,20 +6,38 @@ require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /** App config stored in the database */
-class Config extends BaseConfig
+final class Config extends BaseConfig
 {
-    public static function GetFieldTemplate() : array
+    use TableNoChildren;
+    
+    /** The setting for public account creation */
+    private FieldTypes\IntType $create_account;
+    /** The setting for requiring account contact info */
+    private FieldTypes\IntType $require_contact;
+    /** True if usernames are contact info (e.g. emails) */
+    private FieldTypes\BoolType $username_isContact;
+    /** @var FieldTypes\NullObjectRefT<Group> default group for new accounts */
+    private FieldTypes\NullObjectRefT $default_group;
+    /** @var FieldTypes\NullObjectRefT<Auth\Manager> default auth source to use */
+    private FieldTypes\NullObjectRefT $default_auth;
+
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'createaccount' => new FieldTypes\IntType(0),
-            'requirecontact' => new FieldTypes\IntType(0),
-            'usernameiscontact' => new FieldTypes\BoolType(false),
-            'obj_default_group' => new FieldTypes\ObjectRef(Group::class),
-            'obj_default_auth' => new FieldTypes\ObjectRef(Auth\Manager::class)
-        ));
+        $fields = array();
+
+        $this->create_account = $fields[] =     new FieldTypes\IntType('createaccount');
+        $this->require_contact = $fields[] =    new FieldTypes\IntType('requirecontact');
+        $this->username_isContact = $fields[] = new FieldTypes\BoolType('usernameiscontact');
+        $this->default_group = $fields[]      = new FieldTypes\NullObjectRefT(Group::class, 'default_group');
+        $this->default_auth = $fields[]       = new FieldTypes\NullObjectRefT(Auth\Manager::class, 'default_auth');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
     }
     
     /** Creates a new Config singleton */
@@ -39,19 +57,19 @@ class Config extends BaseConfig
         if ($params->HasParam('createaccount')) 
         {
             $param = $params->GetParam('createaccount')->FromWhitelist(array_keys(self::CREATE_TYPES));
-            $this->SetFeatureInt('createaccount', self::CREATE_TYPES[$param]);
+            $this->create_account->SetValue(self::CREATE_TYPES[$param]);
         }
         
         if ($params->HasParam('requirecontact')) 
         {
             $param = $params->GetParam('requirecontact')->FromWhitelist(array_keys(self::CONTACT_TYPES));
-            $this->SetFeatureInt('requirecontact', self::CONTACT_TYPES[$param]);
+            $this->require_contact->SetValue(self::CONTACT_TYPES[$param]);
         }
         
         if ($params->HasParam('usernameiscontact')) 
         {
             $param = $params->GetParam('usernameiscontact')->GetBool();
-            $this->SetFeatureBool('usernameiscontact', $param);
+            $this->username_isContact->SetValue($param);
         }
         
         if ($params->GetOptParam('createdefgroup',false)->GetBool()) 
@@ -73,73 +91,79 @@ class Config extends BaseConfig
     }
     
     /** Returns the default group that all users are implicitly part of */
-    public function GetDefaultGroup() : ?Group { return $this->TryGetObject('default_group'); }
+    public function GetDefaultGroup() : ?Group { return $this->default_group->TryGetObject(); }
     
     /** Returns the ID of the default group */
-    public function GetDefaultGroupID() : ?string { return $this->TryGetObjectID('default_group'); }
+    public function GetDefaultGroupID() : ?string { return $this->default_group->TryGetObjectID(); }
 
     /** Creates a new default group whose implicit members are all accounts */
     private function CreateDefaultGroup() : self
     {
-        if ($this->HasObject('default_group')) return $this;
+        if ($this->default_group->TryGetObjectID() !== null) return $this;
         
         $group = Group::Create($this->database, "Global Group");
-        $this->SetObject('default_group', $group); $group->Initialize(); return $this;
+        $this->default_group->SetObject($group); // TODO need to save here?
+        
+        $group->Initialize(); return $this;
     }
     
     /** Returns the auth manager that will be used by default */
-    public function GetDefaultAuth() : ?Auth\Manager { return $this->TryGetObject('default_auth'); }
+    public function GetDefaultAuth() : ?Auth\Manager { return $this->default_auth->TryGetObject(); }
     
     /** Returns the ID of the auth manager that will be used by default */
-    public function GetDefaultAuthID() : ?string { return $this->TryGetObjectID('default_auth'); }
+    public function GetDefaultAuthID() : ?string { return $this->default_auth->TryGetObjectID(); }
 
     /** Sets the default auth manager to the given value */
-    public function SetDefaultAuth(?Auth\Manager $manager) : self { return $this->SetObject('default_auth',$manager); }
+    public function SetDefaultAuth(?Auth\Manager $manager) : self { $this->default_auth->SetObject($manager); return $this; }
     
-    public const CREATE_WHITELIST = 1; public const CREATE_PUBLIC = 2;
+    /** Only allow creating accounts with whitelisted usernames */
+    public const CREATE_WHITELIST = 1; 
+    /** Allow anyone to create a new account (public) */
+    public const CREATE_PUBLIC = 2;
     
-    const CREATE_TYPES = array('disable'=>0, 'whitelist'=>self::CREATE_WHITELIST, 'public'=>self::CREATE_PUBLIC);
+    private const CREATE_TYPES = array('disable'=>0, 'whitelist'=>self::CREATE_WHITELIST, 'public'=>self::CREATE_PUBLIC);
     
     /** Returns whether the API for creating new accounts is enabled */
-    public function GetAllowCreateAccount() : int { return $this->GetFeatureInt('createaccount'); }
+    public function GetAllowCreateAccount() : int { return $this->create_account->GetValue(); }
     
     /** Returns whether emails should be used as usernames */
-    public function GetUsernameIsContact() : bool  { return $this->GetFeatureBool('usernameiscontact'); }
+    public function GetUsernameIsContact() : bool { return $this->username_isContact->GetValue(); }
     
     /** Sets whether the API for creating new accounts is enabled */
-    public function SetAllowCreateAccount(int $value, bool $temp = false) : self { return $this->SetFeatureInt('createaccount', $value, $temp); }
+    public function SetAllowCreateAccount(int $value) : self { $this->create_account->SetValue($value); return $this; }
     
     /** Sets whether emails should be used as usernames */
-    public function SetUsernameIsContact(bool $value, bool $temp = false) : self { return $this->SetFeatureBool('usernameiscontact', $value, $temp); }
+    public function SetUsernameIsContact(bool $value) : self { $this->username_isContact->SetValue($value); return $this; }
     
-    public const CONTACT_EXIST = 1; public const CONTACT_VALID = 2;
+    /** Require that accounts have contact info */
+    public const CONTACT_EXIST = 1; 
+    /** Require that accounts have validated contact info */
+    public const CONTACT_VALID = 2;
     
-    const CONTACT_TYPES = array('none'=>0, 'exist'=>self::CONTACT_EXIST, 'valid'=>self::CONTACT_VALID);
+    private const CONTACT_TYPES = array('none'=>0, 'exist'=>self::CONTACT_EXIST, 'valid'=>self::CONTACT_VALID);
     
     /** Returns whether a contact for accounts is required or validated */
-    public function GetRequireContact() : int { return $this->GetFeatureInt('requirecontact'); }
+    public function GetRequireContact() : int { return $this->require_contact->GetValue(); }
     
     /* Sets whether a contact for accounts is required or validated */
-    public function SetRequireContact(int $value, bool $temp = false) : self { return $this->SetFeatureInt('requirecontact', $value, $temp); }
+    public function SetRequireContact(int $value) : self { $this->require_contact->SetValue($value); return $this; }
      
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{config:{createaccount:enum, usernameiscontact:bool, requirecontact:enum}}` \
+     * @return array `{create_account:enum, username_iscontact:bool, require_contact:enum, default_auth:?id}` \
          if admin, add: `{default_group:?id}`
      */
     public function GetClientObject(bool $admin = false) : array
     {
         $data = array(
-            'config' => array(
-                'usernameiscontact' => $this->GetUsernameIsContact(),
-                'createaccount' => array_flip(self::CREATE_TYPES)[$this->GetAllowCreateAccount()],
-                'requirecontact' => array_flip(self::CONTACT_TYPES)[$this->GetRequireContact()]
-            ),
-            'default_auth' => $this->GetDefaultAuthID()
+            'username_iscontact' => $this->username_isContact->GetValue(),
+            'create_account' => array_flip(self::CREATE_TYPES)[$this->create_account->GetValue()],
+            'require_contact' => array_flip(self::CONTACT_TYPES)[$this->require_contact->GetValue()],
+            'default_auth' => $this->default_auth->TryGetObjectID()
         );
         
-        if ($admin) $data['default_group'] = $this->GetDefaultGroupID();
+        if ($admin) $data['default_group'] = $this->default_group->TryGetObjectID();
         
         return $data;
     }
