@@ -564,7 +564,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj = EasyObject::Create($objdb)->Save();
         
-        $this->assertSame($obj, $objdb->TryLoadByID(EasyObject::class, $obj->ID()));
+        $this->assertSame($obj, EasyObject::TryLoadByID($objdb, $obj->ID()));
     }
     
     public function testUniqueKeyInsertUnique() : void
@@ -687,7 +687,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // should return null w/o reloading from DB
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
-    
+
     public function testNonUniqueKeyPolyDelete() : void
     {
         $database = $this->createMock(Database::class);

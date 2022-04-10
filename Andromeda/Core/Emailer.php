@@ -136,9 +136,8 @@ final class Emailer extends BaseObject
     {
         $mailer = parent::BaseCreate($database);
         
-        $type = $params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES));
+        $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES))];
         
-        $type = self::MAIL_TYPES[$type];
         $mailer->type->SetValue($type);
         
         $mailer->from_address->SetValue($params->GetParam('from_address')->GetEmail());
@@ -146,7 +145,7 @@ final class Emailer extends BaseObject
         $mailer->from_name->SetValue($params->GetOptParam('from_name',null)->GetNullName());
         $mailer->use_reply->SetValue($params->GetOptParam('use_reply',null)->GetNullBool());
 
-        if ($type == self::TYPE_SMTP)
+        if ($type === self::TYPE_SMTP)
         {
             $mailer->username->SetValue($params->GetOptParam('username',null)->GetNullUTF8String());
             $mailer->password->SetValue($params->GetOptParam('password',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString());
@@ -167,17 +166,8 @@ final class Emailer extends BaseObject
     }
     
     /** Returns all available Emailer objects */
-    public static function LoadAll(ObjectDatabase $database) : array
-    {
-        return $database->LoadObjectsByQuery(static::class, new QueryBuilder());
-    }
-    
-    /** Tries to load an Emailer object by its ID */
-    public static function TryLoadByID(ObjectDatabase $database, string $id) : ?self
-    {
-        return $database->TryLoadByID(self::class, $id);
-    }
-    
+    public static function LoadAll(ObjectDatabase $database) : array { return $database->LoadAll(self::class); }
+
     public function Delete() : void { parent::Delete(); }
     
     /** Build a PHPMailer-formatted host string from an input */
@@ -209,7 +199,7 @@ final class Emailer extends BaseObject
             'type' =>         array_flip(self::MAIL_TYPES)[$this->type->GetValue()],
             'hosts' =>        $this->hosts->TryGetArray(),
             'username' =>     $this->username->TryGetValue(),
-            'password' =>     (bool)($this->password->TryGetValue()),
+            'password' =>     boolval($this->password->TryGetValue()),
             'from_address' => $this->from_address->GetValue(),
             'from_name' =>    $this->from_name->TryGetValue(),
             'use_reply' =>    $this->use_reply->TryGetValue()
@@ -217,7 +207,7 @@ final class Emailer extends BaseObject
     }
     
     /** Initializes the PHPMailer instance */
-    public function Activate() : self
+    public function Activate() : self // TODO this seems unnecessary - move to SubConstruct/PostConstruct?
     {        
         $mailer = new PHPMailer\PHPMailer(true);
         
@@ -234,15 +224,17 @@ final class Emailer extends BaseObject
         
         $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
         
-        $mailer->Debugoutput = function($str, $level){ 
+        $mailer->Debugoutput = function(string $str, int $level)
+        { 
             if (!Utilities::isUTF8($str)) $str = base64_encode($str);
-            ErrorManager::GetInstance()->LogDebugInfo("PHPMailer $level: $str"); };
+            ErrorManager::GetInstance()->LogDebugInfo("PHPMailer $level: $str"); 
+        };
         
         $mailer->setFrom(
             $this->from_address->GetValue(), 
             $this->from_name->TryGetValue() ?? self::DEFAULT_FROM);
         
-        if ($type == self::TYPE_SMTP)
+        if ($type === self::TYPE_SMTP)
         {
             $mailer->Username = $this->username->TryGetValue();
             $mailer->Password = $this->password->TryGetValue();
@@ -268,7 +260,8 @@ final class Emailer extends BaseObject
      */
     public function SendMail(string $subject, string $message, bool $isHtml, array $recipients, bool $usebcc, ?EmailRecipient $from = null) : void
     {
-        if (!count($recipients)) throw new EmptyRecipientsException();
+        if (!count($recipients)) 
+            throw new EmptyRecipientsException();
         
         $mailer = $this->mailer;
         

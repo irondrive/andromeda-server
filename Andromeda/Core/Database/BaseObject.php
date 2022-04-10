@@ -159,6 +159,17 @@ abstract class BaseObject
         return Utilities::Random(static::IDLength);
     }
     
+    /**
+     * Loads an object by its ID
+     * @param ObjectDatabase $database database ref
+     * @param string $id the ID of the object
+     * @return ?static object or null if not found
+     */
+    public static function TryLoadByID(ObjectDatabase $database, string $id) : ?BaseObject
+    {
+        return $database->TryLoadUniqueByKey(static::class, 'id', $id);
+    }
+    
     /** Primary reference to the database */
     protected ObjectDatabase $database;
     

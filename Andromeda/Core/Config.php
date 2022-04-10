@@ -194,14 +194,12 @@ final class Config extends BaseConfig
         if ($params->HasParam('requestlog_details'))
         {
             $param = $params->GetParam('requestlog_details')->FromWhitelist(array_keys(self::RQLOG_DETAILS_TYPES));
-            
             $this->requestlog_details->SetValue(self::RQLOG_DETAILS_TYPES[$param]);
         }
         
         if ($params->HasParam('debug'))
         {
             $param = $params->GetParam('debug')->FromWhitelist(array_keys(self::DEBUG_TYPES));
-            
             $this->debug->SetValue(self::DEBUG_TYPES[$param]);
         }
         
@@ -212,7 +210,6 @@ final class Config extends BaseConfig
         if ($params->HasParam('metrics'))
         {
             $param = $params->GetParam('metrics')->FromWhitelist(array_keys(self::METRICS_TYPES));
-            
             $this->metrics->SetValue(self::METRICS_TYPES[$param]);
         }
         
@@ -335,7 +332,10 @@ final class Config extends BaseConfig
     /** log more detailed info, and full objects when deleted */
     public const RQLOG_DETAILS_FULL = 2;
     
-    private const RQLOG_DETAILS_TYPES = array('none'=>0, 'basic'=>self::RQLOG_DETAILS_BASIC, 'full'=>self::RQLOG_DETAILS_FULL);
+    private const RQLOG_DETAILS_TYPES = array(
+        'none'=>0, 
+        'basic'=>self::RQLOG_DETAILS_BASIC, 
+        'full'=>self::RQLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
     public function GetRequestLogDetails() : int { return $this->requestlog_details->GetValue(); }
@@ -349,7 +349,11 @@ final class Config extends BaseConfig
     /** also show input params, function arguments, SQL values */ 
     public const ERRLOG_SENSITIVE = 3;
     
-    public const DEBUG_TYPES = array('none'=>0, 'errors'=>self::ERRLOG_ERRORS, 'details'=>self::ERRLOG_DETAILS, 'sensitive'=>self::ERRLOG_SENSITIVE);
+    public const DEBUG_TYPES = array(
+        'none'=>0, 
+        'errors'=>self::ERRLOG_ERRORS, 
+        'details'=>self::ERRLOG_DETAILS, 
+        'sensitive'=>self::ERRLOG_SENSITIVE);
     
     /** Returns the current debug level */
     public function GetDebugLevel() : int { return $this->debug->GetValue(); }
@@ -405,7 +409,7 @@ final class Config extends BaseConfig
         if (!$this->GetEnableEmail()) throw new EmailDisabledException();
         
         $mailers = Emailer::LoadAll($this->database);
-        if (count($mailers) == 0) throw new EmailerUnavailableException();
+        if (empty($mailers)) throw new EmailerUnavailableException();
         return $mailers[array_rand($mailers)]->Activate();
     }
     

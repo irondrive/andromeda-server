@@ -242,7 +242,7 @@ class CLI extends IOInterface
         { 
             $key = explode('_',$key,2);
             
-            if ($key[0] == 'andromeda' && count($key) == 2)
+            if (count($key) === 2 && $key[0] === 'andromeda')
             {
                 array_push($envargs, "--".$key[1], $value);
             }
