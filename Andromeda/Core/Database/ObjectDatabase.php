@@ -221,7 +221,7 @@ class ObjectDatabase
     }
 
     /**
-     * Loads an array of objects using the given query
+     * Loads an array of objects matching the given query
      * If using ORDER BY and there are child tables, the returned array may not be sorted!
      * But, the ORDER BY will apply correctly as far as LIMIT/OFFSET and WHAT gets loaded
      * @template T of BaseObject
@@ -327,6 +327,39 @@ class ObjectDatabase
         }
         
         return $count;
+    }
+
+    /**
+     * Loads a unique object matching the given query
+     * @see ObjectDatabase::LoadObjectsByQuery()
+     * @template T of BaseObject
+     * @param class-string<T> $class class name of the object
+     * @param QueryBuilder $query the query used to match objects
+     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @return ?T loaded object or null
+     */
+    public function TryLoadUniqueByQuery(string $class, QueryBuilder $query) : ?BaseObject // TODO unit test
+    {
+        $objs = $this->LoadObjectsByQuery($class, $query);
+        if (count($objs) > 1) throw new MultipleUniqueKeyException("$class");
+        return (count($objs) === 1) ? array_values($objs)[0] : null;
+    }
+    
+    
+    /**
+     * Deletes a unique object matching the given query
+     * @see ObjectDatabase::DeleteObjectsByQuery()
+     * @template T of BaseObject
+     * @param class-string<T> $class class name of the object
+     * @param QueryBuilder $query the query used to match objects
+     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @return bool true if an object was deleted
+     */
+    public function TryDeleteUniqueByQuery(string $class, QueryBuilder $query) : bool // TODO unit test
+    {
+        $count = $this->DeleteObjectsByQuery($class, $query);
+        if ($count > 1) throw new MultipleUniqueKeyException("$class");
+        return $count !== 0;
     }
 
     /**
@@ -656,12 +689,12 @@ class ObjectDatabase
     private array $keyBaseClasses = array();
     
     /**
-     * Converts a scalar value to a string
-     * Want ""/false to be distinct from null
+     * Converts a scalar value to a unique string
      * @param ?scalar $value index data value
      */
     private static function ValueToIndex($value) : string
     {
+        // want ""/false to be distinct from null
         return ($value !== null) ? 'k'.$value : '';
     }
     
@@ -688,6 +721,7 @@ class ObjectDatabase
 
     /**
      * Loads and caches objects matching the given key/value
+     * Also caches results so it only calls the DB once for a given key/value
      * @template T of BaseObject
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
@@ -715,6 +749,7 @@ class ObjectDatabase
     
     /**
      * Deletes objects matching the given key/value
+     * Also updates the cache so the DB is not called if this key/value is loaded
      * @template T of BaseObject
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
@@ -745,6 +780,7 @@ class ObjectDatabase
 
     /**
      * Loads and caches a unique object matching the given unique key/value
+     * Also caches results so it only calls the DB once for a given key/value
      * @template T of BaseObject
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
@@ -769,8 +805,8 @@ class ObjectDatabase
         {
             $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $objs = $this->LoadObjectsByQuery($class, $q);
-            if (count($objs) > 1) throw new MultipleUniqueKeyException("$class $key");
             
+            if (count($objs) > 1) throw new MultipleUniqueKeyException("$class $key");
             $obj = (count($objs) === 1) ? array_values($objs)[0] : null;
             
             $this->SetUniqueKeyObject($class, $key, $validx, $obj);
@@ -782,6 +818,7 @@ class ObjectDatabase
     
     /**
      * Deletes a unique object matching the given unique key/value
+     * Also updates the cache so the DB is not called if this key/value is loaded
      * @template T of BaseObject
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
@@ -791,7 +828,7 @@ class ObjectDatabase
      * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
-    public function DeleteUniqueByKey(string $class, string $key, $value) : bool
+    public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO unit test
     {
         if ($value === null) throw new NullUniqueKeyException("$class $key"); /** @phpstan-ignore-line */
         
@@ -815,7 +852,9 @@ class ObjectDatabase
             if ($count > 1) throw new MultipleUniqueKeyException("$class $key");
         }
         
-        $this->uniqueByKey[$class][$key][$validx] = null; return $count > 0;
+        $this->uniqueByKey[$class][$key][$validx] = null; 
+        
+        return $count !== 0;
     }
     
     /**
@@ -1110,17 +1149,29 @@ class ObjectDatabase
     }
     
     /**
-     * Loads a unique object by its ID
+     * Deletes all objects of a class
+     * @see ObjectDatabase::LoadObjectsByQuery()
      * @template T of BaseObject
-     * @param class-string<T> $class class to load
-     * @param string $id the ID of the object
-     * @return T|null object or null if not found
+     * @param class-string<T> $class class name
+     * @return array<string, T> array of objects indexed by their IDs
      */
-    public function TryLoadByID(string $class, string $id) : ?BaseObject
+    public function LoadAll(string $class) : array
     {
-        return $this->TryLoadUniqueByKey($class, 'id', $id);
+        return $this->LoadObjectsByQuery($class, new QueryBuilder());
     }
     
+    /**
+     * Immediately delete all objects of class
+     * @see ObjectDatabase::DeleteObjectsByQuery()
+     * @template T of BaseObject
+     * @param class-string<T> $class the class of the objects to delete
+     * @return int number of deleted objects
+     */
+    public function DeleteAll(string $class) : int
+    {
+        return $this->DeleteObjectsByQuery($class, new QueryBuilder());
+    }
+
     /**
      * Loads objects with the given object referenced by the given field
      * @template T of BaseObject
