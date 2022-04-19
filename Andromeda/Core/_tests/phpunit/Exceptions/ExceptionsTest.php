@@ -13,9 +13,14 @@ class TestClientException extends ClientException
         parent::__construct("TEST_CLIENT_EXCEPTION", 111, $details);
     }
     
-    public function FromException(\Exception $e, bool $append = false, bool $newloc = true) : self
+    public function CopyException(BaseException $e, bool $newloc = true) : self
     {
-        return parent::FromException($e, $append, $newloc);
+        return parent::CopyException($e, $newloc);
+    }
+    
+    public function AppendException(\Exception $e, bool $newloc = true) : self
+    {
+        return parent::AppendException($e, $newloc);
     }
 }
 
@@ -26,9 +31,14 @@ class TestServerException extends ServerException
         parent::__construct("TEST_SERVER_EXCEPTION", $details);
     }
     
-    public function FromException(\Exception $e, bool $append = false, bool $newloc = true) : self
+    public function CopyException(BaseException $e, bool $newloc = true) : self
     {
-        return parent::FromException($e, $append, $newloc);
+        return parent::CopyException($e, $newloc);
+    }
+    
+    public function AppendException(\Exception $e, bool $newloc = true) : self
+    {
+        return parent::AppendException($e, $newloc);
     }
 }
 
@@ -105,14 +115,14 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
         
         $ex1 = new ServerException($msg1="MY_MESSAGE", $det1="test details1", 999);
         $ex2 = new TestClientException($det2="test details2");
-        $ex2->FromException($ex1);
+        $ex2->CopyException($ex1);
         $this->assertSame($code2, $ex2->getCode()); // NOT copied
         $this->assertSame("$msg1: $det1", $ex2->getMessage());
         $this->assertSame($ex2->getLine(), $ex1->getLine());
         
         $ex1 = new ServerException($msg1="MY_MESSAGE", $det1="test details1", 999);
         $ex2 = new TestClientException($det2="test details2");
-        $ex2->FromException($ex1, true, false);
+        $ex2->AppendException($ex1, false);
         $this->assertSame($code2, $ex2->getCode()); // NOT copied
         $this->assertSame("$msg2: $det2: $msg1: $det1", $ex2->getMessage());
         $this->assertNotSame($ex2->getLine(), $ex1->getLine());
@@ -124,16 +134,16 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
         
         $ex1 = new ClientException($msg1="MY_MESSAGE", $code1=999, $det1="test details1");
         $ex2 = new TestServerException($det2="test details2");
-        $ex2->FromException($ex1);
+        $ex2->CopyException($ex1, false);
         $this->assertSame($code1, $ex2->getCode()); // is copied
         $this->assertSame("$msg1: $det1", $ex2->getMessage());
-        $this->assertSame($ex2->getLine(), $ex1->getLine());
+        $this->assertNotSame($ex2->getLine(), $ex1->getLine());
         
         $ex1 = new ClientException($msg1="MY_MESSAGE", $code1=999, $det1="test details1");
         $ex2 = new TestServerException($det2="test details2");
-        $ex2->FromException($ex1, true, false);
+        $ex2->AppendException($ex1);
         $this->assertSame($code1, $ex2->getCode()); // is copied
         $this->assertSame("$msg2: $det2: $msg1: $det1", $ex2->getMessage());
-        $this->assertNotSame($ex2->getLine(), $ex1->getLine());
+        $this->assertSame($ex2->getLine(), $ex1->getLine());
     }
 }

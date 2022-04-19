@@ -95,7 +95,7 @@ abstract class BaseObject
     }
     
     /**
-     * Helper function for base classes to add unique keys to child classes if they don't have a table
+     * Helper for base classes without tables to add unique keys to child classes
      * Same idea as calling RegisterFields() with $table = null
      * @param array<class-string<self>, array<string>> $keymap key map
      * @param array<string> $keys keys for this class
@@ -165,7 +165,7 @@ abstract class BaseObject
      * @param string $id the ID of the object
      * @return ?static object or null if not found
      */
-    public static function TryLoadByID(ObjectDatabase $database, string $id) : ?BaseObject
+    final public static function TryLoadByID(ObjectDatabase $database, string $id) : ?BaseObject
     {
         return $database->TryLoadUniqueByKey(static::class, 'id', $id);
     }
@@ -207,7 +207,12 @@ abstract class BaseObject
         {
             $this->fieldsByName[$column]->InitDBValue($value);
         }
+        
+        $this->PostConstruct();
     }
+    
+    /** Performs any subclass-specific initialization */
+    protected function PostConstruct() : void { }
     
     /** Returns the object's associated database */
     public function GetDatabase() : ObjectDatabase { return $this->database; }
@@ -231,15 +236,10 @@ abstract class BaseObject
     /**
      * Registers fields for the object so the DB can save/load objects
      * @param array<FieldTypes\BaseField> $fields array of fields to register
-     * @param ?string $table class table the fields belong to, null to use the last registered (child)
-     * @throws NoChildTableException if $table is null and no previously registered table
+     * @param string $table class table the fields belong to
      */
-    final protected function RegisterFields(array $fields, ?string $table = null) : void
+    final protected function RegisterFields(array $fields, string $table) : void
     {
-        if ($table === null && empty($this->fieldsByClass))
-            throw new NoChildTableException(static::class);
-        
-        $table ??= array_key_last($this->fieldsByClass);
         $this->fieldsByClass[$table] ??= array();
         
         foreach ($fields as $field)
@@ -250,6 +250,21 @@ abstract class BaseObject
             $this->fieldsByClass[$table][] = $field;
             $this->fieldsByName[$field->GetName()] = $field;
         }
+    }
+    
+    /**
+     * Helper for base classes without tables to register fields with the last child table
+     * @param array<FieldTypes\BaseField> $fields array of fields to register
+     * @throws NoChildTableException if $table is null and no previously registered table
+     */
+    final protected function RegisterChildFields(array $fields) : void
+    {
+        if (empty($this->fieldsByClass))
+            throw new NoChildTableException(static::class);
+        
+        $table = array_key_last($this->fieldsByClass);
+        
+        $this->RegisterFields($fields, $table);
     }
     
     /** Returns this object's base-unique ID */

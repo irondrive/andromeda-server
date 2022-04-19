@@ -39,3 +39,5 @@ class AppTests(BaseAppTest):
         if not self.canAdmin(): return False
         rval = assertOk(self.interface.run(app='core',action='scanapps',params=self.addAdmin({})))
         assertEquals(set(rval), set(self.main.appList))
+
+    # TODO need to enable/disable the accounts app and test both ways?

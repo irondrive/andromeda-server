@@ -5,7 +5,7 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php");
 /** Minimalistic class for building prepared post-FROM SQL query strings */
 class QueryBuilder
 {
-    /** @var array<string, string> variables to be substituted in the query */
+    /** @var array<string, scalar> variables to be substituted in the query */
     private array $data = array();
 
     /** @see QueryBuilder::$data */
@@ -46,20 +46,26 @@ class QueryBuilder
     private bool $orderdesc = false;
     private ?int $limit = null;
     private ?int $offset = null;
+    
+    /** The current index for the data array */
+    private int $dataIdx = 0;
 
     /**
      * Adds the given value to the internal data array
-     * @param string $val the actual data value
+     * @param scalar $val the actual data value
      * @return string the placeholder to go in the query
      */
     protected function AddData($val) : string
     {
-        $idx = "d".count($this->data);
+        $idx = "d".$this->dataIdx++;
         $this->data[$idx] = $val;
         return ':'.$idx;
     }
     
-    /** Base function for safely comparing columns to values */
+    /** 
+     * Base function for safely comparing columns to values 
+     * @param scalar $val 
+     */
     private function BaseCompare(string $key, $val, string $symbol) : string 
     {
         return "$key $symbol ".$this->AddData($val);
@@ -88,29 +94,58 @@ class QueryBuilder
         return $this->BaseCompare($key,$val,'LIKE'); 
     }
     
-    /** Returns a query string asserting the given column is less than the given value */
-    public function LessThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'<'); }
+    /** 
+     * Returns a query string asserting the given column is less than the given value 
+     * @param string $key the name of the column to compare
+     * @param scalar $val the column value to compare
+     */
+    public function LessThan(string $key, $val) : string { 
+        return $this->BaseCompare($key,$val,'<'); }
     
-    /** Returns a query string asserting the given column is less or equal to the given value */
-    public function LessThanEquals(string $key, $val) : string { return $this->BaseCompare($key,$val,'<='); }
+    /** 
+     * Returns a query string asserting the given column is less or equal to the given value 
+     * @param string $key the name of the column to compare
+     * @param scalar $val the column value to compare
+     */
+    public function LessThanEquals(string $key, $val) : string { 
+        return $this->BaseCompare($key,$val,'<='); }
     
-    /** Returns a query string asserting the given column is greater than the given value */
-    public function GreaterThan(string $key, $val) : string { return $this->BaseCompare($key,$val,'>'); }
+    /**
+     * Returns a query string asserting the given column is greater than the given value 
+     * @param string $key the name of the column to compare
+     * @param scalar $val the column value to compare
+     */
+    public function GreaterThan(string $key, $val) : string { 
+        return $this->BaseCompare($key,$val,'>'); }
     
-    /** Returns a query string asserting the given column is greater than or equal to the given value */
-    public function GreaterThanEquals(string $key, $val) : string { return $this->BaseCompare($key,$val,'>='); }
+    /** 
+     * Returns a query string asserting the given column is greater than or equal to the given value 
+     * @param string $key the name of the column to compare
+     * @param scalar $val the column value to compare
+     */
+    public function GreaterThanEquals(string $key, $val) : string { 
+        return $this->BaseCompare($key,$val,'>='); }
     
     /** Returns a query string asserting the given column is "true" (greater than zero) */
-    public function IsTrue(string $key) : string { return $this->GreaterThan($key,0); }
+    public function IsTrue(string $key) : string {
+        return $this->GreaterThan($key,0); }
     
-    /** Returns a query string asserting the given column is equal to the given value */
+    /** 
+     * Returns a query string asserting the given column is equal to the given value 
+     * @param string $key the name of the column to compare
+     * @param ?scalar $val the column value to compare
+     */
     public function Equals(string $key, $val) : string 
     { 
         if ($val === null) return $this->IsNull($key);
         return $this->BaseCompare($key,$val,'='); 
     }
     
-    /** Returns a query string asserting the given column is not equal to the given value */
+    /**
+     * Returns a query string asserting the given column is not equal to the given value 
+     * @param string $key the name of the column to compare
+     * @param ?scalar $val the column value to compare
+     */
     public function NotEquals(string $key, $val) : string 
     { 
         if ($val === null) return $this->Not($this->IsNull($key));
@@ -129,7 +164,7 @@ class QueryBuilder
     /**
      * Syntactic sugar function to check many OR conditions at once
      * @param string $key the column to compare against
-     * @param array $vals array of possible values for the column
+     * @param array<?scalar> $vals array of possible values for the column
      * @return string the built query string
      */
     public function ManyEqualsOr(string $key, array $vals) 
@@ -140,7 +175,7 @@ class QueryBuilder
     
     /**
      * Syntactic sugar function to check many AND conditions at once
-     * @param array $pairs associative array mapping column names to their desired values
+     * @param array<string, ?scalar> $pairs associative array mapping column names to their desired values
      * @return string the built query string
      */
     public function ManyEqualsAnd(array $pairs) 
@@ -153,7 +188,8 @@ class QueryBuilder
     /** 
      * Assigns/adds a WHERE clause to the query
      * if null, resets - if called > once, uses AND 
-     * */
+     * @return $this
+     */
     public function Where(?string $where) : self 
     {
         if ($where !== null && $this->where !== null)
@@ -166,7 +202,10 @@ class QueryBuilder
     /** Returns the current WHERE string */
     public function GetWhere() : ?string { return $this->where; }
         
-    /** Assigns an ORDER BY clause to the query, optionally descending */
+    /** 
+     * Assigns an ORDER BY clause to the query, optionally descending 
+     * @return $this
+     */
     public function OrderBy(?string $orderby, ?bool $desc = null) : self 
     { 
         $this->orderby = $orderby; 
@@ -180,7 +219,10 @@ class QueryBuilder
     /** Returns true if the order is descending */
     public function GetOrderDesc() : bool { return $this->orderdesc; }
     
-    /** Assigns a LIMIT clause to the query */
+    /** 
+     * Assigns a LIMIT clause to the query 
+     * @return $this
+     */
     public function Limit(?int $limit) : self 
     { 
         if ($limit < 0) $limit = 0; 
@@ -188,7 +230,10 @@ class QueryBuilder
         return $this; 
     }
     
-    /** Assigns an OFFSET clause to the query (use with LIMIT) */
+    /** 
+     * Assigns an OFFSET clause to the query (use with LIMIT) 
+     * @return $this
+     */
     public function Offset(?int $offset) : self 
     { 
         if ($offset < 0) $offset = 0; 
@@ -223,9 +268,7 @@ class QueryBuilder
     }
 
     /**
-     * Performs a self join on a table (selects an alias table and sets the WHERE query)
-     * 
-     * If you need to add extra WHERE to the query, you must add to GetWhere()
+     * Performs a self join on a table (selects an alias table and adds to the WHERE query)
      * @param ObjectDatabase $database database reference
      * @param class-string<BaseObject> $joinclass the table to join to itself 
      * @param string $prop1 the column to match to prop2
@@ -234,12 +277,11 @@ class QueryBuilder
      */
     public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2) : self
     {
-        $joinclass = $database->GetClassTableName($joinclass); 
+        $jointable = $database->GetClassTableName($joinclass); 
         
-        $this->fromalias = ", $joinclass _tmptable"; // TODO not likely to work correctly now - at least make this more general
-        $this->where = "$joinclass.$prop1 = _tmptable.$prop2";
+        $this->fromalias = ", $jointable _tmptable"; // TODO not likely to work correctly now - at least make this (fromalias) more general
         
-        return $this;
+        return $this->Where("$jointable.$prop1 = _tmptable.$prop2");
     }
 }
 

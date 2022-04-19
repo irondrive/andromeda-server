@@ -28,7 +28,7 @@ class DatabaseConnectException extends DatabaseConfigException
 {
     public function __construct(?PDOException $e = null) {
         parent::__construct("DATABASE_CONNECT_FAILED"); 
-        if ($e) $this->FromException($e, true);
+        if ($e) $this->AppendException($e);
     }
 }
 
@@ -52,7 +52,7 @@ class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
 class DatabaseInstallException extends Exceptions\ClientErrorException
 {
     public function __construct(DatabaseConfigException $e) {
-        parent::__construct(""); $this->FromException($e);
+        parent::__construct(""); $this->CopyException($e);
     }
 }
 
@@ -77,7 +77,7 @@ class DatabaseQueryException extends DatabaseException
 {
     public function __construct(PDOException $e) {
         parent::__construct("DATABASE_QUERY_ERROR");
-        $this->FromException($e, true);
+        $this->AppendException($e);
     }
 }
 
@@ -94,7 +94,7 @@ class DatabaseIntegrityException extends DatabaseException
 {
     public function __construct(PDOException $e) {
         parent::__construct("DATABASE_INTEGRITY_VIOLATION");
-        $this->FromException($e, true);
+        $this->AppendException($e);
     }
 }
 

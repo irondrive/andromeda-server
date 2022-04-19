@@ -70,6 +70,7 @@ abstract class BaseApp
     
     /** 
      * Return this app's ActionLog extension class name, if used (or null)
+     * If not null, the app is responsible for creating its ActionLog entries
      * @return ?class-string<ActionLog>
      */
     public static function getLogClass() : ?string { return null; }

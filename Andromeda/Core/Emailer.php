@@ -1,5 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -12,6 +13,22 @@ require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 use \PHPMailer\PHPMailer; // via autoloader
 
+/** Exception indicating that a mailer was requested but it is disabled */
+class EmailDisabledException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("EMAIL_DISABLED", $details);
+    }
+}
+
+/** Exception indicating that a mailer was requested but none are configured */
+class EmailerUnavailableException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("EMAILER_UNAVAILABLE", $details);
+    }
+}
+
 /** Exception indicating that sending mail failed */
 abstract class MailSendException extends Exceptions\ServerException
 {
@@ -20,11 +37,19 @@ abstract class MailSendException extends Exceptions\ServerException
     }
 }
 
+/** Exception indicating PHPMailer sending returned false */
+class PHPMailerException1 extends MailSendException
+{
+    public function __construct(string $details) {
+        parent::__construct("MAIL_SEND_FAILURE", $details);
+    }
+}
+
 /** Exception thrown by the PHPMailer library when sending */
-class PHPMailerException extends MailSendException
+class PHPMailerException2 extends MailSendException
 {
     public function __construct(PHPMailer\Exception $e) {
-        parent::__construct(); $this->FromException($e,true);
+        parent::__construct(); $this->AppendException($e);
     }
 }
 
@@ -166,7 +191,24 @@ final class Emailer extends BaseObject
     }
     
     /** Returns all available Emailer objects */
-    public static function LoadAll(ObjectDatabase $database) : array { return $database->LoadAll(self::class); }
+    public static function LoadAll(ObjectDatabase $database) : array 
+    { 
+        return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
+    }
+    
+    /** 
+     * Returns any available (random) Emailer object 
+     * @throws EmailerUnavailableException if none configured
+     */
+    public static function LoadAny(ObjectDatabase $database) : self
+    {
+        $mailers = static::LoadAll($database);
+        
+        if (empty($mailers)) 
+            throw new EmailerUnavailableException();
+        
+        return $mailers[array_rand($mailers)];
+    }
 
     public function Delete() : void { parent::Delete(); }
     
@@ -207,7 +249,7 @@ final class Emailer extends BaseObject
     }
     
     /** Initializes the PHPMailer instance */
-    public function Activate() : self // TODO this seems unnecessary - move to SubConstruct/PostConstruct?
+    protected function PostConstruct() : void
     {        
         $mailer = new PHPMailer\PHPMailer(true);
         
@@ -244,7 +286,6 @@ final class Emailer extends BaseObject
         }
     
         $this->mailer = $mailer;
-        return $this;
     }
     
     /**
@@ -255,11 +296,15 @@ final class Emailer extends BaseObject
      * @param EmailRecipient $from a different from to send as
      * @param bool $isHtml true if the body is HTML
      * @param bool $usebcc true if the recipients should use BCC
+     * @throws EmailDisabledException if email is not enabled
      * @throws EmptyRecipientsException if no recipients were given
      * @throws MailSendException if sending the message fails
      */
     public function SendMail(string $subject, string $message, bool $isHtml, array $recipients, bool $usebcc, ?EmailRecipient $from = null) : void
     {
+        if (!Config::GetInstance($this->database)->GetEnableEmail())
+            throw new EmailDisabledException();
+        
         if (!count($recipients)) 
             throw new EmptyRecipientsException();
         
@@ -285,9 +330,13 @@ final class Emailer extends BaseObject
         if ($isHtml) $mailer->msgHTML($message);
         else $mailer->Body = $message;
         
-        try { if (!$mailer->send()); }
+        try 
+        { 
+            if (!$mailer->send())
+                throw new PHPMailerException1($mailer->ErrorInfo);
+        }
         catch (PHPMailer\Exception $e) { 
-            throw new PHPMailerException($e); }
+            throw new PHPMailerException2($e); }
         
         $mailer->clearAddresses(); 
         $mailer->clearAttachments();

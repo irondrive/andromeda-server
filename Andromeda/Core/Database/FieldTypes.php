@@ -959,7 +959,7 @@ class JsonArray extends BaseField
 }
 
 /**
- * A field stores a possibly-null reference to another object
+ * A field stores a possibly-null reference to another object via its ID
  * @template T of BaseObject
  */
 class NullObjectRefT extends BaseField
@@ -1049,7 +1049,7 @@ class NullObjectRefT extends BaseField
 }
 
 /**
- * A field stores a possibly-null reference to another object
+ * A field stores a possibly-null reference to another object via its ID
  * @template T of BaseObject
  */
 class ObjectRefT extends BaseField

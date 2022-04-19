@@ -113,7 +113,7 @@ class ActionLog extends BaseLog
      */
     public static function LoadByRequest(ObjectDatabase $database, RequestLog $reqlog) : array
     {
-        return $database->LoadObjectsByObject(static::class, 'requestlog', $reqlog);
+        return $database->LoadObjectsByKey(static::class, 'requestlog', $reqlog->ID());
     }
     
     /**

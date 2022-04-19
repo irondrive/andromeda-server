@@ -40,6 +40,10 @@ final class EasyObject extends BaseObject
         parent::AddUniqueKeys($keymap);
     }
     
+    private bool $postConstruct = false;
+    protected function PostConstruct() : void { $this->postConstruct = true; }
+    public function didPostConstruct() : bool { return $this->postConstruct; }
+    
     public function Delete() : void { parent::Delete(); }
     
     public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
@@ -156,7 +160,7 @@ abstract class PolyObject15 extends PolyObject1
         
         $this->testprop15 = $fields[] = new FieldTypes\NullIntType('testprop15');
         
-        $this->RegisterFields($fields); // part of PolyObject2's table
+        $this->RegisterChildFields($fields);
         
         parent::CreateFields();
     }
