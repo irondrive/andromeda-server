@@ -479,6 +479,46 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
     
+    public function testLoadUniqueByQuery() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(3))->method('read')
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
+            ->willReturnOnConsecutiveCalls([], [array('id'=>'test')], [array('id'=>'test1'),array('id'=>'test2')]);
+        
+        $q = new QueryBuilder(); $q->Where($q->Equals('uniqueKey',5));
+        
+        $this->assertNull($objdb->TryLoadUniqueByQuery(EasyObject::class, $q)); // 0
+        
+        $obj = $objdb->TryLoadUniqueByQuery(EasyObject::class, $q);
+        $this->assertInstanceOf(EasyObject::class, $obj); // 1
+        
+        $this->expectException(MultipleUniqueKeyException::class);
+        $objdb->TryLoadUniqueByQuery(EasyObject::class, $q); // 2
+    }
+    
+    public function testDeleteUniqueByQuery() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->method('SupportsRETURNING')->willReturn(true);
+        
+        $database->expects($this->exactly(3))->method('readwrite')
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0 RETURNING *", array('d0'=>5))
+            ->willReturnOnConsecutiveCalls([], [array('id'=>'test')], [array('id'=>'test1'),array('id'=>'test2')]);
+            
+        $q = new QueryBuilder(); $q->Where($q->Equals('uniqueKey',5));
+        
+        $this->assertFalse($objdb->TryDeleteUniqueByQuery(EasyObject::class, $q)); // 0 
+        $this->assertTrue($objdb->TryDeleteUniqueByQuery(EasyObject::class, $q)); // 1
+        
+        $this->expectException(MultipleUniqueKeyException::class);
+        $objdb->TryDeleteUniqueByQuery(EasyObject::class, $q); // 2
+    }
+    
     public function testNonUniqueKeyLoad() : void
     {
         $database = $this->createMock(Database::class);
@@ -509,23 +549,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj1, $objs2[$id1]);
         $this->assertSame($obj2, $objs2[$id2]);
     }
-    
-    private const polySelect1 = array(
-        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
-        "FROM a2obj_core_database_polyobject1 ".
-        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
-        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
-        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-        "WHERE testprop5 = :d0", array('d0'=>55));
-    
-    private const polySelect2 = array(
-        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
-        "FROM a2obj_core_database_polyobject1 ".
-        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
-        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
-        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)", array('d0'=>75,'d1'=>101));
-    
+
     public function testUniqueKeyLoad() : void
     {
         $database = $this->createMock(Database::class);
@@ -592,7 +616,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(MyObjectBase::class, 'mykey', 7));
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(MyObjectChild::class, 'mykey', 7));
     }
-
+    
+    private const polySelect1 = array(
+        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
+        "FROM a2obj_core_database_polyobject1 ".
+        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+        "WHERE testprop5 = :d0", array('d0'=>55));
+    
+    private const polySelect2 = array(
+        "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
+        "FROM a2obj_core_database_polyobject1 ".
+        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)", array('d0'=>75,'d1'=>101));
+    
     public function testNonUniqueKeyPolyLoad() : void
     {
         $database = $this->createMock(Database::class);

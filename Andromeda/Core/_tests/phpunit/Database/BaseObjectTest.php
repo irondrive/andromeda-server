@@ -76,6 +76,8 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         
         $this->assertInstanceOf(EasyObject::class, $obj);
         $this->assertSame(12, strlen($obj->ID()));
+        
+        $this->assertTrue($obj->didPostConstruct());
     }
     
     public function testToString() : void

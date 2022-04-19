@@ -608,6 +608,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullInt()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetInt() : int
     {
@@ -619,6 +620,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullInt32()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetInt32() : int
     {
@@ -630,6 +632,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullInt16()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetInt16() : int
     {
@@ -641,6 +644,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullInt8()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetInt8() : int
     {
@@ -652,6 +656,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullUUint()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetUint() : int
     {
@@ -663,6 +668,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullUint32()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetUint32() : int
     {
@@ -674,6 +680,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullUint16()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetUint16() : int
     {
@@ -685,6 +692,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullUint8()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetUint8() : int
     {
@@ -696,6 +704,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullFloat()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetFloat() : float
     {
@@ -707,6 +716,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullRandstr()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetRandstr() : string
     {
@@ -718,6 +728,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullAlphanum()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetAlphanum() : string
     {
@@ -729,6 +740,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullName()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetName() : string
     {
@@ -740,6 +752,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullEmail()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetEmail() : string
     {
@@ -751,6 +764,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullFSName()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetFSName() : string
     {
@@ -762,6 +776,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullFSPath()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetFSPath() : string
     {
@@ -773,6 +788,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullHostname()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetHostname() : string
     {
@@ -784,6 +800,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullHTMLText()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetHTMLText() : string
     {
@@ -795,6 +812,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullUTF8String()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetUTF8String() : string
     {
@@ -806,6 +824,7 @@ class SafeParam
     /**
      * @see SafeParam::GetNullObject()
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid
      */
     public function GetObject() : SafeParams
     {
@@ -819,8 +838,8 @@ class SafeParam
      * @template T of scalar
      * @param callable(SafeParam):T $getval function to get scalar from SafeParam
      * @return array<T> array of checked scalars
-     * @throws SafeParamInvalidException if not valid JSON
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid JSON
      */
     public function GetArray(callable $getval) : array
     {
@@ -832,8 +851,8 @@ class SafeParam
     /**
      * Returns an array of SafeParamses decoded from JSON
      * @return array<SafeParams> array of SafeParamses
-     * @throws SafeParamInvalidException if not valid JSON
      * @throws SafeParamNullValueException if null
+     * @throws SafeParamInvalidException if not valid JSON
      */
     public function GetObjectArray() : array
     {

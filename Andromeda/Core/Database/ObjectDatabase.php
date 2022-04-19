@@ -338,7 +338,7 @@ class ObjectDatabase
      * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
-    public function TryLoadUniqueByQuery(string $class, QueryBuilder $query) : ?BaseObject // TODO unit test
+    public function TryLoadUniqueByQuery(string $class, QueryBuilder $query) : ?BaseObject
     {
         $objs = $this->LoadObjectsByQuery($class, $query);
         if (count($objs) > 1) throw new MultipleUniqueKeyException("$class");
@@ -355,7 +355,7 @@ class ObjectDatabase
      * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
-    public function TryDeleteUniqueByQuery(string $class, QueryBuilder $query) : bool // TODO unit test
+    public function TryDeleteUniqueByQuery(string $class, QueryBuilder $query) : bool
     {
         $count = $this->DeleteObjectsByQuery($class, $query);
         if ($count > 1) throw new MultipleUniqueKeyException("$class");
@@ -628,7 +628,7 @@ class ObjectDatabase
         
         $this->RegisterUniqueKeys($base);
         $this->objectsByBase[$base][$object->ID()] = $object;
-        
+
         foreach (array_reverse($fieldsByClass) as $class=>$fields)
         {
             $columns = array(); $indexes = array();
@@ -1146,55 +1146,5 @@ class ObjectDatabase
         
         unset($this->objectsKeyValues[$objstr]);
         unset($this->uniqueKeyValues[$objstr]);
-    }
-    
-    /**
-     * Deletes all objects of a class
-     * @see ObjectDatabase::LoadObjectsByQuery()
-     * @template T of BaseObject
-     * @param class-string<T> $class class name
-     * @return array<string, T> array of objects indexed by their IDs
-     */
-    public function LoadAll(string $class) : array
-    {
-        return $this->LoadObjectsByQuery($class, new QueryBuilder());
-    }
-    
-    /**
-     * Immediately delete all objects of class
-     * @see ObjectDatabase::DeleteObjectsByQuery()
-     * @template T of BaseObject
-     * @param class-string<T> $class the class of the objects to delete
-     * @return int number of deleted objects
-     */
-    public function DeleteAll(string $class) : int
-    {
-        return $this->DeleteObjectsByQuery($class, new QueryBuilder());
-    }
-
-    /**
-     * Loads objects with the given object referenced by the given field
-     * @template T of BaseObject
-     * @param class-string<T> $class class to load
-     * @param string $field The name of the field to check
-     * @param BaseObject $object the object referenced by the field
-     * @return array<string, T> array of objects indexed by their IDs
-     */
-    public function LoadObjectsByObject(string $class, string $field, BaseObject $object) : array
-    {
-        return $this->LoadObjectsByKey($class, $field, $object->ID());
-    }
-    
-    /**
-     * Loads a unique object with the given object referenced by the given field
-     * @template T of BaseObject
-     * @param class-string<T> $class class to load
-     * @param string $field The name of the field to check
-     * @param BaseObject $object the object referenced by the field
-     * @return T|null
-     */
-    public function TryLoadUniqueByObject(string $class, string $field, BaseObject $object) : ?BaseObject
-    {
-        return $this->TryLoadUniqueByKey($class, $field, $object->ID());
     }
 }

@@ -2,26 +2,42 @@
 
 /** The base class for Andromeda exceptions */
 abstract class BaseException extends \Exception 
-{
+{   
     /**
-     * Sets this exception's message (not code) from another exception
-     * @param \Exception $e exception to copy
-     * @param bool $append if true, append message instead of overwriting
+     * Sets this exception's message (not code) from another andromeda exception
+     * @param self $e exception to copy
      * @param bool $newloc if true, also copy the exception file/line
      * @return $this
      */
-    protected function FromException(\Exception $e, bool $append = false, bool $newloc = true) : self
+    protected function CopyException(self $e, bool $newloc = true) : self
     {
-        if ($append)
-            $this->message .= ': '.$e->getMessage();
-        else $this->message = $e->getMessage();
+        $this->message = $e->getMessage();
         
         if ($newloc)
         {
             $this->file = $e->getFile();
             $this->line = $e->getLine();
         }
-
+        
+        return $this;
+    }
+    
+    /**
+     * Appends this exception's message (not code) from another exception
+     * @param \Exception $e exception to copy
+     * @param bool $newloc if true, also copy the exception file/line
+     * @return $this
+     */
+    protected function AppendException(\Exception $e, bool $newloc = true) : self
+    {
+        $this->message .= ': '.$e->getMessage();
+        
+        if ($newloc)
+        {
+            $this->file = $e->getFile();
+            $this->line = $e->getLine();
+        }
+        
         return $this;
     }
 }
@@ -111,17 +127,29 @@ class ServerException extends BaseException
     
     /**
      * Sets this exception's code,message from another exception
-     * @param \Exception $e exception to copy
-     * @param bool $append if true, append message instead of overwriting
-     * @param bool $newloc if true, also copy the exception file/line
+     * @see BaseException::CopyException
      * @return $this
      */
-    protected function FromException(\Exception $e, bool $append = false, bool $newloc = true) : self
+    protected function CopyException(BaseException $e, bool $newloc = true) : self
     {
-        parent::FromException($e, $append, $newloc);
+        parent::CopyException($e, $newloc);
         
         $this->code = $e->getCode();
 
+        return $this;
+    }
+    
+    /**
+     * Appends this exception's code,message from another exception
+     * @see BaseException::AppendException()
+     * @return $this
+     */
+    protected function AppendException(\Exception $e, bool $newloc = true) : self
+    {
+        parent::AppendException($e, $newloc);
+        
+        $this->code = $e->getCode();
+        
         return $this;
     }
 }

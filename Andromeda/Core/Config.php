@@ -10,22 +10,6 @@ require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
-/** Exception indicating that a mailer was requested but it is disabled */
-class EmailDisabledException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMAIL_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that a mailer was requested but none are configured */
-class EmailerUnavailableException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMAILER_UNAVAILABLE", $details);
-    }
-}
-
 /** Exception indicating that the configured data directory is not valid */
 class UnwriteableDatadirException extends Exceptions\ClientErrorException
 {
@@ -73,7 +57,7 @@ abstract class BaseConfig extends SingletonObject
         $this->date_created = $fields[] = new FieldTypes\Date('date_created');
         $this->version = $fields[] = new FieldTypes\StringType('version');
         
-        $this->RegisterFields($fields);
+        $this->RegisterChildFields($fields);
         
         parent::CreateFields();
     }
@@ -399,20 +383,6 @@ final class Config extends BaseConfig
     /** Gets whether using configured emailers is currently allowed */
     public function GetEnableEmail() : bool { return $this->email->GetValue(); }
 
-    /**
-     * Retrieves a configured mailer service, picking one randomly 
-     * @throws EmailDisabledException if email is disabled
-     * @throws EmailerUnavailableException if not configured
-     */
-    public function GetMailer() : Emailer
-    {
-        if (!$this->GetEnableEmail()) throw new EmailDisabledException();
-        
-        $mailers = Emailer::LoadAll($this->database);
-        if (empty($mailers)) throw new EmailerUnavailableException();
-        return $mailers[array_rand($mailers)]->Activate();
-    }
-    
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values

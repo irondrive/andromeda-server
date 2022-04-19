@@ -15,8 +15,6 @@ require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
-require_once(ROOT."/Apps/Core/ActionLog.php");
-
 use Andromeda\Core\{UnknownActionException, MailSendException};
 
 /** Exception indicating that the specified mailer object does not exist */
@@ -31,7 +29,7 @@ class UnknownMailerException extends Exceptions\ClientNotFoundException
 class MailSendFailException extends Exceptions\ClientErrorException
 {
     public function __construct(MailSendException $e) {
-        parent::__construct(""); $this->FromException($e);
+        parent::__construct(""); $this->CopyException($e);
     }
 }
 
@@ -56,7 +54,7 @@ class AdminRequiredException extends Exceptions\ClientDeniedException
  * Handles DB config, install, and getting/setting config/logs.
  * @extends InstalledApp<Config>
  */
-class CoreApp extends InstalledApp
+final class CoreApp extends InstalledApp
 {
     public static function getName() : string { return 'core'; }
     
@@ -66,14 +64,14 @@ class CoreApp extends InstalledApp
         return array_key_exists('accounts', Main::GetInstance()->GetApps());
     }
     
+    /** @return class-string<ActionLog> */
     public static function getLogClass() : string
     { 
         if (self::hasAccountsApp())
-        {
-            require_once(ROOT."/Apps/Core/ActionLogFull.php");
-            return ActionLogFull::class;
-        }
-        else return ActionLog::class;
+             require_once(ROOT."/Apps/Core/ActionLogFull.php");
+        else require_once(ROOT."/Apps/Core/ActionLogBasic.php");
+        
+        return ActionLog::class;
     }
     
     protected static function getConfigClass() : string { return Config::class; }
@@ -149,12 +147,10 @@ class CoreApp extends InstalledApp
         
         if ($action !== 'dbconf' && $action !== 'usage' 
             && ($retval = parent::Run($input)) !== false) return $retval;
-        
-        $useAuth = array_key_exists('accounts', Main::GetInstance()->GetApps());
-        
+
         /* if the Accounts app is installed, use it for 
          * authentication, else check interface privilege */
-        if ($useAuth)
+        if (self::hasAccountsApp())
         {
             require_once(ROOT."/Apps/Accounts/Authenticator.php");
             
@@ -162,23 +158,22 @@ class CoreApp extends InstalledApp
                 $this->database, $input, $this->API->GetInterface());
             
             $isAdmin = $authenticator !== null && $authenticator->isAdmin();
+            
+            $actionlog = null; if (($reqlog = $this->API->GetRequestLog()) !== null)
+            {
+                $actionlog = $reqlog->LogAction($input, self::getLogClass())->SetAuth($authenticator);
+            }
         }
         else // not using the accounts app
         {
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
+            
+            $actionlog = null; if (($reqlog = $this->API->GetRequestLog()) !== null)
+            {
+                $actionlog = $reqlog->LogAction($input, self::getLogClass())->SetAdmin($isAdmin);
+            }
         }
 
-        if (($reqlog = $this->API->GetRequestLog()) !== null)
-        {
-            $actionlog = $reqlog->LogAction($input, self::getLogClass());
-            
-            if ($actionlog instanceof ActionLog)
-                $actionlog->SetAdmin($isAdmin);
-            else if ($actionlog instanceof ActionLogFull)
-                $actionlog->SetAuth($authenticator);
-        }
-        else $actionlog = null;
-        
         $params = $input->GetParams();
 
         switch ($action)
@@ -373,9 +368,8 @@ class CoreApp extends InstalledApp
             
             if ($mailer === null) 
                 throw new UnknownMailerException();
-            else $mailer->Activate();
         }
-        else $mailer = $this->GetConfig()->GetMailer();
+        else $mailer = Emailer::LoadAny($this->database);
         
         if ($actionlog) $actionlog->LogDetails('mailer',$mailer->ID());
         
@@ -386,7 +380,7 @@ class CoreApp extends InstalledApp
     /**
      * Registers (enables) an app
      * @throws AdminRequiredException if not an admin
-     * @return string[] array of enabled apps
+     * @return string[] array of enabled apps (not core)
      */
     protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -404,7 +398,7 @@ class CoreApp extends InstalledApp
     /**
      * Unregisters (disables) an app
      * @throws AdminRequiredException if not an admin
-     * @return string[] array of enabled apps
+     * @return string[] array of enabled apps (not core)
      */
     protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
