@@ -19,9 +19,9 @@ final class ActionMetrics extends BaseObject
     
     protected const IDLength = 20;
     
-    /** The request metrics object for this action */
+    /** @var FieldTypes\ObjectRefT<RequestMetrics> The request metrics object for this action */
     private FieldTypes\ObjectRefT $requestmet;
-    /** The action log corresponding to this metrics */
+    /** @var FieldTypes\NullObjectRefT<ActionLog> The action log corresponding to this metrics */
     private FieldTypes\NullObjectRefT $actionlog;
     /** The command action app name */
     private FieldTypes\StringType $app;

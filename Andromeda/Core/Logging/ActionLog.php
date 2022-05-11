@@ -237,7 +237,7 @@ class ActionLog extends BaseLog
     /**
      * Returns the printable client object of this action log
      * @param bool $expand if true, expand linked objects
-     * @return array `{app:string, action:string, ?inputs:array, ?details:array}`
+     * @return array<mixed> `{app:string, action:string, ?inputs:array, ?details:array}`
      */
     public function GetClientObject(bool $expand = false) : array
     {

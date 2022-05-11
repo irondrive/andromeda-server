@@ -690,12 +690,16 @@ class ObjectDatabase
     
     /**
      * Converts a scalar value to a unique string
+     * Null will return a different result than any non-null values
      * @param ?scalar $value index data value
      */
     private static function ValueToIndex($value) : string
     {
-        // want ""/false to be distinct from null
-        return ($value !== null) ? 'k'.$value : '';
+        if ($value === null) return '';
+        // want false/0 to match as true/1 do
+        if ($value === false) $value = 0;
+        // want null to be a distinct string
+        return 'k'.$value;
     }
     
     /**
@@ -709,12 +713,13 @@ class ObjectDatabase
     public function CountObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
+        $this->objectsByKey[$class][$key] ??= array();
         
         if (array_key_exists($validx, $this->objectsByKey[$class][$key]))
-            return count($this->objectsByKey[$class][$key][(string)$validx]);
+            return count($this->objectsByKey[$class][$key][$validx]);
         else
         {
-            $q = new QueryBuilder(); $q->Where($q->Equals($key, $validx));
+            $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             return $this->CountObjectsByQuery($class, $q);
         }
     }
@@ -756,7 +761,7 @@ class ObjectDatabase
      * @param ?scalar $value data value to match
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByKey(string $class, string $key, $value) : int
+    public function DeleteObjectsByKey(string $class, string $key, $value) : int // TODO unit test
     {
         $validx = self::ValueToIndex($value);
         $this->objectsByKey[$class][$key] ??= array();
@@ -877,7 +882,7 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
-     * @param string $validx value of the key field
+     * @param string $validx index value of the key field
      * @param T[] $objs array of objects to set
      * @param ?class-string<T> $bclass base class for property
      */
@@ -903,7 +908,7 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
-     * @param string $validx value of the key field
+     * @param string $validx index value of the key field
      * @param T $obj object to add to the array
      * @param ?class-string<T> $bclass base class for property
      */
@@ -929,7 +934,7 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
-     * @param string $validx value of the key field
+     * @param string $validx index value of the key field
      * @param T $object object being removed
      */
     private function RemoveNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $object) : void
@@ -976,7 +981,7 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
-     * @param string $validx value of the key field
+     * @param string $validx index value of the key field
      * @param ?T $obj object to set as the cached object or null
      * @param ?class-string<T> $bclass base class for property
      */
@@ -1065,7 +1070,7 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
-     * @param string $validx value of the key field
+     * @param string $validx index value of the key field
      */
     private function UnsetUniqueKeyObject(string $class, string $key, string $validx) : void
     {

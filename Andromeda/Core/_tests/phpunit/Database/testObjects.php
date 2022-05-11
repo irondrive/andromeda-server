@@ -20,6 +20,7 @@ final class EasyObject extends BaseObject
     
     private FieldTypes\NullIntType $uniqueKey;
     private FieldTypes\NullIntType $generalKey;
+    private FieldTypes\NullBoolType $generalKey2;
     
     protected function CreateFields() : void
     {
@@ -27,6 +28,7 @@ final class EasyObject extends BaseObject
         
         $this->uniqueKey = $fields[] = new FieldTypes\NullIntType('uniqueKey');
         $this->generalKey = $fields[] = new FieldTypes\NullIntType('generalKey');
+        $this->generalKey2 = $fields[] = new FieldTypes\NullBoolType('generalKey2');
 
         $this->RegisterFields($fields, self::class);
         
@@ -51,6 +53,9 @@ final class EasyObject extends BaseObject
     
     public function GetGeneralKey() : ?int { return $this->generalKey->TryGetValue(); }
     public function SetGeneralKey(?int $val) : self { $this->generalKey->SetValue($val); return $this; }
+    
+    public function GetGeneralKey2() : ?bool { return $this->generalKey2->TryGetValue(); }
+    public function SetGeneralKey2(?bool $val) : self { $this->generalKey2->SetValue($val); return $this; }
 }
 
 abstract class MyObjectBase extends BaseObject
