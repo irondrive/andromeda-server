@@ -42,14 +42,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
             "1f291553177127a71e6e1597c75c098889dd5cf7bf08361214767cab1b358bae",
             bin2hex(CryptoKey::DeriveKey($password, $salt, 32, true)));
     }
-    
-    public function testSodiumException() : void
-    {
-        $this->expectException(\SodiumException::class);
-        
-        CryptoKey::DeriveKey("", "", 16);
-    }
-    
+
     public function testCryptoSecret() : void
     {
         $this->assertSame(32, CryptoSecret::KeyLength());
