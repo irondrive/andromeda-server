@@ -52,7 +52,7 @@ final class ActionLog extends BaseActionLog
     
     /**
      * Returns the printable client object of this access log
-     * @return array `{admin:bool}`
+     * @return array<mixed> `{admin:bool}`
      */
     public function GetClientObject(bool $expand = false) : array
     {

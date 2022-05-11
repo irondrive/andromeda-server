@@ -200,7 +200,7 @@ final class ErrorLog extends BaseLog
     /**
      * Returns the printable client object of this error log
      * @param ?int $level debug level for output, null for unfiltered
-     * @return array `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,trace_basic:array}`
+     * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,trace_basic:array}`
         if details or null level, add `{trace_full:array,objects:?array,queries:?array,log:?array}`
         if sensitive or null level, add `{params:?array}`
      */

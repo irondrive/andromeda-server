@@ -386,7 +386,7 @@ final class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{apiver:int, apps:[{string:string}], read_only:bool, enabled:bool}` \
+     * @return array<mixed> `{apiver:int, apps:[{string:string}], read_only:bool, enabled:bool}` \
          if admin, add: `{date_created:float, datadir:?string, \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool

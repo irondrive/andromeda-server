@@ -221,7 +221,7 @@ class Database
             {
                 $connect .= ";host=".$params->GetParam('host')->GetHostname();
                 
-                if ($port = ($params->GetOptParam('port',null)->GetNullUint16()) !== null)
+                if (($port = $params->GetOptParam('port',null)->GetNullUint16()) !== null)
                 {
                     $connect .= ";port=$port";
                 }
@@ -338,7 +338,7 @@ class Database
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array `{driver:string, cversion:string, sversion:string, info:string}`
+     * @return array<mixed> `{driver:string, cversion:string, sversion:string, info:string}`
      */
     public function getInfo() : array
     {

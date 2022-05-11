@@ -174,7 +174,7 @@ final class RequestLog extends BaseLog
 
     /**
      * Returns the printable client object of this request log
-     * @return array `{time:float, addr:string, agent:string}` 
+     * @return array<mixed> `{time:float, addr:string, agent:string}` 
          if error, add: `{errcode:int, errtext:string}`
      */
     public function GetClientObject() : array

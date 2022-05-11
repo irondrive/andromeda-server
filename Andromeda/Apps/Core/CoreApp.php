@@ -323,7 +323,7 @@ final class CoreApp extends InstalledApp
     /**
      * Gets miscellaneous server identity information
      * @throws AdminRequiredException if not admin-level access
-     * @return array `{uname:string, server:[various], db:Database::getInfo()}`
+     * @return array<mixed> `{uname:string, php_version:string, zend_version:string, server:[various], db:Database::getInfo()}`
      * @see Database::getInfo()
      */
     protected function ServerInfo(bool $isAdmin) : array
@@ -336,8 +336,10 @@ final class CoreApp extends InstalledApp
         unset($server['argv']); unset($server['argc']);
         
         return array(
-            'uname' => php_uname(), 
             'server' => $server,
+            'uname' => php_uname(),
+            'php_version' => phpversion(),
+            'zend_version' => zend_version(),
             'db' => $this->database->GetInternal()->getInfo()
         );
     }

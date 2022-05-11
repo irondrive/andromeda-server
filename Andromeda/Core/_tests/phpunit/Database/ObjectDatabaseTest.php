@@ -549,6 +549,24 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj1, $objs2[$id1]);
         $this->assertSame($obj2, $objs2[$id2]);
     }
+    
+    public function testNonUniqueKeyCount() : void
+    {
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(2))->method('read')
+            ->withConsecutive(
+                ["SELECT COUNT(a2obj_core_database_easyobject.id) FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)], 
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)])
+            ->willReturnOnConsecutiveCalls(
+                [array('COUNT(a2obj_core_database_easyobject.id)'=>1)], 
+                [array('id'=>'test123','generalKey'=>5)]);
+        
+        $this->assertSame(1, $objdb->CountObjectsByKey(EasyObject::class, 'generalKey', 5));
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5); // now count is cached
+        $this->assertSame(1, $objdb->CountObjectsByKey(EasyObject::class, 'generalKey', 5));
+    }
 
     public function testUniqueKeyLoad() : void
     {
@@ -574,6 +592,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $this->expectException(UnknownUniqueKeyException::class);
         $objdb->TryLoadUniqueByKey(EasyObject::class, 'testKey', 5);
+    }
+    
+    public function testUniqueKeyConstructID() : void
+    {
+        // when constructing objects, ID is an automatic unique key
+        $database = $this->createMock(Database::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(1))->method('read')
+            ->with(...self::select1)->willReturn([array('id'=>$id='test123','testprop1'=>3,'type'=>101)]);
+            
+        $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
+        
+        $objs = $objdb->LoadObjectsByQuery(PolyObject5a::class, $q);
+        $this->assertCount(1, $objs); $obj = $objs[$id];
+        
+        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(PolyObject1::class, 'id', $obj->ID()));
     }
     
     public function testUniqueKeyInsertID() : void
@@ -676,7 +711,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5ab::class, 'testprop5', 55));
     }
     
-    public function testNonUniqueKeyDelete() : void
+    public function testNonUniqueKeyLoadDelete() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -707,7 +742,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5));
     }
     
-    public function testUniqueKeyDelete() : void
+    public function testUniqueKeyLoadDelete() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -728,7 +763,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
 
-    public function testNonUniqueKeyPolyDelete() : void
+    public function testNonUniqueKeyPolyLoadDelete() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -749,7 +784,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertEmpty($objdb->LoadObjectsByKey(PolyObject5ab::class, 'testprop5', 55));
     }
     
-    public function testUniqueKeyPolyDelete() : void
+    public function testUniqueKeyPolyLoadDelete() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -774,7 +809,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5ab::class, 'testprop5', 55));
     }
     
-    public function testNonUniqueKeyModify() : void
+    public function testNonUniqueKeyLoadModify() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -817,7 +852,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj2, $objs2[$id2]);
     }
     
-    public function testUniqueKeyModify() : void
+    public function testUniqueKeyLoadModify() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -845,7 +880,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6));
     }
     
-    public function testNonUniqueKeyPolyModify() : void
+    public function testNonUniqueKeyPolyLoadModify() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -868,7 +903,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // the object will not be cached under 66 as it's not loaded yet, so nothing else to check
     }
     
-    public function testUniqueKeyPolyModify() : void
+    public function testUniqueKeyPolyLoadModify() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -889,7 +924,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj1, $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 66));
     }
     
-    public function testNonUniqueKeyInsert() : void
+    public function testNonUniqueKeyLoadInsert() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -923,7 +958,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj2, $objs2[$id2]);
     }
 
-    public function testUniqueKeyInsert() : void
+    public function testUniqueKeyLoadInsert() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -940,24 +975,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
     }
 
-    public function testUniqueKeyConstructID() : void
-    {
-        // when constructing objects, ID is an automatic unique key
-        $database = $this->createMock(Database::class);
-        $objdb = new ObjectDatabase($database);
-        
-        $database->expects($this->exactly(1))->method('read')
-            ->with(...self::select1)->willReturn([array('id'=>$id='test123','testprop1'=>3,'type'=>101)]);
-            
-        $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-        
-        $objs = $objdb->LoadObjectsByQuery(PolyObject5a::class, $q);
-        $this->assertCount(1, $objs); $obj = $objs[$id];
-        
-        $this->assertSame($obj, $objdb->TryLoadUniqueByKey(PolyObject1::class, 'id', $obj->ID()));
-    }
-    
-    public function testNonUniqueKeyPolyInsert() : void
+    public function testNonUniqueKeyPolyLoadInsert() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -978,7 +996,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertCount(1, $objs); $this->assertSame($obj, $objs[$obj->ID()]);
     }
     
-    public function testUniqueKeyPolyInsert() : void
+    public function testUniqueKeyPolyLoadInsert() : void
     {
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
@@ -997,24 +1015,29 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueNullKey() : void
     {
-        // test inserting objects with values null/0 and test they're treatly differently
+        // test inserting objects with values null/0/false and test they're treatly differently
         
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         
-        $database->expects($this->exactly(2))->method('read')->willReturn([]);
-        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', null);
+        $database->expects($this->exactly(6))->method('read')->willReturn([]);
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', null); // init empty caches
         $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 0);
-
-        $obj1 = EasyObject::Create($objdb)->SetGeneralKey(null); $id1 = $obj1->ID();
-        $obj2 = EasyObject::Create($objdb)->SetGeneralKey(0); $id2 = $obj2->ID();
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 1);
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', null);
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', false);
+        $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', true);
+        
+        $obj1 = EasyObject::Create($objdb)->SetGeneralKey(null)->SetGeneralKey2(null); $id1 = $obj1->ID();
+        $obj2 = EasyObject::Create($objdb)->SetGeneralKey(0)->SetGeneralKey2(false); $id2 = $obj2->ID();
         
         $insstr1 = "INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)";
-        $insstr2 = "INSERT INTO a2obj_core_database_easyobject (generalKey,id) VALUES (:d0,:d1)";
+        $insstr2 = "INSERT INTO a2obj_core_database_easyobject (generalKey,generalKey2,id) VALUES (:d0,:d1,:d2)";
         $database->expects($this->exactly(2))->method('write')
-            ->withConsecutive([$insstr1, array('d0'=>$id1)], [$insstr2, array('d0'=>0,'d1'=>$id2)])
+            ->withConsecutive(
+                [$insstr1, array('d0'=>$id1)], 
+                [$insstr2, array('d0'=>0,'d1'=>0,'d2'=>$id2)])
             ->willReturn(1);
-            
         $obj1->Save(); $obj2->Save();
         
         $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', null);
@@ -1022,6 +1045,15 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 0);
         $this->assertCount(1, $objs); $this->assertSame($obj2, $objs[$id2]);
+        
+        $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', null);
+        $this->assertCount(1, $objs); $this->assertSame($obj1, $objs[$id1]);
+        
+        $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', false);
+        $this->assertCount(1, $objs); $this->assertSame($obj2, $objs[$id2]);
+        
+        $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 1));
+        $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey2', true));
     }
     
     public function testUniqueNullKey() : void

@@ -141,13 +141,11 @@ abstract class BaseObject
      */
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
-        $obj = new static($database, array());
+        $obj = new static($database, array('id' => static::GenerateID()));
         
         $obj->isCreated = true;
-        
-        $obj->idfield->SetValue(static::GenerateID());
-        
-        $database->notifyCreated($obj); return $obj;
+        $database->notifyCreated($obj); 
+        return $obj;
     }
     
     /**

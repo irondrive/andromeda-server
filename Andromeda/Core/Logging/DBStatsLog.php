@@ -51,7 +51,7 @@ trait DBStatsLog
     
     /**
      * Gets the printable client object for this object
-     * @return array `{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}`
+     * @return array<mixed> `{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}`
      * @see DBStats::getStats()
      */
     protected function GetDBStatsClientObject() : array

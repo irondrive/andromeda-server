@@ -135,7 +135,11 @@ final class RequestMetrics extends BaseObject
         {
             $obj->construct_queries->SetArray($construct->getQueries());
             $obj->gcstats->SetArray(gc_status());
-            $obj->rusage->SetArray(getrusage());
+            
+            $rusage = getrusage();
+            if ($rusage === false) $rusage = null;
+            $obj->rusage->SetArray($rusage);
+            
             $obj->includes->SetArray(get_included_files());
             $obj->objects->SetArray($database->getLoadedObjects());
             $obj->queries->SetArray($total->getQueries());
@@ -183,7 +187,7 @@ final class RequestMetrics extends BaseObject
     /**
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
-     * @return array `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:DBStatsLog, action_stats:[ActionMetrics] \
+     * @return array<mixed> `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:DBStatsLog, action_stats:[ActionMetrics] \
            construct_stats:{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}}`
         if extended, add `{gcstats:array,rusage:array,includes:array,construct_stats:{queries:[{time:float,query:string}]}}`
         if extended and not accompanying debug output, omit add `{objects:array<class,[string]>,queries:array,debuglog:array}`

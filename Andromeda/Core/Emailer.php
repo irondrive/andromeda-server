@@ -230,7 +230,7 @@ final class Emailer extends BaseObject
     
     /**
      * Gets the config as a printable client object
-     * @return array `{id:string, type:enum, hosts:?string, username:?string, password:bool,
+     * @return array<mixed> `{id:string, type:enum, hosts:?string, username:?string, password:bool,
          from_address:string, from_name:?string, use_reply:bool, date_created:float}`
      */
     public function GetClientObject() : array

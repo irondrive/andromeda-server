@@ -122,7 +122,7 @@ class SafeParam
      * @template T of array<string>
      * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
-     * @return NULL|value-of<T> the whitelisted value or null
+     * @return ?value-of<T> the whitelisted value or null
      */
     public function FromWhitelistNull(array $values) : ?string
     {
@@ -580,12 +580,13 @@ class SafeParam
         
         if ($this->logref !== null)
         {
-            $this->logref[$this->key] = array();
+            $sublog = &$this->logref[$this->key];
             
+            $sublog = array();
             foreach ($arr as $subval)
             {
-                $idx = array_push($this->logref[$this->key], array());
-                $subval->SetLogRef($this->logref[$this->key][$idx-1], $this->loglevel);
+                $idx = array_push($sublog, array());
+                $subval->SetLogRef($sublog[$idx-1], $this->loglevel);
             }
         }
         
@@ -654,9 +655,10 @@ class SafeParam
     }
     
     /**
-     * @see SafeParam::GetNullUUint()
+     * @see SafeParam::GetNullUint()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
+     * @return 0|positive-int
      */
     public function GetUint() : int
     {
@@ -669,6 +671,7 @@ class SafeParam
      * @see SafeParam::GetNullUint32()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
+     * @return 0|positive-int
      */
     public function GetUint32() : int
     {
@@ -681,6 +684,7 @@ class SafeParam
      * @see SafeParam::GetNullUint16()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
+     * @return 0|positive-int
      */
     public function GetUint16() : int
     {
@@ -693,6 +697,7 @@ class SafeParam
      * @see SafeParam::GetNullUint8()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
+     * @return 0|positive-int
      */
     public function GetUint8() : int
     {

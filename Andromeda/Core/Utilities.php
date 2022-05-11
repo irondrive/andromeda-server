@@ -117,7 +117,7 @@ abstract class Utilities
 
     /** 
      * Returns a random string with the given length 
-     * @param positive-int $length
+     * @param 0|positive-int $length
      */
     public static function Random(int $length) : string
     {

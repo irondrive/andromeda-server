@@ -68,11 +68,13 @@ class TestUtilApp extends BaseApp
         return Utilities::Random($length);
     }
     
+    /** @return array<mixed> */
     protected function GetInput(Input $input) : array
     {
         $params = $input->GetParams()->GetClientObject();
         
-        $files = array_map(function(InputStream $file){ return $file->GetData(); }, $input->GetFiles());
+        $files = array_map(function(InputStream $file){ 
+            return $file->GetData(); }, $input->GetFiles());
         
         return array('params'=>$params, 'files'=>$files);
     }
