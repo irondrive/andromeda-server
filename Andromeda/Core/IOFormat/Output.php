@@ -1,14 +1,8 @@
 <?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 
-/** Exception indicating the given Output to parse is invalid */
-class InvalidParseException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("PARSE_OUTPUT_INVALID", $details);
-    }
-}
+require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
 /** 
  * Represents the output to be shown to the user 

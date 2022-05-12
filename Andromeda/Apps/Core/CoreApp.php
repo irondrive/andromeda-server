@@ -1,13 +1,15 @@
 <?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\{Main, FailedAppLoadException};
+require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Config, InvalidAppException, MissingMetadataException};
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, MissingMetadataException};
+
 require_once(ROOT."/Core/Exceptions/ErrorLog.php"); use Andromeda\Core\Exceptions\ErrorLog;
-require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\{Database, DatabaseException};
+require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Database;
+require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\DatabaseException;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
@@ -15,38 +17,9 @@ require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
+require_once(ROOT."/Apps/Core/Exceptions.php");
+
 use Andromeda\Core\{UnknownActionException, MailSendException};
-
-/** Exception indicating that the specified mailer object does not exist */
-class UnknownMailerException extends Exceptions\ClientNotFoundException 
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_MAILER", $details);
-    }
-}
-
-/** Client error indicating that the mailer config failed */
-class MailSendFailException extends Exceptions\ClientErrorException
-{
-    public function __construct(MailSendException $e) {
-        parent::__construct(""); $this->CopyException($e);
-    }
-}
-
-/** Client error indicating that the database config failed */
-class DatabaseFailException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_DATABASE", $details);
-    }
-}
-/** Exception indicating that admin-level access is required */
-class AdminRequiredException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ADMIN_REQUIRED", $details);
-    }
-}
 
 /**
  * Server management/info app included with the framework.

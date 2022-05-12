@@ -3,11 +3,9 @@
 require_once(ROOT."/Core/IOFormat/SafeParam.php");
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
 require_once(ROOT."/Core/IOFormat/InputFile.php");
+require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
-
-class InputFileMissingException extends SafeParamException {
-    public function __construct(string $key) { $this->message = "INPUT_FILE_MISSING: $key"; } }
 
 /** A username and password combination */
 class InputAuth 

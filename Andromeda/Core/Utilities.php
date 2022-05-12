@@ -1,22 +1,6 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
-
-/** Exception indicating that a duplicate singleton was constructed */
-class DuplicateSingletonException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DUPLICATE_SINGLETON", $details);
-    }
-}
-
-/** Exception indicating that GetInstance() was called on a singleton that has not been constructed */
-class MissingSingletonException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SINGLETON_NOT_CONSTRUCTED", $details);
-    }
-}
+require_once(ROOT."/Core/Exceptions.php");
 
 /** Abstract class implementing a singleton */
 abstract class Singleton
@@ -49,14 +33,6 @@ abstract class Singleton
         if (array_key_exists($class, self::$instances))
             throw new DuplicateSingletonException($class);
         else self::$instances[$class] = $this;
-    }
-}
-
-/** Exception indicating that the given version string is invalid */
-class InvalidVersionException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("VERSION_STRING_INVALID", $details);
     }
 }
 
@@ -98,16 +74,6 @@ class VersionInfo
     /** Returns the Major.Minor compatibility version string */
     public function getCompatVer() : string { 
         return $this->major.'.'.$this->minor; }
-}
-
-/** Converts a JSON failure into an exception */
-class JSONException extends Exceptions\ServerException
-{
-    public function __construct()
-    {
-        parent::__construct("JSON_FAIL",
-            json_last_error_msg(), json_last_error());
-    }
 }
 
 /** Abstract with some global static utility functions */

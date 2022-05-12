@@ -2,7 +2,6 @@
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
@@ -14,22 +13,7 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 
 require_once(ROOT."/Core/Logging/ActionLog.php");
 require_once(ROOT."/Core/Logging/BaseLog.php");
-
-/** Exception indicating that it was requested to modify the log after it was written to disk */
-class LogAfterWriteException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("REQLOG_AFTER_WRITE", $details);
-    }
-}
-
-/** Exception indicating the log file cannot be written more than once */
-class MultiFileWriteException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("LOG_FILE_MULTI_WRITE", $details);
-    }
-}
+require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing an API request */
 final class RequestLog extends BaseLog

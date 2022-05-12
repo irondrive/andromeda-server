@@ -1,35 +1,11 @@
 <?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
 
+require_once(ROOT."/Core/Database/Exceptions.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
 require_once(ROOT."/Core/Database/QueryBuilder.php");
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-/** Exception indicating that the class cannot select from child classes */
-class NotMultiTableException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("TABLE_NOT_MULTI_CLASS", $details);
-    }
-}
-
-/** Exception indicating that no fields were previously registered with a table */
-class NoChildTableException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("NO_CHILD_TABLE", $details);
-    }
-}
-
-/** Exception indicating a base table is not given for this class */
-class NoBaseTableException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("NO_BASE_TABLE", $details);
-    }
-}
 
 /**
  * The base class for objects that can be saved/loaded from the database.
@@ -200,7 +176,7 @@ abstract class BaseObject
             $this->database = $database;
         
         $this->CreateFields();
-        
+
         foreach ($data as $column=>$value)
         {
             $this->fieldsByName[$column]->InitDBValue($value);

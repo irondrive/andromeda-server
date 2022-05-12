@@ -10,97 +10,13 @@ mb_internal_encoding("UTF-8");
 
 use \PDO; use \PDOStatement; use \PDOException;
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-/** Base class for database initialization exceptions */
-abstract class DatabaseConfigException extends Exceptions\ServiceUnavailableException { }
-
-/** Exception indicating that the database configuration is not found */
-class DatabaseMissingException extends DatabaseConfigException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DATABASE_CONFIG_MISSING", $details);
-    }
-}
-
-/** Exception indicating that the database connection failed to initialize */
-class DatabaseConnectException extends DatabaseConfigException
-{
-    public function __construct(?PDOException $e = null) {
-        parent::__construct("DATABASE_CONNECT_FAILED"); 
-        if ($e) $this->AppendException($e);
-    }
-}
-
-/** Exception indicating that the database was requested to use an unknkown driver */
-class InvalidDriverException extends DatabaseConfigException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("PDO_UNKNOWN_DRIVER", $details);
-    }
-}
-
-/** Exception indicating that the a write was requested to a read-only database */
-class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("READ_ONLY_DATABASE", $details);
-    }
-}
-
-/** Exception indicating that database install config failed */
-class DatabaseInstallException extends Exceptions\ClientErrorException
-{
-    public function __construct(DatabaseConfigException $e) {
-        parent::__construct(""); $this->CopyException($e);
-    }
-}
-
-/** Exception indicating the file could not be imported because it's missing */
-class ImportFileMissingException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("IMPORT_FILE_MISSING", $details);
-    }
-}
-
-/** Base class representing a run-time database error */
-abstract class DatabaseException extends Exceptions\ServerException
-{
-    public function __construct(string $message = "DATABASE_ERROR", ?string $details = null) {
-        parent::__construct($message, $details);
-    }
-}
-
-/** Exception indicating that PDO failed to execute the given query */
-class DatabaseQueryException extends DatabaseException
-{
-    public function __construct(PDOException $e) {
-        parent::__construct("DATABASE_QUERY_ERROR");
-        $this->AppendException($e);
-    }
-}
-
-/** Exception indicating that fetching results from the query failed */
-class DatabaseFetchException extends DatabaseException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DATABASE_FETCH_FAILED", $details);
-    }
-}
-
-/** Exception indicating the database had an integrity violation */
-class DatabaseIntegrityException extends DatabaseException
-{
-    public function __construct(PDOException $e) {
-        parent::__construct("DATABASE_INTEGRITY_VIOLATION");
-        $this->AppendException($e);
-    }
-}
-
 require_once(ROOT."/Core/Database/DBStats.php");
+require_once(ROOT."/Core/Database/Exceptions.php");
+
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONException};
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
+
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 /**

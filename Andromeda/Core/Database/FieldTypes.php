@@ -2,10 +2,10 @@
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, ConcurrencyException};
-require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\DatabaseReadOnlyException;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\{ConcurrencyException, DatabaseReadOnlyException};
 
 /** Exception indicating that the given counter exceeded its limit */
 class CounterOverLimitException extends Exceptions\ClientDeniedException
@@ -15,19 +15,19 @@ class CounterOverLimitException extends Exceptions\ClientDeniedException
     }
 }
 
-/** Exception indicating the given data is the wrong type for this field */
-class FieldDataTypeMismatch extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
-    }
-}
-
 /** Exception indicating that loading via a foreign key link failed */
 class ForeignKeyException extends ConcurrencyException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
+    }
+}
+
+/** Exception indicating the given data is the wrong type for this field */
+class FieldDataTypeMismatch extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
     }
 }
 

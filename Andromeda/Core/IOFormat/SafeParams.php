@@ -4,14 +4,6 @@ require_once(ROOT."/Core/IOFormat/SafeParam.php");
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
-/** An exception indicating that the requested parameter name does not exist */
-class SafeParamKeyMissingException extends SafeParamException 
-{
-    public function __construct(string $key) { 
-        $this->message = "SAFEPARAM_KEY_MISSING: $key"; 
-    } 
-}
-
 /**
  * A thin class that manages a collection of SafeParam objects
  * 
