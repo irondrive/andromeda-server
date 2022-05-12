@@ -4,17 +4,9 @@ require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Singleton,Utilities};
 require_once(ROOT."/Core/Exceptions/ErrorLog.php");
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-
-/** Internal-only exception used for getting a backtrace */
-class BreakpointException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("BREAKPOINT_EXCEPTION", $details);
-    }
-}
 
 /** 
  * The main error handler/manager 

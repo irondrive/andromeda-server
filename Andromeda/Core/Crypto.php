@@ -1,16 +1,9 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-if (!function_exists('sodium_memzero')) die("PHP Sodium Extension Required".PHP_EOL);
+if (!function_exists('sodium_memzero')) 
+    die("PHP Sodium Extension Required".PHP_EOL);
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
-
-/** Exception indicating that decryption failed */
-class DecryptionFailedException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DECRYPTION_FAILED", $details);
-    }
-}
+require_once(ROOT."/Core/Exceptions.php");
 
 /** libsodium wrapper class for keys */
 class CryptoKey

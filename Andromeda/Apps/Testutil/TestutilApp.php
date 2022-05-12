@@ -1,13 +1,14 @@
 <?php namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, UnknownActionException};
+require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\BaseApp;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
 require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;

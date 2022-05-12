@@ -2,7 +2,7 @@
 
 require_once("init.php");
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
 
 require_once(ROOT."/Core/IOFormat/Output.php");
 

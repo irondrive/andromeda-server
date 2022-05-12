@@ -2,6 +2,8 @@
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/Exceptions.php");
+
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
@@ -9,65 +11,8 @@ require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
 
 use \PHPMailer\PHPMailer; // via autoloader
-
-/** Exception indicating that a mailer was requested but it is disabled */
-class EmailDisabledException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMAIL_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that a mailer was requested but none are configured */
-class EmailerUnavailableException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMAILER_UNAVAILABLE", $details);
-    }
-}
-
-/** Exception indicating that sending mail failed */
-abstract class MailSendException extends Exceptions\ServerException
-{
-    public function __construct(string $message = "MAIL_SEND_FAILURE", ?string $details = null) {
-        parent::__construct($message, $details);
-    }
-}
-
-/** Exception indicating PHPMailer sending returned false */
-class PHPMailerException1 extends MailSendException
-{
-    public function __construct(string $details) {
-        parent::__construct("MAIL_SEND_FAILURE", $details);
-    }
-}
-
-/** Exception thrown by the PHPMailer library when sending */
-class PHPMailerException2 extends MailSendException
-{
-    public function __construct(PHPMailer\Exception $e) {
-        parent::__construct(); $this->AppendException($e);
-    }
-}
-
-/** Exception indicating that no recipients were given */
-class EmptyRecipientsException extends MailSendException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("NO_RECIPIENTS_GIVEN", $details);
-    }
-}
-
-/** Exception indicating that the configured mailer driver is invalid */
-class InvalidMailTypeException extends MailSendException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_MAILER_TYPE", $details);
-    }
-}
 
 /** A name and address pair email recipient */
 final class EmailRecipient

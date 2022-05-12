@@ -2,14 +2,17 @@
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/DBStats.php");
 require_once(ROOT."/Core/Database/Database.php"); 
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Database, ObjectDatabase, DBStats, DatabaseException, DatabaseConfigException};
+use Andromeda\Core\Database\{Database, ObjectDatabase, DBStats};
+require_once(ROOT."/Core/Database/Exceptions.php");
+use Andromeda\Core\Database\{DatabaseException, DatabaseConfigException};
 
 require_once(ROOT."/Core/Exceptions/ErrorManager.php");
-require_once(ROOT."/Core/Exceptions/Exceptions.php");
+require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
 use Andromeda\Core\Exceptions\{ErrorManager, ClientException};
 
 require_once(ROOT."/Core/IOFormat/IOInterface.php");
@@ -23,38 +26,6 @@ require_once(ROOT."/Core/Logging/RequestLog.php");
 require_once(ROOT."/Core/Logging/ActionLog.php");
 require_once(ROOT."/Core/Logging/RequestMetrics.php");
 use Andromeda\Core\Logging\{RequestLog, ActionLog, RequestMetrics};
-
-/** Exception indicating that the requested app is invalid */
-class UnknownAppException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_APP", $details);
-    }
-}
-
-/** Exception indicating that the server is configured as disabled */
-class MaintenanceException extends Exceptions\ServiceUnavailableException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SERVER_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that the server failed to load a configured app */
-class FailedAppLoadException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FAILED_LOAD_APP", $details);
-    }
-}
-
-/** FinalMetrics requires the database to not already be undergoing a transaction */
-class FinalizeTransactionException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("OUTPUT_IN_TRANSACTION", $details);
-    }
-}
 
 class RunContext 
 { 

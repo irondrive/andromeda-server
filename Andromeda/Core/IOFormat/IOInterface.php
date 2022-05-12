@@ -2,22 +2,14 @@
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Singleton;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 
+require_once(ROOT."/Core/IOFormat/Exceptions.php");
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
-
-/** Exception indicating that an app action does not allow batches */
-class BatchNotAllowedException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ACTION_DISALLOWS_BATCH", $details);
-    }
-}
 
 /** Class for custom app output routines */
 class OutputHandler

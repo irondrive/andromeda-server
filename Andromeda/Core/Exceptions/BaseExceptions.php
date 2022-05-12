@@ -154,6 +154,14 @@ class ServerException extends BaseException
     }
 }
 
+/** Internal-only exception used for getting a backtrace */
+final class BreakpointException extends ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BREAKPOINT_EXCEPTION", $details);
+    }
+}
+
 /** Represents an non-exception error from PHP */
 class PHPError extends BaseException
 {

@@ -1,30 +1,10 @@
 <?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
+require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Utilities, JSONException};
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-/** Base exception indicating a problem with a client parameter */
-abstract class SafeParamException extends Exceptions\ClientErrorException { }
-
-/** An exception indicating that the requested parameter has a null value */
-class SafeParamNullValueException extends SafeParamException 
-{
-    public function __construct(string $key) { 
-        $this->message = "SAFEPARAM_VALUE_NULL: $key";
-    } 
-}
-
-/** Exception indicating that the parameter failed sanitization or validation */
-class SafeParamInvalidException extends SafeParamException
-{
-    public function __construct(string $key, ?string $type = null)
-    {
-        $this->message = "SAFEPARAM_INVALID_TYPE: $key";
-        if ($type !== null) $this->message .= ": must be $type";
-    } 
-}
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
 /**
  * Class representing a client input parameter
