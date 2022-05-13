@@ -58,7 +58,7 @@ final class ErrorLog extends BaseLog
     {
         $fields = array();
         
-        $this->time = $fields[] =        new FieldTypes\Date('time');
+        $this->time = $fields[] =        new FieldTypes\Timestamp('time');
         $this->addr = $fields[] =        new FieldTypes\StringType('addr');
         $this->agent = $fields[] =       new FieldTypes\StringType('agent');
         $this->app = $fields[] =         new FieldTypes\NullStringType('app');

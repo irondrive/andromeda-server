@@ -5,7 +5,7 @@ require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledAp
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\{EmailRecipient, Emailer};
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, MissingMetadataException};
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, MissingMetadataException, UnknownActionException, MailSendException};
 
 require_once(ROOT."/Core/Exceptions/ErrorLog.php"); use Andromeda\Core\Exceptions\ErrorLog;
 require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Database;
@@ -18,8 +18,6 @@ require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\Re
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
-
-use Andromeda\Core\{UnknownActionException, MailSendException};
 
 /**
  * Server management/info app included with the framework.

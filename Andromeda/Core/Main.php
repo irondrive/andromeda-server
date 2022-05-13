@@ -198,7 +198,7 @@ final class Main extends Singleton
             if (!$this->isEnabled()) throw new MaintenanceException();
             
             if ($this->config->isReadOnly()) 
-                $this->database->GetInternal()->setReadOnly();
+                $this->database->GetInternal()->SetReadOnly();
             
             if ($this->config->getVersion() === andromeda_version)
                 $apps = array_merge($apps, $this->config->GetApps());
@@ -213,7 +213,7 @@ final class Main extends Singleton
         if ($this->config && !$this->config->isReadOnly()
             && $this->config->GetEnableRequestLog())
         {
-            $this->requestlog = RequestLog::Create($this)->Save();
+            $this->requestlog = RequestLog::Create($this);
         }
         
         if ($this->database)

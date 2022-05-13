@@ -19,8 +19,8 @@ class CryptoKey
     
     /**
      * Generates an encryption key from a password 
-     * @param non-empty-string $password the password to derive the key from
-     * @param non-empty-string $salt a generated salt to use
+     * @param string $password the password to derive the key from
+     * @param string $salt a generated salt to use
      * @param int $bytes the number of bytes required to output
      * @param bool $fast if true, does a very fast transformation (use only if the password is itself a key)
      * @return string the derived binary key

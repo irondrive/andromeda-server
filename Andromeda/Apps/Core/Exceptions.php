@@ -2,6 +2,8 @@
 
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\MailSendException;
+
 /** Exception indicating that the specified mailer object does not exist */
 class UnknownMailerException extends Exceptions\ClientNotFoundException
 {
