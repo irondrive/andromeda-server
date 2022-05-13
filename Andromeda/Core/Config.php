@@ -15,7 +15,7 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 abstract class BaseConfig extends SingletonObject
 {
     /** Date the config object was created */
-    protected FieldTypes\Date $date_created;
+    protected FieldTypes\Timestamp $date_created;
     /** Version of the app that owns this config */
     protected FieldTypes\StringType $version;
     
@@ -23,7 +23,7 @@ abstract class BaseConfig extends SingletonObject
     {
         $fields = array();
         
-        $this->date_created = $fields[] = new FieldTypes\Date('date_created');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
         $this->version = $fields[] = new FieldTypes\StringType('version');
         
         $this->RegisterChildFields($fields);
@@ -45,7 +45,7 @@ abstract class BaseConfig extends SingletonObject
      * @param string $version schema version
      * @return $this
      */
-    public function setVersion(string $version) : self 
+    public function SetVersion(string $version) : self 
     { 
         $this->version->SetValue($version); return $this; 
     }
@@ -90,7 +90,7 @@ final class Config extends BaseConfig
     /** Creates a new config singleton with default values */
     public static function Create(ObjectDatabase $database) : self
     {
-        return parent::BaseCreate($database)->setVersion(andromeda_version);
+        return parent::BaseCreate($database)->SetVersion(andromeda_version);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
@@ -173,7 +173,7 @@ final class Config extends BaseConfig
         {
             $ro = $params->GetParam('read_only')->GetBool();
             
-            if (!$ro) $this->database->GetInternal()->setReadOnly(false); // make DB writable
+            if (!$ro) $this->database->GetInternal()->SetReadOnly(false); // make DB writable
             
             $this->read_only->SetValue($ro);
             
@@ -254,7 +254,7 @@ final class Config extends BaseConfig
     public function isEnabled() : bool { return $this->enabled->GetValue(); }
     
     /** Set whether the server is allowed to respond to requests */
-    public function setEnabled(bool $enable) : self { $this->enabled->SetValue($enable); return $this; }
+    public function SetEnabled(bool $enable) : self { $this->enabled->SetValue($enable); return $this; }
     
     private bool $dryrun = false;
 
@@ -262,7 +262,7 @@ final class Config extends BaseConfig
     public function isDryRun() : bool { return $this->dryrun; }
     
     /** Sets the server to dryrun mode if $val is true */
-    public function setDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
+    public function SetDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
     
     /** Returns true if the server is set to read-only (not dry run) */
     public function isReadOnly() : bool { return $this->read_only->GetValue(); }

@@ -200,7 +200,10 @@ abstract class BaseObject
     {
         $this->idfield = new FieldTypes\StringType('id');
         
-        foreach (static::GetTableClasses() as $table)
+        if (empty($tables = static::GetTableClasses())) 
+            throw new NoBaseTableException(static::class);
+        
+        foreach ($tables as $table)
         {
             // make sure idfield shows up in every fieldsByClass
             $this->RegisterFields(array($this->idfield), $table);

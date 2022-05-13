@@ -734,17 +734,17 @@ class FloatType extends BaseField
 }
 
 /** A field that stores a possibly-null timestamp */
-class NullDate extends NullFloatType
+class NullTimestamp extends NullFloatType
 { 
     /** Sets the value to the current timestamp */
-    public function SetDateNow() : bool
+    public function SetTimeNow() : bool
     {
         return parent::SetValue(Main::GetInstance()->GetTime());
     }
 }
 
 /** A field that stores a non-null timestamp (default now) */
-class Date extends FloatType 
+class Timestamp extends FloatType 
 {
     public function __construct(string $name, bool $saveOnRollback = false)
     {
@@ -753,7 +753,7 @@ class Date extends FloatType
     }
     
     /** Sets the value to the current timestamp */
-    public function SetDateNow() : bool
+    public function SetTimeNow() : bool
     {
         return parent::SetValue(Main::GetInstance()->GetTime());
     }

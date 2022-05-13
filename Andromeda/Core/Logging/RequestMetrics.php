@@ -27,7 +27,7 @@ final class RequestMetrics extends BaseObject
     /** @var FieldTypes\NullObjectRefT<RequestLog> */
     private FieldTypes\NullObjectRefT $requestlog;
     /** Timestamp of the request */
-    private FieldTypes\Date $date_created;
+    private FieldTypes\Timestamp $date_created;
     /** Peak memory usage reported by PHP */
     private FieldTypes\IntType $peak_memory;
     /** The number of included PHP files */
@@ -68,7 +68,7 @@ final class RequestMetrics extends BaseObject
         $fields = array();
         
         $this->requestlog = $fields[] =   new FieldTypes\NullObjectRefT(RequestLog::class,'requestlog');
-        $this->date_created = $fields[] = new FieldTypes\Date('date_created');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
         $this->peak_memory = $fields[] =  new FieldTypes\IntType('peak_memory');
         $this->nincludes = $fields[] =    new FieldTypes\IntType('nincludes');
         $this->nobjects = $fields[] =     new FieldTypes\IntType('nobjects');

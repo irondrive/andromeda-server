@@ -21,7 +21,7 @@ final class RequestLog extends BaseLog
     use TableNoChildren;
     
     /** Timestamp of the request */
-    private FieldTypes\Date $time;
+    private FieldTypes\Timestamp $time;
     /** Interface address used for the request */
     private FieldTypes\StringType $addr;
     /** Interface user-agent used for the request */
@@ -40,7 +40,7 @@ final class RequestLog extends BaseLog
     {
         $fields = array();
         
-        $this->time = $fields[] =    new FieldTypes\Date('time');
+        $this->time = $fields[] =    new FieldTypes\Timestamp('time');
         $this->addr = $fields[] =    new FieldTypes\StringType('addr');
         $this->agent = $fields[] =   new FieldTypes\StringType('agent');
         $this->errcode = $fields[] = new FieldTypes\NullStringType('errcode');

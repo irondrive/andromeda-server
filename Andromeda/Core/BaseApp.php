@@ -218,13 +218,13 @@ abstract class InstalledApp extends BaseApp
             if (version_compare($newVersion, $oldVersion) === 1 &&
                 version_compare($newVersion, static::getVersion()) <= 0)
             {
-                $script(); $this->config->setVersion($newVersion);
+                $script(); $this->config->SetVersion($newVersion);
                 
                 $this->API->commit(); // commit after every step
             }
         }
         
-        $this->config->setVersion(static::getVersion());
+        $this->config->SetVersion(static::getVersion());
     }
 }
 

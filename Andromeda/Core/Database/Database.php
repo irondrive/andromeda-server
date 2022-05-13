@@ -271,7 +271,7 @@ class Database
      * @param bool $ro if true, set as readonly
      * @return $this
      */
-    public function setReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
+    public function SetReadOnly(bool $ro = true) : self { $this->read_only = $ro; return $this; }
     
     /** Returns true if the database is read-only */
     public function isReadOnly() : bool { return $this->read_only; }

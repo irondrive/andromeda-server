@@ -61,7 +61,7 @@ final class Emailer extends BaseObject
         'smtp'=>self::TYPE_SMTP);
     
     /** Date of object creation */
-    private FieldTypes\Date $date_created;
+    private FieldTypes\Timestamp $date_created;
     /** Type of emailer (see usage) */
     private FieldTypes\IntType $type;
     /** Array of hostnames to try, in order */
@@ -81,7 +81,7 @@ final class Emailer extends BaseObject
     {
         $fields = array();
         
-        $this->date_created = $fields[] = new FieldTypes\Date('date_created');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
         $this->type = $fields[] =         new FieldTypes\IntType('type');
         $this->hosts = $fields[] =        new FieldTypes\NullJsonArray('hosts');
         $this->username = $fields[] =     new FieldTypes\NullStringType('username');

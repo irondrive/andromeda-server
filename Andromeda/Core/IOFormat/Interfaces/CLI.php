@@ -146,7 +146,7 @@ class CLI extends IOInterface
                 case 'metrics': $i++; break;
                 case 'dbconf': $i++; break;
                 
-                case 'dryrun': if ($config) $config->setDryRun(); break;
+                case 'dryrun': if ($config) $config->SetDryRun(); break;
                 
                 default: throw new IncorrectCLIUsageException();
             }
