@@ -62,6 +62,10 @@ abstract class MyObjectBase extends BaseObject
 {
     use TableLinkedChildren;
     
+    /** @return ?array<class-string<self>> */
+    public static function GetChildMap() : ?array {
+        return array(MyObjectChild::class); }
+        
     private FieldTypes\NullIntType $mykey;
     
     protected function CreateFields() : void
@@ -81,11 +85,7 @@ abstract class MyObjectBase extends BaseObject
         
         parent::AddUniqueKeys($keymap);
     }
-    
-    /** @return ?array<class-string<self>> */
-    public static function GetChildMap() : ?array { 
-        return array(MyObjectChild::class); }
-    
+
     public function GetMyKey() : ?int { return $this->mykey->TryGetValue(); }
     public function SetMyKey(?int $val) : self { $this->mykey->SetValue($val); return $this; }
 }
@@ -111,11 +111,11 @@ abstract class PolyObject0 extends PolyObject_
     
     public function SetOnDelete(OnDelete $del) : void { $this->ondel = $del; }
     
-    public function notifyDeleted() : void
+    public function NotifyDeleted() : void
     {
         if ($this->ondel) $this->ondel->Delete();
         
-        parent::notifyDeleted();
+        parent::NotifyDeleted();
     }
 }
 

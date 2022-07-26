@@ -451,7 +451,7 @@ class SafeParam
     /**
      * Returns a string with UTF-8 checked and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW
      * @throws SafeParamInvalidException
-     * @return string|NULL
+     * @return ?string
      */
     public function GetNullUTF8String() : ?string
     {

@@ -5,7 +5,7 @@ if (!version_compare(phpversion(),'7.4.0','>='))
 
 define('Andromeda',true);
 
-define('andromeda_version','2.0.0-alpha');
+define('andromeda_version','1.0.0-alpha');
 
 define('ROOT',__DIR__.'/');
 

@@ -104,7 +104,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $obj->Save(); // update
         
         $obj->Delete(); 
-        $obj->notifyDeleted();
+        $obj->NotifyDeleted();
         $obj->Save(); // nothing
     }
     
@@ -114,13 +114,13 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(0))->method('DeleteObject');
         
         $obj = EasyObject::Create($database);
-        $obj->notifyDeleted();
+        $obj->NotifyDeleted();
         $this->assertTrue($obj->isDeleted());
         
         $obj = new EasyObject($database, array());
         $this->assertSame(5, $obj->SetGeneralKey(5)->GetGeneralKey());
         
-        $obj->notifyDeleted();
+        $obj->NotifyDeleted();
         $this->assertTrue($obj->isDeleted());
     }
     
@@ -142,7 +142,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(1))->method('DeleteObject')
             ->willReturnCallback(function()use($obj,$database){ 
-                $obj->notifyDeleted(); return $database; });
+                $obj->NotifyDeleted(); return $database; });
         
         $obj->Delete();
         $obj->Delete(); // no 2nd call

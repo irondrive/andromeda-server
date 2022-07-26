@@ -276,7 +276,7 @@ abstract class BaseObject
     {
         if ($this->isDeleted) return;
         
-        if ($this->isCreated) { $this->notifyDeleted(); return; }
+        if ($this->isCreated) { $this->NotifyDeleted(); return; }
         
         $this->database->DeleteObject($this);
     }
@@ -293,8 +293,9 @@ abstract class BaseObject
     /** 
      * Notifies this object that the DB has deleted it - internal call only
      * Child classes can extend this if they need extra on-delete logic
+     * NOTE this CAN get called without a call to Delete() - don't override it
      */
-    public function notifyDeleted() : void
+    public function NotifyDeleted() : void
     {
         $this->isDeleted = true;
         

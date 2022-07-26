@@ -202,7 +202,7 @@ class ObjectDatabase
 
     /**
      * Immediately delete objects matching the given query
-     * The objects will be loaded and have their notifyDeleted() run
+     * The objects will be loaded and have their NotifyDeleted() run
      * If using ORDER BY and there are child tables, objects may not be deleted in order!
      * But, the ORDER BY will apply correctly as far as LIMIT/OFFSET and WHAT gets deleted
      * @template T of BaseObject
@@ -453,7 +453,7 @@ class ObjectDatabase
     }
     
     /**
-     * Removes the object from our arrays and calls notifyDeleted()
+     * Removes the object from our arrays and calls NotifyDeleted()
      * @param BaseObject $object object that has been deleted
      */
     private function RemoveObject(BaseObject $object) : void
@@ -468,7 +468,7 @@ class ObjectDatabase
         
         $this->UnsetAllObjectKeyFields($object);
         
-        $object->notifyDeleted();
+        $object->NotifyDeleted();
     }
 
     /**
