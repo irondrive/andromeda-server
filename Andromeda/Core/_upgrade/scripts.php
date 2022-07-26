@@ -13,9 +13,9 @@ return array(
     { 
         $errors->LogDebug("upgrading core to 1.0.4"); 
     },
-    '2.0.0-alpha' => function()use($main,$errors,$database)
+    '1.0.0-alpha' => function()use($main,$errors,$database)
     {
-        $errors->LogDebug("upgrading core to 2.0.0-alpha");
-        //$database->importTemplate(ROOT."/Core/_upgrade/2.0.0-alpha");
+        $errors->LogDebug("upgrading core to 1.0.0-alpha");
+        //$database->importTemplate(ROOT."/Core/_upgrade/1.0.0-alpha");
     }*/
 );

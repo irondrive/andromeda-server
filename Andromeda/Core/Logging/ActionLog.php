@@ -23,23 +23,7 @@ require_once(ROOT."/Core/Logging/RequestLog.php");
 class ActionLog extends BaseLog
 {
     use HasTable;
-    
-    /** @var FieldTypes\ObjectRefT<RequestLog> The request log this action was a part of */
-    private FieldTypes\ObjectRefT $requestlog;
-    /** Action app name */
-    private FieldTypes\StringType $app;
-    /** Action action name */
-    private FieldTypes\StringType $action;
-    /** Optional input parameter logging */
-    private FieldTypes\NullJsonArray $inputs;
-    /** Optional app-specific details if no subtable */
-    private FieldTypes\NullJsonArray $details;
-    
-    /** Temporary array of logged inputs to be saved */
-    private array $inputs_tmp;
-    /** Temporary array of logged details to be saved */
-    private array $details_tmp;
-    
+
     /** @return ?array<class-string<self>> */
     public static function GetChildMap() : ?array 
     {
@@ -74,6 +58,22 @@ class ActionLog extends BaseLog
         $map = self::GetChildMap(); $app = $row['app'];
         return array_key_exists($app, $map) ? $map[$app] : self::class;
     }
+    
+    /** @var FieldTypes\ObjectRefT<RequestLog> The request log this action was a part of */
+    private FieldTypes\ObjectRefT $requestlog;
+    /** Action app name */
+    private FieldTypes\StringType $app;
+    /** Action action name */
+    private FieldTypes\StringType $action;
+    /** Optional input parameter logging */
+    private FieldTypes\NullJsonArray $inputs;
+    /** Optional app-specific details if no subtable */
+    private FieldTypes\NullJsonArray $details;
+    
+    /** Temporary array of logged inputs to be saved */
+    private array $inputs_tmp;
+    /** Temporary array of logged details to be saved */
+    private array $details_tmp;
     
     protected function CreateFields() : void
     {

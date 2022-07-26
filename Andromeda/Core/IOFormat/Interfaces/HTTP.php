@@ -227,7 +227,7 @@ class HTTP extends IOInterface
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
      * @param array $post array of data to place in the POST body
-     * @return string|NULL the remote response
+     * @return ?string the remote response
      */
     public static function HTTPPost(string $url, array $post) : ?string
     {
