@@ -43,7 +43,7 @@ abstract class IOInterface extends Singleton
     /** Returns whether or not the interface grants privileged access */
     abstract public static function isPrivileged() : bool;
     
-    /** Called during API construction to initialize the interface, e.g. to gather global arguments */
+    /** Gather global arguments for debug levels, etc. (early) */
     public function Initialize() : void { }
     
     /** @var array<Input> */

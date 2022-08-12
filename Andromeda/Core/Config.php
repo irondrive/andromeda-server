@@ -211,7 +211,7 @@ final class Config extends BaseConfig
     {
         $app = strtolower($app);
         
-        $apps = array_keys(Main::GetInstance()->GetApps()); 
+        $apps = array_keys(AppRunner::GetInstance()->GetApps()); 
 
         foreach (BaseApp::getAppRequires($app) as $tapp)
         {
@@ -224,7 +224,7 @@ final class Config extends BaseConfig
         if ($appver !== $ourver) 
             throw new AppVersionException("$app($appver) core($ourver)");
         
-        Main::GetInstance()->LoadApp($app);
+        AppRunner::GetInstance()->LoadApp($app);
         
         $capps = $this->GetApps();        
         if (!in_array($app, $capps)) $capps[] = $app;        
@@ -239,7 +239,7 @@ final class Config extends BaseConfig
         if (($key = array_search($app, $this->GetApps())) === false)
             throw new InvalidAppException();
     
-        foreach (array_keys(Main::GetInstance()->GetApps()) as $tapp)
+        foreach (array_keys(AppRunner::GetInstance()->GetApps()) as $tapp)
         {
             if (in_array($app, BaseApp::getAppRequires($tapp)))
                 throw new AppDependencyException("$tapp requires $app");
@@ -370,7 +370,7 @@ final class Config extends BaseConfig
             'read_only' => $this->read_only->GetValue(false)
         );
 
-        foreach (Main::GetInstance()->GetApps() as $name=>$app)
+        foreach (AppRunner::GetInstance()->GetApps() as $name=>$app)
         {
             $data['apps'][$name] = $admin ? $app::getVersion() : 
                 (new VersionInfo($app::getVersion()))->getCompatVer();

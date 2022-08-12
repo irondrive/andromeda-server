@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\RunContext;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
+require_once(ROOT."/Core/RunContext.php"); use Andromeda\Core\RunContext;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;

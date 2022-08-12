@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -32,7 +32,7 @@ final class CoreApp extends InstalledApp
     /** Returns true if the accounts app is available to use */
     private static function hasAccountsApp() : bool
     {
-        return array_key_exists('accounts', Main::GetInstance()->GetApps());
+        return array_key_exists('accounts', AppRunner::GetInstance()->GetApps());
     }
     
     /** @return class-string<ActionLog> */
@@ -190,7 +190,7 @@ final class CoreApp extends InstalledApp
     {
         $want = $params->HasParam('appname') ? $params->GetParam('appname')->GetAlphanum() : null;
         
-        $output = array(); foreach ($this->API->GetApps() as $name=>$app)
+        $output = array(); foreach ($this->API->GetAppRunner()->GetApps() as $name=>$app)
         {
             if ($want !== null && $want !== $name) continue;
             
@@ -236,7 +236,7 @@ final class CoreApp extends InstalledApp
             }
             
             // install all enabled apps
-            foreach ($this->API->GetApps() as $name=>$app)
+            foreach ($this->API->GetAppRunner()->GetApps() as $name=>$app)
             {
                 if ($app instanceof InstalledApp && $app !== $this)
                     $retval[$name] = $app->Install($params);
@@ -257,7 +257,7 @@ final class CoreApp extends InstalledApp
         
         // upgrade all installed apps also
         if (!$params->GetOptParam('noapps',false)->GetBool())
-            foreach ($this->API->GetApps() as $name=>$app)
+            foreach ($this->API->GetAppRunner()->GetApps() as $name=>$app)
         {
             if ($app instanceof InstalledApp && $app !== $this)
                 $retval[$name] = $app->Upgrade($params);

@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Singleton,Utilities};
 require_once(ROOT."/Core/Exceptions/ErrorLog.php");
@@ -16,66 +17,92 @@ require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat
  */
 class ErrorManager extends Singleton
 {
-    private ?Main $API = null; 
+    private ?ApiPackage $apipack = null; 
     
     private IOInterface $interface;
     
-    /** Registers PHP error and exception handlers */
-    public function __construct(IOInterface $interface)
+    private $isGlobal = false;
+    
+    /** 
+     * Creates a new ErrorManager instance
+     * @param bool $global if true, registers PHP error and exception handlers 
+     */
+    public function __construct(IOInterface $interface, bool $global)
     {
-        parent::__construct();
-        
         $this->interface = $interface;
         
-        set_error_handler( function(int $code, string $msg, string $file, int $line){
-            throw new Exceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
-            
-        set_exception_handler(function(\Throwable $e)
+        if ($global)
         {
-            if ($e instanceof ClientException)
-            {
-                $output = $this->HandleClientException($e);
-                
-                $this->API->FinalMetrics($output, true);
-            }
-            else $output = $this->HandleThrowable($e);
+            parent::__construct();
+            $this->isGlobal = true;
             
-            $this->interface->WriteOutput($output); die();
-        });
-        
-        ini_set('assert.active','1');
-        ini_set('assert.exception','1');
+            set_error_handler( function(int $code, string $msg, string $file, int $line) {
+                throw new Exceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
+            
+            set_exception_handler(function(\Throwable $e)
+            {
+                $this->loggedTry(function()use($e)
+                {
+                    $apprunner = $this->GetAppRunner();
+                    if ($apprunner !== null) $apprunner->rollback($e);
+
+                    if ($e instanceof ClientException)
+                    {
+                        $output = $this->HandleClientException($e);
+                        
+                        if ($this->apipack !== null)
+                            $this->apipack->SaveMetrics($output, true);
+                    }
+                    else $output = $this->HandleThrowable($e);
+                    
+                    $this->interface->WriteOutput($output); die();
+                });
+            });
+            
+            ini_set('assert.active','1');
+            ini_set('assert.exception','1');
+        }
     }
-    
+
     public function __destruct()
     {
-        set_error_handler(null, E_ALL);
-        set_exception_handler(null);
+        if ($this->isGlobal)
+        {
+            set_error_handler(null, E_ALL);
+            set_exception_handler(null);
+        }
     }
     
-    public function SetAPI(Main $api) : self { $this->API = $api; return $this; }
+    public function SetAPI(ApiPackage $apipack) : self { 
+        $this->apipack = $apipack; return $this; }
+        
+    /** Returns the app runner if it has been created */
+    private function GetAppRunner() : ?AppRunner
+    {
+        if ($this->apipack === null || !$this->apipack->HasAppRunner()) return null;
+        
+        return $this->apipack->GetAppRunner();
+    }
     
     /** Returns the debug level for internal logging */
     private function GetDebugLogLevel() : int
     {
-        return $this->API ? $this->API->GetDebugLevel() : Config::ERRLOG_ERRORS;
+        return $this->apipack ? $this->apipack->GetDebugLevel() : Config::ERRLOG_ERRORS;
     }
     
     /** Returns the debug level to be show in output */
     private function GetDebugOutputLevel() : int
     {
-        return $this->API ? $this->API->GetDebugLevel(true) : $this->interface->GetDebugLevel();
+        return $this->apipack ? $this->apipack->GetDebugLevel(true) : $this->interface->GetDebugLevel();
     }
 
     /** Handles a client exception, rolling back the DB, 
      * displaying debug data and returning an Output */
     private function HandleClientException(ClientException $e) : Output
     {
-        if ($this->API !== null) $this->API->rollback($e);
-            
         $debug = null; if ($this->GetDebugOutputLevel() >= Config::ERRLOG_DETAILS) 
         {
-            $debug = ErrorLog::Create($this->API, $e)
+            $debug = ErrorLog::Create($this->apipack, $this->GetAppRunner(), $e)
                 ->SetDebugLog($this->GetDebugLogLevel(), $this->GetDebugLog())
                 ->GetClientObject($this->GetDebugOutputLevel());
         }
@@ -87,8 +114,6 @@ class ErrorManager extends Singleton
      * logging debug data and returning an Output */
     private function HandleThrowable(\Throwable $e) : Output
     {
-        if ($this->API !== null) $this->API->rollback($e);
-
         $debug = null; try 
         {
             if (($errlog = $this->LogException($e, false)) !== null) 
@@ -123,9 +148,10 @@ class ErrorManager extends Singleton
      */
     public function LogException(\Throwable $e, bool $mainlog = true) : ?ErrorLog
     {
-        $loglevel = $this->GetDebugLogLevel(); if ($loglevel < Config::ERRLOG_ERRORS) return null;
+        $loglevel = $this->GetDebugLogLevel(); 
+        if ($loglevel < Config::ERRLOG_ERRORS) return null;
 
-        $errlog = ErrorLog::Create($this->API, $e);
+        $errlog = ErrorLog::Create($this->apipack, $this->GetAppRunner(), $e);
         $errlog->SetDebugLog($loglevel, $this->GetDebugLog());
         
         $debug = $errlog->GetClientObject($loglevel);
@@ -133,7 +159,7 @@ class ErrorManager extends Singleton
         
         if ($e instanceof ClientException) return $errlog;
         
-        $config = ($this->API !== null) ? $this->API->TryGetConfig() : null;
+        $config = $this->apipack ? $this->apipack->TryGetConfig() : null;
         
         try // save to file
         {
@@ -152,11 +178,11 @@ class ErrorManager extends Singleton
             $errlog->SetDebugLog($loglevel, $this->GetDebugLog()); // update from e2
         }
         
-        try // save to database
+        try // save to database with a separate connection
         {
             if ($this->dblogok && $config !== null && $config->GetDebugLog2DB()) 
             {
-                $db2 = $this->API->InitDatabase();
+                $db2 = $this->apipack->InitDatabase();
                 
                 $errlog->SaveToDatabase($db2); $db2->commit();
             }

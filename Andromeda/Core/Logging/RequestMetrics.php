@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -160,7 +160,7 @@ final class RequestMetrics extends BaseObject
 
     public function Save(bool $isRollback = false) : self
     {
-        $config = Main::GetInstance()->TryGetConfig();
+        $config = ApiPackage::GetInstance()->TryGetConfig();
         
         if ($config && $config->GetMetricsLog2DB())
         {

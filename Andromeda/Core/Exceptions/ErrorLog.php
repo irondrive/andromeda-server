@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -107,11 +108,12 @@ final class ErrorLog extends BaseLog
      * Creates an errorLog object from the given exception
      *
      * What is logged depends on the configured debug level
-     * @param ?Main $api reference to the main API
+     * @param ?ApiPackage $api reference to the main API
+     * @param ?AppRunner $runner active app runner or null
      * @param \Throwable $e the exception being debugged
      * @return self new error log entry object
      */
-    public static function Create(?Main $api, \Throwable $e) : self
+    public static function Create(?ApiPackage $api, ?AppRunner $runner, \Throwable $e) : self
     {
         $obj = new self(null, array('id'=>static::GenerateID()));
 
@@ -123,7 +125,7 @@ final class ErrorLog extends BaseLog
         $obj->message->SetValue($e->getMessage());
         $obj->file->SetValue($e->getFile()."(".$e->getLine().")");
 
-        $input = ($api && ($context = $api->GetContext()) !== null) ? $context->GetInput() : null;
+        $input = ($runner && ($context = $runner->GetContext()) !== null) ? $context->GetInput() : null;
         
         if ($input !== null)
         {

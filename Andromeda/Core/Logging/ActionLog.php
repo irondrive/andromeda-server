@@ -1,6 +1,7 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -29,7 +30,7 @@ class ActionLog extends BaseLog
     {
         $map = array("" => self::class); 
         
-        foreach (Main::GetInstance()->GetApps() as $name=>$app)
+        foreach (AppRunner::GetInstance()->GetApps() as $name=>$app)
         {
             $logclass = $app::getLogClass();
             if ($logclass !== null) $map[$name] = $logclass;
@@ -49,7 +50,7 @@ class ActionLog extends BaseLog
         else 
         {
             return $q->Not($q->ManyEqualsOr("$table.app",
-                array_keys(Main::GetInstance()->GetApps())));
+                array_keys(AppRunner::GetInstance()->GetApps())));
         }
     }
     
@@ -122,7 +123,7 @@ class ActionLog extends BaseLog
      * If 0, details logs will be discarded, else see Config enum
      * @see \Andromeda\Core\Config::GetRequestLogDetails()
      */
-    public static function GetDetailsLevel() : int { return Main::GetInstance()->GetConfig()->GetRequestLogDetails(); }
+    public static function GetDetailsLevel() : int { return ApiPackage::GetInstance()->GetConfig()->GetRequestLogDetails(); }
     
     /**
      * Returns true if the configured details log detail level is >= full
@@ -162,7 +163,7 @@ class ActionLog extends BaseLog
         if (!empty($this->details_tmp))
             $this->details->SetArray($this->details_tmp);
             
-        if (!Main::GetInstance()->GetConfig()->GetEnableRequestLogDB())
+        if (!ApiPackage::GetInstance()->GetConfig()->GetEnableRequestLogDB())
             return $this; // might only be doing file logging
         
         return parent::Save(); // ignore isRollback

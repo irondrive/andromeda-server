@@ -1,8 +1,8 @@
 <?php if (!defined('Andromeda')) die();
 
-$main = \Andromeda\Core\Main::GetInstance();
-$errors = $main->GetErrorManager();
-$database = $main->GetDatabase();
+$api = \Andromeda\Core\Main::GetInstance();
+$errors = $api->GetErrorManager();
+$database = $api->GetDatabase();
 
 return array(
     /*'1.0.2' => function()use($main,$errors,$database)

@@ -14,7 +14,7 @@ if (file_exists(ROOT.'/userInit.php'))
  * Multiple commands can be given to run in a single request/transaction.
  */
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 
@@ -22,27 +22,29 @@ require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat
 require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 /** 
- * The basic procedure is to create the Main application, parse an array 
- * of commands from the interface, run the Main application for each 
+ * The basic procedure is to create the ApiPackage, parse an array 
+ * of commands from the interface, run the AppRunner application for each 
  * command given, commit the transaction, and display output
  */
 
 $interface = IOInterface::TryGet(); 
 if (!$interface) die('INTERFACE_ERROR');
 
-$main = new Main($interface, new ErrorManager($interface)); 
+$errman = new ErrorManager($interface, true);
+$apipack = new ApiPackage($interface, $errman);
 
-$inputs = $interface->GetInputs($main->TryGetConfig());
+$inputs = $interface->GetInputs($apipack->TryGetConfig());
 
-$retvals = array_map(function(Input $input)use($main){
-    return $main->Run($input); }, $inputs);
+$runner = $apipack->GetAppRunner();
+
+$retvals = array_map(function(Input $input)use($runner){
+    return $runner->Run($input); }, $inputs);
 
 $output = Output::Success($retvals);
 
-$main->commit(true);
+$runner->commit(true);
+if ($interface->UserOutput($output)) 
+    $runner->commit();
 
-if ($interface->UserOutput($output)) $main->commit();
-
-$main->FinalMetrics($output);
-
+$apipack->SaveMetrics($output);
 $interface->WriteOutput($output);

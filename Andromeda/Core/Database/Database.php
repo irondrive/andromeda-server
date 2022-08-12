@@ -13,7 +13,7 @@ use \PDO; use \PDOStatement; use \PDOException;
 require_once(ROOT."/Core/Database/DBStats.php");
 require_once(ROOT."/Core/Database/Exceptions.php");
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{Main, Config};
+require_once(ROOT."/Core/Config.php"); use Andromeda\Core\{ApiPackage, Config};
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
@@ -218,7 +218,7 @@ class Database
         }
         catch (PDOException $e)
         {
-            if (Main::GetInstance()->GetInterface()->isPrivileged())
+            if (ApiPackage::GetInstance()->GetInterface()->isPrivileged())
                 throw new DatabaseConnectException($e);
             else throw new DatabaseConnectException();
         }
@@ -461,7 +461,7 @@ class Database
     /** Logs a query to the internal query history, logging the actual data values if debug allows */
     private function logQuery(string $sql, ?array $data) : string
     {
-        if ($data !== null && Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_SENSITIVE)
+        if ($data !== null && ApiPackage::GetInstance()->GetDebugLevel() >= Config::ERRLOG_SENSITIVE)
         {            
             foreach ($data as $key=>$val)
             {

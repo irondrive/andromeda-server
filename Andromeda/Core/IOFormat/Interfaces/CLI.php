@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\MissingSingletonException;
@@ -36,13 +36,13 @@ class CLI extends IOInterface
         {
             pcntl_signal(SIGTERM, function()
             {
-                try { Main::GetInstance()->rollback(); }
+                try { AppRunner::GetInstance()->rollback(); }
                 catch (MissingSingletonException $e) { }
             });
         }
     }  
     
-    /** Strips -- off the given string and returns (or false if not found) */
+    /** Strips -- off the given string and returns (or null if not found) */
     private static function getKey(string $str) : ?string
     {
         if (mb_substr($str,0,2) !== "--") return null; else return mb_substr($str,2);
@@ -53,6 +53,12 @@ class CLI extends IOInterface
     {
         return (isset($args[$i+1]) && !self::getKey($args[$i+1])) ? $args[++$i] : null;
     }
+    
+    /** The next argv index to process */
+    private int $argIdx = 1;
+    
+    /** True if a dry run was requested in init */
+    private bool $dryRun = false;
 
     /** 
      * Initializes CLI by fetching some global params from $argv
@@ -66,33 +72,42 @@ class CLI extends IOInterface
         global $argv;
         
         // pre-process params that may be needed before $config is available        
-        for ($i = 1; $i < count($argv); $i++)
+        for (; $this->argIdx < count($argv); $this->argIdx++)
         {
-            $key = self::getKey($argv[$i]);
+            $key = self::getKey($argv[$this->argIdx]);
 
-            if (!$key) break; else switch ($key)
+            if ($key === null) break; else switch ($key)
             {
-                case 'dryrun': break;
+                case 'dryrun': $this->dryRun = true; break;
                 
                 case 'json': $this->outmode = static::OUTPUT_JSON; break;
                 case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
                 
                 case 'debug':
-                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                {
+                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
+                        throw new IncorrectCLIUsageException();
                     $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
                     $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
+                }
                     
                 case 'metrics':
-                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                {
+                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
+                        throw new IncorrectCLIUsageException();
                     $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
                     $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
+                }
                     
                 case 'dbconf':
-                    if (($val = self::getNextValue($argv,$i)) === null) throw new IncorrectCLIUsageException();
+                {
+                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
+                        throw new IncorrectCLIUsageException();
                     $this->dbconf = (new SafeParam('dbconf',$val))->GetFSPath();
                     break;
+                }
 
                 default: throw new IncorrectCLIUsageException();
             }
@@ -123,6 +138,8 @@ class CLI extends IOInterface
     
     protected function subGetInputs(?Config $config) : array
     {
+        if ($this->dryRun && $config !== null) $config->SetDryRun();
+        
         if ($config)
         {
             if ($this->debug !== null && in_array($this->debug, Config::DEBUG_TYPES, true))
@@ -134,34 +151,26 @@ class CLI extends IOInterface
         
         global $argv;
         
-        $i = 1; for (; $i < count($argv); $i++)
+        for (; $this->argIdx < count($argv); $this->argIdx++)
         {
-            $key = self::getKey($argv[$i]);
+            $key = self::getKey($argv[$this->argIdx]);
             
-            if ($key !== null) switch ($key) // process flags that are relevant for $config
-            {
-                case 'json': break;
-                case 'printr': break;
-                case 'debug': $i++; break;
-                case 'metrics': $i++; break;
-                case 'dbconf': $i++; break;
-                
-                case 'dryrun': if ($config) $config->SetDryRun(); break;
-                
-                default: throw new IncorrectCLIUsageException();
-            }
-            else switch ($argv[$i]) // build an Input command from the rest of the command line
+            if ($key !== null) 
+                throw new IncorrectCLIUsageException();
+            
+            else switch ($argv[$this->argIdx])
             {
                 case 'version': die("Andromeda ".andromeda_version.PHP_EOL);
                 
                 case 'batch':
                 {
-                    if (($val = self::getNextValue($argv,$i)) === null)
+                    $fname = self::getNextValue($argv,$this->argIdx);
+                    if ($fname === null)
                         throw new IncorrectCLIUsageException();
-                    else return self::GetBatch($val);
+                    else return self::GetBatch($fname);
                 }
-                        
-                default: return array(self::GetInput(array_slice($argv, $i)));
+                
+                default: return array(self::GetInput(array_slice($argv, $this->argIdx)));
             }
         }
 

@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
@@ -739,7 +739,7 @@ class NullTimestamp extends NullFloatType
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue(Main::GetInstance()->GetTime());
+        return parent::SetValue(ApiPackage::GetInstance()->GetTime());
     }
 }
 
@@ -748,14 +748,14 @@ class Timestamp extends FloatType
 {
     public function __construct(string $name, bool $saveOnRollback = false)
     {
-        $def = Main::GetInstance()->GetTime();
+        $def = ApiPackage::GetInstance()->GetTime();
         parent::__construct($name, $saveOnRollback, $def);
     }
     
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue(Main::GetInstance()->GetTime());
+        return parent::SetValue(ApiPackage::GetInstance()->GetTime());
     }
 }
 

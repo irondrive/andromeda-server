@@ -165,6 +165,9 @@ abstract class BaseObject
     /** true if the object should be deleted when saved */
     private bool $deleteLater = false;
     
+    /** Returns the object's associated database */
+    public function GetDatabase() : ObjectDatabase { return $this->database; }
+    
     /**
      * Construct an object from loaded database data
      * @param ?ObjectDatabase $database database
@@ -187,10 +190,7 @@ abstract class BaseObject
     
     /** Performs any subclass-specific initialization */
     protected function PostConstruct() : void { }
-    
-    /** Returns the object's associated database */
-    public function GetDatabase() : ObjectDatabase { return $this->database; }
-    
+
     /**
      * Instantiates the object's database fields - subclasses should override!
      * Subclasses must create their field objects and send to RegisterFields()
@@ -248,7 +248,8 @@ abstract class BaseObject
     public function ID() : string { return $this->idfield->GetValue(); }
 
     /** Returns the string "id:class" where id is the object ID and class is its short class name */
-    final public function __toString() : string { return $this->ID().':'.Utilities::ShortClassName(static::class); }
+    final public function __toString() : string { 
+        return $this->ID().':'.Utilities::ShortClassName(static::class); }
     
     /** Returns the given object's as a string if not null, else null */
     final public static function toString(?self $obj) : ?string { return $obj ? (string)$obj : null; }

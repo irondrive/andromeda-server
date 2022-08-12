@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -33,7 +33,7 @@ final class RequestLog extends BaseLog
     
     private bool $writtenToFile = false;
     
-    /** Array of action metrics if not saved */
+    /** Array of action metrics logged this request */
     private array $actions;
     
     protected function CreateFields() : void
@@ -52,11 +52,11 @@ final class RequestLog extends BaseLog
     }
 
     /** Creates a new request log entry from the main API */
-    public static function Create(Main $main) : self
+    public static function Create(ApiPackage $apipack) : self
     {
-        $interface = $main->GetInterface();
+        $interface = $apipack->GetInterface();
         
-        $obj = parent::BaseCreate($main->GetDatabase());
+        $obj = parent::BaseCreate($apipack->GetDatabase());
         $obj->addr->SetValue($interface->getAddress());
         $obj->agent->SetValue($interface->getUserAgent());
         
@@ -97,7 +97,9 @@ final class RequestLog extends BaseLog
 
     public function Save(bool $isRollback = false) : self
     {
-        $config = Main::GetInstance()->GetConfig();
+        $this->actions ??= array();
+        
+        $config = ApiPackage::GetInstance()->GetConfig();
         
         if ($config->GetEnableRequestLogDB())
         {
@@ -113,7 +115,7 @@ final class RequestLog extends BaseLog
      */
     public function WriteFile() : self
     {
-        $config = Main::GetInstance()->GetConfig();
+        $config = ApiPackage::GetInstance()->GetConfig();
 
         if ($config->GetEnableRequestLogFile() &&
             ($logdir = $config->GetDataDir()) !== null)
@@ -193,7 +195,7 @@ final class RequestLog extends BaseLog
         if ($actions) 
         {
             $retval['actions'] = array();
-            
+
             $actlogs = $this->actions ?? ActionLog::LoadByRequest($this->database,$this);
             
             foreach ($actlogs as $actlog) 

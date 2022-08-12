@@ -3,6 +3,7 @@
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
+require_once(ROOT."/Core/ApiPackage.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -209,7 +210,7 @@ final class Emailer extends BaseObject
             default: throw new InvalidMailTypeException();
         }
         
-        $mailer->SMTPDebug = Main::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;    
+        $mailer->SMTPDebug = ApiPackage::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;
         
         $mailer->Debugoutput = function(string $str, int $level)
         { 
