@@ -6,18 +6,18 @@ require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
+require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog; // phpstan
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\DatabaseException;
 
 /** The base class from which apps must inherit */
 abstract class BaseApp
 {
-    /** Reference to the main API, for convenience */
-    protected Main $API;
+    /** Reference to the main API package */
+    protected ApiPackage $API;
 
     /** All apps are constructed when Andromeda runs */
-    public function __construct(Main $API)
+    public function __construct(ApiPackage $API)
     {
         $this->API = $API;
     }
@@ -126,7 +126,7 @@ abstract class InstalledApp extends BaseApp
     
     protected ObjectDatabase $database;
     
-    public function __construct(Main $API)
+    public function __construct(ApiPackage $API)
     {
         parent::__construct($API);
         
@@ -220,7 +220,7 @@ abstract class InstalledApp extends BaseApp
             {
                 $script(); $this->config->SetVersion($newVersion);
                 
-                $this->API->commit(); // commit after every step
+                AppRunner::GetInstance()->commit(); // commit after every step
             }
         }
         

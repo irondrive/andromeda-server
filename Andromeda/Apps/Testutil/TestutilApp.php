@@ -3,7 +3,7 @@
 require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\BaseApp;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -35,15 +35,6 @@ class TestUtilApp extends BaseApp
         return $retval;
     }
     
-    private ObjectDatabase $database;
-    
-    public function __construct(Main $api)
-    {
-        parent::__construct($api);
-        
-        $this->database = $api->GetDatabase();
-    }
-
     public function Run(Input $input)
     {
         $params = $input->GetParams();
@@ -87,7 +78,8 @@ class TestUtilApp extends BaseApp
     
     protected function CheckDryRun() : bool
     {
-        return Config::GetInstance($this->database)->isDryRun();
+        $db = $this->API->GetDatabase();
+        return Config::GetInstance($db)->isDryRun();
     }
     
     protected function BinaryOutput(SafeParams $params) : void

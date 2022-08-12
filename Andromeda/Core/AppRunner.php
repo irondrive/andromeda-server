@@ -1,62 +1,47 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
+require_once(ROOT."/Core/RunContext.php");
+require_once(ROOT."/Core/ApiPackage.php");
 
 require_once(ROOT."/Core/Database/DBStats.php");
-require_once(ROOT."/Core/Database/Database.php"); 
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Database, ObjectDatabase, DBStats};
-require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{DatabaseException, DatabaseConfigException};
+use Andromeda\Core\Database\DBStats; // phpstan
 
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
-use Andromeda\Core\Exceptions\{ErrorManager, ClientException};
+use Andromeda\Core\Exceptions\ClientException;
 
-require_once(ROOT."/Core/IOFormat/IOInterface.php");
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
+use Andromeda\Core\IOFormat\{Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
 
-require_once(ROOT."/Core/Logging/RequestLog.php");
 require_once(ROOT."/Core/Logging/ActionLog.php");
-require_once(ROOT."/Core/Logging/RequestMetrics.php");
-use Andromeda\Core\Logging\{RequestLog, ActionLog, RequestMetrics};
-
-class RunContext 
-{ 
-    private Input $input;     
-    private ?ActionLog $actionlog;
-    private ?DBStats $metrics;
-    
-    public function GetInput() : Input { return $this->input; }
-    public function GetActionLog() : ?ActionLog { return $this->actionlog; }
-    
-    public function __construct(Input $input, ?ActionLog $actionlog){ 
-        $this->input = $input; $this->actionlog = $actionlog; }
-        
-    public function GetMetrics() : ?DBStats { return $this->metrics; }
-    public function SetMetrics(DBStats $metrics) : void { $this->metrics = $metrics; }
-}
+use Andromeda\Core\Logging\ActionLog;
 
 /**
- * The main container class managing API singletons and running apps
+ * The main class that creates and runs apps
  * 
- * Main is also a Singleton so it can be fetched anywhere with GetInstance().
- * A Main handles a single request, with an arbitrary number of appruns.
+ * AppRunner is also a Singleton so it can be fetched anywhere with GetInstance().
+ * An AppRunner handles a single request, with an arbitrary number of appruns.
  * 
  * The Andromeda transaction model is that there is always a global commit
  * or rollback at the end of the request. A rollback may follow a bad commit.
  * There will NEVER be a rollback followed by a commit. There may be > 1 commit.
  */
-final class Main extends Singleton
+final class AppRunner extends Singleton
 {
-    /** @var DBStats performance metrics for construction */
-    private DBStats $construct_stats; 
+    private ApiPackage $apipack;
+
+    /** @var array<string,BaseApp> apps indexed by name */
+    private array $apps = array(); 
+    
+    /** @var RunContext[] stack frames for nested Run() calls */
+    private array $stack = array(); 
+
+    /** @var bool true if Run() has been called since the last commit or rollback */
+    private bool $dirty = false;
     
     /** @var array<RunContext> action/context history */
     private array $action_history = array();
@@ -64,164 +49,38 @@ final class Main extends Singleton
     /** @var array<DBStats> commit stats */
     private array $commit_stats = array();
     
-    /** @var DBStats total request performance metrics */
-    private DBStats $total_stats;
-    
-    /** Optional request log for this request */
-    private ?RequestLog $requestlog = null;
-    
-    /** @var float time of request */
-    private float $time;
-    
-    /** @var array<string,BaseApp> apps indexed by name */
-    private array $apps = array(); 
-    
-    /** @var RunContext[] stack frames for nested Run() calls */
-    private array $stack = array(); 
-    
-    private ?ObjectDatabase $database = null;
-    private ?Config $config = null;
-    
-    private ErrorManager $error_manager;
-    private IOInterface $interface;
-    
-    /** @var bool true if Run() has been called since the last commit or rollback */
-    private bool $dirty = false;
-    
-    /** Gets the timestamp of when the request was started */
-    public function GetTime() : float { return $this->time; }
-    
     /**
      * Gets an array of instantiated apps
      * @return array<string, BaseApp>
      */
     public function GetApps() : array { return $this->apps; }
 
-    /** Returns true if the global ObjectDatabase instance is valid */
-    public function HasDatabase() : bool { return $this->database !== null; }
-    
-    /** Returns the global ObjectDatabase instance or throws if not configured */
-    public function GetDatabase() : ObjectDatabase
-    {
-        if ($this->database === null)
-        {
-            $this->error_manager->LogBreakpoint(); // new trace
-            
-            throw $this->dbException;
-        }
-        else return $this->database;
-    }
-    
-    /** Instantiates and returns a new ObjectDatabase connection */
-    public function InitDatabase() : ObjectDatabase
-    {
-        $dbconf = Database::LoadConfig(
-            $this->interface->GetDBConfigFile());
-        
-        return new ObjectDatabase(new Database($dbconf));
-    }
-    
-    /** Returns the global config object or null if not installed */
-    public function TryGetConfig() : ?Config { return $this->config; }
-    
-    /** Returns the global config object if installed else throws */
-    public function GetConfig() : Config
-    {
-        if ($this->config === null)
-        {
-            $this->GetDatabase(); // assert db exists
-            
-            $this->error_manager->LogBreakpoint(); // new trace
-            
-            throw $this->cfgException;
-        }
-        else return $this->config;
-    }
-    
-    /** Returns the interface used for the current request */
-    public function GetInterface() : IOInterface { return $this->interface; }
-    
-    /** Returns a reference to the global error manager */
-    public function GetErrorManager() : ErrorManager { return $this->error_manager; }
-    
     /** Returns the RunContext that is currently being executed */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
     
-    /** Returns the request log entry for this request */
-    public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
+    /** @return array<RunContext> action/context history */
+    public function GetActionHistory() : array { return $this->action_history; }
     
-    private DatabaseConfigException $dbException; // reason DB did not init
-    private DatabaseException $cfgException; // reason config did not init
+    /** @return array<DBStats> commit stats */
+    public function GetCommitStats() : array { return $this->commit_stats; }
 
-    /**
-     * Initializes the Main API
-     * 
-     * Creates the error manager, initializes the interface, initializes the
-     * database, loads global config, loads and constructs registered apps 
-     * @param IOInterface $interface the interface that began the request
-     * @param ErrorManager $errorman the error manager instance
-     * @throws MaintenanceException if the server is not enabled
-     * @throws FailedAppLoadException if a registered app fails to load
-     */
-    public function __construct(IOInterface $interface, ErrorManager $errorman)
+    /** Creates the AppRunner service, loading/constructing all apps */
+    public function __construct(ApiPackage $apipack)
     {
-        $this->error_manager = $errorman->SetAPI($this);
-        
         parent::__construct();
-        
-        $this->time = microtime(true);
-        $this->interface = $interface;
-        $this->total_stats = new DBStats();
-        
-        $interface->Initialize();
+        $this->apipack = $apipack;
 
         $apps = array();
         
         if (file_exists(ROOT."/Apps/Core/CoreApp.php"))
             $apps[] = 'core'; // always enabled if present
         
-        try 
-        {
-            $this->database = $this->InitDatabase();
-        }
-        catch (DatabaseConfigException $e)
-        {
-            if ($interface->GetDBConfigFile() !== null) throw $e;
-            
-            $this->dbException = $e;
-        }
-        
-        if ($this->database) try
-        {
-            $this->config = Config::GetInstance($this->database);
+        $config = $apipack->TryGetConfig();
+        if ($config !== null && $config->getVersion() === andromeda_version)
+            $apps = array_merge($apps, $config->GetApps());
 
-            if (!$this->isEnabled()) throw new MaintenanceException();
-            
-            if ($this->config->isReadOnly()) 
-                $this->database->GetInternal()->SetReadOnly();
-            
-            if ($this->config->getVersion() === andromeda_version)
-                $apps = array_merge($apps, $this->config->GetApps());
-        }
-        catch (DatabaseException $e) 
-        {
-            $this->cfgException = $e;
-        }
-        
         foreach ($apps as $app) $this->TryLoadApp($app);
 
-        if ($this->config && !$this->config->isReadOnly()
-            && $this->config->GetEnableRequestLog())
-        {
-            $this->requestlog = RequestLog::Create($this);
-        }
-        
-        if ($this->database)
-        {
-            $this->construct_stats = $this->database->GetInternal()->popStatsContext();
-            $this->total_stats->Add($this->construct_stats);
-        }
-        
         register_shutdown_function(function(){
             if ($this->dirty) $this->rollback(); });
     }
@@ -240,7 +99,7 @@ final class Main extends Singleton
         if (!class_exists($app_class)) return false;
             
         if (!array_key_exists($app, $this->apps))
-            $this->apps[$app] = new $app_class($this);
+            $this->apps[$app] = new $app_class($this->apipack);
             
         return true;
     }
@@ -269,12 +128,14 @@ final class Main extends Singleton
         if (!array_key_exists($app, $this->apps)) 
             throw new UnknownAppException();
 
-        if ($this->GetMetricsLevel()) 
-            $this->database->GetInternal()->pushStatsContext();
+        if ($this->apipack->GetMetricsLevel())
+            $this->apipack->GetDatabase()->GetInternal()->pushStatsContext();
 
         $logclass = $this->apps[$app]::getLogClass();
-        $actionlog = ($logclass === null && $this->requestlog !== null)
-            ? $this->requestlog->LogAction($input, ActionLog::class) : null;
+        
+        $actionlog = null; $reqlog = $this->apipack->GetRequestLog();
+        if ($logclass !== null && $reqlog !== null) 
+            $actionlog = $reqlog->LogAction($input, ActionLog::class);
 
         $context = new RunContext($input, $actionlog);
         $this->stack[] = $context; 
@@ -282,17 +143,17 @@ final class Main extends Singleton
         
         $retval = $this->apps[$app]->Run($input);
         
-        if ($this->database) $this->database->saveObjects();
+        if ($this->apipack->HasDatabase()) 
+            $this->apipack->GetDatabase()->saveObjects();
         
         array_pop($this->stack);
 
-        if ($this->GetMetricsLevel())
+        if ($this->apipack->GetMetricsLevel())
         {
-            $stats = $this->database->GetInternal()->popStatsContext();
+            $stats = $this->apipack->GetDatabase()->GetInternal()->popStatsContext();
             
-            $this->total_stats->Add($stats);
-            $this->action_history[] = $context;
             $context->SetMetrics($stats);
+            $this->action_history[] = $context;
         }
         
         return $retval;
@@ -304,7 +165,7 @@ final class Main extends Singleton
      * Note that this breaks transactions - the remote API will 
      * commit before we get the response to this remote call.
      * @param string $url the base URL of the remote API
-     * @see Main::Run()
+     * @see AppRunner::Run()
      */
     public function RunRemote(string $url, Input $input)
     {
@@ -323,25 +184,27 @@ final class Main extends Singleton
     {
         Utilities::RunNoTimeout(function()use($e)
         {
-            foreach ($this->apps as $app) $this->error_manager->LoggedTry(
-                function()use($app) { $app->rollback(); });
+            $errman = $this->apipack->GetErrorManager();
             
-            if ($this->database) 
+            foreach ($this->apps as $app) $errman->LoggedTry(
+                function()use($app) { $app->rollback(); });
+
+            if ($this->apipack->HasDatabase()) 
             {
-                $this->database->rollback();
+                $db = $this->apipack->GetDatabase();
+                
+                $db->rollback();
                 
                 if ($e instanceof ClientException) 
-                    $this->error_manager->LoggedTry(function()use($e)
+                    $errman->LoggedTry(function()use($e,$db)
                 {
-                    if ($this->requestlog !== null)
-                        $this->requestlog->SetError($e);
+                    $reqlog = $this->apipack->GetRequestLog();
+                    if ($reqlog !== null) $reqlog->SetError($e);
                         
-                    $this->database->saveObjects(true);
-                    
-                    if ($this->requestlog !== null)
-                        $this->requestlog->WriteFile();
-                    
+                    $db->saveObjects(true); // save log + any "always" DB fields
                     $this->commitDatabase(false);
+                    
+                    if ($reqlog !== null) $reqlog->WriteFile();
                 });
             }
             
@@ -360,24 +223,24 @@ final class Main extends Singleton
     {
         Utilities::RunNoTimeout(function()use($main)
         {
-            if ($this->database)
+            if ($this->apipack->HasDatabase())
             {
-                if ($this->GetMetricsLevel()) 
-                    $this->database->GetInternal()->pushStatsContext();
+                $db = $this->apipack->GetDatabase();
                 
-                $this->database->saveObjects();
+                if ($this->apipack->GetMetricsLevel())
+                    $db->GetInternal()->pushStatsContext();
                 
-                if ($main && $this->requestlog !== null)
-                    $this->requestlog->WriteFile();
+                $db->saveObjects();
+                
+                $reqlog = $this->apipack->GetRequestLog();
+                if ($main && $reqlog !== null) $reqlog->WriteFile();
                 
                 $this->commitDatabase(true);
                 
-                if ($this->GetMetricsLevel()) 
+                if ($this->apipack->GetMetricsLevel()) 
                 {
-                    $commit_stats = $this->database->GetInternal()->popStatsContext();
-                    
+                    $commit_stats = $db->GetInternal()->popStatsContext();
                     $this->commit_stats[] = $commit_stats;
-                    $this->total_stats->Add($commit_stats);
                 }
             }
             else foreach ($this->apps as $app) $app->commit();
@@ -392,93 +255,14 @@ final class Main extends Singleton
      */
     private function commitDatabase(bool $apps) : void
     {
-        $rollback = $this->database->isReadOnly() || 
-            ($this->config && $this->config->isDryRun());
+        $rollback = $this->apipack->isCommitRollback();
         
         if ($apps) foreach ($this->apps as $app) 
             if ($rollback) $app->rollback(); else $app->commit();
         
-        if ($rollback) $this->database->rollback(); 
-        else $this->database->commit();
-    }
-
-    /** if false, requests are not allowed (always true for privileged interfaces) */
-    private function isEnabled() : bool
-    {
-        if ($this->config === null) return true;
-        
-        return $this->config->isEnabled() || $this->interface->isPrivileged();
-    }
-    
-    /** 
-     * Returns the configured debug level, or the interface's default 
-     * @param bool $output if true, adjust level to interface privilege
-     */
-    public function GetDebugLevel(bool $output = false) : int
-    {
-        if ($this->config)
-        {            
-            $debug = $this->config->GetDebugLevel();
+        $db = $this->apipack->GetDatabase();
             
-            if ($output && !$this->config->GetDebugOverHTTP() && 
-                !$this->interface->isPrivileged()) $debug = 0;
-            
-            return $debug;
-        }
-        else return $this->interface->GetDebugLevel();
-    }
-    
-    /**
-     * Returns the configured metrics level, or the interface's default
-     * Returns 0 automatically if the database is not present
-     * @param bool $output if true, adjust level to interface privilege
-     */
-    public function GetMetricsLevel(bool $output = false) : int
-    {
-        if (!$this->database) return 0; // required
-        
-        if ($this->config)
-        {
-            $metrics = $this->config->GetMetricsLevel();
-            
-            if ($output && !$this->config->GetDebugOverHTTP() &&
-                !$this->interface->isPrivileged()) $metrics = 0;
-            
-            return $metrics;
-        }
-        else return $this->interface->GetMetricsLevel();
-    }
-    
-    /**
-     * Compiles performance metrics and adds them to the given output
-     * @param Output $output the output object to add metrics to
-     * @param bool $isError if true, the output is an error response
-     */
-    public function FinalMetrics(Output $output, bool $isError = false) : void
-    {
-        if (!$this->database || !($mlevel = $this->GetMetricsLevel())) return;
-        
-        if ($this->database->GetInternal()->inTransaction())
-            throw new FinalizeTransactionException();
-        
-        try
-        {
-            $this->total_stats->stopTiming();
-            
-            $metrics = RequestMetrics::Create(
-                $mlevel, $this->database, $this->requestlog,
-                $this->construct_stats, $this->action_history,
-                $this->commit_stats, $this->total_stats)->Save();
-            
-            $this->commitDatabase(false);
-            
-            if ($this->GetMetricsLevel(true))
-                $output->SetMetrics($metrics->GetClientObject($isError));
-        }
-        catch (\Throwable $e)
-        {
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) throw $e;
-            else $this->error_manager->LogException($e, false);
-        }
+        if ($rollback) $db->rollback(); 
+        else $db->commit();
     }
 }

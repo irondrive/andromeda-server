@@ -8,3 +8,4 @@ parameters:
     excludePaths:
         analyse:
             - ../../Andromeda/Apps/Files
+            - ../../Andromeda/Apps/Accounts
