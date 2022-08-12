@@ -103,28 +103,28 @@ abstract class Utilities
     
     /**
      * Encodes an array as a JSON string
-     * @param array<mixed> $data json array
+     * @param array<mixed> $jarr json array
      * @throws JSONException
      * @return string json string
      */
-    public static function JSONEncode(array $data) : string
+    public static function JSONEncode(array $jarr) : string
     {
-        if (!is_string($data = json_encode($data)))
+        if (!is_string($jstr = json_encode($jarr)))
             throw new JSONException();
-        return $data;
+        return $jstr;
     }
     
     /**
      * Decodes a JSON string as an array
-     * @param string $data json string
+     * @param string $jstr json string
      * @throws JSONException
      * @return array<mixed> json array
      */
-    public static function JSONDecode(string $data) : array
+    public static function JSONDecode(string $jstr) : array
     {
-        if (!is_array($data = json_decode($data, true)))
+        if (!is_array($jarr = json_decode($jstr, true)))
             throw new JSONException();
-        return $data;
+        return $jarr;
     }
     
     /** Returns the best password_hash algorithm available */
