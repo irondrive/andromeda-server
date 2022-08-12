@@ -6,25 +6,11 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Singleton;
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
+require_once(ROOT."/Core/IOFormat/OutputHandler.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
 require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
-
-/** Class for custom app output routines */
-class OutputHandler
-{
-    private $getbytes; private $output;
-    
-    public function __construct(callable $getbytes, callable $output){
-        $this->getbytes = $getbytes; $this->output = $output; }
-    
-    /** Return the number of bytes that will be output */
-    public function GetBytes() : ?int { return ($this->getbytes)(); }
-    
-    /** Do the actual output routine */
-    public function DoOutput(Output $output) : void { ($this->output)($output); }
-}
 
 /** Describes an abstract PHP I/O interface abstraction */
 abstract class IOInterface extends Singleton

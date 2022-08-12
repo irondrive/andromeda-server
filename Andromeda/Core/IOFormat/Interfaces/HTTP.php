@@ -5,6 +5,7 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
 require_once(ROOT."/Core/IOFormat/Input.php"); 
+require_once(ROOT."/Core/IOFormat/InputAuth.php");
 require_once(ROOT."/Core/IOFormat/Output.php"); 
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); 
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); 
