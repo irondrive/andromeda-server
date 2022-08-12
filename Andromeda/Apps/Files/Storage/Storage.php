@@ -664,8 +664,8 @@ abstract class Storage extends BaseObject // TODO was StandardObject
     
     public function rollback() 
     {
-        foreach (array_reverse($this->onRollback) as $obj) try { ($obj->func)(); } 
-            catch (\Throwable $e) { ErrorManager::GetInstance()->LogException($e); }
+        foreach (array_reverse($this->onRollback) as $obj) 
+            ErrorManager::GetInstance()->LoggedTry($obj->func);
         
         $this->createdItems = array();        
         $this->onRollback = array();
@@ -680,8 +680,8 @@ abstract class Storage extends BaseObject // TODO was StandardObject
     {
         foreach (self::$instances as $fs)
         {
-            try { $fs->rollback(); } catch (\Throwable $e) {
-                ErrorManager::GetInstance()->LogException($e); }
+            ErrorManager::GetInstance()->LoggedTry(
+                function()use($fs){ $fs->rollback(); });
         }
     }    
 }

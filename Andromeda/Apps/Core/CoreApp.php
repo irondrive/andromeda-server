@@ -130,7 +130,7 @@ final class CoreApp extends InstalledApp
             
             $isAdmin = $authenticator !== null && $authenticator->isAdmin();
             
-            $actionlog = null; if (($reqlog = $this->API->GetRequestLog()) !== null)
+            $actionlog = null; if (($reqlog = $this->API->GetAppRunner()->GetRequestLog()) !== null)
             {
                 $actionlog = $reqlog->LogAction($input, self::getLogClass())->SetAuth($authenticator);
             }
@@ -139,7 +139,7 @@ final class CoreApp extends InstalledApp
         {
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
             
-            $actionlog = null; if (($reqlog = $this->API->GetRequestLog()) !== null)
+            $actionlog = null; if (($reqlog = $this->API->GetAppRunner()->GetRequestLog()) !== null)
             {
                 $actionlog = $reqlog->LogAction($input, self::getLogClass())->SetAdmin($isAdmin);
             }
