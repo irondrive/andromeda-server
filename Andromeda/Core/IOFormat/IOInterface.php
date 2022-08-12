@@ -55,7 +55,7 @@ abstract class IOInterface extends Singleton
      */
     public function GetInputs(?Config $config) : array
     {
-        if (isset($this->inputs)) return $this->inputs;
+        if (isset($this->inputs)) return $this->inputs; // cache
         else return ($this->inputs = $this->subGetInputs($config));
     }
     

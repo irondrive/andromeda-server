@@ -35,13 +35,13 @@ final class RequestMetrics extends BaseObject
     /** The number of objects loaded in database memory */
     private FieldTypes\IntType $nobjects;
     
-    private FieldTypes\IntType $construct_db_reads;
-    private FieldTypes\FloatType $construct_db_read_time;
-    private FieldTypes\IntType $construct_db_writes;
-    private FieldTypes\FloatType $construct_db_write_time;
-    private FieldTypes\FloatType $construct_code_time;
-    private FieldTypes\FloatType $construct_total_time;
-    private FieldTypes\NullJsonArray $construct_queries;
+    private FieldTypes\IntType $init_db_reads;
+    private FieldTypes\FloatType $init_db_read_time;
+    private FieldTypes\IntType $init_db_writes;
+    private FieldTypes\FloatType $init_db_write_time;
+    private FieldTypes\FloatType $init_code_time;
+    private FieldTypes\FloatType $init_total_time;
+    private FieldTypes\NullJsonArray $init_queries;
     
     /** Garbage collection stats reported by PHP */
     private FieldTypes\NullJsonArray $gcstats;
@@ -73,13 +73,13 @@ final class RequestMetrics extends BaseObject
         $this->nincludes = $fields[] =    new FieldTypes\IntType('nincludes');
         $this->nobjects = $fields[] =     new FieldTypes\IntType('nobjects');
         
-        $this->construct_db_reads = $fields[] =      new FieldTypes\IntType('construct_db_reads');
-        $this->construct_db_read_time = $fields[] =  new FieldTypes\FloatType('construct_db_read_time');
-        $this->construct_db_writes = $fields[] =     new FieldTypes\IntType('construct_db_writes');
-        $this->construct_db_write_time = $fields[] = new FieldTypes\FloatType('construct_db_write_time');
-        $this->construct_code_time = $fields[] =     new FieldTypes\FloatType('construct_code_time');
-        $this->construct_total_time = $fields[] =    new FieldTypes\FloatType('construct_total_time');
-        $this->construct_queries = $fields[] =       new FieldTypes\NullJsonArray('construct_queries');
+        $this->init_db_reads = $fields[] =      new FieldTypes\IntType('init_db_reads');
+        $this->init_db_read_time = $fields[] =  new FieldTypes\FloatType('init_db_read_time');
+        $this->init_db_writes = $fields[] =     new FieldTypes\IntType('init_db_writes');
+        $this->init_db_write_time = $fields[] = new FieldTypes\FloatType('init_db_write_time');
+        $this->init_code_time = $fields[] =     new FieldTypes\FloatType('init_code_time');
+        $this->init_total_time = $fields[] =    new FieldTypes\FloatType('init_total_time');
+        $this->init_queries = $fields[] =       new FieldTypes\NullJsonArray('init_queries');
 
         $this->gcstats = $fields[] =  new FieldTypes\NullJsonArray('gcstats');
         $this->rusage = $fields[] =   new FieldTypes\NullJsonArray('rusage');
@@ -106,14 +106,14 @@ final class RequestMetrics extends BaseObject
      * @param int $level logging level
      * @param ObjectDatabase $database database reference
      * @param RequestLog $reqlog request log for the request
-     * @param DBStats $construct construct stats
+     * @param DBStats $initstat construct stats
      * @param array $actions array<RunContext> actions with metrics
      * @param array $commits array<DBStats> commit metrics
-     * @param DBStats $total total request stats
+     * @param DBStats $totalstat total request stats
      * @return static created metrics object
      */
     public static function Create(int $level, ObjectDatabase $database, ?RequestLog $reqlog,
-                                  DBStats $construct, array $actions, array $commits, DBStats $total) : self
+                                  DBStats $initstat, array $actions, array $commits, DBStats $totalstat) : self
     {        
         $obj = parent::BaseCreate($database);
         $obj->requestlog->SetObject($reqlog);
@@ -122,18 +122,18 @@ final class RequestMetrics extends BaseObject
         $obj->nincludes->SetValue(count(get_included_files()));
         $obj->nobjects->SetValue($database->getLoadedCount());
         
-        $obj->construct_db_reads->SetValue($construct->GetReads());
-        $obj->construct_db_read_time->SetValue($construct->GetReadTime());
-        $obj->construct_db_writes->SetValue($construct->GetWrites());
-        $obj->construct_db_write_time->SetValue($construct->GetWriteTime());
-        $obj->construct_code_time->SetValue($construct->GetCodeTime());
-        $obj->construct_total_time->SetValue($construct->GetTotalTime());
+        $obj->init_db_reads->SetValue($initstat->GetReads());
+        $obj->init_db_read_time->SetValue($initstat->GetReadTime());
+        $obj->init_db_writes->SetValue($initstat->GetWrites());
+        $obj->init_db_write_time->SetValue($initstat->GetWriteTime());
+        $obj->init_code_time->SetValue($initstat->GetCodeTime());
+        $obj->init_total_time->SetValue($initstat->GetTotalTime());
 
-        $obj->SetDBStats($total);
+        $obj->SetDBStats($totalstat);
 
         if ($level >= Config::METRICS_EXTENDED)
         {
-            $obj->construct_queries->SetArray($construct->getQueries());
+            $obj->init_queries->SetArray($initstat->getQueries());
             $obj->gcstats->SetArray(gc_status());
             
             $rusage = getrusage();
@@ -142,7 +142,7 @@ final class RequestMetrics extends BaseObject
             
             $obj->includes->SetArray(get_included_files());
             $obj->objects->SetArray($database->getLoadedObjects());
-            $obj->queries->SetArray($total->getQueries());
+            $obj->queries->SetArray($totalstat->getQueries());
             $obj->debuglog->SetArray(ErrorManager::GetInstance()->GetDebugLog());
         }
         
@@ -188,8 +188,8 @@ final class RequestMetrics extends BaseObject
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
      * @return array<mixed> `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:DBStatsLog, action_stats:[ActionMetrics] \
-           construct_stats:{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}}`
-        if extended, add `{gcstats:array,rusage:array,includes:array,construct_stats:{queries:[{time:float,query:string}]}}`
+           init_stats:{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}}`
+        if extended, add `{gcstats:array,rusage:array,includes:array,init_stats:{queries:[{time:float,query:string}]}}`
         if extended and not accompanying debug output, omit add `{objects:array<class,[string]>,queries:array,debuglog:array}`
      * @see DBStatsLog::GetDBStatsClientObject()
      */
@@ -203,14 +203,14 @@ final class RequestMetrics extends BaseObject
             'peak_memory' =>  $this->peak_memory->GetValue(),
             'nincludes' =>    $this->nincludes->GetValue(),
             'nobjects' =>     $this->nobjects->GetValue(),
-            'construct_stats' => array
+            'init_stats' => array
             (
-                'reads' =>      $this->construct_db_reads->GetValue(),
-                'read_time' =>  $this->construct_db_read_time->GetValue(),
-                'writes' =>     $this->construct_db_writes->GetValue(),
-                'write_time' => $this->construct_db_write_time->GetValue(),
-                'code_time' =>  $this->construct_code_time->GetValue(),
-                'total_time' => $this->construct_total_time->GetValue()
+                'reads' =>      $this->init_db_reads->GetValue(),
+                'read_time' =>  $this->init_db_read_time->GetValue(),
+                'writes' =>     $this->init_db_writes->GetValue(),
+                'write_time' => $this->init_db_write_time->GetValue(),
+                'code_time' =>  $this->init_code_time->GetValue(),
+                'total_time' => $this->init_total_time->GetValue()
             ),
             'action_stats' => array_values(array_map(function(ActionMetrics $o){
                 return $o->GetClientObject(); }, $actions)),
@@ -221,7 +221,7 @@ final class RequestMetrics extends BaseObject
         
         if ($this->gcstats->TryGetArray() !== null) // is EXTENDED
         {
-            $retval['construct_stats']['queries'] = $this->construct_queries->TryGetArray();
+            $retval['init_stats']['queries'] = $this->init_queries->TryGetArray();
             
             $retval['gcstats'] = $this->gcstats->TryGetArray();
             $retval['rusage'] = $this->rusage->TryGetArray();

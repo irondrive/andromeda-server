@@ -117,11 +117,10 @@ final class RequestLog extends BaseLog
     {
         $config = ApiPackage::GetInstance()->GetConfig();
 
-        if ($config->GetEnableRequestLogFile() &&
+        if (!$this->writtenToFile && 
+            $config->GetEnableRequestLogFile() &&
             ($logdir = $config->GetDataDir()) !== null)
         {
-            if ($this->writtenToFile)
-                throw new MultiFileWriteException();
             $this->writtenToFile = true;
         
             $data = Utilities::JSONEncode($this->GetFullClientObject(true));

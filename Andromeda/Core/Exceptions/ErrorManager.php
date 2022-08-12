@@ -41,22 +41,16 @@ class ErrorManager extends Singleton
             
             set_exception_handler(function(\Throwable $e)
             {
-                $this->loggedTry(function()use($e)
-                {
-                    $apprunner = $this->GetAppRunner();
-                    if ($apprunner !== null) $apprunner->rollback($e);
+                $apprunner = $this->GetAppRunner();
+                if ($apprunner !== null) $apprunner->rollback($e);
 
-                    if ($e instanceof ClientException)
-                    {
-                        $output = $this->HandleClientException($e);
-                        
-                        if ($this->apipack !== null)
-                            $this->apipack->SaveMetrics($output, true);
-                    }
-                    else $output = $this->HandleThrowable($e);
-                    
-                    $this->interface->WriteOutput($output); die();
-                });
+                if ($e instanceof ClientException)
+                {
+                    $output = $this->HandleClientException($e);
+                }
+                else $output = $this->HandleThrowable($e);
+                
+                $this->interface->WriteOutput($output); die();
             });
             
             ini_set('assert.active','1');
@@ -106,8 +100,14 @@ class ErrorManager extends Singleton
                 ->SetDebugLog($this->GetDebugLogLevel(), $this->GetDebugLog())
                 ->GetClientObject($this->GetDebugOutputLevel());
         }
-            
-        return Output::ClientException($e, $debug);
+
+        $output = Output::ClientException($e, $debug);
+        
+        if ($this->apipack !== null)
+            $this->apipack->GetMetricsHandler()
+                ->SaveMetrics($this->apipack, $output, true);
+        
+        return $output;
     }
     
     /** Handles a non-client exception, rolling back the DB, 
@@ -116,10 +116,10 @@ class ErrorManager extends Singleton
     {
         $debug = null; try 
         {
-            if (($errlog = $this->LogException($e, false)) !== null) 
+            if (($errlog = $this->LogException($e, false)) !== null)
                 $debug = $errlog->GetClientObject($this->GetDebugOutputLevel());
         }
-        catch (\Throwable $e2) 
+        catch (\Throwable $e2) // in case of ErrorLog bugs
         { 
             if ($this->GetDebugOutputLevel() >= Config::ERRLOG_ERRORS)
             {

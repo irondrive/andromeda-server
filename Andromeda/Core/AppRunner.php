@@ -18,7 +18,8 @@ use Andromeda\Core\IOFormat\{Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
 
 require_once(ROOT."/Core/Logging/ActionLog.php");
-use Andromeda\Core\Logging\ActionLog;
+require_once(ROOT."/Core/Logging/RequestLog.php");
+use Andromeda\Core\Logging\{ActionLog, RequestLog};
 
 /**
  * The main class that creates and runs apps
@@ -43,6 +44,9 @@ final class AppRunner extends Singleton
     /** @var bool true if Run() has been called since the last commit or rollback */
     private bool $dirty = false;
     
+    /** Optional request log for this request */
+    private ?RequestLog $requestlog = null;
+    
     /** @var array<RunContext> action/context history */
     private array $action_history = array();
     
@@ -55,8 +59,11 @@ final class AppRunner extends Singleton
      */
     public function GetApps() : array { return $this->apps; }
 
-    /** Returns the RunContext that is currently being executed */
+    /** Returns the RunContext that is currently being executed, if any */
     public function GetContext() : ?RunContext { return Utilities::array_last($this->stack); }
+    
+    /** Returns the request log entry for this request */
+    public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
     
     /** @return array<RunContext> action/context history */
     public function GetActionHistory() : array { return $this->action_history; }
@@ -80,7 +87,13 @@ final class AppRunner extends Singleton
             $apps = array_merge($apps, $config->GetApps());
 
         foreach ($apps as $app) $this->TryLoadApp($app);
-
+        
+        if ($config && !$config->isReadOnly()
+            && $config->GetEnableRequestLog())
+        {
+            $this->requestlog = RequestLog::Create($apipack);
+        }
+        
         register_shutdown_function(function(){
             if ($this->dirty) $this->rollback(); });
     }
@@ -132,10 +145,9 @@ final class AppRunner extends Singleton
             $this->apipack->GetDatabase()->GetInternal()->pushStatsContext();
 
         $logclass = $this->apps[$app]::getLogClass();
-        
-        $actionlog = null; $reqlog = $this->apipack->GetRequestLog();
-        if ($logclass !== null && $reqlog !== null) 
-            $actionlog = $reqlog->LogAction($input, ActionLog::class);
+
+        $actionlog = null; if ($logclass !== null && $this->requestlog !== null) 
+            $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
 
         $context = new RunContext($input, $actionlog);
         $this->stack[] = $context; 
@@ -198,13 +210,14 @@ final class AppRunner extends Singleton
                 if ($e instanceof ClientException) 
                     $errman->LoggedTry(function()use($e,$db)
                 {
-                    $reqlog = $this->apipack->GetRequestLog();
-                    if ($reqlog !== null) $reqlog->SetError($e);
+                    if ($this->requestlog !== null)
+                        $this->requestlog->SetError($e);
                         
                     $db->saveObjects(true); // save log + any "always" DB fields
                     $this->commitDatabase(false);
                     
-                    if ($reqlog !== null) $reqlog->WriteFile();
+                    if ($this->requestlog !== null)
+                        $this->requestlog->WriteFile();
                 });
             }
             
@@ -217,11 +230,10 @@ final class AppRunner extends Singleton
      * 
      * First commits each app, then the database.  Does a rollback 
      * instead if the request was specified as a dry run.
-     * @param bool $main true if this is the main index.php commit
      */
-    public function commit(bool $main = false) : void
+    public function commit() : void
     {
-        Utilities::RunNoTimeout(function()use($main)
+        Utilities::RunNoTimeout(function()
         {
             if ($this->apipack->HasDatabase())
             {
@@ -231,12 +243,11 @@ final class AppRunner extends Singleton
                     $db->GetInternal()->pushStatsContext();
                 
                 $db->saveObjects();
-                
-                $reqlog = $this->apipack->GetRequestLog();
-                if ($main && $reqlog !== null) $reqlog->WriteFile();
-                
                 $this->commitDatabase(true);
                 
+                if ($this->requestlog !== null) 
+                    $this->requestlog->WriteFile();
+
                 if ($this->apipack->GetMetricsLevel()) 
                 {
                     $commit_stats = $db->GetInternal()->popStatsContext();
@@ -255,14 +266,12 @@ final class AppRunner extends Singleton
      */
     private function commitDatabase(bool $apps) : void
     {
+        $db = $this->apipack->GetDatabase();
         $rollback = $this->apipack->isCommitRollback();
         
         if ($apps) foreach ($this->apps as $app) 
             if ($rollback) $app->rollback(); else $app->commit();
-        
-        $db = $this->apipack->GetDatabase();
-            
-        if ($rollback) $db->rollback(); 
-        else $db->commit();
+
+        if ($rollback) $db->rollback(); else $db->commit();
     }
 }

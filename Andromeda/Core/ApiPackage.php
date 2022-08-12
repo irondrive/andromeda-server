@@ -2,11 +2,11 @@
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/AppRunner.php");
+require_once(ROOT."/Core/MetricsHandler.php");
 
-require_once(ROOT."/Core/Database/DBStats.php");
 require_once(ROOT."/Core/Database/Database.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
-use Andromeda\Core\Database\{Database, ObjectDatabase, DBStats};
+use Andromeda\Core\Database\{Database, ObjectDatabase};
 require_once(ROOT."/Core/Database/Exceptions.php");
 use Andromeda\Core\Database\{DatabaseException, DatabaseConfigException};
 
@@ -14,12 +14,7 @@ require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/Core/IOFormat/IOInterface.php");
-require_once(ROOT."/Core/IOFormat/Output.php");
-use Andromeda\Core\IOFormat\{IOInterface,Output};
-
-require_once(ROOT."/Core/Logging/RequestLog.php");
-require_once(ROOT."/Core/Logging/RequestMetrics.php");
-use Andromeda\Core\Logging\{RequestLog, RequestMetrics};
+use Andromeda\Core\IOFormat\IOInterface;
 
 /**
  * The main container class managing API singletons
@@ -34,16 +29,8 @@ final class ApiPackage extends Singleton
     private AppRunner $apprunner;
     private ErrorManager $error_manager;
     private IOInterface $interface;
-    
-    /** @var DBStats performance metrics for construction */
-    private DBStats $construct_stats;
-    
-    /** @var DBStats total request performance metrics */
-    private DBStats $total_stats;
-    
-    /** Optional request log for this request */
-    private ?RequestLog $requestlog = null;
-    
+    private MetricsHandler $perfstats;
+
     /** @var float time of request */
     private float $time;
     
@@ -103,9 +90,9 @@ final class ApiPackage extends Singleton
     /** Returns a reference to the global error manager */
     public function GetErrorManager() : ErrorManager { return $this->error_manager; }
     
-    /** Returns the request log entry for this request */
-    public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
-    
+    /** Returns the global performance metrics handler */
+    public function GetMetricsHandler() : MetricsHandler { return $this->perfstats; }
+
     private DatabaseConfigException $dbException; // reason DB did not init
     private DatabaseException $cfgException; // reason config did not init
     /**
@@ -117,7 +104,7 @@ final class ApiPackage extends Singleton
      * @param ErrorManager $errorman the error manager instance
      * @throws MaintenanceException if the server is not enabled
      */
-    public function __construct(IOInterface $interface, ErrorManager $errorman)
+    public function __construct(IOInterface $interface, ErrorManager $errorman, MetricsHandler $perfstats)
     {
         $this->error_manager = $errorman->SetAPI($this);
         
@@ -125,7 +112,7 @@ final class ApiPackage extends Singleton
         
         $this->time = microtime(true);
         $this->interface = $interface;
-        $this->total_stats = new DBStats();
+        $this->perfstats = $perfstats;
         
         $interface->Initialize(); // after creating stats!
         
@@ -155,18 +142,6 @@ final class ApiPackage extends Singleton
         }
         
         $this->apprunner = new AppRunner($this);
-        
-        if ($this->config && !$this->config->isReadOnly()
-            && $this->config->GetEnableRequestLog())
-        {
-            $this->requestlog = RequestLog::Create($this);
-        }
-        
-        if ($this->database)
-        {
-            $this->construct_stats = $this->database->GetInternal()->popStatsContext();
-            $this->total_stats->Add($this->construct_stats);
-        }
     }
 
     /** if false, requests are not allowed (always true for privileged interfaces) */
@@ -216,55 +191,10 @@ final class ApiPackage extends Singleton
         else return $this->interface->GetMetricsLevel();
     }
     
-    /** Return true if we want to rollback on commit (dryrun or read-only) */
+    /** Return true if we will rollback on commit (dryrun or read-only) */
     public function isCommitRollback() : bool
     {
-        return $this->database->isReadOnly() ||
+        return ($this->database && $this->database->isReadOnly()) ||
             ($this->config && $this->config->isDryRun());
-    }
-    
-    /**
-     * Compiles performance metrics and adds them to the given output, and logs
-     * @param Output $output the output object to add metrics to
-     * @param bool $isError if true, the output is an error response
-     */
-    public function SaveMetrics(Output $output, bool $isError = false) : void
-    {
-        if (!$this->database || !($mlevel = $this->GetMetricsLevel())) return;
-        
-        // saving metrics must be in its own transaction for commit/rollback
-        if ($this->database->GetInternal()->inTransaction())
-            throw new FinalizeTransactionException();
-        
-        try
-        {
-            $actions = $this->apprunner->GetActionHistory();
-            $commits = $this->apprunner->GetCommitStats();
-            
-            foreach ($actions as $context)
-                $this->total_stats->Add($context->GetMetrics());
-            
-            foreach ($commits as $commit)
-                $this->total_stats->Add($commit);
-            
-            $this->total_stats->stopTiming();
-            
-            $metrics = RequestMetrics::Create(
-                $mlevel, $this->database, 
-                $this->requestlog, $this->construct_stats,
-                $actions, $commits, $this->total_stats)->Save();
-            
-            if ($this->isCommitRollback()) 
-                $this->database->rollback();
-            else $this->database->commit();
-            
-            if ($this->GetMetricsLevel(true))
-                $output->SetMetrics($metrics->GetClientObject($isError));
-        }
-        catch (\Throwable $e)
-        {
-            if ($this->GetDebugLevel() >= Config::ERRLOG_DETAILS) throw $e;
-            else $this->error_manager->LogException($e, false);
-        }
     }
 }
