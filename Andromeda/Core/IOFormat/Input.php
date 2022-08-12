@@ -2,26 +2,11 @@
 
 require_once(ROOT."/Core/IOFormat/SafeParam.php");
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
+require_once(ROOT."/Core/IOFormat/InputAuth.php");
 require_once(ROOT."/Core/IOFormat/InputFile.php");
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
-
-/** A username and password combination */
-class InputAuth 
-{
-    private string $username; 
-    private string $password;
-    
-    public function __construct(string $username, string $password) 
-    { 
-        $this->username = $username; 
-        $this->password = $password; 
-    }
-        
-    public function GetUsername() : string { return $this->username; }
-    public function GetPassword() : string { return $this->password; }
-}
 
 /** 
  * An abstracted Input object gathered from an interface
