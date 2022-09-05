@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
@@ -11,6 +10,8 @@ require_once(ROOT."/Core/IOFormat/IOInterface.php");
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); 
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); 
 use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams,InputPath};
+
+require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
 
 require_once(ROOT."/Core/IOFormat/Interfaces/Exceptions.php");
 
@@ -25,6 +26,9 @@ class HTTP extends IOInterface
     /** @return false */
     public static function isPrivileged() : bool { return false; }
     
+    /** @return int JSON output by default */
+    public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
+    
     public function getAddress() : string
     {
         return $_SERVER['REMOTE_ADDR'];
@@ -34,17 +38,14 @@ class HTTP extends IOInterface
     {
         return $_SERVER['HTTP_USER_AGENT'];
     }
-  
-    /** @return int JSON output by default */
-    public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
-    
+
     /** 
      * Retrieves an array of input objects from the request to run 
      * 
      * Requests can put multiple requests to be run in a single 
      * transaction by using the batch paramter as an array
      */
-    protected function subGetInputs(?Config $config) : array
+    protected function subGetInputs() : array
     {
         if ($_SERVER['REQUEST_METHOD'] !== "GET" && 
             $_SERVER['REQUEST_METHOD'] !== "POST")
@@ -69,6 +70,7 @@ class HTTP extends IOInterface
                 $inputs[$i] = self::GetInput($get, $files, $request);
             }
             
+            if (!count($inputs)) throw new EmptyBatchException();
             if (count($inputs) > 65535) throw new LargeBatchException();
         }
         else $inputs = array(self::GetInput($_GET, $_FILES, $_REQUEST));
@@ -100,9 +102,7 @@ class HTTP extends IOInterface
         $params = new SafeParams();
         
         foreach ($request as $key=>$val)
-        {
             $params->AddParam($key, $val);
-        }
         
         $pfiles = array(); foreach ($files as $key=>$file)
         {
@@ -121,9 +121,12 @@ class HTTP extends IOInterface
         return new Input($app, $action, $params, $pfiles, $auth);
     }
     
-    public function UserOutput(Output $output) : bool
+    /**
+     * Sends the no-cache header and, if UserOutput, the HTTP code
+     * @param Output $output output object
+     */
+    private function InitOutput(Output $output) : void
     {
-        // need to send the HTTP response code if no output      
         if (!headers_sent())
         {
             header("Cache-Control: no-cache");
@@ -131,21 +134,20 @@ class HTTP extends IOInterface
             if ($this->outmode === null)
                 http_response_code($output->GetCode());
         }
+    }
+    
+    public function UserOutput(Output $output) : bool
+    {
+        $this->InitOutput($output);
         
         return parent::UserOutput($output);
     }
     
-    public function WriteOutput(Output $output)
+    public function FinalOutput(Output $output)
     {
-        $multi = $this->isMultiOutput();
+        $this->InitOutput($output);
         
-        if (!headers_sent())
-        {
-            header("Cache-Control: no-cache");
-            
-            if ($this->outmode === null)
-                http_response_code($output->GetCode());
-        }
+        $multi = $this->isMultiOutput();
         
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
@@ -173,7 +175,8 @@ class HTTP extends IOInterface
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true);
         }
-        else if ($this->outmode === self::OUTPUT_JSON)
+        
+        if ($this->outmode === self::OUTPUT_JSON)
         {
             if (!$multi && !headers_sent()) 
             {

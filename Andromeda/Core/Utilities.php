@@ -2,14 +2,18 @@
 
 require_once(ROOT."/Core/Exceptions.php");
 
-/** Abstract class implementing a singleton */
-abstract class Singleton
+/** 
+ * Abstract class implementing a global singleton 
+ * 
+ * This should be avoided as globals make unit testing difficult
+ */
+abstract class Singleton // TODO refactor to get rid of this (only Auth\Local uses it now)
 {
     /** @var array<class-string<static>, static> */
     private static $instances = array();
     
     /**
-     * Get the instance of the singleton
+     * Get the global instance of the singleton
      * @throws MissingSingletonException if not yet constructed
      * @return static
      */
@@ -74,6 +78,10 @@ class VersionInfo
     /** Returns the Major.Minor compatibility version string */
     public function getCompatVer() : string { 
         return $this->major.'.'.$this->minor; }
+    
+    /** @see VersionInfo::getCompatVer() */
+    public static function toCompatVer(string $version) : string {
+        return (new self($version))->getCompatVer(); }
 }
 
 /** Abstract with some global static utility functions */

@@ -1,7 +1,6 @@
 <?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Singleton;
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 require_once(ROOT."/Core/IOFormat/Input.php");
@@ -13,7 +12,7 @@ require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
 
 /** Describes an abstract PHP I/O interface abstraction */
-abstract class IOInterface extends Singleton
+abstract class IOInterface
 {
     /** Constructs and returns a singleton of the appropriate interface type */
     public static function TryGet() : ?self
@@ -28,31 +27,38 @@ abstract class IOInterface extends Singleton
     
     /** Returns whether or not the interface grants privileged access */
     abstract public static function isPrivileged() : bool;
-    
-    /** Gather global arguments for debug levels, etc. (early) */
-    public function Initialize() : void { }
-    
-    /** @var array<Input> */
+
+    /** @var non-empty-array<Input> */
     protected array $inputs;
 
     /** 
-     * Retrieves an array of input objects to run 
-     * @return Input[]
+     * Retrieves an array of input objects to run (if not cached)
+     * @return non-empty-array<Input>
      */
-    public function GetInputs(?Config $config) : array
+    public function GetInputs() : array
     {
         if (isset($this->inputs)) return $this->inputs; // cache
-        else return ($this->inputs = $this->subGetInputs($config));
+        else return ($this->inputs = $this->subGetInputs());
     }
     
-    /** @see self::GetInputs() */
-    abstract protected function subGetInputs(?Config $config) : array;
+    /** Sets temporary config parameters requested by the interface */
+    public function AdjustConfig(Config $config) : self { return $this; }
     
-    /** Asserts that only one output was given */
-    public function DisallowBatch() : void
+    /**
+     * Retries an array of input objects to run
+     * @return non-empty-array<Input>
+     */
+    abstract protected function subGetInputs() : array;
+    
+    /** 
+     * Asserts that only one output was given 
+     * @return $this
+     */
+    public function DisallowBatch() : self
     {
         if (isset($this->inputs) && count($this->inputs) > 1)
             throw new BatchNotAllowedException();
+        return $this;
     }
         
     /** Returns the address of the user on the interface */
@@ -60,6 +66,9 @@ abstract class IOInterface extends Singleton
     
     /** Returns the user agent string on the interface */
     abstract public function getUserAgent() : string;
+    
+    /** Returns true if the interface requested a dry-run */
+    public function isDryRun() : bool { return false; }
     
     /** Returns the debugging level requested by the interface */
     public function GetDebugLevel() : int { return 0; }
@@ -144,6 +153,6 @@ abstract class IOInterface extends Singleton
         return count($this->retfuncs) > 0;
     }
     
-    /** Tells the interface to print its final output */
-    public abstract function WriteOutput(Output $output);
+    /** Tells the interface to print its final output and exit */
+    public abstract function FinalOutput(Output $output);
 }

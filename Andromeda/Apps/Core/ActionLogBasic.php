@@ -37,6 +37,8 @@ final class ActionLog extends BaseActionLog
         $this->admin->SetValue($isAdmin ? true : null); return $this;
     }
     
+    public function SetAuth($authenticator) : self { /* no-op */ return $this; }
+    
     protected static function GetAppPropUsage() : string { return "[--admin bool]"; }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array

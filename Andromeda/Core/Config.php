@@ -1,59 +1,24 @@
 <?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Emailer.php");
 require_once(ROOT."/Core/BaseApp.php");
-require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/BaseConfig.php");
 require_once(ROOT."/Core/Exceptions.php");
+require_once(ROOT."/Core/Utilities.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-
-/** A singleton object that stores a version field */
-abstract class BaseConfig extends SingletonObject
-{
-    /** Date the config object was created */
-    protected FieldTypes\Timestamp $date_created;
-    /** Version of the app that owns this config */
-    protected FieldTypes\StringType $version;
-    
-    protected function CreateFields() : void
-    {
-        $fields = array();
-        
-        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
-        $this->version = $fields[] = new FieldTypes\StringType('version');
-        
-        $this->RegisterChildFields($fields);
-        
-        parent::CreateFields();
-    }
-    
-    /** Create a new config singleton in the given database */
-    public abstract static function Create(ObjectDatabase $database);
-    
-    /** Returns the database schema version */
-    public function getVersion() : string 
-    {
-        return $this->version->GetValue(); 
-    }
-    
-    /** 
-     * Sets the database schema version to the given value
-     * @param string $version schema version
-     * @return $this
-     */
-    public function SetVersion(string $version) : self 
-    { 
-        $this->version->SetValue($version); return $this; 
-    }
-}
+require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
 
 /** The global framework config stored in the database */
 final class Config extends BaseConfig
 {
+    public static function getAppname() : string { return 'core'; }
+    
+    public static function getVersion() : string {
+        return VersionInfo::toCompatVer(andromeda_version); }
+    
     use TableNoChildren;
     
     /** Directory for basic server data (logs) */
@@ -90,7 +55,7 @@ final class Config extends BaseConfig
     /** Creates a new config singleton with default values */
     public static function Create(ObjectDatabase $database) : self
     {
-        return parent::BaseCreate($database)->SetVersion(andromeda_version);
+        return parent::BaseCreate($database);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
@@ -188,17 +153,20 @@ final class Config extends BaseConfig
     
     /**
      * returns the array of registered apps
-     * @return String[]
+     * @return array<string>
      */
     public function GetApps() : array { return $this->apps->GetArray(); }
     
-    /** List all installable app folders that exist in the filesystem */
+    /** 
+     * List all app folders that exist in the filesystem
+     * @return array<string>
+     */
     public static function ScanApps() : array
     {
         $valid = function(string $app)
         {
             if (in_array($app,array('.','..'))) return false;
-            return file_exists(ROOT."/Apps/$app/metadata.json");
+            return is_file(ROOT."/Apps/$app/$app"."App.php");
         };
             
         $apps = array_values(array_filter(scandir(ROOT."/Apps"), $valid));
@@ -211,23 +179,11 @@ final class Config extends BaseConfig
     {
         $app = strtolower($app);
         
-        $apps = array_keys(AppRunner::GetInstance()->GetApps()); 
-
-        foreach (BaseApp::getAppRequires($app) as $tapp)
-        {
-            if (!in_array($tapp, $apps))
-                throw new AppDependencyException("$app requires $tapp");
-        }
-        
-        $appver = BaseApp::getAppApiVersion($app);
-        $ourver = (new VersionInfo(andromeda_version))->getCompatVer();
-        if ($appver !== $ourver) 
-            throw new AppVersionException("$app($appver) core($ourver)");
-        
-        AppRunner::GetInstance()->LoadApp($app);
+        $apprunner = $this->GetApiPackage()->GetAppRunner();
+        $apprunner->LoadApp($app);
         
         $capps = $this->GetApps();        
-        if (!in_array($app, $capps)) $capps[] = $app;        
+        if (!in_array($app, $capps)) $capps[] = $app;
         $this->apps->SetArray($capps); return $this;
     }
     
@@ -235,18 +191,13 @@ final class Config extends BaseConfig
     public function DisableApp(string $app) : self
     {
         $app = strtolower($app);
-        
-        if (($key = array_search($app, $this->GetApps())) === false)
-            throw new InvalidAppException();
     
-        foreach (array_keys(AppRunner::GetInstance()->GetApps()) as $tapp)
-        {
-            if (in_array($app, BaseApp::getAppRequires($tapp)))
-                throw new AppDependencyException("$tapp requires $app");
-        }            
+        $apprunner = $this->GetApiPackage()->GetAppRunner();
+        $runapps = &$apprunner->GetApps();
+        unset($runapps[$app]); // unload app
         
-        $capps = $this->GetApps(); unset($capps[$key]);
-        
+        $capps = $this->GetApps();
+        if (($key = array_search($app, $capps)) !== false) unset($capps[$key]);
         $this->apps->SetArray(array_values($capps)); return $this;
     }
     
@@ -255,15 +206,7 @@ final class Config extends BaseConfig
     
     /** Set whether the server is allowed to respond to requests */
     public function SetEnabled(bool $enable) : self { $this->enabled->SetValue($enable); return $this; }
-    
-    private bool $dryrun = false;
 
-    /** Returns true if the server is set to dry-run mode */
-    public function isDryRun() : bool { return $this->dryrun; }
-    
-    /** Sets the server to dryrun mode if $val is true */
-    public function SetDryRun(bool $val = true) : self { $this->dryrun = $val; return $this; }
-    
     /** Returns true if the server is set to read-only (not dry run) */
     public function isReadOnly() : bool { return $this->read_only->GetValue(); }
     
@@ -308,8 +251,19 @@ final class Config extends BaseConfig
         'details'=>self::ERRLOG_DETAILS, 
         'sensitive'=>self::ERRLOG_SENSITIVE);
     
-    /** Returns the current debug level */
-    public function GetDebugLevel() : int { return $this->debug->GetValue(); }
+    /**
+     * Returns the current debug level
+     * @param ?IOInterface $interface interface to check privilege level
+     */
+    public function GetDebugLevel(?IOInterface $interface = null) : int 
+    {
+        $debug = $this->debug->GetValue();
+        
+        if ($interface !== null && !$interface->isPrivileged()
+            && !$this->debug_http->GetValue()) $debug = 0;
+        
+        return $debug;
+    }
     
     /**
      * Sets the current debug level
@@ -322,10 +276,7 @@ final class Config extends BaseConfig
     
     /** Gets whether the server should log errors to a log file in the datadir */
     public function GetDebugLog2File() : bool { return $this->debug_filelog->GetValue(); } 
-    
-    /** Gets whether debug should be allowed over a non-privileged interface (also affects metrics) */
-    public function GetDebugOverHTTP() : bool { return $this->debug_http->GetValue(); }    
-    
+
     /** Show basic performance metrics */
     public const METRICS_BASIC = 1;
     
@@ -334,8 +285,19 @@ final class Config extends BaseConfig
     
     public const METRICS_TYPES = array('none'=>0, 'basic'=>self::METRICS_BASIC, 'extended'=>self::METRICS_EXTENDED);
     
-    /** Returns the current metrics log level */
-    public function GetMetricsLevel() : int { return $this->metrics->GetValue(); }
+    /** 
+     * Returns the current metrics log level 
+     * @param ?IOInterface $interface interface to check privilege level
+     */
+    public function GetMetricsLevel(?IOInterface $interface = null) : int 
+    { 
+        $metrics = $this->metrics->GetValue(); 
+       
+        if ($interface !== null && !$interface->isPrivileged()
+            && !$this->debug_http->GetValue()) $metrics = 0;
+           
+        return $metrics;
+    }
     
     /**
      * Sets the current metrics log level
@@ -370,10 +332,12 @@ final class Config extends BaseConfig
             'read_only' => $this->read_only->GetValue(false)
         );
 
-        foreach (AppRunner::GetInstance()->GetApps() as $name=>$app)
+        $apprunner = $this->GetApiPackage()->GetAppRunner();
+        
+        foreach ($apprunner->GetApps() as $name=>$app)
         {
-            $data['apps'][$name] = $admin ? $app::getVersion() : 
-                (new VersionInfo($app::getVersion()))->getCompatVer();
+            $data['apps'][$name] = $admin ? $app->getVersion() : 
+                VersionInfo::toCompatVer($app->getVersion());
         }
 
         if ($admin)

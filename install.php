@@ -1,7 +1,7 @@
 <?php
 
 /** 
- * This is the HTTP entry point for Andromeda/index.php
+ * This is the HTTP entry point for Andromeda/install.php
  * 
  * The Andromeda directory can be installed anywhere, by
  * updating the include paths below.  It is recommended that
@@ -11,10 +11,13 @@
  * vendor and Andromeda must exist in the same folder.
  */
 
+/** SECURITY - it is a good idea to remove this file if
+ * HTTP install/upgrade is not needed (see README.md) */
+
 $paths = array(
-    __DIR__.'/Andromeda/index.php',
-    '/usr/local/lib/andromeda-server/Andromeda/index.php',
-    '/usr/lib/andromeda-server/Andromeda/index.php'
+    __DIR__.'/Andromeda/install.php',
+    '/usr/local/lib/andromeda-server/Andromeda/install.php',
+    '/usr/lib/andromeda-server/Andromeda/install.php'
 );
 
 foreach ($paths as $path)

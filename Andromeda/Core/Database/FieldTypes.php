@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
@@ -44,7 +43,7 @@ abstract class BaseField
     protected string $name;
     
     /** if true, save even on rollback */
-    protected bool $saveOnRollback;
+    protected bool $alwaysSave;
     
     /** number of times the field is modified */
     protected int $delta = 0;
@@ -56,7 +55,7 @@ abstract class BaseField
     public function __construct(string $name, bool $saveOnRollback = false)
     {
         $this->name = $name;
-        $this->saveOnRollback = $saveOnRollback;
+        $this->alwaysSave = $saveOnRollback;
     }
 
     /** Returns the unique ID of this field */
@@ -85,7 +84,7 @@ abstract class BaseField
     public function isModified() : bool { return $this->delta > 0; }
     
     /** Returns true if this field should be saved on rollback */
-    public function isSaveOnRollback() : bool { return $this->saveOnRollback; }
+    public function isAlwaysSave() : bool { return $this->alwaysSave; }
     
     /**
      * Initializes the field's value from the DB
@@ -739,23 +738,17 @@ class NullTimestamp extends NullFloatType
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue(ApiPackage::GetInstance()->GetTime());
+        return parent::SetValue($this->parent->GetDatabase()->GetTime());
     }
 }
 
 /** A field that stores a non-null timestamp (default now) */
 class Timestamp extends FloatType 
 {
-    public function __construct(string $name, bool $saveOnRollback = false)
-    {
-        $def = ApiPackage::GetInstance()->GetTime();
-        parent::__construct($name, $saveOnRollback, $def);
-    }
-    
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue(ApiPackage::GetInstance()->GetTime());
+        return parent::SetValue($this->parent->GetDatabase()->GetTime());
     }
 }
 

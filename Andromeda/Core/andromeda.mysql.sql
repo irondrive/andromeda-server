@@ -77,7 +77,7 @@ CREATE TABLE `a2obj_core_exceptions_errorlog` (
   `objects` longtext DEFAULT NULL,
   `queries` longtext DEFAULT NULL,
   `params` longtext DEFAULT NULL,
-  `log` longtext DEFAULT NULL,
+  `hints` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `time` (`time`),
   KEY `code` (`code`(191)),
@@ -179,7 +179,7 @@ CREATE TABLE `a2obj_core_logging_requestmetrics` (
   `includes` longtext DEFAULT NULL,
   `objects` longtext DEFAULT NULL,
   `queries` longtext DEFAULT NULL,
-  `debuglog` longtext DEFAULT NULL,
+  `debughints` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `requestlog` (`requestlog`),
   CONSTRAINT `a2obj_core_logging_requestmetrics_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE SET NULL

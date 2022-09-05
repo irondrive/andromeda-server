@@ -64,7 +64,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testVersionInfo() : void
    {
-       $version = new VersionInfo("3.2.1-alpha");
+       $version = new VersionInfo($v="3.2.1-alpha");
        
        $this->assertSame($version->major, 3);
        $this->assertSame($version->minor, 2);
@@ -72,6 +72,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame($version->extra, 'alpha');
        $this->assertSame((string)$version, "3.2.1-alpha");
        $this->assertSame($version->getCompatVer(), '3.2');
+       $this->assertSame(VersionInfo::toCompatVer($v), '3.2');
    }
    
    public function testBadJSONEncode() : void

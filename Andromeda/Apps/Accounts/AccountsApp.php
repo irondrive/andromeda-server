@@ -1,8 +1,10 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/Core/BaseApp.php");
+require_once(ROOT."/Core/ApiPackage.php");
+require_once(ROOT."/Core/Utilities.php");
+use Andromeda\Core\{ApiPackage, BaseApp, Utilities};
+
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\{SafeParam, SafeParamInvalidException};
@@ -232,21 +234,17 @@ class UnknownGroupMembershipException extends Exceptions\ClientNotFoundException
  * authentication, multi-client/session management, authentication via external
  * sources, and granular per-account/per-group config.
  */
-class AccountsApp extends InstalledApp
+class AccountsApp extends BaseApp
 {
     public static function getName() : string { return 'accounts'; }
     
-    protected static function getLogClass() : string { return ActionLog::class; }
+    public static function getVersion() : string { return andromeda_version; }
     
-    protected static function getConfigClass() : string { return Config::class; }
-    
-    protected function GetConfig() : Config { return $this->config; }
-    
-    protected static function getInstallFlags() : string { return '[--username alphanum --password raw]'; }
-    
+    protected function getLogClass() : string { return ActionLog::class; }
+
     public static function getUsage() : array 
     { 
-        return array_merge(parent::getUsage(),array(
+        return array(
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey randstr] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
@@ -295,14 +293,16 @@ class AccountsApp extends InstalledApp
             'addwhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value alphanum|email',
             'removewhitelist --type '.implode('|',array_keys(Whitelist::TYPES)).' --value alphanum|email',
             'getwhitelist'
-        ));
+        );
     }
     
     public function __construct(ApiPackage $api)
     {
         parent::__construct($api);
         
-        new Auth\Local(); // construct the singleton
+        $this->config = Config::GetInstance($this->database);
+        
+        new Auth\Local(); // TODO refactor to not need a singleton
     }
 
     /**
@@ -312,8 +312,6 @@ class AccountsApp extends InstalledApp
      */
     public function Run(Input $input)
     {
-        if (($retval = parent::Run($input)) !== false) return $retval;
-        
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
         
@@ -323,8 +321,8 @@ class AccountsApp extends InstalledApp
         
         switch($input->GetAction())
         {
-            case 'getconfig':           return $this->RunGetConfig($authenticator);
-            case 'setconfig':           return $this->RunSetConfig($params, $authenticator);
+            case 'getconfig':           return $this->GetConfig($authenticator);
+            case 'setconfig':           return $this->SetConfig($params, $authenticator);
             
             case 'getauthsources':      return $this->GetAuthSources($authenticator);
             case 'createauthsource':    return $this->CreateAuthSource($params, $authenticator, $actionlog);
@@ -394,34 +392,13 @@ class AccountsApp extends InstalledApp
         catch (SafeParamInvalidException $e) {
             return $param->GetEmail(); }
     }
-    
-    /**
-     * {@inheritDoc}
-     * @see \Andromeda\Core\InstalledApp::Install()
-     * @see Account::GetClientObject()
-     * @return ?array Account if admin was created
-     */
-    protected function Install(SafeParams $params) : ?array
-    {
-        parent::Install($params);
-        
-        if ($params->HasParam('username'))
-        {
-            $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->CheckLength(127)->GetAlphanum();
-            $password = $params->GetParam("password", SafeParams::PARAMLOG_NEVER)->GetRawString();
-            
-            return Account::Create($this->database, Auth\Local::GetInstance(), 
-                $username, $password)->setAdmin(true)->GetClientObject();
-        }
-        else return null;
-    }
 
     /**
      * Gets config for this app
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunGetConfig(?Authenticator $authenticator) : array // TODO Call GetConfig=GetConfigObj and rename this to just GetConfig
+    protected function GetConfig(?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
 
@@ -434,7 +411,7 @@ class AccountsApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunSetConfig(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();        
@@ -1000,7 +977,7 @@ class AccountsApp extends InstalledApp
         if (!$authenticator->isSudoUser()) 
             $authenticator->TryRequireTwoFactor();
         
-        if ($actionlog && ActionLog::isFullDetails()) $actionlog->LogDetails('account',
+        if ($actionlog && $actionlog->isFullDetails()) $actionlog->LogDetails('account',
             $account->GetClientObject(Account::OBJECT_ADMIN | Account::OBJECT_FULL));
         
         $account->Delete();
@@ -1030,7 +1007,7 @@ class AccountsApp extends InstalledApp
             if ($session === null) throw new UnknownSessionException();
         }
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('session', $session->GetClientObject());
         
         $session->Delete();
@@ -1060,7 +1037,7 @@ class AccountsApp extends InstalledApp
             if ($client === null) throw new UnknownClientException();
         }
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('client', $client->GetClientObject());
         
         $client->Delete();
@@ -1103,7 +1080,7 @@ class AccountsApp extends InstalledApp
         $twofactor = TwoFactor::TryLoadByAccountAndID($this->database, $account, $twofactorid); 
         if ($twofactor === null) throw new UnknownTwoFactorException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('twofactor', $twofactor->GetClientObject());
 
         $twofactor->Delete();
@@ -1128,7 +1105,7 @@ class AccountsApp extends InstalledApp
         if ($this->GetConfig()->GetRequireContact() && $contact->GetIsValid() && count($account->GetContacts()) <= 1)
             throw new ContactRequiredException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('contact', $contact->GetClientObject());
     
         $contact->Delete();
@@ -1353,7 +1330,7 @@ class AccountsApp extends InstalledApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new UnknownGroupException();
         
-        if ($actionlog && ActionLog::isFullDetails()) $actionlog->LogDetails('group',
+        if ($actionlog && $actionlog->isFullDetails()) $actionlog->LogDetails('group',
             $group->GetClientObject(Group::OBJECT_ADMIN | Group::OBJECT_FULL));
             
         $group->Delete();
@@ -1549,7 +1526,7 @@ class AccountsApp extends InstalledApp
         $manager = Auth\Manager::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('manager', $manager->GetClientObject(true));
         
         $manager->Delete();

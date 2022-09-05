@@ -37,7 +37,7 @@ class Input
     /** Sets the optional param logger to the given ActionLog */
     public function SetLogger(?ActionLog $logger) : self 
     { 
-        if ($logger !== null && ($level = $logger::GetDetailsLevel()) > 0)
+        if ($logger !== null && ($level = $logger->GetDetailsLevel()) > 0)
         {
             $logref = &$logger->GetInputLogRef(); 
             

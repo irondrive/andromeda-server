@@ -3,7 +3,6 @@
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
-require_once(ROOT."/Core/ApiPackage.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
@@ -11,7 +10,6 @@ require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 use \PHPMailer\PHPMailer; // via autoloader
 
@@ -106,6 +104,8 @@ final class Emailer extends BaseObject
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
         $mailer = parent::BaseCreate($database);
+        
+        $mailer->date_created->SetTimeNow();
         
         $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES))];
         
@@ -210,12 +210,13 @@ final class Emailer extends BaseObject
             default: throw new InvalidMailTypeException();
         }
         
-        $mailer->SMTPDebug = ApiPackage::GetInstance()->GetDebugLevel() >= Config::ERRLOG_DETAILS ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;
+        $debug = $this->GetApiPackage()->GetDebugLevel() >= Config::ERRLOG_DETAILS;
+        $mailer->SMTPDebug = $debug ? PHPMailer\SMTP::DEBUG_CONNECTION : 0;
         
         $mailer->Debugoutput = function(string $str, int $level)
         { 
             if (!Utilities::isUTF8($str)) $str = base64_encode($str);
-            ErrorManager::GetInstance()->LogDebugInfo("PHPMailer $level: $str"); 
+            $this->GetApiPackage()->GetErrorManager()->LogDebugHint("PHPMailer $level: $str"); 
         };
         
         $mailer->setFrom(
@@ -248,7 +249,7 @@ final class Emailer extends BaseObject
      */
     public function SendMail(string $subject, string $message, bool $isHtml, array $recipients, bool $usebcc, ?EmailRecipient $from = null) : void
     {
-        if (!Config::GetInstance($this->database)->GetEnableEmail())
+        if (!$this->GetApiPackage()->GetConfig()->GetEnableEmail())
             throw new EmailDisabledException();
         
         if (!count($recipients)) 

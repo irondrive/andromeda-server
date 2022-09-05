@@ -5,6 +5,8 @@ require_once(ROOT."/Core/Database/Database.php");
 require_once(ROOT."/Core/Database/BaseObject.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
 
+use Andromeda\Core\ApiPackage;
+
 /**
  * Provides the interfaces between BaseObject and the underlying PDO database
  *
@@ -15,16 +17,49 @@ class ObjectDatabase
 {
     /** PDO database reference */
     private Database $db;
-
-    public function __construct(Database $db) { $this->db = $db; }
+    
+    /** ApiPackage reference */
+    private ApiPackage $apipack;
+    
+    /** @var float time of construction */
+    private float $time;
+    
+    public function __construct(Database $db) 
+    {
+        $this->db = $db; $this->time = microtime(true);
+    }
     
     /** Returns the internal database instance */
     public function GetInternal() : Database { return $this->db; }
     
+    /** Gets the timestamp of when the db was constructed */
+    public function GetTime() : float { return $this->time; }
+    
+    /** 
+     * Returns the ApiPackage reference 
+     * @throws ApiPackageException if not set
+     */
+    public function GetApiPackage() : ApiPackage 
+    {
+        if (!isset($this->apipack))
+            throw new ApiPackageException();
+        
+        return $this->apipack;
+    }
+    
+    /** Returns true if the ApiPackage reference is set */
+    public function HasApiPackage() : bool { return isset($this->apipack); }
+    
+    /** Sets the API package for objects to use */
+    public function SetApiPackage(ApiPackage $apipack) : self 
+    { 
+        $this->apipack = $apipack; return $this; 
+    }
+    
     private bool $rolledBack = false;
     
     /** Commits the internal database */
-    public function commit() : void
+    public function commit() : void // TODO also need some form of SaveAfterRollback protection here, there are ways to do queries other than just SaveObjects()...
     {
         $this->db->commit();
     }
@@ -70,12 +105,12 @@ class ObjectDatabase
 
     /**
      * Create/update all objects that notified us as needing it
-     * @param bool $isRollback true if this is a rollback
+     * @param bool $onlyAlways true if we only want to save "alwaysSave" properties
      * @return $this
      */
-    public function SaveObjects(bool $isRollback = false) : self
+    public function SaveObjects(bool $onlyAlways = false) : self
     {
-        if (!$isRollback)
+        if (!$onlyAlways)
         {
             if ($this->rolledBack) throw new SaveAfterRollbackException();
             
@@ -83,7 +118,7 @@ class ObjectDatabase
             foreach ($this->created as $obj) $obj->Save();
         }
         
-        foreach ($this->modified as $obj) $obj->Save($isRollback);
+        foreach ($this->modified as $obj) $obj->Save($onlyAlways);
         
         $this->created = array();
         $this->modified = array();

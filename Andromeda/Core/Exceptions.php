@@ -34,14 +34,6 @@ class AppDependencyException extends Exceptions\ClientErrorException
     }
 }
 
-/** Exception indicating that the app is not compatible with this framework version */
-class AppVersionException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("APP_VERSION_MISMATCH", $details);
-    }
-}
-
 /** Exception indicating that a mailer was requested but it is disabled */
 class EmailDisabledException extends Exceptions\ClientErrorException
 {
@@ -66,6 +58,13 @@ class UnknownAppException extends Exceptions\ClientErrorException
     }
 }
 
+class InstallDisabledException extends Exceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("HTTP_INSTALL_DISABLED", $details);
+    }
+}
+
 /** Exception indicating that the server is configured as disabled */
 class MaintenanceException extends Exceptions\ServiceUnavailableException
 {
@@ -77,24 +76,36 @@ class MaintenanceException extends Exceptions\ServiceUnavailableException
 /** An exception indicating that the app is not installed and needs to be */
 class InstallRequiredException extends Exceptions\ServiceUnavailableException
 {
-    public function __construct(?string $details = null) {
-        parent::__construct("APP_INSTALL_REQUIRED", $details);
+    public function __construct(string $appname) {
+        parent::__construct("INSTALL_REQUIRED", $appname);
     }
 }
 
-/** Exception indicating that the database upgrade scripts must be run */
+/** Exception indicating that the app database upgrade scripts must be run */
 class UpgradeRequiredException extends Exceptions\ServiceUnavailableException
 {
-    public function __construct(?string $details = null) {
-        parent::__construct("APP_UPGRADE_REQUIRED", $details);
+    private string $oldVersion;
+    public function getOldVersion() : string { return $this->oldVersion; }
+    public function __construct(string $appname, string $oldVersion) 
+    {
+        $this->oldVersion = $oldVersion;
+        parent::__construct("UPGRADE_REQUIRED", $appname);
     }
 }
 
-/** An exception indicating that the metadata file is missing */
-class MissingMetadataException extends Exceptions\ServerException
+/** An exception indicating that the app is already installed */
+class InstalledAlreadyException extends Exceptions\ServiceUnavailableException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("APP_METADATA_MISSING", $details);
+        parent::__construct("INSTALLED_ALREADY", $details);
+    }
+}
+
+/** Exception indicating that the app is already upgraded to current */
+class UpgradedAlreadyException extends Exceptions\ServiceUnavailableException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("UPGRADED_ALREADY", $details);
     }
 }
 
