@@ -90,6 +90,7 @@ Note the install commands are allowed by any user on any interface when required
 Note that MySQL does not support transactions for queries that modify table structure.  If an install/upgrade fails midway, the database may be left in an inconsistent state.
 
 #### Full SQLite Web Server Install Example with Proper Directories
+This is just a reference and not meant to actually be run.
 
 ```
 
@@ -106,8 +107,8 @@ cd andromeda-server
 composer install
 
 # copy the entry points
-cp andromeda-server /usr/local/bin
-cp index.php /var/www/html/andromeda
+cp andromeda-server /usr/local/bin/
+cp index.php /var/www/html/andromeda/
 
 # create directories
 mkdir /var/lib/andromeda

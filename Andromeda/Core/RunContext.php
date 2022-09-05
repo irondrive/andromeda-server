@@ -13,7 +13,7 @@ class RunContext
 { 
     private Input $input;     
     private ?ActionLog $actionlog;
-    private ?DBStats $metrics;
+    private ?DBStats $metrics = null;
     
     public function __construct(Input $input, ?ActionLog $actionlog)
     {
@@ -21,11 +21,15 @@ class RunContext
         $this->actionlog = $actionlog;
     }
     
+    /** Returns the input object being run */
     public function GetInput() : Input { return $this->input; }
     
+    /** Returns the action log created for this run */
     public function GetActionLog() : ?ActionLog { return $this->actionlog; }
 
+    /** Returns the metrics created for this run */
     public function GetMetrics() : ?DBStats { return $this->metrics; }
     
+    /** Sets the metrics created for this fun */
     public function SetMetrics(DBStats $metrics) : void { $this->metrics = $metrics; }
 }
