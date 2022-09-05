@@ -10,7 +10,7 @@ The framework can log accesses and errors to the database, or to log files if a 
 ### Primary Apps
 In pursuit of being a cloud storage solution, Andromeda principally includes the "accounts" and "files" apps.  Accounts implements the account management and authentication/session-management tasks.  Files app provides the filesystem interface and related features.  The files app requires the accounts app.
 
-As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  See the [wiki](https://github.com/lightray22/andromeda-server/wiki) for more app-specific information.
+As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  See the [wiki](https://github.com/irondrive/andromeda-server/wiki) for more app-specific information.
 
 # General Usage
 
@@ -18,7 +18,9 @@ Andromeda and *all* its API calls can be run either through an HTTP webserver, o
 
 Run the API from the CLI with no arguments (either `./andromeda-server` or `php index.php`) to view the general CLI usage.  The general usage is `./andromeda-server myapp myaction` where myapp and myaction are the app and action to run.  Use `./andromeda-server core usage` to view the list of all available API calls.  Action-specific parameters use the traditional `--name value` syntax and come at the end of the command.  Commands showing `[--name value]` with brackets indicates an optional parameter. Commands with a repeated `(action)` line show a subset of usage for the command based on a specific case of the main usage.  Note that app and action are implicit and do not require --app or --action.  Parameters can be specified as a flag with no value, in which case they are implicitly mapped to `true` for booleans and `null` for all other types.  
 
-Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda-server` and will only specify the `app action` to run, e.g. `core usage`.  The `core usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/lightray22/andromeda-server-docs) repository.
+Commands mentioned in the readme or wiki will omit the `php index.php` or `./andromeda-server` and will only specify the `app action` to run, e.g. `core usage`.  The `core usage` output that documents all API calls is also tracked as USAGE.txt in the [server API docs](https://github.com/irondrive/andromeda-server-docs) repository.
+
+The installer (see below) uses a different entry point (`php install.php` or `./andromeda-install`) with the same general usage format.  
 
 ### Common Exceptions
 
@@ -26,7 +28,7 @@ Commands mentioned in the readme or wiki will omit the `php index.php` or `./and
 
 ### Parameter Types
 
-All input parameters are strictly validated against their expected types.  Most that you will see in `core usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda is heavily object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. `?int`) indicates that the parameter can be null (e.g. `... --myparam null`).  This can have a different meaning than just omitting the parameter.
+All input parameters are strictly validated against their expected types.  Most that you will see in `core usage` are self-explanatory (`bool`, `int`, etc.).  Less-obvious types include `raw` (no validation), `randstr` (an andromeda-generated random value), `name` (a label or human name), `text` (escapes HTML tags with `FILTER_SANITIZE_SPECIAL_CHARS`), and  `id` (a reference to an object by its ID).  Andromeda code is object-oriented and uses unique IDs to refer to database objects.  A parameter type that begins with ? (e.g. `?int`) indicates that the parameter can be null (e.g. `... --myparam null`).  This can have a different meaning than just omitting the parameter.
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
@@ -62,27 +64,30 @@ Certain app actions require that they are passed a file stream as input.  With H
 
 # Installation
 
-For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.
+For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
 
 ### Basic Requirements
 Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
 Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
 
-It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible will reveal information including exact app patch versions (`metadata.json`), and exposing the vendor directory could include [other vulnerable code](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
+It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible [may create vulnerabilities](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
 
 #### Database Config
-The `core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `<?php define('DBCONF','path-to-config');` to `Andromeda/userInit.php`.
+The `./andromeda-install core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `<?php define('DBCONF','path-to-config');` to `Andromeda/userInit.php`.
 
 For example to create and use an SQLite database and save the config file in the default location - `php index.php core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
 ### CLI Install Steps
-Use the `core usage` command to see options for all available commands.
+Use the `./andromeda-install core usage` command to see options for all available commands.
 
-1. Run `core dbconf --outfile` to generate and write database configuration.
-2. Run `core install` to install the database tables.  This will enable and install all apps that are found in the Apps folder unless `--noapps` is provided.  It returns a list of all enabled apps mapped their specific install output.  Apps can also have their `(myapp) install` command run separately if needed.  The `core install` command can take any parameter needed by an individual app. 
+1. Run `./andromeda-install core dbconf --outfile` to generate and write database configuration.
+2. Run `./andromeda-install core install-all` to install the database tables for all apps that exist. It returns a list of all installed apps mapped their specific install output.  Apps can also be installed separately, e.g. `core install` or `accounts install`.  Apps can have database dependencies that may dictate installation order.  The `core install-all` command can take any parameter needed by an individual app. 
+3. Run `./andromeda-server core scanapps --enable` to enable all apps that exist.  It returns a list of enabled apps.
 
-Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/userInit.php`.
+Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('ALLOW_HTTP_INSTALL',false)` to `Andromeda/userInit.php`.  Or you can just delete the install.php entry point if you will only be using CLI for install/upgrade.
+
+Note that MySQL does not support transactions for queries that modify table structure.  If an install/upgrade fails midway, the database may be left in an inconsistent state.
 
 #### Full SQLite Web Server Install Example with Proper Directories
 
@@ -96,7 +101,7 @@ Note the install commands are allowed by any user on any interface when required
 
 # install the server files
 cd /usr/local/lib
-git clone https://github.com/lightray22/andromeda-server
+git clone https://github.com/irondrive/andromeda-server
 cd andromeda-server
 composer install
 
@@ -117,11 +122,12 @@ chmod -R 770 /usr/local/etc/andromeda
 
 # initialize the SQLite database
 sudo -u www-data \
-   andromeda-server core dbconf --driver sqlite \
+   ./andromeda-install core dbconf --driver sqlite \
    --dbpath /var/lib/andromeda/database.s3db \
    --outfile /usr/local/etc/andromeda/DBConfig.php
    
-sudo -u www-data andromeda-server core install
+sudo -u www-data ./andromeda-install core install-all
+sudo -u www-data ./andromeda-server core scanapps --enable
 
 # set the core datadir (for logging)
 sudo -u www-data andromeda-server core setconfig \
@@ -129,9 +135,9 @@ sudo -u www-data andromeda-server core setconfig \
 ```
 
 ### Upgrading
-When the code being run does not match the version stored in the database, running `core upgrade` is required. This will automatically update all enabled apps unless `--noapps` is provided.  It returns a list of all enabled apps mapped their specific upgrade output.  Apps can also have their `(myapp) upgrade` command run separately if needed.  The `core upgrade` command can take any parameter needed by an individual app. 
+When the code being run does not match the version stored in an app's database, running the app's upgrade command is required, e.g. `./andromeda-install core upgrade` or `./andromeda-install accounts upgrade`.  You can upgrade all apps at once with `core upgrade-all`.  It returns a list of all upgraded apps mapped their specific upgrade output.  Apps can have database dependencies that may dictate upgrade order.  The `core upgrade-all` command can take any parameter needed by an individual app. 
 
-Note the upgrade command is allowed by any user on any interface when required, so it is recommend to have public web access disabled during upgrades.  It can also be permanently disabled for HTTP by adding `<?php define('HTTPINSTALL',false)` to `Andromeda/userInit.php`.
+The same rules about public web access for install also apply to upgrade (see above).
 
 
 # License

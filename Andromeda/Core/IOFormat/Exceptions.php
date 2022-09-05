@@ -38,6 +38,14 @@ class InputFileMissingException extends SafeParamException
     }
 }
 
+/** Exception indicating that a batch with zero actions was given */
+class EmptyBatchException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("EMPTY_BATCH_GIVEN", $details);
+    }
+}
+
 /** Exception indicating that an app action does not allow batches */
 class BatchNotAllowedException extends Exceptions\ClientErrorException
 {

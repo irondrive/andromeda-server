@@ -1,9 +1,7 @@
 <?php namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\MissingSingletonException;
 
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/Output.php");
@@ -12,6 +10,8 @@ require_once(ROOT."/Core/IOFormat/InputFile.php");
 require_once(ROOT."/Core/IOFormat/SafeParam.php");
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,InputPath,InputStream};
+
+require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
 
 require_once(ROOT."/Core/IOFormat/Interfaces/Exceptions.php");
 
@@ -28,19 +28,8 @@ class CLI extends IOInterface
     /** @return true */
     public static function isPrivileged() : bool { return true; }
     
-    public function __construct()
-    {
-        parent::__construct();
-        
-        if (function_exists('pcntl_signal'))
-        {
-            pcntl_signal(SIGTERM, function()
-            {
-                try { AppRunner::GetInstance()->rollback(); }
-                catch (MissingSingletonException $e) { }
-            });
-        }
-    }  
+    /** @return int plain text output by default */
+    public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
     
     /** Strips -- off the given string and returns (or null if not found) */
     private static function getKey(string $str) : ?string
@@ -53,76 +42,31 @@ class CLI extends IOInterface
     {
         return (isset($args[$i+1]) && !self::getKey($args[$i+1])) ? $args[++$i] : null;
     }
-    
-    /** The next argv index to process */
-    private int $argIdx = 1;
-    
-    /** True if a dry run was requested in init */
-    private bool $dryRun = false;
 
-    /** 
-     * Initializes CLI by fetching some global params from $argv
-     * 
-     * Options such as output mode, debug level and DB config file should be
-     * fetched here before the actual GetInputs() is run later. These options
-     * are global, not specific to a single Input instance
-     */
-    public function Initialize() : void
-    {        
-        global $argv;
-        
-        // pre-process params that may be needed before $config is available        
-        for (; $this->argIdx < count($argv); $this->argIdx++)
-        {
-            $key = self::getKey($argv[$this->argIdx]);
-
-            if ($key === null) break; else switch ($key)
-            {
-                case 'dryrun': $this->dryRun = true; break;
-                
-                case 'json': $this->outmode = static::OUTPUT_JSON; break;
-                case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
-                
-                case 'debug':
-                {
-                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
-                        throw new IncorrectCLIUsageException();
-                    $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
-                    $this->debug = Config::DEBUG_TYPES[$debug];
-                    break;
-                }
-                    
-                case 'metrics':
-                {
-                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
-                        throw new IncorrectCLIUsageException();
-                    $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
-                    $this->metrics = Config::METRICS_TYPES[$metrics];
-                    break;
-                }
-                    
-                case 'dbconf':
-                {
-                    if (($val = self::getNextValue($argv,$this->argIdx)) === null) 
-                        throw new IncorrectCLIUsageException();
-                    $this->dbconf = (new SafeParam('dbconf',$val))->GetFSPath();
-                    break;
-                }
-
-                default: throw new IncorrectCLIUsageException();
-            }
-        }
-    }
-    
     public function getAddress() : string
     {
-        return implode(" ",array_filter(array("CLI", $_SERVER['COMPUTERNAME']??null, $_SERVER['USERNAME']??null)));
+        $retval = "CLI";
+        
+        if (array_key_exists("COMPUTERNAME",$_SERVER)) 
+            $retval .= " ".$_SERVER["COMPUTERNAME"];
+        if (array_key_exists("USERNAME",$_SERVER))
+            $retval .= " ".$_SERVER["USERNAME"];
+        
+        return $retval;
     }
     
     public function getUserAgent() : string
     {
-        return implode(" ",array_filter(array("CLI", $_SERVER['OS']??null)));
+        $retval = "CLI";
+        
+        if (array_key_exists("OS",$_SERVER))
+            $retval .= " ".$_SERVER["OS"];
+
+        return $retval;
     }
+    
+    private bool $dryRun = false;
+    public function isDryRun() : bool { return $this->dryRun; }
     
     private ?int $debug = null;
     public function GetDebugLevel() : int { return $this->debug ?? Config::ERRLOG_ERRORS; }
@@ -133,55 +77,96 @@ class CLI extends IOInterface
     private ?string $dbconf = null;
     public function GetDBConfigFile() : ?string { return $this->dbconf; }
     
-    /** @return int plain text output by default */
-    public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
-    
-    protected function subGetInputs(?Config $config) : array
+    public function AdjustConfig(Config $config) : self
     {
-        if ($this->dryRun && $config !== null) $config->SetDryRun();
+        if ($this->debug !== null && in_array($this->debug, Config::DEBUG_TYPES, true))
+            $config->SetDebugLevel($this->debug, true);
         
-        if ($config)
+        if ($this->metrics !== null && in_array($this->metrics, Config::METRICS_TYPES, true))
+            $config->SetMetricsLevel($this->metrics, true);
+        
+        return $this;
+    }
+
+    protected function subGetInputs() : array
+    {
+        global $argv; $argIdx = 1;
+        
+        // global params for outmode, debug, config file, etc. come first
+        for (; $argIdx < count($argv); $argIdx++)
         {
-            if ($this->debug !== null && in_array($this->debug, Config::DEBUG_TYPES, true))
-                $config->SetDebugLevel($this->debug, true);
+            $key = self::getKey($argv[$argIdx]);
             
-            if ($this->metrics !== null && in_array($this->metrics, Config::METRICS_TYPES, true))
-                $config->SetMetricsLevel($this->metrics, true);
+            if ($key === null) break; else switch ($key)
+            {
+                case 'dryrun': $this->dryRun = true; break;
+                case 'json': $this->outmode = static::OUTPUT_JSON; break;
+                case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
+                
+                case 'debug':
+                {
+                    if (($val = self::getNextValue($argv,$argIdx)) === null)
+                        throw new IncorrectCLIUsageException();
+                    $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
+                    $this->debug = Config::DEBUG_TYPES[$debug];
+                    break;
+                }
+                case 'metrics':
+                {
+                    if (($val = self::getNextValue($argv,$argIdx)) === null)
+                        throw new IncorrectCLIUsageException();
+                    $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
+                    $this->metrics = Config::METRICS_TYPES[$metrics];
+                    break;
+                }
+                case 'dbconf':
+                {
+                    if (($val = self::getNextValue($argv,$argIdx)) === null)
+                        throw new IncorrectCLIUsageException();
+                    $this->dbconf = (new SafeParam('dbconf',$val))->GetFSPath();
+                    break;
+                }
+                default: throw new IncorrectCLIUsageException();
+            }
         }
         
-        global $argv;
-        
-        for (; $this->argIdx < count($argv); $this->argIdx++)
+        // now process the actual app/action command(s)
+        for (; $argIdx < count($argv); $argIdx++)
         {
-            $key = self::getKey($argv[$this->argIdx]);
+            $key = self::getKey($argv[$argIdx]);
             
             if ($key !== null) 
                 throw new IncorrectCLIUsageException();
             
-            else switch ($argv[$this->argIdx])
+            else switch ($argv[$argIdx])
             {
                 case 'version': die("Andromeda ".andromeda_version.PHP_EOL);
                 
                 case 'batch':
                 {
-                    $fname = self::getNextValue($argv,$this->argIdx);
+                    $fname = self::getNextValue($argv,$argIdx);
                     if ($fname === null)
                         throw new IncorrectCLIUsageException();
                     else return self::GetBatch($fname);
                 }
                 
-                default: return array(self::GetInput(array_slice($argv, $this->argIdx)));
+                default: return array(self::GetInput(array_slice($argv, $argIdx)));
             }
         }
 
         throw new IncorrectCLIUsageException();
     }
-    
-    /** Reads an array of Input objects from a batch file */
+
+    /** 
+     * Reads an array of Input objects from a batch file
+     * @return non-empty-array<Input>
+      */
     private function GetBatch(string $file) : array
     {       
         try { $lines = array_filter(explode("\n", file_get_contents($file))); }
         catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
+        
+        if (!count($lines)) throw new EmptyBatchException();
         
         return array_map(function($line)
         {
@@ -269,7 +254,7 @@ class CLI extends IOInterface
         return new Input($app, $action, $params, $files);
     }
     
-    public function WriteOutput(Output $output)
+    public function FinalOutput(Output $output)
     {
         $multi = $this->isMultiOutput();
         
@@ -285,7 +270,7 @@ class CLI extends IOInterface
         {
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true).PHP_EOL;
-        }        
+        }
         
         if ($multi || $this->outmode === self::OUTPUT_JSON)
         {
@@ -298,6 +283,6 @@ class CLI extends IOInterface
             echo $outdata;
         }
 
-        exit($output->isOK() ? 0 : $output->GetCode());
+        exit($output->isOK() ? 0 : 1);
     }
 }

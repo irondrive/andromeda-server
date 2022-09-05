@@ -10,4 +10,4 @@ try_run ./Andromeda/index.php "$@"
 try_run /usr/local/lib/andromeda-server/Andromeda/index.php "$@"
 try_run /usr/lib/andromeda-server/Andromeda/index.php "$@"
 
-echo "Could not find the Andromeda folder!"
+echo "Could not find the Andromeda server folder!"

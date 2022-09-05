@@ -204,7 +204,7 @@ class CryptoAuth
      */
     public static function CheckAuthCode(string $mac, string $message, string $key) : void
     {
-        if (static::TryCheckAuthCode($mac, $message, $key) === false) 
+        if (!static::TryCheckAuthCode($mac, $message, $key)) 
             throw new DecryptionFailedException();
     }
 }

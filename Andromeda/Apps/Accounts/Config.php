@@ -3,7 +3,8 @@
 require_once(ROOT."/Apps/Accounts/Group.php");
 require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\VersionInfo;
+require_once(ROOT."/Core/BaseConfig.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
@@ -12,6 +13,11 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 /** App config stored in the database */
 final class Config extends BaseConfig
 {
+    public static function getAppname() : string { return 'accounts'; }
+    
+    public static function getVersion() : string { 
+        return VersionInfo::toCompatVer(andromeda_version); }
+    
     use TableNoChildren;
     
     /** The setting for public account creation */
@@ -43,7 +49,7 @@ final class Config extends BaseConfig
     /** Creates a new Config singleton */
     public static function Create(ObjectDatabase $database) : self 
     { 
-        return parent::BaseCreate($database)->setVersion(AccountsApp::getVersion());
+        return parent::BaseCreate($database);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */

@@ -9,7 +9,7 @@ require_once(ROOT."/Apps/Accounts/Auth/External.php");
  * 
  * Does not exist in the database. Stores passwords as hashes in the Account object.
  */
-class Local extends Singleton implements ISource
+class Local extends Singleton implements ISource // TODO make this not a singleton, get rid of Singleton entirely...
 {
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {

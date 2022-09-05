@@ -182,7 +182,7 @@ class FSManager extends BaseObject // TODO was StandardObject
     /** Returns a map of all storage classes as $name=>$class */
     private static function getStorageClasses() : array
     {
-        $classes = Utilities::getClassesMatching(Storage::class);
+        $classes = Utilities::getClassesMatching(Storage::class); // TODO this is dumb, just have array here...
         
         $retval = array(); foreach ($classes as $class)
             $retval[strtolower(Utilities::ShortClassName($class))] = $class;

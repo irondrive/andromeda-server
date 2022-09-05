@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, DatabaseException};
+require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
@@ -94,7 +94,6 @@ class SessionRequiredException extends Exceptions\ClientErrorException
 }
 
 use Andromeda\Core\DecryptionFailedException;
-use Andromeda\Core\UpgradeRequiredException;
 
 /**
  * The class used to authenticate requests
@@ -185,12 +184,7 @@ class Authenticator
      */
     public static function TryAuthenticate(ObjectDatabase $database, Input $input, IOInterface $interface) : ?self
     {
-        try
-        {
-            if (Config::GetInstance($database)->getVersion() !== AccountsApp::getVersion())
-                throw new UpgradeRequiredException(AccountsApp::getName());
-        }
-        catch (DatabaseException $e){ return null; } // not installed
+        Config::GetInstance($database); // assert installed
         
         $params = $input->GetParams();
         

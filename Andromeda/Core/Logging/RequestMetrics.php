@@ -1,6 +1,5 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
@@ -9,7 +8,6 @@ require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/Core/Logging/RequestLog.php");
 require_once(ROOT."/Core/Logging/DBStatsLog.php");
@@ -54,7 +52,7 @@ final class RequestMetrics extends BaseObject
     /** List of database queries */
     private FieldTypes\NullJsonArray $queries;
     /** The main debug log supplement */
-    private FieldTypes\NullJsonArray $debuglog;
+    private FieldTypes\NullJsonArray $debughints;
     
     private bool $writtenToFile = false;
     
@@ -86,7 +84,7 @@ final class RequestMetrics extends BaseObject
         $this->includes = $fields[] = new FieldTypes\NullJsonArray('includes');
         $this->objects = $fields[] =  new FieldTypes\NullJsonArray('objects');
         $this->queries = $fields[] =  new FieldTypes\NullJsonArray('queries');
-        $this->debuglog = $fields[] = new FieldTypes\NullJsonArray('debuglog');
+        $this->debughints = $fields[] = new FieldTypes\NullJsonArray('debughints');
         
         $this->RegisterFields($fields, self::class);
         $this->DBStatsCreateFields();
@@ -116,6 +114,7 @@ final class RequestMetrics extends BaseObject
                                   DBStats $initstat, array $actions, array $commits, DBStats $totalstat) : self
     {        
         $obj = parent::BaseCreate($database);
+        $obj->date_created->SetValue($database->GetTime());
         $obj->requestlog->SetObject($reqlog);
         
         $obj->peak_memory->SetValue(memory_get_peak_usage());
@@ -143,7 +142,9 @@ final class RequestMetrics extends BaseObject
             $obj->includes->SetArray(get_included_files());
             $obj->objects->SetArray($database->getLoadedObjects());
             $obj->queries->SetArray($totalstat->getQueries());
-            $obj->debuglog->SetArray(ErrorManager::GetInstance()->GetDebugLog());
+            
+            $errman = $database->GetApiPackage()->GetErrorManager();
+            $obj->debughints->SetArray($errman->GetDebugHints());
         }
         
         $obj->actions = array();
@@ -160,9 +161,9 @@ final class RequestMetrics extends BaseObject
 
     public function Save(bool $isRollback = false) : self
     {
-        $config = ApiPackage::GetInstance()->TryGetConfig();
+        $config = $this->GetApiPackage()->GetConfig();
         
-        if ($config && $config->GetMetricsLog2DB())
+        if ($config->GetMetricsLog2DB())
         {
             parent::Save(); // ignore $isRollback (not used)
             
@@ -170,7 +171,7 @@ final class RequestMetrics extends BaseObject
             if (isset($this->commits)) foreach ($this->commits as $commit) $commit->Save();
         }
         
-        if ($config && $config->GetMetricsLog2File() &&
+        if ($config->GetMetricsLog2File() &&
             ($logdir = $config->GetDataDir()) !== null)
         {
             if ($this->writtenToFile) 
@@ -190,7 +191,7 @@ final class RequestMetrics extends BaseObject
      * @return array<mixed> `{date_created:float, peak_memory:int, nincludes:int, nobjects:int, total_stats:DBStatsLog, action_stats:[ActionMetrics] \
            init_stats:{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}}`
         if extended, add `{gcstats:array,rusage:array,includes:array,init_stats:{queries:[{time:float,query:string}]}}`
-        if extended and not accompanying debug output, omit add `{objects:array<class,[string]>,queries:array,debuglog:array}`
+        if extended and not accompanying debug output, omit add `{objects:array<class,[string]>,queries:array,debughints:array}`
      * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject(bool $isError = false) : array
@@ -231,7 +232,7 @@ final class RequestMetrics extends BaseObject
             {
                 $retval['objects'] = $this->objects->TryGetArray();
                 $retval['queries'] = $this->queries->TryGetArray();
-                $retval['debuglog'] = $this->debuglog->TryGetArray();
+                $retval['debughints'] = $this->debughints->TryGetArray();
             }
         }
 

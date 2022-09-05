@@ -1,7 +1,5 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -30,9 +28,9 @@ class ActionLog extends BaseLog
     {
         $map = array("" => self::class); 
         
-        foreach (AppRunner::GetInstance()->GetApps() as $name=>$app)
+        foreach (array()/* TODO FIX ME AppRunner::GetInstance()->GetApps()*/ as $name=>$app)
         {
-            $logclass = $app::getLogClass();
+            $logclass = $app->getLogClass();
             if ($logclass !== null) $map[$name] = $logclass;
         } 
         return $map;
@@ -50,7 +48,7 @@ class ActionLog extends BaseLog
         else 
         {
             return $q->Not($q->ManyEqualsOr("$table.app",
-                array_keys(AppRunner::GetInstance()->GetApps())));
+                array_keys(array()/* TODO FIX ME AppRunner::GetInstance()->GetApps()*/)));
         }
     }
     
@@ -123,13 +121,13 @@ class ActionLog extends BaseLog
      * If 0, details logs will be discarded, else see Config enum
      * @see \Andromeda\Core\Config::GetRequestLogDetails()
      */
-    public static function GetDetailsLevel() : int { return ApiPackage::GetInstance()->GetConfig()->GetRequestLogDetails(); }
+    public function GetDetailsLevel() : int { return $this->GetApiPackage()->GetConfig()->GetRequestLogDetails(); }
     
     /**
      * Returns true if the configured details log detail level is >= full
      * @see \Andromeda\Core\Config::GetRequestLogDetails()
      */
-    public static function isFullDetails() : bool { return static::GetDetailsLevel() >= Config::RQLOG_DETAILS_FULL; }
+    public function isFullDetails() : bool { return $this->GetDetailsLevel() >= Config::RQLOG_DETAILS_FULL; }
     
     /** 
      * Log to the app-specific "details" field
@@ -163,7 +161,7 @@ class ActionLog extends BaseLog
         if (!empty($this->details_tmp))
             $this->details->SetArray($this->details_tmp);
             
-        if (!ApiPackage::GetInstance()->GetConfig()->GetEnableRequestLogDB())
+        if (!$this->GetApiPackage()->GetConfig()->GetEnableRequestLogDB())
             return $this; // might only be doing file logging
         
         return parent::Save(); // ignore isRollback

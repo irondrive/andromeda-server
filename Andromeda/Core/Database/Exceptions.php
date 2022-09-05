@@ -44,6 +44,14 @@ class NoBaseTableException extends Exceptions\ServerException
     }
 }
 
+/** Exception indicating the API package is not yet set */
+class ApiPackageException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("API_PACKAGE_NOT_SET", $details);
+    }
+}
+
 /** Base class for database initialization exceptions */
 abstract class DatabaseConfigException extends Exceptions\ServiceUnavailableException { }
 
@@ -55,8 +63,10 @@ class DatabaseMissingException extends DatabaseConfigException
     }
 }
 
+abstract class DatabaseConnectException extends DatabaseConfigException { }
+
 /** Exception indicating that the database connection failed to initialize */
-class DatabaseConnectException extends DatabaseConfigException
+class PDODatabaseConnectException extends DatabaseConnectException
 {
     public function __construct(?PDOException $e = null) {
         parent::__construct("DATABASE_CONNECT_FAILED");
@@ -65,7 +75,7 @@ class DatabaseConnectException extends DatabaseConfigException
 }
 
 /** Exception indicating that the database was requested to use an unknkown driver */
-class InvalidDriverException extends DatabaseConfigException
+class InvalidDriverException extends DatabaseConnectException
 {
     public function __construct(?string $details = null) {
         parent::__construct("PDO_UNKNOWN_DRIVER", $details);

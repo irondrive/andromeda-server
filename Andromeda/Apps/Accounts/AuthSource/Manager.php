@@ -41,7 +41,7 @@ class Manager extends BaseObject
     /** Returns a map of all external Auth classes as $name=>$class */
     private static function getAuthClasses() : array
     {
-        $classes = Utilities::getClassesMatching(External::class);
+        $classes = Utilities::getClassesMatching(External::class); // TODO this is dumb
         
         $retval = array(); foreach ($classes as $class)
             $retval[strtolower(Utilities::ShortClassName($class))] = $class;

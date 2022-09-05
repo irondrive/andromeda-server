@@ -4,6 +4,8 @@ require_once("init.php");
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+
 require_once(ROOT."/Core/Database/FieldTypes.php");
 require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
@@ -28,15 +30,15 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($field->isModified());
     }
     
-    public function testSaveOnRollback() : void
+    public function testAlwaysSave() : void
     {
         $parent = $this->createMock(BaseObject::class);
         
         $field = (new StringType('myfield'))->SetParent($parent);
-        $this->assertFalse($field->isSaveOnRollback());
+        $this->assertFalse($field->isAlwaysSave());
         
         $field = (new StringType('myfield',true))->SetParent($parent);
-        $this->assertTrue($field->isSaveOnRollback());
+        $this->assertTrue($field->isAlwaysSave());
     }
     
     public function testResetDelta() : void
@@ -69,7 +71,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(Database::class);
         $objdb = new ObjectDatabase($database);
         $parent = $this->createMock(BaseObject::class);
-        
+
         $parent->method('GetDatabase')->willReturn($objdb);
         $database->method('DataAlwaysStrings')->willReturn($dbStrings);
         
@@ -635,6 +637,34 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(1.1, $field->GetValue());
     }
     
+    public function testNullTimestamp() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $objdb = $this->createMock(ObjectDatabase::class);
+        $parent->method('GetDatabase')->willReturn($objdb);
+        $objdb->method('GetTime')->willReturn($val=5.56);
+        
+        $field = (new NullTimestamp('myfield'))->SetParent($parent);
+        
+        $this->assertSame(null, $field->TryGetValue());
+        $field->SetTimeNow();
+        $this->assertSame($val, $field->TryGetValue());
+    }
+    
+    public function testTimestamp() : void
+    {
+        $parent = $this->createMock(BaseObject::class);
+        $objdb = $this->createMock(ObjectDatabase::class);
+        $parent->method('GetDatabase')->willReturn($objdb);
+        $objdb->method('GetTime')->willReturn($val2=5.56);
+        
+        $field = (new Timestamp('myfield',false,$val1=7.62))->SetParent($parent);
+        
+        $this->assertSame($val1, $field->GetValue());
+        $field->SetTimeNow();
+        $this->assertSame($val2, $field->GetValue());
+    }
+
     public function testCounter() : void
     {
         $parent = $this->getParentWithDbStrings(false);

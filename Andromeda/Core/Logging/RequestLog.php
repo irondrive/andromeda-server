@@ -1,6 +1,6 @@
 <?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -55,8 +55,10 @@ final class RequestLog extends BaseLog
     public static function Create(ApiPackage $apipack) : self
     {
         $interface = $apipack->GetInterface();
+        $database = $apipack->GetDatabase();
         
-        $obj = parent::BaseCreate($apipack->GetDatabase());
+        $obj = parent::BaseCreate($database);
+        $obj->time->SetValue($database->GetTime());
         $obj->addr->SetValue($interface->getAddress());
         $obj->agent->SetValue($interface->getUserAgent());
         
@@ -99,7 +101,7 @@ final class RequestLog extends BaseLog
     {
         $this->actions ??= array();
         
-        $config = ApiPackage::GetInstance()->GetConfig();
+        $config = $this->GetApiPackage()->GetConfig();
         
         if ($config->GetEnableRequestLogDB())
         {
@@ -115,7 +117,7 @@ final class RequestLog extends BaseLog
      */
     public function WriteFile() : self
     {
-        $config = ApiPackage::GetInstance()->GetConfig();
+        $config = $this->GetApiPackage()->GetConfig();
 
         if (!$this->writtenToFile && 
             $config->GetEnableRequestLogFile() &&

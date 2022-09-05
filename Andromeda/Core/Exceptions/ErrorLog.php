@@ -1,10 +1,5 @@
 <?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/AppRunner.php"); use Andromeda\Core\AppRunner;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
@@ -14,7 +9,7 @@ require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\
 
 require_once(ROOT."/Core/Logging/BaseLog.php"); use Andromeda\Core\Logging\BaseLog;
 
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
+require_once(ROOT."/Core/Exceptions/ErrorInfo.php");
 
 /** Represents an error log entry in the database */
 final class ErrorLog extends BaseLog
@@ -23,8 +18,8 @@ final class ErrorLog extends BaseLog
     
     use TableNoChildren;
     
-    /** time of the request */
-    private FieldTypes\FloatType $time;
+    /** time of the error */
+    private FieldTypes\Timestamp $time;
     /** user address for the request */
     private FieldTypes\StringType $addr;
     /** user agent for the request */
@@ -50,11 +45,8 @@ final class ErrorLog extends BaseLog
     /** all client input parameters */
     private FieldTypes\NullJsonArray $params;
     /** the custom API log */
-    private FieldTypes\NullJsonArray $log;
+    private FieldTypes\NullJsonArray $hints;
     
-    /** @var FieldTypes\BaseField[] our copy of our fields */
-    private array $fields;
-
     protected function CreateFields() : void
     {
         $fields = array();
@@ -72,9 +64,8 @@ final class ErrorLog extends BaseLog
         $this->objects = $fields[] =     new FieldTypes\NullJsonArray('objects');
         $this->queries = $fields[] =     new FieldTypes\NullJsonArray('queries');
         $this->params = $fields[] =      new FieldTypes\NullJsonArray('params');
-        $this->log = $fields[] =         new FieldTypes\NullJsonArray('log');
+        $this->hints = $fields[] =       new FieldTypes\NullJsonArray('hints');
         
-        $this->fields = $fields;
         $this->RegisterFields($fields, self::class);
         
         parent::CreateFields();
@@ -105,140 +96,57 @@ final class ErrorLog extends BaseLog
     }
 
     /**
-     * Creates an errorLog object from the given exception
-     *
-     * What is logged depends on the configured debug level
-     * @param ?ApiPackage $api reference to the main API
-     * @param ?AppRunner $runner active app runner or null
-     * @param \Throwable $e the exception being debugged
-     * @return self new error log entry object
+     * Create a new DB error log entry from an ErrorInfo
+     * @param ObjectDatabase $database database reference
+     * @param ErrorInfo $info error log info to copy
+     * @return self new ErrorLog database object
      */
-    public static function Create(?ApiPackage $api, ?AppRunner $runner, \Throwable $e) : self
+    public static function Create(ObjectDatabase $database, ErrorInfo $info) : self
     {
-        $obj = new self(null, array('id'=>static::GenerateID()));
-
-        $obj->time->SetValue($api ? $api->GetTime() : microtime(true));
-        $obj->addr->SetValue($api ? $api->GetInterface()->GetAddress() : "");
-        $obj->agent->SetValue($api ? $api->GetInterface()->GetUserAgent() : "");
+        $obj = parent::BaseCreate($database);
         
-        $obj->code->SetValue((string)$e->getCode());
-        $obj->message->SetValue($e->getMessage());
-        $obj->file->SetValue($e->getFile()."(".$e->getLine().")");
-
-        $input = ($runner && ($context = $runner->GetContext()) !== null) ? $context->GetInput() : null;
-        
-        if ($input !== null)
-        {
-            $obj->app->SetValue($input->GetApp());
-            $obj->action->SetValue($input->GetAction());
-        }
-        
-        $details = $api && $api->GetDebugLevel() >= Config::ERRLOG_DETAILS;
-        $sensitive = $api && $api->GetDebugLevel() >= Config::ERRLOG_SENSITIVE;
-        
-        if ($details)
-        {
-            if ($api && $api->HasDatabase())
-            {
-                $obj->objects->SetArray($api->GetDatabase()->getLoadedObjects());
-                $obj->queries->SetArray($api->GetDatabase()->GetInternal()->getAllQueries());
-            }
-        }
-        
-        if ($sensitive && $input !== null)
-        {
-            $params = $input->GetParams()->GetClientObject();
-            $obj->params->SetArray(Utilities::arrayStrings($params));
-        }
-        
-        $obj->trace_basic->SetArray(explode("\n",$e->getTraceAsString()));
-        
-        if ($details)
-        {
-            $trace_full = $e->getTrace();
-            
-            foreach ($trace_full as &$val)
-            {
-                if (!$sensitive) unset($val['args']);
-                
-                else if (array_key_exists('args', $val))
-                    Utilities::arrayStrings($val['args']);
-            }
-            
-            $obj->trace_full->SetArray($trace_full);
-        }
+        $obj->time->SetValue($info->GetTime());
+        $obj->addr->SetValue($info->GetAddr());
+        $obj->agent->SetValue($info->GetAgent());
+        $obj->app->SetValue($info->TryGetApp());
+        $obj->action->SetValue($info->TryGetAction());
+        $obj->code->SetValue($info->GetCode());
+        $obj->file->SetValue($info->GetFile());
+        $obj->message->SetValue($info->GetMessage());
+        $obj->trace_basic->SetArray($info->GetTraceBasic());
+        $obj->trace_full->SetArray($info->TryGetTraceFull());
+        $obj->objects->SetArray($info->TryGetObjects());
+        $obj->queries->SetArray($info->TryGetQueries());
+        $obj->params->SetArray($info->TryGetParams());
+        $obj->hints->SetArray($info->TryGetHints());
         
         return $obj;
     }
-    
-    /**
-     * Sets the supplemental debug log
-     * @param int $level debug level for output
-     * @param array $debuglog array of debug details
-     * @return $this
-     */
-    public function SetDebugLog(int $level, array $debuglog) : self
-    {   
-        if ($level >= Config::ERRLOG_DETAILS && $debuglog !== null)
-            $this->log->SetArray($debuglog);
-        
-        return $this;
-    }
-    
-    /**
-     * Force-saves this entry to the given database
-     * @param ObjectDatabase $database database to save to
-     * @return $this
-     */
-    public function SaveToDatabase(ObjectDatabase $database) : self
-    {
-        $idf = (new FieldTypes\StringType('id')); $idf->SetValue($this->ID());
-        
-        $fields = $this->fields; $fields['id'] = $idf;
-        
-        $database->InsertObject($this, array(self::class => $fields)); return $this;
-    }
-    
+
     /**
      * Returns the printable client object of this error log
-     * @param ?int $level debug level for output, null for unfiltered
-     * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,trace_basic:array}`
-        if details or null level, add `{trace_full:array,objects:?array,queries:?array,log:?array}`
-        if sensitive or null level, add `{params:?array}`
+     * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,
+          trace_basic:array,trace_full:array,objects:?array,queries:?array,params:?array,hints:?array}`
      */
-    public function GetClientObject(?int $level = null) : array
+    public function GetClientObject() : array
     {
         $retval = array(
             'time' => $this->time->GetValue(),
             'addr' => $this->addr->GetValue(),
             'agent' => $this->agent->GetValue(),
+            'app' => $this->app->TryGetValue(),
+            'action' => $this->action->TryGetValue(),
             'code' => $this->code->GetValue(),
             'file' => $this->file->GetValue(),
             'message' => $this->message->GetValue(),
-            'app' => $this->app->TryGetValue(),
-            'action' => $this->action->TryGetValue(),
-            'trace_basic' => $this->trace_basic->GetArray()
+            'trace_basic' => $this->trace_basic->GetArray(),
+            'trace_full' => $this->trace_full->TryGetArray(),
+            'objects' => $this->objects->TryGetArray(),
+            'queries' => $this->queries->TryGetArray(),
+            'params' => $this->params->TryGetArray(),
+            'hints' => $this->hints->TryGetArray()
         );
-        
-        $details = $level === null || $level >= Config::ERRLOG_DETAILS;
-        $sensitive = $level === null || $level >= Config::ERRLOG_SENSITIVE;
 
-        if ($details)
-        {
-            $trace_full = $this->trace_full->TryGetArray();
-            if (!$sensitive) foreach ($trace_full as &$val) unset($val['args']);
-            $retval['trace_full'] = $trace_full;
-            
-            $retval['objects'] = $this->objects->TryGetArray();
-            $retval['queries'] = $this->queries->TryGetArray();
-            $retval['log'] = $this->log->TryGetArray();
-        }
-
-        if ($sensitive)
-        {
-            $retval['params'] = $this->params->TryGetArray();
-        }
-        
         return $retval;
     }
 }

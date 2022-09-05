@@ -5,6 +5,7 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
 require_once(ROOT."/Core/Database/QueryBuilder.php");
 
+use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 /**
@@ -14,6 +15,7 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
  * Objects can be loaded via child classes, which will join base tables together top-down,
  * or via base classes which will load every corresponding child class together.
  * The final child type does not necessarily need to have its own table.
+ * @phpstan-consistent-constructor
  */
 abstract class BaseObject
 {
@@ -168,15 +170,17 @@ abstract class BaseObject
     /** Returns the object's associated database */
     public function GetDatabase() : ObjectDatabase { return $this->database; }
     
+    /** Returns the associated Api Package */
+    public function GetApiPackage() : ApiPackage { return $this->database->GetApiPackage(); }
+    
     /**
      * Construct an object from loaded database data
-     * @param ?ObjectDatabase $database database
+     * @param ObjectDatabase $database database
      * @param array<string, mixed> $data db columns
      */
-    final public function __construct(?ObjectDatabase $database, array $data)
+    public function __construct(ObjectDatabase $database, array $data)
     {
-        if ($database !== null) 
-            $this->database = $database;
+        $this->database = $database;
         
         $this->CreateFields();
 
@@ -306,12 +310,12 @@ abstract class BaseObject
     
     /**
      * Inserts this object to the DB if creates, updates this object if modified
-     * @param bool $isRollback true if this is a rollback (see Field saveOnRollback)
+     * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
      * @return $this
      */
-    public function Save(bool $isRollback = false) : self
+    public function Save(bool $onlyAlways = false) : self
     {
-        if ($this->isDeleted || ($isRollback && $this->isCreated)) return $this;
+        if ($this->isDeleted || ($onlyAlways && $this->isCreated)) return $this;
         
         if ($this->deleteLater) { $this->Delete(); return $this; }
 
@@ -327,8 +331,8 @@ abstract class BaseObject
             
             foreach ($fieldsByClass as &$fields)
             {
-                $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($isRollback) {
-                    return $field->isModified() && (!$isRollback || $field->isSaveOnRollback()); });
+                $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($onlyAlways) {
+                    return $field->isModified() && (!$onlyAlways || $field->isAlwaysSave()); });
             }
             
             $this->database->UpdateObject($this, $fieldsByClass);

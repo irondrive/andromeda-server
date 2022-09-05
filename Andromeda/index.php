@@ -1,6 +1,6 @@
 <?php require_once(__DIR__.'/init.php');
 
-if (file_exists(ROOT.'/userInit.php'))
+if (is_file(ROOT.'/userInit.php'))
     require_once(ROOT.'/userInit.php');
 
 /** 
@@ -14,37 +14,54 @@ if (file_exists(ROOT.'/userInit.php'))
  * Multiple commands can be given to run in a single request/transaction.
  */
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
+require_once(ROOT."/Core/ApiPackage.php"); 
+use Andromeda\Core\ApiPackage;
 
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
+require_once(ROOT."/Core/IOFormat/Input.php");
+require_once(ROOT."/Core/IOFormat/Output.php");
+require_once(ROOT."/Core/IOFormat/IOInterface.php");
+use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
 
-/** 
- * The basic procedure is to create the ApiPackage, parse an array 
- * of commands from the interface, run the AppRunner application for each 
- * command given, commit the transaction, and display output
- */
+require_once(ROOT."/Core/Exceptions/ErrorManager.php");
+use Andromeda\Core\Exceptions\ErrorManager;
+
+
+/** First create the global resources */
 
 $interface = IOInterface::TryGet(); 
 if (!$interface) die('INTERFACE_ERROR');
 
 $errman = new ErrorManager($interface, true);
+
+$inputs = $interface->GetInputs(); // check early
+
 $apipack = new ApiPackage($interface, $errman);
 
-$inputs = $interface->GetInputs($apipack->TryGetConfig());
-
 $runner = $apipack->GetAppRunner();
+$metrics = $apipack->GetMetricsHandler();
 
-$retvals = array_map(function(Input $input)use($runner){
-    return $runner->Run($input); }, $inputs);
+$metrics->EndInitStats($apipack->GetDatabase());
+
+
+/** Run the array of user commands */
+
+$retvals = array_map(
+    function(Input $input)use($runner){
+        return $runner->Run($input); }, $inputs);
+
+
+/** Save/commit changes, display output */
 
 $output = Output::Success($retvals);
 
-$runner->commit(true);
+$runner->commit();
+
 if ($interface->UserOutput($output)) 
     $runner->commit();
 
-$apipack->SaveMetrics($output);
-$interface->WriteOutput($output);
+$metrics->SaveMetrics($apipack, $output);
+$interface->FinalOutput($output);
+
+
+
+

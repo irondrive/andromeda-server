@@ -17,4 +17,4 @@ require_once(ROOT.'/../vendor/autoload.php');
 //define('DBCONF','path-to-config');
 
 /** Use to permanently disable install/upgrade via HTTP */
-//define('HTTPINSTALL',false);
+//define('ALLOW_HTTP_INSTALL',false);

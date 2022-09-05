@@ -1,7 +1,7 @@
 <?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
 
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\BaseConfig;
+require_once(ROOT."/Core/BaseConfig.php"); use Andromeda\Core\BaseConfig;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
@@ -9,6 +9,11 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 /** App config stored in the database */
 class Config extends BaseConfig
 {
+    public static function getAppname() : string { return 'files'; }
+    
+    public static function getVersion() : string {
+        return VersionInfo::toCompatVer(andromeda_version); }
+        
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -21,7 +26,10 @@ class Config extends BaseConfig
     }
     
     /** Creates a new config singleton */
-    public static function Create(ObjectDatabase $database) : self { return parent::BaseCreate($database)->setVersion(FilesApp::getVersion()); }
+    public static function Create(ObjectDatabase $database) : self 
+    { 
+        return parent::BaseCreate($database); 
+    }
     
     /** Returns the command usage for SetConfig() */
     public static function GetSetConfigUsage() : string { return "[--rwchunksize uint32] [--crchunksize uint32]".

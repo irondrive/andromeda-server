@@ -6,6 +6,8 @@ require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
 
+require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+
 class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetClassTable() : void
@@ -24,6 +26,23 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(
             'public.a2obj_core_database_polyobject1',
             $objdb->GetClassTableName(PolyObject1::class));
+    }
+    
+    public function testApiPackage() : void
+    {
+        $db = $this->createMock(Database::class);
+        $apipack = $this->createMock(ApiPackage::class);
+        
+        $objdb = new ObjectDatabase($db);
+        $objdb->SetApiPackage($apipack);
+        $this->assertTrue($objdb->HasApiPackage());
+        $this->assertSame($apipack, $objdb->GetApiPackage());
+        
+        $objdb = new ObjectDatabase($db);
+        $this->assertFalse($objdb->HasApiPackage());
+        
+        $this->expectException(ApiPackageException::class);
+        $objdb->GetApiPackage();
     }
 
     private const select1 = array(

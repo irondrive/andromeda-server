@@ -19,8 +19,11 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\{FileReadFailedException, FileWriteFailedException};
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
-require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\{BaseApp, InstalledApp};
-require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/Core/BaseApp.php");
+require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/Emailer.php");
+use Andromeda\Core\{BaseApp, EmailRecipient, VersionInfo};
+
 require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
@@ -179,19 +182,17 @@ class ShareTargetDisabledException extends Exceptions\ClientDeniedException
  * configurable rules per-account or per-filesystem, and granular statistics
  * gathering and limiting for accounts/groups/filesystems.
  */
-class FilesApp extends InstalledApp
+class FilesApp extends BaseApp
 {
     public static function getName() : string { return 'files'; }
     
-    protected static function getLogClass() : string { return ActionLog::class; }
+    public static function getVersion() : string { return andromeda_version; }
     
-    protected static function getConfigClass() : string { return Config::class; }
-    
-    protected function GetConfig() : Config { return $this->config; }
+    protected function getLogClass() : string { return ActionLog::class; }
     
     public static function getUsage() : array 
     { 
-        return array_merge(parent::getUsage(),array(
+        return array(
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
@@ -254,7 +255,14 @@ class FilesApp extends InstalledApp
             "(configtimedlimits) --filesystem id ".Limits\FilesystemTimed::GetConfigUsage(),
             'purgelimits (--account id | --group id | --filesystem id)',
             'purgetimedlimits (--account id | --group id | --filesystem id) --period uint',
-        )); 
+        ); 
+    }
+    
+    public function __construct(ApiPackage $api)
+    {
+        parent::__construct($api);
+        
+        $this->config = Config::GetInstance($this->database);
     }
     
     public function commit() { Storage::commitAll(); }    
@@ -267,8 +275,6 @@ class FilesApp extends InstalledApp
      */
     public function Run(Input $input)
     {
-        if (($retval = parent::Run($input)) !== false) return $retval;
-
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
         
@@ -432,7 +438,7 @@ class FilesApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunGetConfig(?Authenticator $authenticator) : array
+    protected function GetConfig(?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
@@ -445,7 +451,7 @@ class FilesApp extends InstalledApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function RunSetConfig(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) throw new AuthenticationFailedException();
         
@@ -1017,7 +1023,7 @@ class FilesApp extends InstalledApp
         if ($share !== null && !$share->CanModify())
             throw new ItemAccessDeniedException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('item', $itemobj->TryGetClientObject());
 
         $itemobj->Delete();
@@ -1287,7 +1293,7 @@ class FilesApp extends InstalledApp
         if ($share !== null && !$share->CanModify()) 
             throw new ItemAccessDeniedException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('tag', $tag->GetClientObject());
         
         $tag->Delete();
@@ -1381,7 +1387,7 @@ class FilesApp extends InstalledApp
         $cobj = Comment::TryLoadByAccountAndID($this->database, $account, $id);
         if ($cobj === null) throw new UnknownItemException();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('comment', $cobj->GetClientObject());
         
         $cobj->Delete();
@@ -1632,7 +1638,7 @@ class FilesApp extends InstalledApp
                 throw new ItemAccessDeniedException();
         }
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('share', $share->GetClientObject());
         
         $share->Delete();
@@ -1840,7 +1846,7 @@ class FilesApp extends InstalledApp
         
         $unlink = $params->GetOptParam('unlink',false)->GetBool();
         
-        if ($actionlog && ActionLog::isFullDetails()) 
+        if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('filesystem', $filesystem->GetClientObject(true));
         
         $filesystem->Delete($unlink);
