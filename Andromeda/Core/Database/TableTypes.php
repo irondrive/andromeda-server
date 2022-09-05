@@ -32,6 +32,7 @@ trait NoTypedChildren
         throw new NotMultiTableException(self::class);
     }
     
+    /** @param array<string,mixed> $row database data */
     public static function GetRowClass(array $row) : string
     {
         throw new NotMultiTableException(self::class);

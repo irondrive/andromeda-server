@@ -106,7 +106,7 @@ abstract class BaseObject
     /**
      * Given a database row, return the child class applicable
      * Only for base classes that are the final table for > 1 class (TypedChildren)
-     * @param array $row row of data from the database
+     * @param array<string,mixed> $row row of data from the database
      * @return class-string<self> child class of row
      */
     public static function GetRowClass(array $row) : string { 

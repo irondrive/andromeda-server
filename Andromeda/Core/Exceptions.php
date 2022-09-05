@@ -197,6 +197,14 @@ class InvalidVersionException extends Exceptions\ServerException
     }
 }
 
+/** Exception indicating the given context is missing metrics */
+class MissingMetricsException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("MISSING_METRICS", $details);
+    }
+}
+
 /** Converts a JSON failure into an exception */
 class JSONException extends Exceptions\ServerException
 {
