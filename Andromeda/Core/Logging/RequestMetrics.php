@@ -2,6 +2,7 @@
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+require_once(ROOT."/Core/RunContext.php"); use Andromeda\Core\RunContext; // phpstan
 
 require_once(ROOT."/Core/Database/DBStats.php"); use Andromeda\Core\Database\DBStats;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -56,9 +57,9 @@ final class RequestMetrics extends BaseObject
     
     private bool $writtenToFile = false;
     
-    /** Array of action metrics if not saved */
+    /** @var array<ActionMetrics> if not saved */
     private array $actions;
-    /** Array of commit metrics if not saved */
+    /** @var array<CommitMetrics> if not saved */
     private array $commits;
     
     protected function CreateFields() : void
@@ -105,8 +106,8 @@ final class RequestMetrics extends BaseObject
      * @param ObjectDatabase $database database reference
      * @param RequestLog $reqlog request log for the request
      * @param DBStats $initstat construct stats
-     * @param array $actions array<RunContext> actions with metrics
-     * @param array $commits array<DBStats> commit metrics
+     * @param array<RunContext> $actions actions with metrics
+     * @param array<DBStats> $commits commit metrics
      * @param DBStats $totalstat total request stats
      * @return static created metrics object
      */

@@ -123,7 +123,10 @@ abstract class InstallerApp
         }
     }
     
-    /** Installs the app by importing its SQL file and creating config */
+    /** 
+     * Installs the app by importing its SQL file and creating config 
+     * @return mixed
+     */
     protected function Install(SafeParams $params)
     {
         $db = $this->runner->RequireDatabase();
@@ -148,6 +151,7 @@ abstract class InstallerApp
     /**
      * Iterates over the list of upgrade scripts, running them
      * sequentially until the DB is up to date with the code
+     * @return mixed
      */
     protected function Upgrade(SafeParams $params)
     {

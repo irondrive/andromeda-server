@@ -7,7 +7,7 @@ require_once(ROOT."/Core/Exceptions.php");
  * 
  * This should be avoided as globals make unit testing difficult
  */
-abstract class Singleton // TODO refactor to get rid of this (only Auth\Local uses it now)
+abstract class Singleton // TODO refactor to get rid of this
 {
     /** @var array<class-string<static>, static> */
     private static $instances = array();
@@ -270,7 +270,7 @@ abstract class Utilities
      * @param class-string<T> $match
      * @return array<class-string<T>>
      */
-    public static function getClassesMatching(string $match) : array
+    public static function getClassesMatching(string $match) : array // TODO this sucks, refactor away the need
     {
         $retval = array(); foreach (get_declared_classes() as $class)
         {

@@ -572,13 +572,13 @@ class Database
         if ($s !== null) $s->endQuery($sql, $type, $count);
     }
     
-    /** Add a new performance metrics context on to the stack */
-    public function pushStatsContext() : self
+    /** Add a new performance metrics context on to the stack and returns it */
+    public function pushStatsContext() : DBStats
     {
-        $this->stats_stack[] = new DBStats(); return $this;
+        return $this->stats_stack[] = new DBStats();
     }
 
-    /** Pop the current performance metrics context off of the stack */
+    /** Pop the current performance metrics context off of the stack (starts with 1!) */
     public function popStatsContext() : ?DBStats
     {
         $obj = array_pop($this->stats_stack);

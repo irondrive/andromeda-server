@@ -33,7 +33,7 @@ class InstallRunner extends BaseRunner
     /** The exception thrown when db loading failed */
     private ?DatabaseConfigException $dbexc = null;
     
-    /** @var array<string,InstallerApp> */
+    /** @var array<string, InstallerApp> */
     private array $installers = array();
     
     /** Returns the interface used for the current request */

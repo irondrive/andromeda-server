@@ -95,6 +95,8 @@ class ApiPackage
         
         $this->apprunner = new AppRunner($this);
         $this->errorman->SetApiPackage($this);
+        
+        $this->metrics->EndInitStats($this->database);
     }
 
     /**

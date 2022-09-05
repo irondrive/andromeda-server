@@ -39,10 +39,16 @@ class CryptoKey
 /** libsodium wrapper class for secret-key authenticated crypto */
 class CryptoSecret
 {
-    /** Returns the length of a key for use with this class */
+    /** 
+     * Returns the length of a key for use with this class 
+     * @return positive-int
+     */
     public static function KeyLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; }
     
-    /** Returns the length of a nonce for use with this class */
+    /** 
+     * Returns the length of a nonce for use with this class 
+     * @return positive-int
+     */
     public static function NonceLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; }
     
     /** 
@@ -53,7 +59,7 @@ class CryptoSecret
     public static function OutputOverhead() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; }
     
     /** Generates a crypto key for use with this class */
-    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }   
+    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
     
     /** Generates a crypto nonce for use with this class */
     public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
@@ -67,7 +73,7 @@ class CryptoSecret
      * @return string an encrypted and authenticated ciphertext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_encrypt()
      */
-    public static function Encrypt(string $data, string $nonce, string $key, string $extra = null) : string
+    public static function Encrypt(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
@@ -84,7 +90,7 @@ class CryptoSecret
      * @return string the decrypted and authenticated plaintext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_decrypt()
      */
-    public static function Decrypt(string $data, string $nonce, string $key, string $extra = null) : string
+    public static function Decrypt(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
@@ -103,7 +109,10 @@ class KeyPair
 /** libsodium wrapper class for public-key authenticated crypto */
 class CryptoPublic
 {
-    /** Returns the length of a nonce for use with this class */
+    /** 
+     * Returns the length of a nonce for use with this class 
+     * @return positive-int
+     */
     public static function NonceLength() : int { return SODIUM_CRYPTO_BOX_NONCEBYTES; }
 
     /** Generates a crypto nonce for use with this class */
@@ -161,10 +170,16 @@ class CryptoPublic
 /** libsodium wrapper class for authentication-only crypto */
 class CryptoAuth
 {
-    /** Returns the length of a key for use with this class */
+    /** 
+     * Returns the length of a key for use with this class 
+     * @return positive-int
+     */
     public static function KeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
     
-    /** Returns the length of the authentication tag generated */
+    /** 
+     * Returns the length of the authentication tag generated 
+     * @return positive-int
+     */
     public static function AuthLength() : int { return SODIUM_CRYPTO_AUTH_BYTES; }
     
     /** Generates a crypto key for use with this class */

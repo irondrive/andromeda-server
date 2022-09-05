@@ -40,8 +40,6 @@ $apipack = new ApiPackage($interface, $errman);
 $runner = $apipack->GetAppRunner();
 $metrics = $apipack->GetMetricsHandler();
 
-$metrics->EndInitStats($apipack->GetDatabase());
-
 
 /** Run the array of user commands */
 

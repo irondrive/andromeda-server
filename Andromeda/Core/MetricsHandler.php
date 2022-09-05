@@ -30,9 +30,10 @@ final class MetricsHandler
      */
     public function EndInitStats(ObjectDatabase $database) : void
     {
-        $this->init_stats = $database->GetInternal()->popStatsContext();
+        $dbstats = $database->GetInternal()->popStatsContext();
+        if ($dbstats === null) throw new MissingMetricsException();
         
-        $this->total_stats->Add($this->init_stats);
+        $this->total_stats->Add($this->init_stats = $dbstats);
     }
     
     /**

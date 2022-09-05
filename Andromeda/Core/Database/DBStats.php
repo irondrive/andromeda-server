@@ -15,17 +15,17 @@ class DBStats
     private float $read_time = 0; 
     private float $write_time = 0; 
     
-    /**@var array<array> */
+    /** @var array<mixed> */
     private array $queries = array();
     
     public const QUERY_READ = 1;
     public const QUERY_WRITE = 2;
     
     /** Constructs a new stats context and logs the current time */
-    public function __construct(){ $this->start_timens = hrtime(true); }
+    public function __construct() { $this->start_timens = hrtime(true); }
     
     /** Stops the overall timers */
-    public function stopTiming(){ $this->total_timens = hrtime(true) - $this->start_timens; }
+    public function stopTiming() : void { $this->total_timens = hrtime(true) - $this->start_timens; }
 
     /** Begins tracking a query by logging the current time */
     public function startQuery() : void { $this->query_start = hrtime(true); }
@@ -53,7 +53,7 @@ class DBStats
     
     /** 
      * Returns the array of queries issued to the database 
-     * @return array<array> `[{time:float,query:string}]`
+     * @return array<mixed> `[{time:float,query:string}]`
      */
     public function getQueries() : array   { return $this->queries; }
 
@@ -78,7 +78,7 @@ class DBStats
         return $this->GetTotalTime() - $this->read_time - $this->write_time;
     }
     
-    /** Adds another DBStats' stats to this one */
+    /** Adds another DBStats' read/write/query stats to this one (not total/code) */
     public function Add(self $stats) : void
     {
         $this->reads += $stats->reads;

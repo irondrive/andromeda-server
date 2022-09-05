@@ -33,7 +33,7 @@ final class RequestLog extends BaseLog
     
     private bool $writtenToFile = false;
     
-    /** Array of action metrics logged this request */
+    /** @var array<ActionLog> action metrics logged this request */
     private array $actions;
     
     protected function CreateFields() : void
@@ -187,7 +187,7 @@ final class RequestLog extends BaseLog
      * @param bool $actions if true, add action logs
      * @see RequestLog::GetClientObject()
      * @see ActionLog::GetAppClientObject()
-     * @return array RequestLog + if $actions, add `{actions:[ActionLog]}`
+     * @return array<mixed> RequestLog + if $actions, add `{actions:[ActionLog]}`
      */
     public function GetFullClientObject(bool $actions = false, bool $expand = false) : array
     {

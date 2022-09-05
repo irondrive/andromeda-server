@@ -26,9 +26,20 @@ class RunContext
     
     /** Returns the action log created for this run */
     public function GetActionLog() : ?ActionLog { return $this->actionlog; }
+    
+    /** Returns true if metrics were set */
+    public function HasMetrics() : bool { return $this->metrics !== null; }
 
-    /** Returns the metrics created for this run */
-    public function GetMetrics() : ?DBStats { return $this->metrics; }
+    /** 
+     * Returns the metrics created for this run
+     * @throws MissingMetricsException if it wasn't set
+     */
+    public function GetMetrics() : DBStats 
+    { 
+        if ($this->metrics === null) 
+            throw new MissingMetricsException();
+        else return $this->metrics;
+    }
     
     /** Sets the metrics created for this fun */
     public function SetMetrics(DBStats $metrics) : void { $this->metrics = $metrics; }

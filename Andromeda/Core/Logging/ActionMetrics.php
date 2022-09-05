@@ -80,7 +80,10 @@ final class ActionMetrics extends BaseObject
         return $obj;
     }
     
-    /** Loads objects matching the given request metrics */
+    /** 
+     * Loads objects matching the given request metrics 
+     * @return array<string, static>
+     */
     public static function LoadByRequest(ObjectDatabase $database, RequestMetrics $requestmet) : array
     {
         return $database->LoadObjectsByKey(static::class, 'requestmet', $requestmet->ID());
@@ -88,7 +91,7 @@ final class ActionMetrics extends BaseObject
     
     /**
      * Gets the printable client object for this object
-     * @return array DBStatsLog + `{app:string,action:string,queries:[{time:float,query:string}]}`
+     * @return array<mixed> DBStatsLog + `{app:string,action:string,queries:[{time:float,query:string}]}`
      * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject() : array
