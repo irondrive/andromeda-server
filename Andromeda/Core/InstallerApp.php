@@ -15,7 +15,6 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Datab
  * 
  * The base class handles the install/upgrade actions automatically
  * Unlike BaseApp() there are no custom app commit/rollback handlers
- * @template ConfigType of BaseConfig
  */
 abstract class InstallerApp
 {
@@ -53,7 +52,7 @@ abstract class InstallerApp
     
     /**
      * Return the BaseConfig class for this app 
-     * @return class-string<ConfigType>
+     * @return class-string<BaseConfig>
      */
     protected abstract function getConfigClass() : string;
     

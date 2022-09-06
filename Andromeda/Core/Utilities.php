@@ -86,7 +86,8 @@ class VersionInfo
 
 /** Abstract with some global static utility functions */
 abstract class Utilities
-{   
+{
+    /** @var non-empty-string&literal-string */
     private static string $chars = "0123456789abcdefghijkmnopqrstuvwxyz_"; // 36 (5 bits/char)
 
     /** 
@@ -95,7 +96,7 @@ abstract class Utilities
      */
     public static function Random(int $length) : string
     {
-        $range = strlen(self::$chars)-1; assert($range > 1);
+        $range = strlen(self::$chars)-1;
         
         $string = ""; for ($i = 0; $i < $length; $i++)
             $string .= self::$chars[random_int(0, $range)];

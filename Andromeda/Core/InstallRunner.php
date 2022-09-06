@@ -81,12 +81,11 @@ class InstallRunner extends BaseRunner
             defined('ALLOW_HTTP_INSTALL') && !ALLOW_HTTP_INSTALL)
             throw new InstallDisabledException();
 
-        try
-        {
-            $this->database = ApiPackage::InitDatabase($interface);
-            $this->errorman->SetDatabase($this->database);
-        }
+        try { $this->database = ApiPackage::InitDatabase($interface); }
         catch (DatabaseConfigException $e) { $this->dbexc = $e; }
+        
+        if ($this->database !== null)
+            $this->errorman->SetDatabase($this->database);
         
         if ($this->database !== null) try
         {

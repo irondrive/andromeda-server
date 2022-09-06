@@ -14,16 +14,14 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
 
-/**
- * The core config installer, also can install/upgrade all apps
- * @extends InstallerApp<Config>
- */
+/** The core config installer, also can install/upgrade all apps */
 final class CoreInstallApp extends InstallerApp
 {
     public function getName() : string { return 'core'; }
 
     protected function getTemplateFolder() : string { return ROOT.'/Core'; }
     
+    /** @return class-string<Config> */
     protected function getConfigClass() : string { return Config::class; }
 
     public function getUsage() : array
