@@ -5,14 +5,12 @@ require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\
 
 require_once(ROOT."/Apps/Accounts/Config.php");
 
-/**
- * The accounts app installer
- * @extends InstallerApp<Config>
- */
+/** The accounts app installer */
 final class AccountsInstallApp extends InstallerApp
 {
     public static function getName() : string { return 'accounts'; }
     
+    /** @return class-string<Config> */
     protected static function getConfigClass() : string { return Config::class; }
     
     protected static function getInstallFlags() : string { return '[--username alphanum --password raw]'; }
