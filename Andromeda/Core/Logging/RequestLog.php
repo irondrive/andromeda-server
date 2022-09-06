@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -57,7 +57,7 @@ final class RequestLog extends BaseLog
         $interface = $apipack->GetInterface();
         $database = $apipack->GetDatabase();
         
-        $obj = parent::BaseCreate($database);
+        $obj = static::BaseCreate($database);
         $obj->time->SetValue($database->GetTime());
         $obj->addr->SetValue($interface->getAddress());
         $obj->agent->SetValue($interface->getUserAgent());

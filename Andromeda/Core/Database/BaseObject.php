@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/Exceptions.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
@@ -47,7 +47,7 @@ abstract class BaseObject
      * Non-abstract final classes (no children) should always return null
      * If using auto-typed rows, the mapping must be stable across versions
      * Classes must have the @ return line in order to pass type checking!
-     * @return ?non-empty-array<class-string<self>>
+     * @return ?non-empty-array<scalar, class-string<self>>
      */
     public static function GetChildMap() : ?array { return null; }
     

@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
 /** The base class for Andromeda exceptions */
 abstract class BaseException extends \Exception 

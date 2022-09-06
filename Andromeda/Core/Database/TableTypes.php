@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/Exceptions.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
@@ -77,7 +77,7 @@ trait TableTypedChildren
         $type = $row['type']; $map = self::GetChildMap();
         
         if (!array_key_exists($type, $map))
-            throw new BadPolyTypeException($type);
+            throw new BadPolyTypeException((string)$type);
         
         return $map[$type];
     }
@@ -89,7 +89,11 @@ trait TableTypedChildren
         foreach (self::GetChildMap() as $type=>$class)
         {
             // determine the type value based on the object
-            if (is_a($obj, $class)) $obj->typefield->SetValue($type);
+            if (is_a($obj, $class)) 
+            {
+                $obj->typefield->SetValue($type); 
+                if ($class !== self::class) break; 
+            }
         }
         
         return $obj;
@@ -105,7 +109,7 @@ trait TableTypedChildren
      * is fine because BaseCreate() will make sure they are set for every table.
      * After that, they can't change, and the value only matters for the top table.
      */
-    private FieldTypes\IntType $typefield;
+    private FieldTypes\IntType $typefield; // TODO not everyone wants this to be an int...
     
     /**
      * @return array<FieldTypes\BaseField> an array with the internal type field

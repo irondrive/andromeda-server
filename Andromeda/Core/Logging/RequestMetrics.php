@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
@@ -114,7 +114,7 @@ final class RequestMetrics extends BaseObject
     public static function Create(int $level, ObjectDatabase $database, ?RequestLog $reqlog,
                                   DBStats $initstat, array $actions, array $commits, DBStats $totalstat) : self
     {        
-        $obj = parent::BaseCreate($database);
+        $obj = static::BaseCreate($database);
         $obj->date_created->SetValue($database->GetTime());
         $obj->requestlog->SetObject($reqlog);
         

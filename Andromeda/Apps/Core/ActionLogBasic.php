@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;

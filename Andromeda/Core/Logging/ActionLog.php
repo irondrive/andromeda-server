@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 
@@ -90,10 +90,13 @@ class ActionLog extends BaseLog
         parent::CreateFields();
     }
 
-    /** Creates a new action log with the given input and request log */
+    /** 
+     * Creates a new action log with the given input and request log 
+     * @return static
+     */
     public static function Create(ObjectDatabase $database, RequestLog $reqlog, Input $input) : self
     {
-        $obj = parent::BaseCreate($database);
+        $obj = static::BaseCreate($database);
         
         $obj->requestlog->SetObject($reqlog);
         $obj->app->SetValue($input->GetApp());

@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 if (!class_exists('PDO')) 
     die("PHP PDO Extension Required".PHP_EOL); 
@@ -117,7 +117,7 @@ class Database
      * Creates and tests a new database config from the given user input
      * @param SafeParams $params input parameters
      * @see Database::GetInstallUsage()
-     * @throws \Throwable if the database config is not valid and PDO fails
+     * @throws DatabaseInstallException if the database config is not valid and PDO fails
      * @return ?string the database config file contents if no outfile
      */
     public static function Install(SafeParams $params) : ?string

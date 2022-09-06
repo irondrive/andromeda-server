@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 if (!function_exists('sodium_memzero')) 
     die("PHP Sodium Extension Required".PHP_EOL);

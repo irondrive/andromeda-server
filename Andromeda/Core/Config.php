@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/BaseApp.php");
 require_once(ROOT."/Core/BaseConfig.php");
@@ -55,7 +55,7 @@ final class Config extends BaseConfig
     /** Creates a new config singleton with default values */
     public static function Create(ObjectDatabase $database) : self
     {
-        return parent::BaseCreate($database);
+        return static::BaseCreate($database);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */

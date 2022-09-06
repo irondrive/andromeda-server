@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/InstallerApp.php");
@@ -85,19 +85,17 @@ final class CoreInstallApp extends InstallerApp
 
     /**
      * Creates a database config with the given input
-     * @throws DatabaseFailException if the config is invalid
      * @throws AdminRequiredException if config exists and not a privileged interface
      */
     protected function ConfigDB(SafeParams $params) : ?string
     {
-        if ($this->runner->HasDatabaseConfig() /*&&
-            !$this->runner->GetInterface()->isPrivileged()*/)
+        if ($this->runner->HasDatabaseConfig() &&
+            !$this->runner->GetInterface()->isPrivileged())
         {
             throw new AdminRequiredException();
         }
         
-        try { return Database::Install($params); }
-        catch (DatabaseException $e) { throw new DatabaseFailException($e); }
+        return Database::Install($params);
     }
     
     /** Returns true if a has a dependency on b (directly or indirectly) */

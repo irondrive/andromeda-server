@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database\FieldTypes; 
+<?php declare(strict_types=1); namespace Andromeda\Core\Database\FieldTypes; 
 
 require_once("init.php");
 

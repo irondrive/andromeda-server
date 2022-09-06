@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\IOFormat; 
+<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; 
 
 require_once("init.php");
 

@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/BaseApp.php"); 
 require_once(ROOT."/Core/Config.php"); 

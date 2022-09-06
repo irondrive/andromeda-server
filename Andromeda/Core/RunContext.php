@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/DBStats.php");
 use Andromeda\Core\Database\DBStats;
