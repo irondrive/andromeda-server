@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 
@@ -103,7 +103,7 @@ final class ErrorLog extends BaseLog
      */
     public static function Create(ObjectDatabase $database, ErrorInfo $info) : self
     {
-        $obj = parent::BaseCreate($database);
+        $obj = static::BaseCreate($database);
         
         $obj->time->SetValue($info->GetTime());
         $obj->addr->SetValue($info->GetAddr());

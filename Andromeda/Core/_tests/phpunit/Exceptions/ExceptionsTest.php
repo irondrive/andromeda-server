@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Exceptions; 
+<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; 
 
 require_once("init.php");
 

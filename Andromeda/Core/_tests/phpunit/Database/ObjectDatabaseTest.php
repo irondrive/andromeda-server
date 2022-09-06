@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; 
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; 
 
 require_once("init.php");
 
@@ -244,7 +244,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj->SetTestProp4(100); 
         $obj->SetTestProp4n(null); // set null (default!)
         $obj->DeltaTestProp4c(5); // counter
-        
+
         $database->expects($this->exactly(4))->method('write')
             ->withConsecutive(
                 [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id) ],

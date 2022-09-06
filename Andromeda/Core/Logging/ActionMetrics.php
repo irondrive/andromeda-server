@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Logging; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
 require_once(ROOT."/Core/RunContext.php"); use Andromeda\Core\RunContext;
@@ -63,7 +63,7 @@ final class ActionMetrics extends BaseObject
      */
     public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, RunContext $context) : self
     {
-        $obj = parent::BaseCreate($database);
+        $obj = static::BaseCreate($database);
         $obj->requestmet->SetObject($request);
         $obj->actionlog->SetObject($context->GetActionLog());
         

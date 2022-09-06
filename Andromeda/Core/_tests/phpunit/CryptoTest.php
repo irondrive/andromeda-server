@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core;
+<?php declare(strict_types=1); namespace Andromeda\Core;
 
 require_once("init.php");
 

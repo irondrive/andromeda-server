@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; 
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; 
 
 require_once("init.php");
 
@@ -15,7 +15,7 @@ final class EasyObject extends BaseObject
     
     public static function Create(ObjectDatabase $database) : self
     {
-        return parent::BaseCreate($database);
+        return static::BaseCreate($database);
     }
     
     private FieldTypes\NullIntType $uniqueKey;
@@ -274,7 +274,7 @@ class PolyObject5a extends PolyObject4
 
     public static function Create(ObjectDatabase $database) : self
     {
-        return self::BaseCreate($database);
+        return static::BaseCreate($database);
     }
     
     private FieldTypes\NullIntType $testprop5;

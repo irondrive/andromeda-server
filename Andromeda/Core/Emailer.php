@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Utilities.php");
@@ -103,7 +103,7 @@ final class Emailer extends BaseObject
     /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        $mailer = parent::BaseCreate($database);
+        $mailer = static::BaseCreate($database);
         
         $mailer->date_created->SetTimeNow();
         

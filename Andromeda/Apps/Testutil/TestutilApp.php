@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\BaseApp;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;

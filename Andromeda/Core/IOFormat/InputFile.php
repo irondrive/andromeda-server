@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
 /** An input file stream */
 class InputStream

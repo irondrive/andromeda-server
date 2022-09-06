@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; 
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; 
 
 require_once("init.php");
 
@@ -16,7 +16,7 @@ final class TestSingleton2 extends SingletonObject
     
     public static function Create(ObjectDatabase $database) : self 
     { 
-        return parent::BaseCreate($database); 
+        return static::BaseCreate($database); 
     }
 }
 

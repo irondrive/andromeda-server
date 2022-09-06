@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
 require_once(ROOT."/Core/BaseRunner.php"); use Andromeda\Core\BaseRunner;

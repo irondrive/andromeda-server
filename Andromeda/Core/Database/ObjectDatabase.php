@@ -1,4 +1,4 @@
-<?php namespace Andromeda\Core\Database; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/Exceptions.php");
 require_once(ROOT."/Core/Database/Database.php");
@@ -598,7 +598,8 @@ class ObjectDatabase
 
         foreach (array_reverse($fieldsByClass) as $class=>$fields)
         {
-            $columns = array(); $indexes = array();
+            $columns = array(); 
+            $indexes = array();
             $data = array(); $i = 0;
             
             foreach ($fields as $field)

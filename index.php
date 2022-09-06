@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /** 
  * This is the HTTP entry point for Andromeda/index.php
