@@ -62,7 +62,7 @@ abstract class MyObjectBase extends BaseObject
 {
     use TableLinkedChildren;
     
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array {
         return array(MyObjectChild::class); }
         
@@ -101,7 +101,7 @@ abstract class PolyObject0 extends PolyObject_
 {
     // empty, no table!
     
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         return array(PolyObject1::class); // so we can load via it
@@ -123,7 +123,7 @@ abstract class PolyObject1 extends PolyObject0
 {
     use TableLinkedChildren;
     
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         return array(27=>PolyObject2::class); // skip over PolyObject15
@@ -185,7 +185,7 @@ abstract class PolyObject2 extends PolyObject15
 {
     use TableLinkedChildren;
 
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         return array(27=>PolyObject3::class);
@@ -205,7 +205,7 @@ abstract class PolyObject3 extends PolyObject2
 {
     // does not have its own table! but is part of the loadable chain
     
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         return array(PolyObject4::class);
@@ -216,7 +216,7 @@ class PolyObject4 extends PolyObject3
 {
     use TableTypedChildren;
 
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         // includes self::class - this class is not abstract!
@@ -265,7 +265,7 @@ class PolyObject5a extends PolyObject4
 {   
     use TableTypedChildren;
     
-    /** @return ?array<class-string<self>> */
+    /** @return array<int, class-string<self>> */
     public static function GetChildMap() : ?array
     {
         // includes self::class - this class is not abstract!

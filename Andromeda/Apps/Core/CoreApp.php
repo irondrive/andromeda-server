@@ -151,7 +151,7 @@ final class CoreApp extends BaseApp
         
     /**
      * Collects usage strings from every installed app and returns them
-     * @return string[] array of possible commands
+     * @return array<string> array of possible commands
      */
     protected function GetUsages(SafeParams $params) : array
     {
@@ -250,6 +250,7 @@ final class CoreApp extends BaseApp
     /** 
      * Scans for available apps, optionally enabling all
      * @see Config::ScanApps() 
+     * @return array<string>
      */
     protected function ScanApps(SafeParams $params, bool $isAdmin) : array
     {
@@ -268,7 +269,7 @@ final class CoreApp extends BaseApp
     /**
      * Registers (enables) an app
      * @throws AdminRequiredException if not an admin
-     * @return string[] array of enabled apps (not core)
+     * @return array<string> array of enabled apps (not core)
      */
     protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -286,7 +287,7 @@ final class CoreApp extends BaseApp
     /**
      * Unregisters (disables) an app
      * @throws AdminRequiredException if not an admin
-     * @return string[] array of enabled apps (not core)
+     * @return array<string> array of enabled apps (not core)
      */
     protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -301,7 +302,7 @@ final class CoreApp extends BaseApp
     
     /**
      * Loads server config
-     * @return array Config
+     * @return array<mixed> Config
      * @see Config::GetClientObject() 
      */
     protected function GetConfig(bool $isAdmin) : array
@@ -311,7 +312,7 @@ final class CoreApp extends BaseApp
     
     /**
      * Loads server DB config
-     * @return array Database
+     * @return array<mixed> Database
      * @see Database::GetClientObject()
      */
     protected function GetDBConfig(bool $isAdmin) : array
@@ -324,7 +325,7 @@ final class CoreApp extends BaseApp
     /**
      * Sets server config
      * @throws AdminRequiredException if not an admin
-     * @return array Config
+     * @return array<mixed> Config
      * @see Config::GetClientObject()
      */
     protected function SetConfig(SafeParams $params, bool $isAdmin) : array
@@ -337,7 +338,7 @@ final class CoreApp extends BaseApp
     /**
      * Returns a list of the configured mailers
      * @throws AdminRequiredException if not an admin
-     * @return array [id:Emailer]
+     * @return array<string, array<mixed>> [id:Emailer]
      * @see Emailer::GetClientObject()
      */
     protected function GetMailers(bool $isAdmin) : array
@@ -351,7 +352,7 @@ final class CoreApp extends BaseApp
     /**
      * Creates a new emailer config
      * @throws AdminRequiredException if not an admin
-     * @return array Emailer
+     * @return array<mixed> Emailer
      * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(SafeParams $params, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : array
@@ -397,6 +398,7 @@ final class CoreApp extends BaseApp
     /**
      * Returns the server error log, possibly filtered
      * @throws AdminRequiredException if not an admin 
+     * @return array<string, array<mixed>>
      */
     protected function GetErrors(SafeParams $params, bool $isAdmin) : array
     {
@@ -421,7 +423,7 @@ final class CoreApp extends BaseApp
     /**
      * Returns all request logs matching the given input
      * @throws AdminRequiredException if not admin
-     * @return array RequestLog
+     * @return array<array<mixed>> RequestLog
      * @see RequestLog::GetFullClientObject()
      */
     protected function GetRequests(SafeParams $params, bool $isAdmin) : array
@@ -456,7 +458,7 @@ final class CoreApp extends BaseApp
     /**
      * Returns all action logs matching the given input
      * @throws AdminRequiredException if not admin
-     * @return array ActionLog
+     * @return array<array<mixed>> ActionLog
      * @see ActionLog::GetFullClientObject()
      */
     protected function GetActions(SafeParams $params, bool $isAdmin) : array

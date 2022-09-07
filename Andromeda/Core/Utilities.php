@@ -267,7 +267,7 @@ abstract class Utilities
     
     /** 
      * Returns all classes that are a $match type 
-     * @template T
+     * @template T of object
      * @param class-string<T> $match
      * @return array<class-string<T>>
      */
@@ -305,6 +305,7 @@ abstract class Utilities
 /** A class for overriding static methods for unit testing */
 class StaticWrapper
 {
+    /** @var array<string,callable> */
     private $overrides = array();
     private string $class;
     
@@ -314,14 +315,19 @@ class StaticWrapper
      * Overrides a static function on the class
      * @param string $fname name of the static function
      * @param callable $func function to replace with
-     * @return self
+     * @return $this
      */
     public function _override(string $fname, callable $func) : self
     {        
         $this->overrides[$fname] = $func; return $this;
     }
     
-    public function __call($fname, $args)
+    /** 
+     * @param string $fname
+     * @param array<mixed> $args
+     * @return mixed 
+     */
+    public function __call(string $fname, array $args)
     {
         if (array_key_exists($fname, $this->overrides))
             return $this->overrides[$fname](...$args);

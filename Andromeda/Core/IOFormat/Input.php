@@ -39,9 +39,7 @@ class Input
     { 
         if ($logger !== null && ($level = $logger->GetDetailsLevel()) > 0)
         {
-            $logref = &$logger->GetInputLogRef(); 
-            
-            $logref ??= array();
+            $logref = &$logger->GetInputLogRef();
             
             $this->params->SetLogRef($logref, $level);
         }        
@@ -53,10 +51,13 @@ class Input
     /** The inner collection of parameters to be used */
     public function GetParams() : SafeParams { return $this->params; }
 
-    /** @see Input::GetFiles() */
+    /** @var array<string, InputFile> */
     private array $files;
     
-    /** Returns the array of input files */
+    /** 
+     * Returns the array of input files
+     * @return array<string, InputFile>
+     */
     public function GetFiles() : array { return $this->files; }
 
     /**
@@ -70,12 +71,12 @@ class Input
     }
         
     /**
-     * Adds the given InputStream to the file array
+     * Adds the given InputFile to the file array
      * @param string $key param name for file
-     * @param InputStream $file input file stream
+     * @param InputFile $file input file stream
      * @return $this
      */
-    public function AddFile(string $key, InputStream $file) : self 
+    public function AddFile(string $key, InputFile $file) : self 
     {
         $this->files[$key] = $file; return $this; 
     }
@@ -84,9 +85,9 @@ class Input
      * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
      * @throws SafeParamKeyMissingException if the key does not exist
-     * @return InputStream the uploaded file
+     * @return InputFile the uploaded file
      */
-    public function GetFile(string $key) : InputStream
+    public function GetFile(string $key) : InputFile
     {
         if (!$this->HasFile($key)) 
             throw new InputFileMissingException($key);
@@ -97,22 +98,29 @@ class Input
      * Same as GetFile() but returns null rather than throwing an exception
      * @see Input::GetFile()
      */
-    public function TryGetFile(string $key) : ?InputStream
+    public function TryGetFile(string $key) : ?InputFile
     {
         if (!$this->HasFile($key)) return null;
         else return $this->files[$key];
     }
     
-    /** Constructs an input object using the data gathered from the interface, and sanitizes the app/action strings */
+    /** 
+     * Constructs an input object using the data gathered from the interface
+     * @param string $app app name to run (will be sanitized)
+     * @param string $action app action name (will be sanitized)
+     * @param ?SafeParams $params user input params
+     * @param ?array<string, InputFile> $files optional input files
+     * @param ?InputAuth $auth optional input authentication
+     */
     public function __construct(string $app, string $action, ?SafeParams $params = null, 
                                 ?array $files = null, ?InputAuth $auth = null)
     {
+        $this->app = (new SafeParam("app", strtolower($app)))->GetAlphanum();
+        $this->action = (new SafeParam("action", strtolower($action)))->GetAlphanum();
+        
         $this->params = $params ?? new SafeParams(); 
         $this->files = $files ?? array(); 
         
         $this->auth = $auth;
-
-        $this->app = (new SafeParam("app", strtolower($app)))->GetAlphanum();
-        $this->action = (new SafeParam("action", strtolower($action)))->GetAlphanum();
     }
 }

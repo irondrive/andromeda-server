@@ -79,7 +79,7 @@ abstract class BaseObject
      * @param array<string> $keys keys for this class
      * @throws NoChildTableException if no child has registered
      */
-    final protected static function AddChildUniqueKeys(array& $keymap, array $keys)
+    final protected static function AddChildUniqueKeys(array& $keymap, array $keys) : void
     {
         if (empty($keymap)) throw new NoChildTableException(static::class);
             
@@ -106,7 +106,7 @@ abstract class BaseObject
     /**
      * Given a database row, return the child class applicable
      * Only for base classes that are the final table for > 1 class (TypedChildren)
-     * @param array<string,mixed> $row row of data from the database
+     * @param array<string,scalar> $row row of data from the database
      * @return class-string<self> child class of row
      */
     public static function GetRowClass(array $row) : string { 
@@ -155,7 +155,7 @@ abstract class BaseObject
     /** @var array<string, FieldTypes\BaseField> */
     private array $fieldsByName = array();
     
-    /** @var array<class-string<self>, FieldTypes\BaseField[]> ordered derived->base */
+    /** @var array<class-string<self>, array<FieldTypes\BaseField>> ordered derived->base */
     private array $fieldsByClass = array();
     
     /** true if the object was just created */
@@ -176,7 +176,7 @@ abstract class BaseObject
     /**
      * Construct an object from loaded database data
      * @param ObjectDatabase $database database
-     * @param array<string, mixed> $data db columns
+     * @param array<string, ?scalar> $data db columns
      */
     public function __construct(ObjectDatabase $database, array $data)
     {

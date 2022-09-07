@@ -37,7 +37,10 @@ class CLI extends IOInterface
         if (mb_substr($str,0,2) !== "--") return null; else return mb_substr($str,2);
     }
     
-    /** Returns the next args value (or null if not found) and increments $i */
+    /** 
+     * Returns the next args value (or null if not found) and increments $i
+     * @param array<int,string> $args
+     */
     private static function getNextValue(array $args, int &$i) : ?string
     {
         return (isset($args[$i+1]) && !self::getKey($args[$i+1])) ? $args[++$i] : null;
@@ -175,7 +178,10 @@ class CLI extends IOInterface
         }, $lines);
     }
     
-    /** Fetches an Input object by reading it from the command line */
+    /** 
+     * Fetches an Input object by reading it from the command line 
+     * @param array<int,string> $argv
+     */
     private function GetInput(array $argv) : Input
     {
         if (count($argv) < 2) throw new IncorrectCLIUsageException();
@@ -254,7 +260,7 @@ class CLI extends IOInterface
         return new Input($app, $action, $params, $files);
     }
     
-    public function FinalOutput(Output $output)
+    public function FinalOutput(Output $output) : void
     {
         $multi = $this->isMultiOutput();
         

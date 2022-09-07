@@ -93,6 +93,7 @@ abstract class IOInterface
     /** Sets the output mode to the given mode or null (none) - NOT USED in "multi-output" mode! */
     public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
     
+    /** @var array<OutputHandler> */
     private $retfuncs = array();
     private int $numretfuncs = 0;
     
@@ -154,5 +155,5 @@ abstract class IOInterface
     }
     
     /** Tells the interface to print its final output and exit */
-    public abstract function FinalOutput(Output $output);
+    public abstract function FinalOutput(Output $output) : void;
 }

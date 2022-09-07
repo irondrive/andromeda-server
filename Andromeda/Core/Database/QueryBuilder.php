@@ -8,7 +8,7 @@ class QueryBuilder
     /** @var array<string, scalar> variables to be substituted in the query */
     private array $data = array();
 
-    /** @see QueryBuilder::$data */
+    /** @return array<string, scalar> */
     public function GetData() : array { return $this->data; }
     
     /** Returns the compiled query as a string */
@@ -40,6 +40,7 @@ class QueryBuilder
     public function __toString() : string { return $this->GetText(); }
     
     private ?string $fromalias = null;
+    /** @var array<string> */
     private array $joins = array();
     private ?string $where = null;
     private ?string $orderby = null;

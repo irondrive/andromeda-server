@@ -54,8 +54,12 @@ class InstallRunner extends BaseRunner
      */
     public function RequireDatabase() : ObjectDatabase
     {
-        if ($this->database === null) throw $this->dbexc; 
-        else return $this->database;
+        if ($this->database === null) 
+        {
+            // ASSERT: dbexc XOR database are null
+            assert($this->dbexc !== null); throw $this->dbexc; 
+        }
+        return $this->database;
     }
 
     /**

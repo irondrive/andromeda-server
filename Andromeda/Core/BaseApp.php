@@ -51,8 +51,8 @@ abstract class BaseApp
     public function getLogClass() : ?string { return null; }
 
     /** Tells the app to commit any changes made outside the database */
-    public function commit() { }
+    public function commit() : void { }
     
     /** Tells the app to rollback any changes made outside the database */
-    public function rollback() { }
+    public function rollback() : void { }
 }

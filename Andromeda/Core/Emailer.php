@@ -97,7 +97,10 @@ final class Emailer extends BaseObject
     /** Returns a string with the CLI usage for creating an emailer */
     public static function GetCreateUsage() : string { return "--type ".implode('|',array_keys(self::MAIL_TYPES))." --from_address email [--from_name ?name] [--use_reply ?bool]"; }
     
-    /** Returns a array of strings with the CLI usage for each specific driver */
+    /** 
+     * Returns a array of strings with the CLI usage for each specific driver
+     * @return array<string>
+     */
     public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port ?uint16] [--proto ?ssl|tls]) | --hosts json[]) [--username ?utf8] [--password ?raw]"); }
     
     /** Creates a new email backend in the database with the given input (see CLI usage) */
@@ -136,7 +139,10 @@ final class Emailer extends BaseObject
         return $mailer;
     }
     
-    /** Returns all available Emailer objects */
+    /** 
+     * Returns all available Emailer objects 
+     * @return array<string, static>
+     */
     public static function LoadAll(ObjectDatabase $database) : array 
     { 
         return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query

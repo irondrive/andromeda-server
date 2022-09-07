@@ -19,7 +19,10 @@ class SafeParam
     /** @var ?non-empty-string param value */
     private ?string $value;
     
-    /** Construct a new SafeParam with the given key and value */
+    /** 
+     * Construct a new SafeParam with the given key and value
+     * @throws SafeParamInvalidException if the key name is invalid
+     */
     public function __construct(string $key, ?string $value)
     {
         if (empty($key) || !preg_match("%^[a-zA-Z0-9_.]+$%", $key))

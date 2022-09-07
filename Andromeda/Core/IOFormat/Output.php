@@ -14,11 +14,12 @@ class Output
 {
     private bool $ok; 
     private int $code;
-    
     private string $message;
+    /** @var mixed */
     private $appdata; 
-    
-    private ?array $metrics = null; 
+    /** @var ?array<mixed> */
+    private ?array $metrics = null;
+    /** @var ?array<mixed> */
     private ?array $debug = null;
     
     /** Returns whether or not the request succeeded */
@@ -30,15 +31,23 @@ class Output
     /** Returns the error message string (only if not isOK) */
     public function GetMessage() : string { return $this->message; }
     
-    /** Returns the response body to be returned (only if isOK) */
+    /** 
+     * Returns the response body to be returned (only if isOK) 
+     * @return mixed
+     */
     public function GetAppdata() { return $this->appdata; }
     
-    /** Sets performance metrics to be returned */
-    public function SetMetrics(?array $metrics) : self { $this->metrics = $metrics; return $this; }
+    /** 
+     * Sets performance metrics to be returned
+     * @param ?array<mixed> $metrics 
+     * @return $this
+     */
+    public function SetMetrics(?array $metrics) : self { 
+        $this->metrics = $metrics; return $this; }
     
     /** 
      * Returns the Output object as a client array 
-     * @return array if success: `{ok:true, code:int, appdata:mixed}` \
+     * @return array<mixed> if success: `{ok:true, code:int, appdata:mixed}` \
          if failure: `{ok:false, code:int, message:string}`
      */
     public function GetAsArray() : array 
@@ -81,7 +90,10 @@ class Output
         $this->code = $code;
     }
     
-    /** Constructs an Output object representing a success response */
+    /** 
+     * Constructs an Output object representing a success response 
+     * @param array<mixed> $appdata
+     */
     public static function Success(array $appdata) : Output
     {
         // if we only ran a single input, make the output array be that result
@@ -93,7 +105,10 @@ class Output
         return $output;
     }
     
-    /** Constructs an Output object representing a client error, showing the exception and possibly extra debug */
+    /** 
+     * Constructs an Output object representing a client error, showing the exception and possibly extra debug 
+     * @param ?array<mixed> $debug
+     */
     public static function ClientException(Exceptions\ClientException $e, ?array $debug = null) : Output
     {
         $output = new Output(false, $e->getCode());
@@ -105,8 +120,11 @@ class Output
         return $output;
     }
     
-    /** Constructs an Output object representing a non-client error, possibly with debug */
-    public static function Exception(?array $debug = null) : Output
+    /** 
+     * Constructs an Output object representing a non-client error, possibly with debug 
+     * @param ?array<mixed> $debug
+     */
+    public static function ServerException(?array $debug = null) : Output
     {
         // hide the code/message by default
         $output = new Output(false, 500);

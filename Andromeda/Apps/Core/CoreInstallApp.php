@@ -5,8 +5,7 @@ require_once(ROOT."/Core/InstallerApp.php");
 use Andromeda\Core\{Config, InstallerApp};
 
 require_once(ROOT."/Core/Database/Database.php");
-require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{Database, DatabaseException};
+use Andromeda\Core\Database\Database;
 
 require_once(ROOT."/Core/IOFormat/Input.php");
 require_once(ROOT."/Core/IOFormat/SafeParams.php");
@@ -65,7 +64,7 @@ final class CoreInstallApp extends InstallerApp
 
     /**
      * Collects usage strings from every installed app and returns them
-     * @return string[] array of possible commands
+     * @return array<string> array of possible commands
      */
     protected function GetUsages(SafeParams $params) : array
     {
@@ -98,16 +97,19 @@ final class CoreInstallApp extends InstallerApp
         return Database::Install($params);
     }
     
-    /** Returns true if a has a dependency on b (directly or indirectly) */
-    public static function HasDependency(array $installers, InstallerApp $a, InstallerApp $b) : bool
+    /** 
+     * Returns true if a has a dependency on b (directly or indirectly)
+     * @param array<string, InstallerApp> $insts
+     */
+    public static function HasDependency(array $insts, InstallerApp $a, InstallerApp $b) : bool
     {
         $adeps = $a->getDependencies();
         if (in_array($b->getName(), $adeps)) return true;
         
         foreach ($adeps as $adep)
         {
-            $rdep = $installers[$adep] ?? array();
-            if (self::HasDependency($installers, $rdep, $b)) return true;
+            $rdep = $insts[$adep] ?? array();
+            if (self::HasDependency($insts, $rdep, $b)) return true;
         }
         
         return false;
@@ -128,7 +130,7 @@ final class CoreInstallApp extends InstallerApp
     
     /**
      * Installs all available apps (including core)
-     * @return array map of installed apps to their install retval
+     * @return array<string, mixed> map of installed apps to their install retval
      */
     protected function InstallAll(SafeParams $params) : array
     {
@@ -148,7 +150,7 @@ final class CoreInstallApp extends InstallerApp
     
     /**
      * Upgrades all installed apps (including core)
-     * @return array map of upgraded apps to their upgrade retval
+     * @return array<string, mixed> map of upgraded apps to their upgrade retval
      */
     protected function UpgradeAll(SafeParams $params) : array
     {

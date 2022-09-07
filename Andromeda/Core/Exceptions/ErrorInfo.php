@@ -30,17 +30,17 @@ class ErrorInfo
     private string $file;
     /** the error message */
     private string $message;
-    /** a basic backtrace */
+    /** @var array<string> a basic backtrace */
     private array $trace_basic;
-    /** full backtrace including all arguments */
+    /** @var ?array<mixed> full backtrace including all arguments */
     private ?array $trace_full = null;
-    /** objects in memory in the database */
+    /** @var ?array<mixed> objects in memory in the database */
     private ?array $objects = null;
-    /** db queries that were performed */
+    /** @var ?array<mixed> db queries that were performed */
     private ?array $queries = null;
-    /** all client input parameters */
+    /** @var ?array<mixed> all client input parameters */
     private ?array $params = null;
-    /** the custom API log */
+    /** @var ?array<mixed> the custom API log */
     private ?array $hints = null;
     
     /** Return the time of the error */
@@ -59,17 +59,35 @@ class ErrorInfo
     public function GetFile() : string          { return $this->file; }
     /** Return the error message */
     public function GetMessage() : string       { return $this->message; }
-    /** Return the basic backtrace */
+    /** 
+     * Return the basic backtrace
+     * @return array<string>
+     */
     public function GetTraceBasic() : array     { return $this->trace_basic; }
-    /** Return the full backtrace including arguments if logged */
+    /** 
+     * Return the full backtrace including arguments if logged
+     * @return array<mixed>
+     */
     public function TryGetTraceFull() : ?array  { return $this->trace_full; }
-    /** Return the objects in memory in the database if logged */
+    /** 
+     * Return the objects in memory in the database if logged 
+     * @return array<mixed>
+     */
     public function TryGetObjects() : ?array    { return $this->objects; }
-    /** Return the db queries that were performed, if logged */
+    /** 
+     * Return the db queries that were performed, if logged 
+     * @return array<mixed>
+     */
     public function TryGetQueries() : ?array    { return $this->queries; }
-    /** Return the client input parameters, if logged */
+    /** 
+     * Return the client input parameters, if logged 
+     * @return array<mixed>
+     */
     public function TryGetParams() : ?array     { return $this->params; }
-    /** Return the custom API log hints, if logged */
+    /** 
+     * Return the custom API log hints, if logged 
+     * @return array<mixed>
+     */
     public function TryGetHints() : ?array      { return $this->hints; }
     
     /** Reload the debug hints from the error manager */
@@ -88,8 +106,7 @@ class ErrorInfo
      * @param IOInterface $iface the interface of the request
      * @param ?BaseRunner $runner active app runner or null
      * @param ?ObjectDatabase $db object database if available
-     * @param ?array $debuglog extra log info to log if wanted
-     * @return self new error info entry object
+     * @param ?array<mixed> $debuglog extra log info to log if wanted
      */
     public function __construct(int $level, \Throwable $e, IOInterface $iface,
         ?BaseRunner $runner, ?ObjectDatabase $db, ?array $debuglog)
@@ -129,8 +146,7 @@ class ErrorInfo
         
         if ($sensitive && $input !== null)
         {
-            $params = $input->GetParams()->GetClientObject();
-            $this->params = Utilities::arrayStrings($params);
+            $this->params = $input->GetParams()->GetClientObject();
         }
         
         $this->trace_basic = explode("\n",$e->getTraceAsString());
