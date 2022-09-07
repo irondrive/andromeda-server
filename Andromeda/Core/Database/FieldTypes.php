@@ -88,7 +88,7 @@ abstract class BaseField
     
     /**
      * Initializes the field's value from the DB
-     * @param mixed $value database value
+     * @param ?scalar $value database value
      * @return $this
      */
     public abstract function InitDBValue($value);
@@ -124,7 +124,10 @@ abstract class BaseField
         return $this->database->GetInternal()->DataAlwaysStrings();
     }
     
-    /** Gets a type mismatch exception for the given value */
+    /** 
+     * Gets a type mismatch exception for the given value 
+     * @param scalar|object $value
+     */
     protected function GetTypeMismatchException($value) : FieldDataTypeMismatch
     {
         return new FieldDataTypeMismatch($this->name.' '.

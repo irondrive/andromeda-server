@@ -27,7 +27,8 @@ class ErrorManager
     private ?BaseRunner $runner = null;
     private ?ApiPackage $apipack = null;
     
-    private $isGlobal = false;
+    /** true if the global php error handlers are set */
+    private bool $isGlobal = false;
     
     /** 
      * Creates a new ErrorManager instance
@@ -146,7 +147,7 @@ class ErrorManager
             }
         }
         
-        return Output::Exception($debug);
+        return Output::ServerException($debug);
     }
 
     /** if false, the file-based log encountered an error on the last entry */
@@ -212,12 +213,19 @@ class ErrorManager
         return $errinfo;
     }
     
+    /** @var array<scalar|array<scalar>> */
     private array $debughints = array();
     
-    /** Returns the internal supplemental debug log */
+    /** 
+     * Returns the internal supplemental debug log 
+     * @return array<scalar|array<scalar>>
+     */
     public function GetDebugHints() : array { return $this->debughints; }
     
-    /** Adds an entry to the custom debug log, saved with exceptions */
+    /** 
+     * Adds an entry to the custom debug log, saved with exceptions 
+     * @param scalar|array<scalar> $data
+     */
     public function LogDebugHint($data) : self { $this->debughints[] = $data; return $this; }
     
     /** Creates an exception and logs it to the main error log (to get a backtrace) */
@@ -228,7 +236,12 @@ class ErrorManager
         return $this->LogDebugHint($trace); 
     }
     
-    /** Runs the given $func in try/catch and logs if exception */
+    /** 
+     * Runs the given $func in try/catch and logs if exception 
+     * @template T
+     * @param callable():T $func
+     * @return T|void
+     */
     public function LoggedTry(callable $func)
     {
         try { return $func(); } catch (\Throwable $e) { $this->LogException($e); }

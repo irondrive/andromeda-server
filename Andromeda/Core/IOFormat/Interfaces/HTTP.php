@@ -84,6 +84,9 @@ class HTTP extends IOInterface
      * App and Action must be part of $_GET, everything else
      * can be interchangeably in $_GET or $_POST - except
      * 'password' and 'auth_' which cannot be in $_GET
+     * @param array<string, scalar> $get
+     * @param array<string, mixed> $files
+     * @param array<string, scalar> $request
      */
     private function GetInput(array $get, array $files, array $request) : Input
     {
@@ -143,7 +146,7 @@ class HTTP extends IOInterface
         return parent::UserOutput($output);
     }
     
-    public function FinalOutput(Output $output)
+    public function FinalOutput(Output $output) : void
     {
         $this->InitOutput($output);
         
@@ -214,7 +217,7 @@ class HTTP extends IOInterface
      * @param string $url the base URL of the API
      * @param Input $input the input describing the request
      * @throws RemoteInvalidException if decoding the response fails
-     * @return array the decoded remote response
+     * @return array<mixed> the decoded remote response
      */
     public static function RemoteRequest(string $url, Input $input) : array
     {
@@ -230,7 +233,7 @@ class HTTP extends IOInterface
     /**
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
-     * @param array $post array of data to place in the POST body
+     * @param array<string, scalar> $post array of data to place in the POST body
      * @return ?string the remote response
      */
     public static function HTTPPost(string $url, array $post) : ?string

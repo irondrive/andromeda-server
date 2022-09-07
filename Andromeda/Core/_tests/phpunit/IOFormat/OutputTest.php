@@ -55,7 +55,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testServerException() : void
     {
-        $output = Output::Exception(array('mydebug'))->SetMetrics(array('mymetrics'));
+        $output = Output::ServerException(array('mydebug'))->SetMetrics(array('mymetrics'));
         
         $this->assertFalse($output->isOK());
         
@@ -76,8 +76,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $v = array('mykey'=>'myval'); $this->assertSame(Output::Success(array($v))->GetAsString(), print_r($v,true));
         $this->assertSame(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString(), null);
         
-        $this->assertSame(Output::Exception()->GetAsString(), 'SERVER_ERROR');
-        $this->assertSame(Output::Exception(array('mydebug'))->GetAsString(), null);
+        $this->assertSame(Output::ServerException()->GetAsString(), 'SERVER_ERROR');
+        $this->assertSame(Output::ServerException(array('mydebug'))->GetAsString(), null);
     }
     
     public function testParseArrayGood() : void

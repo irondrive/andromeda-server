@@ -455,7 +455,7 @@ class ObjectDatabase
      * Constructs a new object from a row if not already loaded
      * @template T of BaseObject
      * @param class-string<T> $class final row class to instantiate
-     * @param array<mixed> $row row of data from DB
+     * @param array<string, ?scalar> $row row of data from DB
      * @param bool $upcast if true, upcast rows before constructing
      * @throws ObjectTypeException if already loaded a different type
      * @return T instantiated object
@@ -531,7 +531,7 @@ class ObjectDatabase
     /**
      * Updates the given object in the database
      * @param BaseObject $object object to update
-     * @param array<class-string<BaseObject>, FieldTypes\BaseField[]> $fieldsByClass 
+     * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
         fields to save of object for each table class, order derived->base (modified only)
      * @throws UpdateFailedException if the update row fails
      * @return $this
@@ -584,7 +584,7 @@ class ObjectDatabase
     /**
      * Inserts the given object to the database
      * @param BaseObject $object object to insert
-     * @param array<class-string<BaseObject>, FieldTypes\BaseField[]> $fieldsByClass 
+     * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
           fields to save of object for each table class, order derived->base (ALL)
      * @throws InsertFailedException if the insert row fails
      * @return $this
@@ -851,7 +851,7 @@ class ObjectDatabase
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
      * @param string $validx index value of the key field
-     * @param T[] $objs array of objects to set
+     * @param array<T> $objs array of objects to set
      * @param ?class-string<T> $bclass base class for property
      */
     private function SetNonUniqueKeyObjects(string $class, string $key, string $validx, array $objs, ?string $bclass = null) : void
@@ -996,7 +996,7 @@ class ObjectDatabase
     /**
      * Adds the given object's fields to any existing key caches
      * @param BaseObject $object object being created
-     * @param FieldTypes\BaseField[] $fields field values
+     * @param array<FieldTypes\BaseField> $fields field values
      */
     private function SetObjectKeyFields(BaseObject $object, array $fields) : void
     {
@@ -1056,7 +1056,7 @@ class ObjectDatabase
      * Removes the fields for the given object from any existing key-based caches
      * Uses the cached "old-value" for the fields rather than their current value
      * @param BaseObject $object object being created
-     * @param FieldTypes\BaseField[] $fields field values
+     * @param array<FieldTypes\BaseField> $fields field values
      */
     private function UnsetObjectKeyFields(BaseObject $object, array $fields) : void
     {

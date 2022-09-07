@@ -23,7 +23,7 @@ class ActionLog extends BaseLog
 {
     use HasTable;
 
-    /** @return ?array<class-string<self>> */
+    /** @return array<string, class-string<self>> */
     public static function GetChildMap() : ?array 
     {
         $map = array("" => self::class); 
@@ -69,9 +69,9 @@ class ActionLog extends BaseLog
     /** Optional app-specific details if no subtable */
     private FieldTypes\NullJsonArray $details;
     
-    /** Temporary array of logged inputs to be saved */
+    /** @var array<string, mixed> Temporary array of logged inputs to be saved */
     private array $inputs_tmp;
-    /** Temporary array of logged details to be saved */
+    /** @var array<string, mixed> Temporary array of logged details to be saved */
     private array $details_tmp;
     
     protected function CreateFields() : void
@@ -149,8 +149,11 @@ class ActionLog extends BaseLog
         return $this;
     }
 
-    /** Returns a direct reference to the inputs log array */
-    public function &GetInputLogRef() : ?array
+    /** 
+     * Returns a direct reference to the inputs log array 
+     * @return array<string, mixed>
+     */
+    public function &GetInputLogRef() : array
     {
         $this->inputs_tmp ??= array();
         return $this->inputs_tmp;
@@ -261,7 +264,7 @@ class ActionLog extends BaseLog
      * Returns the printable client object of this action log + its request
      * @see RequestLog::GetClientObject
      * @see ActionLog::GetClientObject
-     * @return array ActionLog + `{request:RequestLog}`
+     * @return array<mixed> ActionLog + `{request:RequestLog}`
      */
     public function GetFullClientObject(bool $expand = false) : array
     {

@@ -31,7 +31,10 @@ abstract class BaseConfig extends SingletonObject
         parent::CreateFields();
     }
     
-    /** Create a new config singleton in the given database */
+    /** 
+     * Create a new config singleton in the given database 
+     * @return static
+     */
     public abstract static function Create(ObjectDatabase $database);
 
     /** 

@@ -10,7 +10,7 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
 require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
 require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
 require_once(ROOT."/Core/IOFormat/OutputHandler.php"); use Andromeda\Core\IOFormat\OutputHandler;
-require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputStream;
+require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputFile;
 
 /**
  * Utility app for the python test framework
@@ -64,7 +64,7 @@ class TestUtilApp extends BaseApp
     {
         $params = $input->GetParams()->GetClientObject();
         
-        $files = array_map(function(InputStream $file){ 
+        $files = array_map(function(InputFile $file){ 
             return $file->GetData(); }, $input->GetFiles());
         
         return array('params'=>$params, 'files'=>$files);
