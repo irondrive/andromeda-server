@@ -8,7 +8,10 @@ require_once(ROOT."/Core/Database/BaseObject.php");
 /** A class with a constant ID so there can only exist one instance */
 abstract class SingletonObject extends BaseObject
 {
-    /** @var array<string, static> array of instances by class and database ID */
+    /** 
+     * array of instances by class and database ID 
+     * @var array<string, static>
+     */
     private static $instances = array();
     
     protected static function GenerateID() : string { return 'A'; }

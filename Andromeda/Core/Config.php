@@ -29,7 +29,10 @@ final class Config extends BaseConfig
     private FieldTypes\BoolType $enabled;
     /** True if outgoing email is allowed */
     private FieldTypes\BoolType $email;
-    /** List of installed+enabled apps */
+    /** 
+     * List of installed+enabled apps 
+     * @var FieldTypes\JsonArray<array<string>>
+     */
     private FieldTypes\JsonArray $apps;
     /** True if requests should be logged to DB */
     private FieldTypes\BoolType $requestlog_db;
@@ -69,22 +72,22 @@ final class Config extends BaseConfig
     {
         $fields = array();
         
-        $this->datadir = $fields[] =            new FieldTypes\NullStringType('datadir');
-        $this->read_only = $fields[] =          new FieldTypes\BoolType('read_only',false, false);
-        $this->enabled = $fields[] =            new FieldTypes\BoolType('enabled',false, true);
-        $this->email = $fields[] =              new FieldTypes\BoolType('email',false, true);
-        $this->apps = $fields[] =               new FieldTypes\JsonArray('apps',false);
+        $fields[] = $this->datadir =            new FieldTypes\NullStringType('datadir');
+        $fields[] = $this->read_only =          new FieldTypes\BoolType('read_only',false, false);
+        $fields[] = $this->enabled =            new FieldTypes\BoolType('enabled',false, true);
+        $fields[] = $this->email =              new FieldTypes\BoolType('email',false, true);
+        $fields[] = $this->apps =               new FieldTypes\JsonArray('apps',false);
         
-        $this->requestlog_db = $fields[] =      new FieldTypes\BoolType('requestlog_db',false, false);
-        $this->requestlog_file  = $fields[] =   new FieldTypes\BoolType('requestlog_file',false, false);
-        $this->requestlog_details = $fields[] = new FieldTypes\IntType ('requestlog_details',false, self::RQLOG_DETAILS_BASIC);
-        $this->debug = $fields[] =              new FieldTypes\IntType ('debug',false, self::ERRLOG_ERRORS);
-        $this->debug_http = $fields[] =         new FieldTypes\BoolType('debug_http',false, false);
-        $this->debug_dblog = $fields[] =        new FieldTypes\BoolType('debug_dblog',false, true);
-        $this->debug_filelog = $fields[] =      new FieldTypes\BoolType('debug_filelog',false, false);
-        $this->metrics = $fields[] =            new FieldTypes\IntType ('metrics',false, 0);
-        $this->metrics_dblog = $fields[] =      new FieldTypes\BoolType('metrics_dblog',false, false);
-        $this->metrics_filelog = $fields[] =    new FieldTypes\BoolType('metrics_filelog',false, false);
+        $fields[] = $this->requestlog_db =      new FieldTypes\BoolType('requestlog_db',false, false);
+        $fields[] = $this->requestlog_file  =   new FieldTypes\BoolType('requestlog_file',false, false);
+        $fields[] = $this->requestlog_details = new FieldTypes\IntType ('requestlog_details',false, self::RQLOG_DETAILS_BASIC);
+        $fields[] = $this->debug =              new FieldTypes\IntType ('debug',false, self::ERRLOG_ERRORS);
+        $fields[] = $this->debug_http =         new FieldTypes\BoolType('debug_http',false, false);
+        $fields[] = $this->debug_dblog =        new FieldTypes\BoolType('debug_dblog',false, true);
+        $fields[] = $this->debug_filelog =      new FieldTypes\BoolType('debug_filelog',false, false);
+        $fields[] = $this->metrics =            new FieldTypes\IntType ('metrics',false, 0);
+        $fields[] = $this->metrics_dblog =      new FieldTypes\BoolType('metrics_dblog',false, false);
+        $fields[] = $this->metrics_filelog =    new FieldTypes\BoolType('metrics_filelog',false, false);
         
         $this->RegisterFields($fields, self::class);
         

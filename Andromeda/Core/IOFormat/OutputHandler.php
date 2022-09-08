@@ -11,7 +11,7 @@ class OutputHandler
     private $output;
     
     /**
-     * @param callable() : ?int $getbytes get the number of bytes that will be output
+     * @param callable() : ?int $getbytes get the number of bytes that will be output (can be 0) or null if no output
      * @param callable(Output) : void $output function to display custom output
      */
     public function __construct(callable $getbytes, callable $output)

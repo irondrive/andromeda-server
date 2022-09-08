@@ -108,8 +108,8 @@ final class CoreInstallApp extends InstallerApp
         
         foreach ($adeps as $adep)
         {
-            $rdep = $insts[$adep] ?? array();
-            if (self::HasDependency($insts, $rdep, $b)) return true;
+            if (array_key_exists($adep, $insts) && 
+                self::HasDependency($insts, $insts[$adep], $b)) return true;
         }
         
         return false;

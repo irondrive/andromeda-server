@@ -63,7 +63,10 @@ final class Emailer extends BaseObject
     private FieldTypes\Timestamp $date_created;
     /** Type of emailer (see usage) */
     private FieldTypes\IntType $type;
-    /** Array of hostnames to try, in order */
+    /** 
+     * Array of hostnames to try, in order 
+     * @var FieldTypes\NullJsonArray<array<string>>
+     */
     private FieldTypes\NullJsonArray $hosts;
     /** Optional SMTP username */
     private FieldTypes\NullStringType $username;
@@ -80,14 +83,14 @@ final class Emailer extends BaseObject
     {
         $fields = array();
         
-        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
-        $this->type = $fields[] =         new FieldTypes\IntType('type');
-        $this->hosts = $fields[] =        new FieldTypes\NullJsonArray('hosts');
-        $this->username = $fields[] =     new FieldTypes\NullStringType('username');
-        $this->password = $fields[] =     new FieldTypes\NullStringType('password');
-        $this->from_address = $fields[] = new FieldTypes\StringType('from_address');
-        $this->from_name = $fields[] =    new FieldTypes\NullStringType('from_name');
-        $this->use_reply = $fields[] =    new FieldTypes\NullBoolType('use_reply');
+        $fields[] = $this->date_created = new FieldTypes\Timestamp('date_created');
+        $fields[] = $this->type =         new FieldTypes\IntType('type');
+        $fields[] = $this->hosts =        new FieldTypes\NullJsonArray('hosts');
+        $fields[] = $this->username =     new FieldTypes\NullStringType('username');
+        $fields[] = $this->password =     new FieldTypes\NullStringType('password');
+        $fields[] = $this->from_address = new FieldTypes\StringType('from_address');
+        $fields[] = $this->from_name =    new FieldTypes\NullStringType('from_name');
+        $fields[] = $this->use_reply =    new FieldTypes\NullBoolType('use_reply');
         
         $this->RegisterFields($fields, self::class);
         

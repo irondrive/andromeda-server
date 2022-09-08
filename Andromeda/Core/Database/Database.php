@@ -35,7 +35,10 @@ class Database
     /** a unique instance ID */
     private string $instanceId;
     
-    /** @var array<string, mixed> $config associative array of config for connecting PDO */
+    /** 
+     * $config associative array of config for connecting PDO 
+     * @var array<string, mixed>
+     */
     private array $config;
     
     /** The enum value of the driver being used */
@@ -44,10 +47,16 @@ class Database
     /** if true, don't allow writes */
     private bool $read_only = false;
     
-    /** @var array<DBStats> the stack of DB statistics contexts, for nested API->Run() calls */
+    /** 
+     * the stack of DB statistics contexts, for nested API->Run() calls 
+     * @var array<DBStats>
+     */
     private array $stats_stack = array();
     
-    /** @var array<mixed> global history of SQL queries sent to the DB (not a stack), possibly with errors */
+    /** 
+     * global history of SQL queries sent to the DB (not a stack), possibly with errors 
+     * @var array<mixed>
+     */
     private array $queries = array();
     
     /** the default path for storing the config file */
@@ -330,7 +339,7 @@ class Database
     /**
      * Sends an SQL read query down to the database
      * @param string $sql the SQL query string, with placeholder data values
-     * @param ?array<string, ?scalar> $data associative array of data replacements for the prepared statement
+     * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return array<array<string, ?scalar>> an associative array of the query results
      * @throws DatabaseFetchException if the row fetch fails
      * @see Database::query()
@@ -355,7 +364,7 @@ class Database
     /**
      * Sends an SQL write query down to the database
      * @param string $sql the SQL query string, with placeholder data values
-     * @param ?array<string, ?scalar> $data associative array of data replacements for the prepared statement
+     * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return int count of matched objects (not count of modified!)
      * @throws DatabaseReadOnlyException if the DB is read-only
      * @see Database::query()
@@ -378,7 +387,7 @@ class Database
     /**
      * Sends an SQL read/write query down to the database
      * @param string $sql the SQL query string, with placeholder data values
-     * @param ?array<string, ?scalar> $data associative array of data replacements for the prepared statement
+     * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return array<array<string, ?scalar>> an associative array of the query results
      * @throws DatabaseReadOnlyException if the DB is read-only
      * @throws DatabaseFetchException if the row fetch fails
@@ -475,13 +484,13 @@ class Database
         {            
             foreach ($data as $key=>$val)
             {
-                try { Utilities::JSONEncode(array($val)); }
-                catch (JSONException $e) { 
-                    $val = 'b64:'.base64_encode($val); }
-                
-                if ($val !== null && is_string($val)) 
+                if (is_string($val))
+                {
+                    if (!Utilities::isUTF8($val))
+                        $val = 'b64:('.base64_encode((string)$val).')';
                     $val = str_replace('\\','\\\\',"'$val'");
-                
+                }
+
                 $sql = Utilities::replace_first(":$key", (string)$val, $sql);
             }
         }

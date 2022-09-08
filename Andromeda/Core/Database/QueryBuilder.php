@@ -5,7 +5,10 @@ require_once(ROOT."/Core/Database/ObjectDatabase.php");
 /** Minimalistic class for building prepared post-FROM SQL query strings */
 class QueryBuilder
 {
-    /** @var array<string, scalar> variables to be substituted in the query */
+    /** 
+     * variables to be substituted in the query
+     * @var array<string, scalar>
+     */
     private array $data = array();
 
     /** @return array<string, scalar> */

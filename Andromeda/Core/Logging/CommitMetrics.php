@@ -17,7 +17,10 @@ final class CommitMetrics extends BaseObject
     
     protected const IDLength = 20;
     
-    /** @var FieldTypes\ObjectRefT<RequestMetrics> The request metrics object for this commit */
+    /** 
+     * The request metrics object for this commit 
+     * @var FieldTypes\ObjectRefT<RequestMetrics>
+     */
     private FieldTypes\ObjectRefT $requestmet;
 
     protected function CreateFields() : void

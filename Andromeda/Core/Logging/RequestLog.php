@@ -33,7 +33,10 @@ final class RequestLog extends BaseLog
     
     private bool $writtenToFile = false;
     
-    /** @var array<ActionLog> action metrics logged this request */
+    /** 
+     * action metrics logged this request
+     * @var array<ActionLog>
+     */
     private array $actions;
     
     protected function CreateFields() : void

@@ -30,17 +30,35 @@ class ErrorInfo
     private string $file;
     /** the error message */
     private string $message;
-    /** @var array<string> a basic backtrace */
+    /** 
+     * a basic backtrace 
+     * @var array<int,string>
+     */
     private array $trace_basic;
-    /** @var ?array<mixed> full backtrace including all arguments */
+    /** 
+     * full backtrace including all arguments 
+     * @var ?array<int,array<string,mixed>>
+     */
     private ?array $trace_full = null;
-    /** @var ?array<mixed> objects in memory in the database */
+    /** 
+     * objects in memory in the database 
+     * @var ?array<mixed>
+     */
     private ?array $objects = null;
-    /** @var ?array<mixed> db queries that were performed */
+    /** 
+     * db queries that were performed 
+     * @var ?array<mixed>
+     */
     private ?array $queries = null;
-    /** @var ?array<mixed> all client input parameters */
+    /** 
+     * all client input parameters 
+     * @var ?array<mixed>
+     */
     private ?array $params = null;
-    /** @var ?array<mixed> the custom API log */
+    /** 
+     * the custom API log 
+     * @var ?array<mixed>
+     */
     private ?array $hints = null;
     
     /** Return the time of the error */
@@ -179,6 +197,9 @@ class ErrorInfo
      */
     public function GetClientObject(?int $level = null) : array
     {
+        if ($level !== null && $level > $this->level)
+            throw new LevelUnavailableException("$level > ".$this->level);
+        
         $retval = array(
             'time' => $this->time,
             'addr' => $this->addr,
@@ -191,17 +212,20 @@ class ErrorInfo
             'trace_basic' => $this->trace_basic
         );
         
-        $details = $this->level >= Config::ERRLOG_DETAILS;
-        $sensitive = $this->level >= Config::ERRLOG_SENSITIVE;
+        $details = $level === null || $level >= Config::ERRLOG_DETAILS;
+        $sensitive = $level === null || $level >= Config::ERRLOG_SENSITIVE;
         
         if ($details)
         {
             $retval['trace_full'] = $this->trace_full;
             
-            $trace_full = $this->trace_full;
-            if (!$sensitive) foreach ($trace_full as &$val)
-                unset($val['args']);
-            $retval['trace_full'] = $trace_full;
+            if ($this->trace_full !== null)
+            {
+                $trace_full = $this->trace_full; // copy
+                if (!$sensitive) foreach ($trace_full as &$val)
+                    unset($val['args']);
+                $retval['trace_full'] = $trace_full;
+            }
         
             $retval['objects'] = $this->objects;
             $retval['queries'] = $this->queries;
