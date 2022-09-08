@@ -10,10 +10,13 @@ require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input
  */
 abstract class BaseRunner
 {
-    /** @var array<RunContext> stack frames for nested Run() calls */
+    /** 
+     * stack frames for nested Run() calls
+     * @var array<RunContext>
+     */
     protected array $stack = array();
     
-    /** @var bool true if Run() has been called since the last commit or rollback */
+    /** true if Run() has been called since the last commit or rollback */
     protected bool $dirty = false;
 
     /** Returns the RunContext that is currently being executed, if any */

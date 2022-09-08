@@ -146,7 +146,8 @@ abstract class IOInterface
         
         foreach ($this->retfuncs as $handler) 
         {
-            if ($multi) echo static::formatSize($handler->GetBytes());
+            if ($multi && $handler->GetBytes() !== null) 
+                echo static::formatSize($handler->GetBytes());
             
             $handler->DoOutput($output); flush();
         }

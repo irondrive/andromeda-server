@@ -23,7 +23,10 @@ final class RequestMetrics extends BaseObject
     
     protected const IDLength = 20;
     
-    /** @var FieldTypes\NullObjectRefT<RequestLog> */
+    /** 
+     * Link to the main log for this request
+     * @var FieldTypes\NullObjectRefT<RequestLog>
+     */
     private FieldTypes\NullObjectRefT $requestlog;
     /** Timestamp of the request */
     private FieldTypes\Timestamp $date_created;
@@ -40,52 +43,78 @@ final class RequestMetrics extends BaseObject
     private FieldTypes\FloatType $init_db_write_time;
     private FieldTypes\FloatType $init_code_time;
     private FieldTypes\FloatType $init_total_time;
+    
+    /** @var FieldTypes\NullJsonArray<array<array{query:string,time:float}>> */
     private FieldTypes\NullJsonArray $init_queries;
     
-    /** Garbage collection stats reported by PHP */
+    /** 
+     * Garbage collection stats reported by PHP 
+     * @var FieldTypes\NullJsonArray<array<string,scalar>>
+     */
     private FieldTypes\NullJsonArray $gcstats;
-    /** Resource usage reported by PHP */
+    /**
+     * Resource usage reported by PHP 
+     * @var FieldTypes\NullJsonArray<array<string,scalar>>
+     */
     private FieldTypes\NullJsonArray $rusage;
-    /** List of files included by PHP */
+    /** 
+     * List of files included by PHP 
+     * @var FieldTypes\NullJsonArray<array<string>>
+     */
     private FieldTypes\NullJsonArray $includes;
-    /** List of objects in database memory */
+    /** 
+     * List of objects in database memory 
+     * @var FieldTypes\NullJsonArray<array<string, array<string, string>>>
+     */
     private FieldTypes\NullJsonArray $objects;
-    /** List of database queries */
+    /** 
+     * List of database queries 
+     * @var FieldTypes\NullJsonArray<array<array{query:string,time:float}>>
+     */
     private FieldTypes\NullJsonArray $queries;
-    /** The main debug log supplement */
+    /** 
+     * The main debug log supplement 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $debughints;
     
     private bool $writtenToFile = false;
     
-    /** @var array<ActionMetrics> if not saved */
+    /** 
+     * if not saved yet
+     * @var array<ActionMetrics>
+     */
     private array $actions;
-    /** @var array<CommitMetrics> if not saved */
+    /** 
+     * if not saved yet
+     * @var array<CommitMetrics>
+     */
     private array $commits;
     
     protected function CreateFields() : void
     {
         $fields = array();
         
-        $this->requestlog = $fields[] =   new FieldTypes\NullObjectRefT(RequestLog::class,'requestlog');
-        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
-        $this->peak_memory = $fields[] =  new FieldTypes\IntType('peak_memory');
-        $this->nincludes = $fields[] =    new FieldTypes\IntType('nincludes');
-        $this->nobjects = $fields[] =     new FieldTypes\IntType('nobjects');
+        $fields[] = $this->requestlog =   new FieldTypes\NullObjectRefT(RequestLog::class,'requestlog');
+        $fields[] = $this->date_created = new FieldTypes\Timestamp('date_created');
+        $fields[] = $this->peak_memory =  new FieldTypes\IntType('peak_memory');
+        $fields[] = $this->nincludes =    new FieldTypes\IntType('nincludes');
+        $fields[] = $this->nobjects =     new FieldTypes\IntType('nobjects');
         
-        $this->init_db_reads = $fields[] =      new FieldTypes\IntType('init_db_reads');
-        $this->init_db_read_time = $fields[] =  new FieldTypes\FloatType('init_db_read_time');
-        $this->init_db_writes = $fields[] =     new FieldTypes\IntType('init_db_writes');
-        $this->init_db_write_time = $fields[] = new FieldTypes\FloatType('init_db_write_time');
-        $this->init_code_time = $fields[] =     new FieldTypes\FloatType('init_code_time');
-        $this->init_total_time = $fields[] =    new FieldTypes\FloatType('init_total_time');
-        $this->init_queries = $fields[] =       new FieldTypes\NullJsonArray('init_queries');
+        $fields[] = $this->init_db_reads =      new FieldTypes\IntType('init_db_reads');
+        $fields[] = $this->init_db_read_time =  new FieldTypes\FloatType('init_db_read_time');
+        $fields[] = $this->init_db_writes =     new FieldTypes\IntType('init_db_writes');
+        $fields[] = $this->init_db_write_time = new FieldTypes\FloatType('init_db_write_time');
+        $fields[] = $this->init_code_time =     new FieldTypes\FloatType('init_code_time');
+        $fields[] = $this->init_total_time =    new FieldTypes\FloatType('init_total_time');
+        $fields[] = $this->init_queries =       new FieldTypes\NullJsonArray('init_queries');
 
-        $this->gcstats = $fields[] =  new FieldTypes\NullJsonArray('gcstats');
-        $this->rusage = $fields[] =   new FieldTypes\NullJsonArray('rusage');
-        $this->includes = $fields[] = new FieldTypes\NullJsonArray('includes');
-        $this->objects = $fields[] =  new FieldTypes\NullJsonArray('objects');
-        $this->queries = $fields[] =  new FieldTypes\NullJsonArray('queries');
-        $this->debughints = $fields[] = new FieldTypes\NullJsonArray('debughints');
+        $fields[] = $this->gcstats =  new FieldTypes\NullJsonArray('gcstats');
+        $fields[] = $this->rusage =   new FieldTypes\NullJsonArray('rusage');
+        $fields[] = $this->includes = new FieldTypes\NullJsonArray('includes');
+        $fields[] = $this->objects =  new FieldTypes\NullJsonArray('objects');
+        $fields[] = $this->queries =  new FieldTypes\NullJsonArray('queries');
+        $fields[] = $this->debughints = new FieldTypes\NullJsonArray('debughints');
         
         $this->RegisterFields($fields, self::class);
         $this->DBStatsCreateFields();

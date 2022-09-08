@@ -31,16 +31,25 @@ class AppRunner extends BaseRunner
 {
     private ApiPackage $apipack;
 
-    /** @var array<string,BaseApp> apps indexed by name */
+    /** 
+     * apps indexed by name 
+     * @var array<string,BaseApp>
+     */
     private array $apps = array(); 
 
     /** Optional request log for this request */
     private ?RequestLog $requestlog = null;
     
-    /** @var array<RunContext> action/context history */
+    /** 
+     * action/context history
+     * @var array<RunContext> 
+     */
     protected array $action_history = array();
     
-    /** @var array<DBStats> commit stats */
+    /** 
+     * commit stats 
+     * @var array<DBStats>
+     */
     private array $commit_stats = array();
     
     /**

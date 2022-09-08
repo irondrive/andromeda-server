@@ -19,7 +19,10 @@ require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
  */
 abstract class BaseObject
 {
-    /** @var positive-int The length of the unique object ID */
+    /** 
+     * The length of the unique object ID
+     * @var positive-int
+     */
     protected const IDLength = 12;
 
     /**
@@ -155,7 +158,10 @@ abstract class BaseObject
     /** @var array<string, FieldTypes\BaseField> */
     private array $fieldsByName = array();
     
-    /** @var array<class-string<self>, array<FieldTypes\BaseField>> ordered derived->base */
+    /** 
+     * Fields for each subclass, ordered derived->base 
+     * @var array<class-string<self>, array<FieldTypes\BaseField>>
+     */
     private array $fieldsByClass = array();
     
     /** true if the object was just created */

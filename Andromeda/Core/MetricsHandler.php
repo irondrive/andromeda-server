@@ -12,10 +12,10 @@ use Andromeda\Core\Logging\RequestMetrics;
 
 final class MetricsHandler
 {
-    /** @var DBStats performance metrics for initialization */
+    /** performance metrics for initialization */
     private DBStats $init_stats;
     
-    /** @var DBStats total request performance metrics */
+    /** total request performance metrics */
     private DBStats $total_stats;
     
     /** Creates a new MetricsHandler and starts timing */

@@ -152,9 +152,9 @@ class NullStringType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var ?string value, possibly temporary only */
+    /** possibly temporary only */
     protected ?string $tempvalue;
-    /** @var ?string value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected ?string $realvalue;
 
     /** @param ?string $default default value, default null */
@@ -218,9 +218,9 @@ class StringType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var string value, possibly temporary only */
+    /** possibly temporary only */
     protected string $tempvalue;
-    /** @var string value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected string $realvalue;
 
     /** @param string $default default value, default none */
@@ -293,9 +293,9 @@ class NullBoolType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var ?bool value, possibly temporary only */
+    /** possibly temporary only */
     protected ?bool $tempvalue;
-    /** @var ?bool value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected ?bool $realvalue;
 
     /** @param ?bool $default default value, default null */
@@ -367,9 +367,9 @@ class BoolType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var bool value, possibly temporary only */
+    /** possibly temporary only */
     protected bool $tempvalue;
-    /** @var bool value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected bool $realvalue;
 
     /** @param bool $default default value, default none */
@@ -444,9 +444,9 @@ class NullIntType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var ?int value, possibly temporary only */
+    /** possibly temporary only */
     protected ?int $tempvalue;
-    /** @var ?int value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected ?int $realvalue;
 
     /** @param ?int $default default value, default null */
@@ -515,9 +515,9 @@ class IntType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var int value, possibly temporary only */
+    /** possibly temporary only */
     protected int $tempvalue;
-    /** @var int value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected int $realvalue;
 
     /** @param int $default default value, default none */
@@ -592,9 +592,9 @@ class NullFloatType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var ?float value, possibly temporary only */
+    /** possibly temporary only */
     protected ?float $tempvalue;
-    /** @var ?float value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected ?float $realvalue;
 
     /** @param ?float $default default value, default null */
@@ -663,9 +663,9 @@ class FloatType extends BaseField
 {
     use ScalarCommon;
     
-    /** @var float value, possibly temporary only */
+    /** possibly temporary only */
     protected float $tempvalue;
-    /** @var float value, non-temporary (DB) */
+    /** non-temporary (DB) */
     protected float $realvalue;
 
     /** @param float $default default value, default none */
@@ -839,9 +839,13 @@ class Counter extends BaseField
     }
 }
 
-/** A field that stores a JSON-encoded array (or null) */
+/** 
+ * A field that stores a JSON-encoded array (or null) 
+ * @template T of array
+ */
 class NullJsonArray extends BaseField
 {
+    /** @var ?T */
     protected ?array $value;
     
     public function __construct(string $name, bool $saveOnRollback = false)
@@ -851,6 +855,7 @@ class NullJsonArray extends BaseField
         $this->value = null;
     }
 
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value !== null && !is_string($value))
@@ -877,12 +882,15 @@ class NullJsonArray extends BaseField
         unset($this->delta);
     }
     
-    /** Returns the field's array value */
+    /** 
+     * Returns the field's array value 
+     * @return ?T
+     */
     public function TryGetArray() : ?array { return $this->value; }
 
     /**
      * Sets the field's value
-     * @param ?array $value array value
+     * @param ?T $value array value
      * @return bool true if the field was modified
      */
     public function SetArray(?array $value) : bool
@@ -898,9 +906,13 @@ class NullJsonArray extends BaseField
     }
 }
 
-/** A field that stores a JSON-encoded array */
+/** 
+ * A field that stores a JSON-encoded array 
+ * @template T of array
+ */
 class JsonArray extends BaseField
 {
+    /** @var T */
     protected array $value;
     
     public function __construct(string $name, bool $saveOnRollback = false)
@@ -911,6 +923,7 @@ class JsonArray extends BaseField
         $this->delta = 1; // not default
     }
     
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null || !is_string($value))
@@ -935,12 +948,15 @@ class JsonArray extends BaseField
         unset($this->delta);
     }
     
-    /** Returns the field's array value */
+    /** 
+     * Returns the field's array value 
+     * @return T
+     */
     public function GetArray() : array { return $this->value; }
 
     /**
      * Sets the field's value
-     * @param array $value array value
+     * @param T $value array value
      * @return bool true if the field was modified
      */
     public function SetArray(array $value) : bool
@@ -960,10 +976,16 @@ class JsonArray extends BaseField
  */
 class NullObjectRefT extends BaseField
 {
-    /** @var ?class-string<T> ID reference */
+    /**
+     * ID reference  
+     * @var ?class-string<T> 
+     */
     protected ?string $objId;
     
-    /** @var class-string<T> field class */
+    /** 
+     * field class
+     * @var class-string<T>
+     */
     protected string $class;
 
     /**
@@ -1050,10 +1072,16 @@ class NullObjectRefT extends BaseField
  */
 class ObjectRefT extends BaseField
 {
-    /** @var class-string<T> ID reference */
+    /** 
+     * ID reference 
+     * @var class-string<T>
+     */
     protected string $objId;
     
-    /** @var class-string<T> field class */
+    /** 
+     * field class 
+     * @var class-string<T>
+     */
     protected string $class;
     
     /**

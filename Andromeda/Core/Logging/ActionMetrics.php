@@ -19,27 +19,36 @@ final class ActionMetrics extends BaseObject
     
     protected const IDLength = 20;
     
-    /** @var FieldTypes\ObjectRefT<RequestMetrics> The request metrics object for this action */
+    /** 
+     * The request metrics object for this action 
+     * @var FieldTypes\ObjectRefT<RequestMetrics>
+     */
     private FieldTypes\ObjectRefT $requestmet;
-    /** @var FieldTypes\NullObjectRefT<ActionLog> The action log corresponding to this metrics */
+    /** 
+     * The action log corresponding to this metrics 
+     * @var FieldTypes\NullObjectRefT<ActionLog>
+     */
     private FieldTypes\NullObjectRefT $actionlog;
     /** The command action app name */
     private FieldTypes\StringType $app;
     /** The command action name */
     private FieldTypes\StringType $action;
-    /** Queries performed during this action */
+    /** 
+     * Queries performed during this action 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $queries;
     
     protected function CreateFields() : void
     {
         $fields = array();
 
-        $this->requestmet = $fields[] = new FieldTypes\ObjectRefT(RequestMetrics::class,'requestmet');
-        $this->actionlog = $fields[] = new FieldTypes\NullObjectRefT(ActionLog::class,'actionlog');
+        $fields[] = $this->requestmet = new FieldTypes\ObjectRefT(RequestMetrics::class,'requestmet');
+        $fields[] = $this->actionlog = new FieldTypes\NullObjectRefT(ActionLog::class,'actionlog');
         
-        $this->app = $fields[] =     new FieldTypes\StringType('app');
-        $this->action = $fields[] =  new FieldTypes\StringType('action');
-        $this->queries = $fields[] = new FieldTypes\NullJsonArray('queries');
+        $fields[] = $this->app =     new FieldTypes\StringType('app');
+        $fields[] = $this->action =  new FieldTypes\StringType('action');
+        $fields[] = $this->queries = new FieldTypes\NullJsonArray('queries');
 
         $this->RegisterFields($fields, self::class);
         $this->DBStatsCreateFields();

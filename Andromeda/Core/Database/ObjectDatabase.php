@@ -21,7 +21,7 @@ class ObjectDatabase
     /** ApiPackage reference */
     private ApiPackage $apipack;
     
-    /** @var float time of construction */
+    /** time of construction */
     private float $time;
     
     public function __construct(Database $db) 

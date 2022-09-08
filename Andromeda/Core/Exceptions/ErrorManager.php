@@ -213,18 +213,18 @@ class ErrorManager
         return $errinfo;
     }
     
-    /** @var array<scalar|array<scalar>> */
+    /** @var array<mixed> */
     private array $debughints = array();
     
     /** 
      * Returns the internal supplemental debug log 
-     * @return array<scalar|array<scalar>>
+     * @return array<mixed>
      */
     public function GetDebugHints() : array { return $this->debughints; }
     
     /** 
      * Adds an entry to the custom debug log, saved with exceptions 
-     * @param scalar|array<scalar> $data
+     * @param mixed $data
      */
     public function LogDebugHint($data) : self { $this->debughints[] = $data; return $this; }
     

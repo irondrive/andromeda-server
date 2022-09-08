@@ -34,37 +34,55 @@ final class ErrorLog extends BaseLog
     private FieldTypes\StringType $file;
     /** the error message */
     private FieldTypes\StringType $message;
-    /** a basic backtrace */
+    /** 
+     * basic backtrace 
+     * @var FieldTypes\JsonArray<array<int,string>>
+     */
     private FieldTypes\JsonArray $trace_basic;
-    /** full backtrace including all arguments */
+    /** 
+     * full backtrace including all arguments 
+     * @var FieldTypes\NullJsonArray<array<int,array<string,mixed>>>
+     */
     private FieldTypes\NullJsonArray $trace_full;
-    /** objects in memory in the database */
+    /** 
+     * objects in memory in the database 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $objects;
-    /** db queries that were performed */
+    /** 
+     * db queries that were performed 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $queries;
-    /** all client input parameters */
+    /** 
+     * all client input parameters 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $params;
-    /** the custom API log */
+    /** 
+     * the custom API log 
+     * @var FieldTypes\NullJsonArray<array<mixed>>
+     */
     private FieldTypes\NullJsonArray $hints;
     
     protected function CreateFields() : void
     {
         $fields = array();
         
-        $this->time = $fields[] =        new FieldTypes\Timestamp('time');
-        $this->addr = $fields[] =        new FieldTypes\StringType('addr');
-        $this->agent = $fields[] =       new FieldTypes\StringType('agent');
-        $this->app = $fields[] =         new FieldTypes\NullStringType('app');
-        $this->action = $fields[] =      new FieldTypes\NullStringType('action');
-        $this->code = $fields[] =        new FieldTypes\StringType('code');
-        $this->file = $fields[] =        new FieldTypes\StringType('file');
-        $this->message = $fields[] =     new FieldTypes\StringType('message');
-        $this->trace_basic = $fields[] = new FieldTypes\JsonArray('trace_basic');
-        $this->trace_full = $fields[] =  new FieldTypes\NullJsonArray('trace_full');
-        $this->objects = $fields[] =     new FieldTypes\NullJsonArray('objects');
-        $this->queries = $fields[] =     new FieldTypes\NullJsonArray('queries');
-        $this->params = $fields[] =      new FieldTypes\NullJsonArray('params');
-        $this->hints = $fields[] =       new FieldTypes\NullJsonArray('hints');
+        $fields[] = $this->time =        new FieldTypes\Timestamp('time');
+        $fields[] = $this->addr =        new FieldTypes\StringType('addr');
+        $fields[] = $this->agent =       new FieldTypes\StringType('agent');
+        $fields[] = $this->app =         new FieldTypes\NullStringType('app');
+        $fields[] = $this->action =      new FieldTypes\NullStringType('action');
+        $fields[] = $this->code =        new FieldTypes\StringType('code');
+        $fields[] = $this->file =        new FieldTypes\StringType('file');
+        $fields[] = $this->message =     new FieldTypes\StringType('message');
+        $fields[] = $this->trace_basic = new FieldTypes\JsonArray('trace_basic');
+        $fields[] = $this->trace_full =  new FieldTypes\NullJsonArray('trace_full');
+        $fields[] = $this->objects =     new FieldTypes\NullJsonArray('objects');
+        $fields[] = $this->queries =     new FieldTypes\NullJsonArray('queries');
+        $fields[] = $this->params =      new FieldTypes\NullJsonArray('params');
+        $fields[] = $this->hints =       new FieldTypes\NullJsonArray('hints');
         
         $this->RegisterFields($fields, self::class);
         

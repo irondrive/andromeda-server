@@ -14,9 +14,9 @@ require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
  */
 class SafeParam
 {
-    /** @var non-empty-string param key */
+    /** @var non-empty-string */
     private string $key;
-    /** @var ?non-empty-string param value */
+    /** @var ?non-empty-string */
     private ?string $value;
     
     /** 

@@ -58,32 +58,47 @@ class ActionLog extends BaseLog
         return array_key_exists($app, $map) ? $map[$app] : self::class;
     }
     
-    /** @var FieldTypes\ObjectRefT<RequestLog> The request log this action was a part of */
+    /** 
+     * The request log this action was a part of 
+     * @var FieldTypes\ObjectRefT<RequestLog>
+     */
     private FieldTypes\ObjectRefT $requestlog;
     /** Action app name */
     private FieldTypes\StringType $app;
     /** Action action name */
     private FieldTypes\StringType $action;
-    /** Optional input parameter logging */
+    /** 
+     * Optional input parameter logging 
+     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     */
     private FieldTypes\NullJsonArray $inputs;
-    /** Optional app-specific details if no subtable */
+    /** 
+     * Optional app-specific details if no subtable 
+     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     */
     private FieldTypes\NullJsonArray $details;
     
-    /** @var array<string, mixed> Temporary array of logged inputs to be saved */
+    /** 
+     * Temporary array of logged inputs to be saved 
+     * @var array<string, mixed>
+     */
     private array $inputs_tmp;
-    /** @var array<string, mixed> Temporary array of logged details to be saved */
+    /** 
+     * Temporary array of logged details to be saved 
+     * @var array<string, mixed>
+     */
     private array $details_tmp;
     
     protected function CreateFields() : void
     {
         $fields = array();
         
-        $this->requestlog = $fields[] = new FieldTypes\ObjectRefT(RequestLog::class, 'requestlog');
+        $fields[] = $this->requestlog = new FieldTypes\ObjectRefT(RequestLog::class, 'requestlog');
         
-        $this->app = $fields[] =     new FieldTypes\StringType('app');
-        $this->action = $fields[] =  new FieldTypes\StringType('action');
-        $this->inputs = $fields[] =  new FieldTypes\NullJsonArray('inputs');
-        $this->details = $fields[] = new FieldTypes\NullJsonArray('details');
+        $fields[] = $this->app =     new FieldTypes\StringType('app');
+        $fields[] = $this->action =  new FieldTypes\StringType('action');
+        $fields[] = $this->inputs =  new FieldTypes\NullJsonArray('inputs');
+        $fields[] = $this->details = new FieldTypes\NullJsonArray('details');
         
         $this->RegisterFields($fields, self::class);
         

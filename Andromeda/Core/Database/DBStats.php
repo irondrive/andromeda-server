@@ -15,7 +15,7 @@ class DBStats
     private float $read_time = 0; 
     private float $write_time = 0; 
     
-    /** @var array<mixed> */
+    /** @var array<array{query:string,time:float}> */
     private array $queries = array();
     
     public const QUERY_READ = 1;
@@ -53,7 +53,7 @@ class DBStats
     
     /** 
      * Returns the array of queries issued to the database 
-     * @return array<mixed> `[{time:float,query:string}]`
+     * @return array<array{query:string,time:float}> `[{query:string,time:float}]`
      */
     public function getQueries() : array   { return $this->queries; }
 
