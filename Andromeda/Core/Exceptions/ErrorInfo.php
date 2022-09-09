@@ -184,22 +184,19 @@ class ErrorInfo
             $this->trace_full = $trace_full;
         }
         
-        if ($level >= Config::ERRLOG_DETAILS && $debuglog !== null)
+        if ($details && $debuglog !== null)
             $this->hints = $debuglog;
     }
 
     /**
      * Returns the printable client object of this error info
-     * @param ?int $level debug level for output, null for unfiltered
+     * @param ?int $level max debug level for output, null for unfiltered, also depends on the level this was created with
      * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,trace_basic:array}`
         if details or null level, add `{trace_full:array,objects:?array,queries:?array,hints:?array}`
         if sensitive or null level, add `{params:?array}`
      */
     public function GetClientObject(?int $level = null) : array
     {
-        if ($level !== null && $level > $this->level)
-            throw new LevelUnavailableException("$level > ".$this->level);
-        
         $retval = array(
             'time' => $this->time,
             'addr' => $this->addr,

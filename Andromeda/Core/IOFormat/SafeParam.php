@@ -494,7 +494,10 @@ class SafeParam
 
         foreach ($value as $subkey=>$subval)
         {
-            $obj->AddParam(strval($subkey), strval($subval));
+            if (is_array($subval)) // json array or object
+                $subval = Utilities::JSONEncode($subval);
+            
+            $obj->AddParam((string)$subkey, (string)$subval);
         }
         
         if ($this->logref !== null)
@@ -525,8 +528,11 @@ class SafeParam
         $arr = array();
         foreach ($value as $subval)
         {
+            if (!is_scalar($subval)) // this function gets T of scalar
+                throw new SafeParamInvalidException($this->key, 'json');
+            
             $arr[] = $getval(
-                new SafeParam($this->key, strval($subval)));
+                new SafeParam($this->key, (string)$subval));
         }
 
         $this->LogValue($arr); return $arr;
@@ -558,7 +564,12 @@ class SafeParam
             $arr[] = $params = new SafeParams();
             
             foreach ($subval as $subkey2=>$subval2)
-                $params->AddParam($subkey2, strval($subval2));
+            {
+                if (is_array($subval2)) // json array or object
+                    $subval2 = Utilities::JSONEncode($subval2);
+                    
+                $params->AddParam((string)$subkey2, (string)$subval2);
+            }
         }
         
         if ($this->logref !== null)

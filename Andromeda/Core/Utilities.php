@@ -65,11 +65,11 @@ class VersionInfo
         if (!isset($version[0]) || !isset($version[1]))
             throw new InvalidVersionException();
         
-        $this->major = intval($version[0]);
-        $this->minor = intval($version[1]);
+        $this->major = (int)$version[0];
+        $this->minor = (int)$version[1];
         
         if (isset($version[2])) 
-            $this->patch = intval($version[2]);
+            $this->patch = (int)$version[2];
     }
     
     public function __toString() : string { 
@@ -112,7 +112,7 @@ abstract class Utilities
     
     /**
      * Encodes an array as a JSON string
-     * @param array<mixed> $jarr json array
+     * @param array<scalar, mixed> $jarr json array
      * @throws JSONException
      * @return string json string
      */
@@ -127,7 +127,7 @@ abstract class Utilities
      * Decodes a JSON string as an array
      * @param string $jstr json string
      * @throws JSONException
-     * @return array<mixed> json array
+     * @return array<scalar, NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>> json array
      */
     public static function JSONDecode(string $jstr) : array
     {
@@ -189,7 +189,7 @@ abstract class Utilities
             }
             else 
             {
-                $val = strval($val);
+                $val = (string)$val;
                 
                 if (!Utilities::isUTF8($val))
                     $val = base64_encode($val);
@@ -235,19 +235,28 @@ abstract class Utilities
         if (!$search || !$subject) return $subject;
         
         if (($pos = mb_strpos($subject, $search)) !== false)
-            $subject = mb_substr($subject, 0, $pos).$replace.
+        {
+            return mb_substr($subject, 0, $pos).$replace.
                 mb_substr($subject, $pos+strlen($search));
-        
-        return $subject;
+        }
+        else return $subject;
     }
     
-    /** Captures and returns any echoes or prints in the given function */
+    /** 
+     * Captures and returns any echoes or prints in the given function 
+     * @throws OutputBufferException if the PHP ob functions fail
+     */
     public static function CaptureOutput(callable $func) : string
     {
-        ob_start(); $func(); $retval = ob_get_contents(); ob_end_clean(); 
+        if (ob_start() === false) 
+            throw new OutputBufferException("ob_start fail"); 
         
-        // ASSERT: retval must be string when buffering is active
-        assert(is_string($retval)); return $retval;
+        $func(); $retval = ob_get_clean();
+        
+        if ($retval === false || !is_string($retval))
+            throw new OutputBufferException("ob_get_clean fail");
+        
+        return $retval;
     }
     
     /** 
