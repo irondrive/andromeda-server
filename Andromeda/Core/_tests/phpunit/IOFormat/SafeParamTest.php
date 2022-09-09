@@ -3,6 +3,7 @@
 require_once("init.php");
 
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
+require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Core/IOFormat/SafeParam.php");
 
@@ -409,7 +410,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood($val="hello! special chars !@#$%^&*()\u{9999}", $val, $getVal);
         
         $this->testBad("\0", $getVal);
-        $this->testBad(strval(hex2bin("deadbeef")), $getVal);
+        $this->testBad((string)hex2bin("deadbeef"), $getVal);
     }
     
     public function testObject() : void
@@ -483,22 +484,40 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $obj->GetParam('key2')->GetAlphanum();
         $this->assertSame(array('key'=>array()), $logarr);
     }
-    
-    public function testObjectArray() : void
+
+    public function testNestedObjectsAndArrays() : void
     {
-        $json = '[{"key1":"test"},{"key2":75}]';
+        $getInt = function(SafeParam $p){ return $p->GetInt(); };
+        
+        $json = '[{"key1":[5,6,7,8],"key2":{"inner1":"val1","inner2":[1,2,3]}},{"key1":"test"},{"key2":75}]';
         $param = new SafeParam('mykey',$json);
         
         $logarr = array(); $param->SetLogRef($logarr, 999); // full logging
         
         $arr = $param->GetObjectArray();
-        
         $this->assertIsArray($arr);
-        $this->assertCount(2, $arr);
+        $this->assertCount(3, $arr);
         
-        $this->assertSame("test", $arr[0]->GetParam("key1")->GetAlphanum());        
-        $this->assertSame(75, $arr[1]->GetParam("key2")->GetInt());
-
-        $this->assertSame(array('mykey'=>[['key1'=>'test'],['key2'=>75]]), $logarr);
+        $obj1 = $arr[0];
+        $this->assertIsObject($obj1);
+        
+        $key1 = $obj1->GetParam('key1')->GetArray($getInt);
+        $this->assertSame($key1, array(5,6,7,8));
+        
+        $key2 = $obj1->GetParam('key2')->GetObject();
+        $inner1 = $key2->GetParam('inner1')->GetAlphanum();
+        $this->assertSame($inner1, "val1");
+        
+        $inner2 = $key2->GetParam('inner2')->GetArray($getInt);
+        $this->assertSame($inner2, array(1,2,3));
+        
+        $obj2 = $arr[1]; $obj3 = $arr[2];
+        $this->assertIsObject($obj2);
+        $this->assertIsObject($obj3);
+        
+        $this->assertSame("test", $obj2->GetParam("key1")->GetAlphanum());
+        $this->assertSame(75, $obj3->GetParam("key2")->GetInt());
+        
+        $this->assertSame(array('mykey'=>Utilities::JSONDecode($json)), $logarr);
     }
 }

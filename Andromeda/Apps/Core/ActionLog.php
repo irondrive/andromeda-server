@@ -15,5 +15,9 @@ final class ActionLog extends AuthActionLog
         parent::CreateFields();
     }
     
-    public function SetAdmin(bool $isAdmin) : self { /* no-op */ return $this; }
+    /** Sets whether the action is being considered admin */
+    public function SetAdmin(bool $isAdmin) : self
+    {
+        $this->admin->SetValue($isAdmin ? true : null); return $this;
+    }
 }

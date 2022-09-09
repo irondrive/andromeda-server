@@ -214,3 +214,11 @@ class JSONException extends Exceptions\ServerException
             json_last_error_msg(), json_last_error());
     }
 }
+
+/** Exception indicating the output buffer failed */
+class OutputBufferException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("OUTPUT_BUFFER_FAIL", $details);
+    }
+}

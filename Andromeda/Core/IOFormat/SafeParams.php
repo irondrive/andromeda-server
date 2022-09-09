@@ -77,15 +77,15 @@ class SafeParams
     /**
     * Gets the requested parameter ($default if not present)
     * @param string $key the parameter key name
-    * @param mixed $default parameter value if not given
+    * @param ?scalar $default parameter value if not given
     * @param int $minlog minimum log level for logging (0 for never)
     */
     public function GetOptParam(string $key, $default, int $minlog = self::PARAMLOG_ONLYFULL) : SafeParam
     {
         if (!$this->HasParam($key))
         {
-            // strval(false) is '', which is null, which is true for GetBool()!
-            $defstr = ($default === false) ? 'false' : strval($default);
+            // (string)false is '', which is null, which is true for GetBool()!
+            $defstr = ($default === false) ? 'false' : (string)$default;
             
             return new SafeParam($key, $defstr);
         }

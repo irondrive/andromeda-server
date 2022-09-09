@@ -171,7 +171,7 @@ class Output
                 throw new InvalidParseException();
             
             throw new Exceptions\ClientException(
-                strval($data['message']), intval($data['code']));
+                (string)$data['message'], (int)$data['code']);
         }
     }   
 }

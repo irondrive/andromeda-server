@@ -196,7 +196,7 @@ final class Emailer extends BaseObject
             'type' =>         array_flip(self::MAIL_TYPES)[$this->type->GetValue()],
             'hosts' =>        $this->hosts->TryGetArray(),
             'username' =>     $this->username->TryGetValue(),
-            'password' =>     boolval($this->password->TryGetValue()),
+            'password' =>     (bool)$this->password->TryGetValue(),
             'from_address' => $this->from_address->GetValue(),
             'from_name' =>    $this->from_name->TryGetValue(),
             'use_reply' =>    $this->use_reply->TryGetValue()

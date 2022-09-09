@@ -314,7 +314,7 @@ class NullBoolType extends BaseField
         {
             if (!is_int($value) && !$this->isDBValueString())
                 throw $this->GetTypeMismatchException($value);
-            else $value = boolval($value); // always cast
+            else $value = (bool)$value; // always cast
         }
 
         $this->tempvalue = $value;
@@ -390,7 +390,7 @@ class BoolType extends BaseField
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
             throw $this->GetTypeMismatchException($value);
-        else $value = boolval($value); // always cast
+        else $value = (bool)$value; // always cast
     
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -464,7 +464,7 @@ class NullIntType extends BaseField
         if ($value !== null)
         {
             if ($this->isDBValueString())
-                $value = intval($value);
+                $value = (int)$value;
             else if (!is_int($value))
                 throw $this->GetTypeMismatchException($value);
         }
@@ -538,7 +538,7 @@ class IntType extends BaseField
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
             throw $this->GetTypeMismatchException($value);
-        else $value = intval($value);
+        else $value = (int)$value;
 
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -612,7 +612,7 @@ class NullFloatType extends BaseField
         if ($value !== null)
         {
             if ($this->isDBValueString())
-                $value = floatval($value);
+                $value = (float)$value;
             else if (!is_float($value))
                 throw $this->GetTypeMismatchException($value);
         }
@@ -686,7 +686,7 @@ class FloatType extends BaseField
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_float($value)))
             throw $this->GetTypeMismatchException($value);
-        else $value = floatval($value);
+        else $value = (float)$value;
     
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -777,7 +777,7 @@ class Counter extends BaseField
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
             throw $this->GetTypeMismatchException($value);
-        else $value = intval($value);
+        else $value = (int)$value;
         
         $this->value = $value;
         $this->delta = 0;

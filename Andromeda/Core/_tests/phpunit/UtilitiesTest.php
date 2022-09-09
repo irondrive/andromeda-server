@@ -75,17 +75,21 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(VersionInfo::toCompatVer($v), '3.2');
    }
    
+   public function testJSON() : void
+   {
+       $this->assertSame('{"test":55}',Utilities::JSONEncode(array('test'=>55)));
+       $this->assertSame(array('test'=>55),Utilities::JSONDecode('{"test":55}'));
+   }
+   
    public function testBadJSONEncode() : void
    {
        $this->expectException(JSONException::class);
-       
        Utilities::JSONEncode(array(CryptoSecret::GenerateKey()));
    }
    
    public function testBadJSONDecode() : void
    {
        $this->expectException(JSONException::class);
-       
        Utilities::JSONDecode("nothing here!");
    }
    

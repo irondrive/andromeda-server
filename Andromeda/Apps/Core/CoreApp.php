@@ -19,11 +19,16 @@ require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\Re
 require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
+require_once(ROOT."/Apps/Core/ActionLog.php");
+
+require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
 
 /**
  * Server management/info app included with the framework.
  * 
- * Handles getting/setting config/logs, app enable/disable
+ * Handles getting/setting config/logs, app enable/disable.
+ * Depends on the accountsApp being present but this could be refactored away easily.
+ * If the accountsApp is disabled, only privileged interfaces are considered admin
  */
 final class CoreApp extends BaseApp
 {
@@ -32,22 +37,9 @@ final class CoreApp extends BaseApp
     public function getName() : string { return 'core'; }
     
     public function getVersion() : string { return andromeda_version; }
-    
-    /** Returns true if the accounts app is available to use */
-    private function hasAccountsApp() : bool
-    {
-        return array_key_exists('accounts', $this->API->GetAppRunner()->GetApps());
-    }
-    
+
     /** @return class-string<ActionLog> */
-    public function getLogClass() : string
-    { 
-        if ($this->hasAccountsApp())
-            require_once(ROOT."/Apps/Core/ActionLogFull.php");
-        else require_once(ROOT."/Apps/Core/ActionLogBasic.php");
-        
-        return ActionLog::class;
-    }
+    public function getLogClass() : string { return ActionLog::class; }
 
     public function getUsage() : array
     {
@@ -92,11 +84,9 @@ final class CoreApp extends BaseApp
     public function Run(Input $input)
     {
         // if the accounts app is installed, use it for authentication
-        if (self::hasAccountsApp())
+        if (array_key_exists('accounts', $this->API->GetAppRunner()->GetApps()))
         {
-            require_once(ROOT."/Apps/Accounts/Authenticator.php");
-            
-            $authenticator = \Andromeda\Apps\Accounts\Authenticator::TryAuthenticate(
+            $authenticator = Authenticator::TryAuthenticate(
                 $this->database, $input, $this->API->GetInterface());
             
             $isAdmin = $authenticator !== null && $authenticator->isAdmin();
@@ -110,7 +100,7 @@ final class CoreApp extends BaseApp
         {
             $actionlog = $reqlog->LogAction($input, $this->getLogClass());
             
-            $actionlog->SetAdmin($isAdmin)->SetAuth($authenticator);
+            $actionlog->SetAuth($authenticator)->SetAdmin($isAdmin);
         }
 
         $params = $input->GetParams();
@@ -218,7 +208,7 @@ final class CoreApp extends BaseApp
      * @throws UnknownMailerException if the given mailer is invalid
      * @throws MailSendFailException if sending the email fails
      */
-    protected function TestMail(SafeParams $params, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : void
+    protected function TestMail(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
@@ -355,7 +345,7 @@ final class CoreApp extends BaseApp
      * @return array<mixed> Emailer
      * @see Emailer::GetClientObject()
      */
-    protected function CreateMailer(SafeParams $params, bool $isAdmin, $authenticator, ?BaseActionLog $actionlog) : array
+    protected function CreateMailer(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : array
     {
         if (!$isAdmin) throw new AdminRequiredException();
         
