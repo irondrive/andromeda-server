@@ -32,4 +32,6 @@ for t in phpcode phptests python; do
    else
       for d in . Apps/* Core; do chunk $t $d; done
    fi
+   echo
+   echo
 done
