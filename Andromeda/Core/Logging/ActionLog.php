@@ -54,7 +54,8 @@ class ActionLog extends BaseLog
     
     public static function GetRowClass(array $row) : string
     {
-        $map = self::GetChildMap(); $app = (string)$row['app'];
+        $app = $row['app']; $map = self::GetChildMap();
+        
         return array_key_exists($app, $map) ? $map[$app] : self::class;
     }
     

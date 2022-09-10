@@ -58,7 +58,9 @@ final class Config extends BaseConfig
     /** Creates a new config singleton with default values */
     public static function Create(ObjectDatabase $database) : self
     {
-        return static::BaseCreate($database);
+        $obj = static::BaseCreate($database);
+        $obj->apps->SetArray(array());
+        return $obj;
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */

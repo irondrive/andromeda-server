@@ -50,7 +50,7 @@ abstract class BaseObject
      * Non-abstract final classes (no children) should always return empty
      * If using auto-typed rows, the mapping must be stable across versions
      * Classes must have the @ return line in order to pass type checking!
-     * @return array<scalar, class-string<self>>
+     * @return array<scalar, class-string<static>>
      */
     public static function GetChildMap() : array { return array(); }
     
@@ -109,7 +109,7 @@ abstract class BaseObject
     /**
      * Given a database row, return the child class applicable
      * Only for base classes that are the final table for > 1 class (TypedChildren)
-     * @param array<string,scalar> $row row of data from the database
+     * @param array<string,?scalar> $row row of data from the database
      * @return class-string<self> child class of row
      */
     public static function GetRowClass(array $row) : string { 
@@ -223,7 +223,7 @@ abstract class BaseObject
     /**
      * Registers fields for the object so the DB can save/load objects
      * @param array<FieldTypes\BaseField> $fields array of fields to register
-     * @param string $table class table the fields belong to
+     * @param class-string<self> $table class table the fields belong to
      */
     final protected function RegisterFields(array $fields, string $table) : void
     {
