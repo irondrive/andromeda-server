@@ -47,12 +47,12 @@ abstract class BaseObject
     /**
      * Returns the array of subclasses that exist for this base class, so we can load via it
      * Non-abstract base classes can include self if non-child rows exist
-     * Non-abstract final classes (no children) should always return null
+     * Non-abstract final classes (no children) should always return empty
      * If using auto-typed rows, the mapping must be stable across versions
      * Classes must have the @ return line in order to pass type checking!
-     * @return ?non-empty-array<scalar, class-string<self>>
+     * @return array<scalar, class-string<self>>
      */
-    public static function GetChildMap() : ?array { return null; }
+    public static function GetChildMap() : array { return array(); }
     
     /**
      * Returns this class's unique key map (with parents)

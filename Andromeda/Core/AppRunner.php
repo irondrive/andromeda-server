@@ -138,21 +138,24 @@ class AppRunner extends BaseRunner
 
         $app = $this->apps[$appname];
         $db = $this->apipack->GetDatabase();
-
-        if ($this->apipack->GetMetricsLevel())
-            $db->GetInternal()->pushStatsContext();
-
-        if ($this->requestlog !== null &&
-            $app->getLogClass() !== null)
+        
+        $actionlog = null; if ($this->requestlog !== null 
+                            && $app->getLogClass() !== null)
         {
             $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
         }
-        else $actionlog = null;
         
         $context = new RunContext($input, $actionlog);
-        $this->stack[] = $context; 
+        $this->stack[] = $context;
         $this->dirty = true;
         
+        if ($this->apipack->GetMetricsLevel())
+        {
+            $stats = $db->GetInternal()->pushStatsContext();
+            $context->SetMetrics($stats);
+            $this->action_history[] = $context;
+        }
+
         $retval = $app->Run($input);
         
         $db->SaveObjects();
@@ -160,12 +163,7 @@ class AppRunner extends BaseRunner
         array_pop($this->stack);
 
         if ($this->apipack->GetMetricsLevel())
-        {
-            $stats = $db->GetInternal()->popStatsContext();
-            
-            $context->SetMetrics($stats);
-            $this->action_history[] = $context;
-        }
+            $db->GetInternal()->popStatsContext();
         
         return $retval;
     }
@@ -234,7 +232,10 @@ class AppRunner extends BaseRunner
             $db = $this->apipack->GetDatabase();
             
             if ($this->apipack->GetMetricsLevel())
-                $db->GetInternal()->pushStatsContext();
+            {
+                $stats = $db->GetInternal()->pushStatsContext();
+                $this->commit_stats[] = $stats;
+            }
             
             $db->saveObjects();
             $this->doCommit(true);
@@ -243,10 +244,7 @@ class AppRunner extends BaseRunner
                 $this->requestlog->WriteFile();
 
             if ($this->apipack->GetMetricsLevel()) 
-            {
-                $commit_stats = $db->GetInternal()->popStatsContext();
-                $this->commit_stats[] = $commit_stats;
-            }
+                $db->GetInternal()->popStatsContext();
             
             $this->dirty = false;
         });

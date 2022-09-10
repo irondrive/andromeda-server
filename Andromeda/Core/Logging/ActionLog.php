@@ -24,7 +24,7 @@ class ActionLog extends BaseLog
     use HasTable;
 
     /** @return array<string, class-string<self>> */
-    public static function GetChildMap() : ?array 
+    public static function GetChildMap() : array 
     {
         $map = array("" => self::class); 
         
@@ -54,7 +54,7 @@ class ActionLog extends BaseLog
     
     public static function GetRowClass(array $row) : string
     {
-        $map = self::GetChildMap(); $app = $row['app'];
+        $map = self::GetChildMap(); $app = (string)$row['app'];
         return array_key_exists($app, $map) ? $map[$app] : self::class;
     }
     

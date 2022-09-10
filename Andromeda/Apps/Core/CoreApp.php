@@ -211,11 +211,12 @@ final class CoreApp extends BaseApp
     protected function TestMail(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : void
     {
         if (!$isAdmin) throw new AdminRequiredException();
-        
-        $dest = $params->HasParam('dest') ? $params->GetParam('dest')->GetEmail() : null;
-        if (!$authenticator) $params->GetParam('dest'); // mandatory
-    
-        if ($dest) $dests = array(new EmailRecipient($dest));
+
+        if ($authenticator === null || $params->HasParam('dest'))
+        {
+            $dest = $params->GetParam('dest')->GetEmail();
+            $dests = array(new EmailRecipient($dest));
+        }
         else $dests = $authenticator->GetAccount()->GetContactEmails();
         
         $subject = "Andromeda Email Test";
