@@ -33,5 +33,4 @@ for t in phpcode phptests python; do
       for d in . Apps/* Core; do chunk $t $d; done
    fi
    echo
-   echo
 done
