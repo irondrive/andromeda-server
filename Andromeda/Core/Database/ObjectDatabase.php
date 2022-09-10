@@ -183,7 +183,7 @@ class ObjectDatabase
             $ftable = $this->GetClassTableName($classes[0]);
             $querystr = "SELECT ".($prop = "COUNT($ftable.id)")." FROM $ftable ".$query->GetText();
         
-            return $this->db->read($querystr, $query->GetData())[0][$prop];
+            return (int)$this->db->read($querystr, $query->GetData())[0][$prop];
         }
     }
 

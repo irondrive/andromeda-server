@@ -239,7 +239,7 @@ class StringType extends BaseField
     public function InitDBValue($value) : self
     {
         if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -389,7 +389,7 @@ class BoolType extends BaseField
     {
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         else $value = (bool)$value; // always cast
     
         $this->tempvalue = $value;
@@ -537,7 +537,7 @@ class IntType extends BaseField
     {
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         else $value = (int)$value;
 
         $this->tempvalue = $value;
@@ -685,7 +685,7 @@ class FloatType extends BaseField
     {
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_float($value)))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         else $value = (float)$value;
     
         $this->tempvalue = $value;
@@ -776,7 +776,7 @@ class Counter extends BaseField
     {
         $isStr = $this->isDBValueString();
         if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         else $value = (int)$value;
         
         $this->value = $value;
@@ -846,14 +846,7 @@ class Counter extends BaseField
 class NullJsonArray extends BaseField
 {
     /** @var ?T */
-    protected ?array $value;
-    
-    public function __construct(string $name, bool $saveOnRollback = false)
-    {
-        parent::__construct($name, $saveOnRollback);
-        
-        $this->value = null;
-    }
+    protected ?array $value = null;
 
     /** @return $this */
     public function InitDBValue($value) : self
@@ -914,20 +907,12 @@ class JsonArray extends BaseField
 {
     /** @var T */
     protected array $value;
-    
-    public function __construct(string $name, bool $saveOnRollback = false)
-    {
-        parent::__construct($name, $saveOnRollback);
-        
-        $this->value = array();
-        $this->delta = 1; // not default
-    }
-    
+
     /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         
         if ($value !== "")
             $this->value = Utilities::JSONDecode($value);
@@ -976,10 +961,7 @@ class JsonArray extends BaseField
  */
 class NullObjectRefT extends BaseField
 {
-    /**
-     * ID reference  
-     * @var ?class-string<T> 
-     */
+    /** ID reference */
     protected ?string $objId;
     
     /** 
@@ -1034,8 +1016,7 @@ class NullObjectRefT extends BaseField
         if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
     }
     
-    /** Returns the ID of the object pointed to by this field 
-     * @return ?class-string<T> */
+    /** Returns the ID of the object pointed to by this field */
     public function TryGetObjectID() : ?string { return $this->objId; }
     
     /**
@@ -1072,10 +1053,7 @@ class NullObjectRefT extends BaseField
  */
 class ObjectRefT extends BaseField
 {
-    /** 
-     * ID reference 
-     * @var class-string<T>
-     */
+    /** ID reference */
     protected string $objId;
     
     /** 
@@ -1099,7 +1077,7 @@ class ObjectRefT extends BaseField
     public function InitDBValue($value) : self
     {
         if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value);
+            throw $this->GetTypeMismatchException($value ?? "null");
         
         $this->objId = $value;
         $this->delta = 0;
@@ -1127,8 +1105,7 @@ class ObjectRefT extends BaseField
         if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
     }
     
-    /** Returns the ID of the object pointed to by this field
-     * @return class-string<T> */
+    /** Returns the ID of the object pointed to by this field */
     public function GetObjectID() : string { return $this->objId; }
     
     /** Returns true if this field's value is initialized */

@@ -764,10 +764,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $parent = $this->createMock(BaseObject::class);
         $field = (new JsonArray('myjson'))->SetParent($parent);
         
-        $this->assertSame(array(), $field->GetArray()); // default
-        $this->assertSame('[]', $field->GetDBValue()); // default
-        
-        $field->InitDBValue("");
+        $field->InitDBValue("[]");
         $this->assertSame(array(), $field->GetArray());
         
         $json = '{"key1":"val1","key2":5}';
