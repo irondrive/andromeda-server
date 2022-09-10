@@ -84,42 +84,52 @@ class HTTP extends IOInterface
      * App and Action must be part of $_GET, everything else
      * can be interchangeably in $_GET or $_POST - except
      * 'password' and 'auth_' which cannot be in $_GET
-     * @param array<string, scalar> $get
+     * @param array<string, string> $get
      * @param array<string, mixed> $files
-     * @param array<string, scalar> $request
+     * @param array<string, string> $request
      */
     private function GetInput(array $get, array $files, array $request) : Input
     {
-        if (empty($get['app'])) throw new NoAppActionException();
-        $app = $get['app']; unset($request['app']);
-        
-        if (empty($get['action'])) throw new NoAppActionException();
+        if (empty($get['app']) || empty($get['action']))
+            throw new NoAppActionException();
+        $app =    $get['app'];    unset($request['app']);
         $action = $get['action']; unset($request['action']);
         
         foreach ($get as $key=>$val)
         {
-            if (strpos($key,'password') !== false || strpos($key,'auth_') === 0)
+            if (strpos($key,'password') !== false 
+                || strpos($key,'auth_') === 0)
                 throw new IllegalGetFieldException($key);
         }
         
         $params = new SafeParams();
-        
         foreach ($request as $key=>$val)
             $params->AddParam($key, $val);
         
         $pfiles = array(); foreach ($files as $key=>$file)
         {
-            if (!is_uploaded_file($file['tmp_name']) || $file['error']) continue;
+            if (!is_array($file)
+                || !array_key_exists('tmp_name',$file)
+                || !array_key_exists('name',$file)
+                || !array_key_exists('error',$file))
+                throw new FileUploadFormatException();
             
-            $fname = (new SafeParam('name',$file['name']))->GetFSName();
+            $fpath = (string)$file['tmp_name'];
+            $fname = (string)$file['name'];
+            $ferror = (int)$file['error'];
+                
+            if ($ferror || !is_uploaded_file($fpath))
+                throw new FileUploadFailException((string)$ferror);
             
-            $pfiles[$key] = new InputPath($file['tmp_name'], $fname, true); 
+            $fname = (new SafeParam('name',$fname))->GetFSName();
+            $pfiles[$key] = new InputPath($fpath, $fname, true); 
         }
         
         $user = $_SERVER['PHP_AUTH_USER'] ?? null;
         $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
         
-        $auth = ($user !== null && $pass !== null) ? (new InputAuth($user, $pass)) : null;
+        $auth = ($user !== null && $pass !== null) 
+            ? (new InputAuth($user, $pass)) : null;
 
         return new Input($app, $action, $params, $pfiles, $auth);
     }
@@ -233,11 +243,13 @@ class HTTP extends IOInterface
     /**
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
-     * @param array<string, scalar> $post array of data to place in the POST body
+     * @param array<string, ?scalar> $post array of data to place in the POST body
      * @return ?string the remote response
      */
     public static function HTTPPost(string $url, array $post) : ?string
     {
+        foreach ($post as &$val) $val ??= "null";
+        
         $options = array('http'=>array(
             'header' => 'Content-type: application/x-www-form-urlencoded\r\n',
             'method' => 'POST', 'content' => http_build_query($post)

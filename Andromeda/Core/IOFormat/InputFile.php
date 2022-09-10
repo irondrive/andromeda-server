@@ -9,12 +9,18 @@ abstract class InputFile
      */
     public abstract function GetHandle();
     
-    /** Returns the entire stream contents */
+    /**
+     * Returns the entire stream contents 
+     * @throws FileReadFailedException if it fails
+     */
     public function GetData() : string
     {
         $handle = $this->GetHandle();
         
         $retval = stream_get_contents($handle);
+        
+        if ($retval === false)
+            throw new FileReadFailedException("stream");
         
         fclose($handle); return $retval;
     }
@@ -70,12 +76,33 @@ class InputPath extends InputFile
     /** Returns true if the file is a temp file that can be moved */
     public function isTemp() : bool { return $this->istemp; }
     
-    /** Returns the size of the file to be used */
-    public function GetSize() : int { return filesize($this->path); }
+    /** 
+     * Returns the size of the file to be used 
+     * @throws FileReadFailedException if it fails
+     */
+    public function GetSize() : int 
+    { 
+        $retval = filesize($this->path);
+        if ($retval === false)
+            throw new FileReadFailedException($this->path);
+        else return $retval;
+    }
 
     /**
      * Returns the file's stream resource
+     * @throws FileReadFailedException if it fails
      * @return resource
      */
-    public function GetHandle() { return $this->handle ??= fopen($this->path,'rb'); }
+    public function GetHandle() 
+    {
+        if ($this->handle === null)
+        {
+            $handle = fopen($this->path,'rb');
+            if ($handle === false)
+                throw new FileReadFailedException($this->path);
+            else $this->handle = $handle;
+        }
+        
+        return $this->handle;
+    }
 }

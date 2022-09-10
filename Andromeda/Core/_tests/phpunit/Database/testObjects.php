@@ -63,8 +63,10 @@ abstract class MyObjectBase extends BaseObject
     use TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array {
-        return array(MyObjectChild::class); }
+    public static function GetChildMap() : array 
+    {
+        return array(MyObjectChild::class); 
+    }
         
     private FieldTypes\NullIntType $mykey;
     
@@ -102,7 +104,7 @@ abstract class PolyObject0 extends PolyObject_
     // empty, no table!
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         return array(PolyObject1::class); // so we can load via it
     }
@@ -124,7 +126,7 @@ abstract class PolyObject1 extends PolyObject0
     use TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         return array(27=>PolyObject2::class); // skip over PolyObject15
     }
@@ -186,7 +188,7 @@ abstract class PolyObject2 extends PolyObject15
     use TableLinkedChildren;
 
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         return array(27=>PolyObject3::class);
     }
@@ -206,7 +208,7 @@ abstract class PolyObject3 extends PolyObject2
     // does not have its own table! but is part of the loadable chain
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         return array(PolyObject4::class);
     }
@@ -217,7 +219,7 @@ class PolyObject4 extends PolyObject3
     use TableTypedChildren;
 
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         // includes self::class - this class is not abstract!
         return array(5=>self::class, 13=>PolyObject5a::class, 18=>PolyObject5b::class);
@@ -266,7 +268,7 @@ class PolyObject5a extends PolyObject4
     use TableTypedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : ?array
+    public static function GetChildMap() : array
     {
         // includes self::class - this class is not abstract!
         return array(100=>self::class, 101=>PolyObject5aa::class, 102=>PolyObject5ab::class);

@@ -19,7 +19,7 @@ trait NoChildren
 {
     use NoTypedChildren;
     
-    public static function GetChildMap() : ?array { return null; }
+    public static function GetChildMap() : array { return array(); }
 }
 
 /** A trait for classes with no typed children */
@@ -108,7 +108,7 @@ trait TableTypedChildren
      * is fine because BaseCreate() will make sure they are set for every table.
      * After that, they can't change, and the value only matters for the top table.
      */
-    private FieldTypes\IntType $typefield; // TODO not everyone wants this to be an int...
+    private FieldTypes\IntType $typefield; // TODO not everyone wants this to be an int... GetChildMap keys can be any scalar
     
     /**
      * @return array<FieldTypes\BaseField> an array with the internal type field

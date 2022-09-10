@@ -165,10 +165,11 @@ class CLI extends IOInterface
      * @return non-empty-array<Input>
       */
     private function GetBatch(string $file) : array
-    {       
-        try { $lines = array_filter(explode("\n", file_get_contents($file))); }
-        catch (Exceptions\PHPError $e) { throw new UnknownBatchFileException(); }
+    {
+        if (!is_file($file) || ($fdata = file_get_contents($file)) === false)
+            throw new UnknownBatchFileException($file);
         
+        $lines = array_filter(explode("\n", $fdata));
         if (!count($lines)) throw new EmptyBatchException();
         
         return array_map(function($line)
@@ -218,9 +219,9 @@ class CLI extends IOInterface
                 $val = self::getNextValue($argv,$i);
                 if ($val === null) throw new IncorrectCLIUsageException();
                 
-                if (!is_readable($val)) throw new InvalidFileException();
-                
-                $val = trim(file_get_contents($val));
+                if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
+                    throw new InvalidFileException($val);
+                else $val = trim($fdat);
             }
             // optionally get a param value interactively
             else if ($special === '!')
@@ -228,8 +229,8 @@ class CLI extends IOInterface
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException();
                 
-                echo "enter $param...".PHP_EOL;
-                $val = trim(fgets(STDIN), PHP_EOL);
+                echo "enter $param...".PHP_EOL; $inp = fgets(STDIN);
+                $val = ($inp === false) ? null : trim($inp, PHP_EOL);
             }
             else $val = self::getNextValue($argv,$i);
 
@@ -239,7 +240,8 @@ class CLI extends IOInterface
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException();
                 
-                if (!is_readable($val)) throw new InvalidFileException($val);
+                if ($val === null) throw new IncorrectCLIUsageException();
+                if (!is_file($val)) throw new InvalidFileException($val);
                 
                 $filename = basename(self::getNextValue($argv,$i) ?? $val);
                 $filename = (new SafeParam('name',$filename))->GetFSName();

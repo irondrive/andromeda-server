@@ -137,15 +137,9 @@ final class CoreInstallApp extends InstallerApp
         // install all existing apps
         $installers = $this->runner->GetInstallers();
         self::SortInstallers($installers);
-        
-        $retval = array(); foreach ($installers as $name=>$installer)
-        {
-            $retval[$name] = $installer->Install($params);
-        }
 
-        // TODO need to do dependency resolution, install order matters here... 
-        
-        return $retval;
+        return array_map(function(InstallerApp $installer)use($params){ 
+            return $installer->Install($params); }, $installers);
     }
     
     /**
@@ -158,12 +152,8 @@ final class CoreInstallApp extends InstallerApp
         $installers = $this->runner->GetInstallers();
         self::SortInstallers($installers);
         
-        $retval = array(); foreach ($installers as $name=>$installer)
-        {
-            $retval[$name] = $installer->Upgrade($params);
-        }
-
-        return $retval;
+        return array_map(function(InstallerApp $installer)use($params){
+            return $installer->Upgrade($params); }, $installers);
     }
     
     protected function getUpgradeScripts() : array

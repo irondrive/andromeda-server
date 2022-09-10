@@ -6,9 +6,9 @@ require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exc
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends Exceptions\ClientErrorException
 {
-    public function __construct()
+    public function __construct(?string $details = null)
     {
-        parent::__construct(implode(PHP_EOL,array(
+        $usage = implode(PHP_EOL,array(
             "general usage: php index.php [global flags+] app action [action params+]",
             null,
             "global flags: [--json|--printr] [--dryrun] [--dbconf fspath] ".
@@ -24,7 +24,12 @@ class IncorrectCLIUsageException extends Exceptions\ClientErrorException
             "batch usage:   php index.php batch myfile.txt",
             "get version:   php index.php version",
             "get actions:   php index.php core usage"
-        )));
+        ));
+        
+        if ($details !== null)
+            $usage .= PHP_EOL.PHP_EOL."usage failure details: $details";
+        
+        parent::__construct($usage);
     }
 }
 
@@ -76,6 +81,14 @@ class LargeBatchException extends Exceptions\ClientErrorException
     }
 }
 
+/** Exception indicating the input file request format is wrong */
+class FileUploadFormatException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BAD_FILE_INPUT_FORMAT", $details);
+    }
+}
+
 /** Exception indicating the HTTP method used is not allowed */
 class MethodNotAllowedException extends Exceptions\ClientException
 {
@@ -89,5 +102,13 @@ class RemoteInvalidException extends Exceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INVALID_REMOTE_RESPONSE", $details);
+    }
+}
+
+/** Exception indicating there was an error with the uploaded file */
+class FileUploadFailException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILE_UPLOAD_ERROR", $details);
     }
 }

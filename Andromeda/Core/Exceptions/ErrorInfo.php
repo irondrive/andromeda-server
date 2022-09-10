@@ -79,12 +79,12 @@ class ErrorInfo
     public function GetMessage() : string       { return $this->message; }
     /** 
      * Return the basic backtrace
-     * @return array<string>
+     * @return array<int,string>
      */
     public function GetTraceBasic() : array     { return $this->trace_basic; }
     /** 
      * Return the full backtrace including arguments if logged
-     * @return array<mixed>
+     * @return array<int,array<string,mixed>>
      */
     public function TryGetTraceFull() : ?array  { return $this->trace_full; }
     /** 

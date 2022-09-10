@@ -78,7 +78,7 @@ abstract class BaseConfig extends SingletonObject
     {
         $version = $data['version'] ?? null;
         if ($version !== null && $version !== static::getVersion() && !static::$forceUpdate)
-            throw new UpgradeRequiredException(static::GetAppname(), $version);
+            throw new UpgradeRequiredException(static::GetAppname(), (string)$version);
         
         parent::__construct($database, $data);
         

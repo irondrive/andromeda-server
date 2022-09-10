@@ -125,6 +125,14 @@ abstract class MailSendException extends Exceptions\ServerException
     }
 }
 
+/** Exception indicating the Emailer is SMTP but has no hosts */
+class MissingHostsException extends MailSendException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("MAILER_MISSING_HOSTS", $details);
+    }
+}
+
 /** Exception indicating PHPMailer sending returned false */
 class PHPMailerException1 extends MailSendException
 {
@@ -162,6 +170,14 @@ class FailedAppLoadException extends Exceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FAILED_LOAD_APP", $details);
+    }
+}
+
+/** Exception indicating that scanning apps failed */
+class FailedScanAppsException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FAILED_SCAN_APPS", $details);
     }
 }
 

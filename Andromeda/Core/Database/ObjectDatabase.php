@@ -160,7 +160,7 @@ class ObjectDatabase
         
         if ($countChildren) // count foreach child
         {
-            if (($childmap = $class::GetChildMap()) === null)
+            if (empty($childmap = $class::GetChildMap()))
                 throw new NoBaseTableException($class);
             
             $count = 0; foreach ($childmap as $child)
@@ -203,7 +203,7 @@ class ObjectDatabase
         $childmap = $class::GetChildMap();
         $castRows = self::CanLoadByUpcast($class);
         
-        $doChildren = !$castRows && $childmap !== null;
+        $doChildren = !$castRows && !empty($childmap);
         $doSelf = !$doChildren;
         $objects = array();
         
@@ -262,7 +262,7 @@ class ObjectDatabase
         $childmap = $class::GetChildMap();
         $castRows = self::CanLoadByUpcast($class);
         
-        $doChildren = !$castRows && $childmap !== null;
+        $doChildren = !$castRows && !empty($childmap);
         $doSelf = !$doChildren;
         $count = 0;
         
@@ -340,7 +340,7 @@ class ObjectDatabase
         if (!$class::HasTypedRows()) return false;
         
         $childmap = $class::GetChildMap();
-        if ($childmap === null) return false;
+        if (empty($childmap)) return false;
         
         $tables = $class::GetTableClasses();
         if (empty($tables)) return false;
@@ -348,8 +348,8 @@ class ObjectDatabase
         foreach ($childmap as $child)
         {
             $subquery = ($class !== $child) &&                
-                ($child::GetChildMap() !== null || // has children
-                count($tables) !== count($child::GetTableClasses())); // has table
+                (!empty($child::GetChildMap()) || // has children
+                 count($tables) !== count($child::GetTableClasses())); // has table
             
             if ($subquery) return false;
         }
@@ -860,8 +860,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx] = $objs;
         
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
+        foreach ($class::GetChildMap() as $child)
         {
             if ($child !== $class)
             {
@@ -886,8 +885,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx][$obj->ID()] = $obj;
         
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
+        foreach ($class::GetChildMap() as $child)
         {
             if ($child !== $class)
             {
@@ -909,8 +907,7 @@ class ObjectDatabase
     {
         unset($this->objectsByKey[$class][$key][$validx][$object->ID()]);
         
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
+        foreach ($class::GetChildMap() as $child)
         {
             if ($child !== $class)
                 $this->RemoveNonUniqueKeyObject($child, $key, $validx, $object);
@@ -934,8 +931,7 @@ class ObjectDatabase
                 $this->SetKeyBaseClass($class, $key, $bclass);
                 $this->uniqueByKey[$class][$key] = array();
                 
-                if (($childmap = $class::GetChildMap()) !== null)
-                    foreach ($childmap as $child)
+                foreach ($class::GetChildMap() as $child)
                 {
                     if ($child !== $class)
                         $this->RegisterUniqueKeys($child);
@@ -959,8 +955,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->uniqueByKey[$class][$key][$validx] = $obj;
         
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
+        foreach ($class::GetChildMap() as $child)
         {
             if ($child !== $class)
             {
@@ -1044,8 +1039,7 @@ class ObjectDatabase
     {
         $this->uniqueByKey[$class][$key][$validx] = null;
         
-        if (($childmap = $class::GetChildMap()) !== null)
-            foreach ($childmap as $child)
+        foreach ($class::GetChildMap() as $child)
         {
             if ($child !== $class)
                 $this->UnsetUniqueKeyObject($child, $key, $validx);

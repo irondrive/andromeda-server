@@ -104,8 +104,12 @@ final class Config extends BaseConfig
         if ($params->HasParam('datadir')) 
         {
             $datadir = $params->GetParam('datadir')->GetNullFSPath();
-            if ($datadir !== null && (!is_readable($datadir) || !is_writeable($datadir)))
-                throw new UnwriteableDatadirException();
+            if ($datadir !== null)
+            {
+                if (!is_dir($datadir) || !is_readable($datadir) || !is_writeable($datadir))
+                    throw new UnwriteableDatadirException();
+            }
+            
             $this->datadir->SetValue($datadir);
         }
         
@@ -171,8 +175,10 @@ final class Config extends BaseConfig
             if (in_array($app,array('.','..'))) return false;
             return is_file(ROOT."/Apps/$app/$app"."App.php");
         };
-            
-        $apps = array_values(array_filter(scandir(ROOT."/Apps"), $valid));
+        
+        if (($dir = scandir(ROOT."/Apps")) === false)
+            throw new FailedScanAppsException();
+        $apps = array_values(array_filter($dir, $valid));
         
         return array_map(function(string $s){ return strtolower($s); }, $apps);
     }
@@ -320,7 +326,7 @@ final class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array<mixed> `{apiver:int, apps:[{string:string}], read_only:bool, enabled:bool}` \
+     * @return array<mixed> `{apiver:int, apps:[string:?string], read_only:bool, enabled:bool}` \
          if admin, add: `{date_created:float, datadir:?string, \
             requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
@@ -337,6 +343,7 @@ final class Config extends BaseConfig
 
         $apprunner = $this->GetApiPackage()->GetAppRunner();
         
+        $data['apps'] = array(); 
         foreach ($apprunner->GetApps() as $name=>$app)
         {
             $data['apps'][$name] = $admin ? $app->getVersion() : 
@@ -361,7 +368,7 @@ final class Config extends BaseConfig
 
             foreach ($this->GetApps() as $app) 
                 if (!array_key_exists($app, $data['apps']))
-                    $data['apps'][$app] = "FAILED_LOAD";
+                    $data['apps'][$app] = null; // failed
         }
 
         return $data;

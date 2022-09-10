@@ -61,3 +61,11 @@ class InvalidParseException extends Exceptions\ServerException
         parent::__construct("PARSE_OUTPUT_INVALID", $details);
     }
 }
+
+/** Exception indicating that reading the input file failed */
+class FileReadFailedException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FILE_READ_FAILED", $details);
+    }
+}

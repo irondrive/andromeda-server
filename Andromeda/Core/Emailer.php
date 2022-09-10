@@ -234,11 +234,18 @@ final class Emailer extends BaseObject
         
         if ($type === self::TYPE_SMTP)
         {
-            $mailer->Username = $this->username->TryGetValue();
-            $mailer->Password = $this->password->TryGetValue();
-            if ($mailer->Username !== null) $mailer->SMTPAuth = true;
-
-            $mailer->Host = implode(';', $this->hosts->TryGetArray());
+            if (($username = $this->username->TryGetValue()) !== null)
+            {
+                $mailer->SMTPAuth = true;
+                $mailer->Username = $username;
+                
+                if (($password = $this->password->TryGetValue()) !== null)
+                    $mailer->Password = $password;
+            }
+            
+            if (($hosts = $this->hosts->TryGetArray()) === null)
+                throw new MissingHostsException();
+            else $mailer->Host = implode(';', $hosts);
         }
     
         $this->mailer = $mailer;
@@ -273,12 +280,12 @@ final class Emailer extends BaseObject
                 $this->from_name->TryGetValue() ?? self::DEFAULT_FROM); 
         }
         else if ($from !== null) 
-            $mailer->addReplyTo($from->GetAddress(), $from->GetName());
+            $mailer->addReplyTo($from->GetAddress(), $from->GetName() ?? "");
         
         foreach ($recipients as $recipient) 
         {
-            if ($usebcc) $mailer->addBCC($recipient->GetAddress(), $recipient->GetName());
-            else $mailer->addAddress($recipient->GetAddress(), $recipient->GetName());          
+            if ($usebcc) $mailer->addBCC($recipient->GetAddress(), $recipient->GetName() ?? "");
+            else $mailer->addAddress($recipient->GetAddress(), $recipient->GetName() ?? "");
         }
         
         $mailer->Subject = $subject; 
