@@ -8,7 +8,7 @@ require_once(ROOT."/Core/Exceptions.php");
 require_once(ROOT."/Core/Database/Database.php");
 require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{Database, ObjectDatabase, DatabaseMissingException, DatabaseConnectException};
+use Andromeda\Core\Database\{Database, ObjectDatabase, DatabaseConnectException};
 
 require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
@@ -30,7 +30,6 @@ class ApiPackage
     /** 
      * Instantiates and returns a new ObjectDatabase connection 
      * @param IOInterface $interface interface to get config from
-     * @throws DatabaseMissingException if there is no config file
      * @throws DatabaseConnectException if the connection fails
      */
     public static function InitDatabase(IOInterface $interface) : ObjectDatabase
@@ -63,7 +62,6 @@ class ApiPackage
      *
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
-     * @throws DatabaseMissingException if there is no config file
      * @throws DatabaseConnectException if the connection fails
      * @throws InstallRequiredException if the Config is not available
      * @throws UpgradeRequiredException if the Config version is wrong

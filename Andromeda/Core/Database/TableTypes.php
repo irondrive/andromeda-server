@@ -32,6 +32,7 @@ trait NoTypedChildren
         throw new NotMultiTableException(self::class);
     }
     
+    /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
         throw new NotMultiTableException(self::class);
@@ -71,6 +72,7 @@ trait TableTypedChildren
         return $q->Equals("$table.type",$map[$class]);
     }
     
+    /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
         $type = $row['type']; $map = self::GetChildMap();
@@ -88,7 +90,7 @@ trait TableTypedChildren
         foreach (self::GetChildMap() as $type=>$class)
         {
             // determine the type value based on the object
-            if (is_a($obj, $class)) 
+            if ($obj instanceof $class) 
             {
                 $obj->typefield->SetValue($type); 
                 if ($class !== self::class) break; 

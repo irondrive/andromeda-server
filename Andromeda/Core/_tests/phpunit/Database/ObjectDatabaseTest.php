@@ -1111,9 +1111,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj2->SetUniqueKey(5)->Save(); // move obj2 to unique array
         $this->assertSame($obj2, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
-        
-        $this->expectException(NullUniqueKeyException::class);
-        $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', null); /** @phpstan-ignore-line */
     }
 
     public function testLimitOffsetBaseSubquery() : void

@@ -15,13 +15,16 @@ class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
 /** Exception indicating that database install config failed */
 class DatabaseInstallException extends Exceptions\ClientErrorException
 {
-    public function __construct(DatabaseConfigException $e) {
+    public function __construct(DatabaseConnectException $e) {
         parent::__construct(""); $this->CopyException($e);
     }
 }
 
+/** Exception indicating that a BaseObject was not set up properly */
+abstract class ObjectSetupException extends Exceptions\ServerException { }
+
 /** Exception indicating that the class cannot select from child classes */
-class NotMultiTableException extends Exceptions\ServerException
+class NotMultiTableException extends ObjectSetupException
 {
     public function __construct(?string $details = null) {
         parent::__construct("TABLE_NOT_MULTI_CLASS", $details);
@@ -29,7 +32,7 @@ class NotMultiTableException extends Exceptions\ServerException
 }
 
 /** Exception indicating that no fields were previously registered with a table */
-class NoChildTableException extends Exceptions\ServerException
+class NoChildTableException extends ObjectSetupException
 {
     public function __construct(?string $details = null) {
         parent::__construct("NO_CHILD_TABLE", $details);
@@ -37,10 +40,26 @@ class NoChildTableException extends Exceptions\ServerException
 }
 
 /** Exception indicating a base table is not given for this class */
-class NoBaseTableException extends Exceptions\ServerException
+class NoBaseTableException extends ObjectSetupException
 {
     public function __construct(?string $details = null) {
         parent::__construct("NO_BASE_TABLE", $details);
+    }
+}
+
+/** Exception indicating the requested class is not a child */
+class BadPolyClassException extends ObjectSetupException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BAD_POLY_CLASS", $details);
+    }
+}
+
+/** Exception indicating the given row has a bad type value */
+class BadPolyTypeException extends ObjectSetupException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BAD_POLY_TYPE", $details);
     }
 }
 
@@ -52,18 +71,24 @@ class ApiPackageException extends Exceptions\ServerException
     }
 }
 
-/** Base class for database initialization exceptions */
-abstract class DatabaseConfigException extends Exceptions\ServiceUnavailableException { }
+/** Base class for database connection initialization exceptions */
+abstract class DatabaseConnectException extends Exceptions\ServiceUnavailableException { }
 
 /** Exception indicating that the database configuration is not found */
-class DatabaseMissingException extends DatabaseConfigException
+class DatabaseMissingException extends DatabaseConnectException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DATABASE_CONFIG_MISSING", $details);
     }
 }
 
-abstract class DatabaseConnectException extends DatabaseConfigException { }
+/** Exception indicating that the database config is invalid */
+class DatabaseConfigException extends DatabaseConnectException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DATABASE_CONFIG_INVALID", $details);
+    }
+}
 
 /** Exception indicating that the database connection failed to initialize */
 class PDODatabaseConnectException extends DatabaseConnectException
@@ -71,14 +96,6 @@ class PDODatabaseConnectException extends DatabaseConnectException
     public function __construct(?PDOException $e = null) {
         parent::__construct("DATABASE_CONNECT_FAILED");
         if ($e) $this->AppendException($e);
-    }
-}
-
-/** Exception indicating that the database was requested to use an unknkown driver */
-class InvalidDriverException extends DatabaseConnectException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("PDO_UNKNOWN_DRIVER", $details);
     }
 }
 
@@ -159,6 +176,14 @@ class SaveAfterRollbackException extends DatabaseException
     }
 }
 
+/** Exception indicating that Save() was called on a deleted object */
+class SaveAfterDeleteException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("SAVE_AFTER_DELETE", $details);
+    }
+}
+
 /** Exception indicating that the requested class does not match the loaded object */
 class ObjectTypeException extends DatabaseException
 {
@@ -183,34 +208,10 @@ class UnknownUniqueKeyException extends DatabaseException
     }
 }
 
-/** Exception indicating that null was given as a unique key value */
-class NullUniqueKeyException extends DatabaseException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("NULL_UNIQUE_VALUE", $details);
-    }
-}
-
 /** Exception indicating that the requested object is null */
 class SingletonNotFoundException extends DatabaseException
 {
     public function __construct(?string $details = null) {
         parent::__construct("SINGLETON_NOT_FOUND", $details);
-    }
-}
-
-/** Exception indicating the requested class is not a child */
-class BadPolyClassException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("BAD_POLY_CLASS", $details);
-    }
-}
-
-/** Exception indicating the given row has a bad type value */
-class BadPolyTypeException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("BAD_POLY_TYPE", $details);
     }
 }

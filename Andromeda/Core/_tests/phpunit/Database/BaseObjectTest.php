@@ -105,7 +105,9 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         
         $obj->Delete(); 
         $obj->NotifyDeleted();
-        $obj->Save(); // nothing
+        
+        $this->expectException(SaveAfterDeleteException::class);
+        $obj->Save(); // throws exception
     }
     
     public function testNotifyDelete() : void
