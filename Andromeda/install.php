@@ -2,15 +2,8 @@
 
 /** A more minimal index.php that runs InstallRunner */
 
-require_once(ROOT."/Core/InstallRunner.php"); 
 use Andromeda\Core\InstallRunner;
-
-require_once(ROOT."/Core/IOFormat/Input.php");
-require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/IOInterface.php");
 use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
-
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
 
 
