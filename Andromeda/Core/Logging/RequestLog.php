@@ -1,18 +1,13 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\{ApiPackage, Utilities};
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\IOFormat\{Input, SafeParams};
 
-require_once(ROOT."/Core/Logging/ActionLog.php");
-require_once(ROOT."/Core/Logging/BaseLog.php");
 require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing an API request */

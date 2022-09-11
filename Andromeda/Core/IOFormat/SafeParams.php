@@ -1,8 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php");
-
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
+use Andromeda\Core\Config;
 
 /**
  * A thin class that manages a collection of SafeParam objects

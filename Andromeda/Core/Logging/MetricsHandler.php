@@ -1,19 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\ApiPackage;
-
-require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/Exceptions.php");
-use Andromeda\Core\{Config, MissingMetricsException};
+use Andromeda\Core\{ApiPackage, Config, MissingMetricsException};
 
-require_once(ROOT."/Core/Database/DBStats.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 use Andromeda\Core\Database\{ObjectDatabase, DBStats};
-
-require_once(ROOT."/Core/IOFormat/Output.php");
 use Andromeda\Core\IOFormat\Output;
 
-require_once(ROOT."/Core/Logging/RequestMetrics.php");
+require_once(ROOT."/Core/Logging/Exceptions.php");
 
 final class MetricsHandler
 {

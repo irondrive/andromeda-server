@@ -1,14 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php");
-require_once(ROOT."/Core/InstallerApp.php");
 use Andromeda\Core\{Config, InstallerApp};
-
-require_once(ROOT."/Core/Database/Database.php");
 use Andromeda\Core\Database\Database;
-
-require_once(ROOT."/Core/IOFormat/Input.php");
-require_once(ROOT."/Core/IOFormat/SafeParams.php");
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Core/Exceptions.php");

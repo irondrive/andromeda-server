@@ -2,8 +2,7 @@
 
 require_once("init.php");
 
-require_once(ROOT."/Core/InstallerApp.php"); use Andromeda\Core\InstallerApp;
-require_once(ROOT."/Apps/Core/CoreInstallApp.php");
+use Andromeda\Core\InstallerApp;
 
 class CoreInstallAppTest extends \PHPUnit\Framework\TestCase
 {

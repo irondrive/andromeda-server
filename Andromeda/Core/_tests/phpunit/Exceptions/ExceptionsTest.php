@@ -4,8 +4,6 @@ require_once("init.php");
 
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
 
-require_once(ROOT."/Core/IOFormat/Output.php");
-
 class TestClientException extends ClientException
 {
     public function __construct(?string $details = null) 

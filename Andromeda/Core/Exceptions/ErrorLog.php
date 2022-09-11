@@ -1,15 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
-require_once(ROOT."/Core/Logging/BaseLog.php"); use Andromeda\Core\Logging\BaseLog;
-
-require_once(ROOT."/Core/Exceptions/ErrorInfo.php");
+use Andromeda\Core\Logging\BaseLog;
 
 /** Represents an error log entry in the database */
 final class ErrorLog extends BaseLog

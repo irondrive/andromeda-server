@@ -1,15 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
-require_once(ROOT."/Core/IOFormat/Input.php"); 
-require_once(ROOT."/Core/IOFormat/InputAuth.php");
-require_once(ROOT."/Core/IOFormat/Output.php"); 
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); 
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); 
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); 
-use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams,InputPath};
+require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
+use Andromeda\Core\IOFormat\{Input,InputAuth,Output,IOInterface,SafeParam,SafeParams};
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
 

@@ -1,17 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/BaseRunner.php"); use Andromeda\Core\BaseRunner;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\{ApiPackage, BaseRunner, Config, Utilities};
 
-require_once(ROOT."/Core/Exceptions/ErrorLog.php");
-require_once(ROOT."/Core/Exceptions/ErrorInfo.php");
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\{IOInterface, Output};
+use Andromeda\Core\Database\ObjectDatabase;
 
 /** 
  * The main error handler/manager 

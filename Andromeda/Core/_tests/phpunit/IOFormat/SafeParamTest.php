@@ -3,9 +3,7 @@
 require_once("init.php");
 
 require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
-require_once(ROOT."/Core/IOFormat/SafeParam.php");
+use Andromeda\Core\Utilities;
 
 class SafeParamTest extends \PHPUnit\Framework\TestCase
 {

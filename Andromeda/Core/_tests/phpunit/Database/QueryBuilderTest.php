@@ -4,9 +4,6 @@ require_once("init.php");
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-require_once(ROOT."/Core/Database/QueryBuilder.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
-
 class QueryBuilderTest extends \PHPUnit\Framework\TestCase
 {
     public function testEscapeWildcards() : void

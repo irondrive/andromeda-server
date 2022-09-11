@@ -4,9 +4,7 @@ require_once("init.php");
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
-
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
+use Andromeda\Core\ApiPackage;
 
 class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 {

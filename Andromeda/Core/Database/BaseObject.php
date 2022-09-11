@@ -1,12 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
-require_once(ROOT."/Core/Database/QueryBuilder.php");
 
-use Andromeda\Core\ApiPackage;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\{ApiPackage, Utilities};
 
 /**
  * The base class for objects that can be saved/loaded from the database.

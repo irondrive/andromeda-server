@@ -10,12 +10,10 @@ mb_internal_encoding("UTF-8");
 
 use \PDO; use \PDOStatement; use \PDOException;
 
-require_once(ROOT."/Core/Database/DBStats.php");
 require_once(ROOT."/Core/Database/Exceptions.php");
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\IOFormat\SafeParams;
 
 /**
  * This class implements the PDO database abstraction.

@@ -1,27 +1,19 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/BaseApp.php"); 
-require_once(ROOT."/Core/Config.php"); 
-require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Emailer.php");
 use Andromeda\Core\{ApiPackage, BaseApp, Config, Emailer, EmailRecipient, Utilities};
 
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, UnknownActionException, MailSendException};
 
-require_once(ROOT."/Core/Exceptions/ErrorLog.php"); use Andromeda\Core\Exceptions\ErrorLog;
-require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Database;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/OutputHandler.php"); use Andromeda\Core\IOFormat\OutputHandler;
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Logging/RequestLog.php"); use Andromeda\Core\Logging\RequestLog;
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
+use Andromeda\Core\Exceptions\ErrorLog;
+use Andromeda\Core\Database\Database;
+use Andromeda\Core\IOFormat\{Input, Output, SafeParams, OutputHandler, IOInterface};
+use Andromeda\Core\Logging\RequestLog;
+use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
-require_once(ROOT."/Apps/Core/ActionLog.php");
 
-require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
+use Andromeda\Apps\Accounts\Authenticator;
 
 /**
  * Server management/info app included with the framework.

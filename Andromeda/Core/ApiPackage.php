@@ -1,21 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php");
-require_once(ROOT."/Core/AppRunner.php");
 require_once(ROOT."/Core/Exceptions.php");
 
-require_once(ROOT."/Core/Database/Database.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/Exceptions.php");
 use Andromeda\Core\Database\{Database, ObjectDatabase, DatabaseConnectException};
 
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
-
-require_once(ROOT."/Core/IOFormat/IOInterface.php");
 use Andromeda\Core\IOFormat\IOInterface;
-
-require_once(ROOT."/Core/Logging/MetricsHandler.php");
 use Andromeda\Core\Logging\MetricsHandler;
 
 /** The main container class creating and managing API resources */

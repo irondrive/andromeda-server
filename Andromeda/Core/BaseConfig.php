@@ -1,8 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/SingletonObject.php"); use Andromeda\Core\Database\SingletonObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{ObjectDatabase, SingletonObject};
 require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\DatabaseException;
 
 /** A singleton object that stores a version field */

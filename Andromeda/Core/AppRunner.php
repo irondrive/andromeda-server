@@ -1,25 +1,14 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
-require_once(ROOT."/Core/RunContext.php");
-require_once(ROOT."/Core/ApiPackage.php");
-require_once(ROOT."/Core/BaseRunner.php");
 
-require_once(ROOT."/Core/Database/DBStats.php");
 use Andromeda\Core\Database\DBStats; // phpstan
 
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
 use Andromeda\Core\Exceptions\ClientException;
 
-require_once(ROOT."/Core/IOFormat/Input.php");
-require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
 use Andromeda\Core\IOFormat\{Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
-
-require_once(ROOT."/Core/Logging/ActionLog.php");
-require_once(ROOT."/Core/Logging/RequestLog.php");
 use Andromeda\Core\Logging\{ActionLog, RequestLog};
 
 /**

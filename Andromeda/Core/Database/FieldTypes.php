@@ -1,9 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\{ConcurrencyException, DatabaseReadOnlyException};
 
 /** Exception indicating that the given counter exceeded its limit */

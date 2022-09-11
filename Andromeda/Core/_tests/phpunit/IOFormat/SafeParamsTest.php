@@ -2,9 +2,7 @@
 
 require_once("init.php");
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-
-require_once(ROOT."/Core/IOFormat/SafeParams.php");
+use Andromeda\Core\Config;
 
 class SafeParamsTest extends \PHPUnit\Framework\TestCase
 {

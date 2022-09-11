@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/DBStats.php"); use Andromeda\Core\Database\DBStats;
+use Andromeda\Core\Database\DBStats;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
 
 /** Log entry representing DBStats */

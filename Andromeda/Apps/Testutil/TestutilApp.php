@@ -1,16 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/BaseApp.php"); use Andromeda\Core\BaseApp;
+use Andromeda\Core\{BaseApp, Utilities};
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/OutputHandler.php"); use Andromeda\Core\IOFormat\OutputHandler;
-require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputFile;
+use Andromeda\Core\IOFormat\{Input, InputFile, Output, OutputHandler, SafeParams};
 
 /**
  * Utility app for the python test framework

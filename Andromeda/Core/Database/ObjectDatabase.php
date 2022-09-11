@@ -1,8 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-require_once(ROOT."/Core/Database/Database.php");
-require_once(ROOT."/Core/Database/BaseObject.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
 
 use Andromeda\Core\ApiPackage;

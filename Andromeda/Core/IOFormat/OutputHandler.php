@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/Output.php");
-
 /** Class for custom app output routines */
 class OutputHandler
 {

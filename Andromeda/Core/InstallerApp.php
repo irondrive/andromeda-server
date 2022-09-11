@@ -1,13 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/BaseApp.php");
-require_once(ROOT."/Core/BaseConfig.php");
-require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
 
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\{Input, SafeParams};
+use Andromeda\Core\Database\ObjectDatabase;
 
 /** 
  * Describes an installer for an app that needs database installation and has upgrade
