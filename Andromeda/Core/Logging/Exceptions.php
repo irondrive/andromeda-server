@@ -17,3 +17,11 @@ class MultiFileWriteException extends Exceptions\ServerException
         parent::__construct("LOG_FILE_MULTI_WRITE", $details);
     }
 }
+
+/** SaveMetrics requires the database to not already be undergoing a transaction */
+class MetricsTransactionException extends Exceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("METRICS_IN_TRANSACTION", $details);
+    }
+}
