@@ -3,7 +3,6 @@
 require_once("init.php");
 
 require_once(ROOT."/Core/Database/TableTypes.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 
 final class TestSingleton1 extends SingletonObject 
 {

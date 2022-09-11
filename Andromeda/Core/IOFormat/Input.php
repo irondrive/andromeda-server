@@ -1,12 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/SafeParam.php");
-require_once(ROOT."/Core/IOFormat/SafeParams.php");
-require_once(ROOT."/Core/IOFormat/InputAuth.php");
-require_once(ROOT."/Core/IOFormat/InputFile.php");
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog;
+use Andromeda\Core\Logging\ActionLog;
 
 /** 
  * An abstracted Input object gathered from an interface

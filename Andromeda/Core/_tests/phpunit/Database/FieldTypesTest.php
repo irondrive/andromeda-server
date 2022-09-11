@@ -4,13 +4,9 @@ require_once("init.php");
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-require_once(ROOT."/Core/ApiPackage.php"); use Andromeda\Core\ApiPackage;
-
 require_once(ROOT."/Core/Database/FieldTypes.php");
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+use Andromeda\Core\Database\{BaseObject, Database, ObjectDatabase};
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\Database;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 
 class TestObject1 extends BaseObject { use TableNoChildren; }
 class TestObject2 extends BaseObject { use TableNoChildren; }

@@ -1,9 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/SafeParams.php");
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+ use Andromeda\Core\Utilities;
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
 /**

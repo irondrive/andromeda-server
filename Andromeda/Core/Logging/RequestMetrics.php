@@ -1,19 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/RunContext.php"); use Andromeda\Core\RunContext; // phpstan
+use Andromeda\Core\{Config, RunContext, Utilities};
 
-require_once(ROOT."/Core/Database/DBStats.php"); use Andromeda\Core\Database\DBStats;
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
+use Andromeda\Core\Database\{BaseObject, DBStats, ObjectDatabase};
 
-require_once(ROOT."/Core/Logging/RequestLog.php");
-require_once(ROOT."/Core/Logging/DBStatsLog.php");
-require_once(ROOT."/Core/Logging/ActionMetrics.php");
-require_once(ROOT."/Core/Logging/CommitMetrics.php");
+require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing a performance metrics for a request */
 final class RequestMetrics extends BaseObject

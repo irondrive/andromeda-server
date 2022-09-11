@@ -1,13 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
+use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
-require_once(ROOT."/Core/IOFormat/Input.php");
-require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/OutputHandler.php");
-require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php");
-require_once(ROOT."/Core/IOFormat/Interfaces/CLI.php");
 
 if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
 

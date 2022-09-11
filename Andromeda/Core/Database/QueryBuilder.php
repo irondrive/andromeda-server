@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
-
 /** Minimalistic class for building prepared post-FROM SQL query strings */
 class QueryBuilder
 {

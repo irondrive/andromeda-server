@@ -1,13 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/BaseRunner.php"); use Andromeda\Core\BaseRunner;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\{BaseRunner, Config, Utilities};
 
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
+use Andromeda\Core\IOFormat\IOInterface;
+use Andromeda\Core\Database\ObjectDatabase;
 
 /** Represents an error log entry in the database */
 class ErrorInfo

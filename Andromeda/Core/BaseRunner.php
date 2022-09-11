@@ -1,8 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/RunContext.php");
-
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\IOFormat\Input;
 
 /**
  * A base runner that can handle Run(Input), 

@@ -4,8 +4,6 @@ require_once("init.php");
 
 require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
 
-require_once(ROOT."/Core/IOFormat/Output.php");
-
 class TestClientException extends Exceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {

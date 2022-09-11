@@ -2,9 +2,7 @@
 
 require_once("init.php");
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
-require_once(ROOT."/Core/Database/BaseObject.php");
 require_once(ROOT."/Core/Database/TableTypes.php");
 
 class OnDelete { public function Delete() : void { } }

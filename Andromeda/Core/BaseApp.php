@@ -1,12 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php");
-require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
 
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog; // phpstan
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\Logging\ActionLog; // phpstan
+use Andromeda\Core\Database\ObjectDatabase;
 
 /** The base class from which apps must inherit */
 abstract class BaseApp

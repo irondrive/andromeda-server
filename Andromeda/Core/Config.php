@@ -1,15 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/BaseApp.php");
-require_once(ROOT."/Core/BaseConfig.php");
-require_once(ROOT."/Core/Exceptions.php");
 require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
+use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
 /** The global framework config stored in the database */
 final class Config extends BaseConfig

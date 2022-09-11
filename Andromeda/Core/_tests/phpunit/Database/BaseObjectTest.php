@@ -4,9 +4,6 @@ require_once("init.php");
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-require_once(ROOT."/Core/Database/BaseObject.php");
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
-
 class BaseObjectTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetUniqueKeys() : void

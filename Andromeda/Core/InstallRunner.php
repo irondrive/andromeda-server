@@ -1,19 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php");
-require_once(ROOT."/Core/Utilities.php");
-require_once(ROOT."/Core/ApiPackage.php");
-require_once(ROOT."/Core/InstallerApp.php");
-require_once(ROOT."/Core/BaseRunner.php");
-
-require_once(ROOT."/Core/Database/ObjectDatabase.php");
 use Andromeda\Core\Database\ObjectDatabase;
-
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
-
-require_once(ROOT."/Core/IOFormat/IOInterface.php");
-require_once(ROOT."/Core/IOFormat/Input.php");
 use Andromeda\Core\IOFormat\{IOInterface, Input};
 
 require_once(ROOT."/Core/Database/Exceptions.php");

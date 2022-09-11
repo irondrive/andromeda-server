@@ -1,15 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-require_once(ROOT."/Core/RunContext.php"); use Andromeda\Core\RunContext;
+use Andromeda\Core\{Config, RunContext};
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-
-require_once(ROOT."/Core/Logging/RequestMetrics.php");
-require_once(ROOT."/Core/Logging/DBStatsLog.php");
+use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 
 /** Log entry representing metrics for an app action */
 final class ActionMetrics extends BaseObject
