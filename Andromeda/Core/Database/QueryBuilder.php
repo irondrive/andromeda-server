@@ -225,24 +225,22 @@ class QueryBuilder
     
     /** 
      * Assigns a LIMIT clause to the query 
+     * @param NULL|0|positive-int $limit
      * @return $this
      */
     public function Limit(?int $limit) : self 
-    { 
-        if ($limit < 0) $limit = 0; 
-        $this->limit = $limit; 
-        return $this; 
+    {
+        $this->limit = $limit; return $this; 
     }
     
     /** 
      * Assigns an OFFSET clause to the query (use with LIMIT) 
+     * @param NULL|0|positive-int $offset
      * @return $this
      */
     public function Offset(?int $offset) : self 
-    { 
-        if ($offset < 0) $offset = 0; 
-        $this->offset = $offset; 
-        return $this; 
+    {
+        $this->offset = $offset; return $this; 
     }
 
     /** Returns the set query limit */
