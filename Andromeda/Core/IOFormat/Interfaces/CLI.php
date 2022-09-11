@@ -200,8 +200,10 @@ class CLI extends IOInterface
         for ($i = 0; $i < count($argv); $i++)
         {
             $param = self::getKey($argv[$i]); 
-            if ($param === null) throw new IncorrectCLIUsageException("expected key at action arg $i");
-            else if (empty($param)) throw new IncorrectCLIUsageException("empty key at action arg $i");
+            if ($param === null) throw new IncorrectCLIUsageException(
+                "expected key at action arg $i");
+            else if (empty($param)) throw new IncorrectCLIUsageException(
+                "empty key at action arg $i");
             
             $special = mb_substr($param, -1);
             
@@ -209,10 +211,12 @@ class CLI extends IOInterface
             if ($special === '@')
             {
                 $param = mb_substr($param,0,-1); 
-                if (!$param) throw new IncorrectCLIUsageException("empty @ key at action arg $i");
+                if (!$param) throw new IncorrectCLIUsageException(
+                    "empty @ key at action arg $i");
                 
                 $val = self::getNextValue($argv,$i);
-                if ($val === null) throw new IncorrectCLIUsageException("expected @ value at action arg $i");
+                if ($val === null) throw new IncorrectCLIUsageException(
+                    "expected @ value at action arg $i");
                 
                 if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
                     throw new InvalidFileException($val);
@@ -222,7 +226,8 @@ class CLI extends IOInterface
             else if ($special === '!')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException("empty ! key at action arg $i");
+                if (!$param) throw new IncorrectCLIUsageException(
+                    "empty ! key at action arg $i");
                 
                 echo "enter $param...".PHP_EOL; $inp = fgets(STDIN);
                 $val = ($inp === false) ? null : trim($inp, PHP_EOL);
@@ -233,9 +238,12 @@ class CLI extends IOInterface
             if ($special === '%')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException("empty % key at action arg $i");
+                if (!$param) throw new IncorrectCLIUsageException(
+                    "empty % key at action arg $i");
                 
-                if ($val === null) throw new IncorrectCLIUsageException("expected % value at action arg $i");
+                if ($val === null) throw new IncorrectCLIUsageException(
+                    "expected % value at action arg $i");
+                
                 if (!is_file($val)) throw new InvalidFileException($val);
                 
                 $filename = basename(self::getNextValue($argv,$i) ?? $val);
@@ -247,7 +255,8 @@ class CLI extends IOInterface
             else if ($special === '-')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException("empty - key at action arg $i");
+                if (!$param) throw new IncorrectCLIUsageException(
+                    "empty - key at action arg $i");
                 
                 $files[$param] = new InputStream(STDIN);
             }
