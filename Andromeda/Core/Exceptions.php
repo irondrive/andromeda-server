@@ -181,14 +181,6 @@ class FailedScanAppsException extends Exceptions\ServerException
     }
 }
 
-/** SaveMetrics requires the database to not already be undergoing a transaction */
-class FinalizeTransactionException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("OUTPUT_IN_TRANSACTION", $details);
-    }
-}
-
 /** Exception indicating that a duplicate singleton was constructed */
 class DuplicateSingletonException extends Exceptions\ServerException
 {

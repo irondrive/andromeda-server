@@ -2,7 +2,6 @@
 
 require_once(ROOT."/Core/Config.php");
 require_once(ROOT."/Core/AppRunner.php");
-require_once(ROOT."/Core/MetricsHandler.php");
 require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/Database.php");
@@ -15,6 +14,9 @@ use Andromeda\Core\Exceptions\ErrorManager;
 
 require_once(ROOT."/Core/IOFormat/IOInterface.php");
 use Andromeda\Core\IOFormat\IOInterface;
+
+require_once(ROOT."/Core/Logging/MetricsHandler.php");
+use Andromeda\Core\Logging\MetricsHandler;
 
 /** The main container class creating and managing API resources */
 class ApiPackage
