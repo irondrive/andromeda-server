@@ -110,7 +110,7 @@ abstract class BaseObject
      * Given a database row, return the child class applicable
      * Only for base classes that are the final table for > 1 class (TypedChildren)
      * @param array<string,?scalar> $row row of data from the database
-     * @return class-string<self> child class of row
+     * @return class-string<static> child class of row
      */
     public static function GetRowClass(array $row) : string { 
         throw new NotMultiTableException(self::class); }
@@ -317,11 +317,15 @@ abstract class BaseObject
     /**
      * Inserts this object to the DB if creates, updates this object if modified
      * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
+     * @throws SaveAfterDeleteException if the object is deleted
      * @return $this
      */
     public function Save(bool $onlyAlways = false) : self
     {
-        if ($this->isDeleted || ($onlyAlways && $this->isCreated)) return $this;
+        if ($this->isDeleted)
+            throw new SaveAfterDeleteException();
+        
+        if ($onlyAlways && $this->isCreated) return $this;
         
         if ($this->deleteLater) { $this->Delete(); return $this; }
 

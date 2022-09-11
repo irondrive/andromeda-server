@@ -547,19 +547,22 @@ class ObjectDatabase
             {
                 $key = $field->GetName();
                 $val = $field->GetDBValue();
-                $field->ResetDelta();
+                $field->SetUnmodified();
                 
-                if ($field instanceof FieldTypes\Counter)
+                if ($val === null)
+                {
+                    $sets[] = "$key=NULL";
+                }
+                else if ($field instanceof FieldTypes\Counter)
                 {
                     $sets[] = "$key=$key+:d$i";
                     $data['d'.$i++] = $val;
                 }
-                else if ($val !== null) 
+                else
                 {
                     $sets[] = "$key=:d$i";
                     $data['d'.$i++] = $val;
                 }
-                else $sets[] = "$key=NULL";
             }
             
             if (empty($sets)) continue; // nothing to update
@@ -585,7 +588,7 @@ class ObjectDatabase
      * Inserts the given object to the database
      * @param BaseObject $object object to insert
      * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
-          fields to save of object for each table class, order derived->base (ALL)
+          fields to save of object for each table class, order derived->base (ALL!)
      * @throws InsertFailedException if the insert row fails
      * @return $this
      */
@@ -607,12 +610,22 @@ class ObjectDatabase
                 $key = $field->GetName();
                 $val = $field->GetDBValue();
                 
-                if ($key === 'id' || $field->isModified())
+                if ($field->isModified() ||
+                    $field->GetName() === 'id')
                 {
-                    $field->ResetDelta();
-                    $columns[] = $key;
-                    $indexes[] = ':d'.$i;
-                    $data['d'.$i++] = $val;
+                    $field->SetUnmodified();
+                    
+                    if ($val === null)
+                    {
+                        $columns[] = $key;
+                        $indexes[] = "NULL";
+                    }
+                    else
+                    {
+                        $columns[] = $key;
+                        $indexes[] = ':d'.$i;
+                        $data['d'.$i++] = $val;
+                    }
                 }
             }
             
@@ -717,7 +730,7 @@ class ObjectDatabase
                 $this->objectsKeyValues[(string)$obj][$key] = $validx;
         }
 
-        return $this->objectsByKey[$class][$key][$validx];
+        return $this->objectsByKey[$class][$key][$validx]; /** @phpstan-ignore-line */
     }
     
     /**
@@ -758,15 +771,12 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws NullUniqueKeyException if $value is null
      * @throws UnknownUniqueKeyException if the key is not registered
      * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
     public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
     {
-        if ($value === null) throw new NullUniqueKeyException("$class $key"); /** @phpstan-ignore-line */
-        
         $this->RegisterUniqueKeys($class);
         
         if (!array_key_exists($key, $this->uniqueByKey[$class]))
@@ -786,7 +796,7 @@ class ObjectDatabase
             $this->uniqueKeyValues[(string)$obj][$key] = $validx;
         }
 
-        return $this->uniqueByKey[$class][$key][$validx];
+        return $this->uniqueByKey[$class][$key][$validx]; /** @phpstan-ignore-line */
     }
     
     /**
@@ -796,15 +806,12 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws NullUniqueKeyException if $value is null
      * @throws UnknownUniqueKeyException if the key is not registered
      * @throws MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
     public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO unit test
     {
-        if ($value === null) throw new NullUniqueKeyException("$class $key"); /** @phpstan-ignore-line */
-        
         $this->RegisterUniqueKeys($class);
         
         if (!array_key_exists($key, $this->uniqueByKey[$class]))
@@ -832,9 +839,10 @@ class ObjectDatabase
     
     /**
      * Sets the registered base class for a class key if not already set or lower than existing
-     * @param string $class class to register the key for
+     * @template T of BaseObject
+     * @param class-string<T> $class class to register the key for
      * @param string $key key name being registered
-     * @param string $bclass key's base class to register
+     * @param class-string<T> $bclass key's base class to register
      */
     private function SetKeyBaseClass(string $class, string $key, string $bclass) : void
     {
@@ -864,7 +872,7 @@ class ObjectDatabase
         {
             if ($child !== $class)
             {
-                $objs2 = array_filter($objs, function(BaseObject $obj)use($child){ return is_a($obj, $child); });
+                $objs2 = array_filter($objs, function(BaseObject $obj)use($child){ return $obj instanceof $child; });
                 $this->SetNonUniqueKeyObjects($child, $key, $validx, $objs2, $bclass);
             }    
         }
@@ -889,7 +897,7 @@ class ObjectDatabase
         {
             if ($child !== $class)
             {
-                if ($obj !== null && is_a($obj, $child))
+                if ($obj !== null && $obj instanceof $child)
                     $this->AddNonUniqueKeyObject($child, $key, $validx, $obj, $bclass);
             }
         }
@@ -959,7 +967,7 @@ class ObjectDatabase
         {
             if ($child !== $class)
             {
-                $obj2 = ($obj !== null && is_a($obj, $child)) ? $obj : null;
+                $obj2 = ($obj !== null && $obj instanceof $child) ? $obj : null;
                 $this->SetUniqueKeyObject($child, $key, $validx, $obj2, $bclass);
             }
         }
@@ -968,7 +976,7 @@ class ObjectDatabase
     /**
      * Adds the given object's row data to any existing unique key caches
      * @param BaseObject $object object being created
-     * @param array<string, mixed> $data row from database
+     * @param array<string, ?scalar> $data row from database
      */
     private function SetUniqueKeysFromData(BaseObject $object, array $data) : void
     {

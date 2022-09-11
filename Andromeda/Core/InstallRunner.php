@@ -17,7 +17,7 @@ require_once(ROOT."/Core/IOFormat/Input.php");
 use Andromeda\Core\IOFormat\{IOInterface, Input};
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{DatabaseConfigException, DatabaseMissingException};
+use Andromeda\Core\Database\{DatabaseConnectException, DatabaseMissingException};
 
 /** 
  * A special runner class for loading and running app installers
@@ -31,7 +31,7 @@ class InstallRunner extends BaseRunner
     
     private ?ObjectDatabase $database = null;
     /** The exception thrown when db loading failed */
-    private ?DatabaseConfigException $dbexc = null;
+    private ?DatabaseConnectException $dbexc = null;
     
     /** @var array<string, InstallerApp> */
     private array $installers = array();
@@ -50,7 +50,7 @@ class InstallRunner extends BaseRunner
     
     /** 
      * Returns the ObjectDatabase instance
-     * @throws DatabaseConfigException if not available
+     * @throws DatabaseConnectException if not available
      */
     public function RequireDatabase() : ObjectDatabase
     {
@@ -86,7 +86,7 @@ class InstallRunner extends BaseRunner
             throw new InstallDisabledException();
 
         try { $this->database = ApiPackage::InitDatabase($interface); }
-        catch (DatabaseConfigException $e) { $this->dbexc = $e; }
+        catch (DatabaseConnectException $e) { $this->dbexc = $e; }
         
         if ($this->database !== null)
             $this->errorman->SetDatabase($this->database);

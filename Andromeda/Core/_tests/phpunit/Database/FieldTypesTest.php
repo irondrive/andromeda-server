@@ -41,7 +41,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($field->isAlwaysSave());
     }
     
-    public function testResetDelta() : void
+    public function testSetUnmodified() : void
     {
         $parent = $this->createMock(BaseObject::class);
         $field = (new StringType('myfield'))->SetParent($parent);
@@ -49,7 +49,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetValue('test');
         $this->assertSame(1, $field->GetDelta());
         
-        $field->ResetDelta();
+        $field->SetUnmodified();
         $this->assertSame(0, $field->GetDelta());
     }
     
@@ -703,7 +703,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(-50, $field->GetDBValue());
         $this->assertSame(50, $field->GetValue());
         
-        $field->ResetDelta();
+        $field->SetUnmodified();
         $this->assertSame(0, $field->GetDelta());
         $this->assertSame(0, $field->GetDBValue());
         $this->assertSame(50, $field->GetValue());

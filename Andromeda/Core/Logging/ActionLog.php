@@ -52,6 +52,7 @@ class ActionLog extends BaseLog
         }
     }
     
+    /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
         $app = $row['app']; $map = self::GetChildMap();

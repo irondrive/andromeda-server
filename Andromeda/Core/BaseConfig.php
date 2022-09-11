@@ -39,6 +39,7 @@ abstract class BaseConfig extends SingletonObject
 
     /** 
      * @throws InstallRequiredException if config is not installed
+     * @throws UpgradeRequiredException if the version in the given data does not match
      * @return static 
      */
     public static function GetInstance(ObjectDatabase $database) : self

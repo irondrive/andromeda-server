@@ -75,7 +75,7 @@ abstract class BaseField
     }
     
     /** @return string field name in the DB */
-    final public function GetName() : string { return $this->name; }
+    public function GetName() : string { return $this->name; }
 
     /** @return int number of times modified */
     public function GetDelta() : int { return $this->delta; }
@@ -99,9 +99,11 @@ abstract class BaseField
      */
     public abstract function GetDBValue();
 
-    /** Resets this field's delta 
-     * @return $this */
-    public function ResetDelta() : self { $this->delta = 0; return $this; }
+    /** 
+     * Resets this field's delta 
+     * @return $this 
+     */
+    public function SetUnmodified() : self { $this->delta = 0; return $this; }
     
     /** Unsets the field's value so it cannot be used */
     public abstract function Uninitialize() : void;
