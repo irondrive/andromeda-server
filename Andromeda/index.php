@@ -11,15 +11,8 @@
  * Multiple commands can be given to run in a single request/transaction.
  */
 
-require_once(ROOT."/Core/ApiPackage.php"); 
 use Andromeda\Core\ApiPackage;
-
-require_once(ROOT."/Core/IOFormat/Input.php");
-require_once(ROOT."/Core/IOFormat/Output.php");
-require_once(ROOT."/Core/IOFormat/IOInterface.php");
 use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
-
-require_once(ROOT."/Core/Exceptions/ErrorManager.php");
 use Andromeda\Core\Exceptions\ErrorManager;
 
 
