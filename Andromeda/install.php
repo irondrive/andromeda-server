@@ -1,8 +1,5 @@
 <?php declare(strict_types=1); require_once(__DIR__.'/init.php');
 
-if (is_file(ROOT.'/userInit.php'))
-    require_once(ROOT.'/userInit.php');
-
 /** A more minimal index.php that runs InstallRunner */
 
 require_once(ROOT."/Core/InstallRunner.php"); 
