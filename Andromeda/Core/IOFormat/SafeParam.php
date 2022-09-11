@@ -401,7 +401,7 @@ class SafeParam
             $this->CheckLength(65535);
             $value = trim($value);
             
-            if (preg_match("%[?*;{}]+%", $value)) // blacklist
+            if (preg_match("%[?*;{}]+%", $value) || strpos($value, ':/') !== false) // blacklist
                 throw new SafeParamInvalidException($this->key, 'fspath');
             
             $value = filter_var($value0=$value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW);
