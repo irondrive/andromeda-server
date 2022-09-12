@@ -2,7 +2,6 @@
 
 require_once(ROOT."/Core/Database/Exceptions.php");
 require_once(ROOT."/Core/Database/FieldTypes.php");
-require_once(ROOT."/Core/Database/QueryBuilder.php");
 
 /** A trait for classes that have a database table */
 trait HasTable

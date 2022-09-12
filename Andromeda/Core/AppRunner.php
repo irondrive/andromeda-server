@@ -108,6 +108,12 @@ class AppRunner extends BaseRunner
             throw new FailedAppLoadException($app);
         return $this;
     }
+    
+    /** Unloads the given app (no error if not loaded) */
+    public function UnloadApp(string $app) : self
+    {
+        unset($this->apps[$app]); return $this;
+    }
 
     /**
      * Calls into an app to run the given Input command

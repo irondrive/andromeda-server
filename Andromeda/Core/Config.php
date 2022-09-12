@@ -201,8 +201,7 @@ final class Config extends BaseConfig
         $app = strtolower($app);
     
         $apprunner = $this->GetApiPackage()->GetAppRunner();
-        $runapps = &$apprunner->GetApps();
-        unset($runapps[$app]); // unload app
+        $apprunner->UnloadApp($app);
         
         $capps = $this->GetApps();
         if (($key = array_search($app, $capps)) !== false) unset($capps[$key]);
