@@ -11,9 +11,12 @@ define('ROOT',__DIR__.'/');
 
 require_once(ROOT.'/../vendor/autoload.php');
 
-spl_autoload_register(function(string $class){
-    if (strpos($class,'Andromeda') !== 0) return;
-    $path = ROOT.'../'.str_replace("\\","/",$class).'.php';
+spl_autoload_register(function(string $class)
+{
+    if (strpos($class,"Andromeda\\") !== 0) return;
+    $class = substr($class, 10); // strlen("Andromeda\\")
+    
+    $path = ROOT.str_replace("\\","/",$class).'.php';
     if (file_exists($path)) include_once($path);
 });
 

@@ -28,6 +28,9 @@ final class MetricsHandler
      */
     public function EndInitStats(ObjectDatabase $database) : void
     {
+        // TODO create DBStats and then pass to DB, optionally... 
+        // right now it is always being created and those hrtime()s take time!
+        
         $dbstats = $database->GetInternal()->popStatsContext();
         if ($dbstats === null) throw new MissingMetricsException();
         
