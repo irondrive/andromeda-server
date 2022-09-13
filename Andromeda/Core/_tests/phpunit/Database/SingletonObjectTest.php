@@ -1,6 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Database; 
-
-require_once("init.php");
+<?php declare(strict_types=1); namespace Andromeda\Core\Database; require_once("init.php");
 
 require_once(ROOT."/Core/Database/TableTypes.php");
 

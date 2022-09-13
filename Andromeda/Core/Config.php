@@ -1,6 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php");
 require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
@@ -334,7 +333,7 @@ final class Config extends BaseConfig
     public function GetClientObject(bool $admin = false) : array
     { 
         $data = array(
-            'apiver' => (new VersionInfo(andromeda_version))->major,
+            'apiver' => (new VersionInfo(andromeda_version))->getCompatVer(),
             'enabled' => $this->enabled->GetValue(),
             'read_only' => $this->read_only->GetValue(false)
         );

@@ -2,8 +2,7 @@
 
 use Andromeda\Core\{Config, Utilities};
 
-require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
-use Andromeda\Core\IOFormat\{Input,Output,IOInterface,SafeParam,SafeParams,InputStream};
+use Andromeda\Core\IOFormat\{Input,InputPath,InputStream,Output,IOInterface,SafeParam,SafeParams};
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
 

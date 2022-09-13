@@ -5,8 +5,8 @@ if (!function_exists('sodium_memzero'))
 
 require_once(ROOT."/Core/Exceptions.php");
 
-/** libsodium wrapper class for keys */
-class CryptoKey
+/** libsodium wrapper class for crypto */
+class Crypto
 {
     /** Generates a salt for use with DeriveKey() */
     public static function GenerateSalt() : string
@@ -34,35 +34,31 @@ class CryptoKey
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13 );
         sodium_memzero($password); return $key;
     }
-}
 
-/** libsodium wrapper class for secret-key authenticated crypto */
-class CryptoSecret
-{
     /** 
      * Returns the length of a key for use with this class 
      * @return positive-int
      */
-    public static function KeyLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; }
+    public static function SecretKeyLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; }
     
     /** 
      * Returns the length of a nonce for use with this class 
      * @return positive-int
      */
-    public static function NonceLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; }
+    public static function SecretNonceLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; }
     
     /** 
      * Returns the size overhead of an encrypted string over a plaintext one
      * 
      * The size overhead exists because the crypto is authenticated
      */
-    public static function OutputOverhead() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; }
+    public static function SecretOutputOverhead() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; }
     
     /** Generates a crypto key for use with this class */
-    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
+    public static function GenerateSecretKey() : string { return random_bytes(static::SecretKeyLength()); }
     
     /** Generates a crypto nonce for use with this class */
-    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
+    public static function GenerateSecretNonce() : string { return random_bytes(static::SecretNonceLength()); }
     
     /**
      * Encrypts the given data
@@ -73,7 +69,7 @@ class CryptoSecret
      * @return string an encrypted and authenticated ciphertext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_encrypt()
      */
-    public static function Encrypt(string $data, string $nonce, string $key, string $extra = "") : string
+    public static function EncryptSecret(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
@@ -90,46 +86,35 @@ class CryptoSecret
      * @return string the decrypted and authenticated plaintext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_decrypt()
      */
-    public static function Decrypt(string $data, string $nonce, string $key, string $extra = "") : string
+    public static function DecryptSecret(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
         if ($output === false) throw new DecryptionFailedException();
         return $output;
     }
-}
 
-/** A public/private key pair */
-class KeyPair
-{
-    public string $public;
-    public string $private;
-}
-
-/** libsodium wrapper class for public-key authenticated crypto */
-class CryptoPublic
-{
     /** 
      * Returns the length of a nonce for use with this class 
      * @return positive-int
      */
-    public static function NonceLength() : int { return SODIUM_CRYPTO_BOX_NONCEBYTES; }
+    public static function PublicNonceLength() : int { return SODIUM_CRYPTO_BOX_NONCEBYTES; }
 
     /** Generates a crypto nonce for use with this class */
-    public static function GenerateNonce() : string { return random_bytes(static::NonceLength()); }
+    public static function GeneratePublicNonce() : string { return random_bytes(static::PublicNonceLength()); }
     
     /**
      * Generates a public/private keypair
-     * @return KeyPair key pair
+     * @return array{public:string,private:string}
      */
-    public static function GenerateKeyPair() : KeyPair
+    public static function GeneratePublicKeyPair() : array
     {
         $keypair = sodium_crypto_box_keypair();
         
-        $retval = new KeyPair();
-        $retval->public = sodium_crypto_box_publickey($keypair);
-        $retval->private = sodium_crypto_box_secretkey($keypair);
-        return $retval;
+        return array(
+            'public' => sodium_crypto_box_publickey($keypair),
+            'private' => sodium_crypto_box_secretkey($keypair)
+        );
     }
     
     /**
@@ -140,7 +125,7 @@ class CryptoPublic
      * @param string $recipient_public the recipient's public key
      * @return string the encrypted and signed ciphertext
      */
-    public static function Encrypt(string $message, string $nonce, string $sender_private, string $recipient_public)
+    public static function EncryptPublic(string $message, string $nonce, string $sender_private, string $recipient_public)
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($sender_private, $recipient_public);
         $output = sodium_crypto_box($message, $nonce, $keypair);
@@ -157,7 +142,7 @@ class CryptoPublic
      * @throws DecryptionFailedException if decryption fails
      * @return string the decrypted and verified plaintext
      */
-    public static function Decrypt(string $message, string $nonce, string $recipient_private, string $sender_public)
+    public static function DecryptPublic(string $message, string $nonce, string $recipient_private, string $sender_public)
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($recipient_private, $sender_public);
         $output = sodium_crypto_box_open($message, $nonce, $keypair);
@@ -165,25 +150,21 @@ class CryptoPublic
         if ($output === false) throw new DecryptionFailedException();
         return $output;
     }
-}
 
-/** libsodium wrapper class for authentication-only crypto */
-class CryptoAuth
-{
     /** 
      * Returns the length of a key for use with this class 
      * @return positive-int
      */
-    public static function KeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
+    public static function AuthKeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
     
     /** 
      * Returns the length of the authentication tag generated 
      * @return positive-int
      */
-    public static function AuthLength() : int { return SODIUM_CRYPTO_AUTH_BYTES; }
+    public static function AuthTagLength() : int { return SODIUM_CRYPTO_AUTH_BYTES; }
     
     /** Generates a crypto key for use with this class */
-    public static function GenerateKey() : string { return random_bytes(static::KeyLength()); }
+    public static function GenerateAuthKey() : string { return random_bytes(static::AuthKeyLength()); }
     
     /**
      * Creates an authentication code (MAC) from a message and key
@@ -215,7 +196,7 @@ class CryptoAuth
     /**
      * Same as TryCheckAuthCode() but throws an exception on failure
      * @throws DecryptionFailedException if authentication fails
-     * @see CryptoAuth::TryCheckAuthCode()
+     * @see self::TryCheckAuthCode()
      */
     public static function CheckAuthCode(string $mac, string $message, string $key) : void
     {

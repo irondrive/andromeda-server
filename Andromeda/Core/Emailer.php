@@ -10,25 +10,6 @@ use Andromeda\Core\IOFormat\SafeParams;
 
 use \PHPMailer\PHPMailer; // via autoloader
 
-/** A name and address pair email recipient */
-final class EmailRecipient
-{
-    private ?string $name; 
-    private string $address;
-    
-    public function GetName() : ?string { return $this->name; }
-    public function GetAddress() : string { return $this->address; }
-    public function __construct(string $address, ?string $name = null) {
-        $this->address = $address; $this->name = $name; }
-        
-    public function ToString() : string
-    {
-        $addr = $this->GetAddress(); $name = $this->GetName();        
-        if ($name === null) return $addr;
-        else return "$name <$addr>";
-    }
-}
-
 /** 
  * A configured email service stored in the database 
  * 
@@ -277,12 +258,12 @@ final class Emailer extends BaseObject
                 $this->from_name->TryGetValue() ?? self::DEFAULT_FROM); 
         }
         else if ($from !== null) 
-            $mailer->addReplyTo($from->GetAddress(), $from->GetName() ?? "");
+            $mailer->addReplyTo($from->GetAddress(), $from->TryGetName() ?? "");
         
         foreach ($recipients as $recipient) 
         {
-            if ($usebcc) $mailer->addBCC($recipient->GetAddress(), $recipient->GetName() ?? "");
-            else $mailer->addAddress($recipient->GetAddress(), $recipient->GetName() ?? "");
+            if ($usebcc) $mailer->addBCC($recipient->GetAddress(), $recipient->TryGetName() ?? "");
+            else $mailer->addAddress($recipient->GetAddress(), $recipient->TryGetName() ?? "");
         }
         
         $mailer->Subject = $subject; 

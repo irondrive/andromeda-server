@@ -40,50 +40,6 @@ abstract class Singleton // TODO refactor to get rid of this
     }
 }
 
-/** Class for parsing a version string into components */
-class VersionInfo
-{
-    public string $version;
-    
-    public int $major;
-    public int $minor;
-    public int $patch;
-    public ?string $extra;
-    
-    public function __construct(string $version)
-    {
-        $this->version = $version;
-        
-        $version = explode('-',$version,2);
-        $this->extra = $version[1] ?? null;
-        
-        $version = explode('.',$version[0],3);
-        
-        foreach ($version as $v) if (!is_numeric($v)) 
-            throw new InvalidVersionException();
-
-        if (!isset($version[0]) || !isset($version[1]))
-            throw new InvalidVersionException();
-        
-        $this->major = (int)$version[0];
-        $this->minor = (int)$version[1];
-        
-        if (isset($version[2])) 
-            $this->patch = (int)$version[2];
-    }
-    
-    public function __toString() : string { 
-        return $this->version; }
-    
-    /** Returns the Major.Minor compatibility version string */
-    public function getCompatVer() : string { 
-        return $this->major.'.'.$this->minor; }
-    
-    /** @see VersionInfo::getCompatVer() */
-    public static function toCompatVer(string $version) : string {
-        return (new self($version))->getCompatVer(); }
-}
-
 /** Abstract with some global static utility functions */
 abstract class Utilities
 {
@@ -273,25 +229,7 @@ abstract class Utilities
         // ASSERT: array_combine must be an array when both arrays have the same size
         assert(is_array($retval)); return $retval;
     }
-    
-    /** 
-     * Returns all classes that are a $match type 
-     * @template T of object
-     * @param class-string<T> $match
-     * @return array<class-string<T>>
-     */
-    public static function getClassesMatching(string $match) : array // TODO this sucks, refactor away the need
-    {
-        $retval = array(); foreach (get_declared_classes() as $class)
-        {
-            if ($class !== $match && is_a($class, $match, true) 
-                && !(new \ReflectionClass($class))->isAbstract())
-            {
-                $retval[] = $class;
-            }
-        } return $retval;
-    }
-    
+
     /** 
      * Runs the given function with no execution timeouts or user aborts 
      * @template T
