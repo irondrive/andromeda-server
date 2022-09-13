@@ -1,9 +1,6 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; 
+<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; require_once("init.php");
 
-require_once("init.php");
-
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-use Andromeda\Core\Utilities;
+use Andromeda\Core\{Crypto,Utilities};
 
 class SafeParamTest extends \PHPUnit\Framework\TestCase
 {
@@ -88,7 +85,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $getVal = function(SafeParam $p){ return $p->GetRawString(); };
         $getValN = function(SafeParam $p){ return $p->GetNullRawString(); };
         
-        $val = CryptoSecret::GenerateKey();
+        $val = Crypto::GenerateSecretKey();
         
         $this->testGood($val, $val, $getVal, false);
         $this->testGood($val, $val, $getValN, false);

@@ -1,9 +1,6 @@
-<?php declare(strict_types=1); namespace Andromeda\Core; 
+<?php declare(strict_types=1); namespace Andromeda\Core; require_once("init.php");
 
-require_once("init.php");
-
-require_once(ROOT."/Core/Crypto.php");
-require_once(ROOT."/Core/Utilities.php");
+require_once(ROOT."/Core/Utilities.php"); // Singleton
 
 class MySingleton extends Singleton { }
 
@@ -66,10 +63,10 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    {
        $version = new VersionInfo($v="3.2.1-alpha");
        
-       $this->assertSame($version->major, 3);
-       $this->assertSame($version->minor, 2);
-       $this->assertSame($version->patch, 1);
-       $this->assertSame($version->extra, 'alpha');
+       $this->assertSame($version->getMajor(), 3);
+       $this->assertSame($version->getMinor(), 2);
+       $this->assertSame($version->getPatch(), 1);
+       $this->assertSame($version->getExtra(), 'alpha');
        $this->assertSame((string)$version, "3.2.1-alpha");
        $this->assertSame($version->getCompatVer(), '3.2');
        $this->assertSame(VersionInfo::toCompatVer($v), '3.2');
@@ -84,7 +81,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    public function testBadJSONEncode() : void
    {
        $this->expectException(JSONException::class);
-       Utilities::JSONEncode(array(CryptoSecret::GenerateKey()));
+       Utilities::JSONEncode(array(Crypto::GenerateSecretKey()));
    }
    
    public function testBadJSONDecode() : void
@@ -194,14 +191,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(Utilities::CaptureOutput(function(){ }), "");
        $this->assertSame(Utilities::CaptureOutput(function(){ echo "test"; }), "test");       
    }
-   
-   public function testGetClassesMatching() : void
-   {
-       $this->assertSame(Utilities::getClassesMatching(TestBase0::class), array());
-       $this->assertSame(Utilities::getClassesMatching(TestBase1::class), array(TestClass1::class));
-       $this->assertSame(Utilities::getClassesMatching(TestBase2::class), array(TestClass2::class, TestClass3::class));
-   }
-   
+
    public function testArrayStrings() : void
    {
        $in = array(

@@ -1,6 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Core; 
-
-require_once("init.php");
+<?php declare(strict_types=1); namespace Andromeda\Apps\Core; require_once("init.php");
 
 use Andromeda\Core\InstallerApp;
 
