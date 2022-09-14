@@ -2,9 +2,11 @@
 
 cd Andromeda; 
 
-find . -iname phpunit | while read -r dir; do
-    echo running $dir
-    ../vendor/bin/phpunit $dir -c ../tools/conf/phpunit.xml "$@" || exit 1; echo
-done
-
-#../vendor/bin/phpunit . -c ../tools/conf/phpunit.xml "$@"
+if [ "$1" == "all" ]; then
+   ../vendor/bin/phpunit . -c ../tools/conf/phpunit.xml "$@"
+else
+   find . -iname phpunit | while read -r dir; do
+      echo running $dir
+      ../vendor/bin/phpunit $dir -c ../tools/conf/phpunit.xml "$@" || exit 1; echo
+   done
+fi
