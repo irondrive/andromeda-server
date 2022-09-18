@@ -1,6 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-/** A file given as a path to an actual file */
+/** 
+ * A file given as a path to an actual file 
+ * GetData() can be called more than once
+ */
 class InputPath extends InputFile
 {
     private string $path;
@@ -21,7 +24,7 @@ class InputPath extends InputFile
         $this->name = $name ?? basename($path);
     }
     
-    public function __destruct(){ if ($this->handle !== null) fclose($this->handle); }
+    public function __destruct(){ if (is_resource($this->handle)) fclose($this->handle); }
     
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }
@@ -45,13 +48,13 @@ class InputPath extends InputFile
     }
 
     /**
-     * Returns the file's stream resource
+     * Returns the file's stream resource - seeks to 0!
      * @throws FileReadFailedException if it fails
      * @return resource
      */
     public function GetHandle() 
     {
-        if ($this->handle === null)
+        if (!is_resource($this->handle))
         {
             $handle = fopen($this->path,'rb');
             if ($handle === false)
@@ -59,6 +62,7 @@ class InputPath extends InputFile
             else $this->handle = $handle;
         }
         
+        fseek($this->handle, 0);
         return $this->handle;
     }
 }

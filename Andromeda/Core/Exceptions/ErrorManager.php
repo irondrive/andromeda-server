@@ -50,9 +50,6 @@ class ErrorManager
                 
                 $this->interface->FinalOutput($output);
             });
-            
-            ini_set('assert.active','1');
-            ini_set('assert.exception','1');
         }
     }
 

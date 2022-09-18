@@ -8,7 +8,7 @@ require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\
 use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
 /** The global framework config stored in the database */
-final class Config extends BaseConfig
+class Config extends BaseConfig
 {
     public static function getAppname() : string { return 'core'; }
     
@@ -289,7 +289,10 @@ final class Config extends BaseConfig
     /** Show extended performance metrics */
     public const METRICS_EXTENDED = 2;
     
-    public const METRICS_TYPES = array('none'=>0, 'basic'=>self::METRICS_BASIC, 'extended'=>self::METRICS_EXTENDED);
+    public const METRICS_TYPES = array(
+        'none'=>0, 
+        'basic'=>self::METRICS_BASIC, 
+        'extended'=>self::METRICS_EXTENDED);
     
     /** 
      * Returns the current metrics log level 

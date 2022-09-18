@@ -36,10 +36,11 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     /** 
      * @template T
+     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
      * @param T $want
      * @param callable(SafeParam):T $func 
      */
-    protected function testGood(?string $value, $want, callable $func, bool $willlog = true) : void
+    protected function testGood($value, $want, callable $func, bool $willlog = true) : void
     {
         $param = new SafeParam("key",$value);
         
@@ -51,10 +52,13 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         else $this->assertSame(array('key'=>$want),$logarr);
     }
     
-    /** @param callable(SafeParam):mixed $func */
-    protected function testBad(?string $value, callable $func) : void
+    /**
+     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value 
+     * @param callable(SafeParam):mixed $func 
+     */
+    protected function testBad($value, callable $func) : void
     {            
-        $param = new SafeParam("key", $value);
+        $param = new SafeParam("key",$value);
         
         $logarr = array(); $param->SetLogRef($logarr, 999); // test logging
         
@@ -80,6 +84,24 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($caught);
     }
     
+    public function testRawValue() : void
+    {
+        $param = new SafeParam('key',null);
+        $this->assertNull($param->GetNullRawValue());
+        
+        $param = new SafeParam('key',$v='test');
+        $this->assertSame($v,$param->GetNullRawValue());
+
+        $param = new SafeParam('key',$v=5);
+        $this->assertSame($v,$param->GetNullRawValue());
+        
+        $param = new SafeParam('key',$v=array(1,2,3,array(4,5,6)));
+        $this->assertSame($v,$param->GetNullRawValue());
+        
+        $param = new SafeParam('key',(new SafeParams())->LoadArray($v=array('test1'=>5)));
+        $this->assertSame($v,$param->GetNullRawValue());
+    }
+    
     public function testRawString() : void
     {
         $getVal = function(SafeParam $p){ return $p->GetRawString(); };
@@ -95,34 +117,53 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->expectException(SafeParamNullValueException::class);
         $this->testGood(null, null, $getVal, false); // not good
     }
+    
+    public function testTypes() : void
+    {
+        $this->testBad(array(4,5,6), function(SafeParam $p){ return $p->GetRawString(); });
+        $this->testBad(new SafeParams(), function(SafeParam $p){ return $p->GetRawString(); });
+
+        $inner = function(SafeParam $p){ return $p->GetRawString(); };
+        $this->testBad("test", function(SafeParam $p)use($inner){ return $p->GetArray($inner); }); // bad json
+        $this->testBad(new SafeParams(), function(SafeParam $p)use($inner){ return $p->GetArray($inner); });
+        
+        $this->testBad("test", function(SafeParam $p){ return $p->GetObject(); }); // bad json
+        $this->testBad(array(4,5,6), function(SafeParam $p){ return $p->GetObject(); });
+    }
 
     public function testCheckFunction() : void
     {
         $param = new SafeParam("mykey",$val="testval");
         
-        $param->CheckFunction(function(string $p)use($val)
-        {
+        $param->CheckFunction(function(string $p)use($val){
             $this->assertSame($p,$val); return true;
         });
         
         $this->expectException(SafeParamInvalidException::class);
-        
         $param->CheckFunction(function(string $p){ return false; });
     }
 
-    public function testCheckLength() : void
+    public function testCheckStringLength() : void
     {
         $val = "123456789"; $param = new SafeParam("key", $val);
-        
-        $this->assertSame($val, $param->CheckLength(99)->GetRawString());
+        $this->assertSame($val, $param->CheckLength(99)->GetNullRawValue());
         
         $this->expectException(SafeParamInvalidException::class);
+        $param->CheckLength(5);
+    }
+    
+    public function testCheckArrayLength() : void
+    {
+        $val = array(1,2,3,4,5,6,7); $param = new SafeParam("key", $val);
+        $this->assertSame($val, $param->CheckLength(99)->GetNullRawValue());
         
+        $this->expectException(SafeParamInvalidException::class);
         $param->CheckLength(5);
     }
 
     public function testAutoNull() : void
     {
+        $this->assertTrue((new SafeParam("key", null))->isNull());
         $this->assertTrue((new SafeParam("key", ""))->isNull());
         $this->assertTrue((new SafeParam("key", "null"))->isNull());
         $this->assertTrue((new SafeParam("key", "NULL"))->isNull());
@@ -159,13 +200,13 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("null", true, $getVal);
         $this->testGood("null", null, $getValN);
         
-        foreach (array("true", "1", "yes ") as $val)
+        foreach (array("true", "1", "yes ", true, 1) as $val)
         {
             $this->testGood($val, true, $getVal);
             $this->testGood($val, true, $getValN);
         }
         
-        foreach (array("false", "0", " no") as $val)
+        foreach (array("false", "0", " no", false, 0) as $val)
         {
             $this->testGood($val, false, $getVal);
             $this->testGood($val, false, $getValN);
@@ -182,6 +223,9 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $getValN = function(SafeParam $p){ return $p->GetNullInt(); };
         
         $this->testNulls($getVal, $getValN);
+        
+        $this->testGood(0, 0, $getVal);
+        $this->testGood(123, 123, $getVal);
         
         $this->testGood("0", 0, $getVal);
         $this->testGood(" 1", 1, $getVal);
@@ -254,6 +298,9 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testBad("text", $getVal);
         $this->testBad("47t", $getVal);
         $this->testBad("t47", $getVal);
+        
+        $this->testGood(0, 0.0, $getVal);
+        $this->testGood(1.2, 1.2, $getVal);
         
         $this->testGood("0", 0.0, $getVal);
         $this->testGood("123", 123.0, $getVal);
@@ -417,20 +464,25 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->testNulls($getVal, $getValN);
         
-        $json = '{"key1":75,"key2":"val1"}';
-        $param = new SafeParam('key',$json);
-        $obj = $param->GetObject();
+        $testobj = (new SafeParams())->LoadArray(['key1'=>75,'key2'=>'val1']);
+        $json = '{"key1":75,"key2":"val1"}'; // can take json or SafeParams
         
-        $this->assertIsObject($obj);
-        
-        $this->assertSame($obj->GetParam('key1')->GetInt(), 75);
-        $this->assertSame($obj->GetParam('key2')->GetAlphanum(), 'val1');
-        
-        $this->assertSame($obj->GetClientObject(), array('key1'=>'75','key2'=>'val1'));
-        
-        $this->testBad("string", $getVal);
-        $this->testBad("{test:10}", $getVal);
-        $this->testBad("{'single':10}", $getVal);
+        foreach (array($json, $testobj) as $val)
+        {
+            $param = new SafeParam('key',$val);
+            $obj = $param->GetObject();
+            
+            $this->assertIsObject($obj);
+            
+            $this->assertSame($obj->GetParam('key1')->GetInt(), 75);
+            $this->assertSame($obj->GetParam('key2')->GetAlphanum(), 'val1');
+            
+            $this->assertSame(array('key1'=>75,'key2'=>'val1'), $obj->GetClientObject());
+            
+            $this->testBad("string", $getVal);
+            $this->testBad("{test:10}", $getVal);
+            $this->testBad("{'single':10}", $getVal);
+        }
     }
 
     public function testArray() : void
@@ -442,17 +494,22 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->testNulls($getIntArr, $getIntArrN);
         
-        $param = new SafeParam('key',"[5,7,9,27]");
-        
-        $logarr = array(); $param->SetLogRef($logarr, 999);
-        
-        $arr = $param->GetArray($getInt);
-        $this->assertSame($arr, array(5,7,9,27));
-        
-        $this->assertSame(array('key'=>[5,7,9,27]), $logarr);
-
-        $this->testBad('a string', $getIntArr);
-        $this->testBad('[57,"mixed"]', $getIntArr);
+        // can take JSON or a real array
+        foreach (["[5,7,9,27]",array(5,7,9,27),
+            array('0'=>'5','1'=>'7','2'=>'9','3'=>'27')] as $val)
+        {
+            $param = new SafeParam('key',$val);
+            
+            $logarr = array(); $param->SetLogRef($logarr, 999);
+            
+            $arr = $param->GetArray($getInt);
+            $this->assertSame($arr, array(5,7,9,27));
+            
+            $this->assertSame(array('key'=>[5,7,9,27]), $logarr);
+    
+            $this->testBad('a string', $getIntArr);
+            $this->testBad('[57,"mixed"]', $getIntArr);
+        }
     }
     
     public function testObjectLogging() : void
@@ -500,7 +557,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $key1 = $obj1->GetParam('key1')->GetArray($getInt);
         $this->assertSame($key1, array(5,6,7,8));
-        
+
         $key2 = $obj1->GetParam('key2')->GetObject();
         $inner1 = $key2->GetParam('inner1')->GetAlphanum();
         $this->assertSame($inner1, "val1");

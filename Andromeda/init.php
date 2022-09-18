@@ -9,6 +9,10 @@ define('andromeda_version','1.0.0-alpha');
 
 define('ROOT',__DIR__.'/');
 
+// requires zend.assertions=1 in php.ini
+ini_set('assert.active','1');
+ini_set('assert.exception','1');
+
 require_once(ROOT.'/../vendor/autoload.php');
 
 spl_autoload_register(function(string $class)

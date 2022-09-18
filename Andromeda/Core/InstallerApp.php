@@ -114,7 +114,7 @@ abstract class InstallerApp
         {
             case 'install': return $this->Install($input->GetParams());
             case 'upgrade': return $this->Upgrade($input->GetParams());
-            default: throw new UnknownActionException();
+            default: throw new UnknownActionException($input->GetAction());
         }
     }
     

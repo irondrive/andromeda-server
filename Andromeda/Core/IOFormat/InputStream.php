@@ -9,7 +9,7 @@ class InputStream extends InputFile
     /** @param resource $handle */
     public function __construct($handle){ $this->handle = $handle; }
         
-    public function __destruct(){ fclose($this->handle); }
+    public function __destruct(){ if (is_resource($this->handle)) fclose($this->handle); }
    
     /** 
      * Returns the file's stream resource 

@@ -42,7 +42,7 @@ class TestUtilApp extends BaseApp
             case 'check-dryrun': return $this->CheckDryRun();
             case 'binoutput': $this->BinaryOutput($params); return;
             
-            default: throw new UnknownActionException();
+            default: throw new UnknownActionException($input->GetAction());
         }
     }
 

@@ -4,13 +4,11 @@ use Andromeda\Core\Config;
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
-if (!function_exists('json_encode')) die("PHP JSON Extension Required".PHP_EOL);
-
 /** Describes an abstract PHP I/O interface abstraction */
 abstract class IOInterface
 {
     /** Constructs and returns a singleton of the appropriate interface type */
-    public static function TryGet() : ?self
+    final public static function TryGet() : ?self
     {
         if (Interfaces\HTTP::isApplicable()) return new Interfaces\HTTP();
         else if (Interfaces\CLI::isApplicable()) return new Interfaces\CLI();
@@ -28,12 +26,16 @@ abstract class IOInterface
 
     /** 
      * Retrieves an array of input objects to run (if not cached)
+     * 
+     * Also modifies internal state related to the input (debug, dryrun, etc.)
+     * which can be transferred to config via AdjustConfig()
      * @return non-empty-array<Input>
      */
-    public function GetInputs() : array
+    public function LoadInputs() : array
     {
-        if (isset($this->inputs)) return $this->inputs; // cache
-        else return ($this->inputs = $this->subGetInputs());
+        if (!isset($this->inputs))
+            $this->inputs = $this->subLoadInputs(); // cache
+        return $this->inputs;
     }
     
     /** Sets temporary config parameters requested by the interface */
@@ -43,7 +45,7 @@ abstract class IOInterface
      * Retries an array of input objects to run
      * @return non-empty-array<Input>
      */
-    abstract protected function subGetInputs() : array;
+    abstract protected function subLoadInputs() : array;
     
     /** 
      * Asserts that only one output was given 
@@ -51,8 +53,12 @@ abstract class IOInterface
      */
     public function DisallowBatch() : self
     {
-        if (isset($this->inputs) && count($this->inputs) > 1)
+        if (!isset($this->inputs)) 
+            $this->LoadInputs(); // populate
+        
+        if (count($this->inputs) > 1)
             throw new BatchNotAllowedException();
+        
         return $this;
     }
         
@@ -74,6 +80,12 @@ abstract class IOInterface
     /** Returns the path to the DB config file requested by the interface */
     public function GetDBConfigFile() : ?string { return null; }
     
+    public const OUTPUT_TYPES = array(
+        'none'=>0, 
+        'plain'=>self::OUTPUT_PLAIN, 
+        'json'=>self::OUTPUT_JSON, 
+        'printr'=>self::OUTPUT_PRINTR);
+    
     public const OUTPUT_PLAIN = 1; 
     public const OUTPUT_JSON = 2; 
     public const OUTPUT_PRINTR = 3;
@@ -81,12 +93,23 @@ abstract class IOInterface
     /** Gets the default output mode for the interface */
     abstract public static function GetDefaultOutmode() : int;
     
-    protected ?int $outmode;
+    protected int $outmode;
     
     public function __construct(){ $this->outmode = static::GetDefaultOutmode(); }
+    
+    /** Returns the output mode currently selected */
+    public function GetOutputMode() : int { return $this->outmode; }
 
-    /** Sets the output mode to the given mode or null (none) - NOT USED in "multi-output" mode! */
-    public function SetOutputMode(?int $mode) : self { $this->outmode = $mode; return $this; }
+    /**
+     * Sets the output mode to the given mode or 0 for (none)
+     * @throws MultiOutputJSONException if > 1 user output function and mode is not JSON
+     */
+    public function SetOutputMode(int $mode) : self 
+    {
+        if ($this->numretfuncs > 1 && $mode !== self::OUTPUT_JSON)
+            throw new MultiOutputJSONException($mode);
+        $this->outmode = $mode; return $this; 
+    }
     
     /** @var array<OutputHandler> */
     private $retfuncs = array();
@@ -95,15 +118,15 @@ abstract class IOInterface
     /** 
      * Registers a user output handler function to run after the initial commit 
      * 
-     * Sets the output mode to null if bytes !== null and will cause "multi-output" 
-     * mode to be used if > 1 functions that return > 0 bytes are defined
+     * Sets the output mode to null if bytes !== null, or will cause "multi-output" 
+     * mode to be used (always JSON) if > 1 functions that return non-null bytes are defined
      * @see IOInterface::isMultiOutput()
      */
     public function RegisterOutputHandler(OutputHandler $f) : self 
     {
         if ($f->GetBytes() !== null)
         {
-            $this->outmode = null; 
+            $this->outmode = 0; 
             $this->numretfuncs++;
         }
         
@@ -112,28 +135,33 @@ abstract class IOInterface
         
         $this->retfuncs[] = $f; return $this; 
     }
-    
+
     /** 
      * Returns true if the output is using multi-output mode 
      * 
-     * Multi-output mode is used when more than one user output function wants to run.
+     * Multi-output mode is used when more than one user output function with non-null GetBytes wants to run,
+     * or there when there is more then zero such user output function and our outmode is not null.
      * To accomodate this, each section will be prefaced with the number of bytes written.
      * In multi-output mode, the requested global output mode is ignored and the request
      * is always finished with JSON output (also with the # of bytes prefixed)
      * @see IOInterface::formatSize()
      */
-    protected function isMultiOutput() : bool { return $this->numretfuncs > 1; }
+    public function isMultiOutput() : bool 
+    {
+        return $this->numretfuncs > ($this->outmode ? 0 : 1);
+    }
     
     /** 
      * Returns the binary-packed version of the given integer size 
      * 
      * unsigned long long (always 64 bit, big-endian byte order)
+     * @param int<0,max> $size
      */
-    protected static function formatSize(int $size) : string { return pack("J", $size); }
+    public static function formatSize(int $size) : string { return pack("J", $size); }
     
     /** 
      * Tells the interface to run the custom user output functions
-     * @return bool true if a custom function was run
+     * @return bool true if a custom function was run (regardless of output bytes)
      */
     public function UserOutput(Output $output) : bool
     {
@@ -141,8 +169,8 @@ abstract class IOInterface
         
         foreach ($this->retfuncs as $handler) 
         {
-            if ($multi && $handler->GetBytes() !== null) 
-                echo static::formatSize($handler->GetBytes());
+            if ($multi && ($bytes = $handler->GetBytes()) !== null) 
+                echo static::formatSize($bytes);
             
             $handler->DoOutput($output); flush();
         }

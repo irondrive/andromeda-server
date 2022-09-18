@@ -33,9 +33,10 @@ class Input
     /** Sets the optional param logger to the given ActionLog */
     public function SetLogger(?ActionLog $logger) : self 
     { 
-        if ($logger !== null && ($level = $logger->GetDetailsLevel()) > 0)
+        if ($logger !== null)
         {
             $logref = &$logger->GetInputLogRef();
+            $level = $logger->GetDetailsLevel();
             
             $this->params->SetLogRef($logref, $level);
         }        
@@ -107,16 +108,16 @@ class Input
      * @param ?SafeParams $params user input params
      * @param ?array<string, InputFile> $files optional input files
      * @param ?InputAuth $auth optional input authentication
+     * @throws SafeParamInvalidException if app/action are not valid
      */
     public function __construct(string $app, string $action, ?SafeParams $params = null, 
                                 ?array $files = null, ?InputAuth $auth = null)
     {
-        $this->app = (new SafeParam("app", strtolower($app)))->GetAlphanum();
-        $this->action = (new SafeParam("action", strtolower($action)))->GetAlphanum();
+        $this->app = strtolower((new SafeParam('app', $app))->GetAlphanum());
+        $this->action = strtolower((new SafeParam('act', $action))->GetAlphanum());
         
         $this->params = $params ?? new SafeParams(); 
-        $this->files = $files ?? array(); 
-        
+        $this->files = $files ?? array();
         $this->auth = $auth;
     }
 }

@@ -2,6 +2,9 @@
 
 require_once(ROOT."/Core/Exceptions.php");
 
+if (!function_exists('json_encode')) 
+    die("PHP JSON Extension Required".PHP_EOL);
+
 /** 
  * Abstract class implementing a global singleton 
  * 
@@ -48,7 +51,7 @@ abstract class Utilities
 
     /** 
      * Returns a random string with the given length 
-     * @param 0|positive-int $length
+     * @param int<0,max> $length
      */
     public static function Random(int $length) : string
     {
@@ -228,6 +231,22 @@ abstract class Utilities
         
         // ASSERT: array_combine must be an array when both arrays have the same size
         assert(is_array($retval)); return $retval;
+    }
+    
+    /**
+     * Returns true if the given array has 0..N keys and scalar values
+     * @param array<mixed> $arr
+     * @return bool
+     */
+    public static function is_plain_array(array $arr) : bool
+    {
+        if (empty($arr)) return true;
+        if (!isset($arr[0])) return false; // shortcut
+        if (!is_scalar($arr[0])) return false; // shortcut
+        
+        if (array_keys($arr) !== range(0, count($arr)-1)) return false;
+        foreach ($arr as $val) if (!is_scalar($val)) return false;
+        return true;
     }
 
     /** 

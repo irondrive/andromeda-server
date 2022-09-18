@@ -126,10 +126,10 @@ class AppRunner extends BaseRunner
      * @return mixed the app-specific return value
      */
     public function Run(Input $input)
-    {        
+    {
         $appname = $input->GetApp();
         if (!array_key_exists($appname, $this->apps)) 
-            throw new UnknownAppException();
+            throw new UnknownAppException($appname);
 
         $app = $this->apps[$appname];
         $db = $this->apipack->GetDatabase();

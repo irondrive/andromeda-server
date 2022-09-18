@@ -38,67 +38,98 @@ class HTTP extends IOInterface
      * Requests can put multiple requests to be run in a single 
      * transaction by using the batch paramter as an array
      */
-    protected function subGetInputs() : array
+    protected function subLoadInputs() : array
     {
-        if ($_SERVER['REQUEST_METHOD'] !== "GET" && 
-            $_SERVER['REQUEST_METHOD'] !== "POST")
+        return $this->LoadHTTPInputs($_REQUEST, $_GET, $_FILES, $_SERVER);
+    }
+    
+    /**
+     * Retries an array of input objects to run
+     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $req
+     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $get
+     * @param array<scalar, mixed> $files
+     * @param array<string, scalar> $server
+     * @return non-empty-array<Input>
+     */
+    public function LoadHTTPInputs(array $req, array $get, array $files, array $server) : array
+    {
+        if ($server['REQUEST_METHOD'] !== "GET" && 
+            $server['REQUEST_METHOD'] !== "POST")
             throw new MethodNotAllowedException();
-            
-        if (isset($_GET['batch']) && is_array($_GET['batch']))
-        {            
-            $global_get = $_GET; unset($global_get['batch']);
-            $global_files = $_FILES; unset($global_files['batch']);
-            $global_request = $_REQUEST; unset($global_request['batch']);
-            
-            $inputs = array(); foreach(array_keys($_REQUEST['batch']) as $i)
-            {
-                $get = is_array($_GET['batch'][$i] ?? null) ? $_GET['batch'][$i] : array();
-                $files = is_array($_FILES['batch'][$i] ?? null) ? $_FILES['batch'][$i] : array();
-                $request = is_array($_REQUEST['batch'][$i] ?? null) ? $_REQUEST['batch'][$i] : array();
 
-                $get = array_merge($global_get, $get);
-                $files = array_merge($global_files, $files);
-                $request = array_merge($global_request, $request);
+        if (isset($req['_bat']))
+        {            
+            $breq = $req['_bat'];
+            $bget = $get['_bat'] ?? array();
+            $bfiles = $files['_bat'] ?? array();
+            
+            if (!is_array($bget) || !is_array($bfiles) || !is_array($breq))
+                throw new BatchSyntaxInvalidException('batch not array');
+
+            $global_req = $req; // copy
+            unset($global_req['_bat']);
+            $global_get = $get; // copy
+            unset($global_get['_bat']);
+            $global_files = $files; // copy
+            unset($global_files['_bat']);
+            
+            $inputs = array(); foreach($breq as $bkeyI=>$breqI)
+            {
+                $bgetI = $bget[$bkeyI] ?? array();
+                $bfilesI = $bfiles[$bkeyI] ?? array();
                 
-                $inputs[$i] = self::GetInput($get, $files, $request);
+                if (!is_array($bgetI) || !is_array($bfilesI) || !is_array($breqI))
+                    throw new BatchSyntaxInvalidException("batch $bkeyI not array");
+
+                // merge with global params that apply to all
+                $breqI += $global_req;
+                $bgetI += $global_get;
+                $bfilesI += $global_files;
+
+                $inputs[$bkeyI] = self::GetInput($breqI, $bgetI, $bfilesI, $server);
             }
             
             if (!count($inputs)) throw new EmptyBatchException();
             if (count($inputs) > 65535) throw new LargeBatchException();
         }
-        else $inputs = array(self::GetInput($_GET, $_FILES, $_REQUEST));
+        else $inputs = array(self::GetInput($req, $get, $files, $server));
         
         return $inputs;
     }
-    
+
     /** 
      * Fetches an input object from the HTTP request 
      * 
      * App and Action must be part of $_GET, everything else
-     * can be interchangeably in $_GET or $_POST - except
+     * can be interchangeably in $_GET or $_POST except
      * 'password' and 'auth_' which cannot be in $_GET
-     * @param array<string, string> $get
-     * @param array<string, mixed> $files
-     * @param array<string, string> $request
+     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $req
+     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $get
+     * @param array<scalar, mixed> $files
+     * @param array<string, scalar> $server
      */
-    private function GetInput(array $get, array $files, array $request) : Input
+    private function GetInput(array $req, array $get, array $files, array $server) : Input
     {
-        if (empty($get['app']) || empty($get['action']))
-            throw new NoAppActionException();
-        $app =    $get['app'];    unset($request['app']);
-        $action = $get['action']; unset($request['action']);
+        if (empty($get['_app']) || empty($get['_act']))
+            throw new MissingAppActionException('missing');
+        
+        $app = $get['_app']; unset($req['_app']); // app
+        $act = $get['_act']; unset($req['_act']); // action
+        
+        if (!is_string($app) || !is_string($act))
+            throw new MissingAppActionException('not strings');
         
         foreach ($get as $key=>$val)
         {
+            $key = (string)$key;
             if (strpos($key,'password') !== false 
                 || strpos($key,'auth_') === 0)
                 throw new IllegalGetFieldException($key);
         }
         
         $params = new SafeParams();
-        foreach ($request as $key=>$val)
-            $params->AddParam($key, $val);
-        
+        $params->LoadArray($req);
+
         $pfiles = array(); foreach ($files as $key=>$file)
         {
             if (!is_array($file)
@@ -110,21 +141,22 @@ class HTTP extends IOInterface
             $fpath = (string)$file['tmp_name'];
             $fname = (string)$file['name'];
             $ferror = (int)$file['error'];
+            // https://www.php.net/manual/en/features.file-upload.errors.php
                 
             if ($ferror || !is_uploaded_file($fpath))
                 throw new FileUploadFailException((string)$ferror);
             
             $fname = (new SafeParam('name',$fname))->GetFSName();
-            $pfiles[$key] = new InputPath($fpath, $fname, true); 
+            $pfiles[(string)$key] = new InputPath($fpath, $fname, true); 
         }
         
-        $user = $_SERVER['PHP_AUTH_USER'] ?? null;
-        $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
+        $user = $server['PHP_AUTH_USER'] ?? null;
+        $pass = $server['PHP_AUTH_PW'] ?? null;
         
-        $auth = ($user !== null && $pass !== null) 
-            ? (new InputAuth($user, $pass)) : null;
+        $auth = ($user !== null && $pass !== null)
+            ? new InputAuth((string)$user, (string)$pass) : null;
 
-        return new Input($app, $action, $params, $pfiles, $auth);
+        return new Input($app, $act, $params, $pfiles, $auth);
     }
     
     /**
@@ -135,10 +167,16 @@ class HTTP extends IOInterface
     {
         if (!headers_sent())
         {
+            if (!$this->outmode)
+                http_response_code($output->GetCode());
+            
             header("Cache-Control: no-cache");
             
-            if ($this->outmode === null)
-                http_response_code($output->GetCode());
+            if ($this->isMultiOutput())
+            {
+                header("Content-Type: application/octet-stream");
+                header('Content-Transfer-Encoding: binary');
+            }
         }
     }
     
@@ -152,12 +190,10 @@ class HTTP extends IOInterface
     public function FinalOutput(Output $output) : void
     {
         $this->InitOutput($output);
-        
-        $multi = $this->isMultiOutput();
-        
+
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            if (!$multi && !headers_sent())
+            if (!headers_sent())
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
@@ -172,7 +208,7 @@ class HTTP extends IOInterface
         
         if ($this->outmode === self::OUTPUT_PRINTR) 
         {
-            if (!$multi && !headers_sent())
+            if (!headers_sent())
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
@@ -184,18 +220,17 @@ class HTTP extends IOInterface
         
         if ($this->outmode === self::OUTPUT_JSON)
         {
+            $multi = $this->isMultiOutput();
+            
             if (!$multi && !headers_sent()) 
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: application/json");
             }
             
-            $outdata = $output->GetAsArray();
+            $outdata = Utilities::JSONEncode($output->GetAsArray());
             
-            $outdata = Utilities::JSONEncode($outdata);
-            
-            if ($this->isMultiOutput()) 
-                echo parent::formatSize(strlen($outdata));
+            if ($multi) echo parent::formatSize(strlen($outdata));
             
             echo $outdata;
         }
@@ -210,7 +245,7 @@ class HTTP extends IOInterface
      */
     public static function GetRemoteURL(string $url, Input $input, bool $params = true)
     {
-        $get = array('app'=>$input->GetApp(), 'action'=>$input->GetAction());
+        $get = array('_app'=>$input->GetApp(), '_act'=>$input->GetAction());
         if ($params) $get = array_merge($get, $input->GetParams()->GetClientObject());
         return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
     }
@@ -236,7 +271,7 @@ class HTTP extends IOInterface
     /**
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
-     * @param array<string, ?scalar> $post array of data to place in the POST body
+     * @param array<string, mixed> $post array of data to place in the POST body
      * @return ?string the remote response
      */
     public static function HTTPPost(string $url, array $post) : ?string

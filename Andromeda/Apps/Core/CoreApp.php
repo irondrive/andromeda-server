@@ -126,7 +126,7 @@ final class CoreApp extends BaseApp
             case 'getactions':    return $this->GetActions($params, $isAdmin);
             case 'countactions':  return $this->CountActions($params, $isAdmin);
             
-            default: throw new UnknownActionException();
+            default: throw new UnknownActionException($input->GetAction());
         }
     }
         

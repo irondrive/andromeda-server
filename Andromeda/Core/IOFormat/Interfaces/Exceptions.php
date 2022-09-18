@@ -11,7 +11,8 @@ class IncorrectCLIUsageException extends Exceptions\ClientErrorException
         $usage = implode(PHP_EOL,array(
             "general usage: php index.php [global flags+] app action [action params+]",
             null,
-            "global flags: [--json|--printr] [--dryrun] [--dbconf fspath] ".
+            "global flags: [--dryrun] [--dbconf fspath] ".
+            "[--outmode ".implode('|',array_keys(CLI::OUTPUT_TYPES))."] ".
             "[--debug ".implode('|',array_keys(Config::DEBUG_TYPES))."] ".
             "[--metrics ".implode('|',array_keys(Config::METRICS_TYPES))."]",
             null,
@@ -49,6 +50,14 @@ class BatchFileParseException extends Exceptions\ClientErrorException
     }
 }
 
+/** Exception indicating that the HTTP batch syntax is invalid */
+class BatchSyntaxInvalidException extends Exceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BATCH_SYNTAX_INVALID", $details);
+    }
+}
+
 /** Exception indicating that the given file is not valid */
 class InvalidFileException extends Exceptions\ClientErrorException
 {
@@ -58,7 +67,7 @@ class InvalidFileException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the app or action parameters are missing */
-class NoAppActionException extends Exceptions\ClientErrorException
+class MissingAppActionException extends Exceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("APP_OR_ACTION_MISSING", $details);
