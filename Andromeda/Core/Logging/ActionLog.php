@@ -188,7 +188,7 @@ class ActionLog extends BaseLog
     public static function GetPropUsage(bool $join = true) : string 
     {
         $appstr = implode("|",array_filter(array_keys(self::GetChildMap())));
-        return "[--lapp $appstr] [--laction alphanum]".($join ? ' '.RequestLog::GetPropUsage(false):''); 
+        return "[--app $appstr] [--action alphanum]".($join ? ' '.RequestLog::GetPropUsage(false):''); 
     }
     
     /** Returns the app-specific usage for classes that extend this one */
@@ -202,7 +202,7 @@ class ActionLog extends BaseLog
     {
         $retval = array();
         foreach (self::GetChildMap() as $appname=>$logclass)
-            if ($appname) $retval[] = "--lapp $appname ".$logclass::GetAppPropUsage();
+            if ($appname) $retval[] = "--app $appname ".$logclass::GetAppPropUsage();
         return $retval;
     }
 
@@ -210,8 +210,8 @@ class ActionLog extends BaseLog
     {
         $criteria = array();
 
-        if ($params->HasParam('lapp')) $criteria[] = $q->Equals("app", $params->GetParam('lapp')->GetAlphanum());
-        if ($params->HasParam('laction')) $criteria[] = $q->Equals("action", $params->GetParam('laction')->GetAlphanum());
+        if ($params->HasParam('app')) $criteria[] = $q->Equals("app", $params->GetParam('app')->GetAlphanum());
+        if ($params->HasParam('action')) $criteria[] = $q->Equals("action", $params->GetParam('action')->GetAlphanum());
         
         if (!$join) return $criteria;
         
@@ -222,10 +222,10 @@ class ActionLog extends BaseLog
     /** @return class-string<self> */
     protected static function GetPropClass(SafeParams $params) : string
     {
-        if ($params->HasParam('lapp'))
+        if ($params->HasParam('app'))
         {
             $map = self::GetChildMap();
-            $app = $params->GetParam('lapp')->GetAlphanum();
+            $app = $params->GetParam('app')->GetAlphanum();
             if (array_key_exists($app, $map)) return $map[$app];
         }
         

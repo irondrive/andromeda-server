@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Config;
+use Andromeda\Core\{Config, Utilities};
 
 /**
  * A thin class that manages a collection of SafeParam objects
@@ -11,6 +11,27 @@ use Andromeda\Core\Config;
  */
 class SafeParams
 {
+    /** 
+     * Loads params from an array of input values
+     * @param array<scalar, NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>> $arr 
+     */
+    public function LoadArray(array $arr) : self
+    {
+        foreach ($arr as $key=>$val)
+        {
+            if (is_array($val) && !Utilities::is_plain_array($val))
+            {
+                $obj = new self();
+                // phpstan does not support recursive types
+                $val = $obj->LoadArray($val); /** @phpstan-ignore-line */
+            }
+            
+            $this->AddParam((string)$key, $val); // scalar
+        }
+        
+        return $this;
+    }
+    
     /** @var array<SafeParam> */
     private array $params = array();
     
@@ -19,9 +40,12 @@ class SafeParams
     {
         return array_key_exists($key, $this->params);
     }
-    
-    /** Adds the parameter to this object with the given name and value */
-    public function AddParam(string $key, ?string $value) : self
+
+    /**
+     * Adds the parameter to this object with the given name and value 
+     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
+     */
+    public function AddParam(string $key, $value) : self
     {
         $this->params[$key] = new SafeParam($key, $value); return $this;
     }
@@ -83,7 +107,7 @@ class SafeParams
         if (!$this->HasParam($key))
         {
             // (string)false is '', which is null, which is true for GetBool()!
-            $defstr = ($default === false) ? 'false' : (string)$default;
+            $defstr = ($default === false) ? "false" : (string)$default;
             
             return new SafeParam($key, $defstr);
         }
@@ -99,12 +123,12 @@ class SafeParams
     }
 
     /** 
-     * Returns a plain associative array of each parameter's name mapped to its raw value 
-     * @return array<string, ?string>
+     * Returns a plain associative array of each parameter's name mapped to its raw value
+     * @return array<string, mixed>
      */
     public function GetClientObject() : array
     {
         return array_map(function(SafeParam $param){ 
-            return $param->GetNullRawString(); }, $this->params);
+            return $param->GetNullRawValue(); }, $this->params);
     }
 }

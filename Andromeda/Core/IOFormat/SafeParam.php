@@ -15,24 +15,44 @@ class SafeParam
 {
     /** @var non-empty-string */
     private string $key;
+    
+    /** 
+     * The original constructed value, for GetNullRawValue()
+     * @var ?scalar 
+     */
+    private $origval = null;
+    
     /** @var ?non-empty-string */
-    private ?string $value;
+    private ?string $strval = null;
+    /** @var array<mixed> */ 
+    private ?array $arrval = null;
+    private ?SafeParams $objval = null;
     
     /** 
      * Construct a new SafeParam with the given key and value
+     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
      * @throws SafeParamInvalidException if the key name is invalid
      */
-    public function __construct(string $key, ?string $value)
+    public function __construct(string $key, $value)
     {
-        if (empty($key) || !preg_match("%^[a-zA-Z0-9_.]+$%", $key))
+        if ($key === "" || !preg_match("%^[a-zA-Z0-9_.]+$%", $key))
             throw new SafeParamInvalidException("(key)", 'alphanum');
         
-        if ($value === "" || $value === "null" || $value === "NULL") $value = null;
-            
         $this->key = $key;
-        $this->value = $value;
+        
+        if (is_array($value)) 
+            $this->arrval = $value;
+        else if ($value instanceof SafeParams) 
+            $this->objval = $value;
+        else
+        {
+            $this->origval = $value;
+            $strval = ($value === false) ? "false" : (string)$value;
+            if ($strval !== "" && $strval !== "null" && $strval !== "NULL")
+                $this->strval = $strval;
+        }
     }
-    
+
     private int $loglevel;
     
     /** @var ?array<string, mixed> */
@@ -57,46 +77,101 @@ class SafeParam
             $this->logref[$this->key] = $data;
     }
     
+    /**
+     * Returns the given value as a string or null
+     * @throws SafeParamInvalidException if other type given
+     */
+    protected function tryGetStr() : ?string
+    {
+        if ($this->isNull()) return null;
+        if ($this->strval !== null) return $this->strval;
+        throw new SafeParamInvalidException($this->key,'string');
+    }
+    
+    /**
+     * Returns the given value as an array or null
+     * @throws SafeParamInvalidException if other type given
+     * @return ?array<mixed>
+     */
+    protected function tryGetArr() : ?array
+    {
+        if ($this->isNull()) return null;
+        if ($this->arrval !== null) return $this->arrval;
+        throw new SafeParamInvalidException($this->key,'array');
+    }
+    
+    /**
+     * Returns the given value as an object or null
+     * @throws SafeParamInvalidException if other type given
+     */
+    protected function tryGetObj() : ?SafeParams
+    {
+        if ($this->isNull()) return null;
+        if ($this->objval !== null) return $this->objval;
+        throw new SafeParamInvalidException($this->key,'object');
+    }
+    
+    /** 
+     * Returns the value as originally given (UNSAFE), no logging
+     * @return NULL|scalar|array<mixed> 
+     */
+    public function GetNullRawValue()
+    {
+        if ($this->origval !== null) 
+            return $this->origval;
+        if ($this->arrval !== null)
+            return $this->arrval;
+        if ($this->objval !== null) 
+            return $this->objval->GetClientObject();
+        return null;
+    }
+    
+    /** Returns the raw unchecked value string (or null), no logging */
+    public function GetNullRawString() : ?string { return $this->tryGetStr(); }
+    
     /** 
      * If not null, checks that a custom validation function returns true
      * @param callable(string):bool $valfunc custom function
-     * @throws SafeParamInvalidException if not valid
+     * @throws SafeParamInvalidException if not valid or not string
      * @return $this
      */
     public function CheckFunction(callable $valfunc) : self
     {
-        if ($this->value !== null && !$valfunc($this->value))
+        $str = $this->tryGetStr();
+        if ($str !== null && !$valfunc($str))
             throw new SafeParamInvalidException($this->key);
         else return $this;
     }
 
     /**
-     * Checks that the string length is below a maximum or null
+     * Checks that the string/array length is below a maximum or null
      * @param int $maxlen maximum length (inclusive)
-     * @throws SafeParamInvalidException if not valid
+     * @throws SafeParamInvalidException if not valid or not string/array
      * @return $this
      */
     public function CheckLength(int $maxlen) : self
     {
-        if ($this->value === null) return $this;
+        if ($this->strval === null && $this->arrval === null)
+        {
+            if ($this->objval === null) return $this;
+            throw new SafeParamInvalidException($this->key,'countable');
+        }
         
-        if (mb_strlen($this->value) > $maxlen)
+        if ($this->strval !== null && mb_strlen($this->strval) > $maxlen)
             throw new SafeParamInvalidException($this->key, "max length $maxlen");
-        else return $this;
+        
+        if ($this->arrval !== null && count($this->arrval) > $maxlen)
+            throw new SafeParamInvalidException($this->key, "max length $maxlen");
+            
+        return $this;
     }
     
     /** Returns true if the param value is null */
-    public function isNull() : bool { return $this->value === null; }
-    
-    /** Returns the raw unchecked value string (or null), no logging */
-    public function GetNullRawString() : ?string { return $this->value; }
-    
-    /** Returns the raw unchecked value string (NOT null), no logging */
-    public function GetRawString() : string 
-    {        
-        if ($this->value === null)
-            throw new SafeParamNullValueException($this->key);
-        return $this->value; 
+    public function isNull() : bool 
+    {
+        return $this->strval === null && 
+               $this->arrval === null && 
+               $this->objval === null;
     }
 
     /**
@@ -108,37 +183,25 @@ class SafeParam
      */
     public function FromWhitelistNull(array $values) : ?string
     {
-        if ($this->value !== null && !in_array($this->value,$values,true))
+        $str = $this->tryGetStr();
+        
+        if ($str !== null && !in_array($str,$values,true))
             throw new SafeParamInvalidException($this->key, implode('|',$values));
         
-        $this->LogValue($this->value); return $this->value;
+        $this->LogValue($str); return $str;
     }
-    
-    /**
-     * Checks that the param's value is in the given array
-     * @template T of array<string>
-     * @param T $values whitelisted values
-     * @throws SafeParamInvalidException if not valid
-     * @return value-of<T> the whitelisted value or null
-     */
-    public function FromWhitelist(array $values) : string
-    {
-        if (($value = $this->FromWhitelistNull($values)) === null)
-            throw new SafeParamNullValueException($this->key);
-        else return $value;
-    }
-    
+
     /**
      * Returns a boolean value, see FILTER_VALIDATE_BOOLEAN
      * @throws SafeParamInvalidException if not valid
      */
     public function GetNullBool() : ?bool
     {
-        $value = $this->value; 
+        $str = $this->tryGetStr();
         
-        if ($value !== null)
+        $value = null; if ($str !== null)
         {
-            $value = filter_var($this->value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $value = filter_var($str, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
             if ($value === null) throw new SafeParamInvalidException($this->key, 'bool');
         }
         
@@ -148,9 +211,10 @@ class SafeParam
     /** @throws SafeParamInvalidException if not valid */
     protected function GetBaseInt() : ?int
     {
-        if ($this->value === null) return null;
+        $str = $this->tryGetStr();
+        if ($str === null) return null;
         
-        $value = filter_var($this->value, FILTER_VALIDATE_INT);
+        $value = filter_var($str, FILTER_VALIDATE_INT);
         if ($value === false) throw new SafeParamInvalidException($this->key, 'int');
         
         return $value;
@@ -212,7 +276,7 @@ class SafeParam
     /**
      * Returns an unsigned integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int|NULL
+     * @return int<0,max>|NULL
      */
     public function GetNullUint() : ?int
     {
@@ -227,7 +291,7 @@ class SafeParam
     /**
      * Returns an unsigned 32-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int|NULL
+     * @return int<0,max>|NULL
      */
     public function GetNullUint32() : ?int
     {
@@ -242,7 +306,7 @@ class SafeParam
     /**
      * Returns an unsigned 16-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int|NULL
+     * @return int<0,max>|NULL
      */
     public function GetNullUint16() : ?int
     {
@@ -257,7 +321,7 @@ class SafeParam
     /**
      * Returns an unsigned 8-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int|NULL
+     * @return int<0,max>|NULL
      */
     public function GetNullUint8() : ?int
     {
@@ -275,10 +339,11 @@ class SafeParam
      */
     public function GetNullFloat() : ?float
     {
-        $value = $this->value; 
-        if ($value !== null)
+        $str = $this->tryGetStr(); 
+        
+        $value = null; if ($str !== null)
         {
-            $value = filter_var($value, FILTER_VALIDATE_FLOAT);
+            $value = filter_var($str, FILTER_VALIDATE_FLOAT);
             if ($value === false) throw new SafeParamInvalidException($this->key, 'float');
         }
         
@@ -292,7 +357,7 @@ class SafeParam
      */
     public function GetNullRandstr() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $value = trim($value);
@@ -310,7 +375,7 @@ class SafeParam
      */
     public function GetNullAlphanum() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(255);
@@ -329,7 +394,7 @@ class SafeParam
      */
     public function GetNullName() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(255);
@@ -348,7 +413,7 @@ class SafeParam
      */
     public function GetNullEmail() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(127);
@@ -368,7 +433,7 @@ class SafeParam
      */
     public function GetNullFSName() : ?string
     {
-       $value = $this->value;
+       $value = $this->tryGetStr();
        if ($value !== null)
        {
            $this->CheckLength(255);
@@ -394,7 +459,7 @@ class SafeParam
      */
     public function GetNullFSPath() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(65535);
@@ -417,7 +482,7 @@ class SafeParam
      */
     public function GetNullHostname() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(255);
@@ -437,7 +502,7 @@ class SafeParam
      */
     public function GetNullHTMLText() : ?string // safe for HTML
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(65535);
@@ -457,7 +522,7 @@ class SafeParam
      */
     public function GetNullUTF8String() : ?string
     {
-        $value = $this->value;
+        $value = $this->tryGetStr();
         if ($value !== null)
         {
             $this->CheckLength(65535);
@@ -476,31 +541,29 @@ class SafeParam
      */
     public function GetNullObject() : ?SafeParams
     {
-        if ($this->value === null) 
+        if ($this->objval !== null)
         {
-            $this->LogValue(null); return null;
+            $obj = $this->objval;
         }
-        
-        try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONException $e) {
-            throw new SafeParamInvalidException($this->key, 'json');
-        }
-        
-        if ($this->logref !== null)
-            $this->logref[$this->key] = array();
-        
-        $obj = new SafeParams();
-
-        foreach ($value as $subkey=>$subval)
+        else if ($this->strval !== null)
         {
-            if (is_array($subval)) // json array or object
-                $subval = Utilities::JSONEncode($subval);
+            try { $value = Utilities::JSONDecode($this->strval); }
+            catch (JSONException $e) { throw new SafeParamInvalidException($this->key, 'json'); }
             
-            $obj->AddParam((string)$subkey, (string)$subval);
+            $obj = new SafeParams();
+            $obj->LoadArray($value);
         }
-        
+        else // null
+        {
+            if ($this->arrval === null) { $this->LogValue(null); return null; }
+            throw new SafeParamInvalidException($this->key,'json|object');
+        }
+
         if ($this->logref !== null)
+        {
+            $this->logref[$this->key] = array();
             $obj->SetLogRef($this->logref[$this->key], $this->loglevel);
+        }
             
         return $obj;
     }
@@ -514,24 +577,29 @@ class SafeParam
      */
     public function GetNullArray(callable $getval) : ?array
     {
-        if ($this->value === null)
+        if ($this->arrval !== null)
         {
-            $this->LogValue(null); return null;
+            $value = $this->arrval;
         }
-  
-        try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONException $e) {
-            throw new SafeParamInvalidException($this->key, 'json');
+        else if ($this->strval !== null)
+        {
+            try { $value = Utilities::JSONDecode($this->strval); }
+            catch (JSONException $e) { throw new SafeParamInvalidException($this->key, 'json'); }
+        }
+        else // null
+        {
+            if ($this->objval === null) { $this->LogValue(null); return null; }
+            throw new SafeParamInvalidException($this->key,'json|array');
         }
 
         $arr = array();
         foreach ($value as $subval)
         {
             if (!is_scalar($subval)) // this function gets T of scalar
-                throw new SafeParamInvalidException($this->key, 'json');
+                throw new SafeParamInvalidException($this->key, 'arr[scalar]');
             
-            $arr[] = $getval(
-                new SafeParam($this->key, (string)$subval));
+            $arr[] = $getval( // ignore key names
+                new SafeParam($this->key, $subval));
         }
 
         $this->LogValue($arr); return $arr;
@@ -544,31 +612,29 @@ class SafeParam
      */
     public function GetNullObjectArray() : ?array
     {
-        if ($this->value === null)
+        if ($this->arrval !== null)
         {
-            $this->LogValue(null); return null;
+            $value = $this->arrval;
         }
-        
-        try { $value = Utilities::JSONDecode($this->value); }
-        catch (JSONException $e) {
-            throw new SafeParamInvalidException($this->key, 'json');
+        else if ($this->strval !== null)
+        {
+            try { $value = Utilities::JSONDecode($this->strval); }
+            catch (JSONException $e) { throw new SafeParamInvalidException($this->key, 'json'); }
         }
-        
+        else // null
+        {
+            if ($this->objval === null) { $this->LogValue(null); return null; }
+            throw new SafeParamInvalidException($this->key,'json|array');
+        }
+
         $arr = array();
         foreach ($value as $subval)
         {
             if (!is_array($subval))
-                throw new SafeParamInvalidException($this->key, 'json');
+                throw new SafeParamInvalidException($this->key, 'arr[object]');
             
             $arr[] = $params = new SafeParams();
-            
-            foreach ($subval as $subkey2=>$subval2)
-            {
-                if (is_array($subval2)) // json array or object
-                    $subval2 = Utilities::JSONEncode($subval2);
-                    
-                $params->AddParam((string)$subkey2, (string)$subval2);
-            }
+            $params->LoadArray($subval);
         }
         
         if ($this->logref !== null)
@@ -586,6 +652,31 @@ class SafeParam
         return $arr;
     }
 
+    /**
+     * Checks that the param's value is in the given array
+     * @template T of array<string>
+     * @param T $values whitelisted values
+     * @throws SafeParamInvalidException if not valid
+     * @return value-of<T> the whitelisted value or null
+     */
+    public function FromWhitelist(array $values) : string
+    {
+        if (($value = $this->FromWhitelistNull($values)) === null)
+            throw new SafeParamNullValueException($this->key);
+        else return $value;
+    }
+    
+    /**
+     * Returns the raw unchecked value string (NOT null), no logging
+     * @throws SafeParamNullValueException if null
+     */
+    public function GetRawString() : string
+    {
+        if (($value = $this->GetNullRawString()) === null)
+            throw new SafeParamNullValueException($this->key);
+        else return $value;
+    }
+    
     /**
      * Returns a non-null boolean (null becomes true)
      * @see SafeParam::GetNullBool()
@@ -651,7 +742,7 @@ class SafeParam
      * @see SafeParam::GetNullUint()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int
+     * @return int<0,max>
      */
     public function GetUint() : int
     {
@@ -664,7 +755,7 @@ class SafeParam
      * @see SafeParam::GetNullUint32()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int
+     * @return int<0,max>
      */
     public function GetUint32() : int
     {
@@ -677,7 +768,7 @@ class SafeParam
      * @see SafeParam::GetNullUint16()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int
+     * @return int<0,max>
      */
     public function GetUint16() : int
     {
@@ -690,7 +781,7 @@ class SafeParam
      * @see SafeParam::GetNullUint8()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return 0|positive-int
+     * @return int<0,max>
      */
     public function GetUint8() : int
     {

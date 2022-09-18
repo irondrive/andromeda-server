@@ -32,7 +32,7 @@ All input parameters are strictly validated against their expected types.  Most 
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
-* `--json`/`--printr` use JSON or PHP printr() for output (default printr)
+* `--outmode json`/`--outmode printr` use JSON or PHP printr() for output (default printr)
 * `--debug enum` change the debug output level (default server errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
@@ -42,7 +42,7 @@ CLI-specific global flags must come *before* the app/action.
 To ease command line usage for commands that may involve repeated parameters (e.g. a session key), environment variables prefixed with `andromeda_` can be set that will always be included in a request.  For example, `export andromeda_mykey=myvalue` is equivalent to adding `--mykey=myvalue` to all future commands.
 
 ### Response Format
-Every request will return an object with `ok` and `code`.  `ok` denotes whether the transaction was successful, and `code` returns the corresponding HTTP error code. If the request was successful (200), the `appdata` field will have the output from the app-action.  If there was an error, the `message` field will have a string describing the error.  For cleaner output, when using CLI without `--json` or `--printr` and there is no debug or metrics to output, only the `appdata` or `message` field will be printed.
+Every request will return an object with `ok` and `code`.  `ok` denotes whether the transaction was successful, and `code` returns the corresponding HTTP error code. If the request was successful (200), the `appdata` field will have the output from the app-action.  If there was an error, the `message` field will have a string describing the error.  For cleaner output, when using CLI the default `--outmode` is `plain`, meaning only the `appdata` or `message` field will be printed (if possible).
 
 ### HTTP Differences
 Parameters can be placed in the URL query string, the POST body as `application/x-www-form-urlencoded` or similar (see PHP $_POST), or cookies.  The only restrictions are app and action must be URL variables, and any parameter starting with `auth_` cannot be in the URL.  Andromeda does not make use of the different HTTP methods, headers, or endpoints.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.

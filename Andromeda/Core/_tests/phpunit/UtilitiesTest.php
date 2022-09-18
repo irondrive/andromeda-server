@@ -4,15 +4,9 @@ require_once(ROOT."/Core/Utilities.php"); // Singleton
 
 class MySingleton extends Singleton { }
 
-abstract class TestBase0 { }
-abstract class TestBase1 { }
-abstract class TestBase2 { }
-
-class TestClass1 extends TestBase1 { 
-    public function __toString() : string { return "TestClass1..."; } }
-    
-class TestClass2 extends TestBase2 { }
-class TestClass3 extends TestBase2 { }
+class TestClass1 { public function __toString() : string { return "TestClass1..."; } }
+class TestClass2 { }
+class TestClass3 { }
 
 class UtilitiesTest extends \PHPUnit\Framework\TestCase
 {
@@ -184,6 +178,22 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        
        $this->assertSame(Utilities::array_map_keys($func, 
            array('a','b','c')), array('a'=>'a5','b'=>'b5','c'=>'c5'));
+   }
+   
+   public function testIsPlainArray() : void
+   {
+       $this->assertTrue(Utilities::is_plain_array(array()));
+       $this->assertTrue(Utilities::is_plain_array(array(0=>false)));
+       $this->assertTrue(Utilities::is_plain_array(array(0=>0,1=>'a',2=>3.14)));
+       $this->assertTrue(Utilities::is_plain_array([1,2,3,4,5]));
+       $this->assertTrue(Utilities::is_plain_array(['a','b','c']));
+       
+       $this->assertFalse(Utilities::is_plain_array(array(1=>1)));
+       $this->assertFalse(Utilities::is_plain_array(array(0=>1,2=>1)));
+       $this->assertFalse(Utilities::is_plain_array(array(0=>1,'test'=>false)));
+       $this->assertFalse(Utilities::is_plain_array(array(1.0=>3)));
+       $this->assertFalse(Utilities::is_plain_array(array('test'=>5)));
+       $this->assertFalse(Utilities::is_plain_array(array(0=>5,1=>array(1,2))));
    }
    
    public function testCaptureOutput() : void

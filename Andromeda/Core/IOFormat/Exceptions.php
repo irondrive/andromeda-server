@@ -69,3 +69,11 @@ class FileReadFailedException extends Exceptions\ServerException
         parent::__construct("FILE_READ_FAILED", $details);
     }
 }
+
+/** Exception indicating that the output mode cannot be set in multi-output mode */
+class MultiOutputJSONException extends Exceptions\ServerException
+{
+    public function __construct(?int $mode = null) {
+        parent::__construct("MULTI_OUTPUT_JSON", ($mode !== null) ? (string)$mode : null);
+    }
+}

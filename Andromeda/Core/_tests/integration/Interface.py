@@ -25,7 +25,7 @@ class HTTP(Interface):
         for key,val in params.items():
             if val is None: params[key] = ""
 
-        urlparams = {'app':app,'action':action}
+        urlparams = {'_app':app,'_act':action}
         resp = requests.post(self.url,params=urlparams,data=params,files=files)
 
         if isJson:

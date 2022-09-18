@@ -20,7 +20,7 @@ class CLI extends IOInterface
     public static function isPrivileged() : bool { return true; }
     
     /** @return int plain text output by default */
-    public static function GetDefaultOutmode() : int { return static::OUTPUT_PLAIN; }
+    public static function GetDefaultOutmode() : int { return self::OUTPUT_PLAIN; }
     
     /** Strips -- off the given string and returns (or null if not found) */
     private static function getKey(string $str) : ?string
@@ -82,9 +82,21 @@ class CLI extends IOInterface
         return $this;
     }
 
-    protected function subGetInputs() : array
+    protected function subLoadInputs() : array
     {
-        global $argv; $argIdx = 1;
+        global $argv; return $this->LoadCLIInputs($argv, $_SERVER, STDIN);
+    }
+    
+    /**
+     * Retries an array of input objects to run
+     * @param array<string> $argv
+     * @param array<string, scalar> $server
+     * @param resource $stdin
+     * @return non-empty-array<Input>
+     */
+    public function LoadCLIInputs(array $argv, array $server, $stdin) : array
+    {
+        $argIdx = 1;
         
         // global params for outmode, debug, config file, etc. come first
         for (; $argIdx < count($argv); $argIdx++)
@@ -94,9 +106,15 @@ class CLI extends IOInterface
             if ($key === null) break; else switch ($key)
             {
                 case 'dryrun': $this->dryRun = true; break;
-                case 'json': $this->outmode = static::OUTPUT_JSON; break;
-                case 'printr': $this->outmode = static::OUTPUT_PRINTR; break;
-                
+
+                case 'outmode':
+                {
+                    if (($val = self::getNextValue($argv,$argIdx)) === null)
+                        throw new IncorrectCLIUsageException('no outmode value');
+                    $outmode = (new SafeParam('outmode',$val))->FromWhitelist(array_keys(self::OUTPUT_TYPES));
+                    $this->outmode = self::OUTPUT_TYPES[$outmode];
+                    break;
+                }
                 case 'debug':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
@@ -136,10 +154,10 @@ class CLI extends IOInterface
                     $fname = self::getNextValue($argv,$argIdx);
                     if ($fname === null)
                         throw new IncorrectCLIUsageException('no batch path');
-                    else return self::GetBatch($fname);
+                    else return self::GetBatch($fname, $server,$stdin);
                 }
                 
-                default: return array(self::GetInput(array_slice($argv, $argIdx)));
+                default: return array(self::GetInput(array_slice($argv,$argIdx), $server,$stdin));
             }
         }
 
@@ -149,8 +167,10 @@ class CLI extends IOInterface
     /** 
      * Reads an array of Input objects from a batch file
      * @return non-empty-array<Input>
+     * @param array<string, scalar> $server
+     * @param resource $stdin
       */
-    private function GetBatch(string $file) : array
+    private function GetBatch(string $file, array $server, $stdin) : array
     {
         if (!is_file($file) || ($fdata = file_get_contents($file)) === false)
             throw new UnknownBatchFileException($file);
@@ -158,9 +178,9 @@ class CLI extends IOInterface
         $lines = array_filter(explode("\n", $fdata));
         if (!count($lines)) throw new EmptyBatchException();
         
-        return array_map(function($line)
+        return array_map(function($line)use($server,$stdin)
         {
-            try { return self::GetInput(\Clue\Arguments\split($line)); }
+            try { return self::GetInput(\Clue\Arguments\split($line),$server,$stdin); }
             catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
         }, $lines);
     }
@@ -168,38 +188,39 @@ class CLI extends IOInterface
     /** 
      * Fetches an Input object by reading it from the command line 
      * @param array<int,string> $argv
+     * @param array<string, scalar> $server
+     * @param resource $stdin
      */
-    private function GetInput(array $argv) : Input
+    private function GetInput(array $argv, array $server, $stdin) : Input
     {
         if (count($argv) < 2) 
             throw new IncorrectCLIUsageException('missing app/action');
-        
-        $app = $argv[0]; $action = $argv[1]; 
-        $argv = array_splice($argv, 2);
-        
-        $params = new SafeParams(); $files = array();
-        
+        $app = $argv[0]; $action = $argv[1];
+
         // add environment variables to argv
-        $envargs = array(); foreach ($_SERVER as $key=>$value)
+        foreach ($server as $key=>$value)
         { 
             $key = explode('_',$key,2);
             
             if (count($key) === 2 && $key[0] === 'andromeda')
             {
-                array_push($envargs, "--".$key[1], $value);
+                if ($value === false) $value = "false";
+                array_push($argv, "--".$key[1], (string)$value);
             }
-        }; $argv = array_merge($envargs, $argv);
+        };
         
-        for ($i = 0; $i < count($argv); $i++)
+        $params = new SafeParams(); $files = array();
+ 
+        for ($i = 2; $i < count($argv); $i++)
         {
             $param = self::getKey($argv[$i]); 
             if ($param === null) throw new IncorrectCLIUsageException(
                 "expected key at action arg $i");
-            else if (empty($param)) throw new IncorrectCLIUsageException(
+            else if ($param === "") throw new IncorrectCLIUsageException(
                 "empty key at action arg $i");
             
             $special = mb_substr($param, -1);
-            
+
             // optionally load a param value from a file instead
             if ($special === '@')
             {
@@ -213,7 +234,8 @@ class CLI extends IOInterface
                 
                 if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
                     throw new InvalidFileException($val);
-                else $val = trim($fdat);
+                
+                $params->AddParam($param, trim($fdat));
             }
             // optionally get a param value interactively
             else if ($special === '!')
@@ -222,18 +244,19 @@ class CLI extends IOInterface
                 if (!$param) throw new IncorrectCLIUsageException(
                     "empty ! key at action arg $i");
                 
-                echo "enter $param...".PHP_EOL; $inp = fgets(STDIN);
+                echo "enter $param...".PHP_EOL; $inp = fgets($stdin);
                 $val = ($inp === false) ? null : trim($inp, PHP_EOL);
+                
+                $params->AddParam($param, $val);
             }
-            else $val = self::getNextValue($argv,$i);
-
             // optionally send the app a path/name of a file instead
-            if ($special === '%')
+            else if ($special === '%')
             {
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException(
                     "empty % key at action arg $i");
                 
+                $val = self::getNextValue($argv,$i);
                 if ($val === null) throw new IncorrectCLIUsageException(
                     "expected % value at action arg $i");
                 
@@ -251,19 +274,22 @@ class CLI extends IOInterface
                 if (!$param) throw new IncorrectCLIUsageException(
                     "empty - key at action arg $i");
                 
-                $files[$param] = new InputStream(STDIN);
+                $files[$param] = new InputStream($stdin);
             }
-            else $params->AddParam($param, $val);
+            else // plain argument
+            {
+                $val = self::getNextValue($argv,$i);
+                $params->AddParam($param, $val);
+            }
         }
         
         return new Input($app, $action, $params, $files);
     }
     
-    public function FinalOutput(Output $output) : void
+    /** @param bool $exit if true, exit() with the proper code */
+    public function FinalOutput(Output $output, bool $exit = true) : void
     {
-        $multi = $this->isMultiOutput();
-        
-        if (!$multi && $this->outmode === self::OUTPUT_PLAIN)
+        if ($this->outmode === self::OUTPUT_PLAIN)
         {
             // try echoing as a string, switch to printr if it fails
             $outstr = $output->GetAsString();
@@ -271,23 +297,22 @@ class CLI extends IOInterface
             else $this->outmode = self::OUTPUT_PRINTR;
         }
 
-        if (!$multi && $this->outmode === self::OUTPUT_PRINTR)
+        if ($this->outmode === self::OUTPUT_PRINTR)
         {
             $outdata = $output->GetAsArray();
             echo print_r($outdata, true).PHP_EOL;
         }
         
-        if ($multi || $this->outmode === self::OUTPUT_JSON)
+        if ($this->outmode === self::OUTPUT_JSON)
         {
-            $outdata = $output->GetAsArray();
+            $outdata = Utilities::JSONEncode($output->GetAsArray());
             
-            $outdata = Utilities::JSONEncode($outdata).PHP_EOL;
-            
-            if ($multi) echo static::formatSize(strlen($outdata));
-            
-            echo $outdata;
+            if ($multi = $this->isMultiOutput()) 
+                echo static::formatSize(strlen($outdata));
+        
+            echo $outdata; if (!$multi) echo PHP_EOL;
         }
 
-        exit($output->isOK() ? 0 : 1);
+        if ($exit) exit($output->isOK() ? 0 : 1);
     }
 }

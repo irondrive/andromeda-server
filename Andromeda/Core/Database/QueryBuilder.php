@@ -223,7 +223,7 @@ class QueryBuilder
     
     /** 
      * Assigns a LIMIT clause to the query 
-     * @param NULL|0|positive-int $limit
+     * @param NULL|int<0,max> $limit
      * @return $this
      */
     public function Limit(?int $limit) : self 
@@ -233,7 +233,7 @@ class QueryBuilder
     
     /** 
      * Assigns an OFFSET clause to the query (use with LIMIT) 
-     * @param NULL|0|positive-int $offset
+     * @param NULL|int<0,max> $offset
      * @return $this
      */
     public function Offset(?int $offset) : self 

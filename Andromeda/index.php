@@ -23,7 +23,7 @@ if (!$interface) die('INTERFACE_ERROR');
 
 $errman = new ErrorManager($interface, true);
 
-$inputs = $interface->GetInputs(); // check early
+$inputs = $interface->LoadInputs(); // check early
 
 $apipack = new ApiPackage($interface, $errman);
 
