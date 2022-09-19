@@ -24,7 +24,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * statistics and queries are tracked as a stack, but transactions cannot be nested.
  * Queries made must always be compatible with all supported drivers.
  */
-class Database
+class PDODatabase
 {
     /** the PDO database connection */
     private PDO $connection; 
@@ -242,7 +242,7 @@ class Database
         $this->instanceId = "Database_".Utilities::Random(4);
     }
     
-    /** @see Database::$driver */
+    /** @see PDODatabase::$driver */
     public function getDriver() : int { return $this->driver; }
     
     /** Returns the DB's unique instance ID */
@@ -350,7 +350,7 @@ class Database
      * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return array<array<string, ?scalar>> an associative array of the query results - results MAY be all strings!
      * @throws DatabaseFetchException if the row fetch fails
-     * @see Database::query()
+     * @see PDODatabase::query()
      */
     public function read(string $sql, ?array $data = null) : array
     {
@@ -375,7 +375,7 @@ class Database
      * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return int count of matched objects (not count of modified!)
      * @throws DatabaseReadOnlyException if the DB is read-only
-     * @see Database::query()
+     * @see PDODatabase::query()
      */
     public function write(string $sql, ?array $data = null) : int
     {        
@@ -399,7 +399,7 @@ class Database
      * @return array<array<string, ?scalar>> an associative array of the query results - results MAY be all strings!
      * @throws DatabaseReadOnlyException if the DB is read-only
      * @throws DatabaseFetchException if the row fetch fails
-     * @see Database::query()
+     * @see PDODatabase::query()
      */
     public function readwrite(string $sql, ?array $data = null) : array
     {

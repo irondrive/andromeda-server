@@ -8,14 +8,14 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetClassTable() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $this->assertSame(
             'a2obj_core_database_polyobject1',
             $objdb->GetClassTableName(PolyObject1::class));
         
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $database->method('UsePublicSchema')->willReturn(true);
         $objdb = new ObjectDatabase($database);
         
@@ -26,7 +26,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testApiPackage() : void
     {
-        $db = $this->createMock(Database::class);
+        $db = $this->createMock(PDODatabase::class);
         $apipack = $this->createMock(ApiPackage::class);
         
         $objdb = new ObjectDatabase($db);
@@ -82,7 +82,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // loading by every base class should yield the same results!
         foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
         {
-            $database = $this->createMock(Database::class);
+            $database = $this->createMock(PDODatabase::class);
             $objdb = new ObjectDatabase($database);
             
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
@@ -153,7 +153,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testObjectIdentity() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $id = 'testid5678';
@@ -182,7 +182,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testCountByQuery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Where($q->Equals('mytest',5));
@@ -229,7 +229,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testInsertObject() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj = PolyObject5a::Create($objdb);
@@ -254,7 +254,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUpdateObject() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj = new PolyObject5a($objdb, array('id'=>($id='testid123'),'testprop1'=>5,'testprop4'=>6,'testprop4n'=>6,'testprop5'=>7));
@@ -278,7 +278,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testSaveAllObjects() : void
     {   
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj1 = PolyObject5a::Create($objdb); $id1 = $obj1->ID(); $obj1->SetTestProp4(100);
@@ -308,7 +308,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testDeleteObject() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj = new PolyObject5a($objdb, array('id'=>($id='testid1234')));
@@ -333,7 +333,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // loading by every base class should yield the same results!
         foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
         {
-            $database = $this->createMock(Database::class);
+            $database = $this->createMock(PDODatabase::class);
             $objdb = new ObjectDatabase($database);
             $database->method('SupportsRETURNING')->willReturn(true);
             
@@ -393,7 +393,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // loading by every base class should yield the same results!
         foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
         {
-            $database = $this->createMock(Database::class);
+            $database = $this->createMock(PDODatabase::class);
             $objdb = new ObjectDatabase($database);
             $database->method('SupportsRETURNING')->willReturn(false);
             
@@ -447,7 +447,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testLoadedObjects() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(3))->method('read')
@@ -478,7 +478,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testEmptyKeyLoad() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(2))->method('read')
@@ -496,7 +496,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testLoadUniqueByQuery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(3))->method('read')
@@ -516,7 +516,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testDeleteUniqueByQuery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->method('SupportsRETURNING')->willReturn(true);
@@ -536,7 +536,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyLoad() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
@@ -567,7 +567,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyCount() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(2))->method('read')
@@ -585,7 +585,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testUniqueKeyLoad() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
@@ -612,7 +612,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     public function testUniqueKeyConstructID() : void
     {
         // when constructing objects, ID is an automatic unique key
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
@@ -630,7 +630,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     {
         // ID should always considered unique
         
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(0))->method('read');
@@ -645,7 +645,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     {
         // check that loading the object adds its registered unique keys
                 
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $selstr1 = "SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
@@ -685,7 +685,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyPolyLoad() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
@@ -706,7 +706,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyPolyLoad() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
@@ -728,7 +728,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyLoadDelete() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
@@ -759,7 +759,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyLoadDelete() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
@@ -780,7 +780,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testNonUniqueKeyPolyLoadDelete() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
@@ -801,7 +801,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyPolyLoadDelete() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(2))->method('read')
@@ -826,7 +826,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyLoadModify() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
 
         $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
@@ -869,7 +869,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyLoadModify() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
@@ -897,7 +897,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyPolyLoadModify() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
@@ -920,7 +920,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyPolyLoadModify() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
@@ -941,7 +941,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testNonUniqueKeyLoadInsert() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj1 = EasyObject::Create($objdb); $id1 = $obj1->ID();
@@ -975,7 +975,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testUniqueKeyLoadInsert() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $obj = EasyObject::Create($objdb);
@@ -992,7 +992,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testNonUniqueKeyPolyLoadInsert() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)->willReturn([]);
@@ -1013,7 +1013,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testUniqueKeyPolyLoadInsert() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)->willReturn([]);
@@ -1032,7 +1032,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     {
         // test inserting objects with values null/0/false and test they're treatly differently
         
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(6))->method('read')->willReturn([]);
@@ -1076,7 +1076,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // NULL is not actually a unique value! can have more than one
         // setting a unique key to/from null should move it between the cache types
         
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $database->method('write')->willReturn(1);
@@ -1111,7 +1111,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testLimitOffsetBaseSubquery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Limit(3)->Offset(2);
@@ -1133,7 +1133,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testLimitOffsetChildTableSubquery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Limit(3)->Offset(2)->OrderBy('testprop');
@@ -1150,7 +1150,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     
     public function testLimitOffsetChildTableNoSubquery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Limit(3)->Offset(2);
@@ -1164,7 +1164,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
     public function testLimitOffsetChildNoTableNoSubquery() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Limit(3)->Offset(2);

@@ -5,7 +5,7 @@ use Andromeda\Core\{ApiPackage, BaseApp, Config, Emailer, EmailRecipient, Utilit
 require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, UnknownActionException, MailSendException};
 
 use Andromeda\Core\Exceptions\ErrorLog;
-use Andromeda\Core\Database\Database;
+use Andromeda\Core\Database\PDODatabase;
 use Andromeda\Core\IOFormat\{Input, Output, SafeParams, OutputHandler, IOInterface};
 use Andromeda\Core\Logging\RequestLog;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
@@ -171,8 +171,8 @@ final class CoreApp extends BaseApp
      * Gets miscellaneous server identity information
      * @throws AdminRequiredException if not admin-level access
      * @return array<mixed> `{uname:string, php_version:string, zend_version:string, 
-        server:[various], load:[int,int,int], db:Database::getInfo()}`
-     * @see Database::getInfo()
+        server:[various], load:[int,int,int], db:PDODatabase::getInfo()}`
+     * @see PDODatabase::getInfo()
      */
     protected function ServerInfo(bool $isAdmin) : array
     {
@@ -294,8 +294,8 @@ final class CoreApp extends BaseApp
     
     /**
      * Loads server DB config
-     * @return array<mixed> Database
-     * @see Database::GetClientObject()
+     * @return array<mixed> PDODatabase
+     * @see PDODatabase::GetClientObject()
      */
     protected function GetDBConfig(bool $isAdmin) : array
     {

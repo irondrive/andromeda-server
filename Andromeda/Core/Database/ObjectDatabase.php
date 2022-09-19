@@ -14,7 +14,7 @@ use Andromeda\Core\ApiPackage;
 class ObjectDatabase
 {
     /** PDO database reference */
-    private Database $db;
+    private PDODatabase $db;
     
     /** ApiPackage reference */
     private ApiPackage $apipack;
@@ -22,13 +22,13 @@ class ObjectDatabase
     /** time of construction */
     private float $time;
     
-    public function __construct(Database $db) 
+    public function __construct(PDODatabase $db) 
     {
         $this->db = $db; $this->time = microtime(true);
     }
     
     /** Returns the internal database instance */
-    public function GetInternal() : Database { return $this->db; }
+    public function GetInternal() : PDODatabase { return $this->db; }
     
     /** Gets the timestamp of when the db was constructed */
     public function GetTime() : float { return $this->time; }
@@ -69,7 +69,7 @@ class ObjectDatabase
         $this->db->rollback();
     }
     
-    /** @see Database::isReadOnly() */
+    /** @see PDODatabase::isReadOnly() */
     public function isReadOnly() : bool 
     { 
         return $this->db->isReadOnly();

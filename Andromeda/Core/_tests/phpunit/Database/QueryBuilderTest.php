@@ -100,7 +100,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     
     public function testJoins() : void
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
         $tableA = $objdb->GetClassTableName(EasyObject::class);
