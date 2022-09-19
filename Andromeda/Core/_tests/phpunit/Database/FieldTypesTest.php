@@ -3,7 +3,7 @@
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
 require_once(ROOT."/Core/Database/FieldTypes.php");
-use Andromeda\Core\Database\{BaseObject, Database, ObjectDatabase};
+use Andromeda\Core\Database\{BaseObject, PDODatabase, ObjectDatabase};
 require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
 
 class TestObject1 extends BaseObject { use TableNoChildren; }
@@ -62,7 +62,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     protected function getParentWithDbStrings(bool $dbStrings) : BaseObject
     {
-        $database = $this->createMock(Database::class);
+        $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         $parent = $this->createMock(BaseObject::class);
 

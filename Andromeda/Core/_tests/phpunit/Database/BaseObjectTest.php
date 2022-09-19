@@ -27,7 +27,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testGetWhereChild() : void
     {
-        $db = new ObjectDatabase($this->createMock(Database::class));
+        $db = new ObjectDatabase($this->createMock(PDODatabase::class));
         
         $q = new QueryBuilder();
         $this->assertSame("a2obj_core_database_polyobject4.type = :d0", 

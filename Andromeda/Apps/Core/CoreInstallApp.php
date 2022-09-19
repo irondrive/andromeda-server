@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Config, InstallerApp};
-use Andromeda\Core\Database\Database;
+use Andromeda\Core\Database\PDODatabase;
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
@@ -20,8 +20,8 @@ final class CoreInstallApp extends InstallerApp
     {
         $retval = array_merge(array(
             'usage [--appname alphanum]',
-            'dbconf '.Database::GetInstallUsage(),
-            ...array_map(function($u){ return "(dbconf) $u"; }, Database::GetInstallUsages()),
+            'dbconf '.PDODatabase::GetInstallUsage(),
+            ...array_map(function($u){ return "(dbconf) $u"; }, PDODatabase::GetInstallUsages()),
         ), parent::getUsage());
     
         $inst_flags = implode(" ",array_map(function(InstallerApp $installer){
@@ -87,7 +87,7 @@ final class CoreInstallApp extends InstallerApp
             throw new AdminRequiredException();
         }
         
-        return Database::Install($params);
+        return PDODatabase::Install($params);
     }
     
     /** 

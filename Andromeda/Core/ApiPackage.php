@@ -3,7 +3,7 @@
 require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{Database, ObjectDatabase, DatabaseConnectException};
+use Andromeda\Core\Database\{PDODatabase, ObjectDatabase, DatabaseConnectException};
 
 use Andromeda\Core\Exceptions\ErrorManager;
 use Andromeda\Core\IOFormat\IOInterface;
@@ -27,9 +27,9 @@ class ApiPackage
      */
     public static function InitDatabase(IOInterface $interface) : ObjectDatabase
     {
-        $dbconf = Database::LoadConfig($interface->GetDBConfigFile());
+        $dbconf = PDODatabase::LoadConfig($interface->GetDBConfigFile());
         
-        return new ObjectDatabase(new Database($dbconf, $interface->isPrivileged()));
+        return new ObjectDatabase(new PDODatabase($dbconf, $interface->isPrivileged()));
     }
     
     /** Returns the global ObjectDatabase instance */
