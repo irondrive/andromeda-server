@@ -1,9 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
-
 use Andromeda\Core\IOFormat\{Input,InputAuth,InputPath,IOInterface,Output,SafeParam,SafeParams};
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
 require_once(ROOT."/Core/IOFormat/Interfaces/Exceptions.php");

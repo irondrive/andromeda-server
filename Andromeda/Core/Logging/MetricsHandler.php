@@ -2,7 +2,6 @@
 
 require_once(ROOT."/Core/Exceptions.php");
 use Andromeda\Core\{ApiPackage, Config, MissingMetricsException};
-
 use Andromeda\Core\Database\{ObjectDatabase, DBStats};
 use Andromeda\Core\IOFormat\Output;
 

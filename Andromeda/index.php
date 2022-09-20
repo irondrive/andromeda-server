@@ -13,7 +13,7 @@
 
 use Andromeda\Core\ApiPackage;
 use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
-use Andromeda\Core\Exceptions\ErrorManager;
+use Andromeda\Core\Errors\ErrorManager;
 
 
 /** First create the global resources */

@@ -1,11 +1,7 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Errors; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\IOFormat\SafeParams;
-
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\Logging\BaseLog;
 
 /** Represents an error log entry in the database */
@@ -13,7 +9,7 @@ final class ErrorLog extends BaseLog
 {
     protected const IDLength = 12;
     
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     
     /** time of the error */
     private FieldTypes\Timestamp $time;

@@ -1,11 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, Utilities};
-
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Core/Logging/Exceptions.php");
@@ -13,7 +9,7 @@ require_once(ROOT."/Core/Logging/Exceptions.php");
 /** Log entry representing an API request */
 final class RequestLog extends BaseLog
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     
     /** Timestamp of the request */
     private FieldTypes\Timestamp $time;

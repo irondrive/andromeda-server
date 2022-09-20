@@ -1,9 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
 /** Exception indicating that it was requested to modify the log after it was written to disk */
-class LogAfterWriteException extends Exceptions\ServerException
+class LogAfterWriteException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("REQLOG_AFTER_WRITE", $details);
@@ -11,7 +11,7 @@ class LogAfterWriteException extends Exceptions\ServerException
 }
 
 /** Exception indicating the log file cannot be written more than once */
-class MultiFileWriteException extends Exceptions\ServerException
+class MultiFileWriteException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("LOG_FILE_MULTI_WRITE", $details);
@@ -19,7 +19,7 @@ class MultiFileWriteException extends Exceptions\ServerException
 }
 
 /** SaveMetrics requires the database to not already be undergoing a transaction */
-class MetricsTransactionException extends Exceptions\ServerException
+class MetricsTransactionException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("METRICS_IN_TRANSACTION", $details);

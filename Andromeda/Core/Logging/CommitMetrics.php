@@ -1,13 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-use Andromeda\Core\Database\{BaseObject, DBStats, ObjectDatabase};
+use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, TableTypes};
 
 /** Log entry representing metrics for a commit */
 final class CommitMetrics extends BaseObject
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     use DBStatsLog;
     
     protected const IDLength = 20;

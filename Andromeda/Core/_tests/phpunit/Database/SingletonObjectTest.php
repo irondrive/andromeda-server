@@ -1,15 +1,13 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; require_once("init.php");
 
-require_once(ROOT."/Core/Database/TableTypes.php");
-
 final class TestSingleton1 extends SingletonObject 
 {
-    use TableNoChildren; 
+    use TableTypes\TableNoChildren; 
 }
 
 final class TestSingleton2 extends SingletonObject 
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     
     public static function Create(ObjectDatabase $database) : self 
     { 

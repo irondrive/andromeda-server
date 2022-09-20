@@ -1,9 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
 /** Base exception indicating a problem with a client parameter */
-abstract class SafeParamException extends Exceptions\ClientErrorException { }
+abstract class SafeParamException extends BaseExceptions\ClientErrorException { }
 
 /** An exception indicating that the requested parameter has a null value */
 class SafeParamNullValueException extends SafeParamException
@@ -39,7 +39,7 @@ class InputFileMissingException extends SafeParamException
 }
 
 /** Exception indicating that a batch with zero actions was given */
-class EmptyBatchException extends Exceptions\ClientErrorException
+class EmptyBatchException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("EMPTY_BATCH_GIVEN", $details);
@@ -47,7 +47,7 @@ class EmptyBatchException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that an app action does not allow batches */
-class BatchNotAllowedException extends Exceptions\ClientErrorException
+class BatchNotAllowedException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("ACTION_DISALLOWS_BATCH", $details);
@@ -55,7 +55,7 @@ class BatchNotAllowedException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating the given Output to parse is invalid */
-class InvalidParseException extends Exceptions\ServerException
+class InvalidParseException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("PARSE_OUTPUT_INVALID", $details);
@@ -63,7 +63,7 @@ class InvalidParseException extends Exceptions\ServerException
 }
 
 /** Exception indicating that reading the input file failed */
-class FileReadFailedException extends Exceptions\ServerException
+class FileReadFailedException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FILE_READ_FAILED", $details);
@@ -71,7 +71,7 @@ class FileReadFailedException extends Exceptions\ServerException
 }
 
 /** Exception indicating that the output mode cannot be set in multi-output mode */
-class MultiOutputJSONException extends Exceptions\ServerException
+class MultiOutputJSONException extends BaseExceptions\ServerException
 {
     public function __construct(?int $mode = null) {
         parent::__construct("MULTI_OUTPUT_JSON", ($mode !== null) ? (string)$mode : null);

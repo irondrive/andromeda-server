@@ -1,7 +1,11 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Database\TableTypes; if (!defined('Andromeda')) die();
+
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-require_once(ROOT."/Core/Database/FieldTypes.php");
+use Andromeda\Core\Database\BadPolyClassException;
+use Andromeda\Core\Database\BadPolyTypeException;
+use Andromeda\Core\Database\NotMultiTableException;
 
 /** A trait for classes that have a database table */
 trait HasTable

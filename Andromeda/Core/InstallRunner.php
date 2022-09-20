@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\ObjectDatabase;
-use Andromeda\Core\Exceptions\ErrorManager;
+use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\{IOInterface, Input};
 
 require_once(ROOT."/Core/Database/Exceptions.php");

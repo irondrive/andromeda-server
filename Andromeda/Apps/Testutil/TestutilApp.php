@@ -1,10 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{BaseApp, Utilities};
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
-
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 use Andromeda\Core\IOFormat\{Input, InputFile, Output, OutputHandler, SafeParams};
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
 /**
  * Utility app for the python test framework
@@ -66,7 +65,7 @@ class TestUtilApp extends BaseApp
     
     protected function ServerException() : void
     {
-        throw new Exceptions\ServerException('TEST_MESSAGE', 'some details', 5000);
+        throw new BaseExceptions\ServerException('TEST_MESSAGE', 'some details', 5000);
     }    
     
     protected function CheckDryRun() : bool

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions\ClientException;
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php");
 
@@ -109,7 +109,7 @@ class Output
      * Constructs an Output object representing a client error, showing the exception and possibly extra debug 
      * @param ?array<mixed> $debug
      */
-    public static function ClientException(Exceptions\ClientException $e, ?array $debug = null) : Output
+    public static function ClientException(ClientException $e, ?array $debug = null) : Output
     {
         $output = new Output(false, $e->getCode());
         $output->message = $e->getMessage();
@@ -170,7 +170,7 @@ class Output
             if (!is_string($data['message'])) 
                 throw new InvalidParseException();
             
-            throw new Exceptions\ClientException(
+            throw new ClientException(
                 (string)$data['message'], $code);
         }
     }   

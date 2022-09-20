@@ -1,11 +1,8 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Errors; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, BaseRunner, Config, Utilities};
-
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
-
-use Andromeda\Core\IOFormat\{IOInterface, Output};
 use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\{IOInterface, Output};
 
 /** 
  * The main error handler/manager 
@@ -37,14 +34,14 @@ class ErrorManager
             $this->isGlobal = true;
             
             set_error_handler( function(int $code, string $msg, string $file, int $line) {
-                throw new Exceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
+                throw new BaseExceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
             
             set_exception_handler(function(\Throwable $e)
             {
                 if ($this->runner !== null) 
                     $this->runner->rollback($e);
 
-                if ($e instanceof ClientException)
+                if ($e instanceof BaseExceptions\ClientException)
                     $output = $this->HandleClientException($e);
                 else $output = $this->HandleThrowable($e);
                 
@@ -94,7 +91,7 @@ class ErrorManager
     }
 
     /** Handles a client exception, displaying debug data and returning an Output */
-    private function HandleClientException(ClientException $e) : Output
+    private function HandleClientException(BaseExceptions\ClientException $e) : Output
     {
         try
         {
@@ -222,7 +219,7 @@ class ErrorManager
     /** Creates an exception and logs it to the main error log (to get a backtrace) */
     public function LogBreakpoint() : self 
     {
-        $e = new BreakpointException();
+        $e = new BaseExceptions\BreakpointException();
         $trace = $e->getTraceAsString();
         return $this->LogDebugHint($trace); 
     }

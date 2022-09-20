@@ -53,7 +53,7 @@ CREATE TABLE public.a2obj_core_emailer (
 
 
 
-CREATE TABLE public.a2obj_core_exceptions_errorlog (
+CREATE TABLE public.a2obj_core_errors_errorlog (
     id character(12) NOT NULL,
     "time" double precision NOT NULL,
     addr character varying(255) NOT NULL,
@@ -156,90 +156,90 @@ CREATE TABLE public.a2obj_core_logging_requestmetrics (
 
 
 ALTER TABLE ONLY public.a2obj_core_config
-    ADD CONSTRAINT idx_19859_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20525_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_emailer
-    ADD CONSTRAINT idx_19864_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20530_primary PRIMARY KEY (id);
 
 
 
-ALTER TABLE ONLY public.a2obj_core_exceptions_errorlog
-    ADD CONSTRAINT idx_19871_primary PRIMARY KEY (id);
+ALTER TABLE ONLY public.a2obj_core_errors_errorlog
+    ADD CONSTRAINT idx_20537_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_actionlog
-    ADD CONSTRAINT idx_19878_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20544_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_actionmetrics
-    ADD CONSTRAINT idx_19883_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20549_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_commitmetrics
-    ADD CONSTRAINT idx_19889_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20555_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_requestlog
-    ADD CONSTRAINT idx_19892_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20558_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_requestmetrics
-    ADD CONSTRAINT idx_19898_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20564_primary PRIMARY KEY (id);
 
 
 
-CREATE INDEX idx_19871_action ON public.a2obj_core_exceptions_errorlog USING btree (action);
+CREATE INDEX idx_20537_action ON public.a2obj_core_errors_errorlog USING btree (action);
 
 
 
-CREATE INDEX idx_19871_addr ON public.a2obj_core_exceptions_errorlog USING btree (addr);
+CREATE INDEX idx_20537_addr ON public.a2obj_core_errors_errorlog USING btree (addr);
 
 
 
-CREATE INDEX idx_19871_app ON public.a2obj_core_exceptions_errorlog USING btree (app);
+CREATE INDEX idx_20537_app ON public.a2obj_core_errors_errorlog USING btree (app);
 
 
 
-CREATE INDEX idx_19871_code ON public.a2obj_core_exceptions_errorlog USING btree (code);
+CREATE INDEX idx_20537_code ON public.a2obj_core_errors_errorlog USING btree (code);
 
 
 
-CREATE INDEX idx_19871_time ON public.a2obj_core_exceptions_errorlog USING btree ("time");
+CREATE INDEX idx_20537_time ON public.a2obj_core_errors_errorlog USING btree ("time");
 
 
 
-CREATE INDEX idx_19878_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
+CREATE INDEX idx_20544_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
 
 
 
-CREATE INDEX idx_19878_requestlog ON public.a2obj_core_logging_actionlog USING btree (requestlog);
+CREATE INDEX idx_20544_requestlog ON public.a2obj_core_logging_actionlog USING btree (requestlog);
 
 
 
-CREATE UNIQUE INDEX idx_19883_actionlog ON public.a2obj_core_logging_actionmetrics USING btree (actionlog);
+CREATE UNIQUE INDEX idx_20549_actionlog ON public.a2obj_core_logging_actionmetrics USING btree (actionlog);
 
 
 
-CREATE INDEX idx_19883_app_action ON public.a2obj_core_logging_actionmetrics USING btree (app, action);
+CREATE INDEX idx_20549_app_action ON public.a2obj_core_logging_actionmetrics USING btree (app, action);
 
 
 
-CREATE INDEX idx_19883_requestmet ON public.a2obj_core_logging_actionmetrics USING btree (requestmet);
+CREATE INDEX idx_20549_requestmet ON public.a2obj_core_logging_actionmetrics USING btree (requestmet);
 
 
 
-CREATE INDEX idx_19889_requestmet ON public.a2obj_core_logging_commitmetrics USING btree (requestmet);
+CREATE INDEX idx_20555_requestmet ON public.a2obj_core_logging_commitmetrics USING btree (requestmet);
 
 
 
-CREATE UNIQUE INDEX idx_19898_requestlog ON public.a2obj_core_logging_requestmetrics USING btree (requestlog);
+CREATE UNIQUE INDEX idx_20564_requestlog ON public.a2obj_core_logging_requestmetrics USING btree (requestlog);
 
 
 

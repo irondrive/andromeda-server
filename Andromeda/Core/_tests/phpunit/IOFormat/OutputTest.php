@@ -1,8 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; require_once("init.php");
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
-class TestClientException extends Exceptions\ClientErrorException
+class TestClientException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("TEST_EXCEPTION", $details);
@@ -98,7 +98,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $data = array('ok'=>false,'code'=>400,'message'=>'EXCEPTION!');
         
-        $this->expectException(Exceptions\ClientException::class);
+        $this->expectException(BaseExceptions\ClientException::class);
         $this->expectExceptionCode($data['code']); 
         $this->expectExceptionMessage($data['message']);
         
