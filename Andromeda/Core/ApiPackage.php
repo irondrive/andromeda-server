@@ -3,7 +3,7 @@
 require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{PDODatabase, ObjectDatabase, DatabaseConnectException};
+use Andromeda\Core\Database\{DBStats, PDODatabase, ObjectDatabase, DatabaseConnectException};
 use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Logging\MetricsHandler;
@@ -22,13 +22,14 @@ class ApiPackage
     /** 
      * Instantiates and returns a new ObjectDatabase connection 
      * @param IOInterface $interface interface to get config from
+     * @param ?DBStats $init_stats stats to pass to DB for init
      * @throws DatabaseConnectException if the connection fails
      */
-    public static function InitDatabase(IOInterface $interface) : ObjectDatabase
+    public static function InitDatabase(IOInterface $interface, ?DBStats $init_stats = null) : ObjectDatabase
     {
         $dbconf = PDODatabase::LoadConfig($interface->GetDBConfigFile());
         
-        return new ObjectDatabase(new PDODatabase($dbconf, $interface->isPrivileged()));
+        return new ObjectDatabase(new PDODatabase($dbconf, $interface->isPrivileged(), $init_stats));
     }
     
     /** Returns the global ObjectDatabase instance */
@@ -65,8 +66,10 @@ class ApiPackage
         $this->errorman = $errman;
         
         $this->metrics = new MetricsHandler();
+        $init_stats = $this->metrics->GetInitStats();
 
-        $this->database = static::InitDatabase($interface)->SetApiPackage($this);
+        $this->database = static::InitDatabase($interface, $init_stats);
+        $this->database->SetApiPackage($this);
         $this->errorman->SetDatabase($this->database);
 
         $this->config = Config::GetInstance($this->database);
@@ -77,16 +80,18 @@ class ApiPackage
         $enabled = $this->config->isEnabled() || $interface->isPrivileged();
         if (!$enabled) throw new MaintenanceException();
         
+        $pdoDatabase = $this->database->GetInternal();
+        
         if ($this->config->isReadOnly())
-            $this->database->GetInternal()->SetReadOnly();
+            $pdoDatabase->SetReadOnly();
             
-        $this->database->GetInternal()->SetLogValues(
+        $pdoDatabase->SetLogValues(
             $this->GetDebugLevel() >= Config::ERRLOG_SENSITIVE);
         
         $this->apprunner = new AppRunner($this);
         $this->errorman->SetApiPackage($this);
         
-        $this->metrics->EndInitStats($this->database);
+        $pdoDatabase->popStatsContext(); // end init_stats
     }
 
     /**
