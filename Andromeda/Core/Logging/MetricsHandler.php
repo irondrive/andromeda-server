@@ -1,8 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Core/Exceptions.php");
-use Andromeda\Core\{ApiPackage, Config, MissingMetricsException};
-use Andromeda\Core\Database\{ObjectDatabase, DBStats};
+use Andromeda\Core\{ApiPackage, Config};
+use Andromeda\Core\Database\DBStats;
 use Andromeda\Core\IOFormat\Output;
 
 require_once(ROOT."/Core/Logging/Exceptions.php");
@@ -21,21 +21,12 @@ class MetricsHandler
         $this->total_stats = new DBStats();
     }
     
-    /** 
-     * Pops a stats context off the DB and assigns it to init stats
-     * @param ObjectDatabase $database the database being timed
-     */
-    public function EndInitStats(ObjectDatabase $database) : void
+    /** Creates and returns a new DBStats to be used for init_stats */
+    public function GetInitStats() : DBStats
     {
-        // TODO create DBStats and then pass to DB, optionally... 
-        // right now it is always being created and those hrtime()s take time!
-        
-        $dbstats = $database->GetInternal()->popStatsContext();
-        if ($dbstats === null) throw new MissingMetricsException();
-        
-        $this->total_stats->Add($this->init_stats = $dbstats);
+        return $this->init_stats = new DBStats();
     }
-    
+
     /**
      * Compiles performance metrics and adds them to the given output
      * @param ApiPackage $apipack API package reference
@@ -53,6 +44,7 @@ class MetricsHandler
             $apprunner = $apipack->GetAppRunner();
             
             $total_stats = clone $this->total_stats;
+            $total_stats->Add($this->init_stats);
             
             $actions = $apprunner->GetActionHistory();
             $commits = $apprunner->GetCommitStats();
