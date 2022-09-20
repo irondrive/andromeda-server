@@ -1,7 +1,6 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Errors; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{BaseRunner, Config, Utilities};
-
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Database\ObjectDatabase;
 

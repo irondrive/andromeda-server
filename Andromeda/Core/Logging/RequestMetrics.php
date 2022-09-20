@@ -1,17 +1,14 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{Config, RunContext, Utilities};
-
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-use Andromeda\Core\Database\{BaseObject, DBStats, ObjectDatabase};
+use Andromeda\Core\{Config, /*phpstan*/RunContext, Utilities};
+use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, TableTypes};
 
 require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing a performance metrics for a request */
 final class RequestMetrics extends BaseObject
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     use DBStatsLog;
     
     protected const IDLength = 20;

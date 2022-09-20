@@ -1,12 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\{ConcurrencyException, DatabaseReadOnlyException};
 
 /** Exception indicating that the given counter exceeded its limit */
-class CounterOverLimitException extends Exceptions\ClientDeniedException
+class CounterOverLimitException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {
         parent::__construct("COUNTER_EXCEEDS_LIMIT", $details);
@@ -22,7 +22,7 @@ class ForeignKeyException extends ConcurrencyException
 }
 
 /** Exception indicating the given data is the wrong type for this field */
-class FieldDataTypeMismatch extends Exceptions\ServerException
+class FieldDataTypeMismatch extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);

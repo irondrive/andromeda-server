@@ -3,10 +3,7 @@
 require_once(ROOT."/Core/Exceptions.php");
 
 use Andromeda\Core\Database\DBStats; // phpstan
-
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
-use Andromeda\Core\Exceptions\ClientException;
-
+use Andromeda\Core\Errors\BaseExceptions\ClientException;
 use Andromeda\Core\IOFormat\{Input,Output};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
 use Andromeda\Core\Logging\{ActionLog, RequestLog};

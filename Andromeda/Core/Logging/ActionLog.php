@@ -1,11 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Config;
-
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\HasTable;
-
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 /** 
@@ -16,7 +12,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
  */
 class ActionLog extends BaseLog
 {
-    use HasTable;
+    use TableTypes\HasTable;
 
     /** @return array<string, class-string<self>> */
     public static function GetChildMap() : array 

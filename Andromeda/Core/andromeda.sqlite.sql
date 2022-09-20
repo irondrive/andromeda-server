@@ -41,7 +41,7 @@ CREATE TABLE `a2obj_core_emailer` (
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2obj_core_exceptions_errorlog` (
+CREATE TABLE `a2obj_core_errors_errorlog` (
   `id` char(12) NOT NULL
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
@@ -140,11 +140,11 @@ CREATE TABLE `a2obj_core_logging_requestmetrics` (
 );
 CREATE INDEX "idx_a2obj_core_logging_actionmetrics_app_action" ON "a2obj_core_logging_actionmetrics" (`app`,`action`);
 CREATE INDEX "idx_a2obj_core_logging_actionmetrics_requestmet" ON "a2obj_core_logging_actionmetrics" (`requestmet`);
-CREATE INDEX "idx_a2obj_core_exceptions_errorlog_time" ON "a2obj_core_exceptions_errorlog" (`time`);
-CREATE INDEX "idx_a2obj_core_exceptions_errorlog_code" ON "a2obj_core_exceptions_errorlog" (`code`);
-CREATE INDEX "idx_a2obj_core_exceptions_errorlog_app" ON "a2obj_core_exceptions_errorlog" (`app`);
-CREATE INDEX "idx_a2obj_core_exceptions_errorlog_action" ON "a2obj_core_exceptions_errorlog" (`action`);
-CREATE INDEX "idx_a2obj_core_exceptions_errorlog_addr" ON "a2obj_core_exceptions_errorlog" (`addr`);
+CREATE INDEX "idx_a2obj_core_errors_errorlog_time" ON "a2obj_core_errors_errorlog" (`time`);
+CREATE INDEX "idx_a2obj_core_errors_errorlog_code" ON "a2obj_core_errors_errorlog" (`code`);
+CREATE INDEX "idx_a2obj_core_errors_errorlog_app" ON "a2obj_core_errors_errorlog" (`app`);
+CREATE INDEX "idx_a2obj_core_errors_errorlog_action" ON "a2obj_core_errors_errorlog" (`action`);
+CREATE INDEX "idx_a2obj_core_errors_errorlog_addr" ON "a2obj_core_errors_errorlog" (`addr`);
 CREATE INDEX "idx_a2obj_core_logging_actionlog_requestlog" ON "a2obj_core_logging_actionlog" (`requestlog`);
 CREATE INDEX "idx_a2obj_core_logging_actionlog_app_action" ON "a2obj_core_logging_actionlog" (`app`,`action`);
 CREATE INDEX "idx_a2obj_core_logging_commitmetrics_requestmet" ON "a2obj_core_logging_commitmetrics" (`requestmet`);

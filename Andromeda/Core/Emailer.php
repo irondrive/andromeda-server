@@ -1,14 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
+use \PHPMailer\PHPMailer; // via autoloader
+
 require_once(ROOT."/Core/Exceptions.php");
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\{BaseObject, ObjectDatabase, QueryBuilder};
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
-
-use \PHPMailer\PHPMailer; // via autoloader
 
 /** 
  * A configured email service stored in the database 
@@ -17,7 +14,7 @@ use \PHPMailer\PHPMailer; // via autoloader
  */
 final class Emailer extends BaseObject
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     
     protected const IDLength = 4;
     

@@ -2,10 +2,10 @@
 
 use \PDOException;
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
 /** Exception indicating that the a write was requested to a read-only database */
-class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
+class DatabaseReadOnlyException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {
         parent::__construct("READ_ONLY_DATABASE", $details);
@@ -13,7 +13,7 @@ class DatabaseReadOnlyException extends Exceptions\ClientDeniedException
 }
 
 /** Exception indicating that database install config failed */
-class DatabaseInstallException extends Exceptions\ClientErrorException
+class DatabaseInstallException extends BaseExceptions\ClientErrorException
 {
     public function __construct(DatabaseConnectException $e) {
         parent::__construct(""); $this->CopyException($e);
@@ -21,7 +21,7 @@ class DatabaseInstallException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that a BaseObject was not set up properly */
-abstract class ObjectSetupException extends Exceptions\ServerException { }
+abstract class ObjectSetupException extends BaseExceptions\ServerException { }
 
 /** Exception indicating that the class cannot select from child classes */
 class NotMultiTableException extends ObjectSetupException
@@ -64,7 +64,7 @@ class BadPolyTypeException extends ObjectSetupException
 }
 
 /** Exception indicating the API package is not yet set */
-class ApiPackageException extends Exceptions\ServerException
+class ApiPackageException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("API_PACKAGE_NOT_SET", $details);
@@ -72,7 +72,7 @@ class ApiPackageException extends Exceptions\ServerException
 }
 
 /** Base class for database connection initialization exceptions */
-abstract class DatabaseConnectException extends Exceptions\ServiceUnavailableException { }
+abstract class DatabaseConnectException extends BaseExceptions\ServiceUnavailableException { }
 
 /** Exception indicating that the database configuration is not found */
 class DatabaseMissingException extends DatabaseConnectException
@@ -100,7 +100,7 @@ class PDODatabaseConnectException extends DatabaseConnectException
 }
 
 /** Base exception indicating that something went wrong due to concurrency, try again */
-abstract class ConcurrencyException extends Exceptions\ServiceUnavailableException { }
+abstract class ConcurrencyException extends BaseExceptions\ServiceUnavailableException { }
 
 /** Exception indicating that the update failed to match any objects */
 class UpdateFailedException extends ConcurrencyException
@@ -127,7 +127,7 @@ class DeleteFailedException extends ConcurrencyException
 }
 
 /** Exception indicating the file could not be imported because it's missing */
-class ImportFileMissingException extends Exceptions\ServerException
+class ImportFileMissingException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("IMPORT_FILE_MISSING", $details);
@@ -135,7 +135,7 @@ class ImportFileMissingException extends Exceptions\ServerException
 }
 
 /** Base class representing a run-time database error */
-abstract class DatabaseException extends Exceptions\ServerException
+abstract class DatabaseException extends BaseExceptions\ServerException
 {
     public function __construct(string $message = "DATABASE_ERROR", ?string $details = null) {
         parent::__construct($message, $details);

@@ -1,10 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Config;
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
 /** Exception indicating that the command line usage is incorrect */
-class IncorrectCLIUsageException extends Exceptions\ClientErrorException
+class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null)
     {
@@ -35,7 +35,7 @@ class IncorrectCLIUsageException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the given batch file is not valid */
-class UnknownBatchFileException extends Exceptions\ClientErrorException
+class UnknownBatchFileException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("UNKNOWN_BATCH_FILE", $details);
@@ -43,7 +43,7 @@ class UnknownBatchFileException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the given batch file's syntax is not valid */
-class BatchFileParseException extends Exceptions\ClientErrorException
+class BatchFileParseException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("BATCH_FILE_PARSE_ERROR", $details);
@@ -51,7 +51,7 @@ class BatchFileParseException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the HTTP batch syntax is invalid */
-class BatchSyntaxInvalidException extends Exceptions\ClientErrorException
+class BatchSyntaxInvalidException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("BATCH_SYNTAX_INVALID", $details);
@@ -59,7 +59,7 @@ class BatchSyntaxInvalidException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the given file is not valid */
-class InvalidFileException extends Exceptions\ClientErrorException
+class InvalidFileException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INACCESSIBLE_FILE", $details);
@@ -67,7 +67,7 @@ class InvalidFileException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the app or action parameters are missing */
-class MissingAppActionException extends Exceptions\ClientErrorException
+class MissingAppActionException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("APP_OR_ACTION_MISSING", $details);
@@ -75,7 +75,7 @@ class MissingAppActionException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the parameter cannot be part of $_GET */
-class IllegalGetFieldException extends Exceptions\ClientErrorException
+class IllegalGetFieldException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("ILLEGAL_GET_FIELD", $details);
@@ -83,7 +83,7 @@ class IllegalGetFieldException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating the given batch sequence has too many actions */
-class LargeBatchException extends Exceptions\ClientErrorException
+class LargeBatchException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("BATCH_TOO_LARGE", $details);
@@ -91,7 +91,7 @@ class LargeBatchException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating the input file request format is wrong */
-class FileUploadFormatException extends Exceptions\ClientErrorException
+class FileUploadFormatException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("BAD_FILE_INPUT_FORMAT", $details);
@@ -99,7 +99,7 @@ class FileUploadFormatException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating the HTTP method used is not allowed */
-class MethodNotAllowedException extends Exceptions\ClientException
+class MethodNotAllowedException extends BaseExceptions\ClientException
 {
     public function __construct(?string $details = null) {
         parent::__construct("METHOD_NOT_ALLOWED", 405, $details);
@@ -107,7 +107,7 @@ class MethodNotAllowedException extends Exceptions\ClientException
 }
 
 /** Exception indicating that the remote response is invalid */
-class RemoteInvalidException extends Exceptions\ServerException
+class RemoteInvalidException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INVALID_REMOTE_RESPONSE", $details);
@@ -115,7 +115,7 @@ class RemoteInvalidException extends Exceptions\ServerException
 }
 
 /** Exception indicating there was an error with the uploaded file */
-class FileUploadFailException extends Exceptions\ServerException
+class FileUploadFailException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FILE_UPLOAD_ERROR", $details);

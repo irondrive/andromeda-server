@@ -2,9 +2,7 @@
 
 require_once(ROOT."/Core/Exceptions.php");
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
 /** The global framework config stored in the database */
@@ -14,9 +12,9 @@ class Config extends BaseConfig
     
     public static function getVersion() : string {
         return VersionInfo::toCompatVer(andromeda_version); }
-    
-    use TableNoChildren;
-    
+
+    use TableTypes\TableNoChildren;
+
     /** Directory for basic server data (logs) */
     private FieldTypes\NullStringType $datadir;
     /** True if the server is read-only */

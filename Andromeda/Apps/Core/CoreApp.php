@@ -1,14 +1,13 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, BaseApp, Config, Emailer, EmailRecipient, Utilities};
-
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, UnknownActionException, MailSendException};
-
-use Andromeda\Core\Exceptions\ErrorLog;
+use Andromeda\Core\Errors\ErrorLog;
 use Andromeda\Core\Database\PDODatabase;
 use Andromeda\Core\IOFormat\{Input, Output, SafeParams, OutputHandler, IOInterface};
 use Andromeda\Core\Logging\RequestLog;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
+
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, UnknownActionException, MailSendException};
 
 require_once(ROOT."/Apps/Core/Exceptions.php");
 

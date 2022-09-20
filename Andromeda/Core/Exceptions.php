@@ -1,9 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 
 /** An exception indicating that the requested action is invalid for this app */
-class UnknownActionException extends Exceptions\ClientErrorException
+class UnknownActionException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("UNKNOWN_ACTION", $details);
@@ -11,7 +11,7 @@ class UnknownActionException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the configured data directory is not valid */
-class UnwriteableDatadirException extends Exceptions\ClientErrorException
+class UnwriteableDatadirException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DATADIR_NOT_WRITEABLE", $details);
@@ -19,7 +19,7 @@ class UnwriteableDatadirException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating an invalid app name was given */
-class InvalidAppException extends Exceptions\ClientErrorException
+class InvalidAppException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INVALID_APPNAME", $details);
@@ -27,7 +27,7 @@ class InvalidAppException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that an app dependency was not met */
-class AppDependencyException extends Exceptions\ClientErrorException
+class AppDependencyException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("APP_DEPENDENCY_FAILURE", $details);
@@ -35,7 +35,7 @@ class AppDependencyException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that a mailer was requested but it is disabled */
-class EmailDisabledException extends Exceptions\ClientErrorException
+class EmailDisabledException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("EMAIL_DISABLED", $details);
@@ -43,7 +43,7 @@ class EmailDisabledException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that a mailer was requested but none are configured */
-class EmailerUnavailableException extends Exceptions\ClientErrorException
+class EmailerUnavailableException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("EMAILER_UNAVAILABLE", $details);
@@ -51,14 +51,14 @@ class EmailerUnavailableException extends Exceptions\ClientErrorException
 }
 
 /** Exception indicating that the requested app is invalid */
-class UnknownAppException extends Exceptions\ClientErrorException
+class UnknownAppException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("UNKNOWN_APP", $details);
     }
 }
 
-class InstallDisabledException extends Exceptions\ClientDeniedException
+class InstallDisabledException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {
         parent::__construct("HTTP_INSTALL_DISABLED", $details);
@@ -66,7 +66,7 @@ class InstallDisabledException extends Exceptions\ClientDeniedException
 }
 
 /** Exception indicating that the server is configured as disabled */
-class MaintenanceException extends Exceptions\ServiceUnavailableException
+class MaintenanceException extends BaseExceptions\ServiceUnavailableException
 {
     public function __construct(?string $details = null) {
         parent::__construct("SERVER_DISABLED", $details);
@@ -74,7 +74,7 @@ class MaintenanceException extends Exceptions\ServiceUnavailableException
 }
 
 /** An exception indicating that the app is not installed and needs to be */
-class InstallRequiredException extends Exceptions\ServiceUnavailableException
+class InstallRequiredException extends BaseExceptions\ServiceUnavailableException
 {
     public function __construct(string $appname) {
         parent::__construct("INSTALL_REQUIRED", $appname);
@@ -82,7 +82,7 @@ class InstallRequiredException extends Exceptions\ServiceUnavailableException
 }
 
 /** Exception indicating that the app database upgrade scripts must be run */
-class UpgradeRequiredException extends Exceptions\ServiceUnavailableException
+class UpgradeRequiredException extends BaseExceptions\ServiceUnavailableException
 {
     private string $oldVersion;
     public function getOldVersion() : string { return $this->oldVersion; }
@@ -94,7 +94,7 @@ class UpgradeRequiredException extends Exceptions\ServiceUnavailableException
 }
 
 /** An exception indicating that the app is already installed */
-class InstalledAlreadyException extends Exceptions\ServiceUnavailableException
+class InstalledAlreadyException extends BaseExceptions\ServiceUnavailableException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INSTALLED_ALREADY", $details);
@@ -102,7 +102,7 @@ class InstalledAlreadyException extends Exceptions\ServiceUnavailableException
 }
 
 /** Exception indicating that the app is already upgraded to current */
-class UpgradedAlreadyException extends Exceptions\ServiceUnavailableException
+class UpgradedAlreadyException extends BaseExceptions\ServiceUnavailableException
 {
     public function __construct(?string $details = null) {
         parent::__construct("UPGRADED_ALREADY", $details);
@@ -110,7 +110,7 @@ class UpgradedAlreadyException extends Exceptions\ServiceUnavailableException
 }
 
 /** Exception indicating that decryption failed */
-class DecryptionFailedException extends Exceptions\ServerException
+class DecryptionFailedException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DECRYPTION_FAILED", $details);
@@ -118,7 +118,7 @@ class DecryptionFailedException extends Exceptions\ServerException
 }
 
 /** Exception indicating that sending mail failed */
-abstract class MailSendException extends Exceptions\ServerException
+abstract class MailSendException extends BaseExceptions\ServerException
 {
     public function __construct(string $message = "MAIL_SEND_FAILURE", ?string $details = null) {
         parent::__construct($message, $details);
@@ -166,7 +166,7 @@ class InvalidMailTypeException extends MailSendException
 }
 
 /** Exception indicating that the server failed to load a configured app */
-class FailedAppLoadException extends Exceptions\ServerException
+class FailedAppLoadException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FAILED_LOAD_APP", $details);
@@ -174,7 +174,7 @@ class FailedAppLoadException extends Exceptions\ServerException
 }
 
 /** Exception indicating that scanning apps failed */
-class FailedScanAppsException extends Exceptions\ServerException
+class FailedScanAppsException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("FAILED_SCAN_APPS", $details);
@@ -182,7 +182,7 @@ class FailedScanAppsException extends Exceptions\ServerException
 }
 
 /** Exception indicating that a duplicate singleton was constructed */
-class DuplicateSingletonException extends Exceptions\ServerException
+class DuplicateSingletonException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DUPLICATE_SINGLETON", $details);
@@ -190,7 +190,7 @@ class DuplicateSingletonException extends Exceptions\ServerException
 }
 
 /** Exception indicating that GetInstance() was called on a singleton that has not been constructed */
-class MissingSingletonException extends Exceptions\ServerException
+class MissingSingletonException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("SINGLETON_NOT_CONSTRUCTED", $details);
@@ -198,7 +198,7 @@ class MissingSingletonException extends Exceptions\ServerException
 }
 
 /** Exception indicating that the given version string is invalid */
-class InvalidVersionException extends Exceptions\ServerException
+class InvalidVersionException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("VERSION_STRING_INVALID", $details);
@@ -206,7 +206,7 @@ class InvalidVersionException extends Exceptions\ServerException
 }
 
 /** Exception indicating the given context is missing metrics */
-class MissingMetricsException extends Exceptions\ServerException
+class MissingMetricsException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("MISSING_METRICS", $details);
@@ -214,7 +214,7 @@ class MissingMetricsException extends Exceptions\ServerException
 }
 
 /** Converts a JSON failure into an exception */
-class JSONException extends Exceptions\ServerException
+class JSONException extends BaseExceptions\ServerException
 {
     public function __construct()
     {
@@ -224,7 +224,7 @@ class JSONException extends Exceptions\ServerException
 }
 
 /** Exception indicating the output buffer failed */
-class OutputBufferException extends Exceptions\ServerException
+class OutputBufferException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("OUTPUT_BUFFER_FAIL", $details);

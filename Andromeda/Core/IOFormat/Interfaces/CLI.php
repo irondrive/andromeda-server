@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Config, Utilities};
-
 use Andromeda\Core\IOFormat\{Input,InputPath,InputStream,Output,IOInterface,SafeParam,SafeParams};
 
 require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;

@@ -1,6 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; require_once("init.php");
-
-require_once(ROOT."/Core/Exceptions/BaseExceptions.php");
+<?php declare(strict_types=1); namespace Andromeda\Core\Errors\BaseExceptions; require_once("init.php");
 
 class TestClientException extends ClientException
 {
@@ -38,14 +36,15 @@ class TestServerException extends ServerException
     }
 }
 
-class ExceptionsTest extends \PHPUnit\Framework\TestCase
+class BaseExceptionsTest extends \PHPUnit\Framework\TestCase
 {
     public function testClientExceptions() : void
     {
-        $ex = new ClientException($msg="MY_MESSAGE", $code=999, $det="test details");
+        $ex = new ClientException($msg="MY_MESSAGE", $code=999, $det="test details"); $line = __LINE__;
         $this->assertSame($code, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
-        $this->assertSame("ExceptionsTest.php", basename($ex->getFile()));
+        $this->assertSame(__FILE__, $ex->getFile());
+        $this->assertSame($line, $ex->getLine());
         
         $ex = new ClientErrorException();
         $this->assertSame(400, $ex->getCode());
@@ -90,9 +89,11 @@ class ExceptionsTest extends \PHPUnit\Framework\TestCase
     
     public function testServerExceptions() : void
     {
-        $ex = new ServerException($msg="MY_MESSAGE");
+        $ex = new ServerException($msg="MY_MESSAGE"); $line = __LINE__;
         $this->assertSame(0, $ex->getCode()); // default
         $this->assertSame($msg, $ex->getMessage());
+        $this->assertSame(__FILE__, $ex->getFile());
+        $this->assertSame($line, $ex->getLine());
         
         $ex = new ServerException($msg="MY_MESSAGE", $det="test details", $code=999);
         $this->assertSame($code, $ex->getCode());

@@ -1,13 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; require_once("init.php");
 
-require_once(ROOT."/Core/Database/FieldTypes.php");
-require_once(ROOT."/Core/Database/TableTypes.php");
-
 class OnDelete { public function Delete() : void { } }
 
 final class EasyObject extends BaseObject
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
     
     public static function Create(ObjectDatabase $database) : self
     {
@@ -56,7 +53,7 @@ final class EasyObject extends BaseObject
 
 abstract class MyObjectBase extends BaseObject
 {
-    use TableLinkedChildren;
+    use TableTypes\TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
     public static function GetChildMap() : array 
@@ -90,7 +87,7 @@ abstract class MyObjectBase extends BaseObject
 
 final class MyObjectChild extends MyObjectBase
 {
-    use TableNoChildren;
+    use TableTypes\TableNoChildren;
 }
 
 abstract class PolyObject_ extends BaseObject { }
@@ -119,7 +116,7 @@ abstract class PolyObject0 extends PolyObject_
 
 abstract class PolyObject1 extends PolyObject0
 {
-    use TableLinkedChildren;
+    use TableTypes\TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
     public static function GetChildMap() : array
@@ -181,7 +178,7 @@ abstract class PolyObject15 extends PolyObject1
 
 abstract class PolyObject2 extends PolyObject15
 {
-    use TableLinkedChildren;
+    use TableTypes\TableLinkedChildren;
 
     /** @return array<int, class-string<self>> */
     public static function GetChildMap() : array
@@ -212,7 +209,7 @@ abstract class PolyObject3 extends PolyObject2
 
 class PolyObject4 extends PolyObject3
 {
-    use TableTypedChildren;
+    use TableTypes\TableTypedChildren;
 
     /** @return array<int, class-string<self>> */
     public static function GetChildMap() : array
@@ -261,7 +258,7 @@ class PolyObject4 extends PolyObject3
 
 class PolyObject5a extends PolyObject4
 {   
-    use TableTypedChildren;
+    use TableTypes\TableTypedChildren;
     
     /** @return array<int, class-string<self>> */
     public static function GetChildMap() : array
@@ -313,15 +310,15 @@ class PolyObject5a extends PolyObject4
 
 final class PolyObject5aa extends PolyObject5a
 {
-    use NoChildren;
+    use TableTypes\NoChildren;
 }
 
 final class PolyObject5ab extends PolyObject5a
 {
-    use NoChildren;
+    use TableTypes\NoChildren;
 }
 
 final class PolyObject5b extends PolyObject4
 {
-    use NoChildren;
+    use TableTypes\NoChildren;
 }

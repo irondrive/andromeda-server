@@ -62,7 +62,7 @@ CREATE TABLE `a2obj_core_emailer` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_core_exceptions_errorlog` (
+CREATE TABLE `a2obj_core_errors_errorlog` (
   `id` char(12) NOT NULL,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,

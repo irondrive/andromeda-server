@@ -4,8 +4,7 @@ require_once(ROOT."/Core/Exceptions.php");
 
 require_once(ROOT."/Core/Database/Exceptions.php");
 use Andromeda\Core\Database\{PDODatabase, ObjectDatabase, DatabaseConnectException};
-
-use Andromeda\Core\Exceptions\ErrorManager;
+use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Logging\MetricsHandler;
 

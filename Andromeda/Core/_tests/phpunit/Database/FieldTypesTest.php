@@ -2,12 +2,10 @@
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-require_once(ROOT."/Core/Database/FieldTypes.php");
-use Andromeda\Core\Database\{BaseObject, PDODatabase, ObjectDatabase};
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
+use Andromeda\Core\Database\{BaseObject, PDODatabase, ObjectDatabase, TableTypes};
 
-class TestObject1 extends BaseObject { use TableNoChildren; }
-class TestObject2 extends BaseObject { use TableNoChildren; }
+class TestObject1 extends BaseObject { use TableTypes\TableNoChildren; }
+class TestObject2 extends BaseObject { use TableTypes\TableNoChildren; }
 
 class FieldTypesTest extends \PHPUnit\Framework\TestCase
 {
