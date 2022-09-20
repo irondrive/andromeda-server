@@ -6,7 +6,7 @@ use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, Ta
 require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing a performance metrics for a request */
-final class RequestMetrics extends BaseObject
+class RequestMetrics extends BaseObject
 {
     use TableTypes\TableNoChildren;
     use DBStatsLog;
@@ -134,7 +134,7 @@ final class RequestMetrics extends BaseObject
                                   DBStats $initstat, array $actions, array $commits, DBStats $totalstat) : self
     {        
         $obj = static::BaseCreate($database);
-        $obj->date_created->SetValue($database->GetTime());
+        $obj->date_created->SetTimeNow();
         $obj->requestlog->SetObject($reqlog);
         
         $obj->peak_memory->SetValue(memory_get_peak_usage());

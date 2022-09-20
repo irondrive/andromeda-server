@@ -12,7 +12,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * 
  * Manages PHPMailer configuration and wraps its usage
  */
-final class Emailer extends BaseObject
+class Emailer extends BaseObject
 {
     use TableTypes\TableNoChildren;
     
@@ -85,7 +85,6 @@ final class Emailer extends BaseObject
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
         $mailer = static::BaseCreate($database);
-        
         $mailer->date_created->SetTimeNow();
         
         $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES))];

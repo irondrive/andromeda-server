@@ -2,7 +2,7 @@
 
 class OnDelete { public function Delete() : void { } }
 
-final class EasyObject extends BaseObject
+class EasyObject extends BaseObject
 {
     use TableTypes\TableNoChildren;
     
@@ -85,7 +85,7 @@ abstract class MyObjectBase extends BaseObject
     public function SetMyKey(?int $val) : self { $this->mykey->SetValue($val); return $this; }
 }
 
-final class MyObjectChild extends MyObjectBase
+class MyObjectChild extends MyObjectBase
 {
     use TableTypes\TableNoChildren;
 }
@@ -308,17 +308,17 @@ class PolyObject5a extends PolyObject4
     }
 }
 
-final class PolyObject5aa extends PolyObject5a
+class PolyObject5aa extends PolyObject5a
 {
     use TableTypes\NoChildren;
 }
 
-final class PolyObject5ab extends PolyObject5a
+class PolyObject5ab extends PolyObject5a
 {
     use TableTypes\NoChildren;
 }
 
-final class PolyObject5b extends PolyObject4
+class PolyObject5b extends PolyObject4
 {
     use TableTypes\NoChildren;
 }

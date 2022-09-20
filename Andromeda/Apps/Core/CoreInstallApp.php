@@ -7,7 +7,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
 require_once(ROOT."/Apps/Core/Exceptions.php");
 
 /** The core config installer, also can install/upgrade all apps */
-final class CoreInstallApp extends InstallerApp
+class CoreInstallApp extends InstallerApp
 {
     public function getName() : string { return 'core'; }
 
@@ -115,8 +115,8 @@ final class CoreInstallApp extends InstallerApp
     public static function SortInstallers(array &$insts) : void
     {
         uasort($insts, function(InstallerApp $a, InstallerApp $b)use($insts){
-            if (self::HasDependency($insts, $a, $b)) return 1;
-            if (self::HasDependency($insts, $b, $a)) return -1;
+            if (static::HasDependency($insts, $a, $b)) return 1;
+            if (static::HasDependency($insts, $b, $a)) return -1;
             return 0;
         });
     }
@@ -129,7 +129,7 @@ final class CoreInstallApp extends InstallerApp
     {
         // install all existing apps
         $installers = $this->runner->GetInstallers();
-        self::SortInstallers($installers);
+        static::SortInstallers($installers);
 
         return array_map(function(InstallerApp $installer)use($params){ 
             return $installer->Install($params); }, $installers);
@@ -143,7 +143,7 @@ final class CoreInstallApp extends InstallerApp
     {
         // upgrade all installed apps
         $installers = $this->runner->GetInstallers();
-        self::SortInstallers($installers);
+        static::SortInstallers($installers);
         
         return array_map(function(InstallerApp $installer)use($params){
             return $installer->Upgrade($params); }, $installers);

@@ -20,7 +20,7 @@ use Andromeda\Apps\Accounts\Authenticator;
  * Depends on the accountsApp being present but this could be refactored away easily.
  * If the accountsApp is disabled, only privileged interfaces are considered admin
  */
-final class CoreApp extends BaseApp
+class CoreApp extends BaseApp
 {
     private Config $config;
     
