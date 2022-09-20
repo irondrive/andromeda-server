@@ -1,11 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; require_once("init.php");
 
-final class TestSingleton1 extends SingletonObject 
+class TestSingleton1 extends SingletonObject 
 {
     use TableTypes\TableNoChildren; 
 }
 
-final class TestSingleton2 extends SingletonObject 
+class TestSingleton2 extends SingletonObject 
 {
     use TableTypes\TableNoChildren;
     

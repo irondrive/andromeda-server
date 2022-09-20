@@ -7,7 +7,7 @@ use Andromeda\Core\IOFormat\Output;
 
 require_once(ROOT."/Core/Logging/Exceptions.php");
 
-final class MetricsHandler
+class MetricsHandler
 {
     /** performance metrics for initialization */
     private DBStats $init_stats;

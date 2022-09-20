@@ -4,7 +4,7 @@ use Andromeda\Core\{Config, RunContext};
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, TableTypes};
 
 /** Log entry representing metrics for an app action */
-final class ActionMetrics extends BaseObject
+class ActionMetrics extends BaseObject
 {
     use TableTypes\TableNoChildren;
     use DBStatsLog;

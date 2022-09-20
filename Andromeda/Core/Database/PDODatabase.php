@@ -123,7 +123,7 @@ class PDODatabase
     /**
      * Creates and tests a new database config from the given user input
      * @param SafeParams $params input parameters
-     * @see Database::GetInstallUsage()
+     * @see self::GetInstallUsage()
      * @throws DatabaseInstallException if the database config is not valid and PDO fails
      * @return ?string the database config file contents if no outfile
      */
@@ -242,7 +242,7 @@ class PDODatabase
         $this->instanceId = "Database_".Utilities::Random(4);
     }
     
-    /** @see PDODatabase::$driver */
+    /** @see self::$driver */
     public function getDriver() : int { return $this->driver; }
     
     /** Returns the DB's unique instance ID */
@@ -350,7 +350,7 @@ class PDODatabase
      * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return array<array<string, ?scalar>> an associative array of the query results - results MAY be all strings!
      * @throws DatabaseFetchException if the row fetch fails
-     * @see PDODatabase::query()
+     * @see self::query()
      */
     public function read(string $sql, ?array $data = null) : array
     {
@@ -375,7 +375,7 @@ class PDODatabase
      * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return int count of matched objects (not count of modified!)
      * @throws DatabaseReadOnlyException if the DB is read-only
-     * @see PDODatabase::query()
+     * @see self::query()
      */
     public function write(string $sql, ?array $data = null) : int
     {        
@@ -399,7 +399,7 @@ class PDODatabase
      * @return array<array<string, ?scalar>> an associative array of the query results - results MAY be all strings!
      * @throws DatabaseReadOnlyException if the DB is read-only
      * @throws DatabaseFetchException if the row fetch fails
-     * @see PDODatabase::query()
+     * @see self::query()
      */
     public function readwrite(string $sql, ?array $data = null) : array
     {

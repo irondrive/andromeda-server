@@ -4,7 +4,7 @@
 require_once(ROOT."/Apps/Accounts/AuthActionLog.php"); use Andromeda\Apps\Accounts\AuthActionLog;
 
 /** Core app access log for use with the accounts app installed */
-final class ActionLog extends AuthActionLog
+class ActionLog extends AuthActionLog
 {
     use TableTypes\TableNoChildren;
     

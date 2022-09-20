@@ -17,7 +17,7 @@ trait HasTable
     }
 }
 
-/** A trait for final classes with no children */
+/** A trait for classes with no children */
 trait NoChildren
 {
     use NoTypedChildren;

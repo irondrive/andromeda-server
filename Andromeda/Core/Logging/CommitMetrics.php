@@ -3,7 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, TableTypes};
 
 /** Log entry representing metrics for a commit */
-final class CommitMetrics extends BaseObject
+class CommitMetrics extends BaseObject
 {
     use TableTypes\TableNoChildren;
     use DBStatsLog;

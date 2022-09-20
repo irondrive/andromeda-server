@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 /** A name and address pair email recipient */
-final class EmailRecipient
+class EmailRecipient
 {
     private ?string $name; 
     private string $address;

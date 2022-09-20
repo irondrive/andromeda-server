@@ -66,7 +66,7 @@ class ApiPackage
         
         $this->metrics = new MetricsHandler();
 
-        $this->database = self::InitDatabase($interface)->SetApiPackage($this);
+        $this->database = static::InitDatabase($interface)->SetApiPackage($this);
         $this->errorman->SetDatabase($this->database);
 
         $this->config = Config::GetInstance($this->database);

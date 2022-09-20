@@ -245,7 +245,7 @@ class HTTP extends IOInterface
     public static function GetRemoteURL(string $url, Input $input, bool $params = true)
     {
         $get = array('_app'=>$input->GetApp(), '_act'=>$input->GetAction());
-        if ($params) $get = array_merge($get, $input->GetParams()->GetClientObject());
+        if ($params) $get += $input->GetParams()->GetClientObject();
         return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
     }
 

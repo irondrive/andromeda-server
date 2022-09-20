@@ -5,7 +5,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableType
 use Andromeda\Core\Logging\BaseLog;
 
 /** Represents an error log entry in the database */
-final class ErrorLog extends BaseLog
+class ErrorLog extends BaseLog
 {
     protected const IDLength = 12;
     

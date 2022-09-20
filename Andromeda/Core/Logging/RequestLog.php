@@ -7,7 +7,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
 require_once(ROOT."/Core/Logging/Exceptions.php");
 
 /** Log entry representing an API request */
-final class RequestLog extends BaseLog
+class RequestLog extends BaseLog
 {
     use TableTypes\TableNoChildren;
     
@@ -52,7 +52,7 @@ final class RequestLog extends BaseLog
         $database = $apipack->GetDatabase();
         
         $obj = static::BaseCreate($database);
-        $obj->time->SetValue($database->GetTime());
+        $obj->time->SetTimeNow();
         $obj->addr->SetValue($interface->getAddress());
         $obj->agent->SetValue($interface->getUserAgent());
         
