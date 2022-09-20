@@ -232,7 +232,7 @@ class Config extends BaseConfig
     /** log more detailed info, and full objects when deleted */
     public const RQLOG_DETAILS_FULL = 2;
     
-    private const RQLOG_DETAILS_TYPES = array(
+    public const RQLOG_DETAILS_TYPES = array(
         'none'=>0, 
         'basic'=>self::RQLOG_DETAILS_BASIC, 
         'full'=>self::RQLOG_DETAILS_FULL);

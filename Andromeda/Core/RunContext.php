@@ -4,6 +4,7 @@ use Andromeda\Core\Database\DBStats;
 use Andromeda\Core\IOFormat\Input;
 use Andromeda\Core\Logging\ActionLog;
 
+/** Supplemental objects for the current app action being run */
 class RunContext 
 { 
     private Input $input;     
