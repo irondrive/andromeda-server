@@ -4,8 +4,6 @@ use Andromeda\Core\{ApiPackage,Config};
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\Logging\ActionLog;
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 class InputTest extends \PHPUnit\Framework\TestCase
 {
     public function testAppAction() : void
@@ -17,13 +15,13 @@ class InputTest extends \PHPUnit\Framework\TestCase
     
     public function testSanitizeApp() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new Input('app%','action');
     }
     
     public function testSanitizeAction() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new Input('app','action<');
     }
     
@@ -73,7 +71,7 @@ class InputTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($file2, $input->GetFile('file2'));
         $this->assertSame($file2, $input->TryGetFile('file2'));
         
-        $this->expectException(InputFileMissingException::class);
+        $this->expectException(Exceptions\InputFileMissingException::class);
         $input->GetFile('file3');
     }
     

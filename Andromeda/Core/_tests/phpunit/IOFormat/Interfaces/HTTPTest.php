@@ -1,10 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; require_once("init.php");
 
 use Andromeda\Core\Utilities;
+use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 use Andromeda\Core\IOFormat\{Input, InputAuth, Output, OutputHandler, SafeParam, SafeParams};
-
-require_once(ROOT."/Core/IOFormat/Exceptions.php"); 
-use Andromeda\Core\IOFormat\EmptyBatchException;
 
 class HTTPTest extends \PHPUnit\Framework\TestCase
 {
@@ -22,37 +20,37 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
 
     public function testMethod() : void
     {
-        $this->expectException(MethodNotAllowedException::class);
+        $this->expectException(Exceptions\MethodNotAllowedException::class);
         (new HTTP())->LoadHTTPInputs([], [], [], ['REQUEST_METHOD'=>'PUT']);
     }
     
     public function testMissingApp() : void
     {
-        $this->expectException(MissingAppActionException::class);
+        $this->expectException(Exceptions\MissingAppActionException::class);
         (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testMissingAction() : void
     {
-        $this->expectException(MissingAppActionException::class);
+        $this->expectException(Exceptions\MissingAppActionException::class);
         (new HTTP())->LoadHTTPInputs([], ['_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testAppActionStrings() : void
     {
-        $this->expectException(MissingAppActionException::class);
+        $this->expectException(Exceptions\MissingAppActionException::class);
         (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>[]], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testAppActionGet() : void
     {
-        $this->expectException(MissingAppActionException::class);
+        $this->expectException(Exceptions\MissingAppActionException::class);
         (new HTTP())->LoadHTTPInputs(['_app'=>'myapp','_act'=>'myact'], [], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testIllegalGetField() : void
     {
-        $this->expectException(IllegalGetFieldException::class);
+        $this->expectException(Exceptions\IllegalGetFieldException::class);
         (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact','password'=>'test'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
@@ -85,13 +83,13 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
     
     public function testBatchIsArray1() : void
     {
-        $this->expectException(BatchSyntaxInvalidException::class);
+        $this->expectException(Exceptions\BatchSyntaxInvalidException::class);
         (new HTTP())->LoadHTTPInputs(['_bat'=>[]], ['_bat'=>[]], ['_bat'=>5], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testBatchIsArray2() : void
     {
-        $this->expectException(BatchSyntaxInvalidException::class);
+        $this->expectException(Exceptions\BatchSyntaxInvalidException::class);
         (new HTTP())->LoadHTTPInputs(['_bat'=>[0=>array()]], ['_bat'=>[0=>array()]], ['_bat'=>[0=>5]], ['REQUEST_METHOD'=>'GET']);
     }
     
@@ -126,7 +124,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
     public function testFiles() : void
     {
         // can't really test file input due to is_uploaded_file() check
-        $this->expectException(FileUploadFailException::class);
+        $this->expectException(Exceptions\FileUploadFailException::class);
         
         $files = array('myfile'=>array('tmp_name'=>'test.txt','name'=>'test.txt','error'=>0));
         (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact'], $files, ['REQUEST_METHOD'=>'GET']);

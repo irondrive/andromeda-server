@@ -3,8 +3,6 @@
 if (!function_exists('sodium_memzero')) 
     die("PHP Sodium Extension Required".PHP_EOL);
 
-require_once(ROOT."/Core/Exceptions.php");
-
 /** libsodium wrapper class for crypto */
 class Crypto
 {
@@ -82,7 +80,7 @@ class Crypto
      * @param string $nonce the nonce that was used to encrypt
      * @param string $key the key that was used to encrypt
      * @param string $extra the extra auth data used to encrypt
-     * @throws DecryptionFailedException if decryption fails
+     * @throws Exceptions\DecryptionFailedException if decryption fails
      * @return string the decrypted and authenticated plaintext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_decrypt()
      */
@@ -90,7 +88,7 @@ class Crypto
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
-        if ($output === false) throw new DecryptionFailedException();
+        if ($output === false) throw new Exceptions\DecryptionFailedException();
         return $output;
     }
 
@@ -139,7 +137,7 @@ class Crypto
      * @param string $nonce the nonce that was used to encrypt
      * @param string $recipient_private the recipient's private key
      * @param string $sender_public the sender's public key
-     * @throws DecryptionFailedException if decryption fails
+     * @throws Exceptions\DecryptionFailedException if decryption fails
      * @return string the decrypted and verified plaintext
      */
     public static function DecryptPublic(string $message, string $nonce, string $recipient_private, string $sender_public)
@@ -147,7 +145,7 @@ class Crypto
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($recipient_private, $sender_public);
         $output = sodium_crypto_box_open($message, $nonce, $keypair);
         sodium_memzero($message); sodium_memzero($recipient_private);
-        if ($output === false) throw new DecryptionFailedException();
+        if ($output === false) throw new Exceptions\DecryptionFailedException();
         return $output;
     }
 
@@ -195,12 +193,12 @@ class Crypto
     
     /**
      * Same as TryCheckAuthCode() but throws an exception on failure
-     * @throws DecryptionFailedException if authentication fails
+     * @throws Exceptions\DecryptionFailedException if authentication fails
      * @see self::TryCheckAuthCode()
      */
     public static function CheckAuthCode(string $mac, string $message, string $key) : void
     {
         if (!static::TryCheckAuthCode($mac, $message, $key)) 
-            throw new DecryptionFailedException();
+            throw new Exceptions\DecryptionFailedException();
     }
 }

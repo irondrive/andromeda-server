@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/Exceptions.php");
-
 /** A class with a constant ID so there can only exist one instance */
 abstract class SingletonObject extends BaseObject
 {
@@ -22,7 +20,7 @@ abstract class SingletonObject extends BaseObject
     /**
      * Gets the instance of the given class, possibly loading it from the DB
      * @param ObjectDatabase $database reference to the database
-     * @throws SingletonNotFoundException if no object is loaded
+     * @throws Exceptions\SingletonNotFoundException if no object is loaded
      * @return static
      */
     public static function GetInstance(ObjectDatabase $database) : self
@@ -32,7 +30,7 @@ abstract class SingletonObject extends BaseObject
         if (!array_key_exists($key, self::$instances))
         {
             $obj = $database->TryLoadUniqueByKey(static::class,'id','A');
-            if ($obj === null) throw new SingletonNotFoundException(static::class);
+            if ($obj === null) throw new Exceptions\SingletonNotFoundException(static::class);
             
             self::$instances[$key] = $obj;
         }

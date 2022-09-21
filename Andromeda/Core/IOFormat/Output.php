@@ -2,8 +2,6 @@
 
 use Andromeda\Core\Errors\BaseExceptions\ClientException;
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 /** 
  * Represents the output to be shown to the user 
  * 
@@ -139,16 +137,16 @@ class Output
     /**
      * Parses a response from a remote Andromeda API request into an Output object
      * @param array<mixed> $data the response data from the remote request
-     * @throws InvalidParseException if the response is malformed
+     * @throws Exceptions\InvalidParseException if the response is malformed
      * @return Output the output object constructed from the response
      */
     public static function ParseArray(array $data) : Output
     {
         if (!array_key_exists('ok',$data) || !array_key_exists('code',$data)) 
-            throw new InvalidParseException();
+            throw new Exceptions\InvalidParseException();
         
         if (!is_bool($data['ok']) || !is_int($data['code'])) 
-            throw new InvalidParseException();
+            throw new Exceptions\InvalidParseException();
 
         $ok = (bool)$data['ok']; 
         $code = (int)$data['code'];
@@ -156,7 +154,7 @@ class Output
         if ($ok === true)
         {
             if (!array_key_exists('appdata',$data)) 
-                throw new InvalidParseException();
+                throw new Exceptions\InvalidParseException();
 
             $output = new Output($ok, $code); 
             $output->appdata = $data['appdata']; 
@@ -165,10 +163,10 @@ class Output
         else
         {
             if (!array_key_exists('message',$data)) 
-                throw new InvalidParseException();
+                throw new Exceptions\InvalidParseException();
             
             if (!is_string($data['message'])) 
-                throw new InvalidParseException();
+                throw new Exceptions\InvalidParseException();
             
             throw new ClientException(
                 (string)$data['message'], $code);

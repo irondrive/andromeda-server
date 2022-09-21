@@ -1,11 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\Exceptions as DatabaseExceptions;
 use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\{IOInterface, Input};
-
-require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{DatabaseConnectException, DatabaseMissingException};
 
 /** 
  * A special runner class for loading and running app installers
@@ -19,7 +17,7 @@ class InstallRunner extends BaseRunner
     
     private ?ObjectDatabase $database = null;
     /** The exception thrown when db loading failed */
-    private ?DatabaseConnectException $dbexc = null;
+    private ?DatabaseExceptions\DatabaseConnectException $dbexc = null;
     
     /** @var array<string, InstallerApp> */
     private array $installers = array();
@@ -34,11 +32,11 @@ class InstallRunner extends BaseRunner
     public function HasDatabase() : bool { return $this->database !== null; }
     
     /** Returns true if the database did not give a DatabaseMissingException */
-    public function HasDatabaseConfig() : bool { return !($this->dbexc instanceof DatabaseMissingException); }
+    public function HasDatabaseConfig() : bool { return !($this->dbexc instanceof DatabaseExceptions\DatabaseMissingException); }
     
     /** 
      * Returns the ObjectDatabase instance
-     * @throws DatabaseConnectException if not available
+     * @throws DatabaseExceptions\DatabaseConnectException if not available
      */
     public function RequireDatabase() : ObjectDatabase
     {
@@ -61,7 +59,7 @@ class InstallRunner extends BaseRunner
      *
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
-     * @throws InstallDisabledException if install is globally disabled
+     * @throws Exceptions\InstallDisabledException if install is globally disabled
      */
     public function __construct(IOInterface $interface, ErrorManager $errman)
     {
@@ -71,10 +69,10 @@ class InstallRunner extends BaseRunner
         
         if (!$interface->isPrivileged() && 
             defined('ALLOW_HTTP_INSTALL') && !ALLOW_HTTP_INSTALL)
-            throw new InstallDisabledException();
+            throw new Exceptions\InstallDisabledException();
 
         try { $this->database = ApiPackage::InitDatabase($interface); }
-        catch (DatabaseConnectException $e) { $this->dbexc = $e; }
+        catch (DatabaseExceptions\DatabaseConnectException $e) { $this->dbexc = $e; }
         
         if ($this->database !== null)
             $this->errorman->SetDatabase($this->database);
@@ -85,7 +83,8 @@ class InstallRunner extends BaseRunner
             $interface->AdjustConfig($config);
             $this->errorman->SetConfig($config);
         }
-        catch (InstallRequiredException | UpgradeRequiredException $e) { /* leave un-init */ }
+        catch (Exceptions\InstallRequiredException | 
+               Exceptions\UpgradeRequiredException $e) { /* leave un-init */ }
         
         foreach (Config::ScanApps() as $app)
         {
@@ -109,14 +108,14 @@ class InstallRunner extends BaseRunner
      * Calls Run() on the requested installer and then saves 
      * (but does not commit) any modified objects.
      * @param Input $input the user input command to run
-     * @throws UnknownAppException if the requested app is invalid
+     * @throws Exceptions\UnknownAppException if the requested app is invalid
      * @return mixed the app-specific return value
      */
     public function Run(Input $input)
     {
         $app = $input->GetApp();
         if (!array_key_exists($app, $this->installers))
-            throw new UnknownAppException();
+            throw new Exceptions\UnknownAppException();
 
         $context = new RunContext($input, null);
         $this->stack[] = $context;
@@ -161,4 +160,3 @@ class InstallRunner extends BaseRunner
         });
     }
 }
-

@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 if (!function_exists('json_encode')) 
     die("PHP JSON Extension Required".PHP_EOL);
 
@@ -17,14 +15,14 @@ abstract class Singleton // TODO refactor to get rid of this
     
     /**
      * Get the global instance of the singleton
-     * @throws MissingSingletonException if not yet constructed
+     * @throws Exceptions\MissingSingletonException if not yet constructed
      * @return static
      */
     public static function GetInstance() : self
     {
         $class = static::class;
         if (!array_key_exists($class, self::$instances))
-            throw new MissingSingletonException($class);
+            throw new Exceptions\MissingSingletonException($class);
         return self::$instances[$class];
     }
     
@@ -32,13 +30,13 @@ abstract class Singleton // TODO refactor to get rid of this
      * Construct the singleton for use. 
      * 
      * This can be overriden if it requires more arguments
-     * @throws DuplicateSingletonException if already constructed
+     * @throws Exceptions\DuplicateSingletonException if already constructed
      */
     public function __construct()
     {
         $class = static::class;
         if (array_key_exists($class, self::$instances))
-            throw new DuplicateSingletonException($class);
+            throw new Exceptions\DuplicateSingletonException($class);
         else self::$instances[$class] = $this;
     }
 }
@@ -72,26 +70,26 @@ abstract class Utilities
     /**
      * Encodes an array as a JSON string
      * @param array<scalar, mixed> $jarr json array
-     * @throws JSONException
+     * @throws Exceptions\JSONException
      * @return string json string
      */
     public static function JSONEncode(array $jarr) : string
     {
         if (!is_string($jstr = json_encode($jarr)))
-            throw new JSONException();
+            throw new Exceptions\JSONException();
         return $jstr;
     }
     
     /**
      * Decodes a JSON string as an array
      * @param string $jstr json string
-     * @throws JSONException
+     * @throws Exceptions\JSONException
      * @return array<scalar, NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>> json array
      */
     public static function JSONDecode(string $jstr) : array
     {
         if (!is_array($jarr = json_decode($jstr, true)))
-            throw new JSONException();
+            throw new Exceptions\JSONException();
         return $jarr;
     }
     
@@ -203,17 +201,17 @@ abstract class Utilities
     
     /** 
      * Captures and returns any echoes or prints in the given function 
-     * @throws OutputBufferException if the PHP ob functions fail
+     * @throws Exceptions\OutputBufferException if the PHP ob functions fail
      */
     public static function CaptureOutput(callable $func) : string
     {
         if (ob_start() === false) 
-            throw new OutputBufferException("ob_start fail"); 
+            throw new Exceptions\OutputBufferException("ob_start fail"); 
         
         $func(); $retval = ob_get_clean();
         
         if ($retval === false || !is_string($retval))
-            throw new OutputBufferException("ob_get_clean fail");
+            throw new Exceptions\OutputBufferException("ob_get_clean fail");
         
         return $retval;
     }

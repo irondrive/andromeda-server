@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
@@ -92,7 +90,7 @@ class Config extends BaseConfig
     
     /**
      * Updates config with the parameters in the given input (see CLI usage)
-     * @throws UnwriteableDatadirException if given a new datadir that is invalid
+     * @throws Exceptions\UnwriteableDatadirException if given a new datadir that is invalid
      * @return $this
      */
     public function SetConfig(SafeParams $params) : self
@@ -103,7 +101,7 @@ class Config extends BaseConfig
             if ($datadir !== null)
             {
                 if (!is_dir($datadir) || !is_readable($datadir) || !is_writeable($datadir))
-                    throw new UnwriteableDatadirException();
+                    throw new Exceptions\UnwriteableDatadirException();
             }
             
             $this->datadir->SetValue($datadir);
@@ -173,7 +171,7 @@ class Config extends BaseConfig
         };
         
         if (($dir = scandir(ROOT."/Apps")) === false)
-            throw new FailedScanAppsException();
+            throw new Exceptions\FailedScanAppsException();
         $apps = array_values(array_filter($dir, $valid));
         
         return array_map(function(string $s){ return strtolower($s); }, $apps);

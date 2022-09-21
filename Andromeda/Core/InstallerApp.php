@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 use Andromeda\Core\Database\ObjectDatabase;
 
@@ -84,9 +82,9 @@ abstract class InstallerApp
             $class::GetInstance($runner->RequireDatabase());
             $this->install_state = self::NEED_NOTHING;
         }
-        catch (InstallRequiredException $e) { 
+        catch (Exceptions\InstallRequiredException $e) { 
             $this->install_state = self::NEED_INSTALL; }
-        catch (UpgradeRequiredException $e) { 
+        catch (Exceptions\UpgradeRequiredException $e) { 
             $this->oldVersion = $e->getOldVersion();
             $this->install_state = self::NEED_UPGRADE; }
     }
@@ -106,7 +104,7 @@ abstract class InstallerApp
      * Automatically handles the install/upgrade actions
      * @param Input $input the user input
      * @return mixed the result value to be output to the user
-     * @throws UnknownActionException if unknown action
+     * @throws Exceptions\UnknownActionException if unknown action
      */
     public function Run(Input $input)
     {
@@ -114,7 +112,7 @@ abstract class InstallerApp
         {
             case 'install': return $this->Install($input->GetParams());
             case 'upgrade': return $this->Upgrade($input->GetParams());
-            default: throw new UnknownActionException($input->GetAction());
+            default: throw new Exceptions\UnknownActionException($input->GetAction());
         }
     }
     
@@ -127,14 +125,17 @@ abstract class InstallerApp
         $db = $this->runner->RequireDatabase();
         
         if ($this->install_state > self::NEED_INSTALL)
-            throw new InstalledAlreadyException($this->getName());
+            throw new Exceptions\InstalledAlreadyException($this->getName());
         
         $installers = $this->runner->GetInstallers();
         foreach ($this->getDependencies() as $depapp)
         {
             if (!array_key_exists($depapp, $installers) || 
                 $installers[$depapp]->getInstallState() !== self::NEED_NOTHING)
-                throw new AppDependencyException($this->getName()." requires $depapp");
+            {
+                throw new Exceptions\AppDependencyException
+                    ($this->getName()." requires $depapp");
+            }
         }
         
         $db->GetInternal()->importTemplate($this->getTemplateFolder());
@@ -153,7 +154,7 @@ abstract class InstallerApp
         $db = $this->runner->RequireDatabase();
         
         if ($this->install_state > self::NEED_UPGRADE)
-            throw new UpgradedAlreadyException($this->getName());
+            throw new Exceptions\UpgradedAlreadyException($this->getName());
     
         $class = $this->getConfigClass();
         
@@ -170,4 +171,3 @@ abstract class InstallerApp
         $this->install_state = self::NEED_NOTHING;
     }
 }
-

@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; require_once("init.php");
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 class InputPathTest extends \PHPUnit\Framework\TestCase
 {
     /** @var array<string> */

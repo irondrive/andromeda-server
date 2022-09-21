@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Logging\Exceptions; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Errors\BaseExceptions;
 

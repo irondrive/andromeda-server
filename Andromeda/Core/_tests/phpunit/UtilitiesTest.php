@@ -18,7 +18,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testSingletonEmpty() : void
    {
-       $this->expectException(MissingSingletonException::class);
+       $this->expectException(Exceptions\MissingSingletonException::class);
        
        $this->assertInstanceOf(MySingleton::class, MySingleton::GetInstance());
    }
@@ -48,7 +48,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
     */
    public function testSingletonDuplicate() : void
    {
-       $this->expectException(DuplicateSingletonException::class);
+       $this->expectException(Exceptions\DuplicateSingletonException::class);
        
        new MySingleton();
    }
@@ -74,13 +74,13 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testBadJSONEncode() : void
    {
-       $this->expectException(JSONException::class);
+       $this->expectException(Exceptions\JSONException::class);
        Utilities::JSONEncode(array(Crypto::GenerateSecretKey()));
    }
    
    public function testBadJSONDecode() : void
    {
-       $this->expectException(JSONException::class);
+       $this->expectException(Exceptions\JSONException::class);
        Utilities::JSONDecode("nothing here!");
    }
    

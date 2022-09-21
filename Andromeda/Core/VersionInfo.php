@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 /** Class for parsing a version string into components */
 class VersionInfo
 {
@@ -22,10 +20,10 @@ class VersionInfo
         $version = explode('.',$version[0],3);
         
         foreach ($version as $v) if (!is_numeric($v)) 
-            throw new InvalidVersionException();
+            throw new Exceptions\InvalidVersionException();
 
         if (!isset($version[0]) || !isset($version[1]))
-            throw new InvalidVersionException();
+            throw new Exceptions\InvalidVersionException();
         
         $this->major = (int)$version[0];
         $this->minor = (int)$version[1];

@@ -1,11 +1,9 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
+use Andromeda\Core\Exceptions\JSONException;
 use Andromeda\Core\IOFormat\{Input,InputAuth,InputPath,IOInterface,Output,SafeParam,SafeParams};
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
-
-require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
-require_once(ROOT."/Core/IOFormat/Interfaces/Exceptions.php");
+use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 
 /** The interface for using Andromeda over a web server */
 class HTTP extends IOInterface
@@ -54,7 +52,7 @@ class HTTP extends IOInterface
     {
         if ($server['REQUEST_METHOD'] !== "GET" && 
             $server['REQUEST_METHOD'] !== "POST")
-            throw new MethodNotAllowedException();
+            throw new Exceptions\MethodNotAllowedException();
 
         if (isset($req['_bat']))
         {            
@@ -63,7 +61,7 @@ class HTTP extends IOInterface
             $bfiles = $files['_bat'] ?? array();
             
             if (!is_array($bget) || !is_array($bfiles) || !is_array($breq))
-                throw new BatchSyntaxInvalidException('batch not array');
+                throw new Exceptions\BatchSyntaxInvalidException('batch not array');
 
             $global_req = $req; // copy
             unset($global_req['_bat']);
@@ -78,7 +76,7 @@ class HTTP extends IOInterface
                 $bfilesI = $bfiles[$bkeyI] ?? array();
                 
                 if (!is_array($bgetI) || !is_array($bfilesI) || !is_array($breqI))
-                    throw new BatchSyntaxInvalidException("batch $bkeyI not array");
+                    throw new Exceptions\BatchSyntaxInvalidException("batch $bkeyI not array");
 
                 // merge with global params that apply to all
                 $breqI += $global_req;
@@ -89,7 +87,7 @@ class HTTP extends IOInterface
             }
             
             if (!count($inputs)) throw new EmptyBatchException();
-            if (count($inputs) > 65535) throw new LargeBatchException();
+            if (count($inputs) > 65535) throw new Exceptions\LargeBatchException();
         }
         else $inputs = array(self::GetInput($req, $get, $files, $server));
         
@@ -110,20 +108,20 @@ class HTTP extends IOInterface
     private function GetInput(array $req, array $get, array $files, array $server) : Input
     {
         if (empty($get['_app']) || empty($get['_act']))
-            throw new MissingAppActionException('missing');
+            throw new Exceptions\MissingAppActionException('missing');
         
         $app = $get['_app']; unset($req['_app']); // app
         $act = $get['_act']; unset($req['_act']); // action
         
         if (!is_string($app) || !is_string($act))
-            throw new MissingAppActionException('not strings');
+            throw new Exceptions\MissingAppActionException('not strings');
         
         foreach ($get as $key=>$val)
         {
             $key = (string)$key;
             if (strpos($key,'password') !== false 
                 || strpos($key,'auth_') === 0)
-                throw new IllegalGetFieldException($key);
+                throw new Exceptions\IllegalGetFieldException($key);
         }
         
         $params = new SafeParams();
@@ -135,7 +133,7 @@ class HTTP extends IOInterface
                 || !array_key_exists('tmp_name',$file)
                 || !array_key_exists('name',$file)
                 || !array_key_exists('error',$file))
-                throw new FileUploadFormatException();
+                throw new Exceptions\FileUploadFormatException();
             
             $fpath = (string)$file['tmp_name'];
             $fname = (string)$file['name'];
@@ -143,7 +141,7 @@ class HTTP extends IOInterface
             // https://www.php.net/manual/en/features.file-upload.errors.php
                 
             if ($ferror || !is_uploaded_file($fpath))
-                throw new FileUploadFailException((string)$ferror);
+                throw new Exceptions\FileUploadFailException((string)$ferror);
             
             $fname = (new SafeParam('name',$fname))->GetFSName();
             $pfiles[(string)$key] = new InputPath($fpath, $fname, true); 
@@ -253,7 +251,7 @@ class HTTP extends IOInterface
      * Send a request to a remote Andromeda API
      * @param string $url the base URL of the API
      * @param Input $input the input describing the request
-     * @throws RemoteInvalidException if decoding the response fails
+     * @throws Exceptions\RemoteInvalidException if decoding the response fails
      * @return array<mixed> the decoded remote response
      */
     public static function RemoteRequest(string $url, Input $input) : array
@@ -261,10 +259,10 @@ class HTTP extends IOInterface
         $url = static::GetRemoteURL($url, $input, false);
 
         $data = static::HTTPPost($url, $input->GetParams()->GetClientObject());
-        if ($data === null) throw new RemoteInvalidException();
+        if ($data === null) throw new Exceptions\RemoteInvalidException();
 
         try { return Utilities::JSONDecode($data); }
-        catch (JSONException $e) { throw new RemoteInvalidException(); }
+        catch (JSONException $e) { throw new Exceptions\RemoteInvalidException(); }
     }
 
     /**
@@ -287,5 +285,3 @@ class HTTP extends IOInterface
         if ($result === false) return null; else return $result;
     }
 }
-
-

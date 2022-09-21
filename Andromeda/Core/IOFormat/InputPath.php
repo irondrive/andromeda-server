@@ -37,19 +37,19 @@ class InputPath extends InputFile
     
     /** 
      * Returns the size of the file to be used 
-     * @throws FileReadFailedException if it fails
+     * @throws Exceptions\FileReadFailedException if it fails
      */
     public function GetSize() : int 
     { 
         $retval = filesize($this->path);
         if ($retval === false)
-            throw new FileReadFailedException($this->path);
+            throw new Exceptions\FileReadFailedException($this->path);
         else return $retval;
     }
 
     /**
      * Returns the file's stream resource - seeks to 0!
-     * @throws FileReadFailedException if it fails
+     * @throws Exceptions\FileReadFailedException if it fails
      * @return resource
      */
     public function GetHandle() 
@@ -58,7 +58,7 @@ class InputPath extends InputFile
         {
             $handle = fopen($this->path,'rb');
             if ($handle === false)
-                throw new FileReadFailedException($this->path);
+                throw new Exceptions\FileReadFailedException($this->path);
             else $this->handle = $handle;
         }
         

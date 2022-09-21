@@ -3,13 +3,10 @@
 use Andromeda\Core\{ApiPackage, BaseApp, Config, Emailer, EmailRecipient, Utilities};
 use Andromeda\Core\Errors\ErrorLog;
 use Andromeda\Core\Database\PDODatabase;
+use Andromeda\Core\Exceptions as CoreExceptions;
 use Andromeda\Core\IOFormat\{Input, Output, SafeParams, OutputHandler, IOInterface};
 use Andromeda\Core\Logging\RequestLog;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
-
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{FailedAppLoadException, InvalidAppException, UnknownActionException, MailSendException};
-
-require_once(ROOT."/Apps/Core/Exceptions.php");
 
 use Andromeda\Apps\Accounts\Authenticator;
 
@@ -68,7 +65,7 @@ class CoreApp extends BaseApp
     
     /**
      * {@inheritDoc}
-     * @throws UnknownActionException if the given action is not valid
+     * @throws CoreExceptions\UnknownActionException if the given action is not valid
      * @see BaseApp::Run()
      */
     public function Run(Input $input)
@@ -125,7 +122,7 @@ class CoreApp extends BaseApp
             case 'getactions':    return $this->GetActions($params, $isAdmin);
             case 'countactions':  return $this->CountActions($params, $isAdmin);
             
-            default: throw new UnknownActionException($input->GetAction());
+            default: throw new CoreExceptions\UnknownActionException($input->GetAction());
         }
     }
         
@@ -151,13 +148,13 @@ class CoreApp extends BaseApp
 
     /**
      * Prints the phpinfo() page
-     * @throws AdminRequiredException if not admin-level access
+     * @throws Exceptions\AdminRequiredException if not admin-level access
      */
     protected function PHPInfo(bool $isAdmin) : void
     {
         $this->API->GetInterface()->SetOutputMode(IOInterface::OUTPUT_PLAIN);
         
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
 
         $retval = Utilities::CaptureOutput(function(){ phpinfo(); });
         
@@ -168,14 +165,14 @@ class CoreApp extends BaseApp
     
     /**
      * Gets miscellaneous server identity information
-     * @throws AdminRequiredException if not admin-level access
+     * @throws Exceptions\AdminRequiredException if not admin-level access
      * @return array<mixed> `{uname:string, php_version:string, zend_version:string, 
         server:[various], load:[int,int,int], db:PDODatabase::getInfo()}`
      * @see PDODatabase::getInfo()
      */
     protected function ServerInfo(bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $server = array_filter($_SERVER, function($key){ 
             return strpos($key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
@@ -194,13 +191,13 @@ class CoreApp extends BaseApp
     
     /**
      * Sends a test email via a given mailer
-     * @throws AdminRequiredException if not an admin via the accounts app
-     * @throws UnknownMailerException if the given mailer is invalid
-     * @throws MailSendFailException if sending the email fails
+     * @throws Exceptions\AdminRequiredException if not an admin via the accounts app
+     * @throws Exceptions\UnknownMailerException if the given mailer is invalid
+     * @throws Exceptions\MailSendFailException if sending the email fails
      */
     protected function TestMail(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : void
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
 
         if ($authenticator === null || $params->HasParam('dest'))
         {
@@ -218,14 +215,15 @@ class CoreApp extends BaseApp
             $mailer = Emailer::TryLoadByID($this->database, $mailer);
             
             if ($mailer === null) 
-                throw new UnknownMailerException();
+                throw new Exceptions\UnknownMailerException();
         }
         else $mailer = Emailer::LoadAny($this->database);
         
         if ($actionlog) $actionlog->LogDetails('mailer',$mailer->ID());
         
         try { $mailer->SendMail($subject, $body, false, $dests, false); }
-        catch (MailSendException $e) { throw new MailSendFailException($e); }
+        catch (CoreExceptions\MailSendException $e) { 
+            throw new Exceptions\MailSendFailException($e); }
     }
     
     /** 
@@ -235,7 +233,7 @@ class CoreApp extends BaseApp
      */
     protected function ScanApps(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $apps = Config::ScanApps();
         
@@ -249,30 +247,30 @@ class CoreApp extends BaseApp
     
     /**
      * Registers (enables) an app
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<string> array of enabled apps (not core)
      */
     protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
 
         $app = $params->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
         try { $this->config->EnableApp($app); }
-        catch (FailedAppLoadException $e) { 
-            throw new InvalidAppException(); }
+        catch (CoreExceptions\FailedAppLoadException $e) { 
+            throw new Exceptions\InvalidAppException($app); }
 
         return $this->config->GetApps();
     }
     
     /**
      * Unregisters (disables) an app
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<string> array of enabled apps (not core)
      */
     protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $app = $params->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         
@@ -298,33 +296,33 @@ class CoreApp extends BaseApp
      */
     protected function GetDBConfig(bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return $this->database->GetInternal()->GetConfig();
     }
 
     /**
      * Sets server config
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<mixed> Config
      * @see Config::GetClientObject()
      */
     protected function SetConfig(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return $this->config->SetConfig($params)->GetClientObject(true);
     }
     
     /**
      * Returns a list of the configured mailers
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<string, array<mixed>> [id:Emailer]
      * @see Emailer::GetClientObject()
      */
     protected function GetMailers(bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return array_map(function($m){ return $m->GetClientObject(); }, 
             Emailer::LoadAll($this->database));
@@ -332,13 +330,13 @@ class CoreApp extends BaseApp
     
     /**
      * Creates a new emailer config
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<mixed> Emailer
      * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $emailer = Emailer::Create($this->database, $params)->Save();
         
@@ -358,17 +356,17 @@ class CoreApp extends BaseApp
     
     /**
      * Deletes a configured emailer
-     * @throws AdminRequiredException if not an admin 
-     * @throws UnknownMailerException if given an invalid emailer
+     * @throws Exceptions\AdminRequiredException if not an admin 
+     * @throws Exceptions\UnknownMailerException if given an invalid emailer
      */
     protected function DeleteMailer(SafeParams $params, bool $isAdmin, ?BaseActionLog $actionlog) : void
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $mailid = $params->GetParam('mailid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
-        if ($mailer === null) throw new UnknownMailerException();
+        if ($mailer === null) throw new Exceptions\UnknownMailerException();
         
         if ($actionlog && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('mailer', $mailer->GetClientObject());
@@ -378,12 +376,12 @@ class CoreApp extends BaseApp
     
     /**
      * Returns the server error log, possibly filtered
-     * @throws AdminRequiredException if not an admin 
+     * @throws Exceptions\AdminRequiredException if not an admin 
      * @return array<string, array<mixed>>
      */
     protected function GetErrors(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return array_map(function(ErrorLog $e){ return $e->GetClientObject(); },
             ErrorLog::LoadByParams($this->database, $params));
@@ -391,25 +389,25 @@ class CoreApp extends BaseApp
     
     /**
      * Counts server error log entries, possibly filtered
-     * @throws AdminRequiredException if not an admin
+     * @throws Exceptions\AdminRequiredException if not an admin
      * @return int error log entry count
      */
     protected function CountErrors(SafeParams $params, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return ErrorLog::CountByParams($this->database, $params);
     }
     
     /**
      * Returns all request logs matching the given input
-     * @throws AdminRequiredException if not admin
+     * @throws Exceptions\AdminRequiredException if not admin
      * @return array<array<mixed>> RequestLog
      * @see RequestLog::GetFullClientObject()
      */
     protected function GetRequests(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $actions = $params->GetOptParam('actions',false)->GetBool();
         $expand = $params->GetOptParam('expand',false)->GetBool();
@@ -426,25 +424,25 @@ class CoreApp extends BaseApp
     
     /**
      * Counts all request logs matching the given input
-     * @throws AdminRequiredException if not admin
+     * @throws Exceptions\AdminRequiredException if not admin
      * @return int log entry count
      */
     protected function CountRequests(SafeParams $params, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return RequestLog::CountByParams($this->database, $params);
     }
     
     /**
      * Returns all action logs matching the given input
-     * @throws AdminRequiredException if not admin
+     * @throws Exceptions\AdminRequiredException if not admin
      * @return array<array<mixed>> ActionLog
      * @see ActionLog::GetFullClientObject()
      */
     protected function GetActions(SafeParams $params, bool $isAdmin) : array
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $expand = $params->GetOptParam('expand',false)->GetBool();
         
@@ -460,12 +458,12 @@ class CoreApp extends BaseApp
     
     /**
      * Counts all action logs matching the given input
-     * @throws AdminRequiredException if not admin
+     * @throws Exceptions\AdminRequiredException if not admin
      * @return int log entry count
      */
     protected function CountActions(SafeParams $params, bool $isAdmin) : int
     {
-        if (!$isAdmin) throw new AdminRequiredException();
+        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         return BaseActionLog::CountByParams($this->database, $params);
     }

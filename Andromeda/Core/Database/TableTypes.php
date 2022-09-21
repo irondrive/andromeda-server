@@ -1,11 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\TableTypes; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
-
-require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\BadPolyClassException;
-use Andromeda\Core\Database\BadPolyTypeException;
-use Andromeda\Core\Database\NotMultiTableException;
+use Andromeda\Core\Database\{BaseObject, Exceptions, FieldTypes, ObjectDatabase, QueryBuilder};
 
 /** A trait for classes that have a database table */
 trait HasTable
@@ -32,13 +27,13 @@ trait NoTypedChildren
     
     public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string
     {
-        throw new NotMultiTableException(self::class);
+        throw new Exceptions\NotMultiTableException(self::class);
     }
     
     /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
-        throw new NotMultiTableException(self::class);
+        throw new Exceptions\NotMultiTableException(self::class);
     }
 }
 
@@ -69,7 +64,7 @@ trait TableTypedChildren
         $map = array_flip(self::GetChildMap());
         
         if (!array_key_exists($class, $map))
-            throw new BadPolyClassException($class);
+            throw new Exceptions\BadPolyClassException($class);
         
         $table = $db->GetClassTableName(self::class);
         return $q->Equals("$table.type",$map[$class]);
@@ -81,7 +76,7 @@ trait TableTypedChildren
         $type = $row['type']; $map = self::GetChildMap();
         
         if (!array_key_exists($type, $map))
-            throw new BadPolyTypeException((string)($type ?? "null"));
+            throw new Exceptions\BadPolyTypeException((string)($type ?? "null"));
         
         return $map[$type];
     }

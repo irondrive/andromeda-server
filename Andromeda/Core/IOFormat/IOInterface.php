@@ -2,8 +2,6 @@
 
 use Andromeda\Core\Config;
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 /** Describes an abstract PHP I/O interface abstraction */
 abstract class IOInterface
 {
@@ -57,7 +55,7 @@ abstract class IOInterface
             $this->LoadInputs(); // populate
         
         if (count($this->inputs) > 1)
-            throw new BatchNotAllowedException();
+            throw new Exceptions\BatchNotAllowedException();
         
         return $this;
     }
@@ -102,12 +100,12 @@ abstract class IOInterface
 
     /**
      * Sets the output mode to the given mode or 0 for (none)
-     * @throws MultiOutputJSONException if > 1 user output function and mode is not JSON
+     * @throws Exceptions\MultiOutputJSONException if > 1 user output function and mode is not JSON
      */
     public function SetOutputMode(int $mode) : self 
     {
         if ($this->numretfuncs > 1 && $mode !== self::OUTPUT_JSON)
-            throw new MultiOutputJSONException($mode);
+            throw new Exceptions\MultiOutputJSONException($mode);
         $this->outmode = $mode; return $this; 
     }
     

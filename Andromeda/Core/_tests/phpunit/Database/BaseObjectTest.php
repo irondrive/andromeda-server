@@ -21,7 +21,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(PolyObject4::class, PolyObject4::GetRowClass(array('type'=>5)));
         $this->assertSame(PolyObject5a::class, PolyObject4::GetRowClass(array('type'=>13)));
         
-        $this->expectException(BadPolyTypeException::class);
+        $this->expectException(Exceptions\BadPolyTypeException::class);
         PolyObject4::GetRowClass(array('type'=>99));
     }
     
@@ -40,7 +40,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(array('d0'=>13), $q->GetData());
         
         $q = new QueryBuilder();
-        $this->expectException(BadPolyClassException::class);
+        $this->expectException(Exceptions\BadPolyClassException::class);
         PolyObject4::GetWhereChild($db, $q, PolyObject3::class);
     }
     
@@ -57,7 +57,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(EasyObject::class, EasyObject::GetBaseTableClass());
         $this->assertSame(PolyObject1::class, PolyObject5a::GetBaseTableClass());
         
-        $this->expectException(NoBaseTableException::class);
+        $this->expectException(Exceptions\NoBaseTableException::class);
         PolyObject0::GetBaseTableClass();
     }
     
@@ -101,7 +101,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $obj->Delete(); 
         $obj->NotifyDeleted();
         
-        $this->expectException(SaveAfterDeleteException::class);
+        $this->expectException(Exceptions\SaveAfterDeleteException::class);
         $obj->Save(); // throws exception
     }
     

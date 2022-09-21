@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 use Andromeda\Core\IOFormat\Input;
 use Andromeda\Core\Logging\ActionLog; // phpstan
 use Andromeda\Core\Database\ObjectDatabase;

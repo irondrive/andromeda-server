@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Database\Exceptions; if (!defined('Andromeda')) die();
 
 use \PDOException;
 
@@ -9,6 +9,14 @@ class DatabaseReadOnlyException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {
         parent::__construct("READ_ONLY_DATABASE", $details);
+    }
+}
+
+/** Exception indicating that the given counter exceeded its limit */
+class CounterOverLimitException extends BaseExceptions\ClientDeniedException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("COUNTER_EXCEEDS_LIMIT", $details);
     }
 }
 
@@ -123,6 +131,23 @@ class DeleteFailedException extends ConcurrencyException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DB_OBJECT_DELETE_FAILED", $details);
+    }
+}
+
+
+/** Exception indicating that loading via a foreign key link failed */
+class ForeignKeyException extends ConcurrencyException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
+    }
+}
+
+/** Exception indicating the given data is the wrong type for this field */
+class FieldDataTypeMismatch extends BaseExceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
     }
 }
 
