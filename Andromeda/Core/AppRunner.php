@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
 use Andromeda\Core\Database\DBStats; // phpstan
 use Andromeda\Core\Errors\BaseExceptions\ClientException;
 use Andromeda\Core\IOFormat\{Input,Output};
@@ -102,7 +100,7 @@ class AppRunner extends BaseRunner
     public function LoadApp(string $app) : self
     {
         if (!$this->TryLoadApp($app))
-            throw new FailedAppLoadException($app);
+            throw new Exceptions\FailedAppLoadException($app);
         return $this;
     }
     
@@ -119,14 +117,14 @@ class AppRunner extends BaseRunner
      * any modified objects. These calls can be nested - apps can call Run for 
      * other apps but should always do so via the API, not directly to the app
      * @param Input $input the user input command to run
-     * @throws UnknownAppException if the requested app is invalid
+     * @throws Exceptions\UnknownAppException if the requested app is invalid
      * @return mixed the app-specific return value
      */
     public function Run(Input $input)
     {
         $appname = $input->GetApp();
         if (!array_key_exists($appname, $this->apps)) 
-            throw new UnknownAppException($appname);
+            throw new Exceptions\UnknownAppException($appname);
 
         $app = $this->apps[$appname];
         $db = $this->apipack->GetDatabase();

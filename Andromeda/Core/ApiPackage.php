@@ -1,9 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
-
-require_once(ROOT."/Core/Database/Exceptions.php");
-use Andromeda\Core\Database\{DBStats, PDODatabase, ObjectDatabase, DatabaseConnectException};
+use Andromeda\Core\Database\{DBStats, PDODatabase, ObjectDatabase};
+use Andromeda\Core\Database\Exceptions\DatabaseConnectException;
 use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Logging\MetricsHandler;
@@ -56,9 +54,9 @@ class ApiPackage
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
      * @throws DatabaseConnectException if the connection fails
-     * @throws InstallRequiredException if the Config is not available
-     * @throws UpgradeRequiredException if the Config version is wrong
-     * @throws MaintenanceException if the server is not enabled
+     * @throws Exceptions\InstallRequiredException if the Config is not available
+     * @throws Exceptions\UpgradeRequiredException if the Config version is wrong
+     * @throws Exceptions\MaintenanceException if the server is not enabled
      */
     public function __construct(IOInterface $interface, ErrorManager $errman)
     {
@@ -78,7 +76,7 @@ class ApiPackage
         $this->errorman->SetConfig($this->config);
 
         $enabled = $this->config->isEnabled() || $interface->isPrivileged();
-        if (!$enabled) throw new MaintenanceException();
+        if (!$enabled) throw new Exceptions\MaintenanceException();
         
         $pdoDatabase = $this->database->GetInternal();
         

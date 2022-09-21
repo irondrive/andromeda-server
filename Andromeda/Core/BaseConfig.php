@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, SingletonObject};
-require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\DatabaseException;
+use Andromeda\Core\Database\Exceptions\DatabaseException;
 
 /** A singleton object that stores a version field */
 abstract class BaseConfig extends SingletonObject
@@ -36,8 +36,8 @@ abstract class BaseConfig extends SingletonObject
     public abstract static function Create(ObjectDatabase $database);
 
     /** 
-     * @throws InstallRequiredException if config is not installed
-     * @throws UpgradeRequiredException if the version in the given data does not match
+     * @throws Exceptions\InstallRequiredException if config is not installed
+     * @throws Exceptions\UpgradeRequiredException if the version in the given data does not match
      * @return static 
      */
     public static function GetInstance(ObjectDatabase $database) : self
@@ -47,7 +47,7 @@ abstract class BaseConfig extends SingletonObject
         {
             if ($database->HasApiPackage()) // log just in case
                 $database->GetApiPackage()->GetErrorManager()->LogException($e);
-            throw new InstallRequiredException(static::GetAppname()); 
+            throw new Exceptions\InstallRequiredException(static::GetAppname()); 
         }
     }
     
@@ -72,12 +72,12 @@ abstract class BaseConfig extends SingletonObject
         return $obj;
     }
     
-    /** @throws UpgradeRequiredException if the version in the given data does not match */
+    /** @throws Exceptions\UpgradeRequiredException if the version in the given data does not match */
     public function __construct(ObjectDatabase $database, array $data)
     {
         $version = $data['version'] ?? null;
         if ($version !== null && $version !== static::getVersion() && !static::$forceUpdate)
-            throw new UpgradeRequiredException(static::GetAppname(), (string)$version);
+            throw new Exceptions\UpgradeRequiredException(static::GetAppname(), (string)$version);
         
         parent::__construct($database, $data);
         

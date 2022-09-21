@@ -6,31 +6,31 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
 {
     public function testEmptyKey() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("", null);
     }
     
     public function testBadKey1() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("test\0", null);
     }
     
     public function testBadKey2() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("--test", null);
     }
     
     public function testBadKey3() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("test 0", null);
     }
     
     public function testBadKey4() : void
     {
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("%test", null);
     }
     
@@ -63,7 +63,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $logarr = array(); $param->SetLogRef($logarr, 999); // test logging
         
         $caught = false; try { $func($param); }
-        catch (SafeParamInvalidException $e){ $caught = true; }
+        catch (Exceptions\SafeParamInvalidException $e){ $caught = true; }
         
         $this->assertTrue($caught);
         $this->assertEmpty($logarr); // not logged!
@@ -79,7 +79,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(array('key'=>null),$logarr);
         
         $caught = false; try { $get($param); }
-        catch (SafeParamNullValueException $e){ $caught = true; }
+        catch (Exceptions\SafeParamNullValueException $e){ $caught = true; }
         
         $this->assertTrue($caught);
     }
@@ -114,7 +114,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->testGood(null, null, $getValN, false);
         
-        $this->expectException(SafeParamNullValueException::class);
+        $this->expectException(Exceptions\SafeParamNullValueException::class);
         $this->testGood(null, null, $getVal, false); // not good
     }
     
@@ -138,8 +138,8 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $param->CheckFunction(function(string $p)use($val){
             $this->assertSame($p,$val); return true;
         });
-        
-        $this->expectException(SafeParamInvalidException::class);
+    
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         $param->CheckFunction(function(string $p){ return false; });
     }
 
@@ -148,7 +148,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $val = "123456789"; $param = new SafeParam("key", $val);
         $this->assertSame($val, $param->CheckLength(99)->GetNullRawValue());
         
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         $param->CheckLength(5);
     }
     
@@ -157,7 +157,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $val = array(1,2,3,4,5,6,7); $param = new SafeParam("key", $val);
         $this->assertSame($val, $param->CheckLength(99)->GetNullRawValue());
         
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         $param->CheckLength(5);
     }
 
@@ -186,7 +186,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame($val, $param->FromWhitelist(array($val,'a','b')));
         
-        $this->expectException(SafeParamInvalidException::class);
+        $this->expectException(Exceptions\SafeParamInvalidException::class);
         $param->FromWhitelist(array('a','b','c'));
     }
     

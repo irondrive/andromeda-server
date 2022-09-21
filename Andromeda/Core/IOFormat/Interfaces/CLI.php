@@ -1,11 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Config, Utilities};
+use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 use Andromeda\Core\IOFormat\{Input,InputPath,InputStream,Output,IOInterface,SafeParam,SafeParams};
-
-require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\EmptyBatchException;
-
-require_once(ROOT."/Core/IOFormat/Interfaces/Exceptions.php");
 
 /** The interface for using Andromeda via local console */
 class CLI extends IOInterface
@@ -109,7 +106,7 @@ class CLI extends IOInterface
                 case 'outmode':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
-                        throw new IncorrectCLIUsageException('no outmode value');
+                        throw new Exceptions\IncorrectCLIUsageException('no outmode value');
                     $outmode = (new SafeParam('outmode',$val))->FromWhitelist(array_keys(self::OUTPUT_TYPES));
                     $this->outmode = self::OUTPUT_TYPES[$outmode];
                     break;
@@ -117,7 +114,7 @@ class CLI extends IOInterface
                 case 'debug':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
-                        throw new IncorrectCLIUsageException('no debug value');
+                        throw new Exceptions\IncorrectCLIUsageException('no debug value');
                     $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
                     $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
@@ -125,7 +122,7 @@ class CLI extends IOInterface
                 case 'metrics':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
-                        throw new IncorrectCLIUsageException('no metrics value');
+                        throw new Exceptions\IncorrectCLIUsageException('no metrics value');
                     $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
                     $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
@@ -133,11 +130,11 @@ class CLI extends IOInterface
                 case 'dbconf':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
-                        throw new IncorrectCLIUsageException('no dbconf path');
+                        throw new Exceptions\IncorrectCLIUsageException('no dbconf path');
                     $this->dbconf = (new SafeParam('dbconf',$val))->GetFSPath();
                     break;
                 }
-                default: throw new IncorrectCLIUsageException('invalid global arg');
+                default: throw new Exceptions\IncorrectCLIUsageException('invalid global arg');
             }
         }
         
@@ -152,7 +149,7 @@ class CLI extends IOInterface
                 {
                     $fname = self::getNextValue($argv,$argIdx);
                     if ($fname === null)
-                        throw new IncorrectCLIUsageException('no batch path');
+                        throw new Exceptions\IncorrectCLIUsageException('no batch path');
                     else return self::GetBatch($fname, $server,$stdin);
                 }
                 
@@ -160,7 +157,7 @@ class CLI extends IOInterface
             }
         }
 
-        throw new IncorrectCLIUsageException('missing app/action');
+        throw new Exceptions\IncorrectCLIUsageException('missing app/action');
     }
 
     /** 
@@ -172,7 +169,7 @@ class CLI extends IOInterface
     private function GetBatch(string $file, array $server, $stdin) : array
     {
         if (!is_file($file) || ($fdata = file_get_contents($file)) === false)
-            throw new UnknownBatchFileException($file);
+            throw new Exceptions\UnknownBatchFileException($file);
         
         $lines = array_filter(explode("\n", $fdata));
         if (!count($lines)) throw new EmptyBatchException();
@@ -180,7 +177,7 @@ class CLI extends IOInterface
         return array_map(function($line)use($server,$stdin)
         {
             try { return self::GetInput(\Clue\Arguments\split($line),$server,$stdin); }
-            catch (\InvalidArgumentException $e) { throw new BatchFileParseException(); }
+            catch (\InvalidArgumentException $e) { throw new Exceptions\BatchFileParseException(); }
         }, $lines);
     }
     
@@ -193,7 +190,7 @@ class CLI extends IOInterface
     private function GetInput(array $argv, array $server, $stdin) : Input
     {
         if (count($argv) < 2) 
-            throw new IncorrectCLIUsageException('missing app/action');
+            throw new Exceptions\IncorrectCLIUsageException('missing app/action');
         $app = $argv[0]; $action = $argv[1];
 
         // add environment variables to argv
@@ -213,9 +210,9 @@ class CLI extends IOInterface
         for ($i = 2; $i < count($argv); $i++)
         {
             $param = self::getKey($argv[$i]); 
-            if ($param === null) throw new IncorrectCLIUsageException(
+            if ($param === null) throw new Exceptions\IncorrectCLIUsageException(
                 "expected key at action arg $i");
-            else if ($param === "") throw new IncorrectCLIUsageException(
+            else if ($param === "") throw new Exceptions\IncorrectCLIUsageException(
                 "empty key at action arg $i");
             
             $special = mb_substr($param, -1);
@@ -224,15 +221,15 @@ class CLI extends IOInterface
             if ($special === '@')
             {
                 $param = mb_substr($param,0,-1); 
-                if (!$param) throw new IncorrectCLIUsageException(
+                if (!$param) throw new Exceptions\IncorrectCLIUsageException(
                     "empty @ key at action arg $i");
                 
                 $val = self::getNextValue($argv,$i);
-                if ($val === null) throw new IncorrectCLIUsageException(
+                if ($val === null) throw new Exceptions\IncorrectCLIUsageException(
                     "expected @ value at action arg $i");
                 
                 if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
-                    throw new InvalidFileException($val);
+                    throw new Exceptions\InvalidFileException($val);
                 
                 $params->AddParam($param, trim($fdat));
             }
@@ -240,7 +237,7 @@ class CLI extends IOInterface
             else if ($special === '!')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if (!$param) throw new Exceptions\IncorrectCLIUsageException(
                     "empty ! key at action arg $i");
                 
                 echo "enter $param...".PHP_EOL; $inp = fgets($stdin);
@@ -252,14 +249,14 @@ class CLI extends IOInterface
             else if ($special === '%')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if (!$param) throw new Exceptions\IncorrectCLIUsageException(
                     "empty % key at action arg $i");
                 
                 $val = self::getNextValue($argv,$i);
-                if ($val === null) throw new IncorrectCLIUsageException(
+                if ($val === null) throw new Exceptions\IncorrectCLIUsageException(
                     "expected % value at action arg $i");
                 
-                if (!is_file($val)) throw new InvalidFileException($val);
+                if (!is_file($val)) throw new Exceptions\InvalidFileException($val);
                 
                 $filename = basename(self::getNextValue($argv,$i) ?? $val);
                 $filename = (new SafeParam('name',$filename))->GetFSName();
@@ -270,7 +267,7 @@ class CLI extends IOInterface
             else if ($special === '-')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if (!$param) throw new Exceptions\IncorrectCLIUsageException(
                     "empty - key at action arg $i");
                 
                 $files[$param] = new InputStream($stdin);

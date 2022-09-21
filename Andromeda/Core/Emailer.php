@@ -2,8 +2,6 @@
 
 use \PHPMailer\PHPMailer; // via autoloader
 
-require_once(ROOT."/Core/Exceptions.php");
-
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
 
@@ -127,14 +125,14 @@ class Emailer extends BaseObject
     
     /** 
      * Returns any available (random) Emailer object 
-     * @throws EmailerUnavailableException if none configured
+     * @throws Exceptions\EmailerUnavailableException if none configured
      */
     public static function LoadAny(ObjectDatabase $database) : self
     {
         $mailers = static::LoadAll($database);
         
         if (empty($mailers)) 
-            throw new EmailerUnavailableException();
+            throw new Exceptions\EmailerUnavailableException();
         
         return $mailers[array_rand($mailers)];
     }
@@ -190,7 +188,7 @@ class Emailer extends BaseObject
             case self::TYPE_SENDMAIL: $mailer->isSendmail(); break;
             case self::TYPE_QMAIL: $mailer->isQmail(); break;
             case self::TYPE_SMTP: $mailer->isSMTP(); break;
-            default: throw new InvalidMailTypeException();
+            default: throw new Exceptions\InvalidMailTypeException();
         }
         
         $debug = $this->GetApiPackage()->GetDebugLevel() >= Config::ERRLOG_DETAILS;
@@ -218,7 +216,7 @@ class Emailer extends BaseObject
             }
             
             if (($hosts = $this->hosts->TryGetArray()) === null)
-                throw new MissingHostsException();
+                throw new Exceptions\MissingHostsException();
             else $mailer->Host = implode(';', $hosts);
         }
     
@@ -233,17 +231,17 @@ class Emailer extends BaseObject
      * @param EmailRecipient $from a different from to send as
      * @param bool $isHtml true if the body is HTML
      * @param bool $usebcc true if the recipients should use BCC
-     * @throws EmailDisabledException if email is not enabled
-     * @throws EmptyRecipientsException if no recipients were given
-     * @throws MailSendException if sending the message fails
+     * @throws Exceptions\EmailDisabledException if email is not enabled
+     * @throws Exceptions\EmptyRecipientsException if no recipients were given
+     * @throws Exceptions\MailSendException if sending the message fails
      */
     public function SendMail(string $subject, string $message, bool $isHtml, array $recipients, bool $usebcc, ?EmailRecipient $from = null) : void
     {
         if (!$this->GetApiPackage()->GetConfig()->GetEnableEmail())
-            throw new EmailDisabledException();
+            throw new Exceptions\EmailDisabledException();
         
         if (!count($recipients)) 
-            throw new EmptyRecipientsException();
+            throw new Exceptions\EmptyRecipientsException();
         
         $mailer = $this->mailer;
         
@@ -270,10 +268,10 @@ class Emailer extends BaseObject
         try 
         { 
             if (!$mailer->send())
-                throw new PHPMailerException1($mailer->ErrorInfo);
+                throw new Exceptions\PHPMailerException1($mailer->ErrorInfo);
         }
         catch (PHPMailer\Exception $e) { 
-            throw new PHPMailerException2($e); }
+            throw new Exceptions\PHPMailerException2($e); }
         
         $mailer->clearAddresses(); 
         $mailer->clearAttachments();

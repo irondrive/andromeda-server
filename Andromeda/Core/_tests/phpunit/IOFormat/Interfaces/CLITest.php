@@ -1,10 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; require_once("init.php");
 
 use Andromeda\Core\{Config, Utilities};
+use Andromeda\Core\IOFormat\Exceptions\SafeParamInvalidException;
 use Andromeda\Core\IOFormat\{InputPath, InputStream, Output, OutputHandler};
-
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
 class CLITest extends \PHPUnit\Framework\TestCase
 {
@@ -49,7 +47,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
     {
         $stdin = $this->getStream();
         $caught = false; try { (new CLI())->LoadCLIInputs($argv,array(),$stdin); }
-        catch (IncorrectCLIUsageException $e) { $caught = true; }
+        catch (Exceptions\IncorrectCLIUsageException $e) { $caught = true; }
         $this->assertTrue($caught);
     }
     

@@ -1,11 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php");
 use Andromeda\Core\{ApiPackage, Config};
 use Andromeda\Core\Database\DBStats;
 use Andromeda\Core\IOFormat\Output;
-
-require_once(ROOT."/Core/Logging/Exceptions.php");
 
 class MetricsHandler
 {
@@ -78,7 +75,7 @@ class MetricsHandler
      * @param ApiPackage $apipack API package with database
      * @param Output $output the output object to add metrics to
      * @param bool $isError if true, the output is an error response
-     * @throws MetricsTransactionException if already in a db transaction
+     * @throws Exceptions\MetricsTransactionException if already in a db transaction
      */
     public function SaveMetrics(ApiPackage $apipack, Output $output, bool $isError = false) : void
     {
@@ -90,7 +87,7 @@ class MetricsHandler
             
             // want to re-use DB, saving must be in its own transaction
             if ($db->GetInternal()->inTransaction())
-                throw new MetricsTransactionException();
+                throw new Exceptions\MetricsTransactionException();
             
             // TODO create new objdb from existing internal db? although db->time will be wrong...
             // then objectDB can be more assertive about commitAfterRollback + unset internal DB reference on rollback

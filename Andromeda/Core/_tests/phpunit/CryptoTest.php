@@ -67,7 +67,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame($data, Crypto::DecryptSecret($enc, $nonce, $key, $extra));
         
-        $this->expectException(DecryptionFailedException::class);
+        $this->expectException(Exceptions\DecryptionFailedException::class);
         $badkey = "1113456789ABCDEF0123456789ABCDEF";
         Crypto::DecryptSecret($enc, $nonce, $badkey, $extra);
     }
@@ -96,7 +96,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame($data, Crypto::DecryptPublic($enc, $nonce, $priv2, $pub1));
         
-        $this->expectException(DecryptionFailedException::class);
+        $this->expectException(Exceptions\DecryptionFailedException::class);
         Crypto::DecryptPublic($enc, $nonce, $priv1, $pub1);
     }
     
@@ -120,8 +120,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         
         Crypto::CheckAuthCode($mac, $data, $key);
         
-        $this->expectException(DecryptionFailedException::class);
+        $this->expectException(Exceptions\DecryptionFailedException::class);
         Crypto::CheckAuthCode($badmac, $data, $key);
     }
 }
-

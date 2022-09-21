@@ -3,8 +3,6 @@
 use Andromeda\Core\{Config, /*phpstan*/RunContext, Utilities};
 use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, TableTypes};
 
-require_once(ROOT."/Core/Logging/Exceptions.php");
-
 /** Log entry representing a performance metrics for a request */
 class RequestMetrics extends BaseObject
 {
@@ -195,7 +193,7 @@ class RequestMetrics extends BaseObject
             ($logdir = $config->GetDataDir()) !== null)
         {
             if ($this->writtenToFile) 
-                throw new MultiFileWriteException();
+                throw new Exceptions\MultiFileWriteException();
             $this->writtenToFile = true;
             
             $data = Utilities::JSONEncode($this->GetClientObject());

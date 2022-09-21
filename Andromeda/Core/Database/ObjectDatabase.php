@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/Exceptions.php");
-
 use Andromeda\Core\ApiPackage;
 
 /**
@@ -34,12 +32,12 @@ class ObjectDatabase
     
     /** 
      * Returns the ApiPackage reference 
-     * @throws ApiPackageException if not set
+     * @throws Exceptions\ApiPackageException if not set
      */
     public function GetApiPackage() : ApiPackage 
     {
         if (!isset($this->apipack))
-            throw new ApiPackageException();
+            throw new Exceptions\ApiPackageException();
         
         return $this->apipack;
     }
@@ -109,7 +107,7 @@ class ObjectDatabase
     {
         if (!$onlyAlways)
         {
-            if ($this->rolledBack) throw new SaveAfterRollbackException();
+            if ($this->rolledBack) throw new Exceptions\SaveAfterRollbackException();
             
             // insert new objects first for foreign keys
             foreach ($this->created as $obj) $obj->Save();
@@ -158,11 +156,11 @@ class ObjectDatabase
         if ($countChildren) // count foreach child
         {
             if (empty($childmap = $class::GetChildMap()))
-                throw new NoBaseTableException($class);
+                throw new Exceptions\NoBaseTableException($class);
             
             $count = 0; foreach ($childmap as $child)
             {
-                if ($class === $child) throw new NoBaseTableException($class);
+                if ($class === $child) throw new Exceptions\NoBaseTableException($class);
                 $count += $this->CountObjectsByQuery($child, $query);
             }
             return $count;
@@ -299,13 +297,13 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class name of the object
      * @param QueryBuilder $query the query used to match objects
-     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
     public function TryLoadUniqueByQuery(string $class, QueryBuilder $query) : ?BaseObject
     {
         $objs = $this->LoadObjectsByQuery($class, $query);
-        if (count($objs) > 1) throw new MultipleUniqueKeyException("$class");
+        if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class");
         return (count($objs) === 1) ? array_values($objs)[0] : null;
     }
     
@@ -316,13 +314,13 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class class name of the object
      * @param QueryBuilder $query the query used to match objects
-     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
     public function TryDeleteUniqueByQuery(string $class, QueryBuilder $query) : bool
     {
         $count = $this->DeleteObjectsByQuery($class, $query);
-        if ($count > 1) throw new MultipleUniqueKeyException("$class");
+        if ($count > 1) throw new Exceptions\MultipleUniqueKeyException("$class");
         return $count !== 0;
     }
 
@@ -364,7 +362,7 @@ class ObjectDatabase
     private function GetFromAndSetJoins(string $class, QueryBuilder $query, bool $selectFields) : string
     {
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new NoBaseTableException($class);
+        if (empty($classes)) throw new Exceptions\NoBaseTableException($class);
         
         // specify which tables to select in case of extra joins
         $selstr = implode(', ',array_map(function(string $sclass)use($selectFields){
@@ -392,7 +390,7 @@ class ObjectDatabase
     private function SetTypeFiltering(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
     {       
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new NoBaseTableException($class);
+        if (empty($classes)) throw new Exceptions\NoBaseTableException($class);
         
         // we want the limit/offset to apply to the class being loaded as,
         // not the current child table... use a subquery to accomplish this
@@ -402,7 +400,7 @@ class ObjectDatabase
             // the limited base class must have a table
             $bclasses = $bclass::GetTableClasses();
             if (empty($bclasses) || $bclass !== $bclasses[array_key_last($bclasses)])
-                throw new NoBaseTableException($bclass);
+                throw new Exceptions\NoBaseTableException($bclass);
             
             $subquery = clone $query;
             
@@ -454,7 +452,7 @@ class ObjectDatabase
      * @param class-string<T> $class final row class to instantiate
      * @param array<string, ?scalar> $row row of data from DB
      * @param bool $upcast if true, upcast rows before constructing
-     * @throws ObjectTypeException if already loaded a different type
+     * @throws Exceptions\ObjectTypeException if already loaded a different type
      * @return T instantiated object
      */
     private function ConstructObject(string $class, array $row, bool $upcast) : BaseObject
@@ -479,7 +477,7 @@ class ObjectDatabase
         }
         
         if (!($retobj instanceof $class))
-            throw new ObjectTypeException("$retobj not $class");
+            throw new Exceptions\ObjectTypeException("$retobj not $class");
 
         return $retobj;
     }
@@ -506,7 +504,7 @@ class ObjectDatabase
     /**
      * Immediately deletes a single object from the database
      * @param BaseObject $object the object to delete
-     * @throws DeleteFailedException if nothing is deleted
+     * @throws Exceptions\DeleteFailedException if nothing is deleted
      * @return $this
      */
     public function DeleteObject(BaseObject $object) : self
@@ -520,7 +518,7 @@ class ObjectDatabase
         $querystr = 'DELETE '.$selstr.' '.$query;
         
         if ($this->db->write($querystr, $query->GetData()) !== 1)
-            throw new DeleteFailedException($class);
+            throw new Exceptions\DeleteFailedException($class);
             
         $this->RemoveObject($object); return $this;
     }
@@ -530,7 +528,7 @@ class ObjectDatabase
      * @param BaseObject $object object to update
      * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
         fields to save of object for each table class, order derived->base (modified only)
-     * @throws UpdateFailedException if the update row fails
+     * @throws Exceptions\UpdateFailedException if the update row fails
      * @return $this
      */
     public function UpdateObject(BaseObject $object, array $fieldsByClass) : self
@@ -569,7 +567,7 @@ class ObjectDatabase
             $query = "UPDATE $table SET $setstr WHERE id=:id";
             
             if ($this->db->write($query, $data) !== 1)
-                throw new UpdateFailedException($class);
+                throw new Exceptions\UpdateFailedException($class);
             
             $this->UnsetObjectKeyFields($object, $fields);
             $this->SetObjectKeyFields($object, $fields);
@@ -586,7 +584,7 @@ class ObjectDatabase
      * @param BaseObject $object object to insert
      * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
           fields to save of object for each table class, order derived->base (ALL!)
-     * @throws InsertFailedException if the insert row fails
+     * @throws Exceptions\InsertFailedException if the insert row fails
      * @return $this
      */
     public function InsertObject(BaseObject $object, array $fieldsByClass) : self
@@ -632,7 +630,7 @@ class ObjectDatabase
             $query = "INSERT INTO $table ($colstr) VALUES ($idxstr)";
 
             if ($this->db->write($query, $data) !== 1)
-                throw new InsertFailedException($class);
+                throw new Exceptions\InsertFailedException($class);
             
             $this->SetObjectKeyFields($object, $fields);
         }
@@ -768,8 +766,8 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws UnknownUniqueKeyException if the key is not registered
-     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @throws Exceptions\UnknownUniqueKeyException if the key is not registered
+     * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
     public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
@@ -777,7 +775,7 @@ class ObjectDatabase
         $this->RegisterUniqueKeys($class);
         
         if (!array_key_exists($key, $this->uniqueByKey[$class]))
-            throw new UnknownUniqueKeyException("$class $key");
+            throw new Exceptions\UnknownUniqueKeyException("$class $key");
         
         $validx = self::ValueToIndex($value);
 
@@ -786,7 +784,7 @@ class ObjectDatabase
             $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $objs = $this->LoadObjectsByQuery($class, $q);
             
-            if (count($objs) > 1) throw new MultipleUniqueKeyException("$class $key");
+            if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");
             $obj = (count($objs) === 1) ? array_values($objs)[0] : null;
             
             $this->SetUniqueKeyObject($class, $key, $validx, $obj);
@@ -803,8 +801,8 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
-     * @throws UnknownUniqueKeyException if the key is not registered
-     * @throws MultipleUniqueKeyException if > 1 object is loaded
+     * @throws Exceptions\UnknownUniqueKeyException if the key is not registered
+     * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
     public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO unit test
@@ -812,7 +810,7 @@ class ObjectDatabase
         $this->RegisterUniqueKeys($class);
         
         if (!array_key_exists($key, $this->uniqueByKey[$class]))
-            throw new UnknownUniqueKeyException("$class $key");
+            throw new Exceptions\UnknownUniqueKeyException("$class $key");
             
         $validx = self::ValueToIndex($value);
 
@@ -826,7 +824,7 @@ class ObjectDatabase
         {
             $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $count = $this->DeleteObjectsByQuery($class, $q);
-            if ($count > 1) throw new MultipleUniqueKeyException("$class $key");
+            if ($count > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");
         }
         
         $this->uniqueByKey[$class][$key][$validx] = null; 

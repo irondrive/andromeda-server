@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/Exceptions.php");
-
 use Andromeda\Core\{ApiPackage, Utilities};
 
 /**
@@ -30,14 +28,14 @@ abstract class BaseObject
     
     /**
      * Returns the base table for this class
-     * @throws NoBaseTableException if none
+     * @throws Exceptions\NoBaseTableException if none
      * @return class-string<self>
      */
     final public static function GetBaseTableClass() : string
     {
         $tables = static::GetTableClasses();
         if (!empty($tables)) return $tables[0];
-        else throw new NoBaseTableException(static::class);
+        else throw new Exceptions\NoBaseTableException(static::class);
     }
 
     /**
@@ -76,11 +74,11 @@ abstract class BaseObject
      * Same idea as calling RegisterFields() with $table = null
      * @param array<class-string<self>, array<string>> $keymap key map
      * @param array<string> $keys keys for this class
-     * @throws NoChildTableException if no child has registered
+     * @throws Exceptions\NoChildTableException if no child has registered
      */
     final protected static function AddChildUniqueKeys(array& $keymap, array $keys) : void
     {
-        if (empty($keymap)) throw new NoChildTableException(static::class);
+        if (empty($keymap)) throw new Exceptions\NoChildTableException(static::class);
             
         $table = array_key_last($keymap);
         
@@ -100,7 +98,7 @@ abstract class BaseObject
      * @return string the clause for row matching (e.g. 'type = 5')
      */
     public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string { 
-        throw new NotMultiTableException(self::class); }
+        throw new Exceptions\NotMultiTableException(self::class); }
     
     /**
      * Given a database row, return the child class applicable
@@ -109,7 +107,7 @@ abstract class BaseObject
      * @return class-string<static> child class of row
      */
     public static function GetRowClass(array $row) : string { 
-        throw new NotMultiTableException(self::class); }
+        throw new Exceptions\NotMultiTableException(self::class); }
 
     /**
      * Creates a new object, no values initialized
@@ -207,7 +205,7 @@ abstract class BaseObject
         $this->idfield = new FieldTypes\StringType('id');
         
         if (empty($tables = static::GetTableClasses())) 
-            throw new NoBaseTableException(static::class);
+            throw new Exceptions\NoBaseTableException(static::class);
         
         foreach ($tables as $table)
         {
@@ -238,12 +236,12 @@ abstract class BaseObject
     /**
      * Helper for base classes without tables to register fields with the last child table
      * @param array<FieldTypes\BaseField> $fields array of fields to register
-     * @throws NoChildTableException if $table is null and no previously registered table
+     * @throws Exceptions\NoChildTableException if $table is null and no previously registered table
      */
     final protected function RegisterChildFields(array $fields) : void
     {
         if (empty($this->fieldsByClass))
-            throw new NoChildTableException(static::class);
+            throw new Exceptions\NoChildTableException(static::class);
         
         $table = array_key_last($this->fieldsByClass);
         
@@ -313,13 +311,13 @@ abstract class BaseObject
     /**
      * Inserts this object to the DB if creates, updates this object if modified
      * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
-     * @throws SaveAfterDeleteException if the object is deleted
+     * @throws Exceptions\SaveAfterDeleteException if the object is deleted
      * @return $this
      */
     public function Save(bool $onlyAlways = false) : self
     {
         if ($this->isDeleted)
-            throw new SaveAfterDeleteException();
+            throw new Exceptions\SaveAfterDeleteException();
         
         if ($onlyAlways && $this->isCreated) return $this;
         

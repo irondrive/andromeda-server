@@ -1,9 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
- use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\JSONException;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Exceptions\JSONException;
+use Andromeda\Core\IOFormat\Exceptions\{SafeParamInvalidException, SafeParamNullValueException};
 
 /**
  * Class representing a client input parameter
@@ -132,7 +131,7 @@ class SafeParam
     /** 
      * If not null, checks that a custom validation function returns true
      * @param callable(string):bool $valfunc custom function
-     * @throws SafeParamInvalidException if not valid or not string
+     * @throws SafeParamInvalidException@throws Exceptions\valid or not string
      * @return $this
      */
     public function CheckFunction(callable $valfunc) : self

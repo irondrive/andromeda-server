@@ -12,19 +12,19 @@ abstract class InputFile
     /**
      * Returns the entire stream contents (ONCE)
      * Can only be read ONCE! stream is closed after this
-     * @throws FileReadFailedException if it fails
+     * @throws Exceptions\FileReadFailedException if it fails
      */
     public function GetData() : string
     {
         $handle = $this->GetHandle();
         
         if (!is_resource($handle))
-            throw new FileReadFailedException("stream");
+            throw new Exceptions\FileReadFailedException("stream");
         
         $retval = stream_get_contents($handle);
         
         if ($retval === false)
-            throw new FileReadFailedException("stream");
+            throw new Exceptions\FileReadFailedException("stream");
         
         fclose($handle); return $retval;
     }

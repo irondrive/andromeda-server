@@ -1,33 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\FieldTypes; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
-use Andromeda\Core\Errors\BaseExceptions;
-use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
-require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\{ConcurrencyException, DatabaseReadOnlyException};
-
-/** Exception indicating that the given counter exceeded its limit */
-class CounterOverLimitException extends BaseExceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("COUNTER_EXCEEDS_LIMIT", $details);
-    }
-}
-
-/** Exception indicating that loading via a foreign key link failed */
-class ForeignKeyException extends ConcurrencyException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
-    }
-}
-
-/** Exception indicating the given data is the wrong type for this field */
-class FieldDataTypeMismatch extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
-    }
-}
+use Andromeda\Core\Database\{BaseObject, Exceptions, ObjectDatabase};
 
 /** Base class representing a database column ("field") */
 abstract class BaseField
@@ -113,7 +87,7 @@ abstract class BaseField
         if (isset($this->database))
         {
             if ($this->database->isReadOnly())
-                throw new DatabaseReadOnlyException();
+                throw new Exceptions\DatabaseReadOnlyException();
             
             $this->database->notifyModified($this->parent);
         }
@@ -129,9 +103,9 @@ abstract class BaseField
      * Gets a type mismatch exception for the given value 
      * @param scalar|object $value
      */
-    protected function GetTypeMismatchException($value) : FieldDataTypeMismatch
+    protected function GetTypeMismatchException($value) : Exceptions\FieldDataTypeMismatch
     {
-        return new FieldDataTypeMismatch($this->name.' '.
+        return new Exceptions\FieldDataTypeMismatch($this->name.' '.
             (is_object($value)?get_class($value):gettype($value)));
     }
 }
@@ -801,7 +775,7 @@ class Counter extends BaseField
      * Checks if the given delta would exceed the limit (if it exists)
      * @param int $delta delta to check
      * @param bool $throw if true, throw, else return
-     * @throws CounterOverLimitException if $throw and the limit is exceeded
+     * @throws Exceptions\CounterOverLimitException if $throw and the limit is exceeded
      * @return bool if $throw, return false if the limit was exceeded
      */
     public function CheckDelta(int $delta = 1, bool $throw = true) : bool
@@ -814,7 +788,7 @@ class Counter extends BaseField
             {
                 if (!$throw) return false;
                 
-                throw new CounterOverLimitException($this->name);
+                throw new Exceptions\CounterOverLimitException($this->name);
             }
         }
         return true;
@@ -1014,7 +988,8 @@ class NullObjectRefT extends BaseField
         
         $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
-        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
+        if ($obj !== null) return $obj;
+        throw new Exceptions\ForeignKeyException($this->class);
     }
     
     /** Returns the ID of the object pointed to by this field */
@@ -1103,7 +1078,8 @@ class ObjectRefT extends BaseField
     {
         $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
-        if ($obj === null) throw new ForeignKeyException($this->class); else return $obj;
+        if ($obj !== null) return $obj;
+        throw new Exceptions\ForeignKeyException($this->class);
     }
     
     /** Returns the ID of the object pointed to by this field */

@@ -4,8 +4,6 @@ use Andromeda\Core\{Config, InstallerApp};
 use Andromeda\Core\Database\PDODatabase;
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
-require_once(ROOT."/Apps/Core/Exceptions.php");
-
 /** The core config installer, also can install/upgrade all apps */
 class CoreInstallApp extends InstallerApp
 {
@@ -77,14 +75,14 @@ class CoreInstallApp extends InstallerApp
 
     /**
      * Creates a database config with the given input
-     * @throws AdminRequiredException if config exists and not a privileged interface
+     * @throws Exceptions\AdminRequiredException if config exists and not a privileged interface
      */
     protected function ConfigDB(SafeParams $params) : ?string
     {
         if ($this->runner->HasDatabaseConfig() &&
             !$this->runner->GetInterface()->isPrivileged())
         {
-            throw new AdminRequiredException();
+            throw new Exceptions\AdminRequiredException();
         }
         
         return PDODatabase::Install($params);

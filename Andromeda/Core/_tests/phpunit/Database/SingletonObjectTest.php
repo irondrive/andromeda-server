@@ -21,7 +21,7 @@ class SingletonObjectTest extends \PHPUnit\Framework\TestCase
     {
         $database = $this->createMock(ObjectDatabase::class);
         
-        $this->expectException(SingletonNotFoundException::class);
+        $this->expectException(Exceptions\SingletonNotFoundException::class);
         
         TestSingleton1::GetInstance($database);
     }

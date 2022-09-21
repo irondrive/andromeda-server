@@ -37,7 +37,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($db);
         $this->assertFalse($objdb->HasApiPackage());
         
-        $this->expectException(ApiPackageException::class);
+        $this->expectException(Exceptions\ApiPackageException::class);
         $objdb->GetApiPackage();
     }
 
@@ -510,7 +510,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = $objdb->TryLoadUniqueByQuery(EasyObject::class, $q);
         $this->assertInstanceOf(EasyObject::class, $obj); // 1
         
-        $this->expectException(MultipleUniqueKeyException::class);
+        $this->expectException(Exceptions\MultipleUniqueKeyException::class);
         $objdb->TryLoadUniqueByQuery(EasyObject::class, $q); // 2
     }
     
@@ -530,7 +530,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($objdb->TryDeleteUniqueByQuery(EasyObject::class, $q)); // 0 
         $this->assertTrue($objdb->TryDeleteUniqueByQuery(EasyObject::class, $q)); // 1
         
-        $this->expectException(MultipleUniqueKeyException::class);
+        $this->expectException(Exceptions\MultipleUniqueKeyException::class);
         $objdb->TryDeleteUniqueByQuery(EasyObject::class, $q); // 2
     }
     
@@ -605,7 +605,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         //should return the same object w/o loading from DB
         $this->assertSame($obj, $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5));
         
-        $this->expectException(UnknownUniqueKeyException::class);
+        $this->expectException(Exceptions\UnknownUniqueKeyException::class);
         $objdb->TryLoadUniqueByKey(EasyObject::class, 'testKey', 5);
     }
     

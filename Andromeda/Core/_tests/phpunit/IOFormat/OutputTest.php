@@ -107,28 +107,28 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testParseArrayBad1() : void
     {
-        $this->expectException(InvalidParseException::class);
+        $this->expectException(Exceptions\InvalidParseException::class);
         
         Output::ParseArray(array());
     }
     
     public function testParseArrayBad2() : void
     {
-        $this->expectException(InvalidParseException::class);
+        $this->expectException(Exceptions\InvalidParseException::class);
         
         Output::ParseArray(array('ok'=>true,'code'=>200));
     }
     
     public function testParseArrayBad3() : void
     {
-        $this->expectException(InvalidParseException::class);
+        $this->expectException(Exceptions\InvalidParseException::class);
 
         Output::ParseArray(array('ok'=>false,'code'=>200,'appdata'=>true));
     }
     
     public function testParseArrayBad4() : void
     {
-        $this->expectException(InvalidParseException::class);
+        $this->expectException(Exceptions\InvalidParseException::class);
         
         Output::ParseArray(array('ok'=>true,'code'=>400,'message'=>'exception'));
     }

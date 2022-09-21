@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\Exceptions; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Errors\BaseExceptions;
 
@@ -15,14 +15,6 @@ class UnwriteableDatadirException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("DATADIR_NOT_WRITEABLE", $details);
-    }
-}
-
-/** Exception indicating an invalid app name was given */
-class InvalidAppException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_APPNAME", $details);
     }
 }
 

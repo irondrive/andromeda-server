@@ -2,8 +2,6 @@
 
 use Andromeda\Core\Utilities;
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 class PretendInterface extends IOInterface
 {
     /** @var non-empty-array<Input> */
@@ -42,7 +40,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
             $this->createMock(Input::class));
         $iface = new PretendInterface($inputs);
         
-        $this->expectException(BatchNotAllowedException::class);
+        $this->expectException(Exceptions\BatchNotAllowedException::class);
         $iface->DisallowBatch();
     }
     
@@ -70,7 +68,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(IOInterface::OUTPUT_JSON, $iface->GetOutputMode()); // 2nd user func sets json
         $this->assertTrue($iface->isMultiOutput());
         
-        $this->expectException(MultiOutputJSONException::class);
+        $this->expectException(Exceptions\MultiOutputJSONException::class);
         $iface->SetOutputMode(IOInterface::OUTPUT_PLAIN);
     }
     

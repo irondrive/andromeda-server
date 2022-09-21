@@ -33,7 +33,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame('test',$obj->GetOptParam('test','test')->GetRawString());
         
-        $this->expectException(SafeParamKeyMissingException::class);
+        $this->expectException(Exceptions\SafeParamKeyMissingException::class);
         $obj->GetParam('test');
     }
 

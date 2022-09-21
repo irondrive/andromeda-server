@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; require_once("init.php");
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 class InputStreamTest extends \PHPUnit\Framework\TestCase
 {
     public function testStream() : void
@@ -15,7 +13,7 @@ class InputStreamTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($data, $strobj->GetData());
         $this->assertTrue(!is_resource($stream)); // closed
         
-        $this->expectException(FileReadFailedException::class);
+        $this->expectException(Exceptions\FileReadFailedException::class);
         $strobj->GetData();
     }
     

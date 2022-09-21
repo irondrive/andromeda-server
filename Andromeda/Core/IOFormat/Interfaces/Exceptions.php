@@ -1,7 +1,8 @@
-<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces\Exceptions; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Config;
 use Andromeda\Core\Errors\BaseExceptions;
+use Andromeda\Core\IOFormat\Interfaces\CLI;
 
 /** Exception indicating that the command line usage is incorrect */
 class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException

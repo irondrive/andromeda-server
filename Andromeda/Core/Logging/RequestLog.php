@@ -4,8 +4,6 @@ use Andromeda\Core\{ApiPackage, Utilities};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
-require_once(ROOT."/Core/Logging/Exceptions.php");
-
 /** Log entry representing an API request */
 class RequestLog extends BaseLog
 {
@@ -66,7 +64,7 @@ class RequestLog extends BaseLog
     public function SetError(\Throwable $e) : self
     {
         if ($this->writtenToFile) 
-            throw new LogAfterWriteException();
+            throw new Exceptions\LogAfterWriteException();
         
         $this->errcode->SetValue($e->getCode());
         $this->errtext->SetValue($e->getMessage());
@@ -84,7 +82,7 @@ class RequestLog extends BaseLog
     public function LogAction(Input $input, string $class) : ActionLog
     {
         if ($this->writtenToFile)
-            throw new LogAfterWriteException();
+            throw new Exceptions\LogAfterWriteException();
         
         $this->actions ??= array();
         
@@ -107,7 +105,7 @@ class RequestLog extends BaseLog
     
     /** 
      * Writes the log to the log file 
-     * @throws MultiFileWriteException if called > once
+     * @throws Exceptions\MultiFileWriteException if called > once
      */
     public function WriteFile() : self
     {

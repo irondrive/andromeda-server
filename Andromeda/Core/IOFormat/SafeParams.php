@@ -79,12 +79,12 @@ class SafeParams
      * Gets the requested parameter (present and not null)
      * @param string $key the parameter key name
      * @param int $minlog minimum log level for logging (0 for never)
-     * @throws SafeParamKeyMissingException if the parameter is missing
+     * @throws Exceptions\SafeParamKeyMissingException if the parameter is missing
      */
     public function GetParam(string $key, int $minlog = self::PARAMLOG_ONLYFULL) : SafeParam
     {
         if (!$this->HasParam($key))
-            throw new SafeParamKeyMissingException($key);
+            throw new Exceptions\SafeParamKeyMissingException($key);
         
         $param = $this->params[$key];
         

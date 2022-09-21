@@ -28,12 +28,12 @@ class RunContext
 
     /** 
      * Returns the metrics created for this run
-     * @throws MissingMetricsException if it wasn't set
+     * @throws Exceptions\MissingMetricsException if it wasn't set
      */
     public function GetMetrics() : DBStats 
     { 
         if ($this->metrics === null) 
-            throw new MissingMetricsException();
+            throw new Exceptions\MissingMetricsException();
         else return $this->metrics;
     }
     

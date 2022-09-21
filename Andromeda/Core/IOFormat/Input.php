@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/IOFormat/Exceptions.php");
-
 use Andromeda\Core\Logging\ActionLog;
 
 /** 
@@ -81,13 +79,13 @@ class Input
     /**
      * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
-     * @throws SafeParamKeyMissingException if the key does not exist
+     * @throws Exceptions\InputFileMissingException if the key does not exist
      * @return InputFile the uploaded file
      */
     public function GetFile(string $key) : InputFile
     {
         if (!$this->HasFile($key)) 
-            throw new InputFileMissingException($key);
+            throw new Exceptions\InputFileMissingException($key);
         else return $this->files[$key];
     }
     
@@ -108,7 +106,7 @@ class Input
      * @param ?SafeParams $params user input params
      * @param ?array<string, InputFile> $files optional input files
      * @param ?InputAuth $auth optional input authentication
-     * @throws SafeParamInvalidException if app/action are not valid
+     * @throws Exceptions\SafeParamInvalidException if app/action are not valid
      */
     public function __construct(string $app, string $action, ?SafeParams $params = null, 
                                 ?array $files = null, ?InputAuth $auth = null)

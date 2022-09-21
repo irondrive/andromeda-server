@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-use Andromeda\Core\Database\{BaseObject, PDODatabase, ObjectDatabase, TableTypes};
+use Andromeda\Core\Database\{BaseObject, Exceptions, PDODatabase, ObjectDatabase, TableTypes};
 
 class TestObject1 extends BaseObject { use TableTypes\TableNoChildren; }
 class TestObject2 extends BaseObject { use TableTypes\TableNoChildren; }
@@ -111,7 +111,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(''); $this->assertSame('', $field->TryGetValue()); $this->assertSame('', $field->GetDBValue());
         $field->InitDBValue('5'); $this->assertSame('5', $field->TryGetValue()); $this->assertSame('5', $field->GetDBValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue(0);
     }
     
@@ -171,7 +171,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($field->isInitialized());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue(0);
     }
     
@@ -237,7 +237,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(1); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1');
     }
     
@@ -318,7 +318,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($field->isInitialized());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1');
     }
     
@@ -387,7 +387,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(1); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1');
     }
     
@@ -468,7 +468,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($field->isInitialized());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1');
     }
     
@@ -535,7 +535,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(0.0); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
         $field->InitDBValue(1.1); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1.1');
     }
     
@@ -614,7 +614,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($field->isInitialized());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->InitDBValue('1');
     }
     
@@ -728,7 +728,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($counter->CheckDelta(0));
         $this->assertFalse($counter->CheckDelta(1, false));
 
-        $this->expectException(CounterOverLimitException::class);
+        $this->expectException(Exceptions\CounterOverLimitException::class);
         $counter->CheckDelta(1);
     }
     
@@ -746,7 +746,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $counter->InitDBValue(0);
         $counter->DeltaValue(20, true); // ignore
         
-        $this->expectException(CounterOverLimitException::class);
+        $this->expectException(Exceptions\CounterOverLimitException::class);
         $counter->InitDBValue(0);
         $counter->DeltaValue(20);
     }
@@ -841,7 +841,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(null, $field->TryGetObject());
         $this->assertSame(null, $field->TryGetObjectID());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
     
@@ -888,7 +888,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, $field->GetObject());
         $this->assertSame($id, $field->GetObjectID());
         
-        $this->expectException(FieldDataTypeMismatch::class);
+        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
         $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
 }

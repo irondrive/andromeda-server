@@ -1,14 +1,14 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\TestUtil; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Testutil; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{BaseApp, Utilities};
 use Andromeda\Core\Errors\BaseExceptions;
+use Andromeda\Core\Exceptions\UnknownActionException;
 use Andromeda\Core\IOFormat\{Input, InputFile, Output, OutputHandler, SafeParams};
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
 /**
  * Utility app for the python test framework
  */
-class TestUtilApp extends BaseApp
+class TestutilApp extends BaseApp
 {
     public function getName() : string { return 'testutil'; }
     
