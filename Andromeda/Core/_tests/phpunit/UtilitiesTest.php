@@ -1,9 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; require_once("init.php");
 
-require_once(ROOT."/Core/Utilities.php"); // Singleton
-
-class MySingleton extends Singleton { }
-
 class TestClass1 { public function __toString() : string { return "TestClass1..."; } }
 class TestClass2 { }
 class TestClass3 { }
@@ -14,43 +10,6 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    {
        $this->assertTrue(Andromeda);
        $this->assertIsString(andromeda_version);
-   }
-   
-   public function testSingletonEmpty() : void
-   {
-       $this->expectException(Exceptions\MissingSingletonException::class);
-       
-       $this->assertInstanceOf(MySingleton::class, MySingleton::GetInstance());
-   }
-
-   /**
-    * @depends testSingletonEmpty
-    */
-   public function testSingletonConstruct() : MySingleton
-   {
-       $singleton = new MySingleton();
-       
-       $this->assertInstanceOf(MySingleton::class, $singleton);
-       
-       return $singleton;
-   }
-   
-   /**
-    * @depends testSingletonConstruct
-    */
-   public function testSingletonFetch(MySingleton $singleton) : void
-   {
-       $this->assertSame($singleton, MySingleton::GetInstance());
-   }
-   
-   /**
-    * @depends testSingletonConstruct
-    */
-   public function testSingletonDuplicate() : void
-   {
-       $this->expectException(Exceptions\DuplicateSingletonException::class);
-       
-       new MySingleton();
    }
    
    public function testJSON() : void
