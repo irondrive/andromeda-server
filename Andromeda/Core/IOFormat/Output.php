@@ -10,6 +10,14 @@ use Andromeda\Core\Errors\BaseExceptions\ClientException;
  */
 class Output
 {
+    public const CODE_SUCCESS               = 200;
+    public const CODE_CLIENT_ERROR          = 400;
+    public const CODE_CLIENT_DENIED         = 403;
+    public const CODE_CLIENT_NOTFOUND       = 404;
+    public const CODE_SERVER_ERROR          = 500;
+    public const CODE_SERVER_UNIMPLEMENTED  = 501;
+    public const CODE_SERVER_UNAVAILABLE    = 503;
+    
     private bool $ok; 
     private int $code;
     private string $message;
@@ -82,7 +90,7 @@ class Output
         else return print_r($this->message, true);
     }
     
-    private function __construct(bool $ok = true, int $code = 200)
+    private function __construct(bool $ok = true, int $code = self::CODE_SUCCESS)
     {
         $this->ok = $ok; 
         $this->code = $code;
@@ -125,7 +133,7 @@ class Output
     public static function ServerException(?array $debug = null) : Output
     {
         // hide the code/message by default
-        $output = new Output(false, 500);
+        $output = new Output(false, self::CODE_SERVER_ERROR);
         $output->message = 'SERVER_ERROR';
         
         if ($debug !== null) 

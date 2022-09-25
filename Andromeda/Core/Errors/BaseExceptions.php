@@ -1,5 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Errors\BaseExceptions; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\IOFormat\Output;
+
 /** The base class for Andromeda exceptions */
 abstract class BaseException extends \Exception 
 {   
@@ -63,7 +65,7 @@ class ClientErrorException extends ClientException
 {
     public function __construct(string $message = "INVALID_REQUEST", ?string $details = null)
     {
-        parent::__construct($message, 400, $details);
+        parent::__construct($message, Output::CODE_CLIENT_ERROR, $details);
     }
 }
 
@@ -72,7 +74,7 @@ class ClientDeniedException extends ClientException
 {
     public function __construct(string $message = "ACCESS_DENIED", ?string $details = null)
     {
-        parent::__construct($message, 403, $details);
+        parent::__construct($message, Output::CODE_CLIENT_DENIED, $details);
     }
 }
 
@@ -81,7 +83,7 @@ class ClientNotFoundException extends ClientException
 {
     public function __construct(string $message = "NOT_FOUND", ?string $details = null)
     {
-        parent::__construct($message, 404, $details);
+        parent::__construct($message, Output::CODE_CLIENT_NOTFOUND, $details);
     }
 }
 
@@ -93,7 +95,7 @@ class NotImplementedException extends ClientException
 {
     public function __construct(string $message = "NOT_IMPLEMENTED", ?string $details = null)
     {
-        parent::__construct($message, 501, $details);
+        parent::__construct($message, Output::CODE_SERVER_UNIMPLEMENTED, $details);
     }
 }
 
@@ -105,7 +107,7 @@ class ServiceUnavailableException extends ClientException
 {
     public function __construct(string $message = "SERVICE_UNAVAILABLE", ?string $details = null)
     {
-        parent::__construct($message, 503, $details);
+        parent::__construct($message, Output::CODE_SERVER_UNAVAILABLE, $details);
     }
 }
 

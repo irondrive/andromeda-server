@@ -16,10 +16,10 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), 200);
+        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
         $this->assertSame($output->GetAppdata(), 'myretval');
         
-        $this->assertSame(array('ok'=>true,'code'=>200,
+        $this->assertSame(array('ok'=>true,'code'=>Output::CODE_SUCCESS,
             'appdata'=>'myretval'), $output->GetAsArray());
     }
     
@@ -28,11 +28,11 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval','myretval2'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), 200);
+        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
         
         $this->assertSame($output->GetAppdata(), array('myretval','myretval2'));
         
-        $this->assertSame(array('ok'=>true,'code'=>200,
+        $this->assertSame(array('ok'=>true,'code'=>Output::CODE_SUCCESS,
             'appdata'=>array('myretval','myretval2')), $output->GetAsArray());
     }
     
@@ -42,10 +42,10 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetCode(), 400);
+        $this->assertSame($output->GetCode(), Output::CODE_CLIENT_ERROR);
         $this->assertSame($output->GetMessage(), 'TEST_EXCEPTION');
         
-        $this->assertSame(array('ok'=>false,'code'=>400,'message'=>'TEST_EXCEPTION',
+        $this->assertSame(array('ok'=>false,'code'=>Output::CODE_CLIENT_ERROR,'message'=>'TEST_EXCEPTION',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
     }
     
@@ -55,10 +55,10 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetCode(), 500);
+        $this->assertSame($output->GetCode(), Output::CODE_SERVER_ERROR);
         $this->assertSame($output->GetMessage(), 'SERVER_ERROR');
         
-        $this->assertSame(array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR',
+        $this->assertSame(array('ok'=>false,'code'=>Output::CODE_SERVER_ERROR,'message'=>'SERVER_ERROR',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
     }
     
@@ -78,25 +78,25 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testParseArrayGood() : void
     {
-        $data = array('ok'=>true,'code'=>200,'appdata'=>'myretval');
+        $data = array('ok'=>true,'code'=>Output::CODE_SUCCESS,'appdata'=>'myretval');
         
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), 200);
+        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
         $this->assertSame($output->GetAppdata(), $data['appdata']);        
         $this->assertSame($data, $output->GetAsArray());
         
-        $data = array('ok'=>true,'code'=>200,'appdata'=>array('mykey',array('key'=>'val')));
+        $data = array('ok'=>true,'code'=>Output::CODE_SUCCESS,'appdata'=>array('mykey',array('key'=>'val')));
         
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), 200);
+        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
         $this->assertSame($output->GetAppdata(), $data['appdata']);
         $this->assertSame($data, $output->GetAsArray());
         
-        $data = array('ok'=>false,'code'=>400,'message'=>'EXCEPTION!');
+        $data = array('ok'=>false,'code'=>Output::CODE_CLIENT_ERROR,'message'=>'EXCEPTION!');
         
         $this->expectException(BaseExceptions\ClientException::class);
         $this->expectExceptionCode($data['code']); 
@@ -116,20 +116,20 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectException(Exceptions\InvalidParseException::class);
         
-        Output::ParseArray(array('ok'=>true,'code'=>200));
+        Output::ParseArray(array('ok'=>true,'code'=>Output::CODE_SUCCESS));
     }
     
     public function testParseArrayBad3() : void
     {
         $this->expectException(Exceptions\InvalidParseException::class);
 
-        Output::ParseArray(array('ok'=>false,'code'=>200,'appdata'=>true));
+        Output::ParseArray(array('ok'=>false,'code'=>Output::CODE_SUCCESS,'appdata'=>true));
     }
     
     public function testParseArrayBad4() : void
     {
         $this->expectException(Exceptions\InvalidParseException::class);
         
-        Output::ParseArray(array('ok'=>true,'code'=>400,'message'=>'exception'));
+        Output::ParseArray(array('ok'=>true,'code'=>Output::CODE_CLIENT_ERROR,'message'=>'exception'));
     }
 }

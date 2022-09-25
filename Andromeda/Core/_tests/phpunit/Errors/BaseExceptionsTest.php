@@ -1,5 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Errors\BaseExceptions; require_once("init.php");
 
+use Andromeda\Core\IOFormat\Output;
+
 class TestClientException extends ClientException
 {
     public function __construct(?string $details = null) 
@@ -47,43 +49,43 @@ class BaseExceptionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($line, $ex->getLine());
         
         $ex = new ClientErrorException();
-        $this->assertSame(400, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_ERROR, $ex->getCode());
         $this->assertSame("INVALID_REQUEST", $ex->getMessage());
         
         $ex = new ClientDeniedException();
-        $this->assertSame(403, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_DENIED, $ex->getCode());
         $this->assertSame("ACCESS_DENIED", $ex->getMessage());
         
         $ex = new ClientNotFoundException();
-        $this->assertSame(404, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_NOTFOUND, $ex->getCode());
         $this->assertSame("NOT_FOUND", $ex->getMessage());
         
         $ex = new NotImplementedException();
-        $this->assertSame(501, $ex->getCode());
+        $this->assertSame(Output::CODE_SERVER_UNIMPLEMENTED, $ex->getCode());
         $this->assertSame("NOT_IMPLEMENTED", $ex->getMessage());
         
         $ex = new ServiceUnavailableException();
-        $this->assertSame(503, $ex->getCode());
+        $this->assertSame(Output::CODE_SERVER_UNAVAILABLE, $ex->getCode());
         $this->assertSame("SERVICE_UNAVAILABLE", $ex->getMessage());
         
         $ex = new ClientErrorException($msg="MY_MESSAGE", $det="test details");
-        $this->assertSame(400, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_ERROR, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
         
         $ex = new ClientDeniedException($msg="MY_MESSAGE", $det="test details");
-        $this->assertSame(403, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_DENIED, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
         
         $ex = new ClientNotFoundException($msg="MY_MESSAGE", $det="test details");
-        $this->assertSame(404, $ex->getCode());
+        $this->assertSame(Output::CODE_CLIENT_NOTFOUND, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
         
         $ex = new NotImplementedException($msg="MY_MESSAGE", $det="test details");
-        $this->assertSame(501, $ex->getCode());
+        $this->assertSame(Output::CODE_SERVER_UNIMPLEMENTED, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
         
         $ex = new ServiceUnavailableException($msg="MY_MESSAGE", $det="test details");
-        $this->assertSame(503, $ex->getCode());
+        $this->assertSame(Output::CODE_SERVER_UNAVAILABLE, $ex->getCode());
         $this->assertSame("$msg: $det", $ex->getMessage());
     }
     
