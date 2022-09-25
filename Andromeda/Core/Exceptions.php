@@ -173,22 +173,6 @@ class FailedScanAppsException extends BaseExceptions\ServerException
     }
 }
 
-/** Exception indicating that a duplicate singleton was constructed */
-class DuplicateSingletonException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DUPLICATE_SINGLETON", $details);
-    }
-}
-
-/** Exception indicating that GetInstance() was called on a singleton that has not been constructed */
-class MissingSingletonException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SINGLETON_NOT_CONSTRUCTED", $details);
-    }
-}
-
 /** Exception indicating that the given version string is invalid */
 class InvalidVersionException extends BaseExceptions\ServerException
 {

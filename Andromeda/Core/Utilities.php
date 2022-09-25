@@ -3,44 +3,6 @@
 if (!function_exists('json_encode')) 
     die("PHP JSON Extension Required".PHP_EOL);
 
-/** 
- * Abstract class implementing a global singleton 
- * 
- * This should be avoided as globals make unit testing difficult
- */
-abstract class Singleton // TODO refactor to get rid of this
-{
-    /** @var array<class-string<static>, static> */
-    private static $instances = array();
-    
-    /**
-     * Get the global instance of the singleton
-     * @throws Exceptions\MissingSingletonException if not yet constructed
-     * @return static
-     */
-    public static function GetInstance() : self
-    {
-        $class = static::class;
-        if (!array_key_exists($class, self::$instances))
-            throw new Exceptions\MissingSingletonException($class);
-        return self::$instances[$class];
-    }
-    
-    /**
-     * Construct the singleton for use. 
-     * 
-     * This can be overriden if it requires more arguments
-     * @throws Exceptions\DuplicateSingletonException if already constructed
-     */
-    public function __construct()
-    {
-        $class = static::class;
-        if (array_key_exists($class, self::$instances))
-            throw new Exceptions\DuplicateSingletonException($class);
-        else self::$instances[$class] = $this;
-    }
-}
-
 /** Abstract with some global static utility functions */
 abstract class Utilities
 {
