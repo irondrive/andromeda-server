@@ -23,7 +23,9 @@ class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
             "\t param% gives the file path as a direct file input (optionally with a new name)",
             "\t param- will attach the stdin stream as a direct file input",
             null,
-            "batch usage:   php index.php batch myfile.txt",
+            "batch usage 1: php index.php batch@ myfile.txt",
+            "batch usage 2: php index.php batch \"app1 action1 [params+]\" \"app2 action2 [params+]\"...", 
+            null,
             "get version:   php index.php version",
             "get actions:   php index.php core usage"
         ));
@@ -44,10 +46,11 @@ class UnknownBatchFileException extends BaseExceptions\ClientErrorException
 }
 
 /** Exception indicating that the given batch file's syntax is not valid */
-class BatchFileParseException extends BaseExceptions\ClientErrorException
+class BatchParseException extends BaseExceptions\ClientErrorException
 {
-    public function __construct(?string $details = null) {
-        parent::__construct("BATCH_FILE_PARSE_ERROR", $details);
+    public function __construct(?\InvalidArgumentException $e = null) {
+        parent::__construct("BATCH_PARSE_ERROR");
+        if ($e) $this->AppendException($e);
     }
 }
 

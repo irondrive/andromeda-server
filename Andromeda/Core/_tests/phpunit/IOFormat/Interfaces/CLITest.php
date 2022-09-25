@@ -2,7 +2,7 @@
 
 use Andromeda\Core\{Config, Utilities};
 use Andromeda\Core\IOFormat\Exceptions\SafeParamInvalidException;
-use Andromeda\Core\IOFormat\{InputPath, InputStream, Output, OutputHandler};
+use Andromeda\Core\IOFormat\{/*phpstan*/Input, InputPath, InputStream, Output, OutputHandler};
 
 class CLITest extends \PHPUnit\Framework\TestCase
 {
@@ -151,7 +151,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $this->assertSame('test.php',$cli->GetDBConfigFile());
         $this->assertTrue($cli->isDryRun());
     }
-    
+
     public function testBasicInputs() : void
     {
         $cli = new CLI(); $stdin = $this->getStream();
@@ -276,6 +276,53 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $this->assertSame($data, $myfile1->GetData());
     }
     
+    private const batchlines = array(
+        "app1 action1 --my1 5 --my2",
+        "app2 myact2 --arg3 test",
+        "app3 myact3"
+    );
+    
+    public function testBatchInput() : void
+    {
+        $cli = new CLI(); $stdin = $this->getStream();
+
+        $cmdline = array('','--debug','sensitive','batch',...self::batchlines);
+        $inputs = $cli->LoadCLIInputs($cmdline, array(),$stdin);
+        
+        $this->verifyBatch($inputs);
+    }
+    
+    public function testBatchFile() : void
+    {
+        $cli = new CLI(); $stdin = $this->getStream();
+
+        $fname = $this->getTmpFile(implode(PHP_EOL,self::batchlines));
+        $inputs = $cli->LoadCLIInputs(array('','--debug','sensitive','batch@',$fname), array(),$stdin);
+
+        $this->verifyBatch($inputs);
+    }
+    
+    /** @param array<Input> $inputs */
+    protected function verifyBatch(array $inputs) : void
+    {
+        $this->assertCount(count(self::batchlines),$inputs);
+        
+        $i0 = $inputs[0]; $p0 = $i0->GetParams();
+        $this->assertSame("app1",$i0->GetApp());
+        $this->assertSame("action1",$i0->GetAction());
+        $this->assertSame(5,$p0->GetParam('my1')->GetInt());
+        $this->assertTrue($p0->getParam('my2')->GetBool());
+        
+        $i1 = $inputs[1]; $p1 = $i1->GetParams();
+        $this->assertSame("app2",$i1->GetApp());
+        $this->assertSame("myact2",$i1->GetAction());
+        $this->assertSame("test",$p1->GetParam('arg3')->GetAlphanum());
+        
+        $i2 = $inputs[2]; $p2 = $i2->GetParams();
+        $this->assertSame("app3",$i2->GetApp());
+        $this->assertSame("myact3",$i2->GetAction());
+    }
+
     /** @param ?array<mixed> $arrval */
     protected function testOutput(CLI $iface, int $mode, ?string $strval, ?array $arrval, string $want) : void
     {
@@ -303,6 +350,4 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $iface->RegisterOutputHandler(new OutputHandler(function(){ return 0; },function(Output $output){ }));
         $this->testOutput($iface, CLI::OUTPUT_JSON, null, $arr, CLI::formatSize(strlen($str)).$str);
     }
-    
-    // TODO test batching (after improvement task)
 }
