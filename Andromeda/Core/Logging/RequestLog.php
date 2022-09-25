@@ -127,7 +127,7 @@ class RequestLog extends BaseLog
     public static function GetPropUsage(bool $join = true) : string 
     { 
         return "[--mintime float] [--maxtime float] [--addr utf8] [--agent utf8] ".
-               "[--errcode utf8] [--errtext utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
+               "[--errcode ?utf8] [--errtext ?utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
     }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
@@ -140,8 +140,8 @@ class RequestLog extends BaseLog
         if ($params->HasParam('addr')) $criteria[] = $q->Equals("addr", $params->GetParam('addr')->GetUTF8String());
         if ($params->HasParam('agent')) $criteria[] = $q->Like("agent", $params->GetParam('agent')->GetUTF8String());
         
-        if ($params->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $params->GetParam('errcode')->GetUTF8String());
-        if ($params->HasParam('errtext')) $criteria[] = $q->Equals("errtext", $params->GetParam('errtext')->GetUTF8String());
+        if ($params->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $params->GetParam('errcode')->GetNullUTF8String());
+        if ($params->HasParam('errtext')) $criteria[] = $q->Equals("errtext", $params->GetParam('errtext')->GetNullUTF8String());
         
         $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
 
