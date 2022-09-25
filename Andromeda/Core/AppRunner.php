@@ -130,7 +130,7 @@ class AppRunner extends BaseRunner
         $db = $this->apipack->GetDatabase();
         
         $actionlog = null; if ($this->requestlog !== null 
-                            && $app->getLogClass() !== null)
+                            && $app->getLogClass() === null)
         {
             $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
         }
