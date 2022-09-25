@@ -7,7 +7,7 @@ class VersionInfo
     
     private int $major;
     private int $minor;
-    private int $patch;
+    private ?int $patch;
     private ?string $extra;
     
     public function __construct(string $version)
@@ -20,16 +20,17 @@ class VersionInfo
         $version = explode('.',$version[0],3);
         
         foreach ($version as $v) if (!is_numeric($v)) 
-            throw new Exceptions\InvalidVersionException();
+            throw new Exceptions\InvalidVersionException('numeric digit');
 
         if (!isset($version[0]) || !isset($version[1]))
-            throw new Exceptions\InvalidVersionException();
+            throw new Exceptions\InvalidVersionException('empty major/minor');
         
         $this->major = (int)$version[0];
         $this->minor = (int)$version[1];
         
         if (isset($version[2])) 
             $this->patch = (int)$version[2];
+        else $this->patch = null;
     }
     
     public function __toString() : string { return $this->version; }
@@ -39,7 +40,7 @@ class VersionInfo
     /** Returns the minor version number */
     public function getMinor() : int { return $this->minor; }
     /** Returns the patch version number */
-    public function getPatch() : int { return $this->patch; }
+    public function getPatch() : ?int { return $this->patch; }
     /** Returns the extra version string if set */
     public function getExtra() : ?string { return $this->extra; }
     

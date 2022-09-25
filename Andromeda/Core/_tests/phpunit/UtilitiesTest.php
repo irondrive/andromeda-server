@@ -53,19 +53,6 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        new MySingleton();
    }
    
-   public function testVersionInfo() : void
-   {
-       $version = new VersionInfo($v="3.2.1-alpha");
-       
-       $this->assertSame($version->getMajor(), 3);
-       $this->assertSame($version->getMinor(), 2);
-       $this->assertSame($version->getPatch(), 1);
-       $this->assertSame($version->getExtra(), 'alpha');
-       $this->assertSame((string)$version, "3.2.1-alpha");
-       $this->assertSame($version->getCompatVer(), '3.2');
-       $this->assertSame(VersionInfo::toCompatVer($v), '3.2');
-   }
-   
    public function testJSON() : void
    {
        $this->assertSame('{"test":55}',Utilities::JSONEncode(array('test'=>55)));
