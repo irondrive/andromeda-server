@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\IOFormat\{Input, SafeParams};
-use Andromeda\Core\Database\ObjectDatabase;
 
 /** 
  * Describes an installer for an app that needs database installation and has upgrade
@@ -59,7 +58,8 @@ abstract class InstallerApp
     protected InstallRunner $runner;
     
     private string $oldVersion;
-    private int $install_state;
+    
+    private int $install_state = self::NEED_NOTHING;
     
     /** The app needs installing */
     public const NEED_INSTALL = 0;
@@ -80,7 +80,6 @@ abstract class InstallerApp
         {
             $class = $this->getConfigClass();
             $class::GetInstance($runner->RequireDatabase());
-            $this->install_state = self::NEED_NOTHING;
         }
         catch (Exceptions\InstallRequiredException $e) { 
             $this->install_state = self::NEED_INSTALL; }
@@ -88,13 +87,7 @@ abstract class InstallerApp
             $this->oldVersion = $e->getOldVersion();
             $this->install_state = self::NEED_UPGRADE; }
     }
-    
-    /** @see InstallRunner::RequireDatabase() */
-    public function RequireDatabase() : ObjectDatabase 
-    { 
-        return $this->runner->RequireDatabase(); 
-    }
-    
+
     /** Returns the install state enum for this app */
     public function getInstallState() : int { return $this->install_state; }
 

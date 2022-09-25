@@ -126,7 +126,7 @@ class MissingHostsException extends MailSendException
 }
 
 /** Exception indicating PHPMailer sending returned false */
-class PHPMailerException1 extends MailSendException
+class PHPMailerFalseException extends MailSendException
 {
     public function __construct(string $details) {
         parent::__construct("MAIL_SEND_FAILURE", $details);
@@ -134,7 +134,7 @@ class PHPMailerException1 extends MailSendException
 }
 
 /** Exception thrown by the PHPMailer library when sending */
-class PHPMailerException2 extends MailSendException
+class PHPMailThrowException extends MailSendException
 {
     public function __construct(\PHPMailer\PHPMailer\Exception $e) {
         parent::__construct(); $this->AppendException($e);

@@ -268,10 +268,10 @@ class Emailer extends BaseObject
         try 
         { 
             if (!$mailer->send())
-                throw new Exceptions\PHPMailerException1($mailer->ErrorInfo);
+                throw new Exceptions\PHPMailerFalseException($mailer->ErrorInfo);
         }
         catch (PHPMailer\Exception $e) { 
-            throw new Exceptions\PHPMailerException2($e); }
+            throw new Exceptions\PHPMailThrowException($e); }
         
         $mailer->clearAddresses(); 
         $mailer->clearAttachments();
