@@ -143,11 +143,11 @@ class ForeignKeyException extends ConcurrencyException
     }
 }
 
-/** Exception indicating the given data is the wrong type for this field */
-class FieldDataTypeMismatch extends BaseExceptions\ServerException
+/** Exception that the DB provided null for a non-null field */
+class FieldDataNullException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("FIELD_DATA_TYPE_MISMATCH", $details);
+        parent::__construct("FULL_DATA_NULL", $details);
     }
 }
 

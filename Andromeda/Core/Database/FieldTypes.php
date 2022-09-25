@@ -2,6 +2,7 @@
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{BaseObject, Exceptions, ObjectDatabase};
+use Andromeda\Core\Database\Exceptions\FieldDataNullException;
 
 /** Base class representing a database column ("field") */
 abstract class BaseField
@@ -92,22 +93,6 @@ abstract class BaseField
             $this->database->notifyModified($this->parent);
         }
     }
-    
-    /** True if given DB values are always strings */
-    protected function isDBValueString() : bool
-    {
-        return $this->database->GetInternal()->DataAlwaysStrings();
-    }
-    
-    /** 
-     * Gets a type mismatch exception for the given value 
-     * @param scalar|object $value
-     */
-    protected function GetTypeMismatchException($value) : Exceptions\FieldDataTypeMismatch
-    {
-        return new Exceptions\FieldDataTypeMismatch($this->name.' '.
-            (is_object($value)?get_class($value):gettype($value)));
-    }
 }
 
 /** A common Uninitialize function for scalar types */
@@ -144,9 +129,9 @@ class NullStringType extends BaseField
 
     public function InitDBValue($value) : self
     {
-        if ($value !== null && !is_string($value))
-            throw $this->GetTypeMismatchException($value);
-
+        if ($value !== null)
+            $value = (string)$value;
+        
         $this->tempvalue = $value;
         $this->realvalue = $value;
         $this->delta = 0;
@@ -213,8 +198,9 @@ class StringType extends BaseField
 
     public function InitDBValue($value) : self
     {
-        if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value ?? "null");
+        if ($value === null) 
+            throw new FieldDataNullException($this->name);
+        else $value = (string)$value;
         
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -286,11 +272,7 @@ class NullBoolType extends BaseField
     public function InitDBValue($value) : self
     {
         if ($value !== null)
-        {
-            if (!is_int($value) && !$this->isDBValueString())
-                throw $this->GetTypeMismatchException($value);
-            else $value = (bool)$value; // always cast
-        }
+            $value = (bool)$value;
 
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -362,11 +344,10 @@ class BoolType extends BaseField
 
     public function InitDBValue($value) : self
     {
-        $isStr = $this->isDBValueString();
-        if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value ?? "null");
-        else $value = (bool)$value; // always cast
-    
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
+        else $value = (bool)$value;
+
         $this->tempvalue = $value;
         $this->realvalue = $value;
         $this->delta = 0;
@@ -437,12 +418,7 @@ class NullIntType extends BaseField
     public function InitDBValue($value) : self
     {
         if ($value !== null)
-        {
-            if ($this->isDBValueString())
-                $value = (int)$value;
-            else if (!is_int($value))
-                throw $this->GetTypeMismatchException($value);
-        }
+            $value = (int)$value;
         
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -510,9 +486,8 @@ class IntType extends BaseField
 
     public function InitDBValue($value) : self
     {
-        $isStr = $this->isDBValueString();
-        if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value ?? "null");
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
         else $value = (int)$value;
 
         $this->tempvalue = $value;
@@ -585,12 +560,7 @@ class NullFloatType extends BaseField
     public function InitDBValue($value) : self
     {
         if ($value !== null)
-        {
-            if ($this->isDBValueString())
-                $value = (float)$value;
-            else if (!is_float($value))
-                throw $this->GetTypeMismatchException($value);
-        }
+            $value = (float)$value;
         
         $this->tempvalue = $value;
         $this->realvalue = $value;
@@ -658,11 +628,10 @@ class FloatType extends BaseField
 
     public function InitDBValue($value) : self
     {
-        $isStr = $this->isDBValueString();
-        if ($value === null || (!$isStr && !is_float($value)))
-            throw $this->GetTypeMismatchException($value ?? "null");
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
         else $value = (float)$value;
-    
+
         $this->tempvalue = $value;
         $this->realvalue = $value;
         $this->delta = 0;
@@ -749,11 +718,10 @@ class Counter extends BaseField
 
     public function InitDBValue($value) : self
     {
-        $isStr = $this->isDBValueString();
-        if ($value === null || (!$isStr && !is_int($value)))
-            throw $this->GetTypeMismatchException($value ?? "null");
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
         else $value = (int)$value;
-        
+    
         $this->value = $value;
         $this->delta = 0;
         
@@ -826,8 +794,8 @@ class NullJsonArray extends BaseField
     /** @return $this */
     public function InitDBValue($value) : self
     {
-        if ($value !== null && !is_string($value))
-            throw $this->GetTypeMismatchException($value);
+        if ($value !== null)
+            $value = (string)$value;
         
         if ($value !== null && $value !== "")
             $this->value = Utilities::JSONDecode($value);
@@ -886,9 +854,10 @@ class JsonArray extends BaseField
     /** @return $this */
     public function InitDBValue($value) : self
     {
-        if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value ?? "null");
-        
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
+        else $value = (string)$value;
+
         if ($value !== "")
             $this->value = Utilities::JSONDecode($value);
         
@@ -960,8 +929,8 @@ class NullObjectRefT extends BaseField
     /** @return $this */
     public function InitDBValue($value) : self
     {
-        if ($value !== null && !is_string($value))
-            throw $this->GetTypeMismatchException($value);
+        if ($value !== null)
+            $value = (string)$value;
         
         $this->objId = $value;
         $this->delta = 0;
@@ -1013,10 +982,7 @@ class NullObjectRefT extends BaseField
         }
         
         if ($value->ID() === $this->objId) return false;
-        
-        if (!($value instanceof $this->class))
-            throw $this->GetTypeMismatchException($value);
-            
+
         $this->objId = $value->ID();
         $this->delta++;
         return true;
@@ -1052,9 +1018,10 @@ class ObjectRefT extends BaseField
     /** @return $this */
     public function InitDBValue($value) : self
     {
-        if ($value === null || !is_string($value))
-            throw $this->GetTypeMismatchException($value ?? "null");
-        
+        if ($value === null)
+            throw new FieldDataNullException($this->name);
+        else $value = (string)$value;
+
         $this->objId = $value;
         $this->delta = 0;
         
@@ -1096,10 +1063,7 @@ class ObjectRefT extends BaseField
     public function SetObject(BaseObject $value) : bool
     {
         if (isset($this->objId) && $value->ID() === $this->objId) return false;
-        
-        if (!($value instanceof $this->class))
-            throw $this->GetTypeMismatchException($value);
-        
+
         $this->objId = $value->ID();
         $this->delta++;
         return true;
