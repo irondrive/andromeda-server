@@ -402,7 +402,7 @@ class PDODatabase
     }
     
     /**
-     * Sends an SQL read/write query down to the database
+     * Sends an SQL read+write query down to the database
      * @param string $sql the SQL query string, with placeholder data values
      * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
      * @return array<array<string, ?scalar>> an associative array of the query results - results MAY be all strings!

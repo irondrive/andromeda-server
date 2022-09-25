@@ -50,7 +50,6 @@ abstract class BaseException extends \Exception
  */
 class ClientException extends BaseException 
 { 
-    /** Base class for generally invalid client requests (HTTP 400) */
     public function __construct(string $message, int $code, ?string $details = null)
     {
         if ($details) $message .= ": $details";
@@ -117,7 +116,6 @@ class ServiceUnavailableException extends ClientException
  */
 class ServerException extends BaseException
 {
-    /** Base class for generally invalid client requests (HTTP 400) */
     public function __construct(string $message, ?string $details = null, int $code = 0)
     {
         if ($details) $message .= ": $details";
