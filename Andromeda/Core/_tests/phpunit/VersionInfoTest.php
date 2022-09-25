@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; require_once("init.php");
 
-use Andromeda\Core\Exceptions\InvalidVersionException;
-
 class VersionInfoTest extends \PHPUnit\Framework\TestCase
 {
     public function testBasic() : void
