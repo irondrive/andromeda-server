@@ -57,19 +57,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($field->SetValue('test'));
         $this->assertTrue($field->isModified());
     }
-    
-    protected function getParentWithDbStrings(bool $dbStrings) : BaseObject
-    {
-        $database = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($database);
-        $parent = $this->createMock(BaseObject::class);
 
-        $parent->method('GetDatabase')->willReturn($objdb);
-        $database->method('DataAlwaysStrings')->willReturn($dbStrings);
-        
-        return $parent;
-    }
-    
     public function testNullStringValue() : void
     {
         $parent = $this->createMock(BaseObject::class);
@@ -111,8 +99,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(''); $this->assertSame('', $field->TryGetValue()); $this->assertSame('', $field->GetDBValue());
         $field->InitDBValue('5'); $this->assertSame('5', $field->TryGetValue()); $this->assertSame('5', $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue(0);
+        $field->InitDBValue(0); $this->assertSame('0', $field->TryGetValue()); // bad type?
     }
     
     public function testNullStringDefault() : void
@@ -171,8 +158,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $this->assertTrue($field->isInitialized());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue(0);
+        $field->InitDBValue(0); $this->assertSame('0', $field->GetValue()); // bad type?
     }
     
     public function testStringDefault() : void
@@ -217,28 +203,17 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testNullBoolDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new NullBoolType('myfield'))->SetParent($parent);
-        
-        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
-        $field->InitDBValue(''); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('0'); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('1'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
-        $field->InitDBValue('99'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
-    }
-    
-    public function testNullBoolDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new NullBoolType('myfield'))->SetParent($parent);
+        $field = new NullBoolType('myfield');
         
         $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
         $field->InitDBValue(0); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
         $field->InitDBValue(1); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1');
+        $field->InitDBValue(''); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(false, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(true, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
     }
     
     public function testNullBoolDefault() : void
@@ -288,25 +263,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testBoolDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new BoolType('myfield'))->SetParent($parent);
-        
-        $field->SetValue(true,true);
-        $this->assertTrue($field->isInitialized());
-        $this->assertFalse($field->isInitialized(false));
-        
-        $field->InitDBValue(''); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('0'); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('1'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
-        $field->InitDBValue('99'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
-        
-        $this->assertTrue($field->isInitialized());
-    }
-    
-    public function testBoolDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new BoolType('myfield'))->SetParent($parent);
+        $field = new BoolType('myfield');
         
         $field->SetValue(false,true);
         $this->assertTrue($field->isInitialized());
@@ -316,10 +273,12 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(1); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
         
-        $this->assertTrue($field->isInitialized());
+        $field->InitDBValue(''); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(false, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(true, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1');
+        $this->assertTrue($field->isInitialized());
     }
     
     public function testBoolDefault() : void
@@ -364,31 +323,20 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(null, $field->GetDBValue());
         $this->assertSame(0, $field->GetDelta());
     }
-    
+
     public function testNullIntDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new NullIntType('myfield'))->SetParent($parent);
-        
-        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
-        $field->InitDBValue(''); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('0'); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('1'); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
-        $field->InitDBValue('99'); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
-    }
-    
-    public function testNullIntDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new NullIntType('myfield'))->SetParent($parent);
+        $field = new NullIntType('myfield');
         
         $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
         $field->InitDBValue(0); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
         $field->InitDBValue(1); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1');
+        $field->InitDBValue(''); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(0, $field->TryGetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(1, $field->TryGetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(99, $field->TryGetValue()); $this->assertSame(99, $field->GetDBValue());
     }
     
     public function testNullIntDefault() : void
@@ -435,28 +383,10 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(0, $field->GetDBValue());
         $this->assertSame(0, $field->GetDelta());
     }
-    
+
     public function testIntDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new IntType('myfield'))->SetParent($parent);
-        
-        $field->SetValue(1,true);
-        $this->assertTrue($field->isInitialized());
-        $this->assertFalse($field->isInitialized(false));
-        
-        $field->InitDBValue(''); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('0'); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
-        $field->InitDBValue('1'); $this->assertSame(1, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
-        $field->InitDBValue('99'); $this->assertSame(99, $field->GetValue()); $this->assertSame(99, $field->GetDBValue());
-        
-        $this->assertTrue($field->isInitialized());
-    }
-    
-    public function testIntDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new IntType('myfield'))->SetParent($parent);
+        $field = new IntType('myfield');
         
         $field->SetValue(0,true);
         $this->assertTrue($field->isInitialized());
@@ -466,10 +396,13 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(1); $this->assertSame(1, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
         $field->InitDBValue(99); $this->assertSame(99, $field->GetValue()); $this->assertSame(99, $field->GetDBValue());
         
-        $this->assertTrue($field->isInitialized());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1');
+        $field->InitDBValue(''); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('0'); $this->assertSame(0, $field->GetValue()); $this->assertSame(0, $field->GetDBValue());
+        $field->InitDBValue('1'); $this->assertSame(1, $field->GetValue()); $this->assertSame(1, $field->GetDBValue());
+        $field->InitDBValue('99'); $this->assertSame(99, $field->GetValue()); $this->assertSame(99, $field->GetDBValue());
+        
+        $this->assertTrue($field->isInitialized());
     }
     
     public function testIntDefault() : void
@@ -517,26 +450,15 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testNullFloatDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new NullFloatType('myfield'))->SetParent($parent);
-        
-        $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
-        $field->InitDBValue(''); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
-        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
-        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
-    }
-    
-    public function testNullFloatDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new NullFloatType('myfield'))->SetParent($parent);
+        $field = new NullFloatType('myfield');
         
         $field->InitDBValue(null); $this->assertNull($field->TryGetValue()); $this->assertNull($field->GetDBValue());
         $field->InitDBValue(0.0); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
         $field->InitDBValue(1.1); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1.1');
+        $field->InitDBValue(''); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->TryGetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->TryGetValue()); $this->assertSame(1.1, $field->GetDBValue());
     }
     
     public function testNullFloatDefault() : void
@@ -586,24 +508,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testFloatDBValue() : void
     {
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new FloatType('myfield'))->SetParent($parent);
-        
-        $field->SetValue(1.1,true);
-        $this->assertTrue($field->isInitialized());
-        $this->assertFalse($field->isInitialized(false));
-        
-        $field->InitDBValue(''); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
-        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
-        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->GetValue()); $this->assertSame(1.1, $field->GetDBValue());
-        
-        $this->assertTrue($field->isInitialized());
-    }
-    
-    public function testFloatDBValueStrict() : void
-    {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new FloatType('myfield'))->SetParent($parent);
+        $field = new FloatType('myfield');
         
         $field->SetValue(0.0,true);
         $this->assertTrue($field->isInitialized());
@@ -612,10 +517,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->InitDBValue(0.0); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
         $field->InitDBValue(1.1); $this->assertSame(1.1, $field->GetValue()); $this->assertSame(1.1, $field->GetDBValue());
         
-        $this->assertTrue($field->isInitialized());
+        $field->InitDBValue(''); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('0.0'); $this->assertSame(0.0, $field->GetValue()); $this->assertSame(0.0, $field->GetDBValue());
+        $field->InitDBValue('1.1'); $this->assertSame(1.1, $field->GetValue()); $this->assertSame(1.1, $field->GetDBValue());
         
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->InitDBValue('1');
+        $this->assertTrue($field->isInitialized());
     }
     
     public function testFloatDefault() : void
@@ -659,8 +565,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
 
     public function testCounter() : void
     {
-        $parent = $this->getParentWithDbStrings(false);
-        $field = (new Counter('myfield'))->SetParent($parent);
+        $field = new Counter('myfield');
         
         $this->assertFalse($field->isModified());
         
@@ -700,9 +605,6 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(0, $field->GetDBValue());
         $this->assertSame(50, $field->GetValue());
 
-        $parent = $this->getParentWithDbStrings(true);
-        $field = (new Counter('myfield'))->SetParent($parent);
-        
         $field->InitDBValue(''); $this->assertSame(0, $field->GetValue());
         $field->InitDBValue('0'); $this->assertSame(0, $field->GetValue());
         $field->InitDBValue('1'); $this->assertSame(1, $field->GetValue());
@@ -840,9 +742,6 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetObject(null);
         $this->assertSame(null, $field->TryGetObject());
         $this->assertSame(null, $field->TryGetObjectID());
-        
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
     
     public function testObjectInit() : void
@@ -887,8 +786,5 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetObject($obj);
         $this->assertSame($obj, $field->GetObject());
         $this->assertSame($id, $field->GetObjectID());
-        
-        $this->expectException(Exceptions\FieldDataTypeMismatch::class);
-        $field->SetObject($this->createMock(TestObject2::class)); /** @phpstan-ignore-line */
     }
 }
