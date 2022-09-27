@@ -1,10 +1,10 @@
 
-[Overview](#Overview)
-[General Usage](#General Usage)
-[Installation](#Installation)
-[License](#License)
+[Overview](#overview)
+[General Usage](#general-usage)
+[Installation](#installation)
+[License](#license)
 
-#Overview
+# Overview
 
 Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server.  It is a pure-PHP REST-ish transactional API divided into a reusable core framework and component "apps" which implement the actual API calls.
 
@@ -18,7 +18,7 @@ In pursuit of being a cloud storage solution, Andromeda principally includes the
 
 As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  See the [wiki](https://github.com/irondrive/andromeda-server/wiki) for more app-specific information.
 
-#General Usage
+# General Usage
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
@@ -68,7 +68,7 @@ Certain parameters (password, etc.) are better when not direclty on the command 
 ### File Inputs
 Certain app actions require that they are passed a file stream as input.  With HTTP they should be a regular `multipart/form-data` file upload. See PHP's $_FILES.  With CLI they can be specified as a path with `--myfile% path` or they can be read directly from STDIN (one file only) with `--myfile-`.  With `%` the inputted file's name can optionally be changed as well, e.g. `--myfile% path newname`.  App actions that require file input will specify `%` or `-` in their usage text.
 
-#Installation
+# Installation
 
 For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
 
@@ -147,6 +147,6 @@ When the code being run does not match the version stored in an app's database, 
 The same rules about public web access for install also apply to upgrade (see above).
 
 
-#License
+# License
 
 Andromeda including all source code, documentation, and APIs are copyrighted by the author.  Use of any code is licensed under the SSPL (Server Side Public License) Version 1.  This license also applies to the external API, and therefore any other software that substantially implements the server API, but not to external consumers of it (client software).  Use of any documentation (wiki, readme, etc.) is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 (CC BY-NC-SA 3.0) license.  Alternative commercial licenses for either can be obtained separately.  Contributors agree to the terms in CONTRIBUTING.md for all contributions.  All 3rdparty code (located in `vendor/` folders) retains its original licenses - see `composer licenses`.  All must be copyleft-permissive - no GPL or derivatives.
