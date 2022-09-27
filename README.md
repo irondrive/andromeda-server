@@ -1,4 +1,10 @@
-# Overview
+
+[Overview](#Overview)
+[General Usage](#General Usage)
+[Installation](#Installation)
+[License](#License)
+
+#Overview
 
 Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server.  It is a pure-PHP REST-ish transactional API divided into a reusable core framework and component "apps" which implement the actual API calls.
 
@@ -12,7 +18,7 @@ In pursuit of being a cloud storage solution, Andromeda principally includes the
 
 As the framework itself is app-agnostic, the commands and documentation are generally written in an app-agnostic way (not specific to accounts or files).  See the [wiki](https://github.com/irondrive/andromeda-server/wiki) for more app-specific information.
 
-# General Usage
+#General Usage
 
 Andromeda and *all* its API calls can be run either through an HTTP webserver, or via the command line interface (CLI).  The API is thus a bit of a REST-ish hybrid.  All calls run single "actions" and are run as transactions.  Any errors encountered will result in a rolling back of the entire request. 
 
@@ -62,14 +68,14 @@ Certain parameters (password, etc.) are better when not direclty on the command 
 ### File Inputs
 Certain app actions require that they are passed a file stream as input.  With HTTP they should be a regular `multipart/form-data` file upload. See PHP's $_FILES.  With CLI they can be specified as a path with `--myfile% path` or they can be read directly from STDIN (one file only) with `--myfile-`.  With `%` the inputted file's name can optionally be changed as well, e.g. `--myfile% path newname`.  App actions that require file input will specify `%` or `-` in their usage text.
 
-# Installation
+#Installation
 
 For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
 
 ### Basic Requirements
 Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
-Andromeda does not use any OS or webserver-specific functions and works on Windows and Linux, Apache and Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
+Andromeda does not use any OS or webserver-specific functions and works on Windows, Linux, BSD, Apache, Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
 
 It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible [may create vulnerabilities](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included to restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
 
@@ -141,6 +147,6 @@ When the code being run does not match the version stored in an app's database, 
 The same rules about public web access for install also apply to upgrade (see above).
 
 
-# License
+#License
 
 Andromeda including all source code, documentation, and APIs are copyrighted by the author.  Use of any code is licensed under the SSPL (Server Side Public License) Version 1.  This license also applies to the external API, and therefore any other software that substantially implements the server API, but not to external consumers of it (client software).  Use of any documentation (wiki, readme, etc.) is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 (CC BY-NC-SA 3.0) license.  Alternative commercial licenses for either can be obtained separately.  Contributors agree to the terms in CONTRIBUTING.md for all contributions.  All 3rdparty code (located in `vendor/` folders) retains its original licenses - see `composer licenses`.  All must be copyleft-permissive - no GPL or derivatives.
