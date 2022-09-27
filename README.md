@@ -1,8 +1,8 @@
 
-[Overview](#overview)
-[General Usage](#general-usage)
-[Installation](#installation)
-[License](#license)
+* [Overview](#overview)
+* [General Usage](#general-usage)
+* [Installation](#installation)
+* [License](#license)
 
 # Overview
 
