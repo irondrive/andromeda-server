@@ -1,3 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
-vendor/bin/phpstan analyse -c tools/conf/phpstan.neon "$@"
+# supported PHP versions
+VERS="70400 80000 80100"
+
+for phpv in $VERS; do
+   echo analyzing for PHP version $phpv
+   conf=tools/conf/phpstan.$phpv.neon
+   cp tools/conf/phpstan.neon $conf
+   echo "    phpVersion: $phpv" >> $conf
+   vendor/bin/phpstan analyse -c $conf "$@"
+   ret=$?; if [ $ret != 0 ]; then exit $ret; fi
+done
