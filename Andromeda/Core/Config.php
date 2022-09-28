@@ -166,7 +166,7 @@ class Config extends BaseConfig
     {
         $valid = function(string $app)
         {
-            if (in_array($app,array('.','..'))) return false;
+            if (in_array($app,array('.','..'),true)) return false;
             return is_file(ROOT."/Apps/$app/$app"."App.php");
         };
         
@@ -186,7 +186,7 @@ class Config extends BaseConfig
         $apprunner->LoadApp($app);
         
         $capps = $this->GetApps();        
-        if (!in_array($app, $capps)) $capps[] = $app;
+        if (!in_array($app, $capps, true)) $capps[] = $app;
         $this->apps->SetArray($capps); return $this;
     }
     
@@ -199,7 +199,7 @@ class Config extends BaseConfig
         $apprunner->UnloadApp($app);
         
         $capps = $this->GetApps();
-        if (($key = array_search($app, $capps)) !== false) unset($capps[$key]);
+        if (($key = array_search($app, $capps, true)) !== false) unset($capps[$key]);
         $this->apps->SetArray(array_values($capps)); return $this;
     }
     
