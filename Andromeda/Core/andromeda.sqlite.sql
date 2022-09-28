@@ -64,7 +64,9 @@ CREATE TABLE `a2obj_core_logging_actionlog` (
 ,  `requestlog` char(20) NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
-,  `inputs` text DEFAULT NULL
+,  `params` text DEFAULT NULL
+,  `files` text DEFAULT NULL
+,  `authuser` varchar(255) DEFAULT NULL
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_core_logging_actionlog_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE CASCADE

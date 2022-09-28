@@ -2,7 +2,7 @@
 
 use Andromeda\Core\Utilities;
 
-class PretendInterface extends IOInterface
+class DummyInterface extends IOInterface
 {
     /** @var non-empty-array<Input> */
     private array $myinputs;
@@ -25,7 +25,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
     public function testLoadInputs() : void
     {
         $inputs = array($this->createMock(Input::class));
-        $iface = new PretendInterface($inputs);
+        $iface = new DummyInterface($inputs);
         
         $this->assertSame($inputs, $iface->LoadInputs());
         $this->assertSame($inputs, $iface->LoadInputs());
@@ -38,7 +38,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $inputs = array(
             $this->createMock(Input::class), 
             $this->createMock(Input::class));
-        $iface = new PretendInterface($inputs);
+        $iface = new DummyInterface($inputs);
         
         $this->expectException(Exceptions\BatchNotAllowedException::class);
         $iface->DisallowBatch();
@@ -47,7 +47,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
     public function testOutputMode() : void
     {
         $inputs = array($this->createMock(Input::class));
-        $iface = new PretendInterface($inputs);
+        $iface = new DummyInterface($inputs);
         
         foreach (IOInterface::OUTPUT_TYPES as $mode)
             $this->assertSame($mode,$iface->SetOutputMode($mode)->GetOutputMode());
@@ -82,7 +82,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
 
     protected function testUserOutput(int $numfuncs, ?int $nullIdx, ?int $zeroIdx, bool $multi) : void
     {
-        $iface = new PretendInterface(array($this->createMock(Input::class)));
+        $iface = new DummyInterface(array($this->createMock(Input::class)));
         $output = $this->createStub(Output::class);
         
         $expect = ""; for ($i = 0; $i < $numfuncs; $i++)

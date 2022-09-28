@@ -25,18 +25,26 @@ class Input
     /** @see Input::GetAuth() */
     private ?InputAuth $auth;   
     
-    /** The basic authentication to be used */
-    public function GetAuth() : ?InputAuth { return $this->auth; }
+    /** The basic authentication to be used, always logged */
+    public function GetAuth() : ?InputAuth 
+    {
+        if ($this->auth !== null && $this->logger !== null)
+            $this->logger->SetAuthUser($this->auth->GetUsername());
+
+        return $this->auth; 
+    }
     
+    private ?ActionLog $logger = null;
+
     /** Sets the optional param logger to the given ActionLog */
     public function SetLogger(?ActionLog $logger) : self 
     { 
+        $this->logger = $logger;
         if ($logger !== null)
         {
-            $logref = &$logger->GetInputLogRef();
-            $level = $logger->GetDetailsLevel();
-            
-            $this->params->SetLogRef($logref, $level);
+            $loglevel = $logger->GetDetailsLevel();
+            $plogref = &$logger->GetParamsLogRef();
+            $this->params->SetLogRef($plogref, $loglevel);
         }        
         return $this; 
     }
@@ -76,27 +84,44 @@ class Input
         $this->files[$key] = $file; return $this; 
     }
     
+    /** Logs the given InputFile and returns it */
+    protected function LogFile(string $key, InputFile $file, int $minlog) : InputFile
+    {
+        if ($this->logger !== null && $minlog)
+        {
+            if ($this->logger->GetDetailsLevel() >= $minlog)
+            {
+                $logref = &$this->logger->GetFilesLogRef();
+                $logref[$key] = ($file instanceof InputPath)
+                    ? $file->GetClientObject() : null;
+            }
+        }
+        return $file;
+    }
+    
     /**
      * Gets the file mapped to the parameter name
      * @param string $key the parameter key name
      * @throws Exceptions\InputFileMissingException if the key does not exist
      * @return InputFile the uploaded file
      */
-    public function GetFile(string $key) : InputFile
+    public function GetFile(string $key, int $minlog = SafeParams::PARAMLOG_ONLYFULL) : InputFile
     {
         if (!$this->HasFile($key)) 
             throw new Exceptions\InputFileMissingException($key);
-        else return $this->files[$key];
+    
+        return $this->LogFile($key, $this->files[$key], $minlog);
     }
     
     /**
      * Same as GetFile() but returns null rather than throwing an exception
      * @see Input::GetFile()
      */
-    public function TryGetFile(string $key) : ?InputFile
+    public function TryGetFile(string $key, int $minlog = SafeParams::PARAMLOG_ONLYFULL) : ?InputFile
     {
         if (!$this->HasFile($key)) return null;
-        else return $this->files[$key];
+        
+        return $this->LogFile($key, $this->files[$key], $minlog);
     }
     
     /** 
@@ -113,7 +138,7 @@ class Input
     {
         $this->app = strtolower((new SafeParam('app', $app))->GetAlphanum());
         $this->action = strtolower((new SafeParam('act', $action))->GetAlphanum());
-        
+
         $this->params = $params ?? new SafeParams(); 
         $this->files = $files ?? array();
         $this->auth = $auth;
