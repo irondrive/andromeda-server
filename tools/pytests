@@ -1,5 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 cd Andromeda
 
-python3 Core/_tests/integration/main.py $@
+if [ `which python3` ]; then
+   py=`which python3`
+elif [ `which python` ]; then
+   py=`which python`
+else
+   echo "could not find python!"; exit 1
+fi
+
+$py Core/_tests/integration/main.py $@
