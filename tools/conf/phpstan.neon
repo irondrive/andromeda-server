@@ -1,6 +1,10 @@
+#includes:
+#    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
 parameters:
-    level: 5
-    phpVersion: 70400
+#    strictRules:
+#        numericOperandsInArithmeticOperators: false
+#        strictCalls: false
+    level: 9
     paths: 
         - ../../Andromeda
     bootstrapFiles:
@@ -9,3 +13,8 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
+#    checkAlwaysTrueInstanceof: false
+#    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+#    checkUninitializedProperties: true
+#    rememberPossiblyImpureFunctionValues: false
+#    checkImplicitMixed: true
