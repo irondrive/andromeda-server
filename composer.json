@@ -31,7 +31,8 @@
         "ext-imap": "For IMAP authentication",
         "ext-ldap": "For LDAP authentication",
         "ext-ftp": "For FTP authentication and the FTP storage backend",
-        "ext-smbclient": "For the SMB storage backend"
+        "ext-smbclient": "For the SMB storage backend",
+        "ext-simplexml": "For the S3 storage backend"
     },
     "require-dev": {
         "phpmetrics/phpmetrics": "^2.0",
