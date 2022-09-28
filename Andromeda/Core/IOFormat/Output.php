@@ -52,16 +52,35 @@ class Output
         $this->metrics = $metrics; return $this; }
     
     /** 
+     * @return mixed 
+     * @throws Exceptions\InvalidOutpropException if $outprop is invalid
+     */
+    private function NarrowAppdata(?string $outprop = null)
+    {
+        $appdata = $this->appdata;
+        if ($outprop !== null && is_array($appdata))
+            foreach (explode('.',$outprop) as $key)
+            {
+                if (array_key_exists($key,$appdata))
+                    $appdata = $appdata[$key];
+                else throw new Exceptions\InvalidOutpropException($key);
+            }
+        return $appdata;
+    }
+    
+    /** 
      * Returns the Output object as a client array 
+     * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c.)
      * @return array<mixed> if success: `{ok:true, code:int, appdata:mixed}` \
          if failure: `{ok:false, code:int, message:string}`
+     * @throws Exceptions\InvalidOutpropException if $outprop is invalid
      */
-    public function GetAsArray() : array 
+    public function GetAsArray(?string $outprop = null) : array 
     {
         $array = array('ok'=>$this->ok, 'code'=>$this->code);
-        
+
         if ($this->ok) 
-             $array['appdata'] = $this->appdata;
+            $array['appdata'] = $this->NarrowAppdata($outprop);
         else $array['message'] = $this->message;
         
         if ($this->metrics !== null) $array['metrics'] = $this->metrics;
@@ -70,24 +89,30 @@ class Output
         return $array; 
     }
     
-    /** Returns the appdata as a single string (or null if not possible) */
-    public function GetAsString() : ?string
+    /** 
+     * Returns the appdata as a single string (or null if not possible) 
+     * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c.)
+     * @throws Exceptions\InvalidOutpropException if $outprop is invalid
+     */
+    public function GetAsString(?string $outprop = null) : ?string
     {
         if ($this->debug !== null || $this->metrics !== null) return null;
         
         if ($this->ok)
         {
-            if ($this->appdata === null)
-                $retval = 'SUCCESS';
-            else if ($this->appdata === true)
-                $retval = 'TRUE';
-            else if ($this->appdata === false)
-                $retval = 'FALSE';
-            else $retval = $this->appdata;
+            $appdata = $this->NarrowAppdata($outprop);
             
-            return print_r($retval, true);
+            if ($appdata === null)
+                return 'SUCCESS';
+            else if ($appdata === true)
+                return 'TRUE';
+            else if ($appdata === false)
+                return 'FALSE';
+            else if (is_scalar($appdata))
+                return (string)$appdata;
+            else return null;
         }
-        else return print_r($this->message, true);
+        else return $this->message;
     }
     
     private function __construct(bool $ok = true, int $code = self::CODE_SUCCESS)

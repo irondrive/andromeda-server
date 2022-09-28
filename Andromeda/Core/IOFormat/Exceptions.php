@@ -77,3 +77,14 @@ class MultiOutputJSONException extends BaseExceptions\ServerException
         parent::__construct("MULTI_OUTPUT_JSON", ($mode !== null) ? (string)$mode : null);
     }
 }
+
+/** 
+ * Exception indicating that the given outprop is not valid 
+ * NOTE this exception is thrown AFTER committing the transaction
+ */
+class InvalidOutpropException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_OUTPROP", $details);
+    }
+}
