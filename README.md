@@ -70,14 +70,20 @@ Certain app actions require that they are passed a file stream as input.  With H
 
 # Installation
 
-For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
+For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies, which may require additional PHP extensions.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
 
 ### Basic Requirements
-Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality.  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
+Andromeda requires PHP >= 7.4 (8.x is supported) and the JSON (7.x only), mbstring, PDO and Sodium PHP extensions.  Other extensions may be required by apps for additional functionality (see wiki).  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
-Andromeda does not use any OS or webserver-specific functions and works on Windows, Linux, BSD, Apache, Nginx, etc.  *No* specific PHP or webserver configuration is required.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
+Andromeda does not use any OS or webserver-specific functions and should work on any platform where PHP runs.  No specific PHP or webserver configuration is required.  The following platforms are officially tested and supported:
+* Ubuntu 20.04 LTS (PHP 7.4) + Apache 2.4
+* Ubuntu 22.04 (PHP 8.1) + Nginx 1.18
+* Alpine Linux (PHP 8.0) + Nginx 1.22
+* Arch Linux (PHP 8.1) + Nginx 1.22
+* FreeBSD 12.3/13.1
+Windows works but is supported only on a "best-effort" basis.
 
-It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible [may create vulnerabilities](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included to restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.
+It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible [may create vulnerabilities](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included to restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
 
 #### Database Config
 The `./andromeda-install core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.  The name/path can be permanently overriden by adding `<?php define('DBCONF','path-to-config');` to `Andromeda/userInit.php`.
