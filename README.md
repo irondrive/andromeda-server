@@ -44,7 +44,7 @@ CLI-specific global flags must come *before* the app/action.
 * `--debug none|errors|details|sensitive` change the debug output level (default server errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
-* `--metrics none|basic|extended` will show performance metrics, SQL queries executed, and other development stuff
+* `--metrics none|basic|extended` will show performance metrics, SQL queries executed, etc.
 
 Note that if an invalid --outprop is given, you will get an error output but the requested action will still be run and committed.
 
