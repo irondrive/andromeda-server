@@ -81,7 +81,7 @@ Andromeda requires PHP >= 7.4 and supports up through 8.1.  Required PHP extensi
 
 Andromeda does not use any OS or webserver-specific functions and should work on any platform where PHP runs.  No specific PHP or webserver configuration is required.  Windows works but is supported only on a "best-effort" basis.  The following platforms are officially tested and supported:
 * Ubuntu 20.04 LTS (PHP 7.4) + Apache 2.4
-* Ubuntu 22.04 (PHP 8.1) + Nginx 1.18
+* Ubuntu 22.04 LTS (PHP 8.1) + Nginx 1.18
 * Alpine Linux (PHP 8.0) + Nginx 1.22
 * Arch Linux (PHP 8.1) + Nginx 1.22
 * FreeBSD 12.3/13.1
