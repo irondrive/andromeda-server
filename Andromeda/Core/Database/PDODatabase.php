@@ -1,17 +1,18 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
-if (!class_exists('PDO')) 
-    die("PHP PDO Extension Required".PHP_EOL); 
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Exceptions;
+use Andromeda\Core\IOFormat\SafeParams;
+
+if (!class_exists('PDO'))
+    throw new Exceptions\MissingExtensionException('PDO');
 
 if (!function_exists('mb_internal_encoding'))
-    die("PHP mbstring Extension Required".PHP_EOL);
+    throw new Exceptions\MissingExtensionException('mbstring');
 
 mb_internal_encoding("UTF-8");
 
 use \PDO; use \PDOStatement; use \PDOException;
-
-use Andromeda\Core\Utilities;
-use Andromeda\Core\IOFormat\SafeParams;
 
 /**
  * This class implements the PDO database abstraction.
@@ -91,7 +92,7 @@ class PDODatabase
         {
             if ($ipath === null)
             {
-                $home = $_ENV["HOME"] ?? $_ENV["HOMEPATH"] ?? null;
+                $home = $_ENV["HOME"] ?? $_ENV["HOME"] ?? null;
                 if ($home) $ipath = "$home/andromeda/DBConfig.php";
             }
             

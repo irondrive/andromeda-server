@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 if (!function_exists('sodium_memzero')) 
-    die("PHP Sodium Extension Required".PHP_EOL);
+    throw new Exceptions\MissingExtensionException('sodium');
 
 /** libsodium wrapper class for crypto */
 class Crypto

@@ -2,6 +2,14 @@
 
 use Andromeda\Core\Errors\BaseExceptions;
 
+/** Exception indicating that a requried extension is missing */
+class MissingExtensionException extends BaseExceptions\ServiceUnavailableException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("MISSING_PHP_EXTENSION", $details);
+    }
+}
+
 /** An exception indicating that the requested action is invalid for this app */
 class UnknownActionException extends BaseExceptions\ClientErrorException
 {
