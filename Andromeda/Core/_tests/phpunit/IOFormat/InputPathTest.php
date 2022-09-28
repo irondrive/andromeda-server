@@ -30,6 +30,8 @@ class InputPathTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue(is_resource($handle));
         $fobj->__destruct();
         $this->assertFalse(is_resource($handle));
+        
+        $this->assertSame(array('name'=>basename($fpath),'path'=>$fpath,'size'=>0), $fobj->GetClientObject());
     }
     
     /** @depends testBasic */
@@ -54,5 +56,7 @@ class InputPathTest extends \PHPUnit\Framework\TestCase
             $this->assertSame($data, fread($handle, strlen($data)));
             $this->assertSame($data, $fobj->GetData());
         }
+        
+        $this->assertSame(array('name'=>$name,'path'=>$fpath,'size'=>strlen($data)), $fobj->GetClientObject());
     }
 }
