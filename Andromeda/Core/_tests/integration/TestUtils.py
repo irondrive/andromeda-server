@@ -1,6 +1,10 @@
 
 import inspect, re
 
+def assertSame(left, right): # TODO use me
+    assertEquals(type(left), type(right))
+    assertEquals(left, right)
+
 def assertEquals(left, right):
     assert (left == right), (left, right)
 
