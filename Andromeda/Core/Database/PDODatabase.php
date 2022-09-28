@@ -270,16 +270,20 @@ class PDODatabase
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array<mixed> `{driver:string, cversion:string, sversion:string, info:string}`
+     * @return array<mixed> `{driver:string, cversion:string, sversion:string, ?info:string}`
      */
     public function getInfo() : array
     {
-        return array(
+        $retval = array(
             'driver' => $this->connection->getAttribute(PDO::ATTR_DRIVER_NAME),
             'cversion' => $this->connection->getAttribute(PDO::ATTR_CLIENT_VERSION),
-            'sversion' => $this->connection->getAttribute(PDO::ATTR_SERVER_VERSION),
-            'info' => $this->connection->getAttribute(PDO::ATTR_SERVER_INFO)
+            'sversion' => $this->connection->getAttribute(PDO::ATTR_SERVER_VERSION)
         );
+        
+        if ($this->getDriver() !== self::DRIVER_SQLITE)
+            $retval['info'] = $this->connection->getAttribute(PDO::ATTR_SERVER_INFO);
+        
+        return $retval;
     }
     
     /**
