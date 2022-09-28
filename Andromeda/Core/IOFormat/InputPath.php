@@ -65,4 +65,14 @@ class InputPath extends InputFile
         fseek($this->handle, 0);
         return $this->handle;
     }
+    
+    /** @return array{name:string, path:string, size:int} */
+    public function GetClientObject() : array
+    {
+        return array(
+            'name' => $this->name,
+            'path' => $this->path,
+            'size' => $this->GetSize()
+        );
+    }
 }

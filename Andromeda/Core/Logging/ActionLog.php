@@ -60,11 +60,18 @@ class ActionLog extends BaseLog
     private FieldTypes\StringType $app;
     /** Action action name */
     private FieldTypes\StringType $action;
+    /** Basic auth username if present */
+    private FieldTypes\NullStringType $authuser;
     /** 
      * Optional input parameter logging 
      * @var FieldTypes\NullJsonArray<array<string, mixed>>
      */
-    private FieldTypes\NullJsonArray $inputs;
+    private FieldTypes\NullJsonArray $params;
+    /**
+     * Optional input files logging
+     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     */
+    private FieldTypes\NullJsonArray $files;
     /** 
      * Optional app-specific details if no subtable 
      * @var FieldTypes\NullJsonArray<array<string, mixed>>
@@ -72,10 +79,15 @@ class ActionLog extends BaseLog
     private FieldTypes\NullJsonArray $details;
     
     /** 
-     * Temporary array of logged inputs to be saved 
+     * Temporary array of logged input params to be saved 
      * @var array<string, mixed>
      */
-    private array $inputs_tmp;
+    private array $params_tmp;
+    /**
+     * Temporary array of logged input files to be saved
+     * @var array<string, mixed>
+     */
+    private array $files_tmp;
     /** 
      * Temporary array of logged details to be saved 
      * @var array<string, mixed>
@@ -90,7 +102,9 @@ class ActionLog extends BaseLog
         
         $fields[] = $this->app =     new FieldTypes\StringType('app');
         $fields[] = $this->action =  new FieldTypes\StringType('action');
-        $fields[] = $this->inputs =  new FieldTypes\NullJsonArray('inputs');
+        $fields[] = $this->authuser = new FieldTypes\NullStringType('authuser');
+        $fields[] = $this->params =  new FieldTypes\NullJsonArray('params');
+        $fields[] = $this->files =   new FieldTypes\NullJsonArray('files');
         $fields[] = $this->details = new FieldTypes\NullJsonArray('details');
         
         $this->RegisterFields($fields, self::class);
@@ -158,20 +172,39 @@ class ActionLog extends BaseLog
     }
 
     /** 
-     * Returns a direct reference to the inputs log array 
+     * Returns a direct reference to the input params log array 
      * @return array<string, mixed>
      */
-    public function &GetInputLogRef() : array
+    public function &GetParamsLogRef() : array
     {
-        $this->inputs_tmp ??= array();
-        return $this->inputs_tmp;
+        $this->params_tmp ??= array();
+        return $this->params_tmp;
+    }
+    
+    /**
+     * Returns a direct reference to the input files log array
+     * @return array<string, mixed>
+     */
+    public function &GetFilesLogRef() : array
+    {
+        $this->files_tmp ??= array();
+        return $this->files_tmp;
+    }
+    
+    /** @return $this */
+    public function SetAuthUser(string $username) : self
+    {
+        $this->authuser->SetValue($username); return $this;
     }
     
     public function Save(bool $isRollback = false) : self
     {
-        if (!empty($this->inputs_tmp))
-            $this->inputs->SetArray($this->inputs_tmp);
+        if (!empty($this->params_tmp))
+            $this->params->SetArray($this->params_tmp);
         
+        if (!empty($this->files_tmp))
+            $this->files->SetArray($this->files_tmp);
+            
         if (!empty($this->details_tmp))
             $this->details->SetArray($this->details_tmp);
             
@@ -250,7 +283,7 @@ class ActionLog extends BaseLog
     /**
      * Returns the printable client object of this action log
      * @param bool $expand if true, expand linked objects
-     * @return array<mixed> `{app:string, action:string, ?inputs:array, ?details:array}`
+     * @return array<mixed> `{app:string, action:string, ?authuser:string, ?params:array, ?files:array, ?details:array}`
      */
     public function GetClientObject(bool $expand = false) : array
     {
@@ -259,9 +292,15 @@ class ActionLog extends BaseLog
             'action' => $this->action->GetValue()
         );
         
-        if (($inputs = $this->inputs->TryGetArray()) !== null)
-            $retval['inputs'] = $inputs;
+        if (($authuser = $this->authuser->TryGetValue() !== null))
+            $retval['authuser'] = $authuser;
         
+        if (($params = $this->params->TryGetArray()) !== null)
+            $retval['params'] = $params;
+        
+        if (($files = $this->files->TryGetArray()) !== null)
+            $retval['files'] = $files;
+            
         if (($details = $this->details->TryGetArray()) !== null)
             $retval['details'] = $details;
         
