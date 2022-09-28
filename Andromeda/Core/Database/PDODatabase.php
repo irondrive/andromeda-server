@@ -1,14 +1,14 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
-use Andromeda\Core\Exceptions;
+use Andromeda\Core\Exceptions as CoreExceptions;
 use Andromeda\Core\IOFormat\SafeParams;
 
 if (!class_exists('PDO'))
-    throw new Exceptions\MissingExtensionException('PDO');
+    throw new CoreExceptions\MissingExtensionException('PDO');
 
 if (!function_exists('mb_internal_encoding'))
-    throw new Exceptions\MissingExtensionException('mbstring');
+    throw new CoreExceptions\MissingExtensionException('mbstring');
 
 mb_internal_encoding("UTF-8");
 
