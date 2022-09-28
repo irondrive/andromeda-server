@@ -16,8 +16,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
-        $this->assertSame($output->GetAppdata(), 'myretval');
+        $this->assertSame(Output::CODE_SUCCESS ,$output->GetCode());
+        $this->assertSame('myretval', $output->GetAppdata());
         
         $this->assertSame(array('ok'=>true,'code'=>Output::CODE_SUCCESS,
             'appdata'=>'myretval'), $output->GetAsArray());
@@ -28,9 +28,9 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::Success(array('myretval','myretval2'));
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
+        $this->assertSame(Output::CODE_SUCCESS, $output->GetCode());
         
-        $this->assertSame($output->GetAppdata(), array('myretval','myretval2'));
+        $this->assertSame(array('myretval','myretval2'), $output->GetAppdata());
         
         $this->assertSame(array('ok'=>true,'code'=>Output::CODE_SUCCESS,
             'appdata'=>array('myretval','myretval2')), $output->GetAsArray());
@@ -42,8 +42,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetCode(), Output::CODE_CLIENT_ERROR);
-        $this->assertSame($output->GetMessage(), 'TEST_EXCEPTION');
+        $this->assertSame(Output::CODE_CLIENT_ERROR, $output->GetCode());
+        $this->assertSame('TEST_EXCEPTION', $output->GetMessage());
         
         $this->assertSame(array('ok'=>false,'code'=>Output::CODE_CLIENT_ERROR,'message'=>'TEST_EXCEPTION',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
@@ -55,8 +55,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         
         $this->assertFalse($output->isOK());
         
-        $this->assertSame($output->GetCode(), Output::CODE_SERVER_ERROR);
-        $this->assertSame($output->GetMessage(), 'SERVER_ERROR');
+        $this->assertSame(Output::CODE_SERVER_ERROR, $output->GetCode());
+        $this->assertSame('SERVER_ERROR', $output->GetMessage());
         
         $this->assertSame(array('ok'=>false,'code'=>Output::CODE_SERVER_ERROR,'message'=>'SERVER_ERROR',
             'metrics'=>array('mymetrics'), 'debug'=>array('mydebug')), $output->GetAsArray());
@@ -64,16 +64,31 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testGetAsString() : void
     {
-        $this->assertSame(Output::Success(array(null))->GetAsString(), 'SUCCESS');
-        $this->assertSame(Output::Success(array(false))->GetAsString(), 'FALSE');
-        $this->assertSame(Output::Success(array(true))->GetAsString(), 'TRUE');
-        $this->assertSame(Output::Success(array('myretval'))->GetAsString(), 'myretval');
+        $this->assertSame('SUCCESS', Output::Success(array(null))->GetAsString());
+        $this->assertSame('FALSE', Output::Success(array(false))->GetAsString());
+        $this->assertSame('TRUE', Output::Success(array(true))->GetAsString());
+        $this->assertSame('myretval', Output::Success(array('myretval'))->GetAsString());
         
-        $v = array('mykey'=>'myval'); $this->assertSame(Output::Success(array($v))->GetAsString(), print_r($v,true));
-        $this->assertSame(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString(), null);
+        $this->assertNull(Output::Success(array('mykey'=>'myval'))->GetAsString());
+        $this->assertNull(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString());
         
-        $this->assertSame(Output::ServerException()->GetAsString(), 'SERVER_ERROR');
-        $this->assertSame(Output::ServerException(array('mydebug'))->GetAsString(), null);
+        $this->assertSame('SERVER_ERROR', Output::ServerException()->GetAsString());
+        $this->assertNull(Output::ServerException(array('mydebug'))->GetAsString());
+    }
+    
+    public function testOutprop() : void
+    {
+        $appdata = array('key1'=>array('key2'=>5));
+        $output = Output::Success($appdata);
+        
+        $this->assertNull($output->GetAsString("key1"));
+        $this->assertSame('5', $output->GetAsString("key1.key2"));
+        
+        $this->assertSame(array('ok'=>true,'code'=>200,'appdata'=>$appdata['key1']), $output->GetAsArray("key1"));
+        $this->assertSame(array('ok'=>true,'code'=>200,'appdata'=>5), $output->GetAsArray("key1.key2"));
+        
+        $this->expectException(Exceptions\InvalidOutpropException::class);
+        $output->GetAsArray("key2");
     }
     
     public function testParseArrayGood() : void
@@ -83,8 +98,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
-        $this->assertSame($output->GetAppdata(), $data['appdata']);        
+        $this->assertSame(Output::CODE_SUCCESS, $output->GetCode());
+        $this->assertSame($data['appdata'], $output->GetAppdata());
         $this->assertSame($data, $output->GetAsArray());
         
         $data = array('ok'=>true,'code'=>Output::CODE_SUCCESS,'appdata'=>array('mykey',array('key'=>'val')));
@@ -92,8 +107,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $output = Output::ParseArray($data);
         
         $this->assertTrue($output->isOK());
-        $this->assertSame($output->GetCode(), Output::CODE_SUCCESS);
-        $this->assertSame($output->GetAppdata(), $data['appdata']);
+        $this->assertSame(Output::CODE_SUCCESS, $output->GetCode());
+        $this->assertSame($data['appdata'], $output->GetAppdata());
         $this->assertSame($data, $output->GetAsArray());
         
         $data = array('ok'=>false,'code'=>Output::CODE_CLIENT_ERROR,'message'=>'EXCEPTION!');

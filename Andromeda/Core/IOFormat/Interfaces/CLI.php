@@ -56,6 +56,8 @@ class CLI extends IOInterface
         return $retval;
     }
     
+    private ?string $outprop = null;
+    
     private bool $dryRun = false;
     public function isDryRun() : bool { return $this->dryRun; }
     
@@ -103,7 +105,15 @@ class CLI extends IOInterface
             if ($key === null) break; else switch ($key)
             {
                 case 'dryrun': $this->dryRun = true; break;
-
+                
+                case 'outprop':
+                {
+                    if (($val = self::getNextValue($argv,$argIdx)) === null)
+                        throw new IncorrectCLIUsageException('no outprop value');
+                    $outprop = (new SafeParam('outprop',$val))->GetUTF8String();
+                    $this->outprop = $outprop;
+                    break;
+                }
                 case 'outmode':
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
@@ -297,34 +307,35 @@ class CLI extends IOInterface
         
         return new Input($app, $action, $params, $files);
     }
-    
+
     /** @param bool $exit if true, exit() with the proper code */
     public function FinalOutput(Output $output, bool $exit = true) : void
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
             // try echoing as a string, switch to printr if it fails
-            $outstr = $output->GetAsString();
-            if ($outstr !== null) echo $outstr.PHP_EOL;
+            $outstr = $output->GetAsString($this->outprop);
+            if ($outstr !== null) echo $outstr.PHP_EOL; 
             else $this->outmode = self::OUTPUT_PRINTR;
         }
-
+        
         if ($this->outmode === self::OUTPUT_PRINTR)
         {
-            $outdata = $output->GetAsArray();
+            $outdata = $output->GetAsArray($this->outprop);
             echo print_r($outdata, true).PHP_EOL;
         }
         
         if ($this->outmode === self::OUTPUT_JSON)
         {
-            $outdata = Utilities::JSONEncode($output->GetAsArray());
+            $outdata = Utilities::JSONEncode(
+                $output->GetAsArray($this->outprop));
             
             if ($multi = $this->isMultiOutput()) 
                 echo static::formatSize(strlen($outdata));
         
             echo $outdata; if (!$multi) echo PHP_EOL;
         }
-
+        
         if ($exit) exit($output->isOK() ? 0 : 1);
     }
 }

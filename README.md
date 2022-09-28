@@ -39,11 +39,14 @@ All input parameters are strictly validated against their expected types.  Most 
 
 ### Global CLI Flags
 CLI-specific global flags must come *before* the app/action.
+* `--outprop a.b.c` to select a sub-property in the output, e.g. `--outprop db.info`
 * `--outmode json`/`--outmode printr` use JSON or PHP printr() for output (default printr)
-* `--debug enum` change the debug output level (default server errors only)
+* `--debug none|errors|details|sensitive` change the debug output level (default server errors only)
 * `--dryrun` rollback the transaction at the end of the request
 * `--dbconf path/myconf.php` use the provided database configuration file
-* `--metrics enum` will show performance metrics, SQL queries executed, and other development stuff
+* `--metrics none|basic|extended` will show performance metrics, SQL queries executed, and other development stuff
+
+Note that if an invalid --outprop is given, you will get an error output but the requested action will still be run and committed.
 
 ### Environment Variables
 To ease command line usage for commands that may involve repeated parameters (e.g. a session key), environment variables prefixed with `andromeda_` can be set that will always be included in a request.  For example, `export andromeda_mykey=myvalue` is equivalent to adding `--mykey=myvalue` to all future commands.

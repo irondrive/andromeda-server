@@ -12,7 +12,7 @@ class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
         $usage = implode(PHP_EOL,array(
             "general usage: php index.php [global flags+] app action [action params+]",
             null,
-            "global flags: [--dryrun] [--dbconf fspath] ".
+            "global flags: [--dryrun] [--dbconf fspath] [--outprop a.b.c] ".
             "[--outmode ".implode('|',array_keys(CLI::OUTPUT_TYPES))."] ".
             "[--debug ".implode('|',array_keys(Config::DEBUG_TYPES))."] ".
             "[--metrics ".implode('|',array_keys(Config::METRICS_TYPES))."]",
