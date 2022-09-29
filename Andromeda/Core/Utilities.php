@@ -74,19 +74,7 @@ abstract class Utilities
         
         return $arr[array_key_last($arr)];
     }
-    
-    /** 
-     * Deletes any of the given value from the given array reference 
-     * @template T of array
-     * @param T $arr
-     * @param mixed $value
-     * @return T
-     */
-    public static function delete_value(array &$arr, $value) : array
-    {
-        return $arr = array_filter($arr, function($val)use($value){ return $val !== $value; });
-    }
-    
+
     /** 
      * Converts all objects in the array to strings and checks UTF-8, to make it printable
      * @template T of array
@@ -106,13 +94,14 @@ abstract class Utilities
                 $val = method_exists($val,'__toString')
                     ? (string)$val : get_class($val);
             }
-            else 
+            else if (is_scalar($val))
             {
                 $val = (string)$val;
                 
                 if (!Utilities::isUTF8($val))
                     $val = base64_encode($val);
             }
+            else $val = print_r($val,true);
         }
         return $data;
     }
