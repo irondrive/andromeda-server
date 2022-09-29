@@ -69,7 +69,7 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
   `agent` text NOT NULL,
   `app` varchar(255) DEFAULT NULL,
   `action` varchar(255) DEFAULT NULL,
-  `code` varchar(255) NOT NULL,
+  `code` int(11) NOT NULL,
   `file` text NOT NULL,
   `message` text NOT NULL,
   `trace_basic` longtext DEFAULT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
   `hints` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `time` (`time`),
-  KEY `code` (`code`(191)),
+  KEY `code` (`code`),
   KEY `app` (`app`(191)),
   KEY `action` (`action`(191)),
   KEY `addr` (`addr`(191))
@@ -149,7 +149,7 @@ CREATE TABLE `a2obj_core_logging_requestlog` (
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
-  `errcode` varchar(255) DEFAULT NULL,
+  `errcode` int(11) DEFAULT NULL,
   `errtext` text DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

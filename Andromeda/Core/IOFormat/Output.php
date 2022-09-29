@@ -90,7 +90,7 @@ class Output
     }
     
     /** 
-     * Returns the appdata as a single string (or null if not possible) 
+     * Returns the appdata/message as a single string (or null if not possible) 
      * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c.)
      * @throws Exceptions\InvalidOutpropException if $outprop is invalid
      */
