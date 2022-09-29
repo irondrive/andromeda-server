@@ -95,7 +95,7 @@ class CoreInstallApp extends InstallerApp
     public static function HasDependency(array $insts, InstallerApp $a, InstallerApp $b) : bool
     {
         $adeps = $a->getDependencies();
-        if (in_array($b->getName(), $adeps)) return true;
+        if (in_array($b->getName(), $adeps, true)) return true;
         
         foreach ($adeps as $adep)
         {

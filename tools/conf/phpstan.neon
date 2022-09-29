@@ -13,8 +13,8 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
-#    checkAlwaysTrueInstanceof: false
-#    checkTooWideReturnTypesInProtectedAndPublicMethods: true
-#    checkUninitializedProperties: true
-#    rememberPossiblyImpureFunctionValues: false
-#    checkImplicitMixed: true
+    checkAlwaysTrueInstanceof: false
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+#   checkUninitializedProperties: true # TODO
+    rememberPossiblyImpureFunctionValues: false
+### checkImplicitMixed: true # this returns a lot of wrong

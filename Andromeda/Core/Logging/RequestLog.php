@@ -192,7 +192,7 @@ class RequestLog extends BaseLog
             $actlogs = $this->actions ?? ActionLog::LoadByRequest($this->database,$this);
             
             foreach ($actlogs as $actlog) 
-                $retval['actions'][] = $actlog->GetClientObject($expand);   
+                $retval['actions'][] = $actlog->GetClientObject($expand);
         }
             
         return $retval;

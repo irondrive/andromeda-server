@@ -213,7 +213,7 @@ class PDODatabase
         if (!array_key_exists('CONNECT',$config))
             throw new Exceptions\DatabaseConfigException('missing CONNECT');
         
-        $driver = $config['DRIVER'];
+        $driver = (string)$config['DRIVER'];
         if (!array_key_exists($driver, self::DRIVERS))
             throw new Exceptions\DatabaseConfigException("driver $driver");
         
@@ -222,8 +222,11 @@ class PDODatabase
         
         try
         {
+            $persistent = array_key_exists('PERSISTENT',$config) 
+                ? (bool)$config['PERSISTENT'] : false;
+            
             $options = array(
-                PDO::ATTR_PERSISTENT => $config['PERSISTENT'] ?? false,
+                PDO::ATTR_PERSISTENT => $persistent,
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_STRINGIFY_FETCHES => false
@@ -233,9 +236,11 @@ class PDODatabase
             if ($this->driver === self::DRIVER_MYSQL)
                 $options[PDO::MYSQL_ATTR_FOUND_ROWS] = true;
                 
-            $username = $config['USERNAME'] ?? null;
-            $password = $config['PASSWORD'] ?? null;
-            
+            $username = array_key_exists('USERNAME',$config) 
+                ? (string)$config['USERNAME'] : null;
+            $password = array_key_exists('PASSWORD',$config) 
+                ? (string)$config['PASSWORD'] : null;
+
             $this->connection = new PDO($connect, $username, $password, $options);
         }
         catch (PDOException $e){ throw new Exceptions\PDODatabaseConnectException($verbose ? $e : null); }
