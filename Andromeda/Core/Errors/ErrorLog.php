@@ -21,8 +21,8 @@ class ErrorLog extends BaseLog
     private FieldTypes\NullStringType $app;
     /** command action */
     private FieldTypes\NullStringType $action;
-    /** error code string */
-    private FieldTypes\StringType $code;
+    /** error code */
+    private FieldTypes\IntType $code;
     /** the file with the error */
     private FieldTypes\StringType $file;
     /** the error message */
@@ -67,7 +67,7 @@ class ErrorLog extends BaseLog
         $fields[] = $this->agent =       new FieldTypes\StringType('agent');
         $fields[] = $this->app =         new FieldTypes\NullStringType('app');
         $fields[] = $this->action =      new FieldTypes\NullStringType('action');
-        $fields[] = $this->code =        new FieldTypes\StringType('code');
+        $fields[] = $this->code =        new FieldTypes\IntType('code');
         $fields[] = $this->file =        new FieldTypes\StringType('file');
         $fields[] = $this->message =     new FieldTypes\StringType('message');
         $fields[] = $this->trace_basic = new FieldTypes\JsonArray('trace_basic');
@@ -83,7 +83,7 @@ class ErrorLog extends BaseLog
     }
     
     /** Returns the common command usage for LoadByParams() and CountByParams() */
-    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code utf8] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
+    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {
@@ -92,7 +92,7 @@ class ErrorLog extends BaseLog
         if ($params->HasParam('maxtime')) $criteria[] = $q->LessThan('time', $params->GetParam('maxtime')->GetFloat());
         if ($params->HasParam('mintime')) $criteria[] = $q->GreaterThan('time', $params->GetParam('mintime')->GetFloat());
         
-        if ($params->HasParam('code')) $criteria[] = $q->Equals('code', $params->GetParam('code')->GetUTF8String());
+        if ($params->HasParam('code')) $criteria[] = $q->Equals('code', $params->GetParam('code')->GetInt32());
         if ($params->HasParam('addr')) $criteria[] = $q->Equals('addr', $params->GetParam('addr')->GetUTF8String());
         if ($params->HasParam('agent')) $criteria[] = $q->Like('agent', $params->GetParam('agent')->GetUTF8String());
         
@@ -136,7 +136,7 @@ class ErrorLog extends BaseLog
 
     /**
      * Returns the printable client object of this error log
-     * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,
+     * @return array<mixed> `{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,
           trace_basic:array,trace_full:array,objects:?array,queries:?array,params:?array,hints:?array}`
      */
     public function GetClientObject() : array

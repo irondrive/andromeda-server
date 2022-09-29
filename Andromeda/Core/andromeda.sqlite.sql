@@ -48,7 +48,7 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
 ,  `agent` text NOT NULL
 ,  `app` varchar(255) DEFAULT NULL
 ,  `action` varchar(255) DEFAULT NULL
-,  `code` varchar(255) NOT NULL
+,  `code` integer NOT NULL
 ,  `file` text NOT NULL
 ,  `message` text NOT NULL
 ,  `trace_basic` longtext DEFAULT NULL
@@ -106,7 +106,7 @@ CREATE TABLE `a2obj_core_logging_requestlog` (
 ,  `time` double NOT NULL
 ,  `addr` varchar(255) NOT NULL
 ,  `agent` text NOT NULL
-,  `errcode` varchar(255) DEFAULT NULL
+,  `errcode` integer DEFAULT NULL
 ,  `errtext` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 );

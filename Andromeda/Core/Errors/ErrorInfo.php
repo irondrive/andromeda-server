@@ -20,7 +20,7 @@ class ErrorInfo
     /** command action */
     private ?string $action = null;
     /** error code string */
-    private string $code;
+    private int $code;
     /** the file with the error */
     private string $file;
     /** the error message */
@@ -66,8 +66,8 @@ class ErrorInfo
     public function TryGetApp() : ?string       { return $this->app; }
     /** Return the command action if active */
     public function TryGetAction() : ?string    { return $this->action; }
-    /** Return the error code string */
-    public function GetCode() : string          { return $this->code; }
+    /** Return the error code */
+    public function GetCode() : int             { return $this->code; }
     /** Return the file with the error */
     public function GetFile() : string          { return $this->file; }
     /** Return the error message */
@@ -130,7 +130,7 @@ class ErrorInfo
         $this->addr = $iface->GetAddress();
         $this->agent = $iface->GetUserAgent();
         
-        $this->code = (string)$e->getCode(); // TODO then why is code a string?
+        $this->code = $e->getCode();
         $this->message = $e->getMessage();
         
         $this->file = $e->getFile()."(".$e->getLine().")";
@@ -186,7 +186,7 @@ class ErrorInfo
     /**
      * Returns the printable client object of this error info
      * @param ?int $level max debug level for output, null for unfiltered, also depends on the level this was created with
-     * @return array<mixed> `{time:float,addr:string,agent:string,code:string,file:string,message:string,app:?string,action:?string,trace_basic:array}`
+     * @return array<mixed> `{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array}`
         if details or null level, add `{trace_full:array,objects:?array,queries:?array,hints:?array}`
         if sensitive or null level, add `{params:?array}`
      */

@@ -16,7 +16,7 @@ class RequestLog extends BaseLog
     /** Interface user-agent used for the request */
     private FieldTypes\StringType $agent;
     /** Error code if response was an error (or null) */
-    private FieldTypes\NullStringType $errcode;
+    private FieldTypes\NullIntType $errcode;
     /** Error message if response was an error (or null) */
     private FieldTypes\NullStringType $errtext;
     
@@ -35,7 +35,7 @@ class RequestLog extends BaseLog
         $this->time = $fields[] =    new FieldTypes\Timestamp('time');
         $this->addr = $fields[] =    new FieldTypes\StringType('addr');
         $this->agent = $fields[] =   new FieldTypes\StringType('agent');
-        $this->errcode = $fields[] = new FieldTypes\NullStringType('errcode');
+        $this->errcode = $fields[] = new FieldTypes\NullIntType('errcode');
         $this->errtext = $fields[] = new FieldTypes\NullStringType('errtext');
         
         $this->RegisterFields($fields, self::class);
@@ -66,7 +66,7 @@ class RequestLog extends BaseLog
         if ($this->writtenToFile) 
             throw new Exceptions\LogAfterWriteException();
         
-        $this->errcode->SetValue((string)$e->getCode()); // TODO why string?
+        $this->errcode->SetValue($e->getCode());
         $this->errtext->SetValue($e->getMessage());
         
         return $this;
@@ -127,7 +127,7 @@ class RequestLog extends BaseLog
     public static function GetPropUsage(bool $join = true) : string 
     { 
         return "[--mintime float] [--maxtime float] [--addr utf8] [--agent utf8] ".
-               "[--errcode ?utf8] [--errtext ?utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
+               "[--errcode ?int32] [--errtext ?utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
     }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
@@ -140,7 +140,7 @@ class RequestLog extends BaseLog
         if ($params->HasParam('addr')) $criteria[] = $q->Equals("addr", $params->GetParam('addr')->GetUTF8String());
         if ($params->HasParam('agent')) $criteria[] = $q->Like("agent", $params->GetParam('agent')->GetUTF8String());
         
-        if ($params->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $params->GetParam('errcode')->GetNullUTF8String());
+        if ($params->HasParam('errcode')) $criteria[] = $q->Equals("errcode", $params->GetParam('errcode')->GetNullInt32());
         if ($params->HasParam('errtext')) $criteria[] = $q->Equals("errtext", $params->GetParam('errtext')->GetNullUTF8String());
         
         $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
