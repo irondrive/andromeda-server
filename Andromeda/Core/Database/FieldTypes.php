@@ -65,7 +65,7 @@ abstract class BaseField
      * @param ?scalar $value database value
      * @return $this
      */
-    public abstract function InitDBValue($value);
+    public abstract function InitDBValue($value) : self;
     
     /**
      * Returns the field's DB value
@@ -127,6 +127,7 @@ class NullStringType extends BaseField
         $this->delta = ($default !== null) ? 1 : 0;
     }
 
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value !== null)
@@ -195,7 +196,8 @@ class StringType extends BaseField
             $this->delta = 1;
         }
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null) 
@@ -268,7 +270,8 @@ class NullBoolType extends BaseField
         $this->realvalue = $default;
         $this->delta = ($default !== null) ? 1 : 0;
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value !== null)
@@ -341,7 +344,8 @@ class BoolType extends BaseField
             $this->delta = 1;
         }
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null)
@@ -414,7 +418,8 @@ class NullIntType extends BaseField
         $this->realvalue = $default;
         $this->delta = ($default !== null) ? 1 : 0;
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value !== null)
@@ -483,7 +488,8 @@ class IntType extends BaseField
             $this->delta = 1;
         }
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null)
@@ -556,7 +562,8 @@ class NullFloatType extends BaseField
         $this->realvalue = $default;
         $this->delta = ($default !== null) ? 1 : 0;
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value !== null)
@@ -625,7 +632,8 @@ class FloatType extends BaseField
             $this->delta = 1;
         }
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null)
@@ -715,7 +723,8 @@ class Counter extends BaseField
         $this->delta = 0; // implicit
         $this->limit = $limit;
     }
-
+    
+    /** @return $this */
     public function InitDBValue($value) : self
     {
         if ($value === null)

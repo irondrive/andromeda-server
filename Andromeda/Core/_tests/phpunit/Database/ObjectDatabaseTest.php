@@ -67,13 +67,13 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     private const id2 = 'testid4567';
     
     private const row1 = array(
-        /*1*/'id'=>self::id1,'testprop1'=>5,'type'=>27, /** @phpstan-ignore-line */ 
+        /*1*/'id'=>self::id1,'testprop1'=>5,'type'=>27, // @phpstan-ignore-line intentional redefinition
         /*2*/'id'=>self::id1,'testprop15'=>15,'type'=>27,
         /*4*/'id'=>self::id1,'testprop4'=>41,'type'=>13, 
         /*5*/'id'=>self::id1,'testprop5'=>7,'type'=>101); // PolyObject5aa
     
     private const row2 = array(
-        /*1*/'id'=>self::id2,'testprop1'=>10,'type'=>27, /** @phpstan-ignore-line */ 
+        /*1*/'id'=>self::id2,'testprop1'=>10,'type'=>27, // @phpstan-ignore-line intentional redefinition
         /*2*/'id'=>self::id2,'testprop15'=>16,'type'=>27, 
         /*4*/'id'=>self::id2,'testprop4'=>42,'type'=>18); // PolyObject5b
 
@@ -87,6 +87,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
             
+            $rows = array();
             $rows[0] = self::row2; $rows[0]['type'] = 18;  // 5b
             $rows[1] = self::row2; $rows[1]['type'] = 5;   // 4
             $rows[2] = self::row1; $rows[2]['type'] = 100; // 5a
@@ -695,7 +696,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertCount(1, $objs); $obj1 = $objs[$id1];
         $this->assertInstanceOf(PolyObject5a::class, $obj1);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1);
-        assert($obj1 !== null);
         $this->assertSame(55, $obj1->GetTestProp5());
         
         // will NOT call the database again (child classes)

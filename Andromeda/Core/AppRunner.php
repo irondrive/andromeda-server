@@ -198,7 +198,7 @@ class AppRunner extends BaseRunner
                 if ($this->requestlog !== null)
                     $this->requestlog->SetError($e);
                     
-                $db->saveObjects(true); // any "always" DB fields
+                $db->SaveObjects(true); // any "always" DB fields
                 $this->doCommit(false);
                 
                 if ($this->requestlog !== null)
@@ -227,7 +227,7 @@ class AppRunner extends BaseRunner
                 $this->commit_stats[] = $stats;
             }
             
-            $db->saveObjects();
+            $db->SaveObjects();
             $this->doCommit(true);
             
             if ($this->requestlog !== null) 

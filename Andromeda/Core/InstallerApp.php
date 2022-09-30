@@ -135,6 +135,7 @@ abstract class InstallerApp
         
         ($this->getConfigClass())::Create($db)->Save();
         $this->install_state = self::NEED_NOTHING;
+        return null;
     }
     
     /**
@@ -162,5 +163,6 @@ abstract class InstallerApp
         
         $class::ForceUpdate($db); // load, set version        
         $this->install_state = self::NEED_NOTHING;
+        return null;
     }
 }

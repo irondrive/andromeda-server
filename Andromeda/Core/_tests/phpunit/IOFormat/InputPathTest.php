@@ -27,9 +27,8 @@ class InputPathTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($fobj->isTemp());
         
         $handle = $fobj->GetHandle();
-        $this->assertTrue(is_resource($handle));
         $fobj->__destruct();
-        $this->assertFalse(is_resource($handle));
+        $this->assertFalse(is_resource($handle)); // @phpstan-ignore-line stream is closed
         
         $this->assertSame(array('name'=>basename($fpath),'path'=>$fpath,'size'=>0), $fobj->GetClientObject());
     }
@@ -52,7 +51,6 @@ class InputPathTest extends \PHPUnit\Framework\TestCase
         for ($i = 0; $i < 5; $i++) // files work more than once
         {
             $handle = $fobj->GetHandle();
-            $this->assertTrue(is_resource($handle));
             $this->assertSame($data, fread($handle, strlen($data)));
             $this->assertSame($data, $fobj->GetData());
         }

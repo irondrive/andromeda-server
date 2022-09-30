@@ -47,7 +47,7 @@ abstract class BaseConfig extends SingletonObject
         {
             if ($database->HasApiPackage()) // log just in case
                 $database->GetApiPackage()->GetErrorManager()->LogException($e);
-            throw new Exceptions\InstallRequiredException(static::GetAppname()); 
+            throw new Exceptions\InstallRequiredException(static::getAppname()); 
         }
     }
     
@@ -77,7 +77,7 @@ abstract class BaseConfig extends SingletonObject
     {
         $version = $data['version'] ?? null;
         if ($version !== null && $version !== static::getVersion() && !static::$forceUpdate)
-            throw new Exceptions\UpgradeRequiredException(static::GetAppname(), (string)$version);
+            throw new Exceptions\UpgradeRequiredException(static::getAppname(), (string)$version);
         
         parent::__construct($database, $data);
         

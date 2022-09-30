@@ -47,7 +47,10 @@ class Config extends BaseConfig
     /** True if metrics should be logged to a file */
     private FieldTypes\BoolType $metrics_filelog;
     
-    /** Creates a new config singleton with default values */
+    /** 
+     * Creates a new config singleton with default values 
+     * @return static
+     */
     public static function Create(ObjectDatabase $database) : self
     {
         $obj = static::BaseCreate($database);

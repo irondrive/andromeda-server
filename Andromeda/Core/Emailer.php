@@ -85,7 +85,7 @@ class Emailer extends BaseObject
         $mailer = static::BaseCreate($database);
         $mailer->date_created->SetTimeNow();
         
-        $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhiteList(array_keys(self::MAIL_TYPES))];
+        $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhitelist(array_keys(self::MAIL_TYPES))];
         
         $mailer->type->SetValue($type);
         
@@ -131,7 +131,7 @@ class Emailer extends BaseObject
     {
         $mailers = static::LoadAll($database);
         
-        if (empty($mailers)) 
+        if (count($mailers) === 0) 
             throw new Exceptions\EmailerUnavailableException();
         
         return $mailers[array_rand($mailers)];

@@ -145,7 +145,7 @@ class ObjectDatabase
     {
         $classes = $class::GetTableClasses();
         
-        $countChildren = empty($classes); // no topclass
+        $countChildren = (count($classes) === 0); // no topclass
         
         if (!$countChildren)
         {
@@ -155,7 +155,7 @@ class ObjectDatabase
         
         if ($countChildren) // count foreach child
         {
-            if (empty($childmap = $class::GetChildMap()))
+            if (count($childmap = $class::GetChildMap()) === 0)
                 throw new Exceptions\NoBaseTableException($class);
             
             $count = 0; foreach ($childmap as $child)
@@ -198,7 +198,7 @@ class ObjectDatabase
         $childmap = $class::GetChildMap();
         $castRows = self::CanLoadByUpcast($class);
         
-        $doChildren = !$castRows && !empty($childmap);
+        $doChildren = !$castRows && count($childmap) !== 0;
         $doSelf = !$doChildren;
         $objects = array();
         
@@ -257,7 +257,7 @@ class ObjectDatabase
         $childmap = $class::GetChildMap();
         $castRows = self::CanLoadByUpcast($class);
         
-        $doChildren = !$castRows && !empty($childmap);
+        $doChildren = !$castRows && count($childmap) !== 0;
         $doSelf = !$doChildren;
         $count = 0;
         
@@ -335,15 +335,15 @@ class ObjectDatabase
         if (!$class::HasTypedRows()) return false;
         
         $childmap = $class::GetChildMap();
-        if (empty($childmap)) return false;
+        if (count($childmap) === 0) return false;
         
         $tables = $class::GetTableClasses();
-        if (empty($tables)) return false;
+        if (count($tables) === 0) return false;
         
         foreach ($childmap as $child)
         {
             $subquery = ($class !== $child) &&                
-                (!empty($child::GetChildMap()) || // has children
+                (count($child::GetChildMap()) !== 0 || // has children
                  count($tables) !== count($child::GetTableClasses())); // has table
             
             if ($subquery) return false;
@@ -362,7 +362,7 @@ class ObjectDatabase
     private function GetFromAndSetJoins(string $class, QueryBuilder $query, bool $selectFields) : string
     {
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new Exceptions\NoBaseTableException($class);
+        if (count($classes) == 0) throw new Exceptions\NoBaseTableException($class);
         
         // specify which tables to select in case of extra joins
         $selstr = implode(', ',array_map(function(string $sclass)use($selectFields){
@@ -390,7 +390,7 @@ class ObjectDatabase
     private function SetTypeFiltering(string $class, string $bclass, QueryBuilder $query, bool $selectType) : void
     {       
         $classes = $class::GetTableClasses();
-        if (empty($classes)) throw new Exceptions\NoBaseTableException($class);
+        if (count($classes) === 0) throw new Exceptions\NoBaseTableException($class);
         
         // we want the limit/offset to apply to the class being loaded as,
         // not the current child table... use a subquery to accomplish this
@@ -399,7 +399,7 @@ class ObjectDatabase
         {            
             // the limited base class must have a table
             $bclasses = $bclass::GetTableClasses();
-            if (empty($bclasses) || $bclass !== $bclasses[array_key_last($bclasses)])
+            if (count($bclasses) === 0 || $bclass !== $bclasses[array_key_last($bclasses)])
                 throw new Exceptions\NoBaseTableException($bclass);
             
             $subquery = clone $query;
@@ -560,7 +560,7 @@ class ObjectDatabase
                 }
             }
             
-            if (empty($sets)) continue; // nothing to update
+            if (count($sets) === 0) continue; // nothing to update
             
             $setstr = implode(', ',$sets);
             $table = $this->GetClassTableName($class);
@@ -725,7 +725,7 @@ class ObjectDatabase
                 $this->objectsKeyValues[(string)$obj][$key] = $validx;
         }
 
-        return $this->objectsByKey[$class][$key][$validx]; /** @phpstan-ignore-line */
+        return $this->objectsByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
     }
     
     /**
@@ -791,7 +791,7 @@ class ObjectDatabase
             $this->uniqueKeyValues[(string)$obj][$key] = $validx;
         }
 
-        return $this->uniqueByKey[$class][$key][$validx]; /** @phpstan-ignore-line */
+        return $this->uniqueByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
     }
     
     /**
@@ -892,7 +892,7 @@ class ObjectDatabase
         {
             if ($child !== $class)
             {
-                if ($obj !== null && $obj instanceof $child)
+                if ($obj instanceof $child)
                     $this->AddNonUniqueKeyObject($child, $key, $validx, $obj, $bclass);
             }
         }

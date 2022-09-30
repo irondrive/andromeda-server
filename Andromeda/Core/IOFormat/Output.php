@@ -181,8 +181,7 @@ class Output
         if (!is_bool($data['ok']) || !is_int($data['code'])) 
             throw new Exceptions\InvalidParseException();
 
-        $ok = (bool)$data['ok']; 
-        $code = (int)$data['code'];
+        $ok = $data['ok']; $code = $data['code'];
 
         if ($ok === true)
         {
@@ -202,7 +201,7 @@ class Output
                 throw new Exceptions\InvalidParseException();
             
             throw new ClientException(
-                (string)$data['message'], $code);
+                $data['message'], $code);
         }
     }   
 }
