@@ -15,6 +15,5 @@ parameters:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
     reportUnmatchedIgnoredErrors: false                # otherwise analyzing PHP7+8 is impossible
-#   checkUninitializedProperties: true                 # TODO try this
     rememberPossiblyImpureFunctionValues: false        # default is true, seems like bad behavior?
 ### checkImplicitMixed: true                           # enabled by strict-rules, returns a lot wrong
