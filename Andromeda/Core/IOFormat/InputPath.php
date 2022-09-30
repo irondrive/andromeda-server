@@ -9,8 +9,6 @@ class InputPath extends InputFile
     private string $path;
     private string $name;
     private bool $istemp;
-    /** @var ?resource */
-    private $handle = null;
     
     /**
      * @param string $path path to the input file
@@ -24,7 +22,11 @@ class InputPath extends InputFile
         $this->name = $name ?? basename($path);
     }
     
-    public function __destruct(){ if (is_resource($this->handle)) fclose($this->handle); }
+    public function __destruct()
+    {
+        if (is_resource($this->handle))
+            fclose($this->handle);
+    }
     
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }

@@ -107,14 +107,14 @@ class HTTP extends IOInterface
      */
     private function GetInput(array $req, array $get, array $files, array $server) : Input
     {
-        if (empty($get['_app']) || empty($get['_act']))
+        if (!array_key_exists('_app',$get) || !array_key_exists('_act',$get))
             throw new Exceptions\MissingAppActionException('missing');
         
         $app = $get['_app']; unset($req['_app']); // app
         $act = $get['_act']; unset($req['_act']); // action
         
         if (!is_string($app) || !is_string($act))
-            throw new Exceptions\MissingAppActionException('not strings');
+            throw new Exceptions\MissingAppActionException('invalid');
         
         foreach ($get as $key=>$val)
         {

@@ -165,7 +165,7 @@ class PDODatabase
             $config['USERNAME'] = $params->GetOptParam('dbuser',null)->GetNullName();
             $config['PASSWORD'] = $params->GetOptParam('dbpass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString();
         }
-        else if ($driver === 'sqlite')
+        else if ($driver === 'sqlite') // @phpstan-ignore-line harmless always true (for now)
         {
             $config['CONNECT'] = $params->GetParam('dbpath')->GetFSPath();    
         }
@@ -246,7 +246,7 @@ class PDODatabase
         catch (PDOException $e){ throw new Exceptions\PDODatabaseConnectException($verbose ? $e : null); }
         
         if ($this->connection->inTransaction())
-            $this->connection->rollback();
+            $this->connection->rollBack();
             
         if ($this->driver === self::DRIVER_SQLITE)
             $this->connection->query("PRAGMA foreign_keys = ON");
@@ -379,7 +379,8 @@ class PDODatabase
 
         $result = $query->fetchAll(PDO::FETCH_ASSOC);
         
-        if ($result === false) throw new Exceptions\DatabaseFetchException();
+        if ($result === false) // @phpstan-ignore-line PHP8 never returns false
+            throw new Exceptions\DatabaseFetchException();
 
         if ($this->BinaryAsStreams()) $this->fetchStreams($result);
         
@@ -430,7 +431,8 @@ class PDODatabase
         
         $result = $query->fetchAll(PDO::FETCH_ASSOC);
         
-        if ($result === false) throw new Exceptions\DatabaseFetchException();
+        if ($result === false) // @phpstan-ignore-line PHP8 never returns false
+            throw new Exceptions\DatabaseFetchException();
         
         if ($this->BinaryAsStreams()) $this->fetchStreams($result);
         
@@ -514,7 +516,7 @@ class PDODatabase
                 if (is_string($val))
                 {
                     if (!Utilities::isUTF8($val))
-                        $val = 'b64:('.base64_encode((string)$val).')';
+                        $val = 'b64:('.base64_encode($val).')';
                     $val = str_replace('\\','\\\\',"'$val'");
                 }
 
@@ -580,7 +582,7 @@ class PDODatabase
             $sql = "PDO->rollback()";
             $this->queries[] = $sql;
             $this->startTimingQuery();            
-            $this->connection->rollback();
+            $this->connection->rollBack();
             $this->stopTimingQuery($sql, DBStats::QUERY_WRITE, false);
         }
     }

@@ -127,8 +127,8 @@ class ErrorInfo
         $this->level = $level;
         $this->time = microtime(true);
         
-        $this->addr = $iface->GetAddress();
-        $this->agent = $iface->GetUserAgent();
+        $this->addr = $iface->getAddress();
+        $this->agent = $iface->getUserAgent();
         
         $this->code = $e->getCode();
         $this->message = $e->getMessage();

@@ -70,7 +70,7 @@ abstract class Utilities
      */
     public static function array_last(array $arr)
     {
-        if (empty($arr)) return null;
+        if (count($arr) === 0) return null;
         
         return $arr[array_key_last($arr)];
     }
@@ -161,7 +161,7 @@ abstract class Utilities
         
         $func(); $retval = ob_get_clean();
         
-        if ($retval === false || !is_string($retval))
+        if ($retval === false)
             throw new Exceptions\OutputBufferException("ob_get_clean fail");
         
         return $retval;
@@ -179,7 +179,7 @@ abstract class Utilities
         $retval = array_combine($keys, array_map($func, $keys)); 
         
         // ASSERT: array_combine must be an array when both arrays have the same size
-        assert(is_array($retval)); return $retval;
+        assert(is_array($retval)); return $retval; // @phpstan-ignore-line PHP8 never returns false
     }
     
     /**
@@ -189,7 +189,7 @@ abstract class Utilities
      */
     public static function is_plain_array(array $arr) : bool
     {
-        if (empty($arr)) return true;
+        if (count($arr) === 0) return true;
         if (!isset($arr[0])) return false; // shortcut
         if (!is_scalar($arr[0])) return false; // shortcut
         

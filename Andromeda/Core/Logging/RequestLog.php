@@ -89,6 +89,7 @@ class RequestLog extends BaseLog
         return $this->actions[] = $class::Create($this->database, $this, $input);
     }
 
+    /** @return $this */
     public function Save(bool $isRollback = false) : self
     {
         $this->actions ??= array();

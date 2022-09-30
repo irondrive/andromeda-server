@@ -34,7 +34,7 @@ abstract class BaseObject
     final public static function GetBaseTableClass() : string
     {
         $tables = static::GetTableClasses();
-        if (!empty($tables)) return $tables[0];
+        if (count($tables) !== 0) return $tables[0];
         else throw new Exceptions\NoBaseTableException(static::class);
     }
 
@@ -78,7 +78,7 @@ abstract class BaseObject
      */
     final protected static function AddChildUniqueKeys(array& $keymap, array $keys) : void
     {
-        if (empty($keymap)) throw new Exceptions\NoChildTableException(static::class);
+        if (count($keymap) === 0) throw new Exceptions\NoChildTableException(static::class);
             
         $table = array_key_last($keymap);
         
@@ -204,7 +204,7 @@ abstract class BaseObject
     {
         $this->idfield = new FieldTypes\StringType('id');
         
-        if (empty($tables = static::GetTableClasses())) 
+        if (count($tables = static::GetTableClasses()) === 0) 
             throw new Exceptions\NoBaseTableException(static::class);
         
         foreach ($tables as $table)
@@ -240,7 +240,7 @@ abstract class BaseObject
      */
     final protected function RegisterChildFields(array $fields) : void
     {
-        if (empty($this->fieldsByClass))
+        if (count($this->fieldsByClass) === 0)
             throw new Exceptions\NoChildTableException(static::class);
         
         $table = array_key_last($this->fieldsByClass);

@@ -10,7 +10,7 @@ use Andromeda\Core\Errors\ErrorManager;
 /** First create the global resources */
 
 $interface = IOInterface::TryGet();
-if (!$interface) die('INTERFACE_ERROR');
+if ($interface === null) die('INTERFACE_ERROR');
 
 $errman = new ErrorManager($interface, true);
 

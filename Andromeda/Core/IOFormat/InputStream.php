@@ -3,17 +3,25 @@
 /** An input file stream */
 class InputStream extends InputFile
 {
-    /** @var resource */
-    private $handle;
-    
     /** @param resource $handle */
-    public function __construct($handle){ $this->handle = $handle; }
+    public function __construct($handle) { $this->handle = $handle; }
         
-    public function __destruct(){ if (is_resource($this->handle)) fclose($this->handle); }
+    public function __destruct()
+    { 
+        if (is_resource($this->handle))
+            fclose($this->handle); 
+    }
    
     /** 
      * Returns the file's stream resource 
+     * @throws Exceptions\FileReadFailedException if it fails
      * @return resource
      */
-    public function GetHandle(){ return $this->handle; }
+    public function GetHandle()
+    { 
+        if (!is_resource($this->handle))
+            throw new Exceptions\FileReadFailedException("stream");
+        
+        return $this->handle; 
+    }
 }

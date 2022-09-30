@@ -11,10 +11,10 @@ class InputStreamTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame($stream, $strobj->GetHandle());
         $this->assertSame($data, $strobj->GetData());
-        $this->assertTrue(!is_resource($stream)); // closed
+        $this->assertFalse(is_resource($stream)); // @phpstan-ignore-line stream is closed
         
         $this->expectException(Exceptions\FileReadFailedException::class);
-        $strobj->GetData();
+        $strobj->GetHandle(); // should be closed
     }
     
     /** @depends testStream */
@@ -26,6 +26,6 @@ class InputStreamTest extends \PHPUnit\Framework\TestCase
         $strobj = new InputStream($stream);
         $strobj->__destruct();
         
-        $this->assertTrue(!is_resource($stream));
+        $this->assertFalse(is_resource($stream)); // @phpstan-ignore-line stream is closed
     }
 }

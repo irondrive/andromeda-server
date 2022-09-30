@@ -1,9 +1,10 @@
-#includes:
-#    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
+includes:
+    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
 parameters:
-#    strictRules:
-#        numericOperandsInArithmeticOperators: false
-#        strictCalls: false
+    strictRules:
+        booleansInConditions: false                    # should be able to do !string, etc.
+        numericOperandsInArithmeticOperators: false    # array + array is okay
+        strictCalls: false                             # calling statics with -> should be okay
     level: 9
     paths: 
         - ../../Andromeda
@@ -13,8 +14,7 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
-    checkAlwaysTrueInstanceof: false
-    checkTooWideReturnTypesInProtectedAndPublicMethods: true
-#   checkUninitializedProperties: true # TODO
-    rememberPossiblyImpureFunctionValues: false
-### checkImplicitMixed: true # this returns a lot of wrong
+    reportUnmatchedIgnoredErrors: false                # otherwise analyzing PHP7+8 is impossible
+#   checkUninitializedProperties: true                 # TODO try this
+    rememberPossiblyImpureFunctionValues: false        # default is true, seems like bad behavior?
+### checkImplicitMixed: true                           # enabled by strict-rules, returns a lot wrong

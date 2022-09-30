@@ -312,15 +312,15 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     public function testRandstr() : void
     {
-        $getVal = function(SafeParam $p){ return $p->GetRandStr(); };
-        $getValN = function(SafeParam $p){ return $p->GetNullRandStr(); };
+        $getVal = function(SafeParam $p){ return $p->GetRandstr(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullRandstr(); };
         
         $this->testNulls($getVal, $getValN);
         
         $this->testGood("  test\n", "test", $getVal); // trim
         $this->testGood("9a8s7dn8_s7n", "9a8s7dn8_s7n", $getVal);
         
-        $this->TestBad("23 45", $getVal);
+        $this->testBad("23 45", $getVal);
         $this->testBad("234a<", $getVal);
         $this->testBad("234a'", $getVal);
         $this->testBad("234a\"", $getVal);
@@ -336,7 +336,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("  test\n", "test", $getVal); // trim
         $this->testGood($val="987n927_83..n4-928", $val, $getVal);
         
-        $this->TestBad("23 45", $getVal);
+        $this->testBad("23 45", $getVal);
         $this->testBad("234a<", $getVal);
         $this->testBad("234a'", $getVal);
         $this->testBad("234a\"", $getVal);

@@ -311,7 +311,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $this->assertSame("app1",$i0->GetApp());
         $this->assertSame("action1",$i0->GetAction());
         $this->assertSame(5,$p0->GetParam('my1')->GetInt());
-        $this->assertTrue($p0->getParam('my2')->GetBool());
+        $this->assertTrue($p0->GetParam('my2')->GetBool());
         
         $i1 = $inputs[1]; $p1 = $i1->GetParams();
         $this->assertSame("app2",$i1->GetApp());

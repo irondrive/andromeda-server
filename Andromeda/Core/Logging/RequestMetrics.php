@@ -177,6 +177,7 @@ class RequestMetrics extends BaseObject
         return $obj;
     }
 
+    /** @return $this */
     public function Save(bool $isRollback = false) : self
     {
         $config = $this->GetApiPackage()->GetConfig();

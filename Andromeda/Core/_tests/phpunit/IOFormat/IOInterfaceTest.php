@@ -108,7 +108,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         }
         
         $this->assertSame($expect, Utilities::CaptureOutput(function()use($iface,$output,$numfuncs){
-            $this->assertSame($numfuncs ? true : false, $iface->UserOutput($output));
+            $this->assertSame($numfuncs > 0 ? true : false, $iface->UserOutput($output));
         }));
     }
     

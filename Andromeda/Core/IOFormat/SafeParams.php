@@ -22,8 +22,7 @@ class SafeParams
             if (is_array($val) && !Utilities::is_plain_array($val))
             {
                 $obj = new self();
-                // phpstan does not support recursive types
-                $val = $obj->LoadArray($val); /** @phpstan-ignore-line */
+                $val = $obj->LoadArray($val); // @phpstan-ignore-line recursive types not supported
             }
             
             $this->AddParam((string)$key, $val); // scalar

@@ -2,7 +2,7 @@
 
 require_once(ROOT."/Core/_tests/phpunit/Database/testObjects.php");
 
-use Andromeda\Core\Database\{BaseObject, Exceptions, PDODatabase, ObjectDatabase, TableTypes};
+use Andromeda\Core\Database\{BaseObject, Exceptions, ObjectDatabase, TableTypes};
 
 class TestObject1 extends BaseObject { use TableTypes\TableNoChildren; }
 class TestObject2 extends BaseObject { use TableTypes\TableNoChildren; }
@@ -11,7 +11,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
 {
     public function testBasic() : void
     {
-        $database = $this->CreateMock(ObjectDatabase::class);
+        $database = $this->createMock(ObjectDatabase::class);
         $parent = new TestObject1($database, array('id'=>$id='test123'));
         $field = (new StringType('myfield'))->SetParent($parent);
         
@@ -47,7 +47,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     
     public function testNotifyModified() : void
     {
-        $database = $this->CreateMock(ObjectDatabase::class);
+        $database = $this->createMock(ObjectDatabase::class);
         $parent = new TestObject1($database, array());
         $field = (new StringType('myfield'))->SetParent($parent);
         

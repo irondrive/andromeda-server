@@ -197,15 +197,16 @@ class ActionLog extends BaseLog
         $this->authuser->SetValue($username); return $this;
     }
     
+    /** @return $this */
     public function Save(bool $isRollback = false) : self
     {
-        if (!empty($this->params_tmp))
+        if (count($this->params_tmp) !== 0)
             $this->params->SetArray($this->params_tmp);
         
-        if (!empty($this->files_tmp))
+        if (count($this->files_tmp) !== 0)
             $this->files->SetArray($this->files_tmp);
             
-        if (!empty($this->details_tmp))
+        if (count($this->details_tmp) !== 0)
             $this->details->SetArray($this->details_tmp);
             
         if (!$this->GetApiPackage()->GetConfig()->GetEnableRequestLogDB())

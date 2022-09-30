@@ -9,11 +9,13 @@ class TestClientException extends ClientException
         parent::__construct("TEST_CLIENT_EXCEPTION", 111, $details);
     }
     
+    /** @return $this */
     public function CopyException(BaseException $e, bool $newloc = true) : self
     {
         return parent::CopyException($e, $newloc);
     }
     
+    /** @return $this */
     public function AppendException(\Exception $e, bool $newloc = true) : self
     {
         return parent::AppendException($e, $newloc);
@@ -27,11 +29,13 @@ class TestServerException extends ServerException
         parent::__construct("TEST_SERVER_EXCEPTION", $details);
     }
     
+    /** @return $this */
     public function CopyException(BaseException $e, bool $newloc = true) : self
     {
         return parent::CopyException($e, $newloc);
     }
     
+    /** @return $this */
     public function AppendException(\Exception $e, bool $newloc = true) : self
     {
         return parent::AppendException($e, $newloc);
