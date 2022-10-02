@@ -31,7 +31,7 @@ class CLI extends IOInterface
      */
     private static function getNextValue(array $args, int &$i) : ?string
     {
-        return (isset($args[$i+1]) && !self::getKey($args[$i+1])) ? $args[++$i] : null;
+        return (isset($args[$i+1]) && self::getKey($args[$i+1]) === null) ? $args[++$i] : null;
     }
 
     public function getAddress() : string
@@ -198,7 +198,7 @@ class CLI extends IOInterface
      */
     private function GetBatch(array $lines, array $server, $stdin) : array
     {
-        if (!count($lines)) throw new EmptyBatchException();
+        if (count($lines) === 0) throw new EmptyBatchException();
         
         return array_map(function($line)use($server,$stdin)
         {
@@ -247,7 +247,7 @@ class CLI extends IOInterface
             if ($special === '@')
             {
                 $param = mb_substr($param,0,-1); 
-                if (!$param) throw new IncorrectCLIUsageException(
+                if ($param === "") throw new IncorrectCLIUsageException(
                     "empty @ key at action arg $i");
                 
                 $val = self::getNextValue($argv,$i);
@@ -263,7 +263,7 @@ class CLI extends IOInterface
             else if ($special === '!')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if ($param === "") throw new IncorrectCLIUsageException(
                     "empty ! key at action arg $i");
                 
                 echo "enter $param...".PHP_EOL; $inp = fgets($stdin);
@@ -275,7 +275,7 @@ class CLI extends IOInterface
             else if ($special === '%')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if ($param === "") throw new IncorrectCLIUsageException(
                     "empty % key at action arg $i");
                 
                 $val = self::getNextValue($argv,$i);
@@ -293,7 +293,7 @@ class CLI extends IOInterface
             else if ($special === '-')
             {
                 $param = mb_substr($param,0,-1);
-                if (!$param) throw new IncorrectCLIUsageException(
+                if ($param === "") throw new IncorrectCLIUsageException(
                     "empty - key at action arg $i");
                 
                 $files[$param] = new InputStream($stdin);

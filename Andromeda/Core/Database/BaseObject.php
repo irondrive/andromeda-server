@@ -252,11 +252,16 @@ abstract class BaseObject
     public function ID() : string { return $this->idfield->GetValue(); }
 
     /** Returns the string "id:class" where id is the object ID and class is its short class name */
-    final public function __toString() : string { 
-        return $this->ID().':'.Utilities::ShortClassName(static::class); }
+    final public function __toString() : string 
+    { 
+        return $this->ID().':'.Utilities::ShortClassName(static::class); 
+    }
     
     /** Returns the given object's as a string if not null, else null */
-    final public static function toString(?self $obj) : ?string { return $obj ? (string)$obj : null; }
+    final public static function toString(?self $obj) : ?string 
+    {
+        return $obj !== null ? (string)$obj : null; 
+    }
     
     /** Returns true if this object has been created but not saved */
     final protected function isCreated() : bool { return $this->isCreated; }

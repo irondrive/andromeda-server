@@ -175,7 +175,7 @@ class CoreApp extends BaseApp
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $server = array_filter($_SERVER, function($key){ 
-            return strpos($key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
+            return mb_strpos($key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
         
         unset($server['argv']); unset($server['argc']);
         
@@ -219,7 +219,7 @@ class CoreApp extends BaseApp
         }
         else $mailer = Emailer::LoadAny($this->database);
         
-        if ($actionlog) $actionlog->LogDetails('mailer',$mailer->ID());
+        if ($actionlog !== null) $actionlog->LogDetails('mailer',$mailer->ID());
         
         try { $mailer->SendMail($subject, $body, false, $dests, false); }
         catch (CoreExceptions\MailSendException $e) { 
@@ -349,7 +349,7 @@ class CoreApp extends BaseApp
             $this->TestMail($params, $isAdmin, $authenticator, $actionlog);
         }
 
-        if ($actionlog) $actionlog->LogDetails('mailer',$emailer->ID()); 
+        if ($actionlog !== null) $actionlog->LogDetails('mailer',$emailer->ID()); 
         
         return $emailer->GetClientObject();
     }
@@ -368,7 +368,7 @@ class CoreApp extends BaseApp
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new Exceptions\UnknownMailerException();
         
-        if ($actionlog && $actionlog->isFullDetails()) 
+        if ($actionlog !== null && $actionlog->isFullDetails()) 
             $actionlog->LogDetails('mailer', $mailer->GetClientObject());
         
         $mailer->Delete();

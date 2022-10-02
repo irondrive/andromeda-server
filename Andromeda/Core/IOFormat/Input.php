@@ -87,7 +87,7 @@ class Input
     /** Logs the given InputFile and returns it */
     protected function LogFile(string $key, InputFile $file, int $minlog) : InputFile
     {
-        if ($this->logger !== null && $minlog)
+        if ($this->logger !== null && $minlog > 0)
         {
             if ($this->logger->GetDetailsLevel() >= $minlog)
             {

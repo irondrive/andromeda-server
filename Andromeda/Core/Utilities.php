@@ -126,7 +126,7 @@ abstract class Utilities
     public static function return_bytes(string $val) : int
     {
         $val = trim($val); 
-        if (!$val) return 0;
+        if ($val === "") return 0;
         
         $num = (int)($val);
         switch (substr($val, -1)) {
@@ -140,12 +140,12 @@ abstract class Utilities
     /** Equivalent to str_replace but only does one replacement */
     public static function replace_first(string $search, string $replace, string $subject) : string
     {
-        if (!$search || !$subject) return $subject;
+        if ($search === "" || $subject === "") return $subject;
         
         if (($pos = mb_strpos($subject, $search)) !== false)
         {
             return mb_substr($subject, 0, $pos).$replace.
-                mb_substr($subject, $pos+strlen($search));
+                mb_substr($subject, $pos+mb_strlen($search));
         }
         else return $subject;
     }

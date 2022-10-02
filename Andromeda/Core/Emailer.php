@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
-use \PHPMailer\PHPMailer; // via autoloader
+use PHPMailer\PHPMailer; // via autoloader
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
@@ -147,8 +147,8 @@ class Emailer extends BaseObject
         $port = $params->GetOptParam('port',null)->GetNullUint16();
         $proto =  $params->GetOptParam('proto',null)->FromWhitelistNull(array('tls','ssl'));
         
-        if ($port) $host .= ":$port";
-        if ($proto) $host = "$proto://$host";        
+        if ($port !== null) $host .= ":$port";
+        if ($proto !== null) $host = "$proto://$host";
         return $host;
     }
     
@@ -240,7 +240,7 @@ class Emailer extends BaseObject
         if (!$this->GetApiPackage()->GetConfig()->GetEnableEmail())
             throw new Exceptions\EmailDisabledException();
         
-        if (!count($recipients)) 
+        if (count($recipients) === 0) 
             throw new Exceptions\EmptyRecipientsException();
         
         $mailer = $this->mailer;

@@ -50,7 +50,7 @@ class BatchParseException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?\InvalidArgumentException $e = null) {
         parent::__construct("BATCH_PARSE_ERROR");
-        if ($e) $this->AppendException($e);
+        if ($e !== null) $this->AppendException($e);
     }
 }
 

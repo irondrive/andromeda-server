@@ -200,13 +200,13 @@ class ActionLog extends BaseLog
     /** @return $this */
     public function Save(bool $isRollback = false) : self
     {
-        if (count($this->params_tmp) !== 0)
+        if (isset($this->params_tmp) && count($this->params_tmp) !== 0)
             $this->params->SetArray($this->params_tmp);
         
-        if (count($this->files_tmp) !== 0)
+        if (isset($this->files_tmp) && count($this->files_tmp) !== 0)
             $this->files->SetArray($this->files_tmp);
             
-        if (count($this->details_tmp) !== 0)
+        if (isset($this->details_tmp) && count($this->details_tmp) !== 0)
             $this->details->SetArray($this->details_tmp);
             
         if (!$this->GetApiPackage()->GetConfig()->GetEnableRequestLogDB())
@@ -232,7 +232,10 @@ class ActionLog extends BaseLog
     {
         $retval = array();
         foreach (self::GetChildMap() as $appname=>$logclass)
-            if ($appname) $retval[] = "--app $appname ".$logclass::GetAppPropUsage();
+        {
+            if ($appname !== "") 
+                $retval[] = "--app $appname ".$logclass::GetAppPropUsage();
+        }
         return $retval;
     }
 

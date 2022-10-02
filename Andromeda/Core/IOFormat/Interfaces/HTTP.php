@@ -86,7 +86,7 @@ class HTTP extends IOInterface
                 $inputs[$bkeyI] = self::GetInput($breqI, $bgetI, $bfilesI, $server);
             }
             
-            if (!count($inputs)) throw new EmptyBatchException();
+            if (count($inputs) === 0) throw new EmptyBatchException();
             if (count($inputs) > 65535) throw new Exceptions\LargeBatchException();
         }
         else $inputs = array(self::GetInput($req, $get, $files, $server));
@@ -119,8 +119,8 @@ class HTTP extends IOInterface
         foreach ($get as $key=>$val)
         {
             $key = (string)$key;
-            if (strpos($key,'password') !== false 
-                || strpos($key,'auth_') === 0)
+            if (mb_strpos($key,'password') !== false 
+                || mb_strpos($key,'auth_') === 0)
                 throw new Exceptions\IllegalGetFieldException($key);
         }
         
@@ -140,7 +140,7 @@ class HTTP extends IOInterface
             $ferror = (int)$file['error'];
             // https://www.php.net/manual/en/features.file-upload.errors.php
                 
-            if ($ferror || !is_uploaded_file($fpath))
+            if ($ferror !== 0 || !is_uploaded_file($fpath))
                 throw new Exceptions\FileUploadFailException((string)$ferror);
             
             $fname = (new SafeParam('name',$fname))->GetFSName();
@@ -164,7 +164,7 @@ class HTTP extends IOInterface
     {
         if (!headers_sent())
         {
-            if (!$this->outmode)
+            if ($this->outmode === 0)
                 http_response_code($output->GetCode());
             
             header("Cache-Control: no-cache");
@@ -244,7 +244,7 @@ class HTTP extends IOInterface
     {
         $get = array('_app'=>$input->GetApp(), '_act'=>$input->GetAction());
         if ($params) $get += $input->GetParams()->GetClientObject();
-        return $url.(strpos($url,'?') === false ?'?':'&').http_build_query($get);
+        return $url.(mb_strpos($url,'?') === false ?'?':'&').http_build_query($get);
     }
 
     /**

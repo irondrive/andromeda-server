@@ -451,6 +451,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->testNulls($getVal, $getValN);
         
+        $this->testGood($val="0", $val, $getVal);
         $this->testGood($val="hello! special chars !@#$%^&*()\u{9999}", $val, $getVal);
         
         $this->testBad("\0", $getVal);
