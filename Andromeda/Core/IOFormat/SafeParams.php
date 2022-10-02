@@ -87,7 +87,7 @@ class SafeParams
         
         $param = $this->params[$key];
         
-        if ($this->logref !== null && $minlog && $this->loglevel >= $minlog)
+        if ($this->logref !== null && $minlog > 0 && $this->loglevel >= $minlog)
         {
             $param->SetLogRef($this->logref, $this->loglevel);
         }
@@ -113,7 +113,7 @@ class SafeParams
         
         $param = $this->params[$key];
         
-        if ($this->logref !== null && $minlog && $this->loglevel >= $minlog)
+        if ($this->logref !== null && $minlog > 0 && $this->loglevel >= $minlog)
         {
             $param->SetLogRef($this->logref, $this->loglevel);
         }

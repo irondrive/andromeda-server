@@ -35,7 +35,8 @@ class MetricsHandler
     {
         try // request should still succeed if this fails
         {
-            if (!($mlevel = $apipack->GetMetricsLevel())) return null;
+            $mlevel = $apipack->GetMetricsLevel();
+            if ($mlevel === 0) return null;
             
             $database = $apipack->GetDatabase();
             $apprunner = $apipack->GetAppRunner();
@@ -58,7 +59,7 @@ class MetricsHandler
                 $mlevel, $database, $apprunner->GetRequestLog(),
                 $this->init_stats, $actions, $commits, $total_stats);
 
-            if ($apipack->GetMetricsLevel(true))
+            if ($apipack->GetMetricsLevel(true) !== 0)
                 $output->SetMetrics($metrics->GetClientObject($isError));
             
             return $metrics;
@@ -81,7 +82,7 @@ class MetricsHandler
     {
         try // request should still succeed if this fails
         {
-            if (!$apipack->GetMetricsLevel()) return;
+            if ($apipack->GetMetricsLevel() === 0) return;
             
             $db = $apipack->GetDatabase();
             

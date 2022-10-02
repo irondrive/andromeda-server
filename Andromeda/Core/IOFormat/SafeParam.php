@@ -34,7 +34,7 @@ class SafeParam
      */
     public function __construct(string $key, $value)
     {
-        if ($key === "" || !preg_match("%^[a-zA-Z0-9_.]+$%", $key))
+        if ($key === "" || preg_match("%^[a-zA-Z0-9_.]+$%", $key) !== 1)
             throw new SafeParamInvalidException("(key)", 'alphanum');
         
         $this->key = $key;
@@ -361,7 +361,7 @@ class SafeParam
         {
             $value = trim($value);
             
-            if (!preg_match("%^[a-zA-Z0-9_]+$%", $value))
+            if (preg_match("%^[a-zA-Z0-9_]+$%", $value) !== 1)
                 throw new SafeParamInvalidException($this->key, 'randstr');
         }
         
@@ -380,7 +380,7 @@ class SafeParam
             $this->CheckLength(255);
             $value = trim($value);
             
-            if (!preg_match("%^[a-zA-Z0-9\-_.]+$%", $value))
+            if (preg_match("%^[a-zA-Z0-9\-_.]+$%", $value) !== 1)
                 throw new SafeParamInvalidException($this->key, 'alphanum');
         }
         
@@ -399,7 +399,7 @@ class SafeParam
             $this->CheckLength(255);
             $value = trim($value);
             
-            if (!preg_match("%^[a-zA-Z0-9\-_'(). ]+$%", $value))
+            if (preg_match("%^[a-zA-Z0-9\-_'(). ]+$%", $value) !== 1)
                 throw new SafeParamInvalidException($this->key, 'name');
         }
         
@@ -419,7 +419,7 @@ class SafeParam
             $value = trim($value);
             
             $value = filter_var($value0=$value, FILTER_VALIDATE_EMAIL);
-            if (!$value || $value !== $value0)
+            if ($value === "" || $value !== $value0)
                 throw new SafeParamInvalidException($this->key, 'email');
         }
         
@@ -438,11 +438,11 @@ class SafeParam
            $this->CheckLength(255);
            $value = trim($value);
            
-           if (preg_match("%[\\\\/?*:;{}]+%", $value)) // blacklist
+           if (preg_match("%[\\\\/?*:;{}]+%", $value) !== 0) // blacklist
                throw new SafeParamInvalidException($this->key, 'fsname');
            
            $value = filter_var($value0=$value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW);
-           if (!$value || $value !== $value0 || !Utilities::isUTF8($value))
+           if ($value === "" || $value !== $value0 || !Utilities::isUTF8($value))
                throw new SafeParamInvalidException($this->key, 'fsname');
            
            if (basename($value) !== $value || $value === '.' || $value === '..')
@@ -453,7 +453,7 @@ class SafeParam
     }
     
     /**
-     * A filesystem path, forbids ?*;{}, max length 65535, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW
+     * A filesystem path, forbids ?*;{}, :/, max length 65535, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW - ALLOWS ./..
      * @throws SafeParamInvalidException if not valid
      */
     public function GetNullFSPath() : ?string
@@ -464,12 +464,13 @@ class SafeParam
             $this->CheckLength(65535);
             $value = trim($value);
             
-            if (preg_match("%[?*;{}]+%", $value) || strpos($value, ':/') !== false) // blacklist
+            if (preg_match("%[?*;{}]+%", $value) !== 0 || 
+                mb_strpos($value, ':/') !== false) // blacklist
                 throw new SafeParamInvalidException($this->key, 'fspath');
             
             $value = filter_var($value0=$value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW);
-            if (!$value || $value !== $value0 || !Utilities::isUTF8($value))
-                throw new SafeParamInvalidException($this->key, 'fsname');
+            if ($value === "" || $value !== $value0 || !Utilities::isUTF8($value))
+                throw new SafeParamInvalidException($this->key, 'fspath');
         }
         
         $this->LogValue($value); return $value;
@@ -488,7 +489,7 @@ class SafeParam
             $value = trim($value);
             
             $value = filter_var($value0=$value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME);
-            if (!$value || $value !== $value0)
+            if ($value === "" || $value !== $value0)
                 throw new SafeParamInvalidException($this->key, 'hostname');
         }
         
@@ -507,7 +508,7 @@ class SafeParam
             $this->CheckLength(65535);
             
             $value = filter_var($value, FILTER_SANITIZE_SPECIAL_CHARS);
-            if (!$value || !Utilities::isUTF8($value)) // allow sanitizing
+            if ($value === "" || $value === false || !Utilities::isUTF8($value)) // allow sanitizing
                 throw new SafeParamInvalidException($this->key, 'text');
         }
         
@@ -527,7 +528,7 @@ class SafeParam
             $this->CheckLength(65535);
             
             $value = filter_var($value0=$value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW);
-            if (!$value || $value !== $value0 || !Utilities::isUTF8($value))
+            if ($value === "" || $value !== $value0 || !Utilities::isUTF8($value))
                 throw new SafeParamInvalidException($this->key, 'utf8');
         }
         

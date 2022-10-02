@@ -3,6 +3,13 @@
 if (!version_compare(phpversion(),'7.4.0','>='))
     die("PHP must be 7.4.0 or greater (you have ".PHP_VERSION.PHP_EOL);
 
+if (!function_exists('mb_internal_encoding'))
+    die("PHP mbstring Extension Required".PHP_EOL);
+
+mb_internal_encoding("UTF-8");
+
+error_reporting(E_ALL);
+
 define('Andromeda',true); // entry-points
 define('andromeda_version','1.0.0-alpha');
 

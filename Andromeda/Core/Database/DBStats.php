@@ -40,8 +40,8 @@ class DBStats
     { 
         $el = (hrtime(true)-$this->query_start)/1e9;
         
-        $isRead = $type & self::QUERY_READ;
-        $isWrite = $type & self::QUERY_WRITE;
+        $isRead = (bool)($type & self::QUERY_READ);
+        $isWrite = (bool)($type & self::QUERY_WRITE);
         
         if ($isRead && $isWrite) $el /= 2;
         

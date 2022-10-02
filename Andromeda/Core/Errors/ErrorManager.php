@@ -34,7 +34,7 @@ class ErrorManager
             $this->isGlobal = true;
             
             set_error_handler( function(int $code, string $msg, string $file, int $line) {
-                throw new BaseExceptions\PHPError($code,$msg,$file,$line); }, E_ALL);
+                throw new BaseExceptions\PHPError($code,$msg,$file,$line); });
             
             set_exception_handler(function(\Throwable $e)
             {
@@ -72,14 +72,14 @@ class ErrorManager
     /** Returns the debug level for internal logging */
     private function GetDebugLogLevel() : int
     {
-        return $this->config ? $this->config->GetDebugLevel()
+        return $this->config !== null ? $this->config->GetDebugLevel()
             : max(Config::ERRLOG_ERRORS, $this->interface->GetDebugLevel());
     }
     
     /** Returns the debug level to be show in output */
     private function GetDebugOutputLevel() : int
     {
-        return $this->config ? $this->config->GetDebugLevel($this->interface)
+        return $this->config !== null ? $this->config->GetDebugLevel($this->interface)
             : $this->interface->GetDebugLevel();
     }
     
@@ -164,7 +164,7 @@ class ErrorManager
 
         try // save to file
         {
-            if ($this->filelogok && $this->config && $this->config->GetDebugLog2File())
+            if ($this->filelogok && $this->config !== null && $this->config->GetDebugLog2File())
             {
                 if (($logdir = $this->config->GetDataDir()) !== null)
                 {
@@ -182,7 +182,7 @@ class ErrorManager
         
         try // save to database with a separate connection
         {
-            if ($this->dblogok && $this->config && $this->config->GetDebugLog2DB()) 
+            if ($this->dblogok && $this->config !== null && $this->config->GetDebugLog2DB()) 
             {
                 $db2 = ApiPackage::InitDatabase($this->interface);
                 $errlog = ErrorLog::Create($db2, $errinfo);

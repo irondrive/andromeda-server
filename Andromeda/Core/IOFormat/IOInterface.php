@@ -146,7 +146,7 @@ abstract class IOInterface
      */
     public function isMultiOutput() : bool 
     {
-        return $this->numretfuncs > ($this->outmode ? 0 : 1);
+        return $this->numretfuncs > (($this->outmode !== 0) ? 0 : 1);
     }
     
     /** 

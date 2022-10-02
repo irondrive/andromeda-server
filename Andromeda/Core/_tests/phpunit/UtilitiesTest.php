@@ -63,8 +63,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
    
    public function testReturnBytes() : void
    {
-       $this->assertSame(Utilities::return_bytes(""), 0);       
-       $this->assertSame(Utilities::return_bytes("0"), 0);
+       $this->assertSame(Utilities::return_bytes(""), 0);
        
        $this->assertSame(Utilities::return_bytes("0"), 0);
        $this->assertSame(Utilities::return_bytes("75"), 75);

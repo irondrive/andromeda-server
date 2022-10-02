@@ -54,7 +54,7 @@ abstract class BaseLog extends BaseObject
         $or = ($params->HasParam('logic') ? $params->GetParam('logic', SafeParams::PARAMLOG_ONLYFULL)
             ->FromWhitelist(array('and','or')) : null) === 'or'; // default AND
         
-        if (!count($criteria))
+        if (count($criteria) === 0)
         {
             if ($or) $q->Where("FALSE"); return $q; // match nothing
         }

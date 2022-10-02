@@ -139,7 +139,7 @@ class AppRunner extends BaseRunner
         $this->stack[] = $context;
         $this->dirty = true;
         
-        if ($this->apipack->GetMetricsLevel())
+        if ($this->apipack->GetMetricsLevel() > 0)
         {
             $stats = $db->GetInternal()->pushStatsContext();
             $context->SetMetrics($stats);
@@ -152,7 +152,7 @@ class AppRunner extends BaseRunner
         
         array_pop($this->stack);
 
-        if ($this->apipack->GetMetricsLevel())
+        if ($this->apipack->GetMetricsLevel() > 0)
             $db->GetInternal()->popStatsContext();
         
         return $retval;
@@ -221,7 +221,7 @@ class AppRunner extends BaseRunner
         {
             $db = $this->apipack->GetDatabase();
             
-            if ($this->apipack->GetMetricsLevel())
+            if ($this->apipack->GetMetricsLevel() > 0)
             {
                 $stats = $db->GetInternal()->pushStatsContext();
                 $this->commit_stats[] = $stats;
@@ -233,7 +233,7 @@ class AppRunner extends BaseRunner
             if ($this->requestlog !== null) 
                 $this->requestlog->WriteFile();
 
-            if ($this->apipack->GetMetricsLevel()) 
+            if ($this->apipack->GetMetricsLevel() > 0) 
                 $db->GetInternal()->popStatsContext();
             
             $this->dirty = false;

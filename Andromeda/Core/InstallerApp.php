@@ -31,8 +31,8 @@ abstract class InstallerApp
      */
     public function getUsage() : array 
     {
-        $istr = 'install'; if ($if = $this->getInstallFlags()) $istr .= " $if";
-        $ustr = 'upgrade'; if ($uf = $this->getUpgradeFlags()) $ustr .= " $uf";
+        $istr = 'install'; if (($if = $this->getInstallFlags()) !== "") $istr .= " $if";
+        $ustr = 'upgrade'; if (($uf = $this->getUpgradeFlags()) !== "") $ustr .= " $uf";
         
         return array($istr,$ustr);
     }

@@ -54,7 +54,8 @@ class ClientException extends BaseException
 { 
     public function __construct(string $message, int $code, ?string $details = null)
     {
-        if ($details) $message .= ": $details";
+        if ($details !== null && $details !== "") 
+            $message .= ": $details";
         
         parent::__construct($message, $code);
     }
@@ -120,7 +121,8 @@ class ServerException extends BaseException
 {
     public function __construct(string $message, ?string $details = null, int $code = 0)
     {
-        if ($details) $message .= ": $details";
+        if ($details !== null && $details !== "")
+            $message .= ": $details";
         
         parent::__construct($message, $code);
     }

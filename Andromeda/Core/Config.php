@@ -216,7 +216,11 @@ class Config extends BaseConfig
     public function isReadOnly() : bool { return $this->read_only->GetValue(); }
     
     /** Returns the configured global data directory path */
-    public function GetDataDir() : ?string { $dir = $this->datadir->TryGetValue(); if ($dir) $dir .= '/'; return $dir; }
+    public function GetDataDir() : ?string 
+    { 
+        $dir = $this->datadir->TryGetValue(); 
+        return ($dir !== null) ? "$dir/" : $dir; 
+    }
     
     /** Returns true if request logging to DB is enabled */
     public function GetEnableRequestLogDB() : bool { return $this->requestlog_db->GetValue(); }

@@ -108,7 +108,7 @@ abstract class PolyObject0 extends PolyObject_
     
     public function NotifyDeleted() : void
     {
-        if ($this->ondel) $this->ondel->Delete();
+        if ($this->ondel !== null) $this->ondel->Delete();
         
         parent::NotifyDeleted();
     }

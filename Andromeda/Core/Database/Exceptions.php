@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\Exceptions; if (!defined('Andromeda')) die();
 
-use \PDOException;
+use PDOException;
 
 use Andromeda\Core\Errors\BaseExceptions;
 
@@ -103,7 +103,7 @@ class PDODatabaseConnectException extends DatabaseConnectException
 {
     public function __construct(?PDOException $e = null) {
         parent::__construct("DATABASE_CONNECT_FAILED");
-        if ($e) $this->AppendException($e);
+        if ($e !== null) $this->AppendException($e);
     }
 }
 

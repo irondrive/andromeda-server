@@ -7,12 +7,7 @@ use Andromeda\Core\IOFormat\SafeParams;
 if (!class_exists('PDO'))
     throw new CoreExceptions\MissingExtensionException('PDO');
 
-if (!function_exists('mb_internal_encoding'))
-    throw new CoreExceptions\MissingExtensionException('mbstring');
-
-mb_internal_encoding("UTF-8");
-
-use \PDO; use \PDOStatement; use \PDOException;
+use PDO; use PDOStatement; use PDOException;
 
 /**
  * This class implements the PDO database abstraction.
@@ -268,7 +263,7 @@ class PDODatabase
     {
         $config = $this->config;
         
-        if ($config['PASSWORD'] ?? null) 
+        if (array_key_exists('PASSWORD',$config))
             $config['PASSWORD'] = true;
         
         return $config;
