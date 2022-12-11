@@ -67,7 +67,7 @@ class CryptoSecret
      * @return string an encrypted and authenticated ciphertext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_encrypt()
      */
-    public static function Encrypt(string $data, string $nonce, string $key, string $extra = null) : string
+    public static function Encrypt(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
@@ -84,7 +84,7 @@ class CryptoSecret
      * @return string the decrypted and authenticated plaintext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_decrypt()
      */
-    public static function Decrypt(string $data, string $nonce, string $key, string $extra = null) : string
+    public static function Decrypt(string $data, string $nonce, string $key, string $extra = "") : string
     {
         $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($data, $extra, $nonce, $key);
         sodium_memzero($data); sodium_memzero($key);
