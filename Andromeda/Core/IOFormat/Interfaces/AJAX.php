@@ -36,7 +36,7 @@ class AJAX extends IOInterface
     }
     
     /** @return false */
-    public static function isPrivileged() : bool { return false; }
+    public static function isPrivileged() : bool { return true; }
     
     public function getAddress() : string
     {
@@ -115,6 +115,15 @@ class AJAX extends IOInterface
         foreach ($request as $key=>$val)
         {
             $params->AddParam($key, $val);
+        }
+        
+        foreach (getallheaders() as $key=>$val)
+        {
+            if (strpos($key,"X-Andromeda-") === 0)
+            {
+                $key = explode("-",strtolower($key),3)[2];
+                $params->AddParam(str_replace("-","_",$key), $val);
+            }
         }
         
         $pfiles = array(); foreach ($files as $key=>$file)
