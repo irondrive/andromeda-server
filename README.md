@@ -1,3 +1,6 @@
+
+!!! Andromeda is in early development - do not use in production! !!!
+
 # Overview
 
 Andromeda is a self-hostable cloud file storage solution.  This repository contains the backend server.  It is a pure-PHP REST-ish transactional API divided into a reusable core framework and component "apps" which implement the actual API calls.
