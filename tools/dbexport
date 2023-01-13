@@ -1,11 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 cd tools; if [ ! -d mysql2sqlite ]; then
    git clone https://github.com/dumblob/mysql2sqlite.git
 fi; cd ..
 
 echo "running pgtransfer..."
-tools/pgtransfer || exit 1
+tools/pgtransfer
 
 read -sp "MySQL password: " MYSQL_PWD; echo
 export MYSQL_PWD

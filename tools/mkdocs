@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 rm -rf docs/doctum_*
 php vendor/bin/doctum.php update tools/conf/doctum-conf.php -v

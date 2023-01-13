@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-cd Andromeda; 
+cd Andromeda;
 
 if [ "$1" == "all" ]; then
    ../vendor/bin/phpunit . -c ../tools/conf/phpunit.xml "$@"
@@ -9,7 +10,7 @@ else
       match=`echo "$dir" | grep -i "$1"`
       if [ "$1" == "" ] || [ "$match" != "" ]; then
          echo running $dir
-         ../vendor/bin/phpunit $dir -c ../tools/conf/phpunit.xml "$@" || exit 1; echo
+         ../vendor/bin/phpunit $dir -c ../tools/conf/phpunit.xml "$@"; echo
       fi
    done
 fi

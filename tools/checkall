@@ -1,3 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-tools/analyze && sleep 1 && tools/unittests && sleep 1 && tools/pytests && tools/count total
+tools/analyze; sleep 1
+tools/unittests; sleep 1
+tools/pytests
+
+tools/count total
