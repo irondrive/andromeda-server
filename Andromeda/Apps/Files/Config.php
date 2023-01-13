@@ -56,6 +56,19 @@ class Config extends BaseConfig
     public function GetAPIUrl() : ?string { return $this->TryGetScalar('apiurl'); }
     
     /**
+     * Return the maximum allowed upload size as min(php post_max, php upload_max, admin config)
+     * @return ?int max upload size in bytes or null if none
+     */
+    public function GetMaxUploadSize() : ?int
+    {
+        $a = Utilities::return_bytes(ini_get('post_max_size'));
+        $b = Utilities::return_bytes(ini_get('upload_max_filesize'));
+        $c = $this->TryGetScalar('upload_maxsize');
+        
+        return (!$a && !$b && !$c) ? null : 
+            min($a ?: PHP_INT_MAX, $b ?: PHP_INT_MAX, $c ?: PHP_INT_MAX);
+    }
+    /**
      * Returns a printable client object for this config
      * @param bool $admin if true, show admin-only values
      * @return array `{uploadmax:{bytes:int, files:int}}` \
@@ -64,18 +77,9 @@ class Config extends BaseConfig
      */
     public function GetClientObject(bool $admin) : array
     {
-        $postmax = Utilities::return_bytes(ini_get('post_max_size'));
-        $uploadmax = Utilities::return_bytes(ini_get('upload_max_size'));
-        
-        if (!$postmax) $postmax = PHP_INT_MAX;
-        if (!$uploadmax) $uploadmax = PHP_INT_MAX;
-        
-        $adminmax = $this->TryGetScalar('upload_maxsize') ?? PHP_INT_MAX;
-
         $retval = array(
-            'uploadmax' => array(
-                'bytes' => min($postmax, $uploadmax, $adminmax),
-                'files' => (int)ini_get('max_file_uploads'))
+            'upload_maxbytes' => $this->GetMaxUploadSize(),
+            'upload_maxfiles' => (int)ini_get('max_file_uploads')
         );
         
         if ($admin)
