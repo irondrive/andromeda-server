@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 TAG=$1
 
@@ -6,11 +7,11 @@ if [ -z "$TAG" ]; then
     echo "tag required"; exit 1
 fi
 
-rm -Rf release || exit 2
+rm -Rf release || true
 mkdir release; cd release
 
 git clone git@github.com:irondrive/andromeda-server.git api
-cd api; git checkout $TAG || exit 3
+cd api; git checkout $TAG
 
 rm -rf tools Andromeda/Apps/Testutil
 
@@ -34,7 +35,7 @@ cd ../../../.. # api
 cd .. # release
 
 git clone git@github.com:irondrive/andromeda-server-docs.git docs
-cd docs; git checkout $TAG || exit 4; cd ..
+cd docs; git checkout $TAG; cd ..
 
 git clone git@github.com:irondrive/andromeda-server.wiki.git docs/wiki
 
