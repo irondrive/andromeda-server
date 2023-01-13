@@ -72,7 +72,12 @@ class TestUtilApp extends BaseApp
     {
         $params = $input->GetParams()->GetClientObject();
         
-        $files = array_map(function(InputStream $file){ return $file->GetData(); }, $input->GetFiles());
+        $files = array_map(function(InputStream $file)
+        {
+            $data = $file->GetData();
+            if (mb_check_encoding($data,'UTF-8')) return $data;
+            else return strlen($data);
+        }, $input->GetFiles());
         
         return array('params'=>$params, 'files'=>$files);
     }
