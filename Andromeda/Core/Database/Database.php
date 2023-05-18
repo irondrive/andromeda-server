@@ -111,7 +111,8 @@ class Database implements Transactions
                 if ($home) $path = "$home/andromeda/DBConfig.php";
             }
             
-            if (file_exists($path)) { $config = $path; break; }
+            if ($path !== null && file_exists($path)) { 
+                $config = $path; break; }
         }
         
         if ($config !== null) $config = require($config);
