@@ -287,7 +287,10 @@ class CLI extends IOInterface
                 $param = mb_substr($param,0,-1);
                 if (!$param) throw new IncorrectCLIUsageException();
                 
-                $files[$param] = new InputStream(STDIN);
+                $filename = basename(self::getNextValue($argv,$i) ?? $val);
+                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME); // TODO document this in readme
+                
+                $files[$param] = new InputStream(STDIN, $filename);
             }
             else $params->AddParam($param, $val);
         }

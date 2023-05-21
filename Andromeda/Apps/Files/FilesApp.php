@@ -407,7 +407,7 @@ class FilesApp extends InstalledApp
         }
         else // can't import handles directly
         {
-            $name = $input->GetParam('name',SafeParam::TYPE_FSNAME);
+            $name = $infile->GetName(); // TODO check not null!
             
             if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
             
