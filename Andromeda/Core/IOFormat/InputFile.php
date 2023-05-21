@@ -4,12 +4,16 @@
 class InputStream
 {
     protected $handle;
+    protected ?string $name;
     
-    public function __construct($handle) {
-        $this->handle = $handle; }
+    public function __construct($handle, ?string $name = null) {
+        $this->handle = $handle; $this->name = $name; }
    
     /** Returns the file's stream resource */
     public function GetHandle() { return $this->handle; }
+    
+    /** Returns the name of the file to be used */
+    public function GetName() : ?string { return $this->name; }
     
     /** Returns the entire stream contents */
     public function GetData() : string 
@@ -26,7 +30,6 @@ class InputStream
 class InputPath extends InputStream
 {
     private string $path;
-    private string $name;
     private bool $istemp;
     
     /**
@@ -36,12 +39,11 @@ class InputPath extends InputStream
      */
     public function __construct(string $path, ?string $name = null, bool $istemp = false) {
         $this->path = $path; $this->name = $name ?? basename($path); $this->istemp = $istemp; }
+        
+    // TODO GetName() needs to be not null here
     
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }
-    
-    /** Returns the name of the file to be used */    
-    public function GetName() : string { return $this->name; }
     
     /** Returns true if the file is a temp file that can be moved */
     public function isTemp() : bool { return $this->istemp; }
