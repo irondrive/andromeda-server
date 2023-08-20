@@ -1,43 +1,14 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
+require_once(ROOT."/Apps/Files/Exceptions.php");
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Filesystem/FSImpl.php"); use Andromeda\Apps\Files\Filesystem\FSImpl;
 require_once(ROOT."/Apps/Files/Limits/Filesystem.php");
 require_once(ROOT."/Apps/Files/Limits/Account.php");
-
-/** Exception indicating that files cannot be moved across filessytems */
-class CrossFilesystemException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FILESYSTEM_MISMATCH", $details);
-    }
-}
-
-/** Exception indicating that the item target name already exists */
-class DuplicateItemException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ITEM_ALREADY_EXISTS", $details);
-    }
-}
-
-/** Exception indicating that the item was deleted when refreshed from storage */
-class DeletedByStorageException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ITEM_DELETED_BY_STORAGE", $details);
-    }
-}
 
 /**
  * An abstract class defining a user-created item in a filesystem.
@@ -55,8 +26,8 @@ abstract class Item extends BaseObject // TODO was StandardObject
         return array_merge(parent::GetFieldTemplate(), array(
             'name' => new FieldTypes\StringType(),
             'description' => new FieldTypes\StringType(),
-            'date_modified' => new FieldTypes\Date(null),
-            'date_accessed' => new FieldTypes\Date(null, true),         
+            'date_modified' => new FieldTypes\Timestamp(null),
+            'date_accessed' => new FieldTypes\Timestamp(null, true),         
             'count_bandwidth' => new FieldTypes\Counter(true),  // total bandwidth used (recursive for folders)
             'count_pubdownloads' => new FieldTypes\Counter(),   // total public download count (recursive for folders)
             'obj_owner' => new FieldTypes\ObjectRef(Account::class),
@@ -127,7 +98,7 @@ abstract class Item extends BaseObject // TODO was StandardObject
      * @param bool $overwrite if true, delete the duplicate item
      * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
      * @throws DuplicateItemException if a duplicate item exists and not $overwrite
-     * @return static|NULL existing item to be re-used
+     * @return ?static existing item to be re-used
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?self
     {
@@ -152,7 +123,7 @@ abstract class Item extends BaseObject // TODO was StandardObject
      * @param bool $reuse if true, return the duplicate item for reuse instead of deleting
      * @throws CrossFilesystemException if the parent is on a different filesystem
      * @throws DuplicateItemException if a duplicate item exists and not $overwrite
-     * @return static|NULL existing item to be re-used
+     * @return ?static existing item to be re-used
      */
     protected function CheckParent(Folder $parent, bool $overwrite, bool $reuse) : ?self
     {
@@ -475,7 +446,7 @@ abstract class Item extends BaseObject // TODO was StandardObject
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the parent folder of the item
      * @param string $name the name of the item to load
-     * @return static|NULL loaded item or null if not found
+     * @return ?static loaded item or null if not found
      */
     public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?self
     {
@@ -510,7 +481,7 @@ abstract class Item extends BaseObject // TODO was StandardObject
      * Returns a printable client object of this item
      * @param bool $owner if true, show owner-level details
      * @param bool $details if true, show tag and share objects
-     * @return array|NULL `{id:id, name:?string, owner:?string, parent:?string, filesystem:string, \
+     * @return ?array `{id:id, name:?string, owner:?string, parent:?string, filesystem:string, \
          dates:{created:float, modified:?float}, counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int, tags:int, comments:int}}` \
          if $owner, add: `{counters:{shares:int}, dates:{accessed:?float}}`, \
          if $details, add: `{tags:[id:Tag]}`, if $details && $owner, add `{shares:[id:Share]}`

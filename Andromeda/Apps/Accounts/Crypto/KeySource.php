@@ -1,102 +1,90 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey, DecryptionFailedException};
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Crypto;
+use Andromeda\Core\Database\FieldTypes;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
 
-require_once(ROOT."/Apps/Accounts/Account.php");
-
-/** 
- * An object that holds an encrypted copy of an Account's master key 
- * 
- * Inherits from AuthObject, using the auth key as the key that wraps the master key.
- * This is used to provide methods of unlocking crypto in a request other than having the user's password.
- */
-abstract class KeySource extends AuthObject
+/** An object that holds an encrypted copy of a crypto key */
+trait KeySource
 {
-    public static function GetFieldTemplate() : array
+    /** The encrypted copy of the account master key */
+    private FieldTypes\NullStringType $master_key;
+    /** The nonce used to encrypt the master key */
+    private FieldTypes\NullStringType $master_nonce;
+    /** The salt used to encrypt the master key */
+    private FieldTypes\NullStringType $master_salt;
+    
+    /** The decrypted master key, if in memory */
+    private string $unlocked_key;
+    
+    protected function KeySourceCreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'master_key' => new FieldTypes\StringType(),
-            'master_nonce' => new FieldTypes\StringType(),
-            'master_salt' => new FieldTypes\StringType()
-        ));
-    }
+        $fields = array();
 
-    /** Returns true if this key source contains key material */
-    public function hasCrypto() : bool { return $this->TryGetScalar('master_key') !== null; }
-    
-    /** Returns the account that owns this key source */
-    public function GetAccount() : Account  { return $this->GetObject('account'); }
-    
-    /** Creates a new key source for the given account, initializing crypto if the account has it */
-    public static function CreateKeySource(ObjectDatabase $database, Account $account) : self
-    {
-        $obj = parent::BaseCreate($database)->SetObject('account',$account);;
+        $this->master_key = $fields[] =   new FieldTypes\NullStringType('master_key');
+        $this->master_nonce = $fields[] = new FieldTypes\NullStringType('master_nonce');
+        $this->master_salt = $fields[] =  new FieldTypes\NullStringType('master_salt');
         
-        return (!$account->hasCrypto()) ? $obj : $obj->InitializeCrypto();
+        $this->RegisterChildFields($fields);
     }
     
+    /** Returns true if this key source contains key material */
+    protected function hasCrypto() : bool { return $this->master_key->TryGetValue() !== null; }
+
     /**
-     * Initializes crypto, storing a copy of the account's master key
-     * 
-     * Crypto must be unlocked for the account to get a copy of the key
+     * Initializes crypto, storing an encrypted copy of the given key
+     * @param string $key the key to be encrypted
+     * @param string $wrapkey the key to use to encrypt
      * @throws CryptoAlreadyInitializedException if already initialized
-     * @see Account::GetEncryptedMasterKey()
      * @return $this
      */
-    public function InitializeCrypto() : self
+    protected function InitializeCrypto(string $key, string $wrapkey) : self
     {
         if ($this->hasCrypto()) throw new CryptoAlreadyInitializedException();
         
-        $master_salt = CryptoKey::GenerateSalt();
-        $master_nonce = CryptoSecret::GenerateNonce();
+        $this->unlocked_key = $key;
         
-        $key = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength(), true);
-        $master_key = $this->GetAccount()->GetEncryptedMasterKey($master_nonce, $key);
+        $master_salt = Crypto::GenerateSalt();
+        $master_nonce = Crypto::GenerateSecretNonce();
+        $this->master_salt->SetValue($master_salt);
+        $this->master_nonce->SetValue($master_nonce);
         
-        return $this
-            ->SetScalar('master_salt', $master_salt)
-            ->SetScalar('master_nonce', $master_nonce)
-            ->SetScalar('master_key', $master_key);
+        $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
+        $master_key = Crypto::EncryptSecret($key, $master_nonce, $wrapkey);
+        $this->master_key->SetValue($master_key);
+        
+        return $this;
     }
 
     /**
-     * Returns the decrypted account master key
+     * Returns the decrypted key using the given key
+     * @param string $wrapkey the key to use to decrypt
      * @throws CryptoNotInitializedException if no key material exists
      * @throws DecryptionFailedException if decryption fails
-     * @see AuthObject::GetAuthKey()
      */
-    public function GetUnlockedKey() : string
+    protected function TryGetUnlockedKey(string $wrapkey) : ?string
     {
         if (!$this->hasCrypto()) throw new CryptoNotInitializedException();
         
-        $master = $this->GetScalar('master_key');
-        $master_nonce = $this->GetScalar('master_nonce');
-        $master_salt = $this->GetScalar('master_salt');
+        $key = $this->master_key->TryGetValue();
+        if ($key === null) return null;
         
-        $cryptokey = CryptoKey::DeriveKey($this->GetAuthKey(), $master_salt, CryptoSecret::KeyLength(), true);
+        $master_salt = $this->master_salt->TryGetValue();
+        $master_nonce = $this->master_nonce->TryGetValue();
         
-        return CryptoSecret::Decrypt($master, $master_nonce, $cryptokey);
+        $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
+        return $this->unlocked_key = Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
     }
 
     /** Erases all key material from the object */
-    public function DestroyCrypto() : self
+    protected function DestroyCrypto() : self
     {
-        $this->SetScalar('master_key', null);
-        $this->SetScalar('master_salt', null);
-        $this->SetScalar('master_nonce', null);
+        unset($this->unlocked_key);
+        
+        $this->master_key->SetValue(null);
+        $this->master_salt->SetValue(null);
+        $this->master_nonce->SetValue(null);
+        
         return $this;
-    }    
-    
-    /**
-     * Returns a printable client object
-     * @param bool $secret if true, show the real key
-     * @return array `{authkey:string}` if $secret, else empty
-     */
-    public function GetClientObject(bool $secret = false) : array
-    {
-        return $secret ? array('authkey'=>$this->GetAuthKey()) : array();
     }
 }
-

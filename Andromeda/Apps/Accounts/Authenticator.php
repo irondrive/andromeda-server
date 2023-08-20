@@ -1,99 +1,13 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
 
-require_once(ROOT."/Apps/Accounts/Account.php");
-require_once(ROOT."/Apps/Accounts/Config.php");
-require_once(ROOT."/Apps/Accounts/Client.php");
-require_once(ROOT."/Apps/Accounts/Group.php");
-require_once(ROOT."/Apps/Accounts/Session.php");
-require_once(ROOT."/Apps/Accounts/TwoFactor.php");
+use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\{Input, IOInterface, SafeParams};
 
-/** Exception indicating that the request is not allowed with the given authentication */
-class AuthenticationFailedException extends Exceptions\ClientDeniedException
-{
-    public function __construct(string $message = "AUTHENTICATION_FAILED", ?string $details = null) {
-        parent::__construct($message, $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Exceptions.php");
 
-/** Exception indicating that the authenticated account is disabled */
-class AccountDisabledException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ACCOUNT_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that the specified session is invalid */
-class InvalidSessionException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_SESSION", $details);
-    }
-}
-
-/** Exception indicating that admin-level access is required */
-class AdminRequiredException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ADMIN_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that a two factor code was required but not given */
-class TwoFactorRequiredException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("TWOFACTOR_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that a password for authentication was required but not given */
-class PasswordRequiredException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("PASSWORD_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that the request requires providing crypto details */
-class CryptoKeyRequiredException extends AuthenticationFailedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_KEY_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that the account does not have crypto initialized */
-class CryptoInitRequiredException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_INIT_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that the action requires an account to act as */
-class AccountRequiredException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ACCOUNT_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that the action requires a session to use */
-class SessionRequiredException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SESSION_REQUIRED", $details);
-    }
-}
-
-use Andromeda\Core\DecryptionFailedException;
+use Andromeda\Apps\Accounts\Resource\{Client, Session};
 
 /**
  * The class used to authenticate requests
@@ -206,7 +120,7 @@ class Authenticator
         {
             $session = Session::TryLoadByID($database, $sessionid);
             
-            if ($session === null || !$session->CheckMatch($sessionkey)) 
+            if ($session === null || !$session->CheckKeyMatch($sessionkey)) 
                 throw new InvalidSessionException();
             
             $account = $session->GetAccount();
@@ -214,9 +128,9 @@ class Authenticator
             if (!$account->isEnabled()) 
                 throw new AccountDisabledException();
             
-            $authenticator->realaccount = $account->setActiveDate();
-            $authenticator->session = $session->setActiveDate();
-            $authenticator->client = $session->GetClient()->setActiveDate();
+            $authenticator->realaccount = $account->SetActiveDate();
+            $authenticator->session = $session->SetActiveDate();
+            $authenticator->client = $session->GetClient()->SetActiveDate();
             
             if (($sudouser !== null || $sudoacct !== null) && !$account->isAdmin())
                 throw new AdminRequiredException();

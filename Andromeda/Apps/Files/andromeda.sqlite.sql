@@ -1,29 +1,32 @@
 PRAGMA journal_mode = MEMORY;
-CREATE TABLE `a2obj_apps_files_accesslog` (
+CREATE TABLE `a2obj_apps_files_actionlog` (
   `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL
-,  `obj_account` char(12) DEFAULT NULL
-,  `obj_sudouser` char(12) DEFAULT NULL
-,  `obj_client` char(12) DEFAULT NULL
-,  `obj_file` char(16) DEFAULT NULL
-,  `obj_folder` char(16) DEFAULT NULL
-,  `obj_parent` char(16) DEFAULT NULL
-,  `obj_file_share` char(16) DEFAULT NULL
-,  `obj_folder_share` char(16) DEFAULT NULL
-,  `obj_parent_share` char(16) DEFAULT NULL
+,  `account` char(12) DEFAULT NULL
+,  `sudouser` char(12) DEFAULT NULL
+,  `client` char(12) DEFAULT NULL
+,  `file` char(16) DEFAULT NULL
+,  `folder` char(16) DEFAULT NULL
+,  `parent` char(16) DEFAULT NULL
+,  `file_share` char(16) DEFAULT NULL
+,  `folder_share` char(16) DEFAULT NULL
+,  `parent_share` char(16) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
 );
 CREATE TABLE `a2obj_apps_files_comment` (
   `id` char(16) NOT NULL
-,  `obj_owner` char(12) NOT NULL
-,  `obj_item` varchar(64) NOT NULL
+,  `owner` char(12) NOT NULL
+,  `item` char(16) NOT NULL
 ,  `comment` text NOT NULL
 ,  `date_created` double NOT NULL
 ,  `date_modified` double NOT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_comment_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_comment_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_item` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_config` (
-  `id` char(12) NOT NULL
+  `id` char(1) NOT NULL
 ,  `version` varchar(255) NOT NULL
 ,  `date_created` double NOT NULL
 ,  `apiurl` text DEFAULT NULL
@@ -33,147 +36,128 @@ CREATE TABLE `a2obj_apps_files_config` (
 ,  `timedstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
-CREATE TABLE `a2obj_apps_files_file` (
-  `id` char(16) NOT NULL
-,  `name` varchar(255) NOT NULL
-,  `description` text DEFAULT NULL
-,  `date_created` double NOT NULL
-,  `date_modified` double DEFAULT NULL
-,  `date_accessed` double DEFAULT NULL
-,  `size` integer NOT NULL DEFAULT 0
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
-,  `obj_owner` char(12) DEFAULT NULL
-,  `obj_parent` char(16) NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
-,  `objs_likes` integer NOT NULL DEFAULT 0
-,  `count_likes` integer NOT NULL DEFAULT 0
-,  `count_dislikes` integer NOT NULL DEFAULT 0
-,  `objs_tags` integer NOT NULL DEFAULT 0
-,  `objs_comments` integer NOT NULL DEFAULT 0
-,  `objs_shares` integer NOT NULL DEFAULT 0
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`name`,`obj_parent`)
-);
 CREATE TABLE `a2obj_apps_files_filesystem_fsmanager` (
-  `id` char(12) NOT NULL
+  `id` char(8) NOT NULL
 ,  `date_created` double NOT NULL
 ,  `type` integer NOT NULL
 ,  `readonly` integer NOT NULL
-,  `obj_storage` varchar(64) NOT NULL
-,  `obj_owner` char(12) DEFAULT NULL
+,  `owner` char(12) DEFAULT NULL
 ,  `name` varchar(127) DEFAULT NULL
 ,  `crypto_masterkey` binary(32) DEFAULT NULL
 ,  `crypto_chunksize` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_owner`,`name`)
+,  UNIQUE (`owner`,`name`)
+,  CONSTRAINT `a2obj_apps_files_filesystem_fsmanager_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_folder` (
   `id` char(16) NOT NULL
-,  `name` varchar(255) DEFAULT NULL
-,  `description` text DEFAULT NULL
+,  `count_subfiles` integer NOT NULL DEFAULT 0
+,  `count_subfolders` integer NOT NULL DEFAULT 0
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_folder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_item` (
+  `id` char(16) NOT NULL
+,  `size` integer NOT NULL
+,  `owner` char(12) DEFAULT NULL
+,  `filesystem` char(8) NOT NULL
 ,  `date_created` double NOT NULL
 ,  `date_modified` double DEFAULT NULL
 ,  `date_accessed` double DEFAULT NULL
-,  `count_size` integer NOT NULL DEFAULT 0
-,  `count_pubvisits` integer NOT NULL DEFAULT 0
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
-,  `obj_owner` char(12) DEFAULT NULL
-,  `obj_parent` char(16) DEFAULT NULL
-,  `obj_filesystem` char(12) NOT NULL
-,  `objs_files` integer NOT NULL DEFAULT 0
-,  `objs_folders` integer NOT NULL DEFAULT 0
-,  `count_subfiles` integer NOT NULL DEFAULT 0
-,  `count_subfolders` integer NOT NULL DEFAULT 0
-,  `count_subshares` integer NOT NULL DEFAULT 0
-,  `objs_likes` integer NOT NULL DEFAULT 0
-,  `count_likes` integer NOT NULL DEFAULT 0
-,  `count_dislikes` integer NOT NULL DEFAULT 0
-,  `objs_tags` integer NOT NULL DEFAULT 0
-,  `objs_comments` integer NOT NULL DEFAULT 0
-,  `objs_shares` integer NOT NULL DEFAULT 0
+,  `description` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`name`,`obj_parent`)
+,  CONSTRAINT `a2obj_apps_files_item_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_item_ibfk_2` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_like` (
-  `id` char(16) NOT NULL
-,  `obj_owner` char(12) NOT NULL
-,  `obj_item` varchar(64) NOT NULL
+  `id` char(12) NOT NULL
+,  `owner` char(12) NOT NULL
+,  `item` char(16) NOT NULL
 ,  `date_created` double NOT NULL
 ,  `value` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_owner`,`obj_item`)
+,  UNIQUE (`owner`,`item`)
+,  CONSTRAINT `a2obj_apps_files_like_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_like_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_item` (`id`)
 );
-CREATE TABLE `a2obj_apps_files_limits_authentitytotal` (
+CREATE TABLE `a2obj_apps_files_limits_accounttimed` (
   `id` char(12) NOT NULL
-,  `obj_object` varchar(64) NOT NULL
-,  `date_created` double NOT NULL
-,  `date_download` double DEFAULT NULL
-,  `date_upload` double DEFAULT NULL
-,  `itemsharing` integer DEFAULT NULL
-,  `share2everyone` integer DEFAULT NULL
-,  `share2groups` integer DEFAULT NULL
+,  `account` char(12) NOT NULL
+,  `timeperiod` integer NOT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`account`,`timeperiod`)
+,  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_limits_accounttotal` (
+  `id` char(12) NOT NULL
+,  `account` char(2) NOT NULL
 ,  `emailshare` integer DEFAULT NULL
-,  `publicupload` integer DEFAULT NULL
-,  `publicmodify` integer DEFAULT NULL
-,  `randomwrite` integer DEFAULT NULL
 ,  `userstorage` integer DEFAULT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
-,  `count_size` integer NOT NULL DEFAULT 0
-,  `count_items` integer NOT NULL DEFAULT 0
-,  `count_shares` integer NOT NULL DEFAULT 0
-,  `limit_size` integer DEFAULT NULL
-,  `limit_items` integer DEFAULT NULL
-,  `limit_shares` integer DEFAULT NULL
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_object`)
+,  UNIQUE (`account`)
+,  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 );
-CREATE TABLE `a2obj_apps_files_limits_filesystemtotal` (
-  `id` char(12) NOT NULL
-,  `obj_object` varchar(64) NOT NULL
-,  `date_created` double NOT NULL
-,  `date_download` double DEFAULT NULL
-,  `date_upload` double DEFAULT NULL
-,  `itemsharing` integer DEFAULT NULL
-,  `share2everyone` integer DEFAULT NULL
-,  `share2groups` integer DEFAULT NULL
-,  `publicupload` integer DEFAULT NULL
-,  `publicmodify` integer DEFAULT NULL
-,  `randomwrite` integer DEFAULT NULL
+CREATE TABLE `a2obj_apps_files_limits_filesystemtimed` (
+  `id` char(8) NOT NULL
+,  `filesystem` char(8) NOT NULL
+,  `timeperiod` integer NOT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
-,  `count_size` integer NOT NULL DEFAULT 0
-,  `count_items` integer NOT NULL DEFAULT 0
-,  `count_shares` integer NOT NULL DEFAULT 0
-,  `limit_size` integer DEFAULT NULL
-,  `limit_items` integer DEFAULT NULL
-,  `limit_shares` integer DEFAULT NULL
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_object`)
+,  UNIQUE (`filesystem`,`timeperiod`)
+,  CONSTRAINT `a2obj_apps_files_limits_filesystemtimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_filesystemtimed_ibfk_2` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_limits_filesystemtotal` (
+  `id` char(8) NOT NULL
+,  `filesystem` char(8) NOT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`filesystem`)
+,  CONSTRAINT `a2obj_apps_files_limits_filesystemtotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_filesystemtotal_ibfk_2` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_limits_grouptimed` (
+  `id` char(12) NOT NULL
+,  `group` char(12) NOT NULL
+,  `timeperiod` integer NOT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`group`,`timeperiod`)
+,  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_limits_grouptotal` (
+  `id` char(12) NOT NULL
+,  `group` char(12) NOT NULL
+,  `emailshare` integer DEFAULT NULL
+,  `userstorage` integer DEFAULT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`group`)
+,  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`)
+,  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_limits_timed` (
   `id` char(12) NOT NULL
-,  `obj_object` varchar(64) NOT NULL
-,  `objs_stats` integer NOT NULL DEFAULT 0
 ,  `date_created` double NOT NULL
-,  `timeperiod` integer NOT NULL
 ,  `max_stats_age` integer DEFAULT NULL
-,  `track_items` integer DEFAULT NULL
-,  `track_dlstats` integer DEFAULT NULL
 ,  `limit_pubdownloads` integer DEFAULT NULL
 ,  `limit_bandwidth` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_object`,`timeperiod`)
 );
 CREATE TABLE `a2obj_apps_files_limits_timedstats` (
   `id` char(12) NOT NULL
-,  `obj_limitobj` varchar(64) NOT NULL
+,  `limit` char(12) NOT NULL
 ,  `date_created` double NOT NULL
 ,  `date_timestart` integer NOT NULL
 ,  `iscurrent` integer DEFAULT NULL
@@ -183,14 +167,44 @@ CREATE TABLE `a2obj_apps_files_limits_timedstats` (
 ,  `count_pubdownloads` integer NOT NULL DEFAULT 0
 ,  `count_bandwidth` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_limitobj`,`date_timestart`)
-,  UNIQUE (`obj_limitobj`,`iscurrent`)
+,  UNIQUE (`limit`,`date_timestart`)
+,  UNIQUE (`limit`,`iscurrent`)
+,  CONSTRAINT `a2obj_apps_files_limits_timedstats_ibfk_1` FOREIGN KEY (`limit`) REFERENCES `a2obj_apps_files_limits_timed` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_limits_total` (
+  `id` char(12) NOT NULL
+,  `date_created` double NOT NULL
+,  `date_download` double DEFAULT NULL
+,  `date_upload` double DEFAULT NULL
+,  `itemsharing` integer DEFAULT NULL
+,  `share2everyone` integer DEFAULT NULL
+,  `share2groups` integer DEFAULT NULL
+,  `publicupload` integer DEFAULT NULL
+,  `publicmodify` integer DEFAULT NULL
+,  `randomwrite` integer DEFAULT NULL
+,  `count_size` integer NOT NULL DEFAULT 0
+,  `count_items` integer NOT NULL DEFAULT 0
+,  `count_shares` integer NOT NULL DEFAULT 0
+,  `limit_size` integer DEFAULT NULL
+,  `limit_items` integer DEFAULT NULL
+,  `limit_shares` integer DEFAULT NULL
+,  `count_pubdownloads` integer NOT NULL DEFAULT 0
+,  `count_bandwidth` integer NOT NULL DEFAULT 0
+,  PRIMARY KEY (`id`)
+);
+CREATE TABLE `a2obj_apps_files_rootfolder` (
+  `id` char(16) NOT NULL
+,  `owner` char(12) DEFAULT NULL
+,  `filesystem` char(12) NOT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`owner`,`filesystem`)
+,  CONSTRAINT `a2obj_apps_files_rootfolder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_folder` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_share` (
   `id` char(16) NOT NULL
-,  `obj_item` varchar(64) NOT NULL
-,  `obj_owner` char(12) NOT NULL
-,  `obj_dest` varchar(64) DEFAULT NULL
+,  `item` char(16) NOT NULL
+,  `owner` char(12) NOT NULL
+,  `dest` char(12) DEFAULT NULL
 ,  `label` text DEFAULT NULL
 ,  `authkey` text DEFAULT NULL
 ,  `password` text DEFAULT NULL
@@ -198,7 +212,7 @@ CREATE TABLE `a2obj_apps_files_share` (
 ,  `date_accessed` double DEFAULT NULL
 ,  `count_accessed` integer NOT NULL DEFAULT 0
 ,  `limit_accessed` integer DEFAULT NULL
-,  `date_expires` integer DEFAULT NULL
+,  `date_expires` double DEFAULT NULL
 ,  `read` integer NOT NULL
 ,  `upload` integer NOT NULL
 ,  `modify` integer NOT NULL
@@ -206,33 +220,33 @@ CREATE TABLE `a2obj_apps_files_share` (
 ,  `reshare` integer NOT NULL
 ,  `keepowner` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_item`,`obj_owner`,`obj_dest`)
+,  UNIQUE (`item`,`owner`,`dest`)
+,  CONSTRAINT `a2obj_apps_files_share_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_share_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_item` (`id`)
+,  CONSTRAINT `a2obj_apps_files_share_ibfk_3` FOREIGN KEY (`dest`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_ftp` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
+,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
 ,  `implssl` integer NOT NULL
-,  `path` text NOT NULL
 ,  `username` varbinary(255) DEFAULT NULL
 ,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` tinyblob DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_local` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
 ,  `path` text NOT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_local_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_s3` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
+,  `path` text NOT NULL
 ,  `endpoint` text NOT NULL
 ,  `path_style` integer DEFAULT NULL
 ,  `port` integer DEFAULT NULL
@@ -244,11 +258,10 @@ CREATE TABLE `a2obj_apps_files_storage_s3` (
 ,  `secretkey` varbinary(56) DEFAULT NULL
 ,  `secretkey_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_s3_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_sftp` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
@@ -262,11 +275,10 @@ CREATE TABLE `a2obj_apps_files_storage_sftp` (
 ,  `privkey_nonce` binary(24) DEFAULT NULL
 ,  `keypass_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_sftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_smb` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `workgroup` varchar(255) DEFAULT NULL
@@ -275,50 +287,65 @@ CREATE TABLE `a2obj_apps_files_storage_smb` (
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_smb_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_storage_storage` (
+  `id` char(8) NOT NULL
+,  `date_created` double NOT NULL
+,  `filesystem` char(8) NOT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`filesystem`)
+,  CONSTRAINT `a2obj_apps_files_storage_storage_ibfk_1` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_storage_webdav` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `obj_filesystem` char(12) NOT NULL
+  `id` char(8) NOT NULL
+,  `path` text NOT NULL
 ,  `endpoint` text NOT NULL
 ,  `username` varbinary(255) NOT NULL
 ,  `password` tinyblob DEFAULT NULL
 ,  `username_nonce` binary(24) DEFAULT NULL
 ,  `password_nonce` binary(24) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_webdav_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_subitem` (
+  `id` char(16) NOT NULL
+,  `name` varchar(255) NOT NULL
+,  `parent` char(16) NOT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`name`,`parent`)
+,  CONSTRAINT `a2obj_apps_files_subitem_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`)
+,  CONSTRAINT `a2obj_apps_files_subitem_ibfk_2` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_folder` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_tag` (
   `id` char(16) NOT NULL
-,  `obj_owner` char(12) NOT NULL
-,  `obj_item` varchar(64) NOT NULL
+,  `owner` char(12) NOT NULL
+,  `item` char(16) NOT NULL
 ,  `tag` varchar(127) NOT NULL
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`obj_item`,`tag`)
+,  UNIQUE (`item`,`tag`)
+,  CONSTRAINT `a2obj_apps_files_tag_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_tag_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_item` (`id`)
 );
-CREATE INDEX "idx_a2obj_apps_files_limits_timed_object" ON "a2obj_apps_files_limits_timed" (`obj_object`);
-CREATE INDEX "idx_a2obj_apps_files_tag_owner" ON "a2obj_apps_files_tag" (`obj_owner`);
-CREATE INDEX "idx_a2obj_apps_files_tag_item" ON "a2obj_apps_files_tag" (`obj_item`);
-CREATE INDEX "idx_a2obj_apps_files_storage_smb_filesystem" ON "a2obj_apps_files_storage_smb" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_storage_s3_filesystem" ON "a2obj_apps_files_storage_s3" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_share_owner" ON "a2obj_apps_files_share" (`obj_owner`);
-CREATE INDEX "idx_a2obj_apps_files_share_item" ON "a2obj_apps_files_share" (`obj_item`);
-CREATE INDEX "idx_a2obj_apps_files_comment_item" ON "a2obj_apps_files_comment" (`obj_item`);
-CREATE INDEX "idx_a2obj_apps_files_comment_owner_item" ON "a2obj_apps_files_comment" (`obj_owner`,`obj_item`);
-CREATE INDEX "idx_a2obj_apps_files_file_owner" ON "a2obj_apps_files_file" (`obj_owner`);
-CREATE INDEX "idx_a2obj_apps_files_file_parent" ON "a2obj_apps_files_file" (`obj_parent`);
-CREATE INDEX "idx_a2obj_apps_files_file_filesystem" ON "a2obj_apps_files_file" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_storage_webdav_filesystem" ON "a2obj_apps_files_storage_webdav" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_storage_sftp_filesystem" ON "a2obj_apps_files_storage_sftp" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_like_item" ON "a2obj_apps_files_like" (`obj_item`);
-CREATE INDEX "idx_a2obj_apps_files_folder_parent" ON "a2obj_apps_files_folder" (`obj_parent`);
-CREATE INDEX "idx_a2obj_apps_files_folder_owner" ON "a2obj_apps_files_folder" (`obj_owner`);
-CREATE INDEX "idx_a2obj_apps_files_folder_filesystem" ON "a2obj_apps_files_folder" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_filesystem_fsmanager_owner" ON "a2obj_apps_files_filesystem_fsmanager" (`obj_owner`);
+CREATE INDEX "idx_a2obj_apps_files_limits_grouptimed_group" ON "a2obj_apps_files_limits_grouptimed" (`group`);
+CREATE INDEX "idx_a2obj_apps_files_limits_filesystemtimed_filesystem" ON "a2obj_apps_files_limits_filesystemtimed" (`filesystem`);
+CREATE INDEX "idx_a2obj_apps_files_actionlog_account" ON "a2obj_apps_files_actionlog" (`account`);
+CREATE INDEX "idx_a2obj_apps_files_actionlog_file" ON "a2obj_apps_files_actionlog" (`file`);
+CREATE INDEX "idx_a2obj_apps_files_actionlog_folder" ON "a2obj_apps_files_actionlog" (`folder`);
+CREATE INDEX "idx_a2obj_apps_files_tag_owner" ON "a2obj_apps_files_tag" (`owner`);
+CREATE INDEX "idx_a2obj_apps_files_tag_item" ON "a2obj_apps_files_tag" (`item`);
+CREATE INDEX "idx_a2obj_apps_files_item_owner" ON "a2obj_apps_files_item" (`owner`);
+CREATE INDEX "idx_a2obj_apps_files_item_filesystem" ON "a2obj_apps_files_item" (`filesystem`);
+CREATE INDEX "idx_a2obj_apps_files_share_dest" ON "a2obj_apps_files_share" (`dest`);
+CREATE INDEX "idx_a2obj_apps_files_share_owner" ON "a2obj_apps_files_share" (`owner`);
+CREATE INDEX "idx_a2obj_apps_files_share_item" ON "a2obj_apps_files_share" (`item`);
+CREATE INDEX "idx_a2obj_apps_files_rootfolder_owner" ON "a2obj_apps_files_rootfolder" (`owner`);
+CREATE INDEX "idx_a2obj_apps_files_rootfolder_filesystem" ON "a2obj_apps_files_rootfolder" (`filesystem`);
+CREATE INDEX "idx_a2obj_apps_files_comment_item" ON "a2obj_apps_files_comment" (`item`);
+CREATE INDEX "idx_a2obj_apps_files_comment_owner_item" ON "a2obj_apps_files_comment" (`owner`,`item`);
+CREATE INDEX "idx_a2obj_apps_files_like_item" ON "a2obj_apps_files_like" (`item`);
+CREATE INDEX "idx_a2obj_apps_files_limits_accounttimed_account" ON "a2obj_apps_files_limits_accounttimed" (`account`);
+CREATE INDEX "idx_a2obj_apps_files_subitem_parent" ON "a2obj_apps_files_subitem" (`parent`);
+CREATE INDEX "idx_a2obj_apps_files_filesystem_fsmanager_owner" ON "a2obj_apps_files_filesystem_fsmanager" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_filesystem_fsmanager_name" ON "a2obj_apps_files_filesystem_fsmanager" (`name`);
-CREATE INDEX "idx_a2obj_apps_files_filesystem_fsmanager_storage" ON "a2obj_apps_files_filesystem_fsmanager" (`obj_storage`);
-CREATE INDEX "idx_a2obj_apps_files_storage_local_filesystem" ON "a2obj_apps_files_storage_local" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_storage_ftp_filesystem" ON "a2obj_apps_files_storage_ftp" (`obj_filesystem`);
-CREATE INDEX "idx_a2obj_apps_files_accesslog_account" ON "a2obj_apps_files_accesslog" (`obj_account`);
-CREATE INDEX "idx_a2obj_apps_files_accesslog_file" ON "a2obj_apps_files_accesslog" (`obj_file`);
-CREATE INDEX "idx_a2obj_apps_files_accesslog_folder" ON "a2obj_apps_files_accesslog" (`obj_folder`);

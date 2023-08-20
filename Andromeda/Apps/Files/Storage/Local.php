@@ -1,19 +1,11 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
-
-/** Exception indicating only admins can create local storage */
-class LocalNonAdminException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("LOCAL_STORAGE_ADMIN_ONLY", $details);
-    }
-}
 
 abstract class LocalBase extends FWrapper { use BasePath; }
 
@@ -48,7 +40,7 @@ class Local extends LocalBase
 
     protected function GetFullURL(string $path = "") : string
     {
-        return $this->GetPath($path);
+        return $this->GetPath($path); // TODO use file:// ?
     }
     
     /**

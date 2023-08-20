@@ -1,57 +1,16 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Contact.php");
-require_once(ROOT."/Apps/Accounts/Client.php"); 
-require_once(ROOT."/Apps/Accounts/Config.php");
-require_once(ROOT."/Apps/Accounts/Group.php");
-require_once(ROOT."/Apps/Accounts/GroupStuff.php");
-require_once(ROOT."/Apps/Accounts/KeySource.php");
-require_once(ROOT."/Apps/Accounts/Session.php");
-require_once(ROOT."/Apps/Accounts/RecoveryKey.php");
+use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
-require_once(ROOT."/Apps/Accounts/Auth/Local.php");
+use Andromeda\Apps\Accounts\Resource\{Contact, Client, RecoveryKey, Session, TwoFactor};
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\{CryptoSecret, CryptoKey, DecryptionFailedException};
-require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\{BaseObject, NullValueException};
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\AuthEntity;
 
-/** Exception indicating that crypto must be unlocked by the client */
-class CryptoUnlockRequiredException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_UNLOCK_REQUIRED", $details);
-    }
-}
-
-/** Exception indicating that crypto cannot be unlocked because it does not exist */
-class CryptoNotInitializedException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_NOT_INITIALIZED", $details);
-    }
-}
-
-/** Exception indicating that crypto cannot be initialized because it already exists */
-class CryptoAlreadyInitializedException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_ALREADY_INITIALIZED", $details);
-    }
-}
-
-/** Exception indicating that the given recovery key is not valid */
-class RecoveryKeyFailedException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("RECOVERY_KEY_UNLOCK_FAILED", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Crypto/KeySource.php"); use Andromeda\Apps\Accounts\Crypto\KeySource;
+require_once(ROOT."/Apps/Accounts/AuthSource/Local.php");
 
 /**
  * Class representing a user account in the database
@@ -72,10 +31,10 @@ class Account extends AuthEntity
             'master_nonce' => new FieldTypes\StringType(),
             'master_salt' => new FieldTypes\StringType(),
             'password' => new FieldTypes\StringType(),
-            'date_passwordset' => new FieldTypes\Date(),
-            'date_loggedon' => new FieldTypes\Date(),
-            'date_active' => new FieldTypes\Date(null, true),
-            'obj_authsource'    => new FieldTypes\ObjectPoly(Auth\External::class),
+            'date_passwordset' => new FieldTypes\Timestamp(),
+            'date_loggedon' => new FieldTypes\Timestamp(),
+            'date_active' => new FieldTypes\Timestamp(null, true),
+            'obj_authsource'    => new FieldTypes\ObjectPoly(AuthSource\External::class),
             'objs_sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(),
             'objs_contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
             'objs_clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
@@ -133,7 +92,7 @@ class Account extends AuthEntity
         if ($default !== null) $retval[$default->ID()] = $default;
         
         $authman = $this->GetAuthSource();
-        if ($authman instanceof Auth\External) 
+        if ($authman instanceof AuthSource\External) 
         {
             $default = $authman->GetManager()->GetDefaultGroup();
             if ($default !== null) $retval[$default->ID()] = $default;
@@ -198,11 +157,11 @@ class Account extends AuthEntity
     }
 
     /** Returns the auth source the account authenticates against */
-    public function GetAuthSource() : Auth\ISource
+    public function GetAuthSource() : AuthSource\ISource
     { 
         $authsource = $this->TryGetObject('authsource');
         if ($authsource !== null) return $authsource;
-        else return Auth\Local::GetInstance();
+        else return AuthSource\Local::GetInstance();
     }
     
     /**
@@ -260,16 +219,16 @@ class Account extends AuthEntity
     public function isEnabled() : bool       { return !(bool)($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['disabled']); }
     
     /** Sets this account's admin-status to the given value */
-    public function setAdmin(?bool $val) : self { return $this->SetFeatureBool('admin', $val); }
+    public function SetAdmin(?bool $val) : self { return $this->SetFeatureBool('admin', $val); }
     
     /** Sets the account's disabled status to the given enum value */
-    public function setDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeatureInt('disabled', $val); }    
+    public function SetDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeatureInt('disabled', $val); }    
     
     /** Gets the timestamp when this user was last active */
     public function getActiveDate() : ?float    { return $this->TryGetDate('active'); }
     
     /** Sets the last-active timestamp to now */
-    public function setActiveDate() : self      
+    public function SetActiveDate() : self      
     { 
         if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         
@@ -280,10 +239,10 @@ class Account extends AuthEntity
     public function getLoggedonDate() : ?float  { return $this->TryGetDate('loggedon'); }
     
     /** Sets the timestamp of last-login to now */
-    public function setLoggedonDate() : self    { return $this->SetDate('loggedon'); }
+    public function SetLoggedonDate() : self    { return $this->SetDate('loggedon'); }
     
     private function getPasswordDate() : ?float { return $this->TryGetDate('passwordset'); }
-    private function setPasswordDate() : self   { return $this->SetDate('passwordset'); }
+    private function SetPasswordDate() : self   { return $this->SetDate('passwordset'); }
     
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
     public function resetPasswordDate() : self  { return $this->SetDate('passwordset', 0); }
@@ -311,25 +270,13 @@ class Account extends AuthEntity
      * Attempts to load an account with the given username
      * @param ObjectDatabase $database database reference
      * @param string $username username to load for
-     * @return static|NULL loaded account or null if not found
+     * @return ?static loaded account or null if not found
      */
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
     {
         return static::TryLoadByUniqueKey($database, 'username', $username);
     }
-    
-    /**
-     * Attempts to load an account with the given contact info
-     * @param ObjectDatabase $database database reference
-     * @param ContactInfo $info the contact info type/value
-     * @return self|NULL loaded account or null if not found
-     */
-    public static function TryLoadByContactInfo(ObjectDatabase $database, ContactInfo $info) : ?self
-    {
-        $info = Contact::TryLoadByInfoPair($database, $info);
-        return ($info !== null) ? $info->GetAccount() : null;
-    }
-    
+
     /**
      * Returns all accounts whose username, fullname or contacts match the given info
      * @param ObjectDatabase $database database reference
@@ -353,16 +300,16 @@ class Account extends AuthEntity
         $loaded3 = static::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
         if (count($loaded3) >= $limit+1) $loaded3 = array(); else $limit -= count($loaded3);
         
-        return array_merge($loaded1, $loaded2, $loaded3);
+        return $loaded1 + $loaded2 + $loaded3;
     }
     
     /**
      * Returns an array of all accounts based on the given auth source
      * @param ObjectDatabase $database database reference
-     * @param Auth\Manager $authman authentication source
+     * @param AuthSource\Manager $authman authentication source
      * @return array<string, Account> accounts indexed by ID
      */
-    public static function LoadByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : array
+    public static function LoadByAuthSource(ObjectDatabase $database, AuthSource\Manager $authman) : array
     {
         return static::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }
@@ -370,9 +317,9 @@ class Account extends AuthEntity
     /**
      * Deletes all accounts using the given auth source
      * @param ObjectDatabase $database database reference
-     * @param Auth\Manager $authman authentication source
+     * @param AuthSource\Manager $authman authentication source
      */
-    public static function DeleteByAuthSource(ObjectDatabase $database, Auth\Manager $authman) : void
+    public static function DeleteByAuthSource(ObjectDatabase $database, AuthSource\Manager $authman) : void
     {
         static::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }   
@@ -396,7 +343,7 @@ class Account extends AuthEntity
      * Returns EmailReceipient objects for all email contacts
      * @return array<string, EmailRecipient>
      */
-    public function GetContactEmails() : array
+    public function GetContactEmails() : array // TODO not wild about email-specific things in Account
     {
         $emails = array_filter($this->GetContacts(), 
             function(Contact $contact){ return $contact->isEmail(); });
@@ -407,9 +354,9 @@ class Account extends AuthEntity
 
     /**
      * Returns the EmailRecipient to use for sending email FROM this account
-     * @return EmailRecipient|NULL email recipient object or null if not set
+     * @return ?EmailRecipient email recipient object or null if not set
      */
-    public function GetEmailFrom() : ?EmailRecipient
+    public function GetEmailFrom() : ?EmailRecipient // TODO not wild about email-specific things in Account
     {
         $contact = Contact::TryLoadAccountFromContact($this->database, $this);
         
@@ -428,22 +375,22 @@ class Account extends AuthEntity
     /** Sets this account to enabled if it was disabled pending a valid contact */
     public function NotifyValidContact() : self
     {
-        return ($this->TryGetFeatureInt('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->setDisabled(null) : $this;
+        return ($this->TryGetFeatureInt('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->SetDisabled(null) : $this;
     }
         
     /**
      * Creates a new user account
      * @param ObjectDatabase $database database reference
-     * @param Auth\ISource $source the auth source for the account
+     * @param AuthSource\ISource $source the auth source for the account
      * @param string $username the account's username
      * @param string $password the account's password, if not external auth
      * @return static created account
      */
-    public static function Create(ObjectDatabase $database, Auth\ISource $source, string $username, string $password = null) : self
-    {        
-        $account = parent::BaseCreate($database)->SetScalar('username',$username);
+    public static function Create(ObjectDatabase $database, AuthSource\ISource $source, string $username, string $password = null) : self
+    {
+        $account = static::BaseCreate($database)->SetScalar('username',$username);
         
-        if ($source instanceof Auth\External) 
+        if ($source instanceof AuthSource\External) 
             $account->SetObject('authsource',$source);
         else $account->ChangePassword($password);
         
@@ -478,7 +425,7 @@ class Account extends AuthEntity
     
     /**
      * Gets this account as a printable object
-     * @return array `{id:id,username:string,dispname:string}` \
+     * @return array<mixed> `{id:id,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:?float,loggedon:?float,active:?float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contacts:?int,recoverykeys:?int}, config:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
@@ -502,7 +449,7 @@ class Account extends AuthEntity
 
         if ($level & self::OBJECT_FULL || $level & self::OBJECT_ADMIN)
         {
-            $data = array_merge($data, array(
+            $data += array(
                 'client_timeout' => $this->GetClientTimeout(),
                 'session_timeout' => $this->GetSessionTimeout(),
                 'max_password_age' => $this->GetMaxPasswordAge(),
@@ -524,16 +471,16 @@ class Account extends AuthEntity
                 'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                     array('sessions','contacts','recoverykeys')
                 )
-            ));
+            );
         }
         
         if ($level & self::OBJECT_FULL)
         {
-            $data = array_merge($data, array(
+            $data += array(
                 'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
                 'contacts' => array_map($mapobj, $this->GetContacts(false)),
                 'clients' => array_map($mapobj, $this->GetClients()),
-            ));
+            );
         }
         else
         {            
@@ -543,7 +490,7 @@ class Account extends AuthEntity
 
         if ($level & self::OBJECT_ADMIN)
         {
-            $data = array_merge($data, array(
+            $data += array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
                 'groups' => array_keys($this->GetGroups()),
@@ -556,7 +503,7 @@ class Account extends AuthEntity
                     
                 'limits_from' => Utilities::array_map_keys(function($p){ 
                     return static::toString($this->TryGetInheritsScalarFrom("limit_$p")); }, array_keys($data['limits'])),
-            ));
+            );
             
             $data['dates']['modified'] = $this->TryGetDate('modified');
             $data['counters']['groups'] = $this->CountObjectRefs('groups');
@@ -611,9 +558,10 @@ class Account extends AuthEntity
     /** Returns true if the account's password is not out of date, or is using external auth */
     public function CheckPasswordAge() : bool
     {
-        if (!($this->GetAuthSource() instanceof Auth\Local)) return true;
+        if (!($this->GetAuthSource() instanceof AuthSource\Local)) return true;
         
-        $date = $this->getPasswordDate(); $max = $this->GetMaxPasswordAge();
+        $date = $this->getPasswordDate(); 
+        $max = $this->GetMaxPasswordAge();
         
         if ($date <= 0) return false; else return 
             ($max === null || Main::GetInstance()->GetTime() - $date < $max);
@@ -637,10 +585,11 @@ class Account extends AuthEntity
            foreach ($this->GetTwoFactors() as $tf) $tf->InitializeCrypto();
         }
         
-        if ($this->GetAuthSource() instanceof Auth\Local)
-            Auth\Local::SetPassword($this, $new_password);
+        if ($this->GetAuthSource() instanceof AuthSource\Local)
+            AuthSource\Local::SetPassword($this, $new_password);
+        // TODO move check for external auth here
 
-        return $this->setPasswordDate();
+        return $this->SetPasswordDate();
     }
     
     /** Gets the account's password hash */
@@ -661,7 +610,7 @@ class Account extends AuthEntity
         if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();    
         
         $master = $this->GetScalar('master_key');
-        return CryptoSecret::Encrypt($data, $nonce, $master);
+        return Crypto::EncryptSecret($data, $nonce, $master);
     }
     
     /**
@@ -676,7 +625,7 @@ class Account extends AuthEntity
         if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
         
         $master = $this->GetScalar('master_key');
-        return CryptoSecret::Decrypt($data, $nonce, $master);
+        return Crypto::DecryptSecret($data, $nonce, $master);
     }
 
     /**
@@ -689,7 +638,7 @@ class Account extends AuthEntity
     public function GetEncryptedMasterKey(string $nonce, string $key) : string
     {
         if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
-        return CryptoSecret::Encrypt($this->GetScalar('master_key'), $nonce, $key);
+        return Crypto::EncryptSecret($this->GetScalar('master_key'), $nonce, $key);
     }
     
     /**
@@ -707,8 +656,8 @@ class Account extends AuthEntity
         $master_nonce = $this->GetScalar('master_nonce');
         $master_salt = $this->GetScalar('master_salt');
         
-        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());        
-        $master = CryptoSecret::Decrypt($master, $master_nonce, $password_key);
+        $password_key = Crypto::DeriveKey($password, $master_salt, Crypto::SecretKeyLength());        // TODO commonize with KeySource
+        $master = Crypto::DecryptSecret($master, $master_nonce, $password_key);
         
         $this->SetScalar('master_key', $master, true);
         
@@ -747,12 +696,14 @@ class Account extends AuthEntity
         else if (!$this->hasCrypto())
             throw new CryptoNotInitializedException();
         
-        if (!$this->HasRecoveryKeys()) throw new RecoveryKeyFailedException();
+        if (!$this->HasRecoveryKeys()) 
+            throw new RecoveryKeyFailedException();
         
         $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new RecoveryKeyFailedException();
         
-        if (!$obj->CheckFullKey($key)) throw new RecoveryKeyFailedException();
+        if (!$obj->CheckFullKey($key)) 
+            throw new RecoveryKeyFailedException();
         
         return $this->UnlockCryptoFromKeySource($obj);
     }
@@ -783,16 +734,16 @@ class Account extends AuthEntity
         if (!$rekey && $this->hasCrypto())
             throw new CryptoAlreadyInitializedException();
         
-        $master_salt = CryptoKey::GenerateSalt(); 
+        $master_salt = Crypto::GenerateSalt(); 
         $this->SetScalar('master_salt', $master_salt);
         
-        $master_nonce = CryptoSecret::GenerateNonce(); 
+        $master_nonce = Crypto::GenerateSecretNonce(); 
         $this->SetScalar('master_nonce',  $master_nonce);   
         
-        $password_key = CryptoKey::DeriveKey($password, $master_salt, CryptoSecret::KeyLength());
+        $password_key = Crypto::DeriveKey($password, $master_salt, Crypto::SecretKeyLength());
         
-        $master = $rekey ? $this->GetScalar('master_key') : CryptoSecret::GenerateKey();
-        $master_encrypted = CryptoSecret::Encrypt($master, $master_nonce, $password_key);
+        $master = $rekey ? $this->GetScalar('master_key') : Crypto::GenerateSecretKey();
+        $master_encrypted = Crypto::EncryptSecret($master, $master_nonce, $password_key);
   
         $this->SetScalar('master_key', $master_encrypted);         
         $this->SetScalar('master_key', $master, true); sodium_memzero($master);      
@@ -903,7 +854,7 @@ trait GroupInherit
             
             $temp_priority = $group->GetPriority();
             
-            if ($temp_value !== null && ($temp_priority > $priority || $priority == null))
+            if ($temp_value !== null && ($temp_priority > $priority || $priority === null))
             {
                 $value = $temp_value; $source = $group;
                 $priority = $temp_priority;

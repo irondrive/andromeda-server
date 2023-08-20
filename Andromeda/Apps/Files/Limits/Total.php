@@ -1,10 +1,8 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase};
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Limits/Base.php");
 
@@ -23,8 +21,8 @@ abstract class Total extends Base
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
-            'date_download' => new FieldTypes\Date(),
-            'date_upload' => new FieldTypes\Date(),
+            'date_download' => new FieldTypes\Timestamp(),
+            'date_upload' => new FieldTypes\Timestamp(),
             'itemsharing' => new FieldTypes\BoolType(),
             'share2groups' => new FieldTypes\BoolType(),
             'share2everyone' => new FieldTypes\BoolType(),
@@ -94,7 +92,7 @@ abstract class Total extends Base
      */
     protected static function Create(ObjectDatabase $database, BaseObject $obj) : self
     {
-        $newobj = parent::BaseCreate($database)->SetObject('object',$obj);
+        $newobj = static::BaseCreate($database)->SetObject('object',$obj);
         
         static::$cache[$obj->ID()] = $newobj; return $newobj;
     }
@@ -145,18 +143,18 @@ abstract class Total extends Base
     /**
      * Returns a printable client object of this timed limit
      * @param bool $full if false, show config only (no dates,counters,limits)
-     * @return array `{dates:{created:float, download:?float, upload:?float}, config:{itemsharing:?bool, \
+     * @return array<mixed> `{dates:{created:float, download:?float, upload:?float}, config:{itemsharing:?bool, \
         share2everyone:?bool, share2groups:?bool, publicupload:?bool, publicmodify:?bool, randomwrite:?bool},
         limits:{size:?int, items:?int, shares:?int}, counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      * @see Base::GetClientObject()
      */
     public function GetClientObject(bool $full) : array
     {
-        $retval = array_merge(parent::GetClientObject($full), array(
+        $retval = parent::GetClientObject($full) + array(
             'config' => Utilities::array_map_keys(function($p){ return $this->TryGetFeatureBool($p); },
                 array('itemsharing','share2everyone','share2groups',
                       'publicupload','publicmodify','randomwrite'))
-        ));
+        );
         
         if ($full)
         {

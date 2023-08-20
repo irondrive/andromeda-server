@@ -1,212 +1,223 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Account.php");
-require_once(ROOT."/Apps/Accounts/AuthObject.php");
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
+use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Emailer.php"); use Andromeda\Core\EmailRecipient;
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/Apps/Accounts/Crypto/AuthObjectFull.php"); use Andromeda\Apps\Accounts\Crypto\AuthObjectFull;
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-
-/** Exception indicating that a valid contact value was not given */
-class ContactNotGivenException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CONTACT_NOT_GIVEN", $details);
-    }
-}
-
-/** Exception indicating that this contact is not an email address */
-class ContactNotEmailException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CONTACT_NOT_EMAIL", $details);
-    }
-}
-
-/** Pair representing a contact type and value */
-class ContactInfo 
-{ 
-    public int $type; public string $info;
-    public function __construct(int $type, string $info){
-        $this->type = $type; $this->info = $info; } 
-}
-
-abstract class ContactBase extends AuthObject 
-{ 
-    use FullAuthKey; protected static function GetFullKeyPrefix() : string { return "ci"; }
-}
+require_once(ROOT."/Apps/Accounts/Resource/Exceptions.php");
+require_once(ROOT."/Apps/Accounts/Resource/ContactPair.php");
 
 /** An object describing a contact method for a user account */
-class Contact extends ContactBase
-{    
-    public static function GetFieldTemplate() : array
+abstract class Contact extends BaseObject
+{
+    use TableTypes\TableTypedChildren;
+    
+    use AuthObjectFull { CheckFullKey as BaseCheckFullKey; }
+    
+    protected static function GetFullKeyPrefix() : string { return "ci"; }
+    
+    private const TYPE_EMAIL = 1;
+    
+    private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
+    
+    /** @return array<int, class-string<self>> */
+    public static function GetChildMap() : array
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'type' => new FieldTypes\IntType(), // type of contact
-            'info' => new FieldTypes\StringType(), // value of the contact
-            'valid' => new FieldTypes\BoolType(false), // true if it has been validated
-            'usefrom' => new FieldTypes\BoolType(), // true if this should be used as from
-            'public' => new FieldTypes\BoolType(false), // true if this should be searchable
-            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'contacts')
-        ));
+        return array(self::TYPE_EMAIL => EmailContact::class); // TODO maybe use email STRING for type?
     }
     
-    protected const KEY_LENGTH = 8;
+    /** Address of the contact */
+    private FieldTypes\StringType $address;
+    /** If this contact is publically viewable */
+    private FieldTypes\BoolType $public;
+    /** True if this contact should be used as a "from" address */
+    private FieldTypes\NullBoolType $asfrom;
+    /** Timestamp this contact info was created */
+    private FieldTypes\Timestamp $date_created;
+    /** 
+     * Account this contact info belongs to
+     * @var FieldTypes\ObjectRefT<Account> 
+     */
+    private FieldTypes\ObjectRefT $account;
+    
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->address = $fields[] = new FieldTypes\StringType('address');
+        $this->public = $fields[] = new FieldTypes\BoolType('public', false, false);
+        $this->asfrom = $fields[] = new FieldTypes\NullBoolType('from');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+        $this->account = $fields[] = new FieldTypes\ObjectRefT(Account::class, 'account');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
+
+    protected function GetKeyLength() : int { return 8; }
     
     public function CheckFullKey(string $code) : bool
     {
-        $retval = parent::CheckFullKey($code);
+        if (!$this->BaseCheckFullKey($code)) return false;
         
-        if ($retval) 
-        {
-            $this->GetAccount()->NotifyValidContact();
-            
-            $this->SetIsValid()->ChangeAuthKey(null);
-        }
+        $this->SetAuthKey(null);
         
-        return $retval;
+        $this->GetAccount()->NotifyValidContact();
+        
+        return true;
     }
-    
-    public const TYPE_EMAIL = 1;
-    
-    private const TYPES = array(self::TYPE_EMAIL=>'email');
-    
+
     /**
      * Attemps to load a from contact for the given account
      * @param ObjectDatabase $database database reference
      * @param Account $account account of interest
-     * @return static|NULL contact to use as "from" or none if not set
+     * @return ?static contact to use as "from" or none if not set
      */
     public static function TryLoadAccountFromContact(ObjectDatabase $database, Account $account) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->IsTrue('usefrom'));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->IsTrue('asfrom'));
         
-        return static::TryLoadUniqueByQuery($database, $q->Where($w));
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
-   /** Returns the contact object matching the given value and type, or null */
-    public static function TryLoadByInfoPair(ObjectDatabase $database, ContactInfo $input) : ?self
+    // TODO search/replace info/value (changed to address)
+    
+    /** 
+     * Returns the contact object matching the given address and type, or null 
+     * @template T of Contact
+     * @param ContactPair<T> $pair
+     * @return ?T
+     */
+    public static function TryLoadByContactPair(ObjectDatabase $database, ContactPair $pair) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('info',$input->info),$q->Equals('type',$input->type));
+        $q = new QueryBuilder(); $w = $q->Equals('address',$pair->GetAddr());
         
-        return static::TryLoadUniqueByQuery($database, $q->Where($w));
+        return $database->TryLoadUniqueByQuery($pair->GetClass(), $q->Where($w));
     }
     
-    /** Attempts to load a contact by the given ID for the given account */
+    /** 
+     * Attempts to load a contact by the given ID for the given account
+     * @return ?static
+     */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('obj_account',$account->ID()));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('account',$account->ID()));
         
-        return static::TryLoadUniqueByQuery($database, $q->Where($w));
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
 
     /**
-     * Returns all accounts matching the given contact value
+     * Returns all accounts matching the given public contact address
      * @param ObjectDatabase $database database reference
-     * @param string $info contact value to match (wildcard)
+     * @param string $address contact address to match (wildcard)
      * @param int $limit return up to this many
-     * @return array Account
+     * @return array<Account>
      * @see Account::GetClientObject()
      */
-    public static function LoadAccountsMatchingValue(ObjectDatabase $database, string $info, int $limit) : array
+    public static function LoadAccountsMatchingValue(ObjectDatabase $database, string $address, int $limit) : array
     {
-        $q = new QueryBuilder(); $info = QueryBuilder::EscapeWildcards($info).'%'; // search by prefix
+        $q = new QueryBuilder(); $address = QueryBuilder::EscapeWildcards($address).'%'; // search by prefix
         
-        $w = $q->And($q->Like('info',$info,true),$q->IsTrue('public'));
+        $w = $q->And($q->Like('address',$address,true),$q->IsTrue('public'));
         
-        $loaded = static::LoadByQuery($database, $q->Where($w)->Limit($limit));
+        $contacts = $database->LoadObjectsByQuery(static::class, $q->Where($w)->Limit($limit));
         
-        $retval = array(); foreach ($loaded as $obj){ $acct = $obj->GetAccount(); $retval[$acct->ID()] = $acct; }; return $retval;
+        $retval = array(); foreach ($contacts as $contact)
+        { 
+            $account = $contact->GetAccount(); 
+            $retval[$account->ID()] = $account; 
+        }; 
+        return $retval;
     }
     
-    /** Returns the enum describing the type of contact */
-    protected function GetType() : int { return $this->GetScalar('type'); }
-    
-    /** Returns the actual contact value */
-    protected function GetInfo() : string { return $this->GetScalar('info'); }
+    /** Returns the contact address string */
+    protected function GetAddress() : string { return $this->address->GetValue(); }
     
     /** Returns true if the contact has been validated */
-    public function GetIsValid() : bool { return $this->GetScalar('valid'); }
-    
-    /** Sets whether the contact has been validated */
-    protected function SetIsValid() : self { return $this->SetScalar('valid',true); }
+    public function GetIsValid() : bool { return $this->authkey->TryGetValue() === null; }
     
     /** Returns whether or not the contact is public */
-    public function getIsPublic() : bool { return $this->GetScalar('public'); }
+    public function GetIsPublic() : bool { return $this->public->GetValue(); }
     
-    /** Sets whether this contact should be publically searchable */
-    public function setIsPublic(bool $val) : self { return $this->SetScalar('public',$val); }
+    /** 
+     * Sets whether this contact should be publically searchable 
+     * @return $this
+     */
+    public function SetIsPublic(bool $val) : self { $this->public->SetValue($val); return $this; }
     
-    /** Sets whether this contact should be used as from (can only be one) */
-    public function setUseFrom(bool $val) : self
+    /** 
+     * Sets whether this contact should be used as from (can only be one) 
+     * @return $this
+     */
+    public function SetUseAsFrom(bool $val) : self
     {
         if ($val)
         {
             $old = static::TryLoadAccountFromContact($this->database, $this->GetAccount());
             
-            if ($old !== null) $old->setUseFrom(false);
+            if ($old !== null) $old->SetUseFrom(false);
         }
         else $val = null;
         
-        return $this->SetScalar('usefrom',$val);
+        $this->asfrom->SetValue($val); return $this;
     }
     
     /** Returns the account that owns the contact */
-    public function GetAccount() : Account { return $this->GetObject('account'); }
+    public function GetAccount() : Account { return $this->account->GetObject(); }
 
     /**
      * Creates a new contact
      * @param ObjectDatabase $database database reference
-     * @param Account $account account of contact 
-     * @param ContactInfo $input type/value pair
+     * @param Account $account account of contact
+     * @param string $address the contact address
      * @param bool $verify true to send a validation message
-     * @return Contact
+     * @return static
      */
-    public static function Create(ObjectDatabase $database, Account $account, ContactInfo $input, bool $verify = false) : Contact
-    {        
-        $contact = parent::BaseCreate($database, false)->SetScalar('info',$input->info)
-            ->SetScalar('type',$input->type)->SetObject('account', $account);
+    protected static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : self
+    {
+        $contact = static::BaseCreate($database);
+        $contact->date_created->SetTimeNow();
+        
+        $contact->account->SetObject($account);
+        $contact->address->SetValue($address);
         
         if ($verify)
         {
-            $key = $contact->InitAuthKey()->GetFullKey();
+            $contact->InitAuthKey();
+            $key = $contact->TryGetFullKey();
             
-            $subject = "Andromeda Email Validation Code";
+            $subject = "Andromeda Contact Validation Code";
             $body = "Your validation code is: $key";
             
             $contact->SendMessage($subject, null, $body);
         }
-        else $contact->SetIsValid();
         
         return $contact;
     }
     
+    public static function GetFetchUsage() : string { return "--email email"; } // TODO make sure this is used enough? // TODO get from all subclasses
+    
     /**
      * Fetches a type/value pair from input (depends on the param name given)
      * @throws ContactNotGivenException if nothing valid was found
-     * @return ContactInfo
+     * @return ContactPair
      */
-   public static function FetchInfoFromParams(SafeParams $params) : ContactInfo
+    public static function FetchPairFromParams(SafeParams $params) : ContactPair
     {
         if ($params->HasParam('email')) 
         { 
-            $type = self::TYPE_EMAIL;
+            $class = EmailContact::class;
             
-            $info = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); 
+            $info = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); // TODO move to EmailContact?
         }
-        
         else throw new ContactNotGivenException();
-        
-        return new ContactInfo($type, $info);
+         
+        return new ContactPair($class, $info);
     }
-    
-    public static function GetFetchUsage() : string { return "--email email"; }
-    
+
     /**
      * Sends a message to this contact
      * @see Contact::SendMessageMany()
@@ -221,62 +232,25 @@ class Contact extends ContactBase
      * @param string $subject subject line
      * @param string $html html message (optional)
      * @param string $plain plain text message
-     * @param array<Contact> $recipients array of contacts
+     * @param array<self> $recipients array of contacts
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */
-    public static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
-    {
-        $emails = array_filter($recipients, function(Contact $contact){ return $contact->isEmail(); });
-        
-        $message = $html ?? $plain; $ishtml = ($html !== null);
-        
-        static::SendEmails($subject, $message, $ishtml, $emails, $bcc, $from);
-    }
-    
-    /**
-     * Sends a message to the given email recipients
-     * @see Contact::SendMessageMany()
-     * @see Emailer::SendMail()
-     */
-    protected static function SendEmails(string $subject, string $message, bool $ishtml, array $recipients, bool $bcc, ?Account $from = null) : void
-    {
-        $mailer = Main::GetInstance()->GetConfig()->GetMailer();
-        
-        $recipients = array_map(function(Contact $contact){ return $contact->GetAsEmailRecipient(); }, $recipients);
-        
-        if ($from !== null) $from = $from->GetEmailFrom();
-        
-        $mailer->SendMail($subject, $message, $ishtml, $recipients, $bcc, $from);
-    }
-    
-    /** Returns true if this contact is an email contact */
-    public function isEmail() : bool { return $this->GetType() === self::TYPE_EMAIL; }
-    
-    /** 
-     * Returns this contact as an email recipient
-     * @throws ContactNotEmailException if not an email contact
-     */
-    public function GetAsEmailRecipient() : EmailRecipient
-    {
-        if (!$this->isEmail()) throw new ContactNotEmailException();
-        
-        return new EmailRecipient($this->GetInfo(), $this->GetAccount()->GetDisplayName());
-    }
+    public abstract static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void;
 
     /**
      * Gets this contact as a printable object
-     * @return array `{id:id, type:enum, info:string, valid:bool, usefrom:bool, public:bool, dates:{created:float}}`
+     * @return array<mixed> `{id:id, type:enum, info:string, valid:bool, asfrom:bool, public:bool, dates:{created:float}}`
      */
-    public function GetClientObject() : array
+    public function GetClientObject() : array // TODO fix me
     {
         return array(
             'id' => $this->ID(),
             'type' => self::TYPES[$this->GetType()],
             'info' => $this->GetInfo(),
             'valid' => $this->GetIsValid(),
-            'usefrom' => (bool)($this->TryGetScalar('usefrom')),
-            'public' => $this->getIsPublic(),
+            'asfrom' => (bool)($this->TryGetScalar('asfrom')),
+            'public' => $this->GetIsPublic(),
             'dates' => array(
                 'created' => $this->GetDateCreated()
             )

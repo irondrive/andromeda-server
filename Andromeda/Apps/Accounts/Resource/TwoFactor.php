@@ -1,45 +1,9 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+use Andromeda\Core\Crypto;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
-require_once(ROOT."/Apps/Accounts/Account.php");
-
-/** Object for tracking used two factor codes, to prevent replay attacks */
-class UsedToken extends BaseObject // TODO was StandardObject
-{
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'code' => new FieldTypes\StringType(),         
-            'obj_twofactor' => new FieldTypes\ObjectRef(TwoFactor::class, 'usedtokens')
-        ));
-    }
-    
-    /** Returns the value of the used token */
-    public function GetCode() : string { return $this->GetScalar('code'); }
-    
-    /** Returns the two factor code this is associated with */
-    public function GetTwoFactor() : TwoFactor { return $this->GetObject('twofactor'); }
-    
-    /** Prunes old codes from the database that are too old to be valid anyway */
-    public static function PruneOldCodes(ObjectDatabase $database) : void
-    {
-        $mintime = Main::GetInstance()->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
-        $q = new QueryBuilder(); $q->Where($q->LessThan('date_created', $mintime));
-        static::DeleteByQuery($database, $q);
-    }
-    
-    /** Logs a used token with the given twofactor object and code */
-    public static function Create(ObjectDatabase $database, TwoFactor $twofactor, string $code) : UsedToken 
-    {
-        return parent::BaseCreate($database)->SetObject('twofactor',$twofactor)->SetScalar('code',$code);            
-    }
-}
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 /** 
  * Describes an OTP twofactor authentication source for an account 
@@ -47,63 +11,86 @@ class UsedToken extends BaseObject // TODO was StandardObject
  * Accounts can have > 1 of these so the user is able to use multiple devices.
  * If account crypto is available, the secret is stored encrypted in the database.
  */
-class TwoFactor extends BaseObject // TODO was StandardObject
+class TwoFactor extends BaseObject
 {
-    public static function GetFieldTemplate() : array
+    use TableTypes\TableNoChildren;
+    
+    /** Date the twofactor was created */
+    private FieldTypes\Timestamp $date_created;
+    /** The optional user label for this twofactor */
+    private FieldTypes\NullStringType $comment;
+    /** The twofactor secret for generating codes */
+    private FieldTypes\StringType $secret;
+    /** The nonce if the secret is encrypted */
+    private FieldTypes\NullStringType $nonce;
+    /** True if this twofactor has been validated */
+    private FieldTypes\BoolType $valid;
+    /** The timestamp this twofactor was last used */
+    private FieldTypes\NullTimestamp $date_used;
+    /**
+     * The account this twofactor is for
+     * @var FieldTypes\ObjectRefT<Account> 
+     */
+    private FieldTypes\ObjectRefT $account;
+    
+    /** The raw secret in case it's encrypted */
+    private string $raw_secret;
+
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'comment' => new FieldTypes\StringType(),
-            'secret' => new FieldTypes\StringType(),
-            'nonce' => new FieldTypes\StringType(),
-            'valid' => new FieldTypes\BoolType(),
-            'date_used' => new FieldTypes\Date(),
-            'obj_account' => new FieldTypes\ObjectRef(Account::class, 'twofactors'),
-            'objs_usedtokens' => (new FieldTypes\ObjectRefs(UsedToken::class, 'twofactor'))->autoDelete()
-        ));
+        $fields = array();
+        
+        $this->comment =      $fields[] = new FieldTypes\NullStringType('comment');
+        $this->secret =       $fields[] = new FieldTypes\StringType('secret');
+        $this->nonce =        $fields[] = new FieldTypes\NullStringType('nonce');
+        $this->valid =        $fields[] = new FieldTypes\BoolType('valid', false, false);
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+        $this->date_used =    $fields[] = new FieldTypes\NullTimestamp('date_used');
+        $this->account =      $fields[] = new FieldTypes\ObjectRefT(Account::class, 'account');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
     }
     
     /** The length of the OTP secret */
     private const SECRET_LENGTH = 32; 
     
     /** the time tolerance for codes, as a multiple of 30-seconds */
-    private const TIME_TOLERANCE = 2;
+    public const TIME_TOLERANCE = 2;
     
     /** Gets the account that owns this object */
-    public function GetAccount() : Account { return $this->GetObject('account'); }
+    public function GetAccount() : Account { return $this->account->GetObject(); }
     
     /** Gets the comment/label the user assigned to this object */
-    public function GetComment() : ?string { return $this->TryGetScalar("comment"); }
-    
-    /**
-     * Gets an array of used tokens
-     * @return array<string, UsedToken> used tokens indexed by ID
-     */
-    private function GetUsedTokens() : array { return $this->GetObjectRefs('usedtokens'); }
+    public function GetComment() : ?string { return $this->comment->TryGetValue(); }
 
     /** Returns whether this twofactor has been validated */
-    public function GetIsValid() : bool { return $this->GetScalar('valid'); }
+    public function GetIsValid() : bool { return $this->valid->GetValue(); }
     
     /** Returns whether the OTP secret is stored encrypted */
-    public function hasCrypto() : bool { return $this->TryGetScalar('nonce') !== null; }
+    public function hasCrypto() : bool { return $this->nonce->TryGetValue() !== null; }
     
     /** 
      * Tries to load a two factor object by the given account and ID
-     * @return ?self the loaded object or null if not found */
+     * @return ?static the loaded object or null if not found */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->Equals('id',$id));
-        return self::TryLoadUniqueByQuery($database, $q->Where($w));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
     /** Creates and returns a new twofactor object for the given account */
-    public static function Create(ObjectDatabase $database, Account $account, string $comment = null) : TwoFactor
+    public static function Create(ObjectDatabase $database, Account $account, ?string $comment = null) : self
     {
-        $obj = parent::BaseCreate($database)
-                ->SetScalar('comment',$comment)
-                ->SetObject('account',$account);
+        $obj = static::BaseCreate($database);
+        $obj->date_created->SetTimeNow();
+        $obj->comment->SetValue($comment);
+        $obj->account->SetObject($account);
         
         $ga = new \PHPGangsta_GoogleAuthenticator();
-        $obj->SetScalar('secret', $ga->createSecret(self::SECRET_LENGTH));
+        $obj->secret->SetValue($ga->createSecret(self::SECRET_LENGTH));
         
         if ($account->hasCrypto()) $obj->InitializeCrypto();
         
@@ -113,39 +100,54 @@ class TwoFactor extends BaseObject // TODO was StandardObject
     /** Returns the (decrypted) OTP secret */
     private function GetSecret() : string
     {
-        $secret = $this->GetScalar('secret');
-        
-        if ($this->hasCrypto())
+        if (!isset($this->raw_secret))
         {
-            $secret = $this->GetAccount()->DecryptSecret(
-                $secret, $this->GetScalar('nonce'));
+            if ($this->hasCrypto())
+            {
+                $this->raw_secret = $this->GetAccount()->DecryptSecret(
+                    $this->secret->GetValue(), $this->nonce->TryGetValue());
+            }
+            else $this->raw_secret = $this->secret->GetValue();
         }
         
-        return $secret;
+        return $this->raw_secret;
+    }
+    
+    public function NotifyDeleted() : void
+    {
+        UsedToken::DeleteByTwoFactor($this->database, $this);
+        
+        parent::NotifyDeleted();
     }
     
     /** Stores the secret as encrypted by the owner */
     public function InitializeCrypto() : self
     {
-        $nonce = CryptoSecret::GenerateNonce();
+        $nonce = Crypto::GenerateSecretNonce();
         
-        $secret = $this->GetAccount()->EncryptSecret($this->GetSecret(), $nonce);  
+        $secret_crypt = $this->GetAccount()->EncryptSecret(
+            $this->GetSecret(), $nonce);  
         
-        return $this->SetScalar('nonce',$nonce)->SetScalar('secret',$secret);
+        $this->nonce->SetValue($nonce);
+        $this->secret->SetValue($secret_crypt);
+        
+        return $this;
     }
     
     /** Stores the secret as plaintext (not encrypted) */
     public function DestroyCrypto() : self
     {
-        return $this->SetScalar('secret',$this->GetSecret())->SetScalar('nonce',null);
+        $this->secret->SetValue($this->GetSecret());
+        $this->nonce->SetValue(null);
+        return $this;
     }
     
     /** Checks and returns whether the given twofactor code is valid */
     public function CheckCode(string $code) : bool
     {
         UsedToken::PruneOldCodes($this->database);
-        
-        foreach ($this->GetUsedTokens() as $usedtoken)
+
+        foreach (UsedToken::LoadByTwoFactor($this->database, $this) as $usedtoken)
         {
             if ($usedtoken->GetCode() === $code) return false;
         }
@@ -154,7 +156,8 @@ class TwoFactor extends BaseObject // TODO was StandardObject
         
         if (!$ga->verifyCode($this->GetSecret(), $code, self::TIME_TOLERANCE)) return false;
 
-        $this->SetScalar('valid', true)->SetDate('used');
+        $this->valid->SetValue(true);
+        $this->date_used->SetTimeNow();
         
         UsedToken::Create($this->database, $this, $code);       
         
@@ -172,7 +175,7 @@ class TwoFactor extends BaseObject // TODO was StandardObject
     /**
      * Returns a printable client object for this twofactor
      * @param bool $secret if true, show the OTP secret
-     * @return array `{id:id, comment:?string, dates:{created:float,used:?float}` \
+     * @return array<mixed> `{id:id, comment:?string, date_created:float, date_used:?float}` \
         if $secret, add `{secret:string, qrcodeurl:string}`
      */
     public function GetClientObject(bool $secret = false) : array
@@ -180,10 +183,8 @@ class TwoFactor extends BaseObject // TODO was StandardObject
         $data = array(
             'id' => $this->ID(),
             'comment' => $this->GetComment(),
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-                'used' => $this->TryGetDate('used')
-            ),
+            'date_created' => $this->date_created->GetValue(),
+            'date_used' => $this->date_used->TryGetValue()
         );
         
         if ($secret) 

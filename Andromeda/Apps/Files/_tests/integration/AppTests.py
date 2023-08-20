@@ -10,7 +10,8 @@ class AppTests(BaseAppTest):
         return { }
 
     def install(self):
-        assertIn('accounts', self.main.appMap)
+        # TODO how to make sure accounts is installed...?
+        assertOk(self.interface.run(app='core',action='enableapp',params={'appname':'files'}))
         assertError(self.interface.run(app='files',action='getconfig'),503,'APP_INSTALL_REQUIRED: files')
         assertOk(self.interface.run('files','install'))
 

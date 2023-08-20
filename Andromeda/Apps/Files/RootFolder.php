@@ -1,21 +1,13 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+
+require_once(ROOT."/Apps/Files/Exceptions.php");
 require_once(ROOT."/Apps/Files/Folder.php");
 
 use Andromeda\Apps\Files\Filesystem\FSManager;
-
-/** Exception indicating that the operation is not valid on a root folder */
-class InvalidRootOpException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ROOT_FOLDER_OP_INVALID", $details);
-    }
-}
 
 /** A root folder has no parent or name */
 class RootFolder extends Folder
@@ -53,7 +45,7 @@ class RootFolder extends Folder
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner of the root folder
      * @param FSManager $filesystem the filesystem of the root, or null to get the default
-     * @return static|NULL loaded folder or null if a default FS does not exist and none is given
+     * @return ?static loaded folder or null if a default FS does not exist and none is given
      */
     public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
     {
@@ -68,7 +60,7 @@ class RootFolder extends Folder
         {
             $owner = $filesystem->isExternal() ? $filesystem->GetOwner() : $account;
             
-            return parent::BaseCreate($database)
+            return static::BaseCreate($database)
                 ->SetObject('filesystem',$filesystem)
                 ->SetObject('owner',$owner)->Refresh();
         }

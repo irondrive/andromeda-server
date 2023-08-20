@@ -1,108 +1,117 @@
-<?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
+use Andromeda\Core\Errors\{BaseExceptions, ErrorManager};
+use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/Auth/External.php");
-require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
+require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
+require_once(ROOT."/Apps/Accounts/AuthSource/External.php");
 
-/** Exception indicating the PHP FTP extension is missing */
-class FTPExtensionException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_EXTENSION_MISSING", $details);
-    }
-}
-
-/** Exception indicating the FTP connection failed to connect */
-class FTPConnectionFailure extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_CONNECTION_FAILURE", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 /** Uses an FTP server for authentication */
 class FTP extends External
 {
-    public static function GetFieldTemplate() : array
+    use TableTypes\TableNoChildren;
+    
+    /** Hostname of the FTP server */
+    private FieldTypes\StringType $hostname;
+    /** Port number to use (null for default) */
+    private FieldTypes\NullIntType $port;
+    /** True if implicit SSL should be used (not STARTTLS) */
+    private FieldTypes\BoolType $implssl;
+    
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'implssl' => new FieldTypes\BoolType(), // true to use implicit SSL, false for explicit or none
-            'hostname' => new FieldTypes\StringType(),
-            'port' => new FieldTypes\IntType()
-        ));
-    }    
+        $fields = array();
+        
+        $this->hostname = $fields[] = new FieldTypes\StringType('hostname');
+        $this->port =     $fields[] = new FieldTypes\NullIntType('port');
+        $this->implssl =  $fields[] = new FieldTypes\BoolType('implssl');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
     
     public static function GetPropUsage() : string { return "--hostname hostname [--port ?uint16] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        return parent::Create($database, $params)
-            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
-            ->SetScalar('implssl', $params->GetOptParam('implssl',false)->GetBool())
-            ->SetScalar('port', $params->GetOptParam('port',null)->GetNullUint16());
+        $obj = parent::Create($database, $params);
+
+        $obj->hostname->SetValue($params->GetParam('hostname')->GetHostname());
+        $obj->port->SetValue($params->GetOptParam('port',null)->GetNullUint16());
+        $obj->implssl->SetValue($params->GetOptParam('implssl',false)->GetBool());
+        
+        return $obj;
     }
     
     public function Edit(SafeParams $params) : self
     {
-        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
-        if ($params->HasParam('implssl')) $this->SetScalar('implssl',$params->GetParam('implssl')->GetBool());
-        if ($params->HasParam('port')) $this->SetScalar('port',$params->GetParam('port')->GetNullUint16());
+        if ($params->HasParam('hostname'))
+            $this->hostname->SetValue($params->GetParam('hostname')->GetHostname());
         
+        if ($params->HasParam('port'))
+            $this->port->SetValue($params->GetParam('port')->GetNullUint16());
+        
+        if ($params->HasParam('implssl'))
+            $this->implssl->SetValue($params->GetParam('implssl')->GetBool());
+
         return $this;
     }
     
     /**
      * Returns a printable client object for this FTP
-     * @return array `{hostname:string, port:?int, implssl:bool}`
+     * @return array<string, mixed> `{hostname:string, port:?int, implssl:bool}` + External
+     * @see External::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $admin) : array
     {
-        return array(
-            'hostname' => $this->GetScalar('hostname'),
-            'port' => $this->TryGetScalar('port'),
-            'implssl' => $this->GetScalar('implssl'),
+        return parent::GetClientObject($admin) + array(
+            'hostname' => $this->hostname->GetValue(),
+            'port' => $this->port->TryGetValue(),
+            'implssl' => $this->implssl->GetValue()
         );
     }
     
-    private $ftp;
+    private $ftpConn;
     
     /** Asserts that the FTP extension exists */
-    public function SubConstruct() : void
+    public function PostConstruct() : void
     {
-        if (!function_exists('ftp_connect')) throw new FTPExtensionException();
+        if (!function_exists('ftp_connect')) 
+            throw new FTPExtensionException();
     }
     
     /** Initiates a connection to the FTP server */
     public function Activate() : self
     {
-        if (isset($this->ftp)) return $this;
+        if (isset($this->ftpConn)) return $this;
         
-        $host = $this->GetScalar('hostname'); $port = $this->TryGetScalar('port') ?? 21;
+        $host = $this->hostname->GetValue(); 
+        $port = $this->port->TryGetValue() ?? 0; // 0 to use default
         
-        if ($this->GetScalar('implssl')) $this->ftp = ftp_ssl_connect($host, $port);
-        else $this->ftp = ftp_connect($host, $port);
+        if ($this->implssl->GetValue()) 
+             $this->ftpConn = ftp_ssl_connect($host, $port);
+        else $this->ftpConn = ftp_connect($host, $port);
         
-        if (!$this->ftp) throw new FTPConnectionFailure();
+        if (!$this->ftpConn) throw new FTPConnectionFailure();
         
         return $this;
     }
     
-    public function VerifyUsernamePassword(string $username, string $password) : bool
+    public function VerifyAccountPassword(Account $account, string $password) : bool
     {
         $this->Activate();
 
         try 
         { 
-            $success = ftp_login($this->ftp, $username, $password); 
+            $success = ftp_login($this->ftpConn, $account->GetUsername(), $password); 
             
-            ftp_close($this->ftp); unset($this->ftp); return $success;
+            ftp_close($this->ftpConn); unset($this->ftpConn); return $success;
         }
-        catch (Exceptions\PHPError $e) 
+        catch (BaseExceptions\PHPError $e) 
         { 
             ErrorManager::GetInstance()->LogException($e); return false; 
         }

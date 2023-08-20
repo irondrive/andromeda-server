@@ -1,15 +1,16 @@
-<?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\{Singleton, Utilities};
+use Andromeda\Core\Utilities;
+
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Auth/External.php");
+require_once(ROOT."/Apps/Accounts/AuthSource/IAuthSource.php");
 
 /** 
  * The regular internal authentication source
  * 
  * Does not exist in the database. Stores passwords as hashes in the Account object.
  */
-class Local extends Singleton implements ISource // TODO make this not a singleton, get rid of Singleton entirely...
+class Local implements IAuthSource // TODO make this not a singleton, get rid of Singleton entirely...
 {
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {

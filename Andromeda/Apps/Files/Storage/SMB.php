@@ -1,38 +1,13 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase};
+use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
-
-/** Exception indicating that the libsmbclient extension is missing */
-class SMBExtensionException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SMB_EXTENSION_MISSING", $details);
-    }
-}
-
-/** Exception indicating that the SMB state initialization failed */
-class SMBStateInitException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SMB_STATE_INIT_FAILED", $details);
-    }
-}
-
-/** Exception indicating that SMB failed to connect or read the base path */
-class SMBConnectException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SMB_CONNECT_FAILED", $details);
-    }
-}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) SMB::DecryptAccount($database, $account); });
@@ -59,15 +34,15 @@ class SMB extends SMBBase2
     
     /**
      * Returns a printable client object of this SMB storage
-     * @return array `{workgroup:?string, hostname:string}`
+     * @return array<mixed> `{workgroup:?string, hostname:string}`
      * @see Storage::GetClientObject()
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), array(
+        return parent::GetClientObject($activate) + array(
             'workgroup' => $this->TryGetScalar('workgroup'),
             'hostname' => $this->GetScalar('hostname')
-        ));
+        );
     }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--workgroup ?alphanum]"; }

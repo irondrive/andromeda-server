@@ -1,12 +1,8 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/Database.php"); use Andromeda\Core\Database\DatabaseException;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, RowInsertFailedException};
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+require_once(ROOT."/Core/Database/Exceptions.php"); use Andromeda\Core\Database\DatabaseException;
 
 /**
  * Stores an entry of statistics for a Timed limit
@@ -26,7 +22,7 @@ class TimedStats extends BaseObject // TODO was StandardObject
     {
         return array_merge(parent::GetFieldTemplate(), array(
             'obj_limitobj' => new FieldTypes\ObjectPoly(Timed::class, 'stats'),
-            'date_timestart' => new FieldTypes\Date(),
+            'date_timestart' => new FieldTypes\Timestamp(),
             'iscurrent' => new FieldTypes\BoolType(),
             'count_size' => new FieldTypes\Counter(),
             'count_items' => new FieldTypes\Counter(),
@@ -111,7 +107,7 @@ class TimedStats extends BaseObject // TODO was StandardObject
         {
             try 
             {
-                $stats = parent::BaseCreate($database)->SetObject('limitobj',$limit)
+                $stats = static::BaseCreate($database)->SetObject('limitobj',$limit)
                     ->SetScalar('iscurrent',true)->SetDate('timestart',$start)->Save();
             }
             catch (RowInsertFailedException $e) // someone may have already inserted a new time period, try loading again
@@ -166,7 +162,7 @@ class TimedStats extends BaseObject // TODO was StandardObject
      * @param ObjectDatabase $database database reference
      * @param Timed $limit limit to load stats for
      * @param int $time the time at which the stats were current
-     * @return static|NULL load stats or null if none exist
+     * @return ?static load stats or null if none exist
      */
     public static function LoadByLimitAtTime(ObjectDatabase $database, Timed $limit, int $time) : ?self
     {
@@ -185,7 +181,7 @@ class TimedStats extends BaseObject // TODO was StandardObject
 
     /**
      * Returns a printable client object of the stats
-     * @return array `{iscurrent:bool, dates:{created:float, timestart:int}, 
+     * @return array<mixed> `{iscurrent:bool, dates:{created:float, timestart:int}, 
         counters:{size:int, items:int, shares:int, pubdownloads:int, bandwidth:int}}`
      */
     public function GetClientObject() : array

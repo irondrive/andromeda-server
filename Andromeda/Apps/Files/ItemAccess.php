@@ -1,18 +1,14 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Errors\BaseExceptions;
+use Andromeda\Core\IOFormat\SafeParams;
 
-use Andromeda\Apps\Accounts\{Account, Authenticator, AuthenticationFailedException};
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
+require_once(ROOT."/Apps/Accounts/Exceptions.php"); use Andromeda\Apps\Accounts\AuthenticationFailedException;
 
-/** Exception indicating that the given share password is invalid */
-class InvalidSharePasswordException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_SHARE_PASSWORD", $details);
-    }
-}
+require_once(ROOT."/Apps/Files/Exceptions.php");
 
 /** 
  * Authenticator class that implements item access rules 
@@ -146,6 +142,6 @@ class ItemAccess
     public static function TryAuthenticate(ObjectDatabase $database, SafeParams $params, ?Authenticator $authenticator, ?Item $item = null) : ?self
     {
         try { return static::Authenticate($database, $params, $authenticator, $item); }
-        catch (Exceptions\ClientException $e) { return null; }
+        catch (BaseExceptions\ClientException $e) { return null; }
     }
 }

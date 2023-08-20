@@ -1,11 +1,8 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Limits/Base.php");
 require_once(ROOT."/Apps/Files/Limits/TimedStats.php");
@@ -24,7 +21,7 @@ require_once(ROOT."/Apps/Files/Limits/TimedStats.php");
  */
 abstract class Timed extends Base
 {
-    /** array<limited object ID, self[]> */
+    /** array<limited object ID, array<self>> */
     protected static $cache = array();
     
     public static function GetDBClass() : string { return self::class; }
@@ -91,7 +88,7 @@ abstract class Timed extends Base
      * @param ObjectDatabase $database database reference
      * @param StandardObject $obj the limited object
      * @param int $period the time period
-     * @return static|NULL limit object or null if none
+     * @return ?static limit object or null if none
      */
     public static function LoadByClientAndPeriod(ObjectDatabase $database, BaseObject $obj, int $period) : ?self
     {
@@ -127,7 +124,7 @@ abstract class Timed extends Base
      */
     protected static function CreateTimed(ObjectDatabase $database, BaseObject $obj, int $timeperiod) : self
     {
-        $newobj = parent::BaseCreate($database)->SetObject('object',$obj)->SetScalar('timeperiod',$timeperiod);
+        $newobj = static::BaseCreate($database)->SetObject('object',$obj)->SetScalar('timeperiod',$timeperiod);
         
         static::$cache[$obj->ID()] ??= array();
         static::$cache[$obj->ID()][] = $newobj;
@@ -182,7 +179,7 @@ abstract class Timed extends Base
     /**
      * Returns a printable client object of this timed limit
      * @param bool $full if false, don't show anything
-     * @return array `{timeperiod:int, max_stats_age:?int, dates:{created:float}, 
+     * @return array<mixed> `{timeperiod:int, max_stats_age:?int, dates:{created:float}, 
             limits: {pubdownloads:?int, bandwidth:?int}`
      * @see Base::GetClientObject()
      */
@@ -192,7 +189,7 @@ abstract class Timed extends Base
         
         if (!$full) return $retval;
         
-        return array_merge($retval, array(
+        $retval += array(
             'timeperiod' => $this->GetTimePeriod(),
             'max_stats_age' => $this->GetMaxStatsAge(),
             'dates' => array(
@@ -202,6 +199,8 @@ abstract class Timed extends Base
             'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                 array('pubdownloads','bandwidth')
             )
-        ));
+        );
+        
+        return $retval;
     }
 }

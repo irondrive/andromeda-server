@@ -1,133 +1,126 @@
-<?php namespace Andromeda\Apps\Accounts\Auth; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
+use Andromeda\Core\Errors\{BaseExceptions, ErrorManager};
+use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/Auth/External.php");
-require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
+require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
+require_once(ROOT."/Apps/Accounts/AuthSource/External.php");
 
-/** Exception indicating that the LDAP extension does not exist */
-class LDAPExtensionException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("LDAP_EXTENSION_MISSING", $details);
-    }
-}
-
-/** Exception indicating that the LDAP connection failed */
-class LDAPConnectionFailure extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("LDAP_CONNECTION_FAILURE", $details);
-    }
-}
-
-/** Exception indicating that LDAP encountered an error */
-class LDAPErrorException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("LDAP_EXTENSION_ERROR", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 /** Uses an LDAP server for authentication */
 class LDAP extends External
 {
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'hostname' => new FieldTypes\StringType(),
-            'secure' => new FieldTypes\BoolType(),    // true to use LDAP-SSL
-            'userprefix' => new FieldTypes\StringType() // LDAP prefix for user lookup
-        ));
-    }
+    use TableTypes\TableNoChildren;
     
-    public static function GetPropUsage() : string { return "--hostname hostname [--secure bool] [--userprefix ?utf8]"; }
+    /** Hostname of the LDAP server to connect to */
+    private FieldTypes\StringType $hostname;
+    /** If true, use LDAP over SSL */
+    private FieldTypes\BoolType $secure;
+    /** LDAP username lookup prefix */
+    private FieldTypes\NullStringType $userprefix;
+    
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->hostname =   $fields[] = new FieldTypes\StringType('hostname');
+        $this->secure =     $fields[] = new FieldTypes\BoolType('secure');
+        $this->userprefix = $fields[] = new FieldTypes\NullStringType('userprefix');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
+
+    public static function GetPropUsage() : string { return "--hostname hostname [--secure bool] [--userprefix ?utf8]"; } // TODO should this call parent? unclear - check usages ... maybe rename like GetSubPropUsage
     
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        return parent::Create($database, $params)
-            ->SetScalar('hostname', $params->GetParam('hostname')->GetHostname())
-            ->SetScalar('secure', $params->GetOptParam('secure',false)->GetBool())
-            ->SetScalar('userprefix', $params->GetOptParam('userprefix',null)->GetNullUTF8String());
+        $obj = parent::Create($database, $params);
+        
+        $obj->hostname->SetValue($params->GetParam('hostname')->GetHostname());
+        $obj->secure->SetValue($params->GetOptParam('secure',false)->GetBool());
+        $obj->userprefix->SetValue($params->GetOptParam('userprefix',null)->GetNullUTF8String());
+        
+        return $obj;
     }
     
     public function Edit(SafeParams $params) : self
     {
-        if ($params->HasParam('hostname')) $this->SetScalar('hostname',$params->GetParam('hostname')->GetHostname());
-        if ($params->HasParam('secure')) $this->SetScalar('secure',$params->GetParam('secure')->GetBool());
-        if ($params->HasParam('userprefix')) $this->SetScalar('userprefix',$params->GetParam('userprefix')->GetNullUTF8String());
+        if ($params->HasParam('hostname')) 
+            $this->hostname->SetValue($params->GetParam('hostname')->GetHostname());
+        
+        if ($params->HasParam('secure')) 
+            $this->secure->SetValue($params->GetParam('secure')->GetBool());
+        
+        if ($params->HasParam('userprefix')) 
+            $this->userprefix->SetValue($params->GetParam('userprefix')->GetNullUTF8String());
         
         return $this;
     }
     
     /**
      * Returns a printable client object for this LDAP
-     * @return array `{hostname:string, secure:bool, userprefix:string}`
+     * @return array<string, mixed> `{hostname:string, secure:bool, userprefix:?string}` + External
+     * @see External::GetClientObject()
      */
-    public function GetClientObject() : array
+    public function GetClientObject(bool $admin) : array
     {
-        return array(
-            'hostname' => $this->GetHostname(),
-            'secure' => $this->GetUseSSL(),
-            'userprefix' => $this->GetUserPrefix()
+        return parent::GetClientObject($admin) + array(
+            'hostname' => $this->hostname->GetValue(),
+            'secure' => $this->secure->GetValue(),
+            'userprefix' => $this->userprefix->TryGetValue()
         );
     }
     
-    private $ldap;
-    
-    /** Returns the hostname of the LDAP server */
-    public function GetHostname() : string { return $this->GetScalar('hostname'); }
-    
-    /** Returns whether to use SSL with the LDAP server */
-    public function GetUseSSL() : bool { return $this->GetScalar('secure'); }
-    
-    /** Returns the user prefix to use for looking up users in LDAP */
-    public function GetUserPrefix() : ?string { return $this->TryGetScalar('userprefix'); }
-    
+    private $ldapConn;
+
     /** Checks for the existence of the LDAP extension */
-    public function SubConstruct() : void
+    public function PostConstruct() : void
     {        
-        if (!function_exists('ldap_bind')) throw new LDAPExtensionException();
+        if (!function_exists('ldap_bind')) 
+            throw new LDAPExtensionException();
     }
     
     /** Initiates a connection to the LDAP server */
     public function Activate() : self
     {
-        if (isset($this->ldap)) return $this;
+        if (isset($this->ldapConn)) return $this;
         
-        $protocol = $this->GetUseSSL() ? "ldaps" : "ldap";
+        $protocol = $this->secure->GetValue() ? "ldaps" : "ldap";
         
-        $this->ldap = ldap_connect("$protocol://".$this->GetHostname());
-        if (!$this->ldap) throw new LDAPConnectionFailure();
+        $this->ldapConn = ldap_connect("$protocol://".$this->hostname->GetValue());
+        if (!$this->ldapConn) throw new LDAPConnectionFailure();
         
-        ldap_set_option($this->ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
-        ldap_set_option($this->ldap, LDAP_OPT_REFERRALS, 0);
+        ldap_set_option($this->ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+        ldap_set_option($this->ldapConn, LDAP_OPT_REFERRALS, 0);
         
         return $this;
     }
     
-    public function VerifyUsernamePassword(string $username, string $password) : bool
+    public function VerifyAccountPassword(Account $account, string $password) : bool
     {
         $this->Activate();
         
-        $prefix = $this->GetUserPrefix(); 
+        $username = $account->GetUsername();
+        
+        $prefix = $this->userprefix->TryGetValue(); 
         if ($prefix !== null) $username = "$prefix\\$username";
         
         try 
         {
-            $success = ldap_bind($this->ldap, $username, $password); 
+            $success = ldap_bind($this->ldapConn, $username, $password); 
             
-            ldap_close($this->ldap); unset($this->ldap); return $success;
+            ldap_close($this->ldapConn); unset($this->ldapConn); return $success;
         }
-        catch (Exceptions\PHPError $e) 
+        catch (BaseExceptions\PHPError $e) 
         {
-            $errman = ErrorManager::GetInstance(); $errman->LogException($e);
+            $errman = ErrorManager::GetInstance(); 
+            $errman->LogException($e);
             
-            if ($lerr = ldap_error($this->ldap)) 
+            if ($lerr = ldap_error($this->ldapConn)) 
                 $errman->LogException(new LDAPErrorException($lerr));
             
             return false; 

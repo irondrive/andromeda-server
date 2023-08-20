@@ -1,24 +1,40 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
 /** Whitelist entry for allowing account signups */
-class Whitelist extends BaseObject // TODO was StandardObject
+class Whitelist extends BaseObject
 {
-    public const TYPE_USERNAME = 1;
-    public const TYPE_CONTACT = 2;
+    use TableTypes\TableNoChildren;
     
-    public const TYPES = array('username'=>self::TYPE_USERNAME, 'contact'=>self::TYPE_CONTACT);
+    /** A whitelisted username */
+    public const TYPE_USERNAME = 0;
+    /** A whitelisted contact info */
+    public const TYPE_CONTACT = 1; // TODO maybe refactor to have actual contact types?
     
-    public static function GetFieldTemplate() : array
+    public const TYPES = array(
+        'username'=>self::TYPE_USERNAME, 
+        'contact'=>self::TYPE_CONTACT);
+    
+    /** The type of whitelist entry */
+    private FieldTypes\IntType $type; // keep it simple, no polymorphism
+    /** The value of the whitelist entry */
+    private FieldTypes\StringType $value;
+    /** Date the entry was created */
+    private FieldTypes\Timestamp $date_created;
+    
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'type' => new FieldTypes\IntType(),
-            'value' => new FieldTypes\StringType()
-        ));
+        $fields = array();
+
+        $this->type = $fields[] =  new FieldTypes\IntType('type');
+        $this->value = $fields[] = new FieldTypes\StringType('value');
+        
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+        
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
     }
     
     /**
@@ -30,7 +46,11 @@ class Whitelist extends BaseObject // TODO was StandardObject
      */
     public static function Create(ObjectDatabase $database, int $type, string $value) : self
     {
-        return parent::BaseCreate($database)->SetScalar('type',$type)->SetScalar('value',$value);
+        $obj = static::BaseCreate($database);
+        $obj->date_created->SetTimeNow();
+        $obj->type->SetValue($type);
+        $obj->value->SetValue($value);
+        return $obj;
     }
     
     /**
@@ -44,7 +64,7 @@ class Whitelist extends BaseObject // TODO was StandardObject
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('type',$type),$q->Equals('value',$value));
         
-        return (static::TryLoadUniqueByQuery($database, $q->Where($w)) !== null);
+        return ($database->TryLoadUniqueByQuery(self::class, $q) !== null);
     }
     
     /**
@@ -53,22 +73,23 @@ class Whitelist extends BaseObject // TODO was StandardObject
      * @param int $type type enum of whitelist entry
      * @param string $value value of whitelist entry
      */
-    public static function DeleteByTypeAndValue(ObjectDatabase $database, int $type, string $value) : void
+    public static function DeleteByTypeAndValue(ObjectDatabase $database, int $type, string $value) : bool
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('type',$type),$q->Equals('value',$value));
         
-        static::DeleteByQuery($database, $q->Where($w));
+        return $database->TryDeleteUniqueByQuery(self::class, $q);
     }
     
     /**
      * Returns a printable client object for this entry
-     * @return array `{type:enum, value:string}`
+     * @return array<mixed> `{date_created:float, type:enum, value:string}`
      */
     public function GetClientObject() : array
     {
         return array(
-            'type' => array_flip(self::TYPES)[$this->GetScalar('type')], 
-            'value' => $this->GetScalar('value')            
+            'date_created' => $this->date_created->GetValue(),
+            'type' => array_flip(self::TYPES)[$this->type->GetValue()], 
+            'value' => $this->value->GetValue()
         );
     }    
 }

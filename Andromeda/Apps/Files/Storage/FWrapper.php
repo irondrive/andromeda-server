@@ -1,34 +1,10 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
 require_once(ROOT."/Apps/Files/FileUtils.php"); use Andromeda\Apps\Files\FileUtils;
 
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/Storage.php");
 require_once(ROOT."/Apps/Files/Storage/Traits.php");
-
-/** Exception indicating that the file handle failed to open */
-class FileOpenFailedException extends StorageException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FILE_OPEN_FAILED", $details);
-    }
-}
-
-/** Exception indicating that the file handle failed to seek */
-class FileSeekFailedException extends StorageException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FILE_SEEK_FAILED", $details);
-    }
-}
-
-/** Exception indicating that the file handle failed to close */
-class FileCloseFailedException extends StorageException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FILE_CLOSE_FAILED", $details);
-    }
-}
 
 class FileContext
 {

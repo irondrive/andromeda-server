@@ -1,9 +1,6 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -18,7 +15,7 @@ class Comment extends BaseObject // TODO was StandardObject
             'obj_owner'  => new FieldTypes\ObjectRef(Account::class),
             'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'comments'),
             'comment' => new FieldTypes\StringType(),
-            'date_modified' => new FieldTypes\Date()
+            'date_modified' => new FieldTypes\Timestamp()
         ));
     }
     
@@ -27,7 +24,7 @@ class Comment extends BaseObject // TODO was StandardObject
     
     public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : self
     {
-        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetComment($comment);
+        return static::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetComment($comment);
     }
     
     /** Tries to load a comment object by the given account and comment ID */
@@ -40,7 +37,7 @@ class Comment extends BaseObject // TODO was StandardObject
     
     /**
      * Returns a printable client object of this comment
-     * @return array `{id:id,owner:id,item:id,comment:string,dates{created:float,modified:?float}}`
+     * @return array<mixed> `{id:id,owner:id,item:id,comment:string,dates{created:float,modified:?float}}`
      */
     public function GetClientObject() : array
     {

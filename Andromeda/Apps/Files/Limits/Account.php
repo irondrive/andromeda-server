@@ -1,14 +1,12 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{BaseObject, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\{Account, GroupInherit};
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
-require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\GroupJoin;
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\GroupJoin;
 
 require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
@@ -53,7 +51,7 @@ trait AccountCommon
     /**
      * Returns a printable client object that includes property inherit sources
      * @param bool $full if true, show property inherit sources - always show $full for parent!
-     * @return array `{config:{track_items:bool,track_dlstats:bool}, config_from:"id:class", limits_from:"id:class"}`
+     * @return array<mixed> `{config:{track_items:bool,track_dlstats:bool}, config_from:"id:class", limits_from:"id:class"}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */
@@ -214,7 +212,7 @@ class AccountTotal extends AuthEntityTotal
      * @param Account $account account of interest
      * @param bool $require if true and no limit exists, a fake object will be returned to retrieve defaults
      * @see AccountTotalDefault
-     * @return self|NULL limit object or null
+     * @return ?self limit object or null
      */
     public static function LoadByAccount(ObjectDatabase $database, ?Account $account, bool $require = true) : ?self
     {
@@ -372,16 +370,14 @@ class AccountTimed extends AuthEntityTimed
         $retval = static::LoadAllForClient($database, $account);
         
         foreach ($retval as $aclim)
-        {
-            $retval = array_merge($retval, $aclim->GetGroups());
-        }
+            $retval += $aclim->GetGroups();
         
         return $retval;
     }
     
     /**
      * Returns a printable client object that includes property inherit sources
-     * @return array `{max_stats_age_from:"id:class"}`
+     * @return array<mixed> `{max_stats_age_from:"id:class"}`
      * @see AccountCommon::GetClientObject()
      */
     public function GetClientObject(bool $full) : array

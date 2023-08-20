@@ -1,54 +1,17 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Config.php"); use Andromeda\Core\Config;
-
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/Exceptions/ErrorManager.php"); use Andromeda\Core\Exceptions\ErrorManager;
+use Andromeda\Core\Config;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase};
+use Andromeda\Core\Errors\ErrorManager;
+use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\OptFieldCrypt;
+require_once(ROOT."/Apps/Accounts/Crypto/FieldCrypt.php"); use Andromeda\Apps\Accounts\Crypto\OptFieldCrypt;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
 require_once(ROOT."/Apps/Files/Storage/Traits.php");
-
-/** Exception indicating that the S3 SDK is missing */
-class S3AwsSdkException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("S3_AWS_SDK_MISSING", $details);
-    }
-}
-
-/** Exception indicating that S3 failed to connect or read the base path */
-class S3ConnectException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("S3_CONNECT_FAILED", $details);
-    }
-}
-
-/** Exception that wraps S3 SDK exceptions */
-class S3ErrorException extends StorageException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("S3_SDK_EXCEPTION", $details);
-    }
-}
-
-/** Exception indicating that objects cannot be modified */
-class S3ModifyException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("S3_OBJECTS_IMMUTABLE", $details);
-    }
-}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) S3::DecryptAccount($database, $account); });
@@ -82,7 +45,7 @@ class S3 extends S3Base
     
     /**
      * Returns a printable client object of this S3 storage
-     * @return array `{endpoint:string, path_style:?bool, port:?int, usetls:bool, \
+     * @return array<mixed> `{endpoint:string, path_style:?bool, port:?int, usetls:bool, \
            region:string, bucket:string, accesskey:string/bool, secretkey:bool}`
      * @see Storage::GetClientObject()
      */
@@ -90,7 +53,7 @@ class S3 extends S3Base
     {
         $accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : (bool)($this->TryGetScalar('accesskey'));
         
-        return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
+        return parent::GetClientObject($activate) + $this->GetFieldCryptClientObject() + array(
             'endpoint' => $this->GetScalar('endpoint'),
             'path_style' => $this->TryGetScalar('path_style'),
             'port' => $this->TryGetScalar('port'),
@@ -99,7 +62,7 @@ class S3 extends S3Base
             'bucket' => $this->GetScalar('bucket'),
             'accesskey' => $accesskey,
             'secretkey' => (bool)($this->TryGetScalar('secretkey'))
-        ));
+        );
     }
     
     /** Returns the S3 bucket identifier */
@@ -250,7 +213,7 @@ class S3 extends S3Base
     /**
      * Returns an array of the params used for all requests (bucket and key)
      * @param string $path key/path of object
-     * @return array `{Bucket:string,Key:string}`
+     * @return array<mixed> `{Bucket:string,Key:string}`
      */
     protected function getStdParams(string $path) : array
     {

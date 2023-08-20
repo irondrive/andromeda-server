@@ -1,167 +1,110 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\FieldTypes;
 
-/** Exception indicating that the raw (non-hashed) key does not exist in memory */
-class RawKeyNotAvailableException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("AUTHOBJECT_KEY_NOT_AVAILABLE", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Crypto/Exceptions.php");
 
 /** 
  * Represents an object that holds an authentication code that can be checked 
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
  */
-abstract class AuthObject extends BaseObject // TODO was StandardObject
-{    
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'authkey' => new FieldTypes\StringType()
-        ));
-    }
+trait AuthObject
+{
+    /** Return the string length of the auth key */
+    protected function GetKeyLength() : int { return 32; }
     
-    protected const KEY_LENGTH = 32; // ~160 bits
+    /** Return the time cost for the hashing algorithm */
+    protected function GetTimeCost() : int { return 1; }
     
-    /** a long random string doesn't need purposefully-slow hashing */
-    private const SETTINGS = array('time_cost' => 1, 'memory_cost' => 1024);
+    /** Return the memory cost in KiB for the hashing algorithm */
+    protected function GetMemoryCost() : int { return 1024; }
     
-    /**
-     * Attemps to load the object with the given account and ID
-     * @param ObjectDatabase $database database reference
-     * @param Account $account account that owns this object
-     * @param string $id the ID of this object
-     * @return static|NULL loaded object or null if not found
-     */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    /** The hashed auth key stored in DB */
+    private FieldTypes\NullStringType $authkey;
+    
+    /** The actual auth key if in memory */
+    private string $authkey_raw;
+    
+    protected function AuthObjectCreateFields() : void
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->Equals('id',$id));
-        return self::TryLoadUniqueByQuery($database, $q->Where($w));
-    }
-
-    /**
-     * Creates a new auth object
-     * @param ObjectDatabase $database database reference
-     * @param bool $withKey if true, create an auth key
-     * @return $this
-     */
-    public static function BaseCreate(ObjectDatabase $database, bool $withKey = true) : self
-    {
-        $obj = parent::BaseCreate($database);
-        if (!$withKey) return $obj;
+        $fields = array();
         
-        $key = Utilities::Random(static::KEY_LENGTH);
-        return $obj->ChangeAuthKey($key);
+        $this->authkey = $fields[] = new FieldTypes\NullStringType('authkey');
+
+        $this->RegisterChildFields($fields);
     }
     
-    /** Returns true if the given key is valid, and stores it in memory for GetAuthKey() */
+    /** Returns true if the given key is valid, and stores it in memory for TryGetAuthKey() */
     public function CheckKeyMatch(string $key) : bool
     {
-        $hash = $this->GetAuthKey(true);
-        $correct = password_verify($key, $hash);
+        $hash = $this->authkey->TryGetValue();
         
-        if ($correct)
-        {
-            $this->haveKey = true; $algo = Utilities::GetHashAlgo();
-            
-            if (password_needs_rehash($this->GetAuthKey(true), $algo, self::SETTINGS))
-            {
-                $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
-            }
-            
-            $this->SetScalar('authkey', $key, true);
-        }
+        if ($hash === null || !password_verify($key, $hash)) return false;
+
+        $this->authkey_raw = $key;
         
-        return $correct;
+        $settings = array(
+            'time_cost'=>static::GetTimeCost(), 
+            'memory_cost'=>static::GetMemoryCost());
+        
+        if (password_needs_rehash($hash, $algo = Utilities::GetHashAlgo(), $settings))
+            $this->authkey->SetValue(password_hash($key, $algo, $settings));
+        
+        return true;
     }
     
     /**
-     * Returns the auth key or auth key hash
-     * @param bool $asHash if false, get the real key not the hash
+     * Returns the auth key if available or null if none
      * @throws RawKeyNotAvailableException if the real key is not in memory
      */
-    public function GetAuthKey(bool $asHash = false) : string
+    protected function TryGetAuthKey() : ?string
     {
-        if (!$asHash && !$this->haveKey) 
+        if ($this->authkey->TryGetValue() === null)
+            return null; // no key/hash
+        
+        if (!isset($this->authkey_raw))
             throw new RawKeyNotAvailableException();
-        return $this->GetScalar('authkey', !$asHash);
+        return $this->authkey_raw;
     }
-    
-    private $haveKey = false;
-    
+
     /** 
      * Sets the auth key to a new random value 
-     * @return $this
+     * @return string the new auth key
      */
-    protected function InitAuthKey() : self
+    protected function InitAuthKey() : string
     {
-        return $this->ChangeAuthKey(Utilities::Random(static::KEY_LENGTH));
+        $key = Utilities::Random(static::GetKeyLength());
+        $this->SetAuthKey($key); return $key;
     }
+    
+    // TODO took away BaseCreate here... was InitAuthkey() if second param true (default)
     
     /**
      * Sets the auth key to the given value and hashes it
      * @param string $key new auth key
      * @return $this
      */
-    protected function ChangeAuthKey(?string $key) : self 
+    protected function SetAuthKey(?string $key) : self 
     {
-        $this->haveKey = true; $algo = Utilities::GetHashAlgo(); 
+        if ($key === null)
+        {
+            unset($this->authkey_raw);
+            $hash = null;
+        }
+        else
+        {   
+            $settings = array(
+                'time_cost'=>static::GetTimeCost(),
+                'memory_cost'=>static::GetMemoryCost());
+            
+            $this->authkey_raw = $key;
+            $algo = Utilities::GetHashAlgo();
+            $hash = password_hash($key, $algo, $settings);
+        }
         
-        if ($key === null) return $this->SetScalar('authkey', null);
-
-        $this->SetScalar('authkey', password_hash($key, $algo, self::SETTINGS));
-        
-        return $this->SetScalar('authkey', $key, true);
+        $this->authkey->SetValue($hash);
+        return $this;
     }
-}
-
-/** A trait for getting a serialized user key with both the ID and auth key */
-trait FullAuthKey
-{    
-    /**
-     * Tries to load an AuthObject by the full serialized key - DOES NOT CheckFullKey()!
-     * @param ObjectDatabase $database database reference
-     * @param string $code the full user/serialized code
-     * @param Account $account the owner of the authObject or null for any
-     * @return static|NULL loaded object or null if not found
-     */
-    public static function TryLoadByFullKey(ObjectDatabase $database, string $code, ?Account $account = null) : ?self
-    {
-        $code = explode(":", $code, 3);
-        
-        if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix()) return null;
-        
-        $q = new QueryBuilder(); $w = $q->Equals('id',$code[1]); 
-        
-        if ($account !== null) $w = $q->And($w,$q->Equals('obj_account',$account->ID()));
-
-        return static::TryLoadUniqueByQuery($database, $q->Where($w));
-    }
-    
-    /** Checks the given full/serialized key for validity, returns result */
-    public function CheckFullKey(string $code) : bool
-    {
-        $code = explode(":", $code, 3);
-        if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix()) return false;
-        
-        return $this->CheckKeyMatch($code[2]);
-    }
-    
-    /**
-     * Gets the full serialized key value for the user
-     *
-     * The serialized string contains both the key ID and key value
-     */
-    public function GetFullKey() : string
-    {
-        return implode(":",array(static::GetFullKeyPrefix(),$this->ID(),$this->GetAuthKey()));
-    }    
 }

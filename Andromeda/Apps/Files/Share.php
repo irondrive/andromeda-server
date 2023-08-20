@@ -1,41 +1,15 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
-require_once(ROOT."/Apps/Accounts/AuthObject.php"); use Andromeda\Apps\Accounts\AuthObject;
-require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\{AuthEntity, GroupJoin};
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Crypto/AuthObject.php"); use Andromeda\Apps\Accounts\AuthObject;
+require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php"); use Andromeda\Apps\Accounts\{AuthEntity, GroupJoin};
 
-/** Exception indicating that the requested share has expired */
-class ShareExpiredException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARE_EXPIRED", $details);
-    }
-}
-
-/** Exception indicating that the requested share already exists */
-class ShareExistsException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARE_EXISTS", $details);
-    }
-}
-
-/** Exception indicating that a share was requested for a public item */
-class SharePublicItemException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CANNOT_SHARE_PUBLIC_ITEM", $details);
-    }
-}
+require_once(ROOT."/Apps/Files/Exceptions.php");
 
 /**
  * A share granting access to an item
@@ -46,8 +20,10 @@ class SharePublicItemException extends Exceptions\ClientErrorException
  * track specific permissions for the access (see functions).
  * Folder shares also share all content under them.
  */
-class Share extends AuthObject
+class Share extends BaseObject
 {
+    use AuthObject;
+    
     protected const IDLength = 16;
     
     public static function GetFieldTemplate() : array
@@ -58,10 +34,10 @@ class Share extends AuthObject
             'obj_dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
             'label' => new FieldTypes\StringType(), // user-supplied label
             'password' => new FieldTypes\StringType(0), // possible password set on the share
-            'date_accessed' => new FieldTypes\Date(null, true),
+            'date_accessed' => new FieldTypes\Timestamp(null, true),
             'count_accessed' => new FieldTypes\Counter(), // the count of accesses
             'limit_accessed' => new FieldTypes\Limit(),     // the maximum number of accesses
-            'date_expires' => new FieldTypes\Date(),   // the timestamp past which the share is not valid
+            'date_expires' => new FieldTypes\Timestamp(),   // the timestamp past which the share is not valid
             'read' => new FieldTypes\BoolType(true),
             'upload' => new FieldTypes\BoolType(false),
             'modify' => new FieldTypes\BoolType(false),
@@ -142,7 +118,7 @@ class Share extends AuthObject
             
         if (static::TryLoadUniqueByQuery($database, $q->Where($w)) !== null) throw new ShareExistsException(); 
         
-        return parent::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
+        return static::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
     }
 
     /**
@@ -154,7 +130,7 @@ class Share extends AuthObject
      */
     public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
     {
-        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item->CountShare());
+        return static::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item->CountShare());
     }
     
     /** Deletes the share */
@@ -275,7 +251,7 @@ class Share extends AuthObject
         $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
                     $defgroups, $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
 
-        return array_merge($shares, static::LoadByQuery($database, $q->Where($w)));
+        return $shares + static::LoadByQuery($database, $q->Where($w));
     }
 
     /**
@@ -329,11 +305,10 @@ class Share extends AuthObject
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
      * @param bool $owner if true, we are showing the owner of the share
-     * @return array `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
+     * @return array<mixed> `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
         expired:bool, dates:{created:float, expires:?float}, config:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
         if owner, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
      * @see Item::SubGetClientObject()
-     * @see AuthObject::GetClientObject()
      */
     public function GetClientObject(bool $item = false, bool $owner = true, bool $secret = false) : array
     {

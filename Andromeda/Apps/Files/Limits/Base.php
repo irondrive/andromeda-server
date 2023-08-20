@@ -1,10 +1,7 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
@@ -43,13 +40,13 @@ abstract class Base extends BaseObject // TODO was StandardObject
      *
      * This is abstract since different concrete limit types may use them differently.
      */
-    protected abstract function SetBaseLimits(Input $input) : void;
+    protected abstract function SetBaseLimits(SafeParams $params) : void;
     
     /** Returns the command usage for BaseConfigLimits() */
     public abstract static function BaseConfigUsage() : string;
     
     /** Configures the common (at some level) limit properites for the given object with the given input */
-    protected abstract static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, Input $input);
+    protected abstract static function BaseConfigLimits(ObjectDatabase $database, BaseObject $obj, SafeParams $params);
     
     /** Returns the object that is subject to the limits */
     public function GetLimitedObject() : BaseObject { return $this->GetObject('object'); }
@@ -171,7 +168,7 @@ abstract class Base extends BaseObject // TODO was StandardObject
     /** Returns the share counter for the limited object */
     protected function GetShares() : int { return $this->GetCounter('shares'); }  
     
-    /** @return array `{limited:id}` */
+    /** @return array<mixed> `{limited:id}` */
     public function GetClientObject(bool $full) : array
     {
         return array('limited' => $this->GetLimitedObject()->ID());

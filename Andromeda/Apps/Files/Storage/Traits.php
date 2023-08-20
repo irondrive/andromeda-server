@@ -1,22 +1,11 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase};
+use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 
-require_once(ROOT."/Apps/Accounts/FieldCrypt.php"); use Andromeda\Apps\Accounts\OptFieldCrypt;
-
-/** Exception indicating that this storage does not support folder functions */
-class FoldersUnsupportedException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("STORAGE_FOLDERS_UNSUPPORTED", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Crypto/FieldCrypt.php"); use Andromeda\Apps\Accounts\Crypto\OptFieldCrypt;
 
 /** Trait for storage classes that store a possibly-encrypted username and password */
 trait UserPass
@@ -36,15 +25,15 @@ trait UserPass
     
     /**
      * Returns the printable client object of this trait
-     * @return array `{username:?string, password:bool}`
+     * @return array<mixed> `{username:?string, password:bool}`
      * @see Storage::GetClientObject()
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), $this->GetFieldCryptClientObject(), array(
+        return parent::GetClientObject($activate) + $this->GetFieldCryptClientObject() + array(
             'username' => $this->TryGetUsername(),
             'password' => (bool)($this->TryGetPassword()),
-        ));
+        );
     }
     
     /** Returns the command usage for Create() */
@@ -131,9 +120,9 @@ trait BasePath
     
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), array(
+        return parent::GetClientObject($activate) + array(
             'path' => $this->GetPath()
-        ));
+        );
     }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --path fspath"; }

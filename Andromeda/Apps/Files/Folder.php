@@ -1,25 +1,12 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Main.php"); use Andromeda\Core\Main;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+ use Andromeda\Core\Utilities;
+ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
+require_once(ROOT."/Apps/Files/Exceptions.php");
 require_once(ROOT."/Apps/Files/Item.php");
-
-/** Exception indicating that the folder destination is invalid */
-class InvalidDestinationException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_FOLDER_DESTINATION", $details);
-    }
-}
 
 /** 
  * Defines a user-stored folder which groups other items 
@@ -107,7 +94,7 @@ abstract class Folder extends Item
     {
         $this->SetOwner($account);
         
-        foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item) $item->SetOwner($account);
+        //foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item) $item->SetOwner($account); // TODO no array merge
        
         return $this;
     }
@@ -287,7 +274,7 @@ abstract class Folder extends Item
      * @param bool $recursive if true, show recursive contents
      * @param int $limit max number of items to show
      * @param int $offset offset of items to show
-     * @return array|NULL null if deleted, else `{files:[id:File], folders:[id:Folder], \
+     * @return ?array null if deleted, else `{files:[id:File], folders:[id:Folder], \
          counters:{size:int, pubvisits:int, subfiles:int, subfolders:int}}` \
          if $owner, add: `{counters:{subshares:int}}`
      * @see Item::SubGetClientObject()

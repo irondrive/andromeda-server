@@ -1,14 +1,11 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\{BaseObject, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\{SafeParam, SafeParams};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
-require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\GroupJoin;
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\GroupJoin;
 
 require_once(ROOT."/Apps/Files/Limits/Total.php");
 require_once(ROOT."/Apps/Files/Limits/Timed.php");
@@ -17,12 +14,12 @@ require_once(ROOT."/Apps/Files/Limits/AuthObj.php");
 interface IGroupCommon 
 { 
     /** Track stats for component accounts by inheriting this property */
-    private const TRACK_ACCOUNTS = 1;
+    public const TRACK_ACCOUNTS = 1;
     
     /** Track stats for components accounts and also the group as a whole */
-    private const TRACK_WHOLE_GROUP = 2;
+    public const TRACK_WHOLE_GROUP = 2;
     
-    private const TRACK_TYPES = array('none'=>0,
+    public const TRACK_TYPES = array('none'=>0,
         'accounts'=>self::TRACK_ACCOUNTS, 
         'wholegroup'=>self::TRACK_WHOLE_GROUP);  
 }
