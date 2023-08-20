@@ -7,10 +7,10 @@ class QueryBuilder
      * variables to be substituted in the query
      * @var array<string, scalar>
      */
-    private array $data = array();
+    private array $params = array();
 
     /** @return array<string, scalar> */
-    public function GetData() : array { return $this->data; }
+    public function GetParams() : array { return $this->params; }
     
     /** Returns the compiled query as a string */
     public function GetText() : string 
@@ -49,18 +49,18 @@ class QueryBuilder
     private ?int $limit = null;
     private ?int $offset = null;
     
-    /** The current index for the data array */
-    private int $dataIdx = 0;
+    /** The current index for the param array */
+    private int $paramIdx = 0;
 
     /**
-     * Adds the given value to the internal data array
+     * Adds the given value to the internal param array
      * @param scalar $val the actual data value
      * @return string the placeholder to go in the query
      */
-    protected function AddData($val) : string
+    protected function AddParam($val) : string
     {
-        $idx = "d".$this->dataIdx++;
-        $this->data[$idx] = $val;
+        $idx = "d".$this->paramIdx++;
+        $this->params[$idx] = $val;
         return ':'.$idx;
     }
     
@@ -70,7 +70,7 @@ class QueryBuilder
      */
     private function BaseCompare(string $key, $val, string $symbol) : string 
     {
-        return "$key $symbol ".$this->AddData($val);
+        return "$key $symbol ".$this->AddParam($val); // TODO get rid of this as a function
     }    
     
     /** Returns the given string with escaped SQL wildcard characters */
@@ -85,13 +85,14 @@ class QueryBuilder
     /**
      * Returns a string comparing the given column to a value using LIKE
      * @param string $key the name of the column to compare
-     * @param string $val the value to check for
+     * @param string $val the value to check for (NOTE use EscapeWildcards if using hasMatch!)
      * @param bool $hasMatch if true, the string manages its own SQL wildcard characters else use %$val%
      * @return string the built string
      */
     public function Like(string $key, string $val, bool $hasMatch = false) : string 
     {
-        $val = str_replace('\\','\\\\',$val);
+        $val = str_replace('\\','\\\\',$val); // TODO this should be part of EscapeWildcards... see c++
+        // TODO use ESCAPE like c++ sqlite? not sure if it's supported in mysql/postgres, see https://www.sqlitetutorial.net/sqlite-like/
         if (!$hasMatch) $val = '%'.static::EscapeWildcards($val).'%';
         return $this->BaseCompare($key,$val,'LIKE'); 
     }
@@ -154,6 +155,30 @@ class QueryBuilder
         return $this->BaseCompare($key,$val,'<>'); 
     }
     
+    /**
+     * Syntactic sugar function to check many OR conditions at once
+     * @param string $key the column to compare against
+     * @param array<?scalar> $vals array of possible values for the column
+     * @return string the built query string
+     */
+    public function ManyEqualsOr(string $key, array $vals) : string
+    {
+        return $this->Or(...array_map(function($val)use($key){
+            return $this->Equals($key,$val); },$vals));
+    }
+    
+    /**
+     * Syntactic sugar function to check many AND conditions at once
+     * @param array<string, ?scalar> $pairs associative array mapping column names to their desired values
+     * @return string the built query string
+     */
+    public function ManyEqualsAnd(array $pairs) : string
+    {
+        $retval = array(); foreach($pairs as $key=>$val){
+            $retval[] = $this->Equals($key, $val); }
+            return $this->And(...$retval);
+    }
+    
     /** Returns a query string that inverts the logic of the given query */
     public function Not(string $arg) : string { return "(NOT $arg)"; }
     
@@ -163,30 +188,6 @@ class QueryBuilder
     /** Returns a query string that combines the given arguments using AND */
     public function And(string ...$args) : string { return "(".implode(' AND ',$args).")"; }
 
-    /**
-     * Syntactic sugar function to check many OR conditions at once
-     * @param string $key the column to compare against
-     * @param array<?scalar> $vals array of possible values for the column
-     * @return string the built query string
-     */
-    public function ManyEqualsOr(string $key, array $vals) 
-    { 
-        return $this->Or(...array_map(function($val)use($key){ 
-            return $this->Equals($key,$val); },$vals)); 
-    }    
-    
-    /**
-     * Syntactic sugar function to check many AND conditions at once
-     * @param array<string, ?scalar> $pairs associative array mapping column names to their desired values
-     * @return string the built query string
-     */
-    public function ManyEqualsAnd(array $pairs) 
-    {
-        $retval = array(); foreach($pairs as $key=>$val){ 
-            $retval[] = $this->Equals($key, $val); }
-        return $this->And(...$retval);
-    }
-    
     /** 
      * Assigns/adds a WHERE clause to the query
      * if null, resets - if called > once, uses AND 
@@ -195,9 +196,8 @@ class QueryBuilder
     public function Where(?string $where) : self 
     {
         if ($where !== null && $this->where !== null)
-            $where = $this->And($this->where, $where);
-            
-        $this->where = $where; 
+            $this->where = $this->And($this->where, $where);
+        else $this->where = $where; 
         return $this;
     }
     
@@ -205,7 +205,7 @@ class QueryBuilder
     public function GetWhere() : ?string { return $this->where; }
         
     /** 
-     * Assigns an ORDER BY clause to the query, optionally descending 
+     * Assigns an ORDER BY clause to the query, optionally descending, null to reset
      * @return $this
      */
     public function OrderBy(?string $orderby, ?bool $desc = null) : self 
@@ -222,7 +222,7 @@ class QueryBuilder
     public function GetOrderDesc() : bool { return $this->orderdesc; }
     
     /** 
-     * Assigns a LIMIT clause to the query 
+     * Assigns a LIMIT clause to the query, null to reset
      * @param NULL|int<0,max> $limit
      * @return $this
      */
@@ -232,7 +232,7 @@ class QueryBuilder
     }
     
     /** 
-     * Assigns an OFFSET clause to the query (use with LIMIT) 
+     * Assigns an OFFSET clause to the query (use with LIMIT), null to reset
      * @param NULL|int<0,max> $offset
      * @return $this
      */

@@ -32,12 +32,12 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder();
         $this->assertSame("a2obj_core_database_polyobject4.type = :d0", 
             PolyObject4::GetWhereChild($db, $q, PolyObject4::class));
-        $this->assertSame(array('d0'=>5), $q->GetData());
+        $this->assertSame(array('d0'=>5), $q->GetParams());
         
         $q = new QueryBuilder();
         $this->assertSame("a2obj_core_database_polyobject4.type = :d0",
             PolyObject4::GetWhereChild($db, $q, PolyObject5a::class));
-        $this->assertSame(array('d0'=>13), $q->GetData());
+        $this->assertSame(array('d0'=>13), $q->GetParams());
         
         $q = new QueryBuilder();
         $this->expectException(Exceptions\BadPolyClassException::class);

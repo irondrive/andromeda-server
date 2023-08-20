@@ -245,6 +245,7 @@ class PDODatabase
             
         if ($this->driver === self::DRIVER_SQLITE)
             $this->connection->query("PRAGMA foreign_keys = ON");
+        // TODO should we use the WAL sqlite mode here? read docs
         
         $this->instanceId = "Database_".Utilities::Random(4);
     }
@@ -439,22 +440,22 @@ class PDODatabase
     /**
      * Sends an SQL query down to the database, possibly beginning a transaction
      * @param string $sql the SQL query string, with placeholder data values
-     * @param ?array<string, scalar> $data associative array of data replacements for the prepared statement
+     * @param ?array<string, scalar> $data param replacements for the prepared statement
      * @throws Exceptions\DatabaseQueryException if the database query throws a PDOException
      * @return PDOStatement the finished PDO statement object
      */
-    protected function query(string $sql, ?array $data = null) : PDOStatement
+    protected function query(string $sql, ?array $params = null) : PDOStatement
     {
         if (!$this->connection->inTransaction())
             $this->beginTransaction();
             
-        $this->logQuery($sql, $data);
+        $this->logQuery($sql, $params);
         
         $doSavepoint = $this->RequiresSAVEPOINT();
 
-        if ($this->BinaryEscapeInput() && $data !== null)
+        if ($this->BinaryEscapeInput() && $params !== null)
         {
-            foreach ($data as &$value)
+            foreach ($params as &$value)
             {
                 if (is_string($value) && !Utilities::isUTF8($value))
                     $value = pg_escape_bytea($value);
@@ -467,7 +468,7 @@ class PDODatabase
                 $this->connection->query("SAVEPOINT a2save");
             
             $query = $this->connection->prepare($sql);
-            $query->execute($data ?? array());
+            $query->execute($params ?? array());
 
             if ($doSavepoint)
                 $this->connection->query("RELEASE SAVEPOINT a2save");
@@ -502,11 +503,11 @@ class PDODatabase
      * Logs a query to the internal query history, logging the actual data values if debug allows 
      * @param ?array<string, scalar> $data
      */
-    private function logQuery(string $sql, ?array $data) : string
+    private function logQuery(string $sql, ?array $params) : string
     {
-        if ($data !== null && $this->logValues)
+        if ($params !== null && $this->logValues)
         {            
-            foreach ($data as $key=>$val)
+            foreach ($params as $key=>$val)
             {
                 if (is_string($val))
                 {
@@ -538,7 +539,7 @@ class PDODatabase
         }
     }
     
-    /** Begins a new database transaction */
+    /** Begins a new database transaction if not already in one */
     public function beginTransaction() : void
     {
         if (!$this->connection->inTransaction())
@@ -563,6 +564,7 @@ class PDODatabase
     private function configTransaction() : void
     {
         $qstr = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED";
+        // TODO not sure if this is the best idea... don't make decisions here based on TimedStats, can always just fail with 503 now
         
         if ($this->read_only) $qstr .= " READ ONLY";
         

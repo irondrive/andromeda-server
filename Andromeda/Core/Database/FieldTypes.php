@@ -35,14 +35,14 @@ abstract class BaseField
     /** Returns the unique ID of this field */
     public function ID() : string
     {
-        return $this->parent->ID().':'.$this->name;
+        return $this->parent->ID().':'.$this->name; // TODO what is this used for??
     }
     
     /**
      * @param BaseObject $parent parent object reference
      * @return $this
      */
-    public function SetParent(BaseObject $parent) : self
+    public function SetParent(BaseObject $parent) : self // TODO why not in constructor?
     {
         $this->database = $parent->GetDatabase();
         $this->parent = $parent; return $this;
@@ -100,12 +100,15 @@ trait ScalarCommon
 {
     public function Uninitialize() : void
     {
-        unset($this->default);
         unset($this->tempvalue);
         unset($this->realvalue);
         unset($this->delta);
     }
 }
+
+// NOTE the reason we have separate classes for all the scalar types
+// is so that we get RUNTIME safety with the types also.  Otherwise
+// you would only get type checking with phpstan based on the comments
 
 /** A possibly-null string */
 class NullStringType extends BaseField
@@ -250,6 +253,8 @@ class StringType extends BaseField
         return false;
     }
 }
+
+// TODO consider getting rid of the bool type, consumers can just use int...
 
 /** A possibly-null boolean */
 class NullBoolType extends BaseField
@@ -693,7 +698,7 @@ class NullTimestamp extends NullFloatType
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue($this->parent->GetDatabase()->GetTime());
+        return parent::SetValue($this->parent->GetDatabase()->GetTime()); // TODO we have a database ref already??
     }
 }
 
@@ -711,6 +716,7 @@ class Timestamp extends FloatType
 class Counter extends BaseField
 {
     private ?NullIntType $limit = null;
+    // TODO why would this ever be null? should just default to 0?
     
     protected int $value;
     
@@ -851,6 +857,8 @@ class NullJsonArray extends BaseField
     }
 }
 
+// TODO maybe get rid of the non-null JSON version? JSON gives no guarantees anyway, could be empty...
+
 /** 
  * A field that stores a JSON-encoded array 
  * @template T of array
@@ -967,7 +975,7 @@ class NullObjectRefT extends BaseField
         $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
         if ($obj !== null) return $obj;
-        throw new Exceptions\ForeignKeyException($this->class);
+        throw new Exceptions\ForeignKeyException($this->class); // TODO objId also?
     }
     
     /** Returns the ID of the object pointed to by this field */
@@ -991,6 +999,8 @@ class NullObjectRefT extends BaseField
         }
         
         if ($value->ID() === $this->objId) return false;
+        
+        // TODO missing NotifyModified??
 
         $this->objId = $value->ID();
         $this->delta++;
@@ -1078,3 +1088,6 @@ class ObjectRefT extends BaseField
         return true;
     }
 }
+
+// TODO split this out into more files...
+

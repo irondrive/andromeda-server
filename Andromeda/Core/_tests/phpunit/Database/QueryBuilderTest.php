@@ -12,21 +12,21 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     
     /**
      * @param QueryBuilder $q
-     * @param array<mixed> $data
+     * @param array<mixed> $params
      * @param string $value
      */
-    protected function testQuery(QueryBuilder $q, array $data, string $value) : void
+    protected function testQuery(QueryBuilder $q, array $params, string $value) : void
     {
         $this->assertSame($value, $q->GetText(), (string)$q);
         
-        $keys = array_map(function(int $val){ return "d$val"; }, array_keys($data));
+        $keys = array_map(function(int $val){ return "d$val"; }, array_keys($params));
         
-        $data = array_combine($keys, $data);        
+        $params = array_combine($keys, $params);        
         
-        $this->assertSame($data, $q->GetData());
+        $this->assertSame($params, $q->GetParams());
     }
     
-    public function testBasic() : void
+    public function testCompares() : void
     {
         $q = new QueryBuilder(); $q->Where($q->IsNull('mykey'));        
         $this->testQuery($q, array(), "WHERE mykey IS NULL");        
@@ -50,6 +50,9 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder(); $q->Where($q->Equals('mykey','myval'));
         $this->testQuery($q, array('myval'), "WHERE mykey = :d0");
         
+        $q = new QueryBuilder(); $q->Where($q->Equals('mykey',null));
+        $this->testQuery($q, array('myval'), "WHERE mykey IS NULL");
+        
         $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey','myval'));
         $this->testQuery($q, array('myval'), "WHERE mykey <> :d0");
     }
@@ -67,6 +70,9 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     {
         $q = new QueryBuilder(); $q->Where($q->Not($q->Equals('mykey','myval')));
         $this->testQuery($q, array('myval'), "WHERE (NOT mykey = :d0)");
+        
+        $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey',null));
+        $this->testQuery($q, array('myval'), "WHERE (NOT mykey IS NULL)");
         
         $q = new QueryBuilder(); $q->Where($q->And($q->Equals('mykey1','myval1'), $q->Equals('mykey2','myval2')));
         $this->testQuery($q, array('myval1','myval2'), "WHERE (mykey1 = :d0 AND mykey2 = :d1)");
@@ -94,8 +100,18 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame(15, $q->GetLimit());
         $this->assertSame(10, $q->GetOffset());
+        $this->assertSame("mykey", $q->GetOrderBy());
+        $this->assertSame(true, $q->GetOrderDesc());
         
         $this->testQuery($q, array(), "WHERE mykey IS NULL ORDER BY mykey DESC LIMIT 15 OFFSET 10");
+        
+        $q->Where(null)->Limit(null)->Offset(null)->OrderBy(null); // reset
+        $this->assertSame(null, $q->GetLimit());
+        $this->assertSame(null, $q->GetOffset());
+        $this->assertSame(null, $q->GetOrderBy());
+        $this->assertSame(false, $q->GetOrderDesc());
+        
+        $this->testQuery($q, array(), "");
     }
     
     public function testJoins() : void

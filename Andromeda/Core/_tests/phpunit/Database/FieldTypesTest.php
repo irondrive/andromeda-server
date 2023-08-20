@@ -111,6 +111,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
 
         $field = (new NullStringType('myfield', false, 'a'))->SetParent($parent);
         $this->assertSame('a', $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testStringValue() : void
@@ -167,6 +168,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
 
         $field = (new StringType('myfield', false, 'a'))->SetParent($parent);
         $this->assertSame('a', $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testNullBoolValue() : void
@@ -225,9 +227,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new NullBoolType('myfield', false, false))->SetParent($parent);
         $this->assertSame(false, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new NullBoolType('myfield', false, true))->SetParent($parent);
         $this->assertSame(true, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testBoolValue() : void
@@ -287,9 +291,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new BoolType('myfield', false, false))->SetParent($parent);
         $this->assertSame(false, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new BoolType('myfield', false, true))->SetParent($parent);
         $this->assertSame(true, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testNullIntValue() : void
@@ -348,9 +354,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
 
         $field = (new NullIntType('myfield', false, 0))->SetParent($parent);
         $this->assertSame(0, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new NullIntType('myfield', false, 1))->SetParent($parent);
         $this->assertSame(1, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testIntValue() : void
@@ -411,9 +419,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new IntType('myfield', false, 0))->SetParent($parent);
         $this->assertSame(0, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new IntType('myfield', false, 1))->SetParent($parent);
         $this->assertSame(1, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testNullFloatValue() : void
@@ -470,9 +480,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new NullFloatType('myfield', false, 0.0))->SetParent($parent);
         $this->assertSame(0.0, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new NullFloatType('myfield', false, 1.1))->SetParent($parent);
         $this->assertSame(1.1, $field->TryGetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testFloatValue() : void
@@ -530,9 +542,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new FloatType('myfield', false, 0.0))->SetParent($parent);
         $this->assertSame(0.0, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
         
         $field = (new FloatType('myfield', false, 1.1))->SetParent($parent);
         $this->assertSame(1.1, $field->GetValue());
+        $this->assertSame(1, $field->GetDelta());
     }
     
     public function testNullTimestamp() : void

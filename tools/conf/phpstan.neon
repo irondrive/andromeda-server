@@ -1,8 +1,8 @@
-#includes:
-#    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
+includes:
+    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
 parameters:
-#    strictRules:
-#        strictCalls: false                             # default is true, calling statics with -> should be okay
+    strictRules:
+        strictCalls: false                             # default is true, calling statics with -> should be okay
     level: 9
     paths: 
         - ../../Andromeda

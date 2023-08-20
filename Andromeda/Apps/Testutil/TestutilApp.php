@@ -57,8 +57,12 @@ class TestutilApp extends BaseApp
     {
         $params = $input->GetParams()->GetClientObject();
         
-        $files = array_map(function(InputFile $file){ 
-            return $file->GetData(); }, $input->GetFiles());
+        $files = array_map(function(InputFile $file) 
+        { 
+            $data = $file->GetData();
+            if (Utilities::isUTF8($data)) return $data;
+            else return strlen($data);
+        }, $input->GetFiles());
         
         return array('params'=>$params, 'files'=>$files);
     }
