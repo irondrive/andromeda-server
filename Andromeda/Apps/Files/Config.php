@@ -97,7 +97,7 @@ class Config extends BaseConfig
         return (!$a && !$b && !$c) ? null :
             min($a ?: PHP_INT_MAX, $b ?: PHP_INT_MAX, $c ?: PHP_INT_MAX);
     }
-    
+
     /**
      * Returns a printable client object for this config
      * @param bool $admin if true, show admin-only values
@@ -109,7 +109,7 @@ class Config extends BaseConfig
     {
         $retval = array(
             'upload_maxbytes' => $this->GetMaxUploadSize(),
-            'upload_maxfiles' => ini_get('max_file_uploads') // TODO this could be false
+            'upload_maxfiles' => ini_get('max_file_uploads') // TODO this could be false, also cast to int?
         );
         
         if ($admin)

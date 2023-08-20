@@ -297,7 +297,10 @@ class CLI extends IOInterface
                 if ($param === "") throw new IncorrectCLIUsageException(
                     "empty - key at action arg $i");
                 
-                $files[$param] = new InputStream($stdin);
+                $filename = basename(self::getNextValue($argv,$i) ?? $val); // TODO copied from master, check
+                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME); // TODO document this in readme
+                
+                $files[$param] = new InputStream($stdin, $filename);
             }
             else // plain argument
             {

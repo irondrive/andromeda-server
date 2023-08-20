@@ -67,7 +67,7 @@ class FilesApp extends BaseApp
             'getfolderlikes --folder id [--limit ?uint] [--offset ?uint]',
             'getfilecomments --file id [--limit ?uint] [--offset ?uint]',
             'getfoldercomments --folder id [--limit ?uint] [--offset ?uint]',
-            'fileinfo --file id [--details bool]',
+            'filemeta --file id [--details bool]',
             'getfolder [--folder id | --filesystem id] [--files bool] [--folders bool] [--recursive bool] [--limit ?uint] [--offset ?uint] [--details bool]',
             'getitembypath --path fspath [--folder id | --filesystem id] [--isfile bool]',
             'editfilemeta --file id [--description ?text]',
@@ -363,7 +363,8 @@ class FilesApp extends BaseApp
         }
         else // can't import handles directly
         {
-            $name = $params->GetParam('name')->GetFSName();
+            //$name = $params->GetParam('name')->GetFSName();
+            $name = $infile->GetName(); // TODO check not null! used to have above
             
             if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
             
