@@ -128,7 +128,17 @@ class HTTP extends IOInterface
         
         $params = new SafeParams();
         $params->LoadArray($req);
-
+        
+        // TODO copied from master, make sure is correct
+        foreach (getallheaders() as $key=>$val)
+        {
+            if (strpos($key,"X-Andromeda-") === 0)
+            {
+                $key = explode("-",strtolower($key),3)[2];
+                $params->AddParam(str_replace("-","_",$key), base64_decode($val));
+            }
+        }
+        
         $pfiles = array(); foreach ($files as $key=>$file)
         {
             if (!is_array($file)

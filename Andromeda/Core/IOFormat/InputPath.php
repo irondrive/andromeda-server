@@ -7,7 +7,6 @@
 class InputPath extends InputFile
 {
     private string $path;
-    private string $name;
     private bool $istemp;
     
     /**
@@ -28,11 +27,10 @@ class InputPath extends InputFile
             fclose($this->handle);
     }
     
+    // TODO GetName() needs to be not null here
+    
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }
-    
-    /** Returns the name of the file to be used */    
-    public function GetName() : string { return $this->name; }
     
     /** Returns true if the file is a temp file that can be moved */
     public function isTemp() : bool { return $this->istemp; }
