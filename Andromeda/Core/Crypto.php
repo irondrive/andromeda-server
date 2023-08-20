@@ -6,6 +6,8 @@ if (!function_exists('sodium_memzero'))
 /** libsodium wrapper class for crypto */
 class Crypto
 {
+    // TODO salt length?
+    
     /** Generates a salt for use with DeriveKey() */
     public static function GenerateSalt() : string
     {
@@ -34,13 +36,13 @@ class Crypto
     }
 
     /** 
-     * Returns the length of a key for use with this class 
+     * Returns the length of a key for use with secret crypto
      * @return positive-int
      */
     public static function SecretKeyLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; }
     
     /** 
-     * Returns the length of a nonce for use with this class 
+     * Returns the length of a nonce for use with secret crypto
      * @return positive-int
      */
     public static function SecretNonceLength() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; }
@@ -52,31 +54,31 @@ class Crypto
      */
     public static function SecretOutputOverhead() : int { return SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; }
     
-    /** Generates a crypto key for use with this class */
+    /** Generates a crypto key for use with secret crypto */
     public static function GenerateSecretKey() : string { return random_bytes(static::SecretKeyLength()); }
     
-    /** Generates a crypto nonce for use with this class */
+    /** Generates a crypto nonce for use with secret crypto */
     public static function GenerateSecretNonce() : string { return random_bytes(static::SecretNonceLength()); }
     
     /**
      * Encrypts the given data
-     * @param string $data the plaintext to encrypt
+     * @param string $msg the plaintext to encrypt
      * @param string $nonce the crypto nonce to use
      * @param string $key the crypto key to use
      * @param string $extra extra data to include in authentication (must be provided at decrypt)
      * @return string an encrypted and authenticated ciphertext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_encrypt()
      */
-    public static function EncryptSecret(string $data, string $nonce, string $key, string $extra = "") : string
+    public static function EncryptSecret(string $msg, string $nonce, string $key, string $extra = "") : string
     {
-        $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($data, $extra, $nonce, $key);
-        sodium_memzero($data); sodium_memzero($key);
+        $output = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($msg, $extra, $nonce, $key);
+        sodium_memzero($msg); sodium_memzero($key);
         return $output;
     }
     
     /**
      * Decrypts the given data
-     * @param string $data the ciphertext to decrypt
+     * @param string $enc the ciphertext to decrypt
      * @param string $nonce the nonce that was used to encrypt
      * @param string $key the key that was used to encrypt
      * @param string $extra the extra auth data used to encrypt
@@ -84,21 +86,21 @@ class Crypto
      * @return string the decrypted and authenticated plaintext
      * @see sodium_crypto_aead_xchacha20poly1305_ietf_decrypt()
      */
-    public static function DecryptSecret(string $data, string $nonce, string $key, string $extra = "") : string
+    public static function DecryptSecret(string $enc, string $nonce, string $key, string $extra = "") : string
     {
-        $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($data, $extra, $nonce, $key);
-        sodium_memzero($data); sodium_memzero($key);
+        $output = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt($enc, $extra, $nonce, $key);
+        sodium_memzero($enc); sodium_memzero($key);
         if ($output === false) throw new Exceptions\DecryptionFailedException();
         return $output;
     }
 
     /** 
-     * Returns the length of a nonce for use with this class 
+     * Returns the length of a nonce for use with public crypto
      * @return positive-int
      */
     public static function PublicNonceLength() : int { return SODIUM_CRYPTO_BOX_NONCEBYTES; }
 
-    /** Generates a crypto nonce for use with this class */
+    /** Generates a crypto nonce for use with public crypto */
     public static function GeneratePublicNonce() : string { return random_bytes(static::PublicNonceLength()); }
     
     /**
@@ -115,42 +117,44 @@ class Crypto
         );
     }
     
+    // TODO add PublicOutputSize() function (see C++)
+    
     /**
      * Encrypts and signs data from a sender to a recipient
-     * @param string $message the plaintext to encrypt
+     * @param string $msg the plaintext to encrypt
      * @param string $nonce the nonce to encrypt with
      * @param string $sender_private the sender's private key
      * @param string $recipient_public the recipient's public key
      * @return string the encrypted and signed ciphertext
      */
-    public static function EncryptPublic(string $message, string $nonce, string $sender_private, string $recipient_public)
+    public static function EncryptPublic(string $msg, string $nonce, string $sender_private, string $recipient_public)
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($sender_private, $recipient_public);
-        $output = sodium_crypto_box($message, $nonce, $keypair);
-        sodium_memzero($message); sodium_memzero($sender_private);
+        $output = sodium_crypto_box($msg, $nonce, $keypair);
+        sodium_memzero($msg); sodium_memzero($sender_private);
         return $output;
     }
     
     /**
      * Decrypts and verifies data from a sender to a recipient
-     * @param string $message the ciphertext to decrypt
+     * @param string $enc the ciphertext to decrypt
      * @param string $nonce the nonce that was used to encrypt
      * @param string $recipient_private the recipient's private key
      * @param string $sender_public the sender's public key
      * @throws Exceptions\DecryptionFailedException if decryption fails
      * @return string the decrypted and verified plaintext
      */
-    public static function DecryptPublic(string $message, string $nonce, string $recipient_private, string $sender_public)
+    public static function DecryptPublic(string $enc, string $nonce, string $recipient_private, string $sender_public)
     {
         $keypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($recipient_private, $sender_public);
-        $output = sodium_crypto_box_open($message, $nonce, $keypair);
-        sodium_memzero($message); sodium_memzero($recipient_private);
+        $output = sodium_crypto_box_open($enc, $nonce, $keypair);
+        sodium_memzero($enc); sodium_memzero($recipient_private);
         if ($output === false) throw new Exceptions\DecryptionFailedException();
         return $output;
     }
 
     /** 
-     * Returns the length of a key for use with this class 
+     * Returns the length of a key for use with auth crypto
      * @return positive-int
      */
     public static function AuthKeyLength() : int { return SODIUM_CRYPTO_AUTH_KEYBYTES; }
@@ -161,33 +165,33 @@ class Crypto
      */
     public static function AuthTagLength() : int { return SODIUM_CRYPTO_AUTH_BYTES; }
     
-    /** Generates a crypto key for use with this class */
+    /** Generates a crypto key for use with auth crypto */
     public static function GenerateAuthKey() : string { return random_bytes(static::AuthKeyLength()); }
     
     /**
      * Creates an authentication code (MAC) from a message and key
-     * @param string $message the message to create the MAC for
+     * @param string $msg the message to create the MAC for
      * @param string $key the secret key to use for creating the MAC
      * @return string the message authentication code (MAC)
      */
-    public static function MakeAuthCode(string $message, string $key) : string
+    public static function MakeAuthCode(string $msg, string $key) : string
     {
-        $output = sodium_crypto_auth($message, $key);
-        sodium_memzero($message); sodium_memzero($key);
+        $output = sodium_crypto_auth($msg, $key);
+        sodium_memzero($msg); sodium_memzero($key);
         return $output;
     }
     
     /**
      * Tries to authenticate a message using a secret key
      * @param string $mac the message authentication code
-     * @param string $message the message to verify
+     * @param string $msg the message to verify
      * @param string $key the key used in creating the MAC
      * @return bool true if authentication succeeds
      */
-    public static function TryCheckAuthCode(string $mac, string $message, string $key) : bool
+    public static function TryCheckAuthCode(string $mac, string $msg, string $key) : bool
     {
-        $output = sodium_crypto_auth_verify($mac, $message, $key);
-        sodium_memzero($mac); sodium_memzero($message); sodium_memzero($key);
+        $output = sodium_crypto_auth_verify($mac, $msg, $key);
+        sodium_memzero($mac); sodium_memzero($msg); sodium_memzero($key);
         return $output;
     }
     
@@ -196,9 +200,9 @@ class Crypto
      * @throws Exceptions\DecryptionFailedException if authentication fails
      * @see self::TryCheckAuthCode()
      */
-    public static function CheckAuthCode(string $mac, string $message, string $key) : void
+    public static function CheckAuthCode(string $mac, string $msg, string $key) : void
     {
-        if (!static::TryCheckAuthCode($mac, $message, $key)) 
+        if (!static::TryCheckAuthCode($mac, $msg, $key)) 
             throw new Exceptions\DecryptionFailedException();
     }
 }

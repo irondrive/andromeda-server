@@ -6,6 +6,7 @@ use Andromeda\Core\ApiPackage;
  * Provides the interfaces between BaseObject and the underlying PDO database
  *
  * Basic functions include loading, caching, updating, creating, and deleting objects.
+ * Attention is paid to being efficient and doing as few queries as possible.
  * This class should only be used internally by BaseObjects.
  */
 class ObjectDatabase
@@ -84,18 +85,22 @@ class ObjectDatabase
      * Notify the DB that the given object needs to be inserted 
      * @return $this
      */
-    public function notifyCreated(BaseObject $obj) : self
+    public function notifyCreated(BaseObject $object) : self
     {
-        $this->created[$obj->ID()] = $obj; return $this;
+        $this->created[$object->ID()] = $object; return $this;
+        // TODO IMPORTANT - this array needs to be separated by class like the rest of the cache! ID is only base-unique
+        // that might present a problem though since we might want to preserve order...?
+        // maybe just use class.ID as the string rather than a separate map?
     }
 
     /** 
      * Notify the DB that the given object needs to be updated 
      * @return $this
      */
-    public function notifyModified(BaseObject $obj) : self
+    public function notifyModified(BaseObject $object) : self
     {
-        $this->modified[$obj->ID()] = $obj; return $this;
+        // TODO proably should check this->created here, no need to duplicate...? see c++
+        $this->modified[$object->ID()] = $object; return $this;
     }
 
     /**
@@ -128,7 +133,8 @@ class ObjectDatabase
      */
     public function GetClassTableName(string $class) : string
     {
-        $class = explode('\\',$class); unset($class[0]);
+        $class = explode('\\',$class); 
+        unset($class[0]); // no Andromeda_ prefix
         $table = "a2obj_".strtolower(implode('_', $class));
         
         return $this->db->UsePublicSchema() ? "public.$table" : $table;
@@ -178,7 +184,7 @@ class ObjectDatabase
             $ftable = $this->GetClassTableName($classes[0]);
             $querystr = "SELECT ".($prop = "COUNT($ftable.id)")." FROM $ftable ".$query->GetText();
         
-            return (int)$this->db->read($querystr, $query->GetData())[0][$prop];
+            return (int)$this->db->read($querystr, $query->GetParams())[0][$prop];
         }
     }
 
@@ -220,13 +226,15 @@ class ObjectDatabase
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, true);
             $querystr = 'SELECT '.$selstr.' '.$selfQuery->GetText();
             
-            foreach ($this->db->read($querystr, $selfQuery->GetData()) as $row)
+            foreach ($this->db->read($querystr, $selfQuery->GetParams()) as $row)
             {
                 $object = $this->ConstructObject($class, $row, $castRows);
                 $objects[$object->ID()] = $object;
             }
         }
 
+        // TODO could you just manually sort objects..? see comment above
+        
         return $objects;
     }
 
@@ -278,7 +286,7 @@ class ObjectDatabase
             $selstr = $this->GetFromAndSetJoins($class, $selfQuery, false);
             $querystr = 'DELETE '.$selstr.' '.$selfQuery->GetText().' RETURNING *';
             
-            $rows = $this->db->readwrite($querystr, $selfQuery->GetData());
+            $rows = $this->db->readwrite($querystr, $selfQuery->GetParams());
             $count += count($rows);
             
             foreach ($rows as $row)
@@ -512,12 +520,13 @@ class ObjectDatabase
         $query = new QueryBuilder();
         $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
         $query->Where($query->Equals($basetbl.'.id',$object->ID()));
+        // TODO don't bother with a QueryBuilder here, hardcode WHERE id=:id like Load does
         
         $class = get_class($object);
         $selstr = $this->GetFromAndSetJoins($class, $query, false);
         $querystr = 'DELETE '.$selstr.' '.$query;
         
-        if ($this->db->write($querystr, $query->GetData()) !== 1)
+        if ($this->db->write($querystr, $query->GetParams()) !== 1)
             throw new Exceptions\DeleteFailedException($class);
             
         $this->RemoveObject($object); return $this;
@@ -573,17 +582,18 @@ class ObjectDatabase
             $this->SetObjectKeyFields($object, $fields);
         }
         
-        unset($this->created[$object->ID()]);
         unset($this->modified[$object->ID()]);
         
         return $this;
     }
     
+    // TODO change this to be like the C++ where we determine Insert vs. Update ourselves
+    
     /**
      * Inserts the given object to the database
      * @param BaseObject $object object to insert
      * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
-          fields to save of object for each table class, order derived->base (ALL!)
+          fields to save of object for each table class, order derived->base (ALL! not only modified)
      * @throws Exceptions\InsertFailedException if the insert row fails
      * @return $this
      */
@@ -602,22 +612,20 @@ class ObjectDatabase
             
             foreach ($fields as $field)
             {
-                $key = $field->GetName();
-                $val = $field->GetDBValue();
-                
                 if ($field->isModified() ||
                     $field->GetName() === 'id')
                 {
+                    $key = $field->GetName();
+                    $val = $field->GetDBValue();
                     $field->SetUnmodified();
                     
+                    $columns[] = $key;
                     if ($val === null)
                     {
-                        $columns[] = $key;
                         $indexes[] = "NULL";
                     }
                     else
                     {
-                        $columns[] = $key;
                         $indexes[] = ':d'.$i;
                         $data['d'.$i++] = $val;
                     }

@@ -28,6 +28,8 @@ class HTTP extends IOInterface
     {
         return $_SERVER['HTTP_USER_AGENT'];
     }
+    
+    // TODO can replace SERVER_HTTP with getallheaders() ? 
 
     /** 
      * Retrieves an array of input objects from the request to run 

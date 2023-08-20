@@ -117,6 +117,12 @@ abstract class BaseObject
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
         $obj = new static($database, array('id' => static::GenerateID()));
+        // TODO set ID via SetValue() so that it's modified, remove 'id' check in InsertObject in ObjectDB
+        
+        // TODO probably should have the DB create the object and register it
+        // otherwise if you do a load by ID it won't work until saved.  The C++ code will have to do this anyway
+        // then again... the object database doesn't update unique keys etc. until saved either. Part of its design
+        // see CreateObject in C++
         
         $obj->isCreated = true;
         $database->notifyCreated($obj); 
@@ -148,6 +154,8 @@ abstract class BaseObject
     
     /** The field with the object ID */
     private FieldTypes\StringType $idfield;
+    // TODO idfield should be part of child classes, and ID() should be abstract in case they want to e.g. use an int
+    // make a trait for the default StringType implementation...
     
     /** @var array<string, FieldTypes\BaseField> */
     private array $fieldsByName = array();
@@ -254,7 +262,7 @@ abstract class BaseObject
     /** Returns the string "id:class" where id is the object ID and class is its short class name */
     final public function __toString() : string 
     { 
-        return $this->ID().':'.Utilities::ShortClassName(static::class); 
+        return $this->ID().':'.Utilities::ShortClassName(static::class); // TODO is this debug only? probably should print full name
     }
     
     /** Returns the given object's as a string if not null, else null */
@@ -265,6 +273,8 @@ abstract class BaseObject
     
     /** Returns true if this object has been created but not saved */
     final protected function isCreated() : bool { return $this->isCreated; }
+    
+    // TODO see the new C++ semantics for create and save/update/insert, potentially follow here?
     
     /** Returns true if this object has been deleted */
     final public function isDeleted() : bool { return $this->isDeleted; }
@@ -314,7 +324,7 @@ abstract class BaseObject
     }
     
     /**
-     * Inserts this object to the DB if creates, updates this object if modified
+     * Inserts this object to the DB if created, updates this object if modified
      * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
      * @throws Exceptions\SaveAfterDeleteException if the object is deleted
      * @return $this

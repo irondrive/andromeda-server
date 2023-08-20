@@ -1,13 +1,4 @@
 #!/bin/sh
 
-try_run() {
-    if [ -f "$1" ]; then
-        php "$@"; exit $?
-    fi
-}
-
-try_run ./Andromeda/install.php "$@"
-try_run /usr/local/lib/andromeda-server/Andromeda/install.php "$@"
-try_run /usr/lib/andromeda-server/Andromeda/install.php "$@"
-
-echo "Could not find the Andromeda server folder!"
+ROOT=$(readlink -f "$0" | xargs dirname)
+php "$ROOT"/install.php "$@"; exit $?
