@@ -36,7 +36,7 @@ class AJAX extends IOInterface
     }
     
     /** @return false */
-    public static function isPrivileged() : bool { return true; }
+    public static function isPrivileged() : bool { return false; }
     
     public function getAddress() : string
     {
