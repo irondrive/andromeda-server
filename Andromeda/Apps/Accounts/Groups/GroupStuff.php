@@ -1,8 +1,9 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Groups; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\{BaseObject, FieldTypes};
+use Andromeda\Core\IOFormat\SafeParams;
+
+use Andromeda\Apps\Accounts\Account;
 
 /** A value and inherit-source pair */
 class InheritedProperty
@@ -50,7 +51,7 @@ class GroupJoin //extends JoinObject // TODO
     
     /**
      * Returns a printable client object of this group membership
-     * @return array `{dates:{created:float}}`
+     * @return array<mixed> `{dates:{created:float}}`
      */
     public function GetClientObject()
     {
@@ -87,7 +88,7 @@ abstract class AuthEntity extends BaseObject  // TODO was StandardObject
             'session_timeout' => new FieldTypes\IntType(), // server-side timeout - max time for a session to be inactive
             'client_timeout' => new FieldTypes\IntType(), // server-side timeout - max time for a client to be inactive
             'max_password_age' => new FieldTypes\IntType(), // max time since the account's password changed
-            'date_modified' => new FieldTypes\Date() // last timestamp these properties were modified
+            'date_modified' => new FieldTypes\Timestamp() // last timestamp these properties were modified
         ));
     }
     

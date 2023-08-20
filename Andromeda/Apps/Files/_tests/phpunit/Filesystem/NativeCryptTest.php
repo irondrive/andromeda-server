@@ -1,25 +1,20 @@
-<?php namespace Andromeda\Apps\Files\Filesystem; 
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Filesystem; require_once("init.php");
 
-require_once("init.php");
+use Andromeda\Core\{Crypto, Utilities};
+use Andromeda\Core\IOFormat\InputPath;
+require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
+require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php");
 
-require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
-require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
-
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
-
 class NativeCryptTest extends \PHPUnit\Framework\TestCase
 {
-    private array $files = array(); /** array of temp files */
     private array $paths = array(); /** array of FS path -> memory buffer */
     private array $sizes = array(); /** array of file ID -> file size */
     
     private NativeCrypt $fsimpl;
     
-    public function setUp() : void
+    public function SetUp() : void
     {        
         $storage = $this->createMock(Storage::class);
         
@@ -62,19 +57,22 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $filesystem = $this->createMock(FSManager::class);
         $filesystem->method('GetStorage')->willReturn($storage);
         
-        $this->fsimpl = new NativeCrypt($filesystem, CryptoSecret::GenerateKey(), self::CHUNK_SIZE);
+        $this->fsimpl = new NativeCrypt($filesystem, Crypto::GenerateSecretKey(), self::CHUNK_SIZE);
     }
-
+    
+    /** @var array<string> */
+    private array $files = array();
+    
     public function tearDown() : void
-    {     
-        foreach ($this->files as $file) unlink($file);
-    }    
+    {
+        foreach ($this->files as $file) @unlink($file);
+    }
     
     protected function getTmpFile() : string
     {
         $file = tempnam(sys_get_temp_dir(), 'a2test');
-        
-        $this->files[] = $file; return $file;
+        assert(is_string($file));
+        return $this->files[] = $file;
     }
     
     protected function createFile(string $data) : File

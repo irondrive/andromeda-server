@@ -1,9 +1,6 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -37,12 +34,12 @@ class Tag extends BaseObject // TODO was StandardObject
         $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),$q->Equals('tag',$tag));
         if (($ex = static::TryLoadUniqueByQuery($database, $q->Where($where))) !== null) return $ex;
         
-        return parent::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetScalar('tag',$tag);
+        return static::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item)->SetScalar('tag',$tag);
     }
 
     /**
      * Returns a printable client object of this tag
-     * @return array `{id:id, owner:id, item:id, tag:string, dates:{created:float}}`
+     * @return array<mixed> `{id:id, owner:id, item:id, tag:string, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {

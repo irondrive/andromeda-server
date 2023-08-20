@@ -1,54 +1,12 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase};
+use Andromeda\Core\IOFormat\Input;
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
-
-/** Exception indicating that the FTP extension is not installed */
-class FTPExtensionException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_EXTENSION_MISSING", $details);
-    }
-}
-
-/** Exception indicating that the FTP server connection failed */
-class FTPConnectionFailure extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_CONNECTION_FAILURE", $details);
-    }
-}
-
-/** Exception indicating that authentication on the FTP server failed */
-class FTPAuthenticationFailure extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_AUTHENTICATION_FAILURE", $details);
-    }
-}
-
-/** Exception indicating that a random write was requested (FTP does not support it) */
-class FTPAppendOnlyException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_WRITE_APPEND_ONLY", $details);
-    }
-}
-
-/** Exception indicating that FTP does not support file copy */
-class FTPCopyFileException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FTP_NO_COPY_SUPPORT", $details);
-    }
-}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) FTP::DecryptAccount($database, $account); });
@@ -77,16 +35,16 @@ class FTP extends FTPBase2
     
     /**
      * Returns a printable client object of this FTP storage
-     * @return array `{hostname:string, port:?int, implssl:bool}`
+     * @return array<mixed> `{hostname:string, port:?int, implssl:bool}`
      * @see Storage::GetClientObject()
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), array(
+        return parent::GetClientObject($activate) + array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'implssl' => $this->GetScalar('implssl'),
-        ));
+        );
     }
     
     public static function GetCreateUsage() : string { return parent::GetCreateUsage()." --hostname alphanum [--port ?uint16] [--implssl bool]"; }

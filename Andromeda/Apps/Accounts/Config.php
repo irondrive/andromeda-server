@@ -1,45 +1,47 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Group.php");
-require_once(ROOT."/Apps/Accounts/Auth/Manager.php");
-
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\VersionInfo;
-require_once(ROOT."/Core/BaseConfig.php"); use Andromeda\Core\BaseConfig;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/TableTypes.php"); use Andromeda\Core\Database\TableNoChildren;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-
+use Andromeda\Core\{BaseConfig, VersionInfo};
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
+use Andromeda\Core\IOFormat\SafeParams;
+ 
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+  
 /** App config stored in the database */
-final class Config extends BaseConfig
+class Config extends BaseConfig
 {
     public static function getAppname() : string { return 'accounts'; }
     
     public static function getVersion() : string { 
         return VersionInfo::toCompatVer(andromeda_version); }
     
-    use TableNoChildren;
-    
+    use TableTypes\TableNoChildren;
+
     /** The setting for public account creation */
     private FieldTypes\IntType $create_account;
     /** The setting for requiring account contact info */
     private FieldTypes\IntType $require_contact;
     /** True if usernames are contact info (e.g. emails) */
     private FieldTypes\BoolType $username_isContact;
-    /** @var FieldTypes\NullObjectRefT<Group> default group for new accounts */
+    /** 
+     * default group for new accounts 
+     * @var FieldTypes\NullObjectRefT<Group>
+     */
     private FieldTypes\NullObjectRefT $default_group;
-    /** @var FieldTypes\NullObjectRefT<Auth\Manager> default auth source to use */
+    /** 
+     * default auth source to use 
+     * @var FieldTypes\NullObjectRefT<AuthSource\Manager>
+     */
     private FieldTypes\NullObjectRefT $default_auth;
 
     protected function CreateFields() : void
     {
         $fields = array();
 
-        $this->create_account = $fields[] =     new FieldTypes\IntType('createaccount');
-        $this->require_contact = $fields[] =    new FieldTypes\IntType('requirecontact');
-        $this->username_isContact = $fields[] = new FieldTypes\BoolType('usernameiscontact');
+        $this->create_account = $fields[] =     new FieldTypes\IntType('createaccount',false,0);
+        $this->require_contact = $fields[] =    new FieldTypes\IntType('requirecontact',false,0);
+        $this->username_isContact = $fields[] = new FieldTypes\BoolType('usernameiscontact',false,false);
         $this->default_group = $fields[]      = new FieldTypes\NullObjectRefT(Group::class, 'default_group');
-        $this->default_auth = $fields[]       = new FieldTypes\NullObjectRefT(Auth\Manager::class, 'default_auth');
+        $this->default_auth = $fields[]       = new FieldTypes\NullObjectRefT(AuthSource\Manager::class, 'default_auth');
         
         $this->RegisterFields($fields, self::class);
         
@@ -48,14 +50,15 @@ final class Config extends BaseConfig
     
     /** Creates a new Config singleton */
     public static function Create(ObjectDatabase $database) : self 
-    { 
-        return parent::BaseCreate($database);
+    {
+        return static::BaseCreate($database);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
-    public static function GetSetConfigUsage() : string { return "[--createaccount ".implode('|',array_keys(self::CREATE_TYPES))."] ".
-                                                                 "[--requirecontact ".implode('|',array_keys(self::CONTACT_TYPES))."] ".
-                                                                 "[--usernameiscontact bool] [--createdefgroup bool] [--default_auth ?id]"; }
+    public static function GetSetConfigUsage() : string { return 
+        "[--createaccount ".implode('|',array_keys(self::CREATE_TYPES))."] ".
+        "[--requirecontact ".implode('|',array_keys(self::CONTACT_TYPES))."] ".
+        "[--usernameiscontact bool] [--createdefgroup bool] [--default_auth ?id]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(SafeParams $params) : self
@@ -85,7 +88,7 @@ final class Config extends BaseConfig
         {
             if (($id = $params->GetParam('default_auth')->GetNullRandstr()) !== null)
             {
-                $manager = Auth\Manager::TryLoadByID($this->database, $id);
+                $manager = AuthSource\Manager::TryLoadByID($this->database, $id);
                 if ($manager === null) throw new UnknownAuthSourceException();
             }
             else $manager = null;
@@ -98,9 +101,6 @@ final class Config extends BaseConfig
     
     /** Returns the default group that all users are implicitly part of */
     public function GetDefaultGroup() : ?Group { return $this->default_group->TryGetObject(); }
-    
-    /** Returns the ID of the default group */
-    public function GetDefaultGroupID() : ?string { return $this->default_group->TryGetObjectID(); }
 
     /** Creates a new default group whose implicit members are all accounts */
     private function CreateDefaultGroup() : self
@@ -114,20 +114,23 @@ final class Config extends BaseConfig
     }
     
     /** Returns the auth manager that will be used by default */
-    public function GetDefaultAuth() : ?Auth\Manager { return $this->default_auth->TryGetObject(); }
+    public function GetDefaultAuth() : ?AuthSource\Manager { return $this->default_auth->TryGetObject(); }
     
     /** Returns the ID of the auth manager that will be used by default */
     public function GetDefaultAuthID() : ?string { return $this->default_auth->TryGetObjectID(); }
 
     /** Sets the default auth manager to the given value */
-    public function SetDefaultAuth(?Auth\Manager $manager) : self { $this->default_auth->SetObject($manager); return $this; }
+    public function SetDefaultAuth(?AuthSource\Manager $manager) : self { $this->default_auth->SetObject($manager); return $this; }
     
     /** Only allow creating accounts with whitelisted usernames */
     public const CREATE_WHITELIST = 1; 
     /** Allow anyone to create a new account (public) */
     public const CREATE_PUBLIC = 2;
     
-    private const CREATE_TYPES = array('disable'=>0, 'whitelist'=>self::CREATE_WHITELIST, 'public'=>self::CREATE_PUBLIC);
+    private const CREATE_TYPES = array(
+        'disable'=>0, 
+        'whitelist'=>self::CREATE_WHITELIST, 
+        'public'=>self::CREATE_PUBLIC);
     
     /** Returns whether the API for creating new accounts is enabled */
     public function GetAllowCreateAccount() : int { return $this->create_account->GetValue(); }
@@ -146,7 +149,10 @@ final class Config extends BaseConfig
     /** Require that accounts have validated contact info */
     public const CONTACT_VALID = 2;
     
-    private const CONTACT_TYPES = array('none'=>0, 'exist'=>self::CONTACT_EXIST, 'valid'=>self::CONTACT_VALID);
+    private const CONTACT_TYPES = array(
+        'none'=>0, 
+        'exist'=>self::CONTACT_EXIST, 
+        'valid'=>self::CONTACT_VALID);
     
     /** Returns whether a contact for accounts is required or validated */
     public function GetRequireContact() : int { return $this->require_contact->GetValue(); }
@@ -157,8 +163,8 @@ final class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array `{create_account:enum, username_iscontact:bool, require_contact:enum, default_auth:?id}` \
-         if admin, add: `{default_group:?id}`
+     * @return array<mixed> `{create_account:enum, username_iscontact:bool, require_contact:enum, default_auth:?id}` \
+         if admin, add: `{date_created:float, default_group:?id}`
      */
     public function GetClientObject(bool $admin = false) : array
     {
@@ -169,7 +175,11 @@ final class Config extends BaseConfig
             'default_auth' => $this->default_auth->TryGetObjectID()
         );
         
-        if ($admin) $data['default_group'] = $this->default_group->TryGetObjectID();
+        if ($admin) 
+        {
+            $data['date_created'] = $this->date_created->GetValue();
+            $data['default_group'] = $this->default_group->TryGetObjectID();
+        }
         
         return $data;
     }

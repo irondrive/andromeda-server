@@ -1,10 +1,10 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\{ObjectDatabase, KeyNotFoundException};
+use Andromeda\Core\Crypto;
+use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\ObjectDatabase;
 
-require_once(ROOT."/Apps/Accounts/Account.php");
+require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/Apps/Accounts/Authenticator.php");
 
 /**
@@ -72,7 +72,7 @@ trait FieldCrypt
     /**
      * Decrypts and returns the value of the given field
      * @param string $field field name
-     * @return string|NULL decrypted value
+     * @return ?string decrypted value
      */
     protected function TryGetEncryptedScalar(string $field) : ?string
     {
@@ -111,7 +111,7 @@ trait FieldCrypt
         {
             $account = $this->RequireCrypto();
         
-            $nonce = CryptoSecret::GenerateNonce();
+            $nonce = Crypto::GenerateSecretNonce();
             $value = $account->EncryptSecret($value, $nonce);            
         }
         
@@ -152,7 +152,7 @@ trait FieldCrypt
  *
  * The encryption uses the owner account's secret-key crypto (only accessible by them)
  */
-trait OptFieldCrypt
+trait OptFieldCrypt // TODO move to own file
 {
     use FieldCrypt;
     

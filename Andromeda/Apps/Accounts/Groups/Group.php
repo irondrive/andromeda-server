@@ -1,12 +1,12 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Groups; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Contact.php");
-require_once(ROOT."/Apps/Accounts/GroupStuff.php");
+use Andromeda\Core\Utilities;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Apps\Accounts\{Config, Account};
+use Andromeda\Apps\Accounts\Resource\Contact;
+
+require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php");
 
 /**
  * A group of user accounts
@@ -55,7 +55,7 @@ class Group extends AuthEntity
             return Account::LoadAll($this->database);
         }
         
-        foreach (Auth\Manager::LoadAll($this->database) as $authman)
+        foreach (AuthSource\Manager::LoadAll($this->database) as $authman)
         {
             if ($authman->GetDefaultGroup() === $this)
             {
@@ -113,6 +113,8 @@ class Group extends AuthEntity
      */
     public static function LoadAllMatchingName(ObjectDatabase $database, string $name, int $limit) : array
     {
+        // TODO possible security issue here, see note in QueryBuilder... maybe just REMOVE all wildcard characters? safer hard though because _ counts!
+        
         $q = new QueryBuilder(); $name = QueryBuilder::EscapeWildcards($name).'%'; // search by prefix
         
         $loaded = static::LoadByQuery($database, $q->Where($q->Like('name',$name,true))->Limit($limit+1));
@@ -150,7 +152,7 @@ class Group extends AuthEntity
     /** Creates and returns a new group with the given name, priority, and comment */
     public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
     {
-        $group = parent::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority ?? 0);
+        $group = static::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority ?? 0);
         
         if ($comment !== null) $group->SetScalar('comment', $comment);
         
@@ -194,7 +196,7 @@ class Group extends AuthEntity
     /**
      * Gets this group as a printable object
      * @param int $level if FULL, show list of account IDs, if ADMIN, show details
-     * @return array `{id:id, name:string}` \
+     * @return array<mixed> `{id:id, name:string}` \
         if FULL, add `{accounts:[id]}` \
         if ADMIN, add `{priority:int,comment:?string,dates:{created:float,modified:?float}, session_timeout:?int, client_timeout:?int, max_password_age:?int, \
             config:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
@@ -210,7 +212,7 @@ class Group extends AuthEntity
         
         if ($level & self::OBJECT_ADMIN)
         {
-            $retval = array_merge($retval, array(
+            $retval += array(
                 'dates' => array(
                     'created' => $this->GetDateCreated(),
                     'modified' => $this->TryGetDate('modified')
@@ -232,7 +234,7 @@ class Group extends AuthEntity
                 'session_timeout' => $this->TryGetScalar('session_timeout'),
                 'client_timeout' => $this->TryGetScalar('client_timeout'),
                 'max_password_age' => $this->TryGetScalar('max_password_age')
-            ));
+            );
         }            
         
         if ($level & self::OBJECT_FULL) $retval['accounts'] = array_keys($this->GetAccounts());

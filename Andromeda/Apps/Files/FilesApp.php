@@ -1,7 +1,14 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
+
+use Andromeda\Core\{ApiPackage, BaseApp, Emailer, EmailRecipient};
+use Andromeda\Core\IOFormat\{Input, InputPath, IOInterface, Output, OutputHandler, SafeParams};
+use Andromeda\Core\IOFormat\Interfaces\HTTP;
+
+require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\UnknownActionException;
 
 require_once(ROOT."/Apps/Files/ActionLog.php");
 require_once(ROOT."/Apps/Files/Config.php");
+require_once(ROOT."/Apps/Files/Exceptions.php");
 require_once(ROOT."/Apps/Files/ItemAccess.php");
 require_once(ROOT."/Apps/Files/Item.php");
 require_once(ROOT."/Apps/Files/File.php");
@@ -19,156 +26,10 @@ require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Fi
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\{FileReadFailedException, FileWriteFailedException};
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 
-require_once(ROOT."/Core/BaseApp.php");
-require_once(ROOT."/Core/Utilities.php");
-require_once(ROOT."/Core/Emailer.php");
-use Andromeda\Core\{BaseApp, EmailRecipient, VersionInfo};
-
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/Output.php"); use Andromeda\Core\IOFormat\Output;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/InputFile.php"); use Andromeda\Core\IOFormat\InputPath;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-require_once(ROOT."/Core/IOFormat/OutputHandler.php"); use Andromeda\Core\IOFormat\OutputHandler;
-require_once(ROOT."/Core/IOFormat/IOInterface.php"); use Andromeda\Core\IOFormat\IOInterface;
-require_once(ROOT."/Core/IOFormat/Interfaces/HTTP.php"); use Andromeda\Core\IOFormat\Interfaces\HTTP;
-
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Group;
-require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\{Authenticator, AuthenticationFailedException};
-
-use Andromeda\Core\UnknownActionException;
-
-use Andromeda\Apps\Accounts\UnknownAccountException;
-use Andromeda\Apps\Accounts\UnknownGroupException;
-
-/** Exception indicating that the requested item does not exist */
-class UnknownItemException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_ITEM", $details);
-    }
-}
-
-/** Exception indicating that the requested file does not exist */
-class UnknownFileException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_FILE", $details);
-    }
-}
-
-/** Exception indicating that the requested folder does not exist */
-class UnknownFolderException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_FOLDER", $details);
-    }
-}
-
-/** Exception indicating that the requested object does not exist */
-class UnknownObjectException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_OBJECT", $details);
-    }
-}
-
-/** Exception indicating that the requested parent does not exist */
-class UnknownParentException  extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_PARENT", $details);
-    }
-}
-
-/** Exception indicating that the requested destination folder does not exist */
-class UnknownDestinationException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_DESTINATION", $details);
-    }
-}
-
-/** Exception indicating that the requested filesystem does not exist */
-class UnknownFilesystemException extends Exceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_FILESYSTEM", $details);
-    }
-}
-
-/** Exception indicating that the requested download byte range is invalid */
-class InvalidDLRangeException extends Exceptions\ClientException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_BYTE_RANGE", 416, $details);
-    }
-}
-
-/** Exception indicating that access to the requested item is denied */
-class ItemAccessDeniedException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ITEM_ACCESS_DENIED", $details);
-    }
-}
-
-/** Exception indicating that user-added filesystems are not allowed */
-class UserStorageDisabledException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("USER_STORAGE_NOT_ALLOWED", $details);
-    }
-}
-
-/** Exception indicating that random write access is not allowed */
-class RandomWriteDisabledException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("RANDOM_WRITE_NOT_ALLOWED", $details);
-    }
-}
-
-/** Exception indicating that item sharing is not allowed */
-class ItemSharingDisabledException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARING_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that emailing share links is not allowed */
-class EmailShareDisabledException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMAIL_SHARES_DISABLED", $details);
-    }
-}
-
-/** Exception indicating that the absolute URL of a share cannot be determined */
-class ShareURLGenerateException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CANNOT_OBTAIN_SHARE_URL", $details);
-    }
-}
-
-/** Exception indicating invalid share target params were given */
-class InvalidShareTargetException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_SHARE_TARGET_PARAMS", $details);
-    }
-}
-
-/** Exception indicating that sharing to the given target is not allowed */
-class ShareTargetDisabledException extends Exceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARE_TARGET_DISABLED", $details);
-    }
-}
+require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Authenticator.php"); use Andromeda\Apps\Accounts\Authenticator;
+require_once(ROOT."/Apps/Accounts/Exceptions.php"); use Andromeda\Apps\Accounts\{AuthenticationFailedException, UnknownAccountException, UnknownGroupException};
 
 /**
  * App that provides user-facing filesystem services.
@@ -181,16 +42,18 @@ class ShareTargetDisabledException extends Exceptions\ClientDeniedException
  * likes and comments, sharing of content via links or to users or groups,
  * configurable rules per-account or per-filesystem, and granular statistics
  * gathering and limiting for accounts/groups/filesystems.
+ * @extends InstalledApp<Config>
  */
 class FilesApp extends BaseApp
 {
-    public static function getName() : string { return 'files'; }
+    public function getName() : string { return 'files'; }
+
+    public function getVersion() : string { return andromeda_version; }
     
-    public static function getVersion() : string { return andromeda_version; }
-    
-    protected function getLogClass() : string { return ActionLog::class; }
-    
-    public static function getUsage() : array 
+    /** @return class-string<ActionLog> */
+    public function getLogClass() : string { return ActionLog::class; }
+
+    public function getUsage() : array 
     { 
         return array(
             'getconfig',
@@ -232,8 +95,8 @@ class FilesApp extends BaseApp
             'editshare --share id '.Share::GetSetOptionsUsage(),
             'deleteshare --share id',
             'shareinfo --sid id [--skey randstr] [--spassword raw]',
-            'listshares [--mine bool]',
-            'listadopted',
+            'getshares [--mine bool]',
+            'getadopted',
             'getfilesystem [--filesystem id] [--activate bool]',
             'getfilesystems [--everyone bool [--limit ?uint] [--offset ?uint]]',
             'createfilesystem '.FSManager::GetCreateUsage(),
@@ -265,8 +128,8 @@ class FilesApp extends BaseApp
         $this->config = Config::GetInstance($this->database);
     }
     
-    public function commit() { Storage::commitAll(); }    
-    public function rollback() { Storage::rollbackAll(); }
+    public function commit() : void { Storage::commitAll(); }    
+    public function rollback() : void { Storage::rollbackAll(); }
     
     /**
      * {@inheritDoc}
@@ -278,7 +141,10 @@ class FilesApp extends BaseApp
         $authenticator = Authenticator::TryAuthenticate(
             $this->database, $input, $this->API->GetInterface());
         
-        $actionlog = ActionLog::Create($this->database, $authenticator); $input->SetLogger($actionlog); // TODO fix
+        $actionlog = null; if (($reqlog = $this->API->GetRequestLog()) !== null)
+        {
+            $actionlog = $reqlog->LogAction($input, self::getLogClass())->SetAuth($authenticator);
+        }
         
         $params = $input->GetParams();
 
@@ -330,8 +196,8 @@ class FilesApp extends BaseApp
             case 'editshare':    return $this->EditShare($params, $authenticator, $actionlog);
             case 'deleteshare':  $this->DeleteShare($params, $authenticator, $actionlog); return;
             case 'shareinfo':    return $this->ShareInfo($params, $authenticator, $actionlog);
-            case 'listshares':   return $this->ListShares($params, $authenticator);
-            case 'listadopted':  return $this->ListAdopted($authenticator);
+            case 'getshares':   return $this->GetShares($params, $authenticator);
+            case 'getadopted':  return $this->GetAdopted($authenticator);
             
             case 'getfilesystem':  return $this->GetFilesystem($params, $authenticator, $actionlog);
             case 'getfilesystems': return $this->GetFilesystems($params, $authenticator);
@@ -348,7 +214,7 @@ class FilesApp extends BaseApp
             case 'purgelimits':      $this->PurgeLimits($params, $authenticator); return;
             case 'purgetimedlimits': $this->PurgeTimedLimits($params, $authenticator); return;
             
-            default: throw new UnknownActionException();
+            default: throw new UnknownActionException($input->GetAction());
         }
     }
     
@@ -547,8 +413,8 @@ class FilesApp extends BaseApp
             $ranges = explode('-',$ranges[1]);
             if (count($ranges) != 2) throw new InvalidDLRangeException();
             
-            $fstart = (int)($ranges[0]); 
-            $flast2 = (int)($ranges[1]); 
+            $fstart = (int)$ranges[0]; 
+            $flast2 = (int)$ranges[1]; 
             if ($flast2) $flast = $flast2;
         }
 
@@ -561,7 +427,7 @@ class FilesApp extends BaseApp
         $length = $flast-$fstart+1;
         $file->CheckBandwidth($length);
 
-        if ($flast == $fsize-1) // the end of the file
+        if ($flast === $fsize-1) // the end of the file
             $file->CountDownload(($share !== null));
         
         // send necessary headers
@@ -685,7 +551,8 @@ class FilesApp extends BaseApp
         if ($share !== null && !$share->CanModify()) 
             throw new ItemAccessDeniedException();
 
-        $file->SetSize($params->GetParam('size',SafeParams::PARAMLOG_ALWAYS)->GetUint());
+        $file->SetSize($params->GetParam('size',SafeParams::PARAMLOG_ALWAYS)->GetUint()); 
+        // TODO shouldn't really log this ... also remove logging of file write offsets, download offsets, etc. 
         
         return $file->GetClientObject(($share === null));
     }
@@ -813,7 +680,7 @@ class FilesApp extends BaseApp
         $path = $params->GetParam('path')->GetFSPath();
         $path = array_filter(explode('/',$path)); $name = array_pop($path);
 
-        foreach ($path as $subfolder)
+        foreach ($path as $subfolder) // TODO specifically disallow . and ..
         {
             $subfolder = Folder::TryLoadByParentAndName($this->database, $folder, $subfolder);
             
@@ -1581,7 +1448,7 @@ class FilesApp extends BaseApp
             // TODO CLIENT - param for the client to have the URL point at the client
             // TODO CLIENT - HTML - configure a directory where client templates reside
 
-            $this->API->GetConfig()->GetMailer()->SendMail($subject, $body, true,
+            Emailer::LoadAny($this->database)->SendMail($subject, $body, true,
                 array(new EmailRecipient($email)), false, $account->GetEmailFrom());
         }
         
@@ -1666,7 +1533,7 @@ class FilesApp extends BaseApp
      * @return array [id:Share]
      * @see Share::GetClientObject()
      */
-    protected function ListShares(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function GetShares(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1689,11 +1556,11 @@ class FilesApp extends BaseApp
      * 
      * These are items that the user uploaded into someone else's folder, but owns
      * @throws AuthenticationFailedException if not signed in 
-     * @return array `{files:[id:File],folders:[id:Folder]}`
+     * @return array<mixed> `{files:[id:File],folders:[id:Folder]}`
      * @see File::GetClientObject()
      * @see Folder::GetClientObject()
      */
-    protected function ListAdopted(?Authenticator $authenticator) : array
+    protected function GetAdopted(?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1864,7 +1731,7 @@ class FilesApp extends BaseApp
      * @throws UnknownAccountException if the given account is not found
      * @throws UnknownFilesystemException if the given filesystem is not found
      * @throws UnknownObjectException if nothing valid was specified
-     * @return array `{class:string, obj:object, full:bool}`
+     * @return array<mixed> `{class:string, obj:object, full:bool}`
      */
     private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array
     {
@@ -1930,7 +1797,7 @@ class FilesApp extends BaseApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL Limit | [Limit] client object
+     * @return ?array Limit | [Limit] client object
      * @see FilesApp::GetLimitObject()
      * @see Limits\Total::GetClientObject()
      */
@@ -1995,7 +1862,7 @@ class FilesApp extends BaseApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL [id:TimedStats]
+     * @return ?array [id:TimedStats]
      * @see FilesApp::GetLimitObject()
      * @see Limits\TimedStats::GetClientObject()
      */
@@ -2024,7 +1891,7 @@ class FilesApp extends BaseApp
      * 
      * Defaults to the current account if none specified
      * @throws AuthenticationFailedException if not signed in
-     * @return array|NULL TimedStats | [id:TimedStats]
+     * @return ?array TimedStats | [id:TimedStats]
      * @see FilesApp::GetLimitObject()
      * @see Limits\TimedStats::GetClientObject()
      */

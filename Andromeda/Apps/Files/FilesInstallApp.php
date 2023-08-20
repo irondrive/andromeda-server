@@ -1,18 +1,15 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/InstallerApp.php"); use Andromeda\Core\InstallerApp;
-
-require_once(ROOT."/Apps/Files/Config.php");
+use Andromeda\Core\InstallerApp;
 
 /** The files app installer */
-final class FilesInstallApp extends InstallerApp
+class FilesInstallApp extends InstallerApp
 {
-    public static function getName() : string { return 'files'; }
+    public function getName() : string { return 'files'; }
     
-    public static function getDependencies() : array { return array('accounts'); }
+    public function getDependencies() : array { return array('accounts'); }
     
-    /** @return class-string<Config> */
-    protected static function getConfigClass() : string { return Config::class; }
+    protected function getConfigClass() : string { return Config::class; }
 
     protected function getUpgradeScripts() : array
     {

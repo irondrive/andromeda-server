@@ -1,21 +1,16 @@
-<?php namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Filesystem; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/Crypto.php"); use Andromeda\Core\CryptoSecret;
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
+use Andromeda\Core\{Crypto, Utilities};
+use Andromeda\Core\IOFormat\Input;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
-require_once(ROOT."/Apps/Files/FilesApp.php"); use Andromeda\Apps\Files\RandomWriteDisabledException;
+require_once(ROOT."/Apps/Files/Exceptions.php"); use Andromeda\Apps\Files\RandomWriteDisabledException;
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php"); use Andromeda\Apps\Files\Storage\ActivateException;
 
+require_once(ROOT."/Apps/Files/Filesystem/Exceptions.php");
 require_once(ROOT."/Apps/Files/Filesystem/External.php");
 require_once(ROOT."/Apps/Files/Filesystem/Native.php");
 require_once(ROOT."/Apps/Files/Filesystem/NativeCrypt.php");
@@ -24,30 +19,6 @@ require_once(ROOT."/Apps/Files/Config.php"); use Andromeda\Apps\Files\Config;
 require_once(ROOT."/Apps/Files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
 
 require_once(ROOT."/Apps/Files/Limits/Account.php"); use Andromeda\Apps\Files\Limits;
-
-/** Exception indicating that the stored filesystem type is not valid */
-class InvalidFSTypeException extends Exceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_FILESYSTEM_TYPE", $details);
-    }
-}
-
-/** Exception indicating that the given filesystem name is invalid */
-class InvalidNameException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("INVALID_FILESYSTEM_NAME", $details);
-    }
-}
-
-/** Exception indicating that the underlying storage connection failed */
-class InvalidStorageException extends Exceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("STORAGE_ACTIVATION_FAILED", $details);
-    }
-}
 
 /**
  * An object that manages and points to a filesystem manager
@@ -230,7 +201,7 @@ class FSManager extends BaseObject // TODO was StandardObject
             case 'external': $fstype = self::TYPE_EXTERNAL; break;
         }
         
-        $filesystem = parent::BaseCreate($database)
+        $filesystem = static::BaseCreate($database)
             ->SetOwner($owner)->SetName($name)
             ->SetType($fstype)->SetReadOnly($readonly);
         
@@ -241,7 +212,7 @@ class FSManager extends BaseObject // TODO was StandardObject
                 if (!Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
                     throw new RandomWriteDisabledException();
                 
-                $checkSize = function(string $v){ $v = intval($v); 
+                $checkSize = function(string $v){ $v = (int)$v; 
                     return $v >= 4*1024 && $v <= 1*1024*1024; }; // check in range [4K,1M]
                 $chunksize = $params->GetParam('chunksize')->CheckFunction($checkSize)->GetUint();
                     
@@ -250,7 +221,7 @@ class FSManager extends BaseObject // TODO was StandardObject
             $chunksize ??= Config::GetInstance($database)->GetCryptoChunkSize();
             
             $filesystem->SetScalar('crypto_chunksize', $chunksize);
-            $filesystem->SetScalar('crypto_masterkey', CryptoSecret::GenerateKey());
+            $filesystem->SetScalar('crypto_masterkey', Crypto::GenerateSecretKey());
         }
 
         try
@@ -290,7 +261,7 @@ class FSManager extends BaseObject // TODO was StandardObject
      * Attempts to load the default filesystem (no name)
      * @param ObjectDatabase $database database reference
      * @param Account $account account to get the default for
-     * @return static|NULL loaded FS or null if not available
+     * @return ?static loaded FS or null if not available
      */
     public static function LoadDefaultByAccount(ObjectDatabase $database, Account $account) : ?self
     {
@@ -364,7 +335,7 @@ class FSManager extends BaseObject // TODO was StandardObject
      * Gets a printable client object of this filesystem
      * @param bool $priv if true, show details for the owner
      * @param bool $activ if true, show details that require activation
-     * @return array `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:enum}` \  
+     * @return array<mixed> `{id:id, name:?string, owner:?id, external:bool, encrypted:bool, readonly:bool, sttype:enum}` \  
         if priv, add `{storage:Storage}` - if isEncrypted, add `{chunksize:int}`
      * @see Storage::GetClientObject()
      */

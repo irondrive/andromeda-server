@@ -1,9 +1,6 @@
-<?php namespace Andromeda\Apps\Files; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Database/BaseObject.php"); use Andromeda\Core\Database\BaseObject;
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
@@ -32,7 +29,7 @@ class Like extends BaseObject // TODO was StandardObject
      * @param Account $owner the person doing the like
      * @param Item $item the item being liked
      * @param bool $value true if like, false if dislike, null to unset
-     * @return static|NULL like object if $value is not null
+     * @return ?static like object if $value is not null
      */
     public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?self
     {
@@ -42,7 +39,7 @@ class Like extends BaseObject // TODO was StandardObject
         $likeobj = static::TryLoadUniqueByQuery($database, $q->Where($where));
         
         // create a new one if it doesn't exist
-        $likeobj ??= parent::BaseCreate($database)->SetObject('obj_owner',$owner)->SetObject('obj_item',$item);
+        $likeobj ??= static::BaseCreate($database)->SetObject('obj_owner',$owner)->SetObject('obj_item',$item);
                 
         // "un-count" the old like first
         $item->CountLike($likeobj->TryGetScalar('value') ?? 0, true);
@@ -58,7 +55,7 @@ class Like extends BaseObject // TODO was StandardObject
     
     /**
      * Returns a printable client object of this like
-     * @return array `{owner:id, item:id, value:bool, dates:{created:float}}`
+     * @return array<mixed> `{owner:id, item:id, value:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {

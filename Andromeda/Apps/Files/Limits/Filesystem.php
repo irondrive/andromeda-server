@@ -1,7 +1,7 @@
-<?php namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Limits; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\IOFormat\SafeParams;
 
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/RootFolder.php"); use Andromeda\Apps\Files\RootFolder;
@@ -45,7 +45,7 @@ trait FilesystemCommon
     
     /**
      * @param bool $full if false, don't show track_items/track_dlstats
-     * @return array `config:{track_items:bool,track_dlstats:bool}`
+     * @return array<mixed> `config:{track_items:bool,track_dlstats:bool}`
      * @see Total::GetClientObject()
      * @see Timed::GetClientObject()
      */

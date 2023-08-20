@@ -1,40 +1,12 @@
-<?php namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
-require_once(ROOT."/Core/Exceptions/Exceptions.php"); use Andromeda\Core\Exceptions;
-require_once(ROOT."/Core/IOFormat/Input.php"); use Andromeda\Core\IOFormat\Input;
-require_once(ROOT."/Core/IOFormat/SafeParam.php"); use Andromeda\Core\IOFormat\SafeParam;
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase};
+use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/Apps/Files/Filesystem/FSManager.php"); use Andromeda\Apps\Files\Filesystem\FSManager;
 require_once(ROOT."/Apps/Files/Storage/Exceptions.php");
 require_once(ROOT."/Apps/Files/Storage/FWrapper.php");
-
-/** Exception indicating that the SSH connection failed */
-class SSHConnectionFailure extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SSH_CONNECTION_FAILURE", $details);
-    }
-}
-
-/** Exception indicating that SSH authentication failed */
-class SSHAuthenticationFailure extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SSH_AUTHENTICATION_FAILURE", $details);
-    }
-}
-
-/** Exception indicating that the server's public key has changed */
-class HostKeyMismatchException extends ActivateException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SSH_HOST_KEY_MISMATCH", $details);
-    }
-}
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init){ 
     if (!$init) SFTP::DecryptAccount($database, $account); });
@@ -64,18 +36,18 @@ class SFTP extends SFTPBase2
     
     /**
      * Returns a printable client object of this SFTP storage
-     * @return array `{hostname:string, port:?int, pubkey:bool, keypass:bool}`
+     * @return array<mixed> `{hostname:string, port:?int, pubkey:bool, keypass:bool}`
      * @see Storage::GetClientObject()
      */
     public function GetClientObject(bool $activate = false) : array
     {
-        return array_merge(parent::GetClientObject($activate), array(
+        return parent::GetClientObject($activate) + array(
             'hostname' => $this->GetScalar('hostname'),
             'port' => $this->TryGetScalar('port'),
             'hostkey' => $this->TryGetHostKey(),
             'privkey' => (bool)($this->TryGetScalar('privkey')),
             'keypass' => (bool)($this->TryGetScalar('keypass')),
-        ));
+        );
     }
 
     /** Returns the configured username (mandatory) */
@@ -159,7 +131,7 @@ class SFTP extends SFTPBase2
             if ($cached === null) $this->SetHostKey($hostkey);
             else if ($cached !== $hostkey) throw new HostKeyMismatchException();            
         }
-        catch (Exceptions\PHPError $e) { throw SSHConnectionFailure::Append($e); }
+        catch (BaseExceptions\PHPError $e) { throw SSHConnectionFailure::Append($e); }
 
         try
         {

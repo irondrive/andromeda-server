@@ -1,28 +1,24 @@
-<?php namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) { die(); }
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Database/FieldTypes.php"); use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Database/QueryBuilder.php"); use Andromeda\Core\Database\QueryBuilder;
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
-require_once(ROOT."/Core/IOFormat/SafeParams.php"); use Andromeda\Core\IOFormat\SafeParams;
-
-require_once(ROOT."/Core/Logging/ActionLog.php"); use Andromeda\Core\Logging\ActionLog as BaseActionLog;
-
-require_once(ROOT."/Apps/Accounts/Authenticator.php"); 
 require_once(ROOT."/Apps/Accounts/Account.php");
-require_once(ROOT."/Apps/Accounts/Client.php");
+require_once(ROOT."/Apps/Accounts/Authenticator.php"); 
+require_once(ROOT."/Apps/Accounts/Resource/Client.php"); use Andromeda\Apps\Accounts\Resource\Client;
 
 /** Provides a base class for apps that use the Authenticator to log auth info */
 abstract class AuthActionLog extends BaseActionLog
 {
     /** True if the request was done as admin */
-    private FieldTypes\NullBoolType $admin;
+    protected FieldTypes\NullBoolType $admin;
     /** The real account the action was done with */
-    private FieldTypes\NullObjectRefT $account;
+    protected FieldTypes\NullObjectRefT $account;
     /** The sudouser the action was done as */
-    private FieldTypes\NullObjectRefT $sudouser;
+    protected FieldTypes\NullObjectRefT $sudouser;
     /** The client the action was done with */
-    private FieldTypes\NullObjectRefT $client;
+    protected FieldTypes\NullObjectRefT $client;
 
     protected function CreateFields() : void
     {
@@ -34,25 +30,38 @@ abstract class AuthActionLog extends BaseActionLog
         $this->sudouser = $fields[] = new FieldTypes\NullObjectRefT(Account::class, 'sudouser');
         $this->client = $fields[] = new FieldTypes\NullObjectRefT(Client::class, 'client');
         
-        $this->RegisterFields($fields); // child table
+        $this->RegisterChildFields($fields);
         
         parent::CreateFields();
     }
 
-    /** Logs the authenticator used for this action */
-    public function SetAuth(Authenticator $auth) : self
+    /** 
+     * Logs the authenticator used for this action 
+     * @return $this
+     */
+    public function SetAuth(?Authenticator $auth) : self
     {
-        $this->admin->SetValue($auth->isAdmin());
-        $this->client->SetValue($auth->TryGetClient());
-        $this->account->SetValue($auth->TryGetRealAccount());
+        if ($auth === null)
+        {
+            $this->admin->SetValue(null);
+            $this->client->SetObject(null);
+            $this->account->SetObject(null);
+            $this->sudouser->SetObject(null);
+        }
+        else
+        {
+            $this->admin->SetValue($auth->isAdmin());
+            $this->client->SetObject($auth->TryGetClient());
+            $this->account->SetObject($auth->TryGetRealAccount());
+            $this->sudouser->SetObject($auth->isSudoUser() ? $auth->TryGetAccount() : null);
+        }
         
-        if ($auth->isSudoUser())
-            $this->sudouser->SetValue($auth->TryGetAccount());
+        return $this;
     }
 
-    public static function GetPropUsage() : string { return "[--admin bool] [--account id] [--sudouser id] [--client id]"; }
+    public static function GetAppPropUsage() : string { return "[--admin bool] [--account id] [--sudouser id] [--client id]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {
         $criteria = array();
         
@@ -62,14 +71,14 @@ abstract class AuthActionLog extends BaseActionLog
         foreach (array('account','sudouser','client') as $prop) if ($params->HasParam($prop)) 
             $criteria[] = $q->Equals("$prop", $params->GetParam($prop)->GetRandstr());       
 
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params, $join));
     }
 
     /**
      * Returns the printable client object of this AuthActionLog
      * @param bool $expand if true, expand linked objects
-     * @return array `{admin:?bool, account:?id, client:?id, ?sudouser:id}`
-        if $expand, `{account:?Account, client:?Client, ?sudouser:Account}`
+     * @return array<mixed> `{admin:?bool, ?account:id, ?client:id, ?sudouser:id}`
+        if $expand, `{?account:Account, ?client:Client, ?sudouser:Account}`
        @see Account::GetClientObject()
        @see Client::GetClientObject()
      */
@@ -81,21 +90,22 @@ abstract class AuthActionLog extends BaseActionLog
 
         if ($expand)
         {
-            $account = $this->account->TryGetValue();
-            $sudouser = $this->sudouser->TryGetValue();
-            $client = $this->client->TryGetValue();
+            $account = $this->account->TryGetObject();
+            $sudouser = $this->sudouser->TryGetObject();
+            $client = $this->client->TryGetObject();
             
-            $retval['account'] = ($account !== null) ? $account->GetClientObject() : null;
-            $retval['client'] = ($client !== null) ? $client->GetClientObject() : null;
+            if ($account !== null)  $retval['account']  = $account->GetClientObject();
+            if ($client !== null)   $retval['client']   = $client->GetClientObject();
             if ($sudouser !== null) $retval['sudouser'] = $sudouser->GetClientObject();
         }
         else
         {
-            $retval['account'] = $this->account->TryGetObjectID();
-            $retval['client'] = $this->client->TryGetObjectID();
-            
-            $sudouser = $this->sudouser->TryGetObjectID();
-            if ($sudouser !== null) $retval['sudouser'] = $sudouser;
+            if (($id = $this->account->TryGetObjectID()) !== null)
+                $retval['account'] = $id;
+            if (($id = $this->client->TryGetObjectID()) !== null)
+                $retval['client'] = $id;
+            if (($id = $this->sudouser->TryGetObjectID()) !== null)
+                $retval['sudouser'] = $id;
         }
 
         return $retval;

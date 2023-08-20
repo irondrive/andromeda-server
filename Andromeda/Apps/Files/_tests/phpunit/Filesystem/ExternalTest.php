@@ -1,37 +1,35 @@
-<?php namespace Andromeda\Apps\Files\Filesystem; 
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Filesystem; require_once("init.php");
 
-require_once("init.php");
-
-require_once(ROOT."/Apps/Files/Filesystem/FSManager.php");
-
-require_once(ROOT."/Core/Database/ObjectDatabase.php"); use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, ItemStat};
+
+require_once(ROOT."/Apps/Files/Filesystem/FSManager.php");
 
 require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
 require_once(ROOT."/Apps/Files/Folder.php"); use Andromeda\Apps\Files\Folder;
 require_once(ROOT."/Apps/Files/SubFolder.php"); use Andromeda\Apps\Files\SubFolder;
 
-class MockFileCreator implements FileCreator
+abstract class MockFile extends File
 {
     private ExternalTest $test; private array $dbfiles; 
     
     public function __construct(ExternalTest $test, array& $dbfiles){ $this->test = $test; $this->dbfiles = &$dbfiles; }
     
-    public function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : File
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : File
     {
         return $this->test->NotifyCreateFile($this->dbfiles, $database, $parent, $account, $name);
     }
 }
 
-class MockFolderCreator implements FolderCreator
+abstract class MockFolder extends Folder
 {
     private ExternalTest $test; private array $dbfolders;
     
     public function __construct(ExternalTest $test, array& $dbfolders){ $this->test = $test; $this->dbfolders = &$dbfolders; }
     
-    public function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : SubFolder
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : SubFolder
     {
         return $this->test->NotifyCreateFolder($this->dbfolders, $database, $parent, $account, $name);
     }
@@ -99,13 +97,13 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $storage->method('isFile')->will($this->returnCallback(
             function(string $path)use($fsfiles) : bool
         {
-            return in_array($path, $fsfiles);
+            return in_array($path, $fsfiles, true);
         }));
         
         $storage->method('isFolder')->will($this->returnCallback(
             function(string $path)use($rpath,$fsfolders) : bool
         {
-            return $path === $rpath || in_array($path, $fsfolders);
+            return $path === $rpath || in_array($path, $fsfolders, true);
         }));
         
         $storage->method('readFolder')->will($this->returnCallback(
@@ -125,9 +123,7 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
         $folder->method('GetFiles')->will($this->returnCallback(function()use($dbfiles){ return $dbfiles; }));
         $folder->method('GetFolders')->will($this->returnCallback(function()use($dbfolders){ return $dbfolders; }));
 
-        $fsimpl->RefreshFolder($folder, true,
-            new MockFileCreator($this, $dbfiles),
-            new MockFolderCreator($this, $dbfolders));
+        $fsimpl->RefreshFolder($folder, true, MockFile::class, MockFolder::class);
         
         $fsfiles = array_map(function($path){ return basename($path); }, $fsfiles);
         $fsfolders = array_map(function($path){ return basename($path); }, $fsfolders);

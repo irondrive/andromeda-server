@@ -1,11 +1,9 @@
-<?php namespace Andromeda\Apps\Files; 
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files; require_once("init.php");
 
-require_once("init.php");
+use Andromeda\Core\Utilities;
 
 require_once(ROOT."/Apps/Files/FileUtils.php");
 require_once(ROOT."/Apps/Files/File.php");
-
-require_once(ROOT."/Core/Utilities.php"); use Andromeda\Core\Utilities;
 
 class FileUtilsTest extends \PHPUnit\Framework\TestCase
 {

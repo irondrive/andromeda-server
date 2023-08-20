@@ -11,164 +11,109 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_accesslog` (
+CREATE TABLE `a2obj_apps_accounts_actionlog` (
   `id` char(20) NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
-  `obj_account` char(12) DEFAULT NULL,
-  `obj_sudouser` char(12) DEFAULT NULL,
-  `obj_client` char(12) DEFAULT NULL,
+  `account` char(12) DEFAULT NULL,
+  `sudouser` char(12) DEFAULT NULL,
+  `client` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`obj_account`)
+  KEY `account` (`account`),
+  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_account` (
-  `id` char(12) NOT NULL,
-  `username` varchar(127) NOT NULL,
-  `fullname` varchar(255) DEFAULT NULL,
-  `date_created` double NOT NULL,
-  `date_passwordset` double DEFAULT NULL,
-  `date_loggedon` double DEFAULT NULL,
-  `date_active` double DEFAULT NULL,
-  `date_modified` double DEFAULT NULL,
-  `session_timeout` bigint(20) DEFAULT NULL,
-  `client_timeout` bigint(20) DEFAULT NULL,
-  `max_password_age` bigint(20) DEFAULT NULL,
-  `admin` tinyint(1) DEFAULT NULL,
-  `disabled` tinyint(2) DEFAULT NULL,
-  `forcetf` tinyint(1) DEFAULT NULL,
-  `allowcrypto` tinyint(1) DEFAULT NULL,
-  `accountsearch` tinyint(4) DEFAULT NULL,
-  `groupsearch` tinyint(4) DEFAULT NULL,
-  `userdelete` tinyint(1) DEFAULT NULL,
-  `limit_sessions` tinyint(4) DEFAULT NULL,
-  `limit_contacts` tinyint(4) DEFAULT NULL,
-  `limit_recoverykeys` tinyint(4) DEFAULT NULL,
-  `comment` text DEFAULT NULL,
-  `master_key` binary(48) DEFAULT NULL,
-  `master_nonce` binary(24) DEFAULT NULL,
-  `master_salt` binary(16) DEFAULT NULL,
-  `password` text DEFAULT NULL,
-  `obj_authsource` varchar(64) DEFAULT NULL,
-  `objs_groups` tinyint(4) NOT NULL DEFAULT 0,
-  `objs_sessions` tinyint(4) NOT NULL DEFAULT 0,
-  `objs_contacts` tinyint(4) NOT NULL DEFAULT 0,
-  `objs_clients` tinyint(4) NOT NULL DEFAULT 0,
-  `objs_twofactors` tinyint(4) NOT NULL DEFAULT 0,
-  `objs_recoverykeys` tinyint(4) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  KEY `fullname` (`fullname`),
-  KEY `authsource` (`obj_authsource`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_auth_ftp` (
-  `id` char(12) NOT NULL,
+CREATE TABLE `a2obj_apps_accounts_authsource_ftp` (
+  `id` char(8) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
-  `obj_manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_auth_imap` (
-  `id` char(12) NOT NULL,
+CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
+  `id` char(8) NOT NULL,
   `protocol` tinyint(2) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
   `secauth` tinyint(1) NOT NULL,
-  `obj_manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_auth_ldap` (
-  `id` char(12) NOT NULL,
+CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
+  `id` char(8) NOT NULL,
   `hostname` varchar(255) NOT NULL,
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
-  `obj_manager` char(12) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_auth_manager` (
-  `id` char(12) NOT NULL,
+CREATE TABLE `a2obj_apps_accounts_authsource_source` (
+  `id` char(8) NOT NULL,
   `enabled` tinyint(2) NOT NULL,
-  `obj_authsource` varchar(64) NOT NULL,
   `description` text DEFAULT NULL,
-  `obj_default_group` char(12) DEFAULT NULL,
+  `default_group` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `authsource` (`obj_authsource`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_client` (
-  `id` char(12) NOT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `authkey` text NOT NULL,
-  `lastaddr` varchar(255) NOT NULL,
-  `useragent` text NOT NULL,
-  `date_active` double DEFAULT 0,
-  `date_created` double NOT NULL DEFAULT 0,
-  `date_loggedon` double NOT NULL DEFAULT 0,
-  `obj_account` char(12) NOT NULL,
-  `obj_session` char(12) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `account` (`obj_account`),
-  KEY `session` (`obj_session`),
-  KEY `date_active_account` (`date_active`,`obj_account`)
+  KEY `default_group` (`default_group`),
+  CONSTRAINT `a2obj_apps_accounts_authsource_source_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_apps_accounts_config` (
-  `id` char(12) NOT NULL,
+  `id` char(1) NOT NULL,
   `version` varchar(255) NOT NULL,
-  `createaccount` smallint(1) NOT NULL,
+  `createaccount` tinyint(2) NOT NULL,
   `usernameiscontact` tinyint(1) NOT NULL,
   `requirecontact` tinyint(2) NOT NULL,
-  `obj_default_group` char(12) DEFAULT NULL,
-  `obj_default_auth` char(12) DEFAULT NULL,
+  `default_group` char(12) DEFAULT NULL,
+  `default_auth` char(8) DEFAULT NULL,
   `date_created` double NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_contact` (
-  `id` char(12) NOT NULL,
-  `type` tinyint(2) NOT NULL,
-  `info` varchar(127) NOT NULL,
-  `valid` tinyint(1) NOT NULL DEFAULT 0,
-  `usefrom` tinyint(1) DEFAULT NULL,
-  `public` tinyint(1) NOT NULL DEFAULT 0,
-  `authkey` text DEFAULT NULL,
-  `date_created` double NOT NULL,
-  `obj_account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `type_info` (`type`,`info`),
-  UNIQUE KEY `prefer` (`usefrom`,`obj_account`),
-  KEY `info` (`info`),
-  KEY `account` (`obj_account`)
+  KEY `default_group` (`default_group`),
+  KEY `default_auth` (`default_auth`),
+  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_group` (
+CREATE TABLE `a2obj_apps_accounts_entity_account` (
   `id` char(12) NOT NULL,
-  `name` varchar(127) NOT NULL,
+  `username` varchar(127) NOT NULL,
+  `fullname` varchar(255) DEFAULT NULL,
+  `date_passwordset` double DEFAULT NULL,
+  `date_loggedon` double DEFAULT NULL,
+  `date_active` double DEFAULT NULL,
+  `master_key` binary(48) DEFAULT NULL,
+  `master_nonce` binary(24) DEFAULT NULL,
+  `master_salt` binary(16) DEFAULT NULL,
+  `password` text DEFAULT NULL,
+  `authsource` char(8) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  KEY `fullname` (`fullname`),
+  KEY `authsource` (`authsource`),
+  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`),
+  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_accounts_entity_authentity` (
+  `id` char(12) NOT NULL,
   `comment` text DEFAULT NULL,
-  `priority` tinyint(4) NOT NULL,
   `date_created` double NOT NULL,
   `date_modified` double DEFAULT NULL,
   `admin` tinyint(1) DEFAULT NULL,
@@ -182,61 +127,113 @@ CREATE TABLE `a2obj_apps_accounts_group` (
   `limit_contacts` tinyint(4) DEFAULT NULL,
   `limit_recoverykeys` tinyint(4) DEFAULT NULL,
   `session_timeout` bigint(20) DEFAULT NULL,
-  `client_timeout` bigint(11) DEFAULT NULL,
+  `client_timeout` bigint(20) DEFAULT NULL,
   `max_password_age` bigint(20) DEFAULT NULL,
-  `objs_accounts` int(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_groupjoin` (
+CREATE TABLE `a2obj_apps_accounts_entity_group` (
+  `id` char(12) NOT NULL,
+  `name` varchar(127) NOT NULL,
+  `priority` tinyint(4) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`),
+  CONSTRAINT `a2obj_apps_accounts_entity_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_accounts_entity_groupjoin` (
   `id` char(12) NOT NULL,
   `date_created` double NOT NULL,
-  `objs_accounts` char(12) NOT NULL,
-  `objs_groups` char(12) NOT NULL,
+  `account` char(12) NOT NULL,
+  `group` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `pair` (`objs_accounts`,`objs_groups`),
-  KEY `accounts` (`objs_accounts`),
-  KEY `groups` (`objs_groups`)
+  UNIQUE KEY `account_group` (`account`,`group`),
+  KEY `accounts` (`account`),
+  KEY `groups` (`group`),
+  CONSTRAINT `a2obj_apps_accounts_entity_groupjoin_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`),
+  CONSTRAINT `a2obj_apps_accounts_entity_groupjoin_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_recoverykey` (
+CREATE TABLE `a2obj_apps_accounts_resource_client` (
+  `id` char(12) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `authkey` text NOT NULL,
+  `lastaddr` varchar(255) NOT NULL,
+  `useragent` text NOT NULL,
+  `date_created` double NOT NULL,
+  `date_active` double DEFAULT NULL,
+  `date_loggedon` double DEFAULT NULL,
+  `account` char(12) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `account` (`account`),
+  KEY `date_active_account` (`date_active`,`account`),
+  CONSTRAINT `a2obj_apps_accounts_resource_client_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_accounts_resource_contact` (
+  `id` char(12) NOT NULL,
+  `type` tinyint(2) NOT NULL,
+  `info` varchar(127) NOT NULL,
+  `valid` tinyint(1) NOT NULL DEFAULT 0,
+  `usefrom` tinyint(1) DEFAULT NULL,
+  `public` tinyint(1) NOT NULL DEFAULT 0,
+  `authkey` text DEFAULT NULL,
+  `date_created` double NOT NULL,
+  `account` char(12) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `type_info` (`type`,`info`),
+  UNIQUE KEY `prefer` (`usefrom`,`account`),
+  KEY `info` (`info`),
+  KEY `account` (`account`),
+  CONSTRAINT `a2obj_apps_accounts_resource_contact_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_accounts_resource_recoverykey` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
-  `date_created` double NOT NULL DEFAULT 0,
+  `date_created` double NOT NULL,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
   `master_salt` binary(16) DEFAULT NULL,
-  `obj_account` char(12) NOT NULL,
+  `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`obj_account`)
+  KEY `account` (`account`),
+  CONSTRAINT `a2obj_apps_accounts_resource_recoverykey_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_session` (
+CREATE TABLE `a2obj_apps_accounts_resource_session` (
   `id` char(12) NOT NULL,
   `authkey` text NOT NULL,
   `date_active` double DEFAULT NULL,
-  `date_created` double NOT NULL DEFAULT 0,
+  `date_created` double NOT NULL,
   `master_key` binary(48) DEFAULT NULL,
   `master_nonce` binary(24) DEFAULT NULL,
   `master_salt` binary(16) DEFAULT NULL,
-  `obj_account` char(12) NOT NULL,
-  `obj_client` char(12) NOT NULL,
+  `account` char(12) NOT NULL,
+  `client` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`obj_account`),
-  KEY `client` (`obj_client`),
-  KEY `date_active_account` (`date_active`,`obj_account`)
+  UNIQUE KEY `client` (`client`),
+  KEY `account` (`account`),
+  KEY `date_active_account` (`date_active`,`account`),
+  CONSTRAINT `a2obj_apps_accounts_resource_session_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`),
+  CONSTRAINT `a2obj_apps_accounts_resource_session_ibfk_2` FOREIGN KEY (`client`) REFERENCES `a2obj_apps_accounts_resource_client` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_twofactor` (
+CREATE TABLE `a2obj_apps_accounts_resource_twofactor` (
   `id` char(12) NOT NULL,
   `comment` text DEFAULT NULL,
   `secret` varbinary(48) NOT NULL,
@@ -244,30 +241,31 @@ CREATE TABLE `a2obj_apps_accounts_twofactor` (
   `valid` tinyint(1) NOT NULL DEFAULT 0,
   `date_created` double NOT NULL,
   `date_used` double DEFAULT NULL,
-  `obj_account` char(12) NOT NULL,
-  `objs_usedtokens` tinyint(4) NOT NULL DEFAULT 0,
+  `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `account` (`obj_account`)
+  KEY `account` (`account`),
+  CONSTRAINT `a2obj_apps_accounts_resource_twofactor_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_usedtoken` (
+CREATE TABLE `a2obj_apps_accounts_resource_usedtoken` (
   `id` char(12) NOT NULL,
   `code` char(6) NOT NULL,
   `date_created` double NOT NULL,
-  `obj_twofactor` char(12) NOT NULL,
+  `twofactor` char(12) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `date_created` (`date_created`),
-  KEY `twofactor` (`obj_twofactor`)
+  KEY `twofactor` (`twofactor`),
+  CONSTRAINT `a2obj_apps_accounts_resource_usedtoken_ibfk_1` FOREIGN KEY (`twofactor`) REFERENCES `a2obj_apps_accounts_resource_twofactor` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_whitelist` (
+CREATE TABLE `a2obj_apps_accounts_resource_whitelist` (
   `id` char(12) NOT NULL,
   `date_created` double NOT NULL,
-  `type` smallint(6) NOT NULL,
+  `type` tinyint(2) NOT NULL,
   `value` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `type` (`type`,`value`)
