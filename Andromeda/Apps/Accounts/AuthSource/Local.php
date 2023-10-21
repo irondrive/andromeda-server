@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Utilities;
-
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 require_once(ROOT."/Apps/Accounts/AuthSource/IAuthSource.php");
 
@@ -18,7 +16,7 @@ class Local implements IAuthSource // TODO make this not a singleton, get rid of
         
         $correct = password_verify($password, $hash);
         
-        if ($correct && password_needs_rehash($hash, Utilities::GetHashAlgo()))
+        if ($correct && password_needs_rehash($hash, PASSWORD_ARGON2ID))
             static::SetPassword($account, $password);
             
         return $correct;
@@ -31,6 +29,6 @@ class Local implements IAuthSource // TODO make this not a singleton, get rid of
      */
     public static function SetPassword(Account $account, string $password) : void
     {
-        $account->SetPasswordHash(password_hash($password, Utilities::GetHashAlgo()));
+        $account->SetPasswordHash(password_hash($password, PASSWORD_ARGON2ID));
     }
 }

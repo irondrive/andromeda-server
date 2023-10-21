@@ -79,7 +79,7 @@ Certain app actions require that they are passed a file stream as input.  With H
 For development, simply clone the repo and use `composer install` to download and install the required PHP dependencies.  By default this includes development-specific dependencies, which may require additional PHP extensions.  For production, download a release tarball with dependencies included, or use `composer install --no-dev`.  Installation is done with the `./andromeda-install` entry point.
 
 ### Basic Requirements
-Andromeda requires PHP >= 7.4 and supports up through 8.1.  Required PHP extensions are JSON (7.4 only), mbstring, PDO and Sodium.  Other extensions may be required by apps for additional functionality (see wiki).  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
+Andromeda requires PHP >= 7.4 with libargon2.  Required PHP extensions are JSON (7.4 only), mbstring, PDO and Sodium.  Other extensions may be required by apps for additional functionality (see wiki).  Supported databases are MySQL, PostgreSQL and SQLite. These require the corresponding PDO extensions (PDO-mysql, PDO-pgsql, PDO-sqlite).  PostgreSQL ALSO requires the PHP-pgsql extension.
 
 Andromeda does not use any OS or webserver-specific functions and should work on any platform where PHP runs.  No specific PHP or webserver configuration is required.  Windows works but is supported only on a "best-effort" basis.  The following platforms are officially tested and supported:
 * Ubuntu 20.04 LTS (PHP 7.4) + Apache 2.4
@@ -102,7 +102,7 @@ Use the `./andromeda-install core usage` command to see options for all availabl
 2. Run `./andromeda-install core install-all` to install the database tables for all apps that exist. It returns a list of all installed apps mapped their specific install output.  Apps can also be installed separately, e.g. `core install` or `accounts install`.  Apps can have database dependencies that may dictate installation order.  The `core install-all` command can take any parameter needed by an individual app. 
 3. Run `./andromeda-server core scanapps --enable` to enable all apps that exist.  It returns a list of enabled apps.
 
-Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('ALLOW_HTTP_INSTALL',false)` to `Andromeda/userInit.php`.  Or you can just delete the install.php entry point if you will only be using CLI for install/upgrade.
+Note the install commands are allowed by any user on any interface when required, so it is recommended to have public web access disabled during install.  It can also be permanently disabled for HTTP by adding `<?php define('ALLOW_HTTP_INSTALL',false);` to `Andromeda/userInit.php`.  Or you can just delete the install.php entry point if you will only be using CLI for install/upgrade.
 
 Note that MySQL does not support transactions for queries that modify table structure.  If an install/upgrade fails midway, the database may be left in an inconsistent state.
 

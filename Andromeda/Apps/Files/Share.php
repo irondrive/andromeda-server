@@ -163,10 +163,9 @@ class Share extends BaseObject
     protected function SetPassword(?string $password, bool $check = false) : self
     {
         if ($password === null) return $this->SetScalar('password',null);
-        
-        $algo = Utilities::GetHashAlgo();        
-        if (!$check || password_needs_rehash($this->GetScalar('password'), $algo))
-            $this->SetScalar('password', password_hash($password, $algo));
+             
+        if (!$check || password_needs_rehash($this->GetScalar('password'), PASSWORD_ARGON2ID))
+            $this->SetScalar('password', password_hash($password, PASSWORD_ARGON2ID));
         
         return $this;
     }

@@ -279,16 +279,16 @@ class CLI extends IOInterface
                 if ($param === "") throw new IncorrectCLIUsageException(
                     "empty % key at action arg $i");
                 
-                $val = self::getNextValue($argv,$i);
-                if ($val === null) throw new IncorrectCLIUsageException(
+                $path = self::getNextValue($argv,$i);
+                if ($path === null) throw new IncorrectCLIUsageException(
                     "expected % value at action arg $i");
                 
-                if (!is_file($val)) throw new Exceptions\InvalidFileException($val);
+                if (!is_file($path)) throw new Exceptions\InvalidFileException($path);
                 
-                $filename = self::getNextValue($argv,$i) ?? $val;
-                $filename = (new SafeParam('name',$filename))->GetFSName(); // TODO this seems pointless, remove?
+                $filename = self::getNextValue($argv,$i) ?? basename($path);
+                $filename = (new SafeParam('name',$filename))->GetFSName();
                 
-                $files[$param] = new InputPath($val, $filename, false);
+                $files[$param] = new InputPath($path, $filename, false);
             }
             // optionally attach stdin to a file instead
             else if ($special === '-')
@@ -297,9 +297,9 @@ class CLI extends IOInterface
                 if ($param === "") throw new IncorrectCLIUsageException(
                     "empty - key at action arg $i");
                 
-                $filename = basename(self::getNextValue($argv,$i) ?? $val); // TODO copied from master, check
-                $filename = (new SafeParam('name',$filename))->GetValue(SafeParam::TYPE_FSNAME); // TODO document this in readme
-                
+                $filename = self::getNextValue($argv,$i) ?? "data";
+                $filename = (new SafeParam('name',$filename))->GetFSName(); // TODO update readme and helptext
+            
                 $files[$param] = new InputStream($stdin, $filename);
             }
             else // plain argument
@@ -345,5 +345,6 @@ class CLI extends IOInterface
         if ($exit) exit($output->isOK() ? 0 : 1); // TODO go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
         
         // TODO triple check that when download a file (outmode none) that an error just results in blank stdout output NOT error json
+        // TODO perhaps errors should go to std::cerr when outmode is none?
     }
 }

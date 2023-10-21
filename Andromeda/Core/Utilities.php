@@ -55,14 +55,6 @@ abstract class Utilities
         return $jarr;
     }
     
-    /** Returns the best password_hash algorithm available */
-    public static function GetHashAlgo() : string
-    {
-        if (defined('PASSWORD_ARGON2ID')) return PASSWORD_ARGON2ID;
-        if (defined('PASSWORD_ARGON2I')) return PASSWORD_ARGON2I;
-        else return PASSWORD_DEFAULT;
-    }
-    
     /**
      * @template T
      * @param array<?T> $arr array input 

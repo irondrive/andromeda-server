@@ -51,7 +51,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $this->testQuery($q, array('myval'), "WHERE mykey = :d0");
         
         $q = new QueryBuilder(); $q->Where($q->Equals('mykey',null));
-        $this->testQuery($q, array('myval'), "WHERE mykey IS NULL");
+        $this->testQuery($q, array(), "WHERE mykey IS NULL");
         
         $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey','myval'));
         $this->testQuery($q, array('myval'), "WHERE mykey <> :d0");
@@ -72,7 +72,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $this->testQuery($q, array('myval'), "WHERE (NOT mykey = :d0)");
         
         $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey',null));
-        $this->testQuery($q, array('myval'), "WHERE (NOT mykey IS NULL)");
+        $this->testQuery($q, array(), "WHERE (NOT mykey IS NULL)");
         
         $q = new QueryBuilder(); $q->Where($q->And($q->Equals('mykey1','myval1'), $q->Equals('mykey2','myval2')));
         $this->testQuery($q, array('myval1','myval2'), "WHERE (mykey1 = :d0 AND mykey2 = :d1)");
