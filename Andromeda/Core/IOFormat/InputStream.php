@@ -3,10 +3,11 @@
 /** An input file stream */
 class InputStream extends InputFile
 {
-    protected $handle;
-    
-    /** @param resource $handle */
-    public function __construct($handle, ?string $name = null) { 
+    /** 
+     * @param resource $handle
+     * @param string $name optional file name
+     */
+    public function __construct($handle, string $name) { 
         $this->handle = $handle; $this->name = $name; }
         
     public function __destruct()
@@ -27,7 +28,4 @@ class InputStream extends InputFile
         
         return $this->handle; 
     }
-    
-    /** Returns the name of the file to be used */
-    public function GetName() : string { return $this->name; }
 }

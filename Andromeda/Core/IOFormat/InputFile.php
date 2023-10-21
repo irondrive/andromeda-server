@@ -5,6 +5,7 @@ abstract class InputFile
 {
     /** @var ?resource */
     protected $handle = null;
+    protected string $name;
     
     /**
      * Returns the file's stream resource
@@ -31,4 +32,7 @@ abstract class InputFile
         
         return $retval;
     }
+
+    /** Returns the name of the file to be used */
+    public function GetName() : string { return $this->name; }
 }

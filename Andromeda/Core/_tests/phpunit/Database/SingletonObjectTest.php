@@ -29,7 +29,7 @@ class SingletonObjectTest extends \PHPUnit\Framework\TestCase
     public function testCreate() : void
     {
         $database = $this->createMock(ObjectDatabase::class);
-        
+
         $database->expects($this->exactly(0))->method('TryLoadUniqueByKey');
         
         $obj = TestSingleton2::Create($database);
@@ -40,10 +40,10 @@ class SingletonObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj, TestSingleton2::GetInstance($database));
     }
     
-    /** @depends testCreate */
     public function testLoad() : void
     {
         $database = $this->createMock(ObjectDatabase::class);
+        TestSingleton2::Create($database);
         
         // only one read because TestSingleton2 was created above
         $database->expects($this->exactly(1))->method('TryLoadUniqueByKey')

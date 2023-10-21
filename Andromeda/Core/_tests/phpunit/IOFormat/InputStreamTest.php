@@ -7,10 +7,11 @@ class InputStreamTest extends \PHPUnit\Framework\TestCase
         $data = "testing123";
         $stream = fopen("data:text/plain,$data",'rb');
         assert(is_resource($stream));
-        $strobj = new InputStream($stream);
+        $strobj = new InputStream($stream,"test.txt");
         
         $this->assertSame($stream, $strobj->GetHandle());
         $this->assertSame($data, $strobj->GetData());
+        $this->assertSame("test.txt",$strobj->GetName());
         $this->assertFalse(is_resource($stream)); // @phpstan-ignore-line stream is closed
         
         $this->expectException(Exceptions\FileReadFailedException::class);
@@ -23,7 +24,7 @@ class InputStreamTest extends \PHPUnit\Framework\TestCase
         $stream = fopen("data:text/plain,",'rb');
         assert(is_resource($stream));
         
-        $strobj = new InputStream($stream);
+        $strobj = new InputStream($stream,"test");
         $strobj->__destruct();
         
         $this->assertFalse(is_resource($stream)); // @phpstan-ignore-line stream is closed

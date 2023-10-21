@@ -49,7 +49,7 @@ trait AuthObject
             'time_cost'=>static::GetTimeCost(), 
             'memory_cost'=>static::GetMemoryCost());
         
-        if (password_needs_rehash($hash, $algo = Utilities::GetHashAlgo(), $settings))
+        if (password_needs_rehash($hash, $algo = PASSWORD_ARGON2ID, $settings))
             $this->authkey->SetValue(password_hash($key, $algo, $settings));
         
         return true;
@@ -100,7 +100,7 @@ trait AuthObject
                 'memory_cost'=>static::GetMemoryCost());
             
             $this->authkey_raw = $key;
-            $algo = Utilities::GetHashAlgo();
+            $algo = PASSWORD_ARGON2ID;
             $hash = password_hash($key, $algo, $settings);
         }
         

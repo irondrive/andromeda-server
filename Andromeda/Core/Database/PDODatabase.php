@@ -23,9 +23,6 @@ class PDODatabase
     /** the PDO database connection */
     private PDO $connection; 
     
-    /** a unique instance ID */
-    private string $instanceId;
-    
     /** 
      * $config associative array of config for connecting PDO 
      * @var array<string, mixed>
@@ -246,15 +243,10 @@ class PDODatabase
         if ($this->driver === self::DRIVER_SQLITE)
             $this->connection->query("PRAGMA foreign_keys = ON");
         // TODO should we use the WAL sqlite mode here? read docs
-        
-        $this->instanceId = "Database_".Utilities::Random(4);
     }
     
     /** @see self::$driver */
     public function getDriver() : int { return $this->driver; }
-    
-    /** Returns the DB's unique instance ID */
-    public function getInstanceID() : string { return $this->instanceId; }
     
     /** 
      * returns the array of config that was loaded from the config file 
@@ -440,7 +432,7 @@ class PDODatabase
     /**
      * Sends an SQL query down to the database, possibly beginning a transaction
      * @param string $sql the SQL query string, with placeholder data values
-     * @param ?array<string, scalar> $data param replacements for the prepared statement
+     * @param ?array<string, scalar> $params param replacements for the prepared statement
      * @throws Exceptions\DatabaseQueryException if the database query throws a PDOException
      * @return PDOStatement the finished PDO statement object
      */
@@ -501,7 +493,7 @@ class PDODatabase
     
     /** 
      * Logs a query to the internal query history, logging the actual data values if debug allows 
-     * @param ?array<string, scalar> $data
+     * @param ?array<string, scalar> $params
      */
     private function logQuery(string $sql, ?array $params) : string
     {

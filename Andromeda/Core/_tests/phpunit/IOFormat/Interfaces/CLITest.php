@@ -257,20 +257,21 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $cli = new CLI(); $stdin = $this->getStream();
         
         $this->checkBadUsage(array('','app','action','---'));
-        $this->checkBadUsage(array('','app','action','--test-','test2')); // want no value
 
         fwrite($stdin, $data = Utilities::Random(32)); fseek($stdin, 0);
-        $inputs = $cli->LoadCLIInputs(array('','app','action','--myfile1-','--myfile2-','--arg3','5'), array(),$stdin);
+        $inputs = $cli->LoadCLIInputs(array('','app','action','--myfile1-','--myfile2-','test.txt','--arg3','5'), array(),$stdin);
         $this->assertCount(1, $inputs); $input = $inputs[0]; 
         $this->assertSame(5, $input->GetParams()->GetParam('arg3')->GetInt());
         
         $myfile1 = $input->GetFile('myfile1');
         assert($myfile1 instanceof InputStream);
         $this->assertSame($stdin, $myfile1->GetHandle());
-        
+        $this->assertSame("data",$myfile1->GetName());
+
         $myfile2 = $input->GetFile('myfile2');
         assert($myfile2 instanceof InputStream);
         $this->assertSame($stdin, $myfile2->GetHandle());
+        $this->assertSame("test.txt",$myfile2->GetName());
         
         // InputStream can only be read once
         $this->assertSame($data, $myfile1->GetData());

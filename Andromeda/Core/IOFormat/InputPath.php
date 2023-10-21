@@ -27,8 +27,6 @@ class InputPath extends InputFile
             fclose($this->handle);
     }
     
-    // TODO GetName() needs to be not null here
-    
     /** Returns the path to the input file */
     public function GetPath() : string { return $this->path; }
     

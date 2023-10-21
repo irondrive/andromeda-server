@@ -59,7 +59,7 @@ class FilesApp extends BaseApp
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
-            'upload (--file% path [name] | --file- --name fsname) --parent id [--overwrite bool]',
+            'upload (--file% path [name] | --file- name) --parent id [--overwrite bool]',
             'download --file id [--fstart uint] [--flast int] [--debugdl bool]',
             'ftruncate --file id --size uint',
             'writefile (--data% path | --data-) --file id [--offset uint]',

@@ -14,7 +14,7 @@ abstract class SingletonObject extends BaseObject
     /** Returns a unique instance index for this class and the given database */
     private static function GetIndex(ObjectDatabase $database) : string
     {
-        return $database->GetInternal()->getInstanceID().'_'.static::class;
+        return spl_object_hash($database).'_'.static::class;
     }
 
     /**

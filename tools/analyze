@@ -2,7 +2,7 @@
 set -e
 
 # supported PHP versions
-VERS="70400 80000 80100"
+VERS="70400 80000 80100 80200"
 
 for phpv in $VERS; do
    echo analyzing for PHP version $phpv

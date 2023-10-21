@@ -176,7 +176,7 @@ class QueryBuilder
     {
         $retval = array(); foreach($pairs as $key=>$val){
             $retval[] = $this->Equals($key, $val); }
-            return $this->And(...$retval);
+        return $this->And(...$retval);
     }
     
     /** Returns a query string that inverts the logic of the given query */
