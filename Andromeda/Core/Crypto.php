@@ -6,7 +6,11 @@ if (!function_exists('sodium_memzero'))
 /** libsodium wrapper class for crypto */
 class Crypto
 {
-    // TODO salt length?
+    /** 
+     * Returns the length of a salt returned by GenerateSalt()
+     * @return positive-int
+     */
+    public static function SaltLength() : int { return SODIUM_CRYPTO_PWHASH_SALTBYTES; }
     
     /** Generates a salt for use with DeriveKey() */
     public static function GenerateSalt() : string
