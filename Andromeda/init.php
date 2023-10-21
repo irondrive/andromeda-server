@@ -11,7 +11,7 @@ mb_internal_encoding("UTF-8");
 error_reporting(E_ALL);
 
 define('Andromeda',true); // entry-points
-define('andromeda_version','1.0.0-alpha');
+define('andromeda_version','0.0.1-alpha');
 
 define('ROOT',__DIR__.'/');
 

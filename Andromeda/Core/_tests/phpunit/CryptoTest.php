@@ -4,6 +4,8 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
 {
     public function testGenerateSalt() : void
     {
+        $this->assertSame(16, Crypto::SaltLength());
+        
         $salt = Crypto::GenerateSalt();
         $this->assertIsString($salt);
         $this->assertSame(16, strlen($salt));
