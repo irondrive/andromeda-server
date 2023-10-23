@@ -132,7 +132,7 @@ class HTTP extends IOInterface
         // TODO copied from master, make sure is correct
         foreach (getallheaders() as $key=>$val)
         {
-            if (strpos($key,"X-Andromeda-") === 0)
+            if (mb_strpos($key,"X-Andromeda-") === 0)
             {
                 $key = explode("-",strtolower($key),3)[2];
                 $params->AddParam(str_replace("-","_",$key), base64_decode($val));

@@ -20,7 +20,7 @@ trait NoChildren
     public static function GetChildMap() : array { return array(); }
 }
 
-/** A trait for classes with no typed children */
+/** A trait for classes with no typed children (may have linked children) */
 trait NoTypedChildren
 {
     public static function HasTypedRows() : bool { return false; }
