@@ -19,21 +19,6 @@ class CLI extends IOInterface
     /** @return int plain text output by default */
     public static function GetDefaultOutmode() : int { return self::OUTPUT_PLAIN; }
     
-    /** Strips -- off the given string and returns (or null if not found) */
-    private static function getKey(string $str) : ?string
-    {
-        if (mb_substr($str,0,2) !== "--") return null; else return mb_substr($str,2);
-    }
-    
-    /** 
-     * Returns the next args value (or null if not found) and increments $i
-     * @param array<int,string> $args
-     */
-    private static function getNextValue(array $args, int &$i) : ?string
-    {
-        return (isset($args[$i+1]) && self::getKey($args[$i+1]) === null) ? $args[++$i] : null;
-    }
-
     public function getAddress() : string
     {
         $retval = "CLI";
@@ -86,6 +71,31 @@ class CLI extends IOInterface
         global $argv; return $this->LoadCLIInputs($argv, $_SERVER, STDIN);
     }
     
+    /** Strips -- off the given string and returns (or null if not found) */
+    private static function getKey(string $str) : ?string
+    {
+        if (mb_substr($str,0,2) !== "--") return null; 
+        else return explode("=",mb_substr($str,2),2)[0];
+    }
+    
+    /** 
+     * Returns the next args value (or null if not found) 
+     * at or after $i (MUST EXIST) and increments if the value was at i+1
+     * @param array<int,string> $args
+     */
+    private static function getNextValue(array $args, int &$i) : ?string
+    {
+        if (self::getKey($args[$i]) !== null &&
+            mb_strpos($args[$i],"=") !== false) // --key=val
+        {
+            return explode('=',$args[$i],2)[1];
+        }
+
+        if (isset($args[$i+1]) && self::getKey($args[$i+1]) === null) // --key val
+            return $args[++$i];
+        return null; // no value
+    }
+
     /**
      * Retries an array of input objects to run
      * @param array<string> $argv

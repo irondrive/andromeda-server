@@ -163,18 +163,20 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $this->assertSame($action,$input->GetAction());
         
         $app = Utilities::Random(8); $action = Utilities::Random(8);
-        $inputs = $cli->LoadCLIInputs(array('','--outmode','json',$app,$action), array(),$stdin);
+        $inputs = $cli->LoadCLIInputs(array('','--outmode','json',"--debug=sensitive",$app,$action), array(),$stdin);
         $this->assertSame(CLI::OUTPUT_JSON, $cli->GetOutputMode());
+        $this->assertSame(Config::ERRLOG_SENSITIVE, $cli->GetDebugLevel());
         $this->assertCount(1, $inputs); $input = $inputs[0];
         $this->assertSame($app,$input->GetApp());
         $this->assertSame($action,$input->GetAction());
         
         $app = Utilities::Random(8); $action = Utilities::Random(8);
-        $inputs = $cli->LoadCLIInputs(array('',$app,$action,'--myopt','5','--myflag'), array(),$stdin);
+        $inputs = $cli->LoadCLIInputs(array('',$app,$action,'--myopt','5','--myopt2=6','--myflag'), array(),$stdin);
         $this->assertCount(1, $inputs); $input = $inputs[0]; $params = $input->GetParams();
         $this->assertSame($app,$input->GetApp());
         $this->assertSame($action,$input->GetAction());
         $this->assertSame(5, $params->GetParam('myopt')->GetInt());
+        $this->assertSame(6, $params->GetParam('myopt2')->GetInt());
         $this->assertTrue($params->GetParam('myflag')->GetBool());
     }
     
