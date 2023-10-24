@@ -29,6 +29,7 @@ class SafeParam
     
     /** 
      * Construct a new SafeParam with the given key and value
+     * @param string $key name of the input param - MUST NOT CONTAIN "-"
      * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
      * @throws SafeParamInvalidException if the key name is invalid
      */
