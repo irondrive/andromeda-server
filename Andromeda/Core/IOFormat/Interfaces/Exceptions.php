@@ -102,6 +102,14 @@ class FileUploadFormatException extends BaseExceptions\ClientErrorException
     }
 }
 
+/** Exception indicating the field contains invalid base64 */
+class Base64DecodeException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("BASE64_DECODE_FAIL", $details);
+    }
+}
+
 /** Exception indicating the HTTP method used is not allowed */
 class MethodNotAllowedException extends BaseExceptions\ClientException
 {

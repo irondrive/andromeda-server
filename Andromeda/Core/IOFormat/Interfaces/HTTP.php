@@ -28,8 +28,6 @@ class HTTP extends IOInterface
     {
         return $_SERVER['HTTP_USER_AGENT'];
     }
-    
-    // TODO can replace SERVER_HTTP with getallheaders() ? 
 
     /** 
      * Retrieves an array of input objects from the request to run 
@@ -129,13 +127,15 @@ class HTTP extends IOInterface
         $params = new SafeParams();
         $params->LoadArray($req);
         
-        // TODO copied from master, make sure is correct
-        foreach (getallheaders() as $key=>$val)
+        // TODO NOTE does not support batching, not a problem after batching is removed
+        foreach ($server as $key=>$val)
         {
-            if (mb_strpos($key,"X-Andromeda-") === 0)
+            if (mb_strpos($key,"HTTP_X_ANDROMEDA_") === 0)
             {
-                $key = explode("-",strtolower($key),3)[2];
-                $params->AddParam(str_replace("-","_",$key), base64_decode($val));
+                $key = explode("_",mb_strtolower($key),4)[3];
+                if (($val = base64_decode((string)$val,true)) !== false)
+                    $params->AddParam($key, $val);
+                else throw new Exceptions\Base64DecodeException($key);
             }
         }
         

@@ -54,11 +54,19 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact','password'=>'test'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
+    public function testBadBase64Field() : void
+    {
+        $this->expectException(Exceptions\Base64DecodeException::class);
+        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET',"HTTP_X_ANDROMEDA_XYZ"=>"bad!"]);
+    }
+    
     public function testBasicInput() : void
     {
         $get = array('_app'=>$app='myapp', '_act'=>$act='myact');
         $req = array('password'=>'test', 'param2'=>['0'=>'0','1'=>'1'], 'obj'=>['0'=>'2','3'=>'4']);
-        $inputs = (new HTTP())->LoadHTTPInputs($req+$get, $get, [], ['REQUEST_METHOD'=>'POST']);
+        
+        $server = array('REQUEST_TIME'=>0,'HTTP_USER_AGENT'=>"abc","HTTP_X_ANDROMEDA_XYZ"=>base64_encode("123"));
+        $inputs = (new HTTP())->LoadHTTPInputs($req+$get, $get, [], $server+['REQUEST_METHOD'=>'POST']);
         $this->assertCount(1, $inputs); $input = $inputs[0];
         
         $this->assertSame($app, $input->GetApp());
@@ -72,7 +80,9 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame(2, $obj->GetParam('0')->GetInt());
         $this->assertSame(4, $obj->GetParam('3')->GetInt());
-        $this->assertSame($req, $params->GetClientObject());
+        
+        $this->assertSame(123, $params->GetParam('xyz')->GetInt());
+        $this->assertSame($req+["xyz"=>"123"], $params->GetClientObject());
     }
     
     public function testEmptyBatch() : void
