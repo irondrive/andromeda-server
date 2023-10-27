@@ -420,7 +420,7 @@ class SafeParam
             $value = trim($value);
             
             $value = filter_var($value0=$value, FILTER_VALIDATE_EMAIL);
-            if ($value === "" || $value !== $value0)
+            if ($value !== $value0) // FILTER_EMAIL checks for ""
                 throw new SafeParamInvalidException($this->key, 'email');
         }
         
