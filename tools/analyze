@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# supported PHP versions
-VERS="70400 80000 80100 80200"
-
-for phpv in $VERS; do
-   echo analyzing for PHP version $phpv
-   conf=tools/conf/phpstan.$phpv.neon
+for conf in $(ls tools/conf/phpstan.*.neon); do
+   echo analyzing for PHP config $(basename $conf)
    vendor/bin/phpstan analyse -c $conf "$@"
 done

@@ -44,7 +44,7 @@ abstract class BaseObject
      * Non-abstract classes (no children) should always return empty
      * If using auto-typed rows, the mapping must be stable across versions
      * Classes must have the @ return line in order to pass type checking!
-     * @return array<scalar, class-string<static>>
+     * @return array<array-key, class-string<static>>
      */
     public static function GetChildMap() : array { return array(); }
     

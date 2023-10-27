@@ -57,7 +57,7 @@ trait AuthObject
     
     /**
      * Returns the auth key if available or null if none
-     * @throws RawKeyNotAvailableException if the real key is not in memory
+     * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory
      */
     protected function TryGetAuthKey() : ?string
     {
@@ -65,7 +65,7 @@ trait AuthObject
             return null; // no key/hash
         
         if (!isset($this->authkey_raw))
-            throw new RawKeyNotAvailableException();
+            throw new Exceptions\RawKeyNotAvailableException();
         return $this->authkey_raw;
     }
 

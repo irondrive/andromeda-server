@@ -19,11 +19,11 @@ class ActionLog extends BaseLog
     {
         $map = array("" => self::class); 
         
-        foreach (array()/* TODO FIX ME AppRunner::GetInstance()->GetApps()*/ as $name=>$app)
+        /*foreach (array() as $name=>$app) // TODO FIX ME AppRunner::GetInstance()->GetApps()
         {
             $logclass = $app->getLogClass();
             if ($logclass !== null) $map[$name] = $logclass;
-        } 
+        } */
         return $map;
     }
 
@@ -39,15 +39,17 @@ class ActionLog extends BaseLog
         else 
         {
             return $q->Not($q->ManyEqualsOr("$table.app",
-                array_keys(array()/* TODO FIX ME AppRunner::GetInstance()->GetApps()*/)));
+                array_keys(array()))); // TODO FIX ME AppRunner::GetInstance()->GetApps()
         }
     }
     
     /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
-        $app = $row['app']; $map = self::GetChildMap();
+        $app = (string)$row['app'];
+        $map = self::GetChildMap();
         
+        // apps previously logged might be uninstalled now
         return array_key_exists($app, $map) ? $map[$app] : self::class;
     }
     
