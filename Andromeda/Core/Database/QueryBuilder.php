@@ -64,15 +64,6 @@ class QueryBuilder
         return ':'.$idx;
     }
     
-    /** 
-     * Base function for safely comparing columns to values 
-     * @param scalar $val 
-     */
-    private function BaseCompare(string $key, $val, string $symbol) : string 
-    {
-        return "$key $symbol ".$this->AddParam($val); // TODO get rid of this as a function
-    }    
-    
     /** Returns the given string with escaped SQL wildcard characters */
     public static function EscapeWildcards(string $query) : string
     {
@@ -91,10 +82,10 @@ class QueryBuilder
      */
     public function Like(string $key, string $val, bool $hasMatch = false) : string 
     {
-        $val = str_replace('\\','\\\\',$val); // TODO this should be part of EscapeWildcards... see c++
-        // TODO use ESCAPE like c++ sqlite? not sure if it's supported in mysql/postgres, see https://www.sqlitetutorial.net/sqlite-like/
+        $val = str_replace('\\','\\\\',$val); // TODO DB FIX this should be part of EscapeWildcards... see c++
+        // TODO DB FIX use ESCAPE like c++ sqlite? not sure if it's supported in mysql/postgres, see https://www.sqlitetutorial.net/sqlite-like/
         if (!$hasMatch) $val = '%'.static::EscapeWildcards($val).'%';
-        return $this->BaseCompare($key,$val,'LIKE'); 
+        return "$key LIKE ".$this->AddParam($val); 
     }
     
     /** 
@@ -103,7 +94,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function LessThan(string $key, $val) : string { 
-        return $this->BaseCompare($key,$val,'<'); }
+        return "$key < ".$this->AddParam($val); }
     
     /** 
      * Returns a query string asserting the given column is less or equal to the given value 
@@ -111,7 +102,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function LessThanEquals(string $key, $val) : string { 
-        return $this->BaseCompare($key,$val,'<='); }
+        return "$key <= ".$this->AddParam($val); }
     
     /**
      * Returns a query string asserting the given column is greater than the given value 
@@ -119,7 +110,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function GreaterThan(string $key, $val) : string { 
-        return $this->BaseCompare($key,$val,'>'); }
+        return "$key > ".$this->AddParam($val); }
     
     /** 
      * Returns a query string asserting the given column is greater than or equal to the given value 
@@ -127,7 +118,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function GreaterThanEquals(string $key, $val) : string { 
-        return $this->BaseCompare($key,$val,'>='); }
+        return "$key >= ".$this->AddParam($val); }
     
     /** Returns a query string asserting the given column is "true" (greater than zero) */
     public function IsTrue(string $key) : string {
@@ -141,7 +132,7 @@ class QueryBuilder
     public function Equals(string $key, $val) : string 
     { 
         if ($val === null) return $this->IsNull($key);
-        return $this->BaseCompare($key,$val,'='); 
+        return "$key = ".$this->AddParam($val);
     }
     
     /**
@@ -152,7 +143,7 @@ class QueryBuilder
     public function NotEquals(string $key, $val) : string 
     { 
         if ($val === null) return $this->Not($this->IsNull($key));
-        return $this->BaseCompare($key,$val,'<>'); 
+        return "$key <> ".$this->AddParam($val);
     }
     
     /**

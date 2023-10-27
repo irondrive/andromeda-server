@@ -6,3 +6,4 @@ tools/unittests; sleep 1
 #tools/pytests # TODO enable pytests (fix)
 
 tools/count total
+echo "---- ALL CHECKS OK! ----"

@@ -127,7 +127,7 @@ class Client extends BaseObject
     
     public function NotifyDeleted() : void
     {
-        Session::DeleteByClient($this->database, $this);
+        Session::DeleteByClient($this->database, $this); // TODO not gonna work! foreign keys must be removed first!
         
         parent::NotifyDeleted();
     }

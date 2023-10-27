@@ -134,7 +134,7 @@ class S3 extends S3Base
     /** The stream wrapper ID */ private string $streamID;
     
     /** Checks for the SMB client extension */
-    public function SubConstruct() : void
+    public function PostConstruct() : void
     {
         if (!class_exists('\\Aws\\S3\\S3Client')) throw new S3AwsSdkException();
     }

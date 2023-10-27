@@ -15,7 +15,7 @@ abstract class BaseLog extends BaseObject
     protected const IDLength = 20;
     
     /** Returns the CLI usage string for loading objects by properties */
-    public static abstract function GetPropUsage() : string;
+    public static abstract function GetPropUsage(ObjectDatabase $database) : string;
     
     /**
      * Adds query filter parameters using the given input
@@ -33,7 +33,7 @@ abstract class BaseLog extends BaseObject
      * @param SafeParams $params input to determine class
      * @return class-string<static>
      */
-    protected static function GetPropClass(SafeParams $params) : string { return static::class; }
+    protected static function GetPropClass(ObjectDatabase $database, SafeParams $params) : string { return static::class; }
     
     /** Returns the common CLI usage for loading log entries */
     public static function GetLoadUsage() : string { return "[--logic and|or] [--limit uint] [--offset uint]"; }
@@ -69,7 +69,7 @@ abstract class BaseLog extends BaseObject
      */
     public static function LoadByParams(ObjectDatabase $database, SafeParams $params) : array
     {
-        $class = static::GetPropClass($params);
+        $class = static::GetPropClass($database, $params);
         
         $q = $class::GetWhereQuery($database, $params);
         
@@ -88,7 +88,7 @@ abstract class BaseLog extends BaseObject
      */
     public static function CountByParams(ObjectDatabase $database, SafeParams $params) : int
     {
-        $class = static::GetPropClass($params);
+        $class = static::GetPropClass($database, $params);
         
         $q = static::GetWhereQuery($database, $params);
         

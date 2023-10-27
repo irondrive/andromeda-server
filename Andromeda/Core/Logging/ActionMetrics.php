@@ -48,11 +48,11 @@ class ActionMetrics extends BaseObject
         parent::CreateFields();
     }
     
-    protected static function AddUniqueKeys(array& $keymap) : void
+    public static function GetUniqueKeys() : array
     {
-        $keymap[self::class] = array('actionlog');
-        
-        parent::AddUniqueKeys($keymap);
+        return array_merge_recursive(
+            array(self::class => array('actionlog')),
+            parent::GetUniqueKeys());
     }
 
     /**

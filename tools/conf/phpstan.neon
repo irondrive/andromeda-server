@@ -1,9 +1,9 @@
-#includes:
-#    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
+includes:
+    - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
 # TODO enable phpstan-strict-rules
 parameters:
-#    strictRules:
-#        strictCalls: false                             # default is true, calling statics with -> should be okay
+    strictRules:
+        strictCalls: false                             # default is true, calling statics with -> should be okay
     level: 9
     paths: 
         - ../../Andromeda
@@ -13,6 +13,7 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
+    reportStaticMethodSignatures: false                # strict-rules sets true, objdb has difficult issues with this
     reportUnmatchedIgnoredErrors: false                # default is true, makes analyzing PHP7+8 impossible
     rememberPossiblyImpureFunctionValues: false        # default is true, seems like bad behavior?
 ### checkUninitializedProperties: true                 # default is false, does't work with how we do objects

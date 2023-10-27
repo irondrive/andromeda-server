@@ -120,8 +120,6 @@ abstract class Utilities
         $val = trim($val); 
         if ($val === "") return 0;
         
-        // TODO exception if not is_numeric?
-        
         $num = (int)($val);
         switch (substr($val, -1)) {
             case 'T': $num *= 1024;

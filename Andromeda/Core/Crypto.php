@@ -121,7 +121,8 @@ class Crypto
         );
     }
     
-    // TODO add PublicOutputSize() function (see C++)
+    /** Returns the size overhead of an encrypted string over a plaintext one */
+    public static function PublicOutputOverhead() : int { return SODIUM_CRYPTO_BOX_MACBYTES; }
     
     /**
      * Encrypts and signs data from a sender to a recipient

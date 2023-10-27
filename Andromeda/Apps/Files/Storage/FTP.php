@@ -73,7 +73,7 @@ class FTP extends FTPBase2
     }
     
     /** Check for the FTP extension */
-    public function SubConstruct() : void
+    public function PostConstruct() : void
     {
         if (!function_exists('ftp_connect')) throw new FTPExtensionException();
     }

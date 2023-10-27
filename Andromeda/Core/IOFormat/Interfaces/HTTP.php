@@ -127,7 +127,7 @@ class HTTP extends IOInterface
         $params = new SafeParams();
         $params->LoadArray($req);
         
-        // TODO NOTE does not support batching, not a problem after batching is removed
+        // TODO IFACE NOTE does not support batching, not a problem after batching is removed
         foreach ($server as $key=>$val)
         {
             if (mb_strpos($key,"HTTP_X_ANDROMEDA_") === 0)

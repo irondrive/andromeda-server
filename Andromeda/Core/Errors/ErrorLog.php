@@ -83,7 +83,8 @@ class ErrorLog extends BaseLog
     }
     
     /** Returns the common command usage for LoadByParams() and CountByParams() */
-    public static function GetPropUsage() : string { return "[--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
+    public static function GetPropUsage(ObjectDatabase $database) : string { 
+        return "[--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
     {

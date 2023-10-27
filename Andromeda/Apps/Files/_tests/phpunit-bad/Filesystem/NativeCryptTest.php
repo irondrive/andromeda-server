@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Filesystem; require_once("init.php");
 
-/*use Andromeda\Core\{Crypto, Utilities};
+use Andromeda\Core\{Crypto, Utilities};
 use Andromeda\Core\IOFormat\InputPath;
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\Storage;
 require_once(ROOT."/Apps/Files/File.php"); use Andromeda\Apps\Files\File;
@@ -60,7 +60,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $this->fsimpl = new NativeCrypt($filesystem, Crypto::GenerateSecretKey(), self::CHUNK_SIZE);
     }
     
-    // TODO FIX comment type @var array<string>
+    /** @var array<string> */
     private array $files = array();
     
     public function tearDown() : void
@@ -199,4 +199,4 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $this->tryWritingPair(47, 99);
         $this->tryWritingPair(49, 99);
     }
-}*/ // TODO ENABLE ME
+}
