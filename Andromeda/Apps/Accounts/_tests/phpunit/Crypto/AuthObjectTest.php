@@ -103,7 +103,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $obj = new MyAuthObject($objdb, array('id'=>'test123','authkey'=>$hash));
         
         $exc = false; try { $obj->pubTryGetAuthKey(); } // key not available yet
-        catch (RawKeyNotAvailableException $e) { $exc = true; }
+        catch (Exceptions\RawKeyNotAvailableException $e) { $exc = true; }
         $this->assertTrue($exc);
         
         $this->assertSame($hash, $obj->pubGetAuthHash());

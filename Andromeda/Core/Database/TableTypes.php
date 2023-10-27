@@ -73,10 +73,11 @@ trait TableTypedChildren
     /** @return class-string<self> child class of row */
     public static function GetRowClass(array $row) : string
     {
-        $type = $row['type']; $map = self::GetChildMap();
+        $type = (string)$row['type']; 
+        $map = self::GetChildMap();
         
-        if (!array_key_exists($type, $map))
-            throw new Exceptions\BadPolyTypeException((string)($type ?? "null"));
+        if (!array_key_exists($type, $map)) // does int/string conversions
+            throw new Exceptions\BadPolyTypeException($type);
         
         return $map[$type];
     }
