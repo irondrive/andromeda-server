@@ -163,7 +163,7 @@ class AccountTotal extends AuthEntityTotal
     }
     
     /** register a group change handler that updates this specific object's grouplim cache */
-    protected function SubConstruct() : void
+    protected function PostConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
@@ -323,7 +323,7 @@ class AccountTimed extends AuthEntityTimed
     }
         
     /** register a group change handler that updates this specific object's grouplim cache */
-    protected function SubConstruct() : void
+    protected function PostConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {

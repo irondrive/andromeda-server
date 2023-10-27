@@ -32,17 +32,11 @@ abstract class BaseField
         $this->alwaysSave = $saveOnRollback;
     }
 
-    /** Returns the unique ID of this field */
-    public function ID() : string
-    {
-        return $this->parent->ID().':'.$this->name; // TODO what is this used for??
-    }
-    
     /**
      * @param BaseObject $parent parent object reference
      * @return $this
      */
-    public function SetParent(BaseObject $parent) : self // TODO why not in constructor?
+    public function SetParent(BaseObject $parent) : self
     {
         $this->database = $parent->GetDatabase();
         $this->parent = $parent; return $this;
@@ -79,9 +73,6 @@ abstract class BaseField
      */
     public function SetUnmodified() : self { $this->delta = 0; return $this; }
     
-    /** Unsets the field's value so it cannot be used */
-    public abstract function Uninitialize() : void;
-    
     /** Notify the DB that this field was modified */
     protected function NotifyModified() : void
     {
@@ -95,17 +86,6 @@ abstract class BaseField
     }
 }
 
-/** A common Uninitialize function for scalar types */
-trait ScalarCommon
-{
-    public function Uninitialize() : void
-    {
-        unset($this->tempvalue);
-        unset($this->realvalue);
-        unset($this->delta);
-    }
-}
-
 // NOTE the reason we have separate classes for all the scalar types
 // is so that we get RUNTIME safety with the types also.  Otherwise
 // you would only get type checking with phpstan based on the comments
@@ -113,8 +93,6 @@ trait ScalarCommon
 /** A possibly-null string */
 class NullStringType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected ?string $tempvalue;
     /** non-temporary (DB) */
@@ -180,8 +158,6 @@ class NullStringType extends BaseField
 /** A non-null string */
 class StringType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected string $tempvalue;
     /** non-temporary (DB) */
@@ -254,13 +230,9 @@ class StringType extends BaseField
     }
 }
 
-// TODO consider getting rid of the bool type, consumers can just use int...
-
 /** A possibly-null boolean */
 class NullBoolType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected ?bool $tempvalue;
     /** non-temporary (DB) */
@@ -330,8 +302,6 @@ class NullBoolType extends BaseField
 /** A non-null boolean */
 class BoolType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected bool $tempvalue;
     /** non-temporary (DB) */
@@ -407,8 +377,6 @@ class BoolType extends BaseField
 /** A possibly-null integer */
 class NullIntType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected ?int $tempvalue;
     /** non-temporary (DB) */
@@ -474,8 +442,6 @@ class NullIntType extends BaseField
 /** A non-null integer */
 class IntType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected int $tempvalue;
     /** non-temporary (DB) */
@@ -551,8 +517,6 @@ class IntType extends BaseField
 /** A possibly-null float */
 class NullFloatType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected ?float $tempvalue;
     /** non-temporary (DB) */
@@ -618,8 +582,6 @@ class NullFloatType extends BaseField
 /** A non-null float */
 class FloatType extends BaseField
 {
-    use ScalarCommon;
-    
     /** possibly temporary only */
     protected float $tempvalue;
     /** non-temporary (DB) */
@@ -698,7 +660,7 @@ class NullTimestamp extends NullFloatType
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue($this->parent->GetDatabase()->GetTime()); // TODO we have a database ref already??
+        return parent::SetValue($this->database->GetTime());
     }
 }
 
@@ -708,7 +670,7 @@ class Timestamp extends FloatType
     /** Sets the value to the current timestamp */
     public function SetTimeNow() : bool
     {
-        return parent::SetValue($this->parent->GetDatabase()->GetTime());
+        return parent::SetValue($this->database->GetTime());
     }
 }
 
@@ -716,8 +678,7 @@ class Timestamp extends FloatType
 class Counter extends BaseField
 {
     private ?NullIntType $limit = null;
-    // TODO why would this ever be null? should just default to 0?
-    
+
     protected int $value;
     
     /** @param ?NullIntType $limit optional counter limiting field */
@@ -744,12 +705,6 @@ class Counter extends BaseField
     }
 
     public function GetDBValue() : int { return $this->delta; }
-    
-    public function Uninitialize() : void
-    {
-        unset($this->value);
-        unset($this->delta);
-    }
     
     /** Returns the field's total count value */
     public function GetValue() : int { return $this->value; }
@@ -827,12 +782,6 @@ class NullJsonArray extends BaseField
         return Utilities::JSONEncode($this->value);
     }
     
-    public function Uninitialize() : void 
-    { 
-        unset($this->value);
-        unset($this->delta);
-    }
-    
     /** 
      * Returns the field's array value 
      * @return ?T
@@ -852,12 +801,9 @@ class NullJsonArray extends BaseField
         
         $this->value = $value;
         $this->delta++;
-        
         return true;
     }
 }
-
-// TODO maybe get rid of the non-null JSON version? JSON gives no guarantees anyway, could be empty...
 
 /** 
  * A field that stores a JSON-encoded array 
@@ -888,12 +834,6 @@ class JsonArray extends BaseField
         return Utilities::JSONEncode($this->value); 
     }
     
-    public function Uninitialize() : void 
-    { 
-        unset($this->value);
-        unset($this->delta);
-    }
-    
     /** 
      * Returns the field's array value 
      * @return T
@@ -911,7 +851,6 @@ class JsonArray extends BaseField
         
         $this->value = $value;
         $this->delta++;
-        
         return true;
     }
 }
@@ -957,13 +896,6 @@ class NullObjectRefT extends BaseField
     
     public function GetDBValue() : ?string { return $this->objId; }
     
-    public function Uninitialize() : void
-    {
-        unset($this->objId);
-        unset($this->class);
-        unset($this->delta);
-    }
-
     /** 
      * Returns the field's object (maybe null) 
      * @return ?T
@@ -975,7 +907,7 @@ class NullObjectRefT extends BaseField
         $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
         
         if ($obj !== null) return $obj;
-        throw new Exceptions\ForeignKeyException($this->class); // TODO objId also?
+        throw new Exceptions\ForeignKeyException($this->class);
     }
     
     /** Returns the ID of the object pointed to by this field */
@@ -1000,8 +932,7 @@ class NullObjectRefT extends BaseField
         
         if ($value->ID() === $this->objId) return false;
         
-        // TODO missing NotifyModified??
-
+        $this->NotifyModified();
         $this->objId = $value->ID();
         $this->delta++;
         return true;
@@ -1049,13 +980,6 @@ class ObjectRefT extends BaseField
     
     public function GetDBValue() : string { return $this->objId; }
 
-    public function Uninitialize() : void
-    {
-        unset($this->objId);
-        unset($this->class);
-        unset($this->delta);
-    }
-    
     /**
      * Returns the field's object
      * @return T
@@ -1083,11 +1007,9 @@ class ObjectRefT extends BaseField
     {
         if (isset($this->objId) && $value->ID() === $this->objId) return false;
 
+        $this->NotifyModified();
         $this->objId = $value->ID();
         $this->delta++;
         return true;
     }
 }
-
-// TODO split this out into more files...
-

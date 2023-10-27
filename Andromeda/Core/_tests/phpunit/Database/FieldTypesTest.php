@@ -14,8 +14,6 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(ObjectDatabase::class);
         $parent = new TestObject1($database, array('id'=>$id='test123'));
         $field = (new StringType('myfield'))->SetParent($parent);
-        
-        $this->assertSame("$id:myfield", $field->ID());
         $this->assertSame("myfield", $field->GetName());
         
         $this->assertSame(0, $field->GetDelta());

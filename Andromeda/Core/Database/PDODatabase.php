@@ -242,7 +242,7 @@ class PDODatabase
             
         if ($this->driver === self::DRIVER_SQLITE)
             $this->connection->query("PRAGMA foreign_keys = ON");
-        // TODO should we use the WAL sqlite mode here? read docs
+        // TODO DB should we use the WAL sqlite mode here? read docs
     }
     
     /** @see self::$driver */
@@ -541,25 +541,23 @@ class PDODatabase
             $this->startTimingQuery();
             
             if ($this->driver === self::DRIVER_MYSQL)
-                $this->configTransaction();
+                $this->configIsolationLevel();
 
             $this->connection->beginTransaction();
             
             if ($this->driver === self::DRIVER_POSTGRESQL)
-                $this->configTransaction();
+                $this->configIsolationLevel();
                 
             $this->stopTimingQuery($sql, DBStats::QUERY_READ, false);
         }
     }
     
     /** Sends a query to configure the isolation level and access mode */
-    private function configTransaction() : void
+    private function configIsolationLevel() : void
     {
         $qstr = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED";
-        // TODO not sure if this is the best idea... don't make decisions here based on TimedStats, can always just fail with 503 now
-        
+        // TODO DB not sure if this is the best idea... don't make decisions here based on TimedStats, can always just fail with 503 now
         if ($this->read_only) $qstr .= " READ ONLY";
-        
         $this->connection->query($qstr);
     }
 

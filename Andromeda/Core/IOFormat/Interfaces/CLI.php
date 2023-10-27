@@ -81,7 +81,7 @@ class CLI extends IOInterface
     /** 
      * Returns the next args value (or null if not found) 
      * at or after $i (MUST EXIST) and increments if the value was at i+1
-     * @param array<int,string> $args
+     * @param list<string> $args
      */
     private static function getNextValue(array $args, int &$i) : ?string
     {
@@ -199,7 +199,7 @@ class CLI extends IOInterface
     
     /**
      * Fetches an Input object by reading it from the command line
-     * @param array<int,string> $lines
+     * @param list<string> $lines
      * @param array<string, scalar> $server
      * @param resource $stdin
      * @return non-empty-array<Input>
@@ -219,7 +219,7 @@ class CLI extends IOInterface
 
     /** 
      * Fetches an Input object by reading it from the command line 
-     * @param array<int,string> $argv
+     * @param list<string> $argv
      * @param array<string, scalar> $server
      * @param resource $stdin
      */
@@ -231,14 +231,13 @@ class CLI extends IOInterface
 
         // add environment variables to argv
         foreach ($server as $key=>$value)
-        { 
-            $key = explode('_',$key,2); // TODO would be more efficient to check if it starts with andromeda first
-            
-            if (count($key) === 2 && $key[0] === 'andromeda')
+        {
+            if (mb_strpos($key,"andromeda_") === 0)
             {
+                $key = explode('_',$key,2);
                 if ($value === false) $value = "false";
                 array_push($argv, "--".$key[1], (string)$value);
-                // TODO these should be prepended so CLI takes precedence
+                    // TODO IFACE these should be prepended so CLI takes precedence
             }
         };
         
@@ -268,7 +267,7 @@ class CLI extends IOInterface
                 if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
                     throw new Exceptions\InvalidFileException($val);
                 
-                $params->AddParam($param, trim($fdat)); // TODO do not trim here
+                $params->AddParam($param, trim($fdat)); // TODO IFACE do not trim here
             }
             // optionally get a param value interactively
             else if ($special === '!')
@@ -308,7 +307,7 @@ class CLI extends IOInterface
                     "empty - key at action arg $i");
                 
                 $filename = self::getNextValue($argv,$i) ?? "data";
-                $filename = (new SafeParam('name',$filename))->GetFSName(); // TODO update readme and helptext
+                $filename = (new SafeParam('name',$filename))->GetFSName(); // TODO IFACE update readme and helptext
             
                 $files[$param] = new InputStream($stdin, $filename);
             }
@@ -322,7 +321,7 @@ class CLI extends IOInterface
         return new Input($app, $action, $params, $files);
     }
     
-    // TODO when I do a command that gives array input it's no longer removing ok/code and just showing appdata, it did on api-old...
+    // TODO IFACE when I do a command that gives array input it's no longer removing ok/code and just showing appdata, it did on api-old...
 
     /** @param bool $exit if true, exit() with the proper code */
     public function FinalOutput(Output $output, bool $exit = true) : void
@@ -352,9 +351,9 @@ class CLI extends IOInterface
             echo $outdata; if (!$multi) echo PHP_EOL;
         }
         
-        if ($exit) exit($output->isOK() ? 0 : 1); // TODO go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
+        if ($exit) exit($output->isOK() ? 0 : 1); // TODO IFACE go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
         
-        // TODO triple check that when download a file (outmode none) that an error just results in blank stdout output NOT error json
-        // TODO perhaps errors should go to std::cerr when outmode is none?
+        // TODO IFACE triple check that when download a file (outmode none) that an error just results in blank stdout output NOT error json
+        // TODO IFACE perhaps errors should go to std::cerr when outmode is none?
     }
 }

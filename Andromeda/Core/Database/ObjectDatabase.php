@@ -55,7 +55,7 @@ class ObjectDatabase
     private bool $rolledBack = false;
     
     /** Commits the internal database */
-    public function commit() : void // TODO also need some form of SaveAfterRollback protection here, there are ways to do queries other than just SaveObjects()...
+    public function commit() : void // TODO BATCH also need some form of SaveAfterRollback protection here, there are ways to do queries other than just SaveObjects()...
     {
         $this->db->commit();
     }
@@ -88,7 +88,7 @@ class ObjectDatabase
     public function notifyCreated(BaseObject $object) : self
     {
         $this->created[$object->ID()] = $object; return $this;
-        // TODO IMPORTANT - this array needs to be separated by class like the rest of the cache! ID is only base-unique
+        // TODO DB FIX - this array needs to be separated by class like the rest of the cache! ID is only base-unique
         // that might present a problem though since we might want to preserve order...?
         // maybe just use class.ID as the string rather than a separate map?
     }
@@ -99,7 +99,7 @@ class ObjectDatabase
      */
     public function notifyModified(BaseObject $object) : self
     {
-        // TODO proably should check this->created here, no need to duplicate...? see c++
+        // TODO DB C++ proably should check this->created here, no need to duplicate...? see c++
         $this->modified[$object->ID()] = $object; return $this;
     }
 
@@ -161,7 +161,7 @@ class ObjectDatabase
         
         if ($countChildren) // count foreach child
         {
-            if (count($childmap = $class::GetChildMap()) === 0)
+            if (count($childmap = $class::GetChildMap($this)) === 0)
                 throw new Exceptions\NoBaseTableException($class);
             
             $count = 0; foreach ($childmap as $child)
@@ -201,8 +201,8 @@ class ObjectDatabase
     public function LoadObjectsByQuery(string $class, QueryBuilder $query, ?string $baseClass = null) : array
     {
         $baseClass ??= $class;
-        $childmap = $class::GetChildMap();
-        $castRows = self::CanLoadByUpcast($class);
+        $childmap = $class::GetChildMap($this);
+        $castRows = $this->CanLoadByUpcast($class);
         
         $doChildren = !$castRows && count($childmap) !== 0;
         $doSelf = !$doChildren;
@@ -233,7 +233,7 @@ class ObjectDatabase
             }
         }
 
-        // TODO could you just manually sort objects..? see comment above
+        // TODO DB could you just manually sort objects..? see comment above
         
         return $objects;
     }
@@ -262,8 +262,8 @@ class ObjectDatabase
             return count($objs);
         }
         
-        $childmap = $class::GetChildMap();
-        $castRows = self::CanLoadByUpcast($class);
+        $childmap = $class::GetChildMap($this);
+        $castRows = $this->CanLoadByUpcast($class);
         
         $doChildren = !$castRows && count($childmap) !== 0;
         $doSelf = !$doChildren;
@@ -338,11 +338,11 @@ class ObjectDatabase
      * @param class-string<BaseObject> $class class to be loaded
      * @return bool true iff every child has no table or children (is final)
      */
-    private static function CanLoadByUpcast(string $class) : bool
+    private function CanLoadByUpcast(string $class) : bool
     {
         if (!$class::HasTypedRows()) return false;
         
-        $childmap = $class::GetChildMap();
+        $childmap = $class::GetChildMap($this);
         if (count($childmap) === 0) return false;
         
         $tables = $class::GetTableClasses();
@@ -351,7 +351,7 @@ class ObjectDatabase
         foreach ($childmap as $child)
         {
             $subquery = ($class !== $child) &&                
-                (count($child::GetChildMap()) !== 0 || // has children
+                (count($child::GetChildMap($this)) !== 0 || // has children
                  count($tables) !== count($child::GetTableClasses())); // has table
             
             if ($subquery) return false;
@@ -475,7 +475,7 @@ class ObjectDatabase
             $retobj = $this->objectsByBase[$base][$id];
         else
         {
-            if ($upcast) $class = $class::GetRowClass($row);
+            if ($upcast) $class = $class::GetRowClass($this,$row);
             
             $retobj = new $class($this, $row);
             $this->objectsByBase[$base][$id] = $retobj;
@@ -520,7 +520,7 @@ class ObjectDatabase
         $query = new QueryBuilder();
         $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
         $query->Where($query->Equals($basetbl.'.id',$object->ID()));
-        // TODO don't bother with a QueryBuilder here, hardcode WHERE id=:id like Load does
+        // TODO DB C++ don't bother with a QueryBuilder here, hardcode WHERE id=:id like Load does
         
         $class = get_class($object);
         $selstr = $this->GetFromAndSetJoins($class, $query, false);
@@ -587,7 +587,7 @@ class ObjectDatabase
         return $this;
     }
     
-    // TODO change this to be like the C++ where we determine Insert vs. Update ourselves
+    // TODO DB C++ change this to be like the C++ where we determine Insert vs. Update ourselves
     
     /**
      * Inserts the given object to the database
@@ -745,7 +745,7 @@ class ObjectDatabase
      * @param ?scalar $value data value to match
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByKey(string $class, string $key, $value) : int // TODO unit test
+    public function DeleteObjectsByKey(string $class, string $key, $value) : int // TODO DB unit test
     {
         $validx = self::ValueToIndex($value);
         $this->objectsByKey[$class][$key] ??= array();
@@ -813,7 +813,7 @@ class ObjectDatabase
      * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
-    public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO unit test
+    public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO DB unit test
     {
         $this->RegisterUniqueKeys($class);
         
@@ -871,7 +871,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx] = $objs;
         
-        foreach ($class::GetChildMap() as $child)
+        foreach ($class::GetChildMap($this) as $child)
         {
             if ($child !== $class)
             {
@@ -896,7 +896,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx][$obj->ID()] = $obj;
         
-        foreach ($class::GetChildMap() as $child)
+        foreach ($class::GetChildMap($this) as $child)
         {
             if ($child !== $class)
             {
@@ -918,7 +918,7 @@ class ObjectDatabase
     {
         unset($this->objectsByKey[$class][$key][$validx][$object->ID()]);
         
-        foreach ($class::GetChildMap() as $child)
+        foreach ($class::GetChildMap($this) as $child)
         {
             if ($child !== $class)
                 $this->RemoveNonUniqueKeyObject($child, $key, $validx, $object);
@@ -941,12 +941,12 @@ class ObjectDatabase
             {
                 $this->SetKeyBaseClass($class, $key, $bclass);
                 $this->uniqueByKey[$class][$key] = array();
+            }
                 
-                foreach ($class::GetChildMap() as $child)
-                {
-                    if ($child !== $class)
-                        $this->RegisterUniqueKeys($child);
-                }
+            foreach ($class::GetChildMap($this) as $child)
+            {
+                if ($child !== $class)
+                    $this->RegisterUniqueKeys($child);
             }
         }
     }
@@ -966,7 +966,7 @@ class ObjectDatabase
         $this->SetKeyBaseClass($class, $key, $bclass);
         $this->uniqueByKey[$class][$key][$validx] = $obj;
         
-        foreach ($class::GetChildMap() as $child)
+        foreach ($class::GetChildMap($this) as $child)
         {
             if ($child !== $class)
             {
@@ -1050,7 +1050,7 @@ class ObjectDatabase
     {
         $this->uniqueByKey[$class][$key][$validx] = null;
         
-        foreach ($class::GetChildMap() as $child)
+        foreach ($class::GetChildMap($this) as $child)
         {
             if ($child !== $class)
                 $this->UnsetUniqueKeyObject($child, $key, $validx);

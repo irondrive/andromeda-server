@@ -15,39 +15,40 @@ class ActionLog extends BaseLog
     use TableTypes\HasTable;
 
     /** @return array<string, class-string<self>> */
-    public static function GetChildMap() : array 
+    public static function GetChildMap(ObjectDatabase $database) : array 
     {
         $map = array("" => self::class); 
-        
-        /*foreach (array() as $name=>$app) // TODO FIX ME AppRunner::GetInstance()->GetApps()
+        $apps = $database->GetApiPackage()->GetAppRunner()->GetApps();
+
+        foreach ($apps as $name=>$app)
         {
             $logclass = $app->getLogClass();
             if ($logclass !== null) $map[$name] = $logclass;
-        } */
+        }
         return $map;
     }
 
     public static function HasTypedRows() : bool { return true; }
     
-    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string
+    public static function GetWhereChild(ObjectDatabase $database, QueryBuilder $q, string $class) : string
     {
-        $map = array_flip(self::GetChildMap());
-        $table = $db->GetClassTableName(self::class);
+        $map = array_flip(self::GetChildMap($database));
+        $table = $database->GetClassTableName(self::class);
         
         if ($class !== self::class && array_key_exists($class, $map))
             return $q->Equals("$table.app", $map[$class]);
         else 
         {
             return $q->Not($q->ManyEqualsOr("$table.app",
-                array_keys(array()))); // TODO FIX ME AppRunner::GetInstance()->GetApps()
+                array_keys($database->GetApiPackage()->GetAppRunner()->GetApps())));
         }
     }
     
     /** @return class-string<self> child class of row */
-    public static function GetRowClass(array $row) : string
+    public static function GetRowClass(ObjectDatabase $database, array $row) : string
     {
         $app = (string)$row['app'];
-        $map = self::GetChildMap();
+        $map = self::GetChildMap($database);
         
         // apps previously logged might be uninstalled now
         return array_key_exists($app, $map) ? $map[$app] : self::class;
@@ -217,10 +218,10 @@ class ActionLog extends BaseLog
         return parent::Save(); // ignore isRollback
     }
     
-    public static function GetPropUsage(bool $join = true) : string 
+    public static function GetPropUsage(ObjectDatabase $database, bool $join = true) : string 
     {
-        $appstr = implode("|",array_filter(array_keys(self::GetChildMap())));
-        return "[--app $appstr] [--action alphanum]".($join ? ' '.RequestLog::GetPropUsage(false):''); 
+        $appstr = implode("|",array_filter(array_keys(self::GetChildMap($database))));
+        return "[--app $appstr] [--action alphanum]".($join ? ' '.RequestLog::GetPropUsage($database, false):''); 
     }
     
     /** Returns the app-specific usage for classes that extend this one */
@@ -230,10 +231,10 @@ class ActionLog extends BaseLog
      * Returns the array of app-specific propUsage strings
       * @return array<string> 
       */
-    public static function GetAppPropUsages() : array
+    public static function GetAppPropUsages(ObjectDatabase $database) : array
     {
         $retval = array();
-        foreach (self::GetChildMap() as $appname=>$logclass)
+        foreach (self::GetChildMap($database) as $appname=>$logclass)
         {
             if ($appname !== "") 
                 $retval[] = "--app $appname ".$logclass::GetAppPropUsage();
@@ -255,11 +256,11 @@ class ActionLog extends BaseLog
     }
     
     /** @return class-string<self> */
-    protected static function GetPropClass(SafeParams $params) : string
+    protected static function GetPropClass(ObjectDatabase $database, SafeParams $params) : string
     {
         if ($params->HasParam('app'))
         {
-            $map = self::GetChildMap();
+            $map = self::GetChildMap($database);
             $app = $params->GetParam('app')->GetAlphanum();
             if (array_key_exists($app, $map)) return $map[$app];
         }

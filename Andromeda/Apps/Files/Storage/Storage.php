@@ -601,7 +601,7 @@ abstract class Storage extends BaseObject // TODO was StandardObject
     /** array of all instantiated storages */
     private static $instances = array();    
     
-    public function SubConstruct() : void { array_push(self::$instances, $this); }
+    public function PostConstruct() : void { array_push(self::$instances, $this); }
     
     /** array of paths that were newly created */
     protected array $createdItems = array();

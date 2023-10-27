@@ -174,7 +174,7 @@ class GroupTotal extends AuthEntityTotal implements IGroupCommon
     }
     
     /** register a group change handler that updates this specific object's accountlim cache */
-    protected function SubConstruct() : void
+    protected function PostConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
@@ -256,7 +256,7 @@ class GroupTimed extends AuthEntityTimed implements IGroupCommon
     }
     
     /** register a group change handler that updates this specific object's accountlim cache */
-    protected function SubConstruct() : void
+    protected function PostConstruct() : void
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {

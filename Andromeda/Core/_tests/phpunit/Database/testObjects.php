@@ -27,12 +27,12 @@ class EasyObject extends BaseObject
         
         parent::CreateFields();
     }
-    
-    protected static function AddUniqueKeys(array& $keymap) : void
+
+    public static function GetUniqueKeys() : array
     {
-        $keymap[self::class] = array('uniqueKey');
-        
-        parent::AddUniqueKeys($keymap);
+        return array_merge_recursive(
+            array(self::class => array('uniqueKey')),
+            parent::GetUniqueKeys());
     }
     
     private bool $postConstruct = false;
@@ -56,7 +56,7 @@ abstract class MyObjectBase extends BaseObject
     use TableTypes\TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array 
+    public static function GetChildMap(ObjectDatabase $database) : array 
     {
         return array(MyObjectChild::class); 
     }
@@ -74,11 +74,11 @@ abstract class MyObjectBase extends BaseObject
         parent::CreateFields();
     }
     
-    protected static function AddUniqueKeys(array& $keymap) : void
+    public static function GetUniqueKeys() : array
     {
-        $keymap[self::class] = array('mykey');
-        
-        parent::AddUniqueKeys($keymap);
+        return array_merge_recursive(
+            array(self::class => array('mykey')),
+            parent::GetUniqueKeys());
     }
 
     public function GetMyKey() : ?int { return $this->mykey->TryGetValue(); }
@@ -97,7 +97,7 @@ abstract class PolyObject0 extends PolyObject_
     // empty, no table!
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return array(PolyObject1::class); // so we can load via it
     }
@@ -119,7 +119,7 @@ abstract class PolyObject1 extends PolyObject0
     use TableTypes\TableLinkedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return array(27=>PolyObject2::class); // skip over PolyObject15
     }
@@ -181,7 +181,7 @@ abstract class PolyObject2 extends PolyObject15
     use TableTypes\TableLinkedChildren;
 
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return array(27=>PolyObject3::class);
     }
@@ -201,7 +201,7 @@ abstract class PolyObject3 extends PolyObject2
     // does not have its own table! but is part of the loadable chain
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return array(PolyObject4::class);
     }
@@ -209,10 +209,10 @@ abstract class PolyObject3 extends PolyObject2
 
 class PolyObject4 extends PolyObject3
 {
-    use TableTypes\TableTypedChildren;
+    use TableTypes\TableIntTypedChildren;
 
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         // includes self::class - this class is not abstract!
         return array(5=>self::class, 13=>PolyObject5a::class, 18=>PolyObject5b::class);
@@ -258,10 +258,10 @@ class PolyObject4 extends PolyObject3
 
 class PolyObject5a extends PolyObject4
 {   
-    use TableTypes\TableTypedChildren;
+    use TableTypes\TableIntTypedChildren;
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         // includes self::class - this class is not abstract!
         return array(100=>self::class, 101=>PolyObject5aa::class, 102=>PolyObject5ab::class);
@@ -285,11 +285,11 @@ class PolyObject5a extends PolyObject4
         parent::CreateFields();
     }
     
-    protected static function AddUniqueKeys(array& $keymap) : void
+    public static function GetUniqueKeys() : array
     {
-        $keymap[self::class] = array('testprop5');
-        
-        parent::AddUniqueKeys($keymap);
+        return array_merge_recursive(
+            array(self::class => array('testprop5')),
+            parent::GetUniqueKeys());
     }
     
     public function GetTestProp5() : ?int

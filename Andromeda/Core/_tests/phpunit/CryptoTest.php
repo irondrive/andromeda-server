@@ -79,6 +79,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
     public function testCryptoPublic() : void
     {
         $this->assertSame(24, Crypto::PublicNonceLength());
+        $this->assertSame(16, Crypto::PublicOutputOverhead());
         $this->assertSame(24, strlen(Crypto::GeneratePublicNonce()));
         
         $pair = Crypto::GeneratePublicKeyPair();   
@@ -97,6 +98,7 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(
             "ff05ee407b1f91c764e112f9c59a9716055a62d0022dd931c57f50fd3c11dfca559adaba70b73e",
             bin2hex($enc = Crypto::EncryptPublic($msg, $nonce, $priv1, $pub2)));
+        $this->assertSame(strlen($msg)+Crypto::PublicOutputOverhead(), strlen($enc));
         
         $this->assertSame($msg, Crypto::DecryptPublic($enc, $nonce, $priv2, $pub1));
         

@@ -2,7 +2,7 @@
 
 use Andromeda\Core\Utilities;
 
-/*require_once(ROOT."/Apps/Files/FileUtils.php");
+require_once(ROOT."/Apps/Files/FileUtils.php");
 require_once(ROOT."/Apps/Files/File.php");
 
 class FileUtilsTest extends \PHPUnit\Framework\TestCase
@@ -137,4 +137,4 @@ class FileUtilsTest extends \PHPUnit\Framework\TestCase
         $this->tryChunkedWrite(100, 30, 31, 10, true, array([30,10],[40,10],[50,10],[60,1]));  
         $this->tryChunkedWrite(100, 29, 32, 10, true, array([29,1],[30,10],[40,10],[50,10],[60,1]));
     }    
-}*/ // TODO ENABLE ME
+}

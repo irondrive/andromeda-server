@@ -115,7 +115,7 @@ class TwoFactor extends BaseObject
     
     public function NotifyDeleted() : void
     {
-        UsedToken::DeleteByTwoFactor($this->database, $this);
+        UsedToken::DeleteByTwoFactor($this->database, $this); // TODO not gonna work! foreign keys must be removed first!
         
         parent::NotifyDeleted();
     }

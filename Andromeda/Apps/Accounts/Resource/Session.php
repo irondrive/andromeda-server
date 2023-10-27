@@ -46,11 +46,11 @@ class Session extends BaseObject
         parent::CreateFields();
     }
     
-    protected static function AddUniqueKeys(array& $keymap) : void
+    public static function GetUniqueKeys() : array
     {
-        $keymap[self::class] = array('client');
-        
-        parent::AddUniqueKeys($keymap);
+        return array_merge_recursive(
+            array(self::class => array('client')),
+            parent::GetUniqueKeys());
     }
     
     /** Returns the client that owns this session */

@@ -46,43 +46,15 @@ abstract class BaseObject
      * Classes must have the @ return line in order to pass type checking!
      * @return array<array-key, class-string<static>>
      */
-    public static function GetChildMap() : array { return array(); }
+    public static function GetChildMap(ObjectDatabase $database) : array { return array(); }
     
     /**
-     * Returns this class's unique key map (with parents)
+     * Returns this class's unique key map (must add parents!)
      * @return array<class-string<self>, array<string>>
      */
-    final public static function GetUniqueKeys() : array
+    public static function GetUniqueKeys() : array
     {
-        $keymap = array(); static::AddUniqueKeys($keymap); return $keymap;
-    }
-    
-    /**
-     * Method for children to override to add their unique keys to the array
-     * Children MUST call parent::AddUniqueKeys(), AFTER adding their keys
-     * @param array<class-string<self>, array<string>> $keymap key map
-     */
-    protected static function AddUniqueKeys(array& $keymap) : void 
-    { 
-        $btable = self::GetBaseTableClass();
-        $keymap[$btable] ??= array();
-        $keymap[$btable][] = 'id';
-    }
-    
-    /**
-     * Helper for base classes without tables to add unique keys to child classes
-     * Same idea as calling RegisterFields() with $table = null
-     * @param array<class-string<self>, array<string>> $keymap key map
-     * @param array<string> $keys keys for this class
-     * @throws Exceptions\NoChildTableException if no child has registered
-     */
-    final protected static function AddChildUniqueKeys(array& $keymap, array $keys) : void
-    {
-        if (count($keymap) === 0) throw new Exceptions\NoChildTableException(static::class);
-            
-        $table = array_key_last($keymap);
-        
-        $keymap[$table] = array_merge($keymap[$table], $keys);
+        return array(self::GetBaseTableClass() => array('id'));
     }
     
     /** Returns true iff GetWhereChild/GetRowClass can be used */
@@ -92,12 +64,12 @@ abstract class BaseObject
      * Given a child class, return a query clause selecting rows for it (and adds token data to the query)
      * Only for base classes that are the final table for > 1 class (TypedChildren)
      * Classes must have the @ return line in order to pass type checking!
-     * @param ObjectDatabase $db database reference
+     * @param ObjectDatabase $database database reference
      * @param QueryBuilder $q query to add WHERE clause to
      * @param class-string<self> $class child class we want to filter by
      * @return string the clause for row matching (e.g. 'type = 5')
      */
-    public static function GetWhereChild(ObjectDatabase $db, QueryBuilder $q, string $class) : string { 
+    public static function GetWhereChild(ObjectDatabase $database, QueryBuilder $q, string $class) : string { 
         throw new Exceptions\NotMultiTableException(self::class); }
     
     /**
@@ -106,7 +78,7 @@ abstract class BaseObject
      * @param array<string,?scalar> $row row of data from the database
      * @return class-string<static> child class of row
      */
-    public static function GetRowClass(array $row) : string { 
+    public static function GetRowClass(ObjectDatabase $database, array $row) : string { 
         throw new Exceptions\NotMultiTableException(self::class); }
 
     /**
@@ -117,9 +89,9 @@ abstract class BaseObject
     protected static function BaseCreate(ObjectDatabase $database) : self
     {
         $obj = new static($database, array('id' => static::GenerateID()));
-        // TODO set ID via SetValue() so that it's modified, remove 'id' check in InsertObject in ObjectDB
+        // TODO DB FIX set ID via SetValue() so that it's modified, remove 'id' check in InsertObject in ObjectDB
         
-        // TODO probably should have the DB create the object and register it
+        // TODO DB C++ probably should have the DB create the object and register it
         // otherwise if you do a load by ID it won't work until saved.  The C++ code will have to do this anyway
         // then again... the object database doesn't update unique keys etc. until saved either. Part of its design
         // see CreateObject in C++
@@ -154,7 +126,7 @@ abstract class BaseObject
     
     /** The field with the object ID */
     private FieldTypes\StringType $idfield;
-    // TODO idfield should be part of child classes, and ID() should be abstract in case they want to e.g. use an int
+    // TODO DB ID idfield should be part of child classes, and ID() should be abstract in case they want to e.g. use an int
     // make a trait for the default StringType implementation...
     
     /** @var array<string, FieldTypes\BaseField> */
@@ -193,9 +165,7 @@ abstract class BaseObject
         $this->CreateFields();
 
         foreach ($data as $column=>$value)
-        {
             $this->fieldsByName[$column]->InitDBValue($value);
-        }
         
         $this->PostConstruct();
     }
@@ -262,7 +232,7 @@ abstract class BaseObject
     /** Returns the string "id:class" where id is the object ID and class is its short class name */
     final public function __toString() : string 
     { 
-        return $this->ID().':'.Utilities::ShortClassName(static::class); // TODO is this debug only? probably should print full name
+        return $this->ID().':'.static::class;
     }
     
     /** Returns the given object's as a string if not null, else null */
@@ -274,7 +244,7 @@ abstract class BaseObject
     /** Returns true if this object has been created but not saved */
     final protected function isCreated() : bool { return $this->isCreated; }
     
-    // TODO see the new C++ semantics for create and save/update/insert, potentially follow here?
+    // TODO DB C++ see the new C++ semantics for create and save/update/insert, potentially follow here?
     
     /** Returns true if this object has been deleted */
     final public function isDeleted() : bool { return $this->isDeleted; }
@@ -318,9 +288,6 @@ abstract class BaseObject
     public function NotifyDeleted() : void
     {
         $this->isDeleted = true;
-        
-        foreach ($this->fieldsByName as $field)
-            $field->Uninitialize();
     }
     
     /**

@@ -4,6 +4,8 @@
 .phpdoc
 .vs
 .vscode
+.DS_Store
+*.code-workspace
 
 vendor/
 

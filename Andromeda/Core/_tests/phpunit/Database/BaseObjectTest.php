@@ -18,11 +18,12 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testGetRowClass() : void
     {
-        $this->assertSame(PolyObject4::class, PolyObject4::GetRowClass(array('type'=>5)));
-        $this->assertSame(PolyObject5a::class, PolyObject4::GetRowClass(array('type'=>13)));
+        $database = $this->createMock(ObjectDatabase::class);
+        $this->assertSame(PolyObject4::class, PolyObject4::GetRowClass($database,array('type'=>5)));
+        $this->assertSame(PolyObject5a::class, PolyObject4::GetRowClass($database,array('type'=>13)));
         
         $this->expectException(Exceptions\BadPolyTypeException::class);
-        PolyObject4::GetRowClass(array('type'=>99));
+        PolyObject4::GetRowClass($database,array('type'=>99));
     }
     
     public function testGetWhereChild() : void
@@ -80,7 +81,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(ObjectDatabase::class);
         $obj = EasyObject::Create($database); $id = $obj->ID();
         
-        $str = "$id:EasyObject";
+        $str = "$id:Andromeda\\Core\\Database\\EasyObject";
         $this->assertSame($str, BaseObject::toString($obj));
         $this->assertSame($str, "$obj");
     }

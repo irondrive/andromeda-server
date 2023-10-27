@@ -125,10 +125,10 @@ class RequestLog extends BaseLog
         return $this;
     }
    
-    public static function GetPropUsage(bool $join = true) : string 
+    public static function GetPropUsage(ObjectDatabase $database, bool $join = true) : string 
     { 
         return "[--mintime float] [--maxtime float] [--addr utf8] [--agent utf8] ".
-               "[--errcode ?int32] [--errtext ?utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage(false):''); 
+               "[--errcode ?int32] [--errtext ?utf8] [--asc bool]".($join ? ' '.ActionLog::GetPropUsage($database, false):''); 
     }
     
     public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array

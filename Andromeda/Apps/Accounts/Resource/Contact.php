@@ -12,7 +12,7 @@ require_once(ROOT."/Apps/Accounts/Resource/ContactPair.php");
 /** An object describing a contact method for a user account */
 abstract class Contact extends BaseObject
 {
-    use TableTypes\TableTypedChildren;
+    use TableTypes\TableIntTypedChildren;
     
     use AuthObjectFull { CheckFullKey as BaseCheckFullKey; }
     
@@ -23,7 +23,7 @@ abstract class Contact extends BaseObject
     private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return array(self::TYPE_EMAIL => EmailContact::class); // TODO maybe use email STRING for type?
     }

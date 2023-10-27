@@ -73,7 +73,7 @@ class SMB extends SMBBase2
     public function TryGetWorkgroup() : ?string { return $this->TryGetScalar('workgroup'); }
 
     /** Checks for the SMB client extension */
-    public function SubConstruct() : void
+    public function PostConstruct() : void
     {
         if (!function_exists('smbclient_version')) throw new SMBExtensionException();
     }

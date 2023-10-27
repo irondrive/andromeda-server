@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Filesystem; require_once("init.php");
 
-/*use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\ObjectDatabase;
 require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
 
 require_once(ROOT."/Apps/Files/Storage/Storage.php"); use Andromeda\Apps\Files\Storage\{Storage, ItemStat};
@@ -169,4 +169,4 @@ class ExternalTest extends \PHPUnit\Framework\TestCase
     public function testFolderSyncs2(){ $this->TestFolderSyncs("/test"); }
     public function testFolderSyncs3(){ $this->TestFolderSyncs("/test1/test2"); }
     public function testFolderSyncs4(){ $this->TestFolderSyncs("/test1/test2/test3"); }
-}*/ // TODO ENABLE ME
+}

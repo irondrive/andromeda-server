@@ -21,7 +21,7 @@ abstract class External extends BaseObject implements IAuthSource
     use TableTypes\TableLinkedChildren;
     
     /** @return array<string, class-string<self>> */
-    public static function GetChildMap() : array
+    public static function GetChildMap(ObjectDatabase $database) : array
     {
         return self::getAuthClasses();
     }
