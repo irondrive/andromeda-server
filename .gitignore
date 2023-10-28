@@ -25,4 +25,4 @@ tools/mysql2sqlite
 
 pytest-config.json
 .phpunit.result.cache
-
+phpstan-tmp-*
