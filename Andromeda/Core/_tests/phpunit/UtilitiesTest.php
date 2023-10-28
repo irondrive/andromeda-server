@@ -87,6 +87,24 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        $this->assertSame(Utilities::replace_first("test","test2","test"), "test2");
        $this->assertSame(Utilities::replace_first("test","test2","3testtest5"), "3test2test5");      
    }
+
+   public function testEscapeAll() : void
+   {
+        $this->assertSame("", Utilities::escape_all("",['a']));
+        $this->assertSame("\\a", Utilities::escape_all("a",['a']));
+        $this->assertSame("\\\\", Utilities::escape_all("\\",['b']));
+
+        // test _ __ ___ 2  ->  test \_ \_\_ \_\_\_ 2
+        $this->assertSame("test \\_ \\_\\_ \\_\\_\\_ 2", Utilities::escape_all("test _ __ ___ 2",['_']));
+
+        // test __\__ 2  ->  test \_\_\\\_\_ 2
+        $this->assertSame("test \\_\\_\\\\\\_\\_ 2", Utilities::escape_all("test __\\__ 2",['_']));
+
+        // test \_ \\_ \\\_ \\\\_ _%\%_ 2 -> test \\\_ \\\\\_ \\\\\\\_ \\\\\\\\\_ \_\%\\\%\_ 2
+        $this->assertSame("test \\\\\\_ \\\\\\\\\\_ \\\\\\\\\\\\\\_ \\\\\\\\\\\\\\\\\\_ \\_\\_\\\\\\_\\_ 2", 
+            Utilities::escape_all("test \\_ \\\\_ \\\\\\_ \\\\\\\\_ __\\__ 2",['_','%']));
+
+   }
    
    public function testArrayMapKeys() : void
    {

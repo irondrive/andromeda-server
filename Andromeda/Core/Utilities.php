@@ -141,6 +141,19 @@ abstract class Utilities
         }
         else return $subject;
     }
+
+    /**
+     * Escape a string replacing delims with \\ (and correctly handling existing escape characters)
+     * @param string $str input string to escape
+     * @param list<string> $delims list of delimeters to escape
+     */
+    public static function escape_all(string $str, array $delims) : string
+    {
+        $str = str_replace("\\", "\\\\", $str);
+        foreach ($delims as $delim)
+            $str = str_replace($delim,"\\$delim", $str);
+        return $str;
+    }
     
     /** 
      * Captures and returns any echoes or prints in the given function 

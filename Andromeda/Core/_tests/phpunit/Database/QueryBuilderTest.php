@@ -6,7 +6,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
 {
     public function testEscapeWildcards() : void
     {
-        $this->assertSame('test\%test\_test', 
+        $this->assertSame('test\\%test\\_test', 
             QueryBuilder::EscapeWildcards('test%test_test'));   
     }
     
@@ -60,10 +60,13 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     public function testLike() : void
     {
         $q = new QueryBuilder(); $q->Where($q->Like('mykey','my%val\\'));
-        $this->testQuery($q, array('%my\%val\\\\%'), "WHERE mykey LIKE :d0");
+        $this->testQuery($q, array('%my\%val\\\\%'), "WHERE mykey LIKE :d0 ESCAPE '\\'");
         
         $q = new QueryBuilder(); $q->Where($q->Like('mykey','myval%',true));
-        $this->testQuery($q, array('myval%'), "WHERE mykey LIKE :d0");
+        $this->testQuery($q, array('myval%'), "WHERE mykey LIKE :d0 ESCAPE '\\'");
+
+        $q = new QueryBuilder(); $q->Where($q->Like('mykey','my_val\\_%')); // EscapeWildcards
+        $this->testQuery($q, array('%my\\_val\\\\\\_\\%%'), "WHERE mykey LIKE :d0 ESCAPE '\\'");
     }
     
     public function testCombos() : void

@@ -267,7 +267,7 @@ class CLI extends IOInterface
                 if (!is_file($val) || ($fdat = file_get_contents($val)) === false) 
                     throw new Exceptions\InvalidFileException($val);
                 
-                $params->AddParam($param, trim($fdat)); // TODO IFACE do not trim here
+                $params->AddParam($param, $fdat);
             }
             // optionally get a param value interactively
             else if ($special === '!')
