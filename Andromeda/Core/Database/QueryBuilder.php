@@ -1,5 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Utilities;
+
 /** Minimalistic class for building prepared post-FROM SQL query strings */
 class QueryBuilder
 {
@@ -67,7 +69,7 @@ class QueryBuilder
     /** Returns the given string with escaped SQL wildcard characters */
     public static function EscapeWildcards(string $query) : string
     {
-        return str_replace('%','\%',str_replace('_','\_',$query));
+        return Utilities::escape_all($query,['_','%']);
     }
     
     /** Returns a string asserting the given column is null */
@@ -82,10 +84,8 @@ class QueryBuilder
      */
     public function Like(string $key, string $val, bool $hasMatch = false) : string 
     {
-        $val = str_replace('\\','\\\\',$val); // TODO DB FIX this should be part of EscapeWildcards... see c++
-        // TODO DB FIX use ESCAPE like c++ sqlite? not sure if it's supported in mysql/postgres, see https://www.sqlitetutorial.net/sqlite-like/
         if (!$hasMatch) $val = '%'.static::EscapeWildcards($val).'%';
-        return "$key LIKE ".$this->AddParam($val); 
+        return "$key LIKE ".$this->AddParam($val). " ESCAPE '\\'"; 
     }
     
     /** 

@@ -126,8 +126,6 @@ abstract class BaseObject
     
     /** The field with the object ID */
     private FieldTypes\StringType $idfield;
-    // TODO DB ID idfield should be part of child classes, and ID() should be abstract in case they want to e.g. use an int
-    // make a trait for the default StringType implementation...
     
     /** @var array<string, FieldTypes\BaseField> */
     private array $fieldsByName = array();

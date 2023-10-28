@@ -241,8 +241,10 @@ class PDODatabase
             $this->connection->rollBack();
             
         if ($this->driver === self::DRIVER_SQLITE)
-            $this->connection->query("PRAGMA foreign_keys = ON");
-        // TODO DB should we use the WAL sqlite mode here? read docs
+            $this->connection->query(
+                "PRAGMA foreign_keys = true;".
+                "PRAGMA trusted_schema = false;".
+                "PRAGMA journal_mode = WAL;"); // https://www.sqlite.org/wal.html
     }
     
     /** @see self::$driver */
@@ -541,22 +543,24 @@ class PDODatabase
             $this->startTimingQuery();
             
             if ($this->driver === self::DRIVER_MYSQL)
-                $this->configIsolationLevel();
+                $this->configTransaction();
 
             $this->connection->beginTransaction();
             
             if ($this->driver === self::DRIVER_POSTGRESQL)
-                $this->configIsolationLevel();
+                $this->configTransaction();
                 
             $this->stopTimingQuery($sql, DBStats::QUERY_READ, false);
         }
     }
     
     /** Sends a query to configure the isolation level and access mode */
-    private function configIsolationLevel() : void
+    private function configTransaction() : void
     {
-        $qstr = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED";
-        // TODO DB not sure if this is the best idea... don't make decisions here based on TimedStats, can always just fail with 503 now
+        // https://www.postgresql.org/docs/current/transaction-iso.html
+        // READ UNCOMMITTED, READ COMMITTED, REPEATEABLE READ, SERIALIZABLE
+        // PostgreSQL default - READ COMMITTED, MySQL default - REPEATABLE READ
+        $qstr = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ";
         if ($this->read_only) $qstr .= " READ ONLY";
         $this->connection->query($qstr);
     }

@@ -233,8 +233,6 @@ class ObjectDatabase
             }
         }
 
-        // TODO DB could you just manually sort objects..? see comment above
-        
         return $objects;
     }
 
@@ -520,8 +518,7 @@ class ObjectDatabase
         $query = new QueryBuilder();
         $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
         $query->Where($query->Equals($basetbl.'.id',$object->ID()));
-        // TODO DB C++ don't bother with a QueryBuilder here, hardcode WHERE id=:id like Load does
-        
+
         $class = get_class($object);
         $selstr = $this->GetFromAndSetJoins($class, $query, false);
         $querystr = 'DELETE '.$selstr.' '.$query;
