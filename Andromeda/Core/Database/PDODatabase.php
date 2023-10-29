@@ -25,7 +25,7 @@ class PDODatabase
     
     /** 
      * $config associative array of config for connecting PDO 
-     * @var array<string, mixed>
+     * @var array{'DRIVER':string, 'CONNECT':string, 'PERSISTENT':bool, 'USERNAME'?:string, 'PASSWORD'?:string}
      */
     private array $config;
     
@@ -43,11 +43,14 @@ class PDODatabase
     
     /** 
      * global history of SQL queries sent to the DB (not a stack), possibly with errors 
-     * @var array<mixed>
+     * @var array<string|array{'query':string,'error':string}>
      */
     private array $queries = array();
     
-    /** the default path for storing the config file */
+    /** 
+     * the default path for storing the config file
+     * @var list<?string>
+     */
     private const CONFIG_PATHS = array(
         ROOT."/DBConfig.php",
         null, // ~/.config/andromeda/DBConfig.php
@@ -73,32 +76,35 @@ class PDODatabase
      */
     public static function LoadConfig(?string $path = null) : array
     {
-        $paths = defined('DBCONF') ? array(DBCONF) : self::CONFIG_PATHS;
+        $paths = defined('DBCONF') && is_string(DBCONF) ? array(DBCONF) : self::CONFIG_PATHS;
         
         if ($path !== null)
         {
             if (!is_file($path))
                 throw new Exceptions\DatabaseMissingException();
         }
-        else foreach ($paths as $ipath)
+        else foreach ($paths as $ipath) // search
         {
             if ($ipath === null)
             {
-                $home = $_ENV["HOME"] ?? $_ENV["HOME"] ?? null;
-                if ($home) $ipath = "$home/andromeda/DBConfig.php";
+                if (isset($_ENV['HOME'])) $home = $_ENV['HOME']; // Linux
+                else if (isset($_SERVER['HOMEDRIVE']) && isset($_SERVER['HOMEPATH']))
+                    $home = $_SERVER['HOMEDRIVE'].$_SERVER['HOMEPATH']; // Windows
+
+                if (isset($home) && is_string($home)) 
+                    $ipath = "$home/.config/andromeda/DBConfig.php";
             }
             
-            if ($ipath && is_file($ipath)) {
+            if ($ipath !== null && is_file($ipath)) {
                 $path = $ipath; break; }
         }
         
-        if ($path !== null)
-        {
-            $retval = require($path);
-            if (is_array($retval)) return $retval;
-            else throw new Exceptions\DatabaseConfigException('not array'); 
-        }
-        else throw new Exceptions\DatabaseMissingException();
+        if ($path === null)
+            throw new Exceptions\DatabaseMissingException();
+
+        $retval = require($path);
+        if (is_array($retval)) return $retval;
+        else throw new Exceptions\DatabaseConfigException('not array');
     }
 
     /** Returns a string with the primary CLI usage for Install() */
@@ -198,27 +204,32 @@ class PDODatabase
         if ($init_stats !== null)
             $this->stats_stack[] = $init_stats;
         
-        $this->config = $config;
-        
-        if (!array_key_exists('DRIVER',$config))
+        if (!array_key_exists('DRIVER',$config) || !is_string($config['DRIVER']))
             throw new Exceptions\DatabaseConfigException('missing DRIVER');
-        if (!array_key_exists('CONNECT',$config))
+        if (!array_key_exists('CONNECT',$config) || !is_string($config['CONNECT']))
             throw new Exceptions\DatabaseConfigException('missing CONNECT');
         
-        $driver = (string)$config['DRIVER'];
+        $this->config = array(
+            'DRIVER' => $config['DRIVER'], 
+            'CONNECT' => $config['CONNECT'],
+            'PERSISTENT' => array_key_exists('PERSISTENT',$config) ? (bool)$config['PERSISTENT'] : false
+        );
+        if (array_key_exists('USERNAME',$config) && is_string($config['USERNAME'])) 
+            $this->config['USERNAME'] = $config['USERNAME'];
+        if (array_key_exists('PASSWORD',$config) && is_string($config['PASSWORD'])) 
+            $this->config['PASSWORD'] = $config['PASSWORD'];
+
+        $driver = $this->config['DRIVER'];
         if (!array_key_exists($driver, self::DRIVERS))
             throw new Exceptions\DatabaseConfigException("driver $driver");
         
         $this->driver = self::DRIVERS[$driver];
-        $connect = $driver.':'.$config['CONNECT'];
+        $connect = $driver.':'.$this->config['CONNECT'];
         
         try
         {
-            $persistent = array_key_exists('PERSISTENT',$config) 
-                ? (bool)$config['PERSISTENT'] : false;
-            
             $options = array(
-                PDO::ATTR_PERSISTENT => $persistent,
+                PDO::ATTR_PERSISTENT => $this->config['PERSISTENT'],
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_STRINGIFY_FETCHES => false
@@ -228,10 +239,8 @@ class PDODatabase
             if ($this->driver === self::DRIVER_MYSQL)
                 $options[PDO::MYSQL_ATTR_FOUND_ROWS] = true;
                 
-            $username = array_key_exists('USERNAME',$config) 
-                ? (string)$config['USERNAME'] : null;
-            $password = array_key_exists('PASSWORD',$config) 
-                ? (string)$config['PASSWORD'] : null;
+            $username = $this->config['USERNAME'] ?? null;
+            $password = $this->config['PASSWORD'] ?? null;
 
             $this->connection = new PDO($connect, $username, $password, $options);
         }
@@ -252,7 +261,7 @@ class PDODatabase
     
     /** 
      * returns the array of config that was loaded from the config file 
-     * @return array<string, mixed> `{driver:string, connect:string, ?username:string, ?password:true, ?persistent:bool}`
+     * @return array{'DRIVER':string, 'CONNECT':string, 'PERSISTENT':bool, 'USERNAME'?:string, 'PASSWORD'?:true}
      */
     public function GetConfig() : array
     {
@@ -266,7 +275,7 @@ class PDODatabase
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array<mixed> `{driver:string, cversion:string, sversion:string, ?info:string}`
+     * @return array{'driver':string, 'cversion':string, 'sversion':string, 'info'?:string}`
      */
     public function getInfo() : array
     {
@@ -279,7 +288,7 @@ class PDODatabase
         if ($this->getDriver() !== self::DRIVER_SQLITE)
             $retval['info'] = $this->connection->getAttribute(PDO::ATTR_SERVER_INFO);
         
-        return $retval;
+        return $retval; // @phpstan-ignore-line getAttribute returns scalar not mixed
     }
     
     /**
@@ -296,7 +305,8 @@ class PDODatabase
      * Imports the appropriate SQL template file for an app
      * @param string $path the base path containing the templates
      */
-    public function importTemplate(string $path) : self { return $this->importFile($path."/andromeda.".$this->config['DRIVER'].".sql"); }
+    public function importTemplate(string $path) : self { 
+        return $this->importFile($path."/andromeda.".$this->config['DRIVER'].".sql"); }
     
     /**
      * Parses and imports an SQL file into the database
@@ -376,7 +386,7 @@ class PDODatabase
         
         $this->stopTimingQuery($sql, DBStats::QUERY_READ);
         
-        return $result;
+        return $result; // @phpstan-ignore-line fetchAll is missing detailed type
     }
     
     /**
@@ -428,7 +438,7 @@ class PDODatabase
         
         $this->stopTimingQuery($sql, DBStats::QUERY_READ | DBStats::QUERY_WRITE);
         
-        return $result;
+        return $result; // @phpstan-ignore-line fetchAll is missing detailed type
     }
 
     /**
@@ -443,7 +453,7 @@ class PDODatabase
         if (!$this->connection->inTransaction())
             $this->beginTransaction();
             
-        $this->logQuery($sql, $params);
+        $logged = $this->logQuery($sql, $params);
         
         $doSavepoint = $this->RequiresSAVEPOINT();
 
@@ -462,7 +472,10 @@ class PDODatabase
                 $this->connection->query("SAVEPOINT a2save");
             
             $query = $this->connection->prepare($sql);
+            assert($query !== false); // phpstan (we are in exception mode)
+
             $query->execute($params ?? array());
+            // ignore return value as we are in exception mode
 
             if ($doSavepoint)
                 $this->connection->query("RELEASE SAVEPOINT a2save");
@@ -473,11 +486,11 @@ class PDODatabase
         {
             if ($doSavepoint)
                 $this->connection->query("ROLLBACK TO SAVEPOINT a2save");
-                
-            $idx = count($this->queries)-1;
-            $this->queries[$idx] = array($this->queries[$idx], $e->getMessage());
+            
+            $this->queries[count($this->queries)-1] = 
+                array('query'=>$logged, 'error'=>$e->getMessage());
 
-            $eclass = substr($e->getCode(),0,2);
+            $eclass = substr((string)$e->getCode(),0,2);
             
             if ($eclass === '23') // SQL 23XXX
                 throw new Exceptions\DatabaseIntegrityException($e);
@@ -519,7 +532,7 @@ class PDODatabase
     
     /**
      * Loops through an array of row results and replaces streams with their values
-     * @param array<array<string, mixed>> $rows reference to an array of rows from the DB
+     * @param array<array<string, NULL|scalar|resource>> $rows reference to an array of rows from the DB
      */
     private function fetchStreams(array &$rows) : void
     {
@@ -621,7 +634,7 @@ class PDODatabase
     
     /** 
      * Returns the array of query history 
-     * @return array<mixed> string array
+     * @return array<string|array{'query':string,'error':string}> string array
      */
     public function getAllQueries() : array
     {

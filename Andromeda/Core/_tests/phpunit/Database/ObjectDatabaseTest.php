@@ -122,7 +122,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             {
                 $id = $row['id']; $obj = $objs[$id];
                 $this->assertInstanceOf(PolyObject4::class, $obj);
-                assert($obj instanceof PolyObject4); // @phpstan-ignore-line
+                assert($obj instanceof PolyObject4); // @phpstan-ignore-line test anyway
                 
                 $this->assertSame($idx, $obj->GetTestProp4());
                 
@@ -597,7 +597,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         
         $this->assertInstanceOf(EasyObject::class, $obj); 
-        assert($obj !== null); // @phpstan-ignore-line
+        assert($obj !== null); // @phpstan-ignore-line test anyway
         $this->assertSame($id, $obj->ID());
         $this->assertSame(5, $obj->GetUniqueKey());
         
@@ -716,7 +716,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1);
-        assert($obj1 !== null); // @phpstan-ignore-line
+        assert($obj1 !== null); // @phpstan-ignore-line test anyway
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(55, $obj1->GetTestProp5());
         
@@ -769,7 +769,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj); 
-        assert($obj !== null); // @phpstan-ignore-line
+        assert($obj !== null); // @phpstan-ignore-line test anyway
 
         $database->expects($this->once())->method('write')
             ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
@@ -813,7 +813,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line
+        assert($obj1 !== null); // @phpstan-ignore-line test anyway
         
         // check that loading via 5aa leaves the registered base class as 5a
         $objdb->TryLoadUniqueByKey(PolyObject5aa::class, 'testprop5', 75);
@@ -882,7 +882,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj);
-        assert($obj !== null); // @phpstan-ignore-line
+        assert($obj !== null); // @phpstan-ignore-line test anyway
         
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6));
         
@@ -933,7 +933,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line
+        assert($obj1 !== null); // @phpstan-ignore-line test anyway
         $this->assertSame($obj1->ID(), $id1);
         
         $obj1->SetTestProp5(66)->Save();
@@ -1096,7 +1096,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line
+        assert($obj1 !== null); // @phpstan-ignore-line test anyway
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(5, $obj1->GetUniqueKey());
 

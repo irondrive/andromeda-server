@@ -68,7 +68,7 @@ class CLI extends IOInterface
 
     protected function subLoadInputs() : array
     {
-        global $argv; return $this->LoadCLIInputs($argv, $_SERVER, STDIN);
+        global $argv; return $this->LoadCLIInputs($argv, $_SERVER, STDIN); // @phpstan-ignore-line types missing
     }
     
     /** Strips -- off the given string and returns (or null if not found) */
@@ -98,7 +98,7 @@ class CLI extends IOInterface
 
     /**
      * Retries an array of input objects to run
-     * @param array<string> $argv
+     * @param list<string> $argv
      * @param array<string, scalar> $server
      * @param resource $stdin
      * @return non-empty-array<Input>
@@ -159,6 +159,7 @@ class CLI extends IOInterface
             }
         }
         
+        assert(is_int($argIdx));
         // now process the actual app/action command(s)
         for (; $argIdx < count($argv); $argIdx++)
         {
@@ -199,7 +200,7 @@ class CLI extends IOInterface
     
     /**
      * Fetches an Input object by reading it from the command line
-     * @param list<string> $lines
+     * @param array<string> $lines
      * @param array<string, scalar> $server
      * @param resource $stdin
      * @return non-empty-array<Input>
@@ -212,7 +213,7 @@ class CLI extends IOInterface
         
         return array_map(function($line)use($server,$stdin)
         {
-            try { return self::GetInput(\Clue\Arguments\split($line),$server,$stdin); }
+            try { return self::GetInput(\Clue\Arguments\split($line),$server,$stdin); } // @phpstan-ignore-line // TODO BATCH remove me
             catch (\InvalidArgumentException $e) { throw new Exceptions\BatchParseException($e); }
         }, $lines);
     }
@@ -260,7 +261,7 @@ class CLI extends IOInterface
                 if ($param === "") throw new IncorrectCLIUsageException(
                     "empty @ key at action arg $i");
                 
-                $val = self::getNextValue($argv,$i);
+                $val = self::getNextValue($argv,$i); assert(is_int($i));
                 if ($val === null) throw new IncorrectCLIUsageException(
                     "expected @ value at action arg $i");
                 
@@ -288,7 +289,7 @@ class CLI extends IOInterface
                 if ($param === "") throw new IncorrectCLIUsageException(
                     "empty % key at action arg $i");
                 
-                $path = self::getNextValue($argv,$i);
+                $path = self::getNextValue($argv,$i); assert(is_int($i));
                 if ($path === null) throw new IncorrectCLIUsageException(
                     "expected % value at action arg $i");
                 

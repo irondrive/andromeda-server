@@ -50,9 +50,7 @@ class ActionMetrics extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('actionlog')),
-            parent::GetUniqueKeys());
+        return array(self::class => array('id','actionlog'));
     }
 
     /**

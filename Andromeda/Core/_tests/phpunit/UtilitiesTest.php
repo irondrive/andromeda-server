@@ -116,7 +116,7 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
            array('a','b','c')), array('a'=>'a5','b'=>'b5','c'=>'c5'));
    }
    
-   public function testIsPlainArray() : void
+   public function testIsScalarArray() : void
    {
        $this->assertTrue(Utilities::is_plain_array(array()));
        $this->assertTrue(Utilities::is_plain_array(array(0=>false)));

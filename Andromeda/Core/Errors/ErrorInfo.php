@@ -4,7 +4,10 @@ use Andromeda\Core\{BaseRunner, Config, Utilities};
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Database\ObjectDatabase;
 
-/** Represents an error log entry in the database */
+/** 
+ * Represents an error log entry in the database
+ * @phpstan-import-type ScalarArray from Utilities
+ */
 class ErrorInfo
 {
     private int $level;
@@ -32,27 +35,27 @@ class ErrorInfo
     private array $trace_basic;
     /** 
      * full backtrace including all arguments 
-     * @var ?array<int,array<string,mixed>>
+     * @var ?ScalarArray
      */
     private ?array $trace_full = null;
     /** 
      * objects in memory in the database 
-     * @var ?array<mixed>
+     * @var ?array<string, array<string,string>>
      */
     private ?array $objects = null;
     /** 
      * db queries that were performed 
-     * @var ?array<mixed>
+     * @var ?array<string|array{'query':string,'error':string}>
      */
     private ?array $queries = null;
     /** 
      * all client input parameters 
-     * @var ?array<mixed>
+     * @var ?array<string, NULL|scalar|ScalarArray>
      */
     private ?array $params = null;
     /** 
      * the custom API log 
-     * @var ?array<mixed>
+     * @var ?ScalarArray
      */
     private ?array $hints = null;
     
@@ -79,27 +82,27 @@ class ErrorInfo
     public function GetTraceBasic() : array     { return $this->trace_basic; }
     /** 
      * Return the full backtrace including arguments if logged
-     * @return array<int,array<string,mixed>>
+     * @return ScalarArray
      */
     public function TryGetTraceFull() : ?array  { return $this->trace_full; }
     /** 
      * Return the objects in memory in the database if logged 
-     * @return array<mixed>
+     * @return array<string, array<string,string>>
      */
     public function TryGetObjects() : ?array    { return $this->objects; }
     /** 
      * Return the db queries that were performed, if logged 
-     * @return array<mixed>
+     * @return array<string|array{'query':string,'error':string}>
      */
     public function TryGetQueries() : ?array    { return $this->queries; }
     /** 
      * Return the client input parameters, if logged 
-     * @return array<mixed>
+     * @return array<string, NULL|scalar|ScalarArray>
      */
     public function TryGetParams() : ?array     { return $this->params; }
     /** 
      * Return the custom API log hints, if logged 
-     * @return array<mixed>
+     * @return ScalarArray
      */
     public function TryGetHints() : ?array      { return $this->hints; }
     
@@ -119,7 +122,7 @@ class ErrorInfo
      * @param IOInterface $iface the interface of the request
      * @param ?BaseRunner $runner active app runner or null
      * @param ?ObjectDatabase $db object database if available
-     * @param ?array<mixed> $debuglog extra log info to log if wanted
+     * @param ?ScalarArray $debuglog extra log info to log if wanted
      */
     public function __construct(int $level, \Throwable $e, IOInterface $iface,
         ?BaseRunner $runner, ?ObjectDatabase $db, ?array $debuglog)
@@ -130,7 +133,7 @@ class ErrorInfo
         $this->addr = $iface->getAddress();
         $this->agent = $iface->getUserAgent();
         
-        $this->code = $e->getCode();
+        $this->code = (int)$e->getCode();
         $this->message = $e->getMessage();
         
         $this->file = $e->getFile()."(".$e->getLine().")";
@@ -171,12 +174,10 @@ class ErrorInfo
             foreach ($trace_full as &$val)
             {
                 if (!$sensitive) unset($val['args']);
-                
-                else if (array_key_exists('args', $val))
-                    Utilities::arrayStrings($val['args']);
+                Utilities::arrayStrings($val);
             }
             
-            $this->trace_full = $trace_full;
+            $this->trace_full = $trace_full; // @phpstan-ignore-line called arrayStrings above
         }
         
         if ($details && $debuglog !== null)
@@ -186,9 +187,9 @@ class ErrorInfo
     /**
      * Returns the printable client object of this error info
      * @param ?int $level max debug level for output, null for unfiltered, also depends on the level this was created with
-     * @return array<mixed> `{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array}`
-        if details or null level, add `{trace_full:array,objects:?array,queries:?array,hints:?array}`
-        if sensitive or null level, add `{params:?array}`
+     * @return array{'time':float,'addr':string,'agent':string,'code':int,'file':string,'message':string,'app':?string,'action':?string,'trace_basic':array<int,string>,
+     *  'trace_full'?:?ScalarArray,'objects'?:?array<string,array<string,string>>,'queries'?:?array<string|array{'query':string,'error':string}>,'hints'?:?ScalarArray, 'params'?:?array<string, NULL|scalar|ScalarArray>}
+     *  ... details/null level add trace_full,objects,queries,hints, sensitive/null level add params
      */
     public function GetClientObject(?int $level = null) : array
     {
@@ -210,13 +211,10 @@ class ErrorInfo
         if ($details)
         {
             $retval['trace_full'] = $this->trace_full;
-            
-            if ($this->trace_full !== null)
+            if ($retval['trace_full'] !== null)
             {
-                $trace_full = $this->trace_full; // copy
-                if (!$sensitive) foreach ($trace_full as &$val)
-                    unset($val['args']);
-                $retval['trace_full'] = $trace_full;
+                if (!$sensitive) foreach ($retval['trace_full'] as &$val)
+                    unset($val['args']); // okay if already not set
             }
         
             $retval['objects'] = $this->objects;

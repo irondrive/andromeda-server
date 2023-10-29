@@ -27,6 +27,7 @@ spl_autoload_register(function(string $class)
 {
     if (strpos($class,"Andromeda\\") !== 0) return;
     $class = substr($class, 10); // strlen("Andromeda\\")
+    assert($class != false); // phpstan
     
     // usually a file is a single class
     $path = ROOT.str_replace("\\","/",$class).'.php';
@@ -34,7 +35,8 @@ spl_autoload_register(function(string $class)
     else
     {    // a file can also be a namespace
         if (($lpos = strrpos($class, "\\")) !== false)
-            $class = substr($class, 0,  $lpos);
+            $class = substr($class, 0, $lpos);
+        assert($class != false); // phpstan
         $path = ROOT.str_replace("\\","/",$class).'.php';
         if (file_exists($path)) include_once($path);
     }

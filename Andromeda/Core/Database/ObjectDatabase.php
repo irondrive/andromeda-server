@@ -73,11 +73,11 @@ class ObjectDatabase
         return $this->db->isReadOnly();
     }
     
-    /** array of objects that were created
+    /** array of objects that were created indexed by splhash
      * @var array<string, BaseObject> */
     private array $created = array();
     
-    /** array of objects that were modified
+    /** array of objects that were modified indexed by splhash
      * @var array<string, BaseObject> */
     private array $modified = array();
     
@@ -87,10 +87,7 @@ class ObjectDatabase
      */
     public function notifyCreated(BaseObject $object) : self
     {
-        $this->created[$object->ID()] = $object; return $this;
-        // TODO DB FIX - this array needs to be separated by class like the rest of the cache! ID is only base-unique
-        // that might present a problem though since we might want to preserve order...?
-        // maybe just use class.ID as the string rather than a separate map?
+        $this->created[spl_object_hash($object)] = $object; return $this;
     }
 
     /** 
@@ -100,7 +97,7 @@ class ObjectDatabase
     public function notifyModified(BaseObject $object) : self
     {
         // TODO DB C++ proably should check this->created here, no need to duplicate...? see c++
-        $this->modified[$object->ID()] = $object; return $this;
+        $this->modified[spl_object_hash($object)] = $object; return $this;
     }
 
     /**
@@ -494,13 +491,11 @@ class ObjectDatabase
      */
     private function RemoveObject(BaseObject $object) : void
     {
-        $id = $object->ID();
-        
-        unset($this->created[$id]);
-        unset($this->modified[$id]);
+        unset($this->created[spl_object_hash($object)]);
+        unset($this->modified[spl_object_hash($object)]);
         
         $base = $object::GetBaseTableClass();
-        unset($this->objectsByBase[$base][$id]);
+        unset($this->objectsByBase[$base][$object->ID()]);
         
         $this->UnsetAllObjectKeyFields($object);
         
@@ -579,7 +574,7 @@ class ObjectDatabase
             $this->SetObjectKeyFields($object, $fields);
         }
         
-        unset($this->modified[$object->ID()]);
+        unset($this->modified[spl_object_hash($object)]);
         
         return $this;
     }
@@ -640,8 +635,8 @@ class ObjectDatabase
             $this->SetObjectKeyFields($object, $fields);
         }
         
-        unset($this->created[$object->ID()]);
-        unset($this->modified[$object->ID()]);
+        unset($this->created[spl_object_hash($object)]);
+        unset($this->modified[spl_object_hash($object)]);
         
         return $this;
     }
@@ -727,7 +722,7 @@ class ObjectDatabase
             $this->SetNonUniqueKeyObjects($class, $key, $validx, $objs);
             
             foreach ($objs as $obj)
-                $this->objectsKeyValues[(string)$obj][$key] = $validx;
+                $this->objectsKeyValues[spl_object_hash($obj)][$key] = $validx;
         }
 
         return $this->objectsByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
@@ -749,8 +744,7 @@ class ObjectDatabase
         
         if (array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {
-            $count = count($objs = &$this->objectsByKey[$class][$key][$validx]);
-            
+            $count = count($objs = $this->objectsByKey[$class][$key][$validx]);
             foreach ($objs as $obj) $this->DeleteObject($obj);
         }
         else
@@ -793,7 +787,9 @@ class ObjectDatabase
             $obj = (count($objs) === 1) ? array_values($objs)[0] : null;
             
             $this->SetUniqueKeyObject($class, $key, $validx, $obj);
-            $this->uniqueKeyValues[(string)$obj][$key] = $validx;
+
+            if ($obj !== null)
+                $this->uniqueKeyValues[spl_object_hash($obj)][$key] = $validx;
         }
 
         return $this->uniqueByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
@@ -859,7 +855,7 @@ class ObjectDatabase
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
      * @param string $validx index value of the key field
-     * @param array<T> $objs array of objects to set
+     * @param array<string, T> $objs array of objects to set
      * @param ?class-string<T> $bclass base class for property
      */
     private function SetNonUniqueKeyObjects(string $class, string $key, string $validx, array $objs, ?string $bclass = null) : void
@@ -980,7 +976,7 @@ class ObjectDatabase
      */
     private function SetUniqueKeysFromData(BaseObject $object, array $data) : void
     {
-        $objstr = (string)$object;
+        $objstr = spl_object_hash($object);
         $class = get_class($object);
         
         foreach ($data as $key=>$value)
@@ -1003,7 +999,7 @@ class ObjectDatabase
      */
     private function SetObjectKeyFields(BaseObject $object, array $fields) : void
     {
-        $objstr = (string)$object;
+        $objstr = spl_object_hash($object);
         $class = get_class($object);
         
         $this->objectsByKey[$class] ??= array();
@@ -1062,7 +1058,7 @@ class ObjectDatabase
      */
     private function UnsetObjectKeyFields(BaseObject $object, array $fields) : void
     {
-        $objstr = (string)$object;
+        $objstr = spl_object_hash($object);
         $class = get_class($object);
 
         $this->objectsKeyValues[$objstr] ??= array();
@@ -1098,7 +1094,7 @@ class ObjectDatabase
      */
     private function UnsetAllObjectKeyFields(BaseObject $object) : void
     {
-        $objstr = (string)$object;
+        $objstr = spl_object_hash($object);
         $class = get_class($object);
         
         if (array_key_exists($objstr, $this->objectsKeyValues))

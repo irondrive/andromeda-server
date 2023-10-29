@@ -754,11 +754,12 @@ class Counter extends BaseField
 
 /** 
  * A field that stores a JSON-encoded array (or null) 
+ * @phpstan-import-type ScalarArray from Utilities
  * @template T of array
  */
 class NullJsonArray extends BaseField
 {
-    /** @var ?T */
+    /** @var ?ScalarArray */
     protected ?array $value = null;
 
     /** @return $this */
@@ -784,13 +785,13 @@ class NullJsonArray extends BaseField
     
     /** 
      * Returns the field's array value 
-     * @return ?T
+     * @return ?ScalarArray
      */
     public function TryGetArray() : ?array { return $this->value; }
 
     /**
      * Sets the field's value
-     * @param ?T $value array value
+     * @param ?(T&ScalarArray) $value array value
      * @return bool true if the field was modified
      */
     public function SetArray(?array $value) : bool
@@ -807,11 +808,12 @@ class NullJsonArray extends BaseField
 
 /** 
  * A field that stores a JSON-encoded array 
+ * @phpstan-import-type ScalarArray from Utilities
  * @template T of array
  */
 class JsonArray extends BaseField
 {
-    /** @var T */
+    /** @var ScalarArray */
     protected array $value;
 
     /** @return $this */
@@ -836,13 +838,13 @@ class JsonArray extends BaseField
     
     /** 
      * Returns the field's array value 
-     * @return T
+     * @return ScalarArray
      */
     public function GetArray() : array { return $this->value; }
 
     /**
      * Sets the field's value
-     * @param T $value array value
+     * @param T&ScalarArray $value array value
      * @return bool true if the field was modified
      */
     public function SetArray(array $value) : bool

@@ -175,7 +175,7 @@ class CoreApp extends BaseApp
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $server = array_filter($_SERVER, function($key){ 
-            return mb_strpos($key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
+            return mb_strpos((string)$key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
         
         unset($server['argv']); unset($server['argc']);
         
@@ -369,7 +369,7 @@ class CoreApp extends BaseApp
         if ($mailer === null) throw new Exceptions\UnknownMailerException();
         
         if ($actionlog !== null && $actionlog->isFullDetails()) 
-            $actionlog->LogDetails('mailer', $mailer->GetClientObject());
+            $actionlog->LogDetails('mailer', $mailer->GetClientObject()); // @phpstan-ignore-line no recursive ScalarArray
         
         $mailer->Delete();
     }

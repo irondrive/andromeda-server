@@ -66,7 +66,7 @@ class RequestLog extends BaseLog
         if ($this->writtenToFile) 
             throw new Exceptions\LogAfterWriteException();
         
-        $this->errcode->SetValue($e->getCode());
+        $this->errcode->SetValue((int)$e->getCode());
         $this->errtext->SetValue($e->getMessage());
         
         return $this;

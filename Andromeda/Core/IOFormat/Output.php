@@ -61,7 +61,7 @@ class Output
         if ($outprop !== null && is_array($appdata))
             foreach (explode('.',$outprop) as $key)
             {
-                if (array_key_exists($key,$appdata))
+                if (is_array($appdata) && array_key_exists($key,$appdata))
                     $appdata = $appdata[$key];
                 else throw new Exceptions\InvalidOutpropException($key);
             }

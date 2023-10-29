@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Config;
+use Andromeda\Core\{Config, Utilities};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
@@ -9,6 +9,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
  * 
  * Performs a join with RequestLog when loading so that the user can
  * filter by request parameters and action parameters simulataneously.
+ * @phpstan-import-type ScalarArray from Utilities
  */
 class ActionLog extends BaseLog
 {
@@ -67,33 +68,33 @@ class ActionLog extends BaseLog
     private FieldTypes\NullStringType $authuser;
     /** 
      * Optional input parameter logging 
-     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     * @var FieldTypes\NullJsonArray<array<string, NULL|scalar|ScalarArray>>
      */
     private FieldTypes\NullJsonArray $params;
     /**
      * Optional input files logging
-     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     * @var FieldTypes\NullJsonArray<array<string, array{name:string, path:string, size:int}>>
      */
     private FieldTypes\NullJsonArray $files;
     /** 
      * Optional app-specific details if no subtable 
-     * @var FieldTypes\NullJsonArray<array<string, mixed>>
+     * @var FieldTypes\NullJsonArray<array<string, ScalarArray>>
      */
     private FieldTypes\NullJsonArray $details;
     
     /** 
      * Temporary array of logged input params to be saved 
-     * @var array<string, mixed>
+     * @var array<string, NULL|scalar|ScalarArray>
      */
     private array $params_tmp;
     /**
      * Temporary array of logged input files to be saved
-     * @var array<string, mixed>
+     * @var array<string, array{name:string, path:string, size:int}>
      */
     private array $files_tmp;
     /** 
      * Temporary array of logged details to be saved 
-     * @var array<string, mixed>
+     * @var array<string, NULL|scalar|ScalarArray>
      */
     private array $details_tmp;
     
@@ -164,7 +165,7 @@ class ActionLog extends BaseLog
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
      * 
      * @param string $key array key in log
-     * @param mixed $value the data value
+     * @param NULL|scalar|ScalarArray $value the data value
      * @return $this
      */
     public function LogDetails(string $key, $value) : self
@@ -176,7 +177,7 @@ class ActionLog extends BaseLog
 
     /** 
      * Returns a direct reference to the input params log array 
-     * @return array<string, mixed>
+     * @return array<string, NULL|scalar|ScalarArray>
      */
     public function &GetParamsLogRef() : array
     {
@@ -186,7 +187,7 @@ class ActionLog extends BaseLog
     
     /**
      * Returns a direct reference to the input files log array
-     * @return array<string, mixed>
+     * @return array<string, array{name:string, path:string, size:int}>
      */
     public function &GetFilesLogRef() : array
     {
@@ -290,7 +291,7 @@ class ActionLog extends BaseLog
     /**
      * Returns the printable client object of this action log
      * @param bool $expand if true, expand linked objects
-     * @return array<mixed> `{app:string, action:string, ?authuser:string, ?params:array, ?files:array, ?details:array}`
+     * @return array{'app':string, 'action':string, 'authuser'?:string, 'params'?:ScalarArray, 'files'?:ScalarArray, 'details'?:ScalarArray}`
      */
     public function GetClientObject(bool $expand = false) : array
     {
@@ -299,7 +300,7 @@ class ActionLog extends BaseLog
             'action' => $this->action->GetValue()
         );
         
-        if (($authuser = $this->authuser->TryGetValue() !== null))
+        if (($authuser = $this->authuser->TryGetValue()) !== null)
             $retval['authuser'] = $authuser;
         
         if (($params = $this->params->TryGetArray()) !== null)
