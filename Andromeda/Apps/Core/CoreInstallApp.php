@@ -109,14 +109,16 @@ class CoreInstallApp extends InstallerApp
     /**
      * Sort installers by resolving dependencies
      * @param array<string,InstallerApp> $insts
+     * @return array<string,InstallerApp>
      */
-    public static function SortInstallers(array &$insts) : void
+    public static function SortInstallers(array $insts) : array
     {
         uasort($insts, function(InstallerApp $a, InstallerApp $b)use($insts){
             if (static::HasDependency($insts, $a, $b)) return 1;
             if (static::HasDependency($insts, $b, $a)) return -1;
             return 0;
         });
+        return $insts;
     }
     
     /**
@@ -126,8 +128,8 @@ class CoreInstallApp extends InstallerApp
     protected function InstallAll(SafeParams $params) : array
     {
         // install all existing apps
-        $installers = $this->runner->GetInstallers();
-        static::SortInstallers($installers);
+        $installers = static::SortInstallers(
+            $this->runner->GetInstallers());
 
         return array_map(function(InstallerApp $installer)use($params){ 
             return $installer->Install($params); }, $installers);
@@ -140,8 +142,8 @@ class CoreInstallApp extends InstallerApp
     protected function UpgradeAll(SafeParams $params) : array
     {
         // upgrade all installed apps
-        $installers = $this->runner->GetInstallers();
-        static::SortInstallers($installers);
+        $installers = static::SortInstallers(
+            $this->runner->GetInstallers());
         
         return array_map(function(InstallerApp $installer)use($params){
             return $installer->Upgrade($params); }, $installers);

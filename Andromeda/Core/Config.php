@@ -159,7 +159,8 @@ class Config extends BaseConfig
      * returns the array of registered apps
      * @return array<string>
      */
-    public function GetApps() : array { return $this->apps->GetArray(); }
+    public function GetApps() : array { 
+        return $this->apps->GetArray(); } // @phpstan-ignore-line assume array shape here, slow to check...
     
     /** 
      * List all app folders that exist in the filesystem

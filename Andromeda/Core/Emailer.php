@@ -2,6 +2,7 @@
 
 use PHPMailer\PHPMailer; // via autoloader
 
+use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
 
@@ -9,6 +10,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * A configured email service stored in the database 
  * 
  * Manages PHPMailer configuration and wraps its usage
+ * @phpstan-import-type ScalarArray from Utilities
  */
 class Emailer extends BaseObject
 {
@@ -157,8 +159,8 @@ class Emailer extends BaseObject
     
     /**
      * Gets the config as a printable client object
-     * @return array<mixed> `{id:string, type:enum, hosts:?string, username:?string, password:bool,
-         from_address:string, from_name:?string, use_reply:bool, date_created:float}`
+     * @return array{'id':string, 'type':string, 'hosts':?ScalarArray, 'username':?string, 'password':bool,
+        'from_address':string, 'from_name':?string, 'use_reply':bool, 'date_created':float}
      */
     public function GetClientObject() : array
     {
@@ -171,7 +173,7 @@ class Emailer extends BaseObject
             'password' =>     (bool)$this->password->TryGetValue(),
             'from_address' => $this->from_address->GetValue(),
             'from_name' =>    $this->from_name->TryGetValue(),
-            'use_reply' =>    $this->use_reply->TryGetValue()
+            'use_reply' =>    $this->GetUseReply()
         );        
     }
     
@@ -215,9 +217,17 @@ class Emailer extends BaseObject
                     $mailer->Password = $password;
             }
             
-            if (($hosts = $this->hosts->TryGetArray()) === null)
+            if (($hostsJ = $this->hosts->TryGetArray()) === null)
                 throw new Exceptions\MissingHostsException();
-            else $mailer->Host = implode(';', $hosts);
+            else
+            {
+                $hosts = array(); foreach ($hostsJ as $host) // check array shape
+                {
+                    if (is_string($host)) $hosts[] = $host;
+                    else throw new Exceptions\MissingHostsException();
+                }
+                $mailer->Host = implode(';', $hosts);
+            }
         }
     
         $this->mailer = $mailer;

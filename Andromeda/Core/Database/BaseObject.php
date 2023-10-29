@@ -44,12 +44,13 @@ abstract class BaseObject
      * Non-abstract classes (no children) should always return empty
      * If using auto-typed rows, the mapping must be stable across versions
      * Classes must have the @ return line in order to pass type checking!
-     * @return array<array-key, class-string<static>>
+     * @return array<class-string<static>>
      */
     public static function GetChildMap(ObjectDatabase $database) : array { return array(); }
     
     /**
      * Returns this class's unique key map (must add parents!)
+     * This base function adds 'id' to the base table, so if overriding, add it!
      * @return array<class-string<self>, array<string>>
      */
     public static function GetUniqueKeys() : array

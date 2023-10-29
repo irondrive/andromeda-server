@@ -3,7 +3,12 @@
 if (!function_exists('json_encode')) 
     die("PHP JSON Extension Required".PHP_EOL);
 
-/** Abstract with some global static utility functions */
+/** 
+ * Abstract with some global static utility functions
+ * @phpstan-type ScalarArray array<NULL|scalar|array<NULL|scalar|array<mixed>>>
+ * @phpstan-type ScalarArrayN1 array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<mixed>>>>
+ * @phpstan-type ScalarArrayN2 array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<mixed>>>>>
+ */
 abstract class Utilities
 {
     /** @var non-empty-string&literal-string */
@@ -31,7 +36,7 @@ abstract class Utilities
     
     /**
      * Encodes an array as a JSON string
-     * @param array<scalar, mixed> $jarr json array
+     * @param array<mixed> $jarr json array
      * @throws Exceptions\JSONException
      * @return string json string
      */
@@ -46,13 +51,13 @@ abstract class Utilities
      * Decodes a JSON string as an array
      * @param string $jstr json string
      * @throws Exceptions\JSONException
-     * @return array<scalar, NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>> json array
+     * @return ScalarArray json array
      */
     public static function JSONDecode(string $jstr) : array
     {
         if (!is_array($jarr = json_decode($jstr, true)))
             throw new Exceptions\JSONException();
-        return $jarr;
+        return $jarr;; // @phpstan-ignore-line manually prove type
     }
     
     /**
@@ -69,11 +74,10 @@ abstract class Utilities
 
     /** 
      * Converts all objects in the array to strings and checks UTF-8, to make it printable
-     * @template T of array
-     * @param T $data
-     * @return T
+     * @param array<mixed> $data
+     * @return array<NULL|string|array<NULL|string|array<mixed>>>
      */
-    public static function arrayStrings(array $data) : array
+    public static function arrayStrings(array $data) : array // TODO move to ErrorInfo.php
     {
         foreach ($data as &$val)
         {
@@ -89,13 +93,12 @@ abstract class Utilities
             else if (is_scalar($val))
             {
                 $val = (string)$val;
-                
                 if (!Utilities::isUTF8($val))
                     $val = base64_encode($val);
             }
             else $val = print_r($val,true);
         }
-        return $data;
+        return $data; // @phpstan-ignore-line manually prove type
     }
     
     /** Returns a class name with the namespace stripped */

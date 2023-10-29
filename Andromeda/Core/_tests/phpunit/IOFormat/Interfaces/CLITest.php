@@ -42,7 +42,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
         return $stream;
     }
     
-    /** @param array<string> $argv */
+    /** @param list<string> $argv */
     protected function checkBadUsage(array $argv) : void
     {
         $stdin = $this->getStream();
@@ -51,7 +51,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($caught);
     }
     
-    /** @param array<string> $argv */
+    /** @param list<string> $argv */
     protected function checkBadParam(array $argv) : void
     {
         $stdin = $this->getStream();

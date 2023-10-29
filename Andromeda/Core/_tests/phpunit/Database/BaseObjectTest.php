@@ -7,7 +7,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
     public function testGetUniqueKeys() : void
     {
         $this->assertSame(array(
-            EasyObject::class => array('uniqueKey','id')
+            EasyObject::class => array('id','uniqueKey')
         ), EasyObject::GetUniqueKeys());
         
         $this->assertSame(array(

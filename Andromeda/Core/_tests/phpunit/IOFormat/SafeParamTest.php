@@ -2,6 +2,7 @@
 
 use Andromeda\Core\{Crypto,Utilities};
 
+/** @phpstan-import-type ScalarArray from Utilities */
 class SafeParamTest extends \PHPUnit\Framework\TestCase
 {
     public function testEmptyKey() : void
@@ -36,7 +37,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     /** 
      * @template T
-     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
+     * @param NULL|scalar|ScalarArray|SafeParams $value
      * @param T $want
      * @param callable(SafeParam):T $func 
      */
@@ -53,7 +54,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     }
     
     /**
-     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value 
+     * @param NULL|scalar|ScalarArray|SafeParams $value 
      * @param callable(SafeParam):mixed $func 
      */
     protected function testBad($value, callable $func) : void

@@ -54,7 +54,7 @@ class CoreInstallAppTest extends \PHPUnit\Framework\TestCase
         
         // D->B, E->C, C->D, E->D, A->E ... expect A E C D B
         $expect = array('a','e','c','d','b');
-        CoreInstallApp::SortInstallers($installers);
+        $installers = CoreInstallApp::SortInstallers($installers);
         
         $this->assertSame($expect, array_keys($installers));
         $this->assertSame($expect, array_map(function(InstallerApp $i){ 

@@ -9,6 +9,7 @@ use Andromeda\Core\IOFormat\Exceptions\{SafeParamInvalidException, SafeParamNull
  * 
  * Provides a consistent interface for sanitizing and validating input values
  * A value is considered null if it is an empty string or the string "null"
+ * @phpstan-import-type ScalarArray from Utilities
  */
 class SafeParam
 {
@@ -23,14 +24,14 @@ class SafeParam
     
     /** @var ?non-empty-string */
     private ?string $strval = null;
-    /** @var array<mixed> */ 
+    /** @var ?ScalarArray */ 
     private ?array $arrval = null;
     private ?SafeParams $objval = null;
     
     /** 
      * Construct a new SafeParam with the given key and value
      * @param string $key name of the input param - MUST NOT CONTAIN "-"
-     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
+     * @param NULL|scalar|ScalarArray|SafeParams $value
      * @throws SafeParamInvalidException if the key name is invalid
      */
     public function __construct(string $key, $value)
@@ -42,7 +43,7 @@ class SafeParam
         
         if (is_array($value)) 
             $this->arrval = $value;
-        else if ($value instanceof SafeParams) 
+        else if ($value instanceof SafeParams)
             $this->objval = $value;
         else
         {
@@ -55,14 +56,14 @@ class SafeParam
 
     private int $loglevel;
     
-    /** @var ?array<string, mixed> */
+    /** @var ?array<string, NULL|scalar|ScalarArray> */
     private ?array $logref = null;
     
     /** 
      * Takes an array reference for logging fetched parameters 
      * NOTE this does NOT pay attention to the loglevel, it only
      * passes it to the sub-SafeParams if you use GetObject()!
-     * @param ?array<string, mixed> $logref
+     * @param ?array<string, NULL|scalar|ScalarArray> $logref
      */
     public function SetLogRef(?array &$logref, int $loglevel) : void
     {
@@ -113,7 +114,7 @@ class SafeParam
     
     /** 
      * Returns the value as originally given (UNSAFE), no logging
-     * @return NULL|scalar|array<mixed> 
+     * @return NULL|scalar|ScalarArray
      */
     public function GetNullRawValue()
     {
@@ -635,7 +636,7 @@ class SafeParam
                 throw new SafeParamInvalidException($this->key, 'arr[object]');
             
             $arr[] = $params = new SafeParams();
-            $params->LoadArray($subval);
+            $params->LoadArray($subval); // @phpstan-ignore-line no recursive ScalarArray
         }
         
         if ($this->logref !== null)

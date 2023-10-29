@@ -3,7 +3,10 @@
 use Andromeda\Core\{Config, /*phpstan*/RunContext, Utilities};
 use Andromeda\Core\Database\{BaseObject, DBStats, FieldTypes, ObjectDatabase, TableTypes};
 
-/** Log entry representing a performance metrics for a request */
+/** 
+ * Log entry representing a performance metrics for a request
+ * @phpstan-import-type ScalarArray from Utilities
+ */
 class RequestMetrics extends BaseObject
 {
     use TableTypes\TableNoChildren;
@@ -62,7 +65,7 @@ class RequestMetrics extends BaseObject
     private FieldTypes\NullJsonArray $queries;
     /** 
      * The main debug log supplement 
-     * @var FieldTypes\NullJsonArray<array<mixed>>
+     * @var FieldTypes\NullJsonArray<ScalarArray>
      */
     private FieldTypes\NullJsonArray $debughints;
     
@@ -112,9 +115,7 @@ class RequestMetrics extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('requestlog')),
-            parent::GetUniqueKeys());
+        return array(self::class => array('requestlog'));
     }
     
     /**
@@ -155,7 +156,7 @@ class RequestMetrics extends BaseObject
             
             $rusage = getrusage();
             if ($rusage === false) $rusage = null;
-            $obj->rusage->SetArray($rusage);
+            $obj->rusage->SetArray($rusage); // @phpstan-ignore-line type missing
             
             $obj->includes->SetArray(get_included_files());
             $obj->objects->SetArray($database->getLoadedObjects());

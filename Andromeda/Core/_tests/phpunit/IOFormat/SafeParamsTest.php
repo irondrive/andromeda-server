@@ -54,11 +54,11 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
     
     protected function isLogged(int $level, int $minlog) : bool
     {
-        $log = array(); $obj = (new SafeParams())->SetLogRef($log, $level);
+        $log = array(); $obj = (new SafeParams())->SetLogRef($log, $level); assert(is_array($log));
         $obj->AddParam('test','55')->GetParam('test',$minlog)->GetInt();
         $log1 = array_key_exists('test', $log) && $log['test'] === 55;
         
-        $log = array(); $obj = (new SafeParams())->SetLogRef($log, $level);
+        $log = array(); $obj = (new SafeParams())->SetLogRef($log, $level); assert(is_array($log));
         $obj->AddParam('test','55')->GetOptParam('test',false,$minlog)->GetInt();
         $log2 = array_key_exists('test', $log) && $log['test'] === 55;
         

@@ -8,12 +8,13 @@ use Andromeda\Core\{Config, Utilities};
  * This class exists rather than having $params directly in Input
  * because a param can itself contain a collection of other params
  * (see SafeParam::TYPE_OBJECT) represented by another SafeParams
+ * @phpstan-import-type ScalarArray from Utilities
  */
 class SafeParams
 {
     /** 
      * Loads params from an array of input values
-     * @param array<scalar, NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>> $arr 
+     * @param ScalarArray $arr 
      */
     public function LoadArray(array $arr) : self
     {
@@ -22,16 +23,16 @@ class SafeParams
             if (is_array($val) && !Utilities::is_plain_array($val))
             {
                 $obj = new self();
-                $val = $obj->LoadArray($val); // @phpstan-ignore-line recursive types not supported
+                $val = $obj->LoadArray($val); // @phpstan-ignore-line no recursive ScalarArray
             }
             
-            $this->AddParam((string)$key, $val); // scalar
+            $this->AddParam((string)$key, $val); // @phpstan-ignore-line no recursive ScalarArray
         }
         
         return $this;
     }
     
-    /** @var array<SafeParam> */
+    /** @var array<string, SafeParam> */
     private array $params = array();
     
     /** Returns true if the named parameter exists */
@@ -42,7 +43,7 @@ class SafeParams
 
     /**
      * Adds the parameter to this object with the given name and value 
-     * @param NULL|scalar|array<scalar, NULL|scalar|array<scalar, mixed>>|SafeParams $value
+     * @param NULL|scalar|ScalarArray|SafeParams $value
      */
     public function AddParam(string $key, $value) : self
     {
@@ -51,12 +52,12 @@ class SafeParams
 
     private int $loglevel;
     
-    /** @var ?array<string, mixed> */
+    /** @var ?array<string, NULL|scalar|ScalarArray> */
     private ?array $logref = null;
     
     /** 
      * Takes an array reference for logging fetched parameters 
-     * @param ?array<string, mixed> $logref
+     * @param ?array<string, NULL|scalar|ScalarArray> $logref
      */
     public function SetLogRef(?array &$logref, int $loglevel) : self
     {
@@ -123,7 +124,7 @@ class SafeParams
 
     /** 
      * Returns a plain associative array of each parameter's name mapped to its raw value
-     * @return array<string, mixed>
+     * @return array<string, NULL|scalar|ScalarArray>
      */
     public function GetClientObject() : array
     {

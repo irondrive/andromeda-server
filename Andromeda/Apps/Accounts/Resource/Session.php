@@ -48,9 +48,7 @@ class Session extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('client')),
-            parent::GetUniqueKeys());
+        return array(self::class => array('id','client'));
     }
     
     /** Returns the client that owns this session */

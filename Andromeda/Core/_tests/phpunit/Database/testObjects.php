@@ -30,9 +30,7 @@ class EasyObject extends BaseObject
 
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('uniqueKey')),
-            parent::GetUniqueKeys());
+        return array(self::class => array('id','uniqueKey'));
     }
     
     private bool $postConstruct = false;
@@ -76,9 +74,7 @@ abstract class MyObjectBase extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('mykey')),
-            parent::GetUniqueKeys());
+        return array(self::class => array('id','mykey'));
     }
 
     public function GetMyKey() : ?int { return $this->mykey->TryGetValue(); }
@@ -287,8 +283,8 @@ class PolyObject5a extends PolyObject4
     
     public static function GetUniqueKeys() : array
     {
-        return array_merge_recursive(
-            array(self::class => array('testprop5')),
+        return array_merge(
+            [self::class => array('testprop5')], 
             parent::GetUniqueKeys());
     }
     

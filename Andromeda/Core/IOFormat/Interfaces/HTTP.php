@@ -5,7 +5,10 @@ use Andromeda\Core\Exceptions\JSONException;
 use Andromeda\Core\IOFormat\{Input,InputAuth,InputPath,IOInterface,Output,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 
-/** The interface for using Andromeda over a web server */
+/** 
+ * The interface for using Andromeda over a web server
+ * @phpstan-import-type ScalarArray from Utilities
+ */
 class HTTP extends IOInterface
 {
     public static function isApplicable() : bool
@@ -17,16 +20,16 @@ class HTTP extends IOInterface
     public static function isPrivileged() : bool { return false; }
     
     /** @return int JSON output by default */
-    public static function GetDefaultOutmode() : int { return static::OUTPUT_JSON; }
+    public static function GetDefaultOutmode() : int { return self::OUTPUT_JSON; }
     
     public function getAddress() : string
     {
-        return $_SERVER['REMOTE_ADDR'];
+        return $_SERVER['REMOTE_ADDR']; // @phpstan-ignore-line always string
     }
     
     public function getUserAgent() : string
     {
-        return $_SERVER['HTTP_USER_AGENT'];
+        return $_SERVER['HTTP_USER_AGENT']; // @phpstan-ignore-line always string
     }
 
     /** 
@@ -37,14 +40,14 @@ class HTTP extends IOInterface
      */
     protected function subLoadInputs() : array
     {
-        return $this->LoadHTTPInputs($_REQUEST, $_GET, $_FILES, $_SERVER);
+        return $this->LoadHTTPInputs($_REQUEST, $_GET, $_FILES, $_SERVER); // @phpstan-ignore-line types missing
     }
     
     /**
      * Retries an array of input objects to run
-     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $req
-     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $get
-     * @param array<scalar, mixed> $files
+     * @param array<scalar|array<scalar|array<scalar>>> $req
+     * @param array<scalar|array<scalar|array<scalar>>> $get
+     * @param array<array<string, scalar>> $files
      * @param array<string, scalar> $server
      * @return non-empty-array<Input>
      */
@@ -60,7 +63,7 @@ class HTTP extends IOInterface
             $bget = $get['_bat'] ?? array();
             $bfiles = $files['_bat'] ?? array();
             
-            if (!is_array($bget) || !is_array($bfiles) || !is_array($breq))
+            if (!is_array($bget) || !is_array($bfiles) || !is_array($breq)) // @phpstan-ignore-line // TODO BATCH remove me
                 throw new Exceptions\BatchSyntaxInvalidException('batch not array');
 
             $global_req = $req; // copy
@@ -100,9 +103,9 @@ class HTTP extends IOInterface
      * App and Action must be part of $_GET, everything else
      * can be interchangeably in $_GET or $_POST except
      * 'password' and 'auth_' which cannot be in $_GET
-     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $req
-     * @param array<scalar, scalar|array<scalar, scalar|array<scalar, scalar>>> $get
-     * @param array<scalar, mixed> $files
+     * @param array<scalar|array<scalar|array<scalar>>> $req
+     * @param array<scalar|array<scalar|array<scalar>>> $get
+     * @param array<array<string, scalar>> $files
      * @param array<string, scalar> $server
      */
     private function GetInput(array $req, array $get, array $files, array $server) : Input
@@ -127,7 +130,7 @@ class HTTP extends IOInterface
         $params = new SafeParams();
         $params->LoadArray($req);
         
-        // TODO IFACE NOTE does not support batching, not a problem after batching is removed
+        // TODO BATCH NOTE does not support batching, not a problem after batching is removed
         foreach ($server as $key=>$val)
         {
             if (mb_strpos($key,"HTTP_X_ANDROMEDA_") === 0)
@@ -141,10 +144,9 @@ class HTTP extends IOInterface
         
         $pfiles = array(); foreach ($files as $key=>$file)
         {
-            if (!is_array($file)
-                || !array_key_exists('tmp_name',$file)
-                || !array_key_exists('name',$file)
-                || !array_key_exists('error',$file))
+            if (!array_key_exists('tmp_name',$file) ||
+                !array_key_exists('name',$file) ||
+                !array_key_exists('error',$file))
                 throw new Exceptions\FileUploadFormatException();
             
             $fpath = (string)$file['tmp_name'];
@@ -280,7 +282,7 @@ class HTTP extends IOInterface
     /**
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
-     * @param array<string, mixed> $post array of data to place in the POST body
+     * @param array<string, NULL|scalar|ScalarArray> $post array of data to place in the POST body
      * @return ?string the remote response
      */
     public static function HTTPPost(string $url, array $post) : ?string

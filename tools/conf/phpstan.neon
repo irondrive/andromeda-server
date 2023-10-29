@@ -12,8 +12,9 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts
+    checkBenevolentUnionTypes: true
+    checkImplicitMixed: true
+### checkUninitializedProperties: true                 # default is false, does't work with how we do objects
     reportStaticMethodSignatures: false                # strict-rules sets true, objdb has difficult issues with this
     reportUnmatchedIgnoredErrors: false                # default is true, makes analyzing PHP7+8 impossible
     rememberPossiblyImpureFunctionValues: false        # default is true, seems like bad behavior?
-### checkUninitializedProperties: true                 # default is false, does't work with how we do objects
-### checkImplicitMixed: true                           # default is false, sounds good but returns a lot wrong
