@@ -132,7 +132,7 @@ class RequestMetrics extends BaseObject
     public static function Create(int $level, ObjectDatabase $database, ?RequestLog $reqlog,
                                   DBStats $initstat, array $actions, array $commits, DBStats $totalstat) : self
     {        
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->requestlog->SetObject($reqlog);
         

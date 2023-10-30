@@ -51,37 +51,36 @@ abstract class BaseConfig extends SingletonObject
         }
     }
     
-    /** @return static */
-    protected static function BaseCreate(ObjectDatabase $database) : self
+    /** true if we should skip the version check when loading */
+    protected static bool $skipVersionCheck = false;
+    
+    /** 
+     * Load the object and force updating its version instead of checking 
+     * @return static
+     */
+    public static function ForceUpdate(ObjectDatabase $database) : self
     {
-        $obj = parent::BaseCreate($database);
-        $obj->date_created->SetTimeNow();
+        static::$skipVersionCheck = true;
+        $obj = static::GetInstance($database);
+        static::$skipVersionCheck = false;
+
         $obj->version->SetValue(static::getVersion());
         return $obj;
     }
     
-    /** true if we should update the version when loading instead of checking */
-    protected static bool $forceUpdate = false;
-    
-    /** @return static */
-    public static function ForceUpdate(ObjectDatabase $database) : self
-    {
-        static::$forceUpdate = true;
-        $obj = static::GetInstance($database);
-        static::$forceUpdate = false;
-        return $obj;
-    }
-    
     /** @throws Exceptions\UpgradeRequiredException if the version in the given data does not match */
-    public function __construct(ObjectDatabase $database, array $data)
+    public function __construct(ObjectDatabase $database, array $data, bool $created)
     {
         $version = $data['version'] ?? null;
-        if ($version !== null && $version !== static::getVersion() && !static::$forceUpdate)
+        if ($version !== null && $version !== static::getVersion() && !static::$skipVersionCheck)
             throw new Exceptions\UpgradeRequiredException(static::getAppname(), (string)$version);
         
-        parent::__construct($database, $data);
+        parent::__construct($database, $data, $created);
         
-        if (static::$forceUpdate)
+        if ($created)
+        {
+            $this->date_created->SetTimeNow();
             $this->version->SetValue(static::getVersion());
+        }
     }
 }

@@ -8,7 +8,7 @@ class EasyObject extends BaseObject
     
     public static function Create(ObjectDatabase $database) : self
     {
-        return static::BaseCreate($database);
+        return $database->CreateObject(static::class);
     }
     
     private FieldTypes\NullIntType $uniqueKey;
@@ -37,7 +37,7 @@ class EasyObject extends BaseObject
     protected function PostConstruct() : void { $this->postConstruct = true; }
     public function didPostConstruct() : bool { return $this->postConstruct; }
     
-    public function Delete() : void { parent::Delete(); }
+    public function Delete() : void { $this->database->DeleteObject($this); }
     
     public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
     public function SetUniqueKey(?int $val) : self { $this->uniqueKey->SetValue($val); return $this; }
@@ -102,11 +102,11 @@ abstract class PolyObject0 extends PolyObject_
     
     public function SetOnDelete(OnDelete $del) : void { $this->ondel = $del; }
     
-    public function NotifyDeleted() : void
+    public function NotifyPostDeleted() : void
     {
         if ($this->ondel !== null) $this->ondel->Delete();
         
-        parent::NotifyDeleted();
+        parent::NotifyPostDeleted();
     }
 }
 
@@ -213,7 +213,7 @@ class PolyObject4 extends PolyObject3
         // includes self::class - this class is not abstract!
         return array(5=>self::class, 13=>PolyObject5a::class, 18=>PolyObject5b::class);
     }
-    
+
     private FieldTypes\IntType $testprop4;
     private FieldTypes\NullIntType $testprop4n; // null
     private FieldTypes\Counter $testprop4c; // counter
@@ -265,7 +265,7 @@ class PolyObject5a extends PolyObject4
 
     public static function Create(ObjectDatabase $database) : self
     {
-        return static::BaseCreate($database);
+        return $database->CreateObject(static::class);
     }
     
     private FieldTypes\NullIntType $testprop5;
@@ -298,10 +298,7 @@ class PolyObject5a extends PolyObject4
         $this->testprop5->SetValue($val); return $this;
     }
     
-    public function Delete() : void
-    {
-        parent::Delete();
-    }
+    public function Delete() : void { $this->database->DeleteObject($this); }
 }
 
 class PolyObject5aa extends PolyObject5a

@@ -82,21 +82,11 @@ class ObjectDatabase
     private array $modified = array();
     
     /** 
-     * Notify the DB that the given object needs to be inserted 
-     * @return $this
-     */
-    public function notifyCreated(BaseObject $object) : self
-    {
-        $this->created[spl_object_hash($object)] = $object; return $this;
-    }
-
-    /** 
      * Notify the DB that the given object needs to be updated 
      * @return $this
      */
     public function notifyModified(BaseObject $object) : self
     {
-        // TODO DB C++ proably should check this->created here, no need to duplicate...? see c++
         $this->modified[spl_object_hash($object)] = $object; return $this;
     }
 
@@ -115,11 +105,12 @@ class ObjectDatabase
             foreach ($this->created as $obj) $obj->Save();
         }
         
-        foreach ($this->modified as $obj) $obj->Save($onlyAlways);
-        
+        foreach ($this->modified as $obj) // check created to avoid saving created objects twice
+            if (!array_key_exists(spl_object_hash($obj),$this->created))
+                $obj->Save($onlyAlways);
+
         $this->created = array();
         $this->modified = array();
-        
         return $this;
     }
     
@@ -472,9 +463,8 @@ class ObjectDatabase
         {
             if ($upcast) $class = $class::GetRowClass($this,$row);
             
-            $retobj = new $class($this, $row);
+            $retobj = new $class($this, $row, false);
             $this->objectsByBase[$base][$id] = $retobj;
-            
             $this->RegisterUniqueKeys($base);
             $this->SetUniqueKeysFromData($retobj, $row);
         }
@@ -496,10 +486,22 @@ class ObjectDatabase
         
         $base = $object::GetBaseTableClass();
         unset($this->objectsByBase[$base][$object->ID()]);
-        
         $this->UnsetAllObjectKeyFields($object);
         
-        $object->NotifyDeleted();
+        $object->NotifyPostDeleted();
+    }
+
+    /**
+     * Creates a new object and registers for saving
+     * @template T of BaseObject
+     * @param class-string<T> $class BaseObject class to create
+     * @return T instantiated object
+     */
+    public function CreateObject(string $class) : BaseObject
+    {
+        $obj = new $class($this, array(), true);
+        $this->created[spl_object_hash($obj)] = $obj;
+        return $obj;
     }
 
     /**
@@ -510,32 +512,60 @@ class ObjectDatabase
      */
     public function DeleteObject(BaseObject $object) : self
     {
-        $query = new QueryBuilder();
-        $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
-        $query->Where($query->Equals($basetbl.'.id',$object->ID()));
+        $object->NotifyPreDeleted();
 
-        $class = get_class($object);
-        $selstr = $this->GetFromAndSetJoins($class, $query, false);
-        $querystr = 'DELETE '.$selstr.' '.$query;
-        
-        if ($this->db->write($querystr, $query->GetParams()) !== 1)
-            throw new Exceptions\DeleteFailedException($class);
+        if (!array_key_exists(spl_object_hash($object),$this->created))
+        {
+            $query = new QueryBuilder();
+            $basetbl = $this->GetClassTableName($object::GetBaseTableClass());
+            $query->Where($query->Equals($basetbl.'.id',$object->ID()));
+
+            $class = get_class($object);
+            $selstr = $this->GetFromAndSetJoins($class, $query, false);
+            $querystr = 'DELETE '.$selstr.' '.$query;
             
-        $this->RemoveObject($object); return $this;
+            if ($this->db->write($querystr, $query->GetParams()) !== 1)
+                throw new Exceptions\DeleteFailedException($class);
+        }
+
+        $this->RemoveObject($object);
+        return $this;
+    }
+
+    /**
+     * Saves the given object in the database
+     * @param BaseObject $object object to insert or update
+     * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
+        fields to save of object for each table class, order derived->base (ALL! not only modified)
+     * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
+     * @throws Exceptions\UpdateFailedException if the update row fails
+     * @throws Exceptions\InsertFailedException if the insert row fails
+     * @return $this
+     */
+    public function SaveObject(BaseObject $object, array $fieldsByClass, bool $onlyAlways = false) : self
+    {
+        if (array_key_exists(spl_object_hash($object),$this->created))
+            return $onlyAlways ? $this : $this->InsertObject($object, $fieldsByClass);
+        else return $this->UpdateObject($object, $fieldsByClass);
     }
     
     /**
      * Updates the given object in the database
      * @param BaseObject $object object to update
      * @param array<class-string<BaseObject>, array<FieldTypes\BaseField>> $fieldsByClass 
-        fields to save of object for each table class, order derived->base (modified only)
+        fields to save of object for each table class, order derived->base (will only save modified)
+     * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
      * @throws Exceptions\UpdateFailedException if the update row fails
      * @return $this
      */
-    public function UpdateObject(BaseObject $object, array $fieldsByClass) : self
+    protected function UpdateObject(BaseObject $object, array $fieldsByClass, bool $onlyAlways = false) : self
     {
         foreach ($fieldsByClass as $class=>$fields)
         {
+            $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($onlyAlways) {
+                return $field->isModified() && (!$onlyAlways || $field->isAlwaysSave()); });
+            if (count($fields) === 0) continue; // nothing to update
+
             $data = array('id'=>$object->ID()); 
             $sets = array(); $i = 0;
             
@@ -543,7 +573,6 @@ class ObjectDatabase
             {
                 $key = $field->GetName();
                 $val = $field->GetDBValue();
-                $field->SetUnmodified();
                 
                 if ($val === null)
                 {
@@ -561,8 +590,6 @@ class ObjectDatabase
                 }
             }
             
-            if (count($sets) === 0) continue; // nothing to update
-            
             $setstr = implode(', ',$sets);
             $table = $this->GetClassTableName($class);
             $query = "UPDATE $table SET $setstr WHERE id=:id";
@@ -575,11 +602,9 @@ class ObjectDatabase
         }
         
         unset($this->modified[spl_object_hash($object)]);
-        
+        $object->SetUnmodified();
         return $this;
     }
-    
-    // TODO DB C++ change this to be like the C++ where we determine Insert vs. Update ourselves
     
     /**
      * Inserts the given object to the database
@@ -589,12 +614,11 @@ class ObjectDatabase
      * @throws Exceptions\InsertFailedException if the insert row fails
      * @return $this
      */
-    public function InsertObject(BaseObject $object, array $fieldsByClass) : self
+    protected function InsertObject(BaseObject $object, array $fieldsByClass) : self
     {
         $base = $object::GetBaseTableClass();
-        
-        $this->RegisterUniqueKeys($base);
         $this->objectsByBase[$base][$object->ID()] = $object;
+        $this->RegisterUniqueKeys($base);
 
         foreach (array_reverse($fieldsByClass) as $class=>$fields)
         {
@@ -604,23 +628,20 @@ class ObjectDatabase
             
             foreach ($fields as $field)
             {
-                if ($field->isModified() ||
-                    $field->GetName() === 'id')
+                if (!$field->isModified()) continue;
+
+                $key = $field->GetName();
+                $val = $field->GetDBValue();
+                
+                $columns[] = $key;
+                if ($val === null)
                 {
-                    $key = $field->GetName();
-                    $val = $field->GetDBValue();
-                    $field->SetUnmodified();
-                    
-                    $columns[] = $key;
-                    if ($val === null)
-                    {
-                        $indexes[] = "NULL";
-                    }
-                    else
-                    {
-                        $indexes[] = ':d'.$i;
-                        $data['d'.$i++] = $val;
-                    }
+                    $indexes[] = "NULL";
+                }
+                else
+                {
+                    $indexes[] = ':d'.$i;
+                    $data['d'.$i++] = $val;
                 }
             }
             
@@ -632,12 +653,14 @@ class ObjectDatabase
             if ($this->db->write($query, $data) !== 1)
                 throw new Exceptions\InsertFailedException($class);
             
+            // NOTE this is the reason we need ALL fields not just modified
+            // the caches weren't populated because this object wasn't "loaded"
             $this->SetObjectKeyFields($object, $fields);
         }
         
         unset($this->created[spl_object_hash($object)]);
         unset($this->modified[spl_object_hash($object)]);
-        
+        $object->SetUnmodified();
         return $this;
     }
     
@@ -1004,7 +1027,7 @@ class ObjectDatabase
         
         $this->objectsByKey[$class] ??= array();
         $this->uniqueByKey[$class] ??= array();
-        
+
         foreach ($fields as $field)
         {
             $key = $field->GetName();

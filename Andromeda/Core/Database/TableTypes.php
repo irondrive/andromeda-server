@@ -81,29 +81,28 @@ trait TableTypedChildren
         
         return $map[$type];
     }
-    
-    protected static function BaseCreate(ObjectDatabase $database) : BaseObject
+
+    public function __construct(ObjectDatabase $database, array $data, bool $created = false)
     {
-        $obj = parent::BaseCreate($database);
-        
-        foreach (self::GetChildMap($database) as $type=>$class)
+        parent::__construct($database, $data, $created);
+        if (!$created) return; // early return
+
+        foreach (self::GetChildMap($this->database) as $type=>$class)
         {
             // determine the type value based on the object
-            if ($obj instanceof $class) 
+            if ($this instanceof $class) 
             {
-                $obj->typefield->SetValue($type); 
+                $this->typefield->SetValue($type); 
                 if ($class !== self::class) break; 
             }
         }
-        
-        return $obj;
     }
 }
 
 /** 
  * The typefield is normally undefined for all but the most derived class as when joining base tables, 
  * the DB will only give us the type from the most derived table (the field name conflicts between tables).
- * It only actually matters for inserting rows into the DB though which is fine because BaseCreate() will make
+ * It only actually matters for inserting rows into the DB though which is fine because InitTypeField() will make
  * sure they are set for every table. After that, they can't change, and the value only matters for the top table.
 */
 

@@ -49,7 +49,7 @@ class RequestLog extends BaseLog
         $interface = $apipack->GetInterface();
         $database = $apipack->GetDatabase();
         
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->time->SetTimeNow();
         $obj->addr->SetValue($interface->getAddress());
         $obj->agent->SetValue($interface->getUserAgent());
