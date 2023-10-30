@@ -84,7 +84,7 @@ class Emailer extends BaseObject
     /** Creates a new email backend in the database with the given input (see CLI usage) */
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        $mailer = static::BaseCreate($database);
+        $mailer = $database->CreateObject(static::class);
         $mailer->date_created->SetTimeNow();
         
         $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhitelist(array_keys(self::MAIL_TYPES))];
@@ -139,7 +139,7 @@ class Emailer extends BaseObject
         return $mailers[array_rand($mailers)];
     }
 
-    public function Delete() : void { parent::Delete(); }
+    public function Delete() : void { $this->database->DeleteObject($this); }
     
     /** Build a PHPMailer-formatted host string from an input */
     private static function BuildHostFromParams(SafeParams $params) : string

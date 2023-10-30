@@ -62,7 +62,7 @@ class ActionMetrics extends BaseObject
      */
     public static function Create(int $level, ObjectDatabase $database, RequestMetrics $request, RunContext $context) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->requestmet->SetObject($request);
         $obj->actionlog->SetObject($context->GetActionLog());
         

@@ -122,7 +122,7 @@ class ActionLog extends BaseLog
      */
     public static function Create(ObjectDatabase $database, RequestLog $reqlog, Input $input) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         
         $obj->requestlog->SetObject($reqlog);
         $obj->app->SetValue($input->GetApp());

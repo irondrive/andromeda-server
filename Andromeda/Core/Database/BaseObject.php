@@ -51,6 +51,7 @@ abstract class BaseObject
     /**
      * Returns this class's unique key map (must add parents!)
      * This base function adds 'id' to the base table, so if overriding, add it!
+     * NOTE - there isn't a pre-determined map for non-unique keys, instead the DB will cache as Load/Delete by key is used!
      * @return array<class-string<self>, array<string>>
      */
     public static function GetUniqueKeys() : array
@@ -83,26 +84,6 @@ abstract class BaseObject
         throw new Exceptions\NotMultiTableException(self::class); }
 
     /**
-     * Creates a new object, no values initialized
-     * @param ObjectDatabase $database database reference
-     * @return static new object instance (not saved yet)
-     */
-    protected static function BaseCreate(ObjectDatabase $database) : self
-    {
-        $obj = new static($database, array('id' => static::GenerateID()));
-        // TODO DB FIX set ID via SetValue() so that it's modified, remove 'id' check in InsertObject in ObjectDB
-        
-        // TODO DB C++ probably should have the DB create the object and register it
-        // otherwise if you do a load by ID it won't work until saved.  The C++ code will have to do this anyway
-        // then again... the object database doesn't update unique keys etc. until saved either. Part of its design
-        // see CreateObject in C++
-        
-        $obj->isCreated = true;
-        $database->notifyCreated($obj); 
-        return $obj;
-    }
-    
-    /**
      * Returns a string suitable as a new object ID (primary key)
      * Object IDs must be unique for all objects of a base class
      */
@@ -110,7 +91,7 @@ abstract class BaseObject
     {
         return Utilities::Random(static::IDLength);
     }
-    
+
     /**
      * Loads an object by its ID
      * @param ObjectDatabase $database database ref
@@ -137,9 +118,6 @@ abstract class BaseObject
      */
     private array $fieldsByClass = array();
     
-    /** true if the object was just created */
-    private bool $isCreated = false;
-    
     /** true if the object has been deleted */
     private bool $isDeleted = false;
     
@@ -156,8 +134,9 @@ abstract class BaseObject
      * Construct an object from loaded database data
      * @param ObjectDatabase $database database
      * @param array<string, ?scalar> $data db columns
+     * @param bool $created true if this is a new object
      */
-    public function __construct(ObjectDatabase $database, array $data)
+    public function __construct(ObjectDatabase $database, array $data, bool $created = false)
     {
         $this->database = $database;
         
@@ -165,6 +144,9 @@ abstract class BaseObject
 
         foreach ($data as $column=>$value)
             $this->fieldsByName[$column]->InitDBValue($value);
+
+        if ($created)
+            $this->idfield->SetValue(static::GenerateID());
         
         $this->PostConstruct();
     }
@@ -221,7 +203,6 @@ abstract class BaseObject
             throw new Exceptions\NoChildTableException(static::class);
         
         $table = array_key_last($this->fieldsByClass);
-        
         $this->RegisterFields($fields, $table);
     }
     
@@ -240,19 +221,12 @@ abstract class BaseObject
         return $obj !== null ? (string)$obj : null; 
     }
     
-    /** Returns true if this object has been created but not saved */
-    final protected function isCreated() : bool { return $this->isCreated; }
-    
-    // TODO DB C++ see the new C++ semantics for create and save/update/insert, potentially follow here?
-    
     /** Returns true if this object has been deleted */
     final public function isDeleted() : bool { return $this->isDeleted; }
     
     /** Returns true if this object has a modified field */
     final protected function isModified() : bool
     {
-        if ($this->isCreated) return true;
-        
         foreach ($this->fieldsByName as $field)
         {
             if ($field->isModified()) return true;
@@ -260,14 +234,11 @@ abstract class BaseObject
         return false;
     }
 
-    /** Deletes this object from the DB */
-    protected function Delete() : void
+    /** Sets all fields as unmodified */
+    final public function SetUnmodified() : void
     {
-        if ($this->isDeleted) return;
-        
-        if ($this->isCreated) { $this->NotifyDeleted(); return; }
-        
-        $this->database->DeleteObject($this);
+        foreach ($this->fieldsByName as $field)
+            $field->SetUnmodified();
     }
     
     /** 
@@ -280,11 +251,17 @@ abstract class BaseObject
     }
     
     /** 
+     * Notifies this object that the DB is about to delete it - internal call only
+     * This is ONLY run when deleting a single object directly, not deleting by query!
+     * Child classes can extend this if they need extra on-delete logic
+     */
+    public function NotifyPreDeleted() : void { }
+    
+    /** 
      * Notifies this object that the DB has deleted it - internal call only
      * Child classes can extend this if they need extra on-delete logic
-     * NOTE this CAN get called without a call to Delete() - don't override it
      */
-    public function NotifyDeleted() : void
+    public function NotifyPostDeleted() : void
     {
         $this->isDeleted = true;
     }
@@ -299,30 +276,8 @@ abstract class BaseObject
     {
         if ($this->isDeleted)
             throw new Exceptions\SaveAfterDeleteException();
-        
-        if ($onlyAlways && $this->isCreated) return $this;
-        
-        if ($this->deleteLater) { $this->Delete(); return $this; }
-
-        if ($this->isCreated)
-        {
-            $this->database->InsertObject($this, $this->fieldsByClass);
-            
-            $this->isCreated = false;
-        }
-        else 
-        {
-            $fieldsByClass = $this->fieldsByClass;
-            
-            foreach ($fieldsByClass as &$fields)
-            {
-                $fields = array_filter($fields, function(FieldTypes\BaseField $field)use($onlyAlways) {
-                    return $field->isModified() && (!$onlyAlways || $field->isAlwaysSave()); });
-            }
-            
-            $this->database->UpdateObject($this, $fieldsByClass);
-        }
-        
+        if ($this->deleteLater) $this->database->DeleteObject($this);
+        else $this->database->SaveObject($this, $this->fieldsByClass, $onlyAlways);
         return $this;
     }
 }

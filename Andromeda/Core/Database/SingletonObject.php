@@ -38,11 +38,12 @@ abstract class SingletonObject extends BaseObject
         return self::$instances[$key];
     }
 
-    /** @return static */
-    protected static function BaseCreate(ObjectDatabase $database) : self
+    public function __construct(ObjectDatabase $database, array $data, bool $created = false)
     {
-        $idx = self::GetIndex($database);
-        $obj = parent::BaseCreate($database);
-        return self::$instances[$idx] = $obj;
+        parent::__construct($database, $data, $created);
+        if (!$created) return; // early return
+        
+        $idx = self::GetIndex($this->database);
+        self::$instances[$idx] = $this;
     }
 }

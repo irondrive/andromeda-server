@@ -115,7 +115,7 @@ class ErrorLog extends BaseLog
      */
     public static function Create(ObjectDatabase $database, ErrorInfo $info) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         
         $obj->time->SetValue($info->GetTime());
         $obj->addr->SetValue($info->GetAddr());

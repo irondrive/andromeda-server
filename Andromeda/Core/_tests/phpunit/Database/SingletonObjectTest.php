@@ -8,11 +8,6 @@ class TestSingleton1 extends SingletonObject
 class TestSingleton2 extends SingletonObject 
 {
     use TableTypes\TableNoChildren;
-    
-    public static function Create(ObjectDatabase $database) : self 
-    { 
-        return static::BaseCreate($database); 
-    }
 }
 
 class SingletonObjectTest extends \PHPUnit\Framework\TestCase
@@ -32,7 +27,7 @@ class SingletonObjectTest extends \PHPUnit\Framework\TestCase
 
         $database->expects($this->exactly(0))->method('TryLoadUniqueByKey');
         
-        $obj = TestSingleton2::Create($database);
+        $obj = new TestSingleton2($database, array(), true);
         
         $this->assertInstanceOf(TestSingleton2::class, $obj);
         
@@ -43,7 +38,7 @@ class SingletonObjectTest extends \PHPUnit\Framework\TestCase
     public function testLoad() : void
     {
         $database = $this->createMock(ObjectDatabase::class);
-        TestSingleton2::Create($database);
+        new TestSingleton2($database, array(), true);
         
         // only one read because TestSingleton2 was created above
         $database->expects($this->exactly(1))->method('TryLoadUniqueByKey')

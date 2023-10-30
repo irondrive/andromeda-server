@@ -53,7 +53,7 @@ class Config extends BaseConfig
      */
     public static function Create(ObjectDatabase $database) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->apps->SetArray(array());
         return $obj;
     }
