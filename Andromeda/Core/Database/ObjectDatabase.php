@@ -83,10 +83,14 @@ class ObjectDatabase
     
     /** 
      * Notify the DB that the given object needs to be updated 
+     * @throws Exceptions\DatabaseReadOnlyException if read-only
      * @return $this
      */
     public function notifyModified(BaseObject $object) : self
     {
+        if ($this->isReadOnly())
+            throw new Exceptions\DatabaseReadOnlyException();
+
         $this->modified[spl_object_hash($object)] = $object; return $this;
     }
 
@@ -496,9 +500,13 @@ class ObjectDatabase
      * @template T of BaseObject
      * @param class-string<T> $class BaseObject class to create
      * @return T instantiated object
+     * @throws Exceptions\DatabaseReadOnlyException if read-only
      */
     public function CreateObject(string $class) : BaseObject
     {
+        if ($this->isReadOnly())
+            throw new Exceptions\DatabaseReadOnlyException();
+    
         $obj = new $class($this, array(), true);
         $this->created[spl_object_hash($obj)] = $obj;
         return $obj;
@@ -508,10 +516,14 @@ class ObjectDatabase
      * Immediately deletes a single object from the database
      * @param BaseObject $object the object to delete
      * @throws Exceptions\DeleteFailedException if nothing is deleted
+     * @throws Exceptions\DatabaseReadOnlyException if read-only
      * @return $this
      */
     public function DeleteObject(BaseObject $object) : self
     {
+        if ($this->isReadOnly())
+            throw new Exceptions\DatabaseReadOnlyException();
+
         $object->NotifyPreDeleted();
 
         if (!array_key_exists(spl_object_hash($object),$this->created))
@@ -540,10 +552,14 @@ class ObjectDatabase
      * @param bool $onlyAlways true if we only want to save alwaysSave fields (see Field saveOnRollback)
      * @throws Exceptions\UpdateFailedException if the update row fails
      * @throws Exceptions\InsertFailedException if the insert row fails
+     * @throws Exceptions\DatabaseReadOnlyException if read-only
      * @return $this
      */
     public function SaveObject(BaseObject $object, array $fieldsByClass, bool $onlyAlways = false) : self
     {
+        if ($this->isReadOnly())
+            throw new Exceptions\DatabaseReadOnlyException();
+
         if (array_key_exists(spl_object_hash($object),$this->created))
             return $onlyAlways ? $this : $this->InsertObject($object, $fieldsByClass);
         else return $this->UpdateObject($object, $fieldsByClass);

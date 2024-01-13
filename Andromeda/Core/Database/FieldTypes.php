@@ -73,16 +73,14 @@ abstract class BaseField
      */
     public function SetUnmodified() : self { $this->delta = 0; return $this; }
     
-    /** Notify the DB that this field was modified */
+    /** 
+     * Notify the DB that this field was modified
+     * @throws Exceptions\DatabaseReadOnlyException if read-only
+     */
     protected function NotifyModified() : void
     {
         if (isset($this->database))
-        {
-            if ($this->database->isReadOnly())
-                throw new Exceptions\DatabaseReadOnlyException();
-            
             $this->database->notifyModified($this->parent);
-        }
     }
 }
 

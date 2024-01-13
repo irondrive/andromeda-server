@@ -276,6 +276,32 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj->Save();
         $obj->Save(); // nothing
     }
+
+    public function testSaveObject() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        $obj = EasyObject::Create($objdb); $id = $obj->ID();
+        
+        $database->expects($this->exactly(3))->method('write')->withConsecutive(
+            [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
+            [ 'UPDATE a2obj_core_database_easyobject SET generalKey=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id) ],
+            [ 'DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0', array('d0'=>$id) ]
+        )->willReturn(1);
+        
+        $obj->Save(true); // nothing
+        $obj->Save(); // insert
+        $obj->Save(); // nothing
+        $obj->SetGeneralKey(55);
+        $obj->Save(); // update
+
+        $obj->Delete();   
+        $this->assertTrue($obj->didPreDelete());
+        $this->assertTrue($obj->isDeleted());
+        
+        $this->expectException(Exceptions\SaveAfterDeleteException::class);
+        $obj->Save(); // throws exception
+    }
     
     public function testSaveAllObjects() : void
     {   
@@ -325,10 +351,40 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             ->with($qstr, array('d0'=>$id))->willReturn(1);
         
         $obj->Delete();
-        
         $this->assertTrue($obj->isDeleted());
     }
 
+    public function testDeleteCreated() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        $obj = EasyObject::Create($objdb); $id = $obj->ID();
+        
+        $database->expects($this->exactly(0))->method('write');
+
+        $obj->Delete(); // created, no delete call
+        $this->assertTrue($obj->didPreDelete());
+        $this->assertTrue($obj->isDeleted());
+    }
+    
+    public function testDeleteLoaded() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        $obj = EasyObject::Create($objdb); $id = $obj->ID();
+
+        $database->expects($this->exactly(2))->method('write')->withConsecutive(
+            [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
+            [ 'DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0', array('d0'=>$id) ]
+        )->willReturn(1);
+        
+        $obj->Save(); // is now "loaded"
+
+        $obj->Delete(); // delete query
+        $this->assertTrue($obj->didPreDelete());
+        $this->assertTrue($obj->isDeleted());
+    }
+    
     public function testDeleteByQueryYesReturning() : void
     {        
         // loading by every base class should yield the same results!

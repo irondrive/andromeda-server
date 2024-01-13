@@ -86,65 +86,19 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($str, BaseObject::toString($obj));
         $this->assertSame($str, "$obj");
     }
-    
-    /*public function testSave() : void // TODO DB !! make this an objdb test ... there should still be a Save() test here though
+
+    public function testDeleteLater() : void
     {
+        // test Create, construct, ID()
         $database = $this->createMock(ObjectDatabase::class);
-        $obj = EasyObject::Create($database);
-        
-        $database->expects($this->once())->method('InsertObject');
-        $database->expects($this->once())->method('UpdateObject');
+        $obj = new EasyObject($database,array(),true); $id = $obj->ID();
+
+        $database->expects($this->once())->method('SaveObject');
         $database->expects($this->once())->method('DeleteObject');
-        
-        $obj->Save(true); // nothing
-        $obj->Save(); // insert
-        $obj->Save(); // update
-        
-        $obj->Delete(); 
-        $obj->NotifyPostDeleted();
-        
-        $this->expectException(Exceptions\SaveAfterDeleteException::class);
-        $obj->Save(); // throws exception
-    }*/
-    
-    /*public function testNotifyDelete() : void // TODO DB !! make this an objdb test
-    {
-        $database = $this->createMock(ObjectDatabase::class);
-        $database->expects($this->exactly(0))->method('DeleteObject');
-        
-        $obj = EasyObject::Create($database);
-        $obj->NotifyPostDeleted();
-        $this->assertTrue($obj->isDeleted());
-        
-        $obj = new EasyObject($database, array());
-        $this->assertSame(5, $obj->SetGeneralKey(5)->GetGeneralKey());
-        
-        $obj->NotifyPostDeleted();
-        $this->assertTrue($obj->isDeleted());
-    }*/
-    
-    /*public function testDeleteCreated() : void // TODO DB !! make this an objdb test
-    {
-        $database = $this->createMock(ObjectDatabase::class);
-        $database->expects($this->exactly(0))->method('DeleteObject');
-        
-        $obj = EasyObject::Create($database);
-        $obj->Delete(); // created, no delete call
-        $this->assertTrue($obj->isDeleted());
-    }*/
-    
-    /*public function testDeleteLoaded() : void // TODO DB !! these should probably be objdb tests now
-    {
-        $database = $this->createMock(ObjectDatabase::class);
-        
-        $obj = EasyObject::Create($database)->Save();
-        
-        $database->expects($this->exactly(1))->method('DeleteObject')
-            ->willReturnCallback(function()use($obj,$database){ 
-                $obj->NotifyPostDeleted(); return $database; });
-        
-        $obj->Delete();
-        $obj->Delete(); // no 2nd call
-        $this->assertTrue($obj->isDeleted());
-    }*/
+
+        $obj->Save(); // regular save
+
+        $obj->DeleteMeLater();
+        $obj->Save(); // deletes
+    }
 }
