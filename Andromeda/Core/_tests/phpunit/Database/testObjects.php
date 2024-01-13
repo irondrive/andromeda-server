@@ -36,8 +36,13 @@ class EasyObject extends BaseObject
     private bool $postConstruct = false;
     protected function PostConstruct() : void { $this->postConstruct = true; }
     public function didPostConstruct() : bool { return $this->postConstruct; }
+
+    private bool $preDeleted = false;
+    public function NotifyPreDeleted() : void { $this->preDeleted = true; }
+    public function didPreDelete() : bool { return $this->preDeleted; }
     
     public function Delete() : void { $this->database->DeleteObject($this); }
+    public function DeleteMeLater() : void { $this->DeleteLater(); }
     
     public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
     public function SetUniqueKey(?int $val) : self { $this->uniqueKey->SetValue($val); return $this; }

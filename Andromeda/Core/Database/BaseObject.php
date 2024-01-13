@@ -276,7 +276,7 @@ abstract class BaseObject
     {
         if ($this->isDeleted)
             throw new Exceptions\SaveAfterDeleteException();
-        if ($this->deleteLater) $this->database->DeleteObject($this);
+        else if ($this->deleteLater) $this->database->DeleteObject($this);
         else $this->database->SaveObject($this, $this->fieldsByClass, $onlyAlways);
         return $this;
     }
