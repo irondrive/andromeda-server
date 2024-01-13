@@ -77,7 +77,7 @@ abstract class Utilities
      * @param array<mixed> $data
      * @return array<NULL|string|array<NULL|string|array<mixed>>>
      */
-    public static function arrayStrings(array $data) : array // TODO move to ErrorInfo.php
+    public static function arrayStrings(array $data) : array
     {
         foreach ($data as &$val)
         {

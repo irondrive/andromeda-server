@@ -333,6 +333,21 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb->SaveObjects(); // nothing to do now
     }
     
+    private const delete4 =
+        'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4 '.
+            'FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
+            'WHERE a2obj_core_database_polyobject1.id = :d0';
+    
+    private const delete5a =
+        'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4, a2obj_core_database_polyobject5a '.
+            'FROM a2obj_core_database_polyobject1 '.
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
+            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
+            'WHERE a2obj_core_database_polyobject1.id = :d0';
+    
     public function testDeleteObject() : void
     {
         $database = $this->createMock(PDODatabase::class);
@@ -340,15 +355,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj = new PolyObject5a($objdb, array('id'=>($id='testid1234')));
         
-        $qstr = 'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4, a2obj_core_database_polyobject5a '.
-            'FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-            'WHERE a2obj_core_database_polyobject1.id = :d0';
-        
         $database->expects($this->once())->method('write')
-            ->with($qstr, array('d0'=>$id))->willReturn(1);
+            ->with(self::delete5a, array('d0'=>$id))->willReturn(1);
         
         $obj->Delete();
         $this->assertTrue($obj->isDeleted());
@@ -473,25 +481,10 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             // now we delete the objects and hope it deletes the same ones
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
     
-            $deleteStr1 =
-                'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4, a2obj_core_database_polyobject5a '.
-                'FROM a2obj_core_database_polyobject1 '.
-                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-                'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-                'WHERE a2obj_core_database_polyobject1.id = :d0';
-                
-            $deleteStr2 =
-                'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4 '.
-                'FROM a2obj_core_database_polyobject1 '.
-                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-                'WHERE a2obj_core_database_polyobject1.id = :d0';
-    
             $database->expects($this->exactly(2))->method('write')
                 ->withConsecutive(
-                    [$deleteStr1, array('d0'=>self::id1)], 
-                    [$deleteStr2, array('d0'=>self::id2)])
+                    [self::delete5a, array('d0'=>self::id1)], 
+                    [self::delete4, array('d0'=>self::id2)])
                 ->willReturn(1);
                     
             $numDeleted = $objdb->DeleteObjectsByQuery($class, $q);
@@ -622,6 +615,33 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($obj2, $objs2[$id2]);
     }
     
+    public function testNonUniqueKeyDelete() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $database->method('SupportsRETURNING')->willReturn(true);
+        $objdb = new ObjectDatabase($database);
+
+        $database->expects($this->exactly(1))->method('readwrite')
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE generalKey = :d0 RETURNING *", array('d0'=>5))
+            ->willReturn([array('id'=>'test123','generalKey'=>5)]);
+        $database->expects($this->exactly(1))->method('read')
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>6))
+            ->willReturn([array('id'=>$id='test456','generalKey'=>6)]);
+        $database->expects($this->exactly(1))->method('write')
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
+            ->willReturn(1);
+        
+        // not cached, delete will be by query
+        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5));
+        $this->assertSame(0,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5)); // no-op
+        
+        // load an object to cache, delete directly by cache
+        $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 6);
+        $this->assertCount(1, $objs);
+        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 6));
+        $this->assertTrue($objs[$id]->isDeleted());
+    }
+    
     public function testNonUniqueKeyCount() : void
     {
         $database = $this->createMock(PDODatabase::class);
@@ -653,7 +673,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         
         $this->assertInstanceOf(EasyObject::class, $obj); 
-        assert($obj !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj);
         $this->assertSame($id, $obj->ID());
         $this->assertSame(5, $obj->GetUniqueKey());
         
@@ -665,6 +685,33 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $this->expectException(Exceptions\UnknownUniqueKeyException::class);
         $objdb->TryLoadUniqueByKey(EasyObject::class, 'testKey', 5);
+    }
+
+    public function testUniqueKeyDelete() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $database->method('SupportsRETURNING')->willReturn(true);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(1))->method('readwrite')
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0 RETURNING *", array('d0'=>5))
+            ->willReturn([array('id'=>$id='test123','uniqueKey'=>5)]);
+        $database->expects($this->exactly(1))->method('read')
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
+            ->willReturn([array('id'=>$id='test123','uniqueKey'=>6)]);
+        $database->expects($this->exactly(1))->method('write')
+            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
+            ->willReturn(1);
+        
+        // not cached, delete will be by query
+        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5));
+        $this->assertFalse($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5)); // no-op
+        
+        // load an object to cache, delete directly by cache
+        $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6);
+        $this->assertNotNull($obj);
+        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 6));
+        $this->assertTrue($obj->isDeleted());
     }
     
     public function testUniqueKeyConstructID() : void
@@ -760,7 +807,28 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertCount(1, $objs); $this->assertSame($obj1, $objs[$id1]);
         $this->assertEmpty($objdb->LoadObjectsByKey(PolyObject5ab::class, 'testprop5', 55));
     }
-    
+
+    public function testNonUniqueKeyPolyDelete() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
+            ->willReturn([array('id'=>$id1='test123','type'=>101,'testprop5'=>55)]);
+        $database->expects($this->exactly(1))->method('write')
+            ->with(self::delete5a, array('d0'=>$id1))
+            ->willReturn(1);
+
+        $objs = $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55);
+        $this->assertCount(1, $objs); $obj1 = $objs[$id1];
+
+        // delete by child class should use the cache (delete directly)
+        $this->assertSame(1, $objdb->DeleteObjectsByKey(PolyObject5aa::class, 'testprop5', 55));
+        $this->assertTrue($obj1->isDeleted());
+
+        $this->assertCount(0, $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55));
+    }
+
     public function testUniqueKeyPolyLoad() : void
     {
         $database = $this->createMock(PDODatabase::class);
@@ -772,7 +840,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1);
-        assert($obj1 !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj1);
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(55, $obj1->GetTestProp5());
         
@@ -782,7 +850,29 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5ab::class, 'testprop5', 55));
     }
-    
+
+    public function testUniqueKeyPolyDelete() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        
+        $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
+            ->willReturn([array('id'=>$id1='test123','type'=>101,'testprop5'=>55)]);
+        $database->expects($this->exactly(1))->method('write')
+            ->with(self::delete5a, array('d0'=>$id1))
+            ->willReturn(1);
+
+        $obj = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
+        $this->assertNotNull($obj);
+        $this->assertSame($id1, $obj->ID());
+
+        // delete by child class should use the cache (delete directly)
+        $this->assertTrue($objdb->TryDeleteUniqueByKey(PolyObject5aa::class, 'testprop5', 55));
+        $this->assertTrue($obj->isDeleted());
+
+        $this->assertNull($objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55));
+    }
+
     public function testNonUniqueKeyLoadDelete() : void
     {
         $database = $this->createMock(PDODatabase::class);
@@ -825,7 +915,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj); 
-        assert($obj !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj);// @phpstan-ignore-line test anyway
 
         $database->expects($this->once())->method('write')
             ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
@@ -869,7 +959,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj1);
         
         // check that loading via 5aa leaves the registered base class as 5a
         $objdb->TryLoadUniqueByKey(PolyObject5aa::class, 'testprop5', 75);
@@ -938,7 +1028,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj);
-        assert($obj !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj);// @phpstan-ignore-line test anyway
         
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6));
         
@@ -989,7 +1079,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj1);
         $this->assertSame($obj1->ID(), $id1);
         
         $obj1->SetTestProp5(66)->Save();
@@ -1152,7 +1242,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj1); 
-        assert($obj1 !== null); // @phpstan-ignore-line test anyway
+        $this->assertNotNull($obj1);
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(5, $obj1->GetUniqueKey());
 
