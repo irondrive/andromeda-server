@@ -17,7 +17,6 @@ combined.php
 test.s3db
 
 Andromeda/DBConfig.php
-Andromeda/userInit.php
 
 __pycache__
 
