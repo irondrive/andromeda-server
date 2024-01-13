@@ -258,7 +258,7 @@ class ObjectDatabase
         $doChildren = !$castRows && count($childmap) !== 0;
         $doSelf = !$doChildren;
         $count = 0;
-        
+
         if ($doChildren) // need to delete for each child with a table
         {
             foreach ($childmap as $child)
@@ -776,7 +776,7 @@ class ObjectDatabase
      * @param ?scalar $value data value to match
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByKey(string $class, string $key, $value) : int // TODO DB unit test
+    public function DeleteObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
         $this->objectsByKey[$class][$key] ??= array();
@@ -845,7 +845,7 @@ class ObjectDatabase
      * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return bool true if an object was deleted
      */
-    public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool // TODO DB unit test
+    public function TryDeleteUniqueByKey(string $class, string $key, $value) : bool
     {
         $this->RegisterUniqueKeys($class);
         
