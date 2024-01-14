@@ -103,8 +103,11 @@ class Config extends BaseConfig
             $datadir = $params->GetParam('datadir')->GetNullFSPath();
             if ($datadir !== null)
             {
-                if (!is_dir($datadir) || !is_readable($datadir) || !is_writeable($datadir))
-                    throw new Exceptions\UnwriteableDatadirException();
+                if (($realdir = realpath($datadir)) === false)
+                    throw new Exceptions\UnwriteableDatadirException($datadir);
+                if (!is_dir($realdir) || !is_readable($realdir) || !is_writeable($realdir))
+                    throw new Exceptions\UnwriteableDatadirException($realdir);
+                $datadir = $realdir;
             }
             
             $this->datadir->SetValue($datadir);

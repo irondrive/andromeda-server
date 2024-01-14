@@ -28,6 +28,14 @@ class DatabaseInstallException extends BaseExceptions\ClientErrorException
     }
 }
 
+/** Exception indicating the requested database path doesn't exist */
+class DatabasePathException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DATABASE_PATH_INVALID", $details);
+    }
+}
+
 /** Exception indicating that a BaseObject was not set up properly */
 abstract class ObjectSetupException extends BaseExceptions\ServerException { }
 

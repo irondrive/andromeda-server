@@ -2,6 +2,7 @@
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Exceptions as CoreExceptions;
+use Andromeda\Core\Errors\BaseExceptions;
 use Andromeda\Core\IOFormat\SafeParams;
 
 if (!class_exists('PDO'))
@@ -53,11 +54,11 @@ class PDODatabase
      */
     private const CONFIG_PATHS = array(
         ROOT."/DBConfig.php",
-        null, // ~/.config/andromeda/DBConfig.php
-        '/usr/local/etc/andromeda/DBConfig.php',
-        '/etc/andromeda/DBConfig.php'
-    );    
-    
+        null, // ~/.config/andromeda-server/DBConfig.php
+        '/usr/local/etc/andromeda-server/DBConfig.php',
+        '/etc/andromeda-server/DBConfig.php'
+    );
+
     public const DRIVER_MYSQL = 1; 
     public const DRIVER_SQLITE = 2; 
     public const DRIVER_POSTGRESQL = 3;
@@ -76,14 +77,12 @@ class PDODatabase
      */
     public static function LoadConfig(?string $path = null) : array
     {
-        $paths = defined('DBCONF') && is_string(DBCONF) ? array(DBCONF) : self::CONFIG_PATHS;
-        
         if ($path !== null)
         {
             if (!is_file($path))
                 throw new Exceptions\DatabaseMissingException();
         }
-        else foreach ($paths as $ipath) // search
+        else foreach (self::CONFIG_PATHS as $ipath) // search
         {
             if ($ipath === null)
             {
@@ -92,7 +91,7 @@ class PDODatabase
                     $home = $_SERVER['HOMEDRIVE'].$_SERVER['HOMEPATH']; // Windows
 
                 if (isset($home) && is_string($home)) 
-                    $ipath = "$home/.config/andromeda/DBConfig.php";
+                    $ipath = "$home/.config/andromeda-server/DBConfig.php";
             }
             
             if ($ipath !== null && is_file($ipath)) {
@@ -108,7 +107,7 @@ class PDODatabase
     }
 
     /** Returns a string with the primary CLI usage for Install() */
-    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile [fspath]]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite --outfile [fspath|-]"; }
     
     /** 
      * Returns the CLI usages specific to each driver 
@@ -165,30 +164,39 @@ class PDODatabase
         }
         else if ($driver === 'sqlite') // @phpstan-ignore-line harmless always true (for now)
         {
-            $config['CONNECT'] = $params->GetParam('dbpath')->GetFSPath();    
-        }
-        
-        $config = var_export($config,true);
-        
-        $output = "<?php if (!defined('Andromeda')) die(); return $config;";
-        
-        if ($params->HasParam('outfile')) // store it
-        {
-            $outnam = $params->GetParam('outfile')->GetNullFSPath() ?? self::CONFIG_PATHS[0];
+            $fullpath = $params->GetParam('dbpath')->GetFSPath();
+            if (is_dir($fullpath)) $fullpath .= "/";
+            if (mb_substr($fullpath,-1) === "/") 
+                $fullpath .= "andromeda-server.s3db"; // default
 
-            $tmpnam = "$outnam.tmp.php";
-            file_put_contents($tmpnam, $output);
-            
-            try { new self(self::LoadConfig($tmpnam), true); }
-            catch (Exceptions\PDODatabaseConnectException $e) 
-            {
-                unlink($tmpnam); 
-                throw new Exceptions\DatabaseInstallException($e); 
-            }
-            
-            rename($tmpnam, $outnam); return null;
+            if (($dirname = realpath(dirname($fullpath))) === false)
+                throw new Exceptions\DatabasePathException($fullpath);
+
+            $config['CONNECT'] = $dirname.'/'.basename($fullpath);
         }
-        else return $output;
+        
+        // test config
+        try { new self($config, true); }
+        catch (Exceptions\PDODatabaseConnectException $e) {
+            throw new Exceptions\DatabaseInstallException($e); 
+        }
+        
+        $output = "<?php if (!defined('Andromeda')) die(); return ".var_export($config,true).";";
+        $outnam = $params->GetParam('outfile')->GetNullFSPath() ?? self::CONFIG_PATHS[0];
+
+        if ($outnam === "-") // return directly
+            return $output;
+        else 
+        {
+            if (is_dir($outnam)) $outnam .= "/";
+            if (mb_substr($outnam,-1) === "/")
+                $outnam .= "DBConfig.php"; // default
+
+            try { file_put_contents($outnam, $output); }
+            catch (BaseExceptions\PHPError $e) {
+                throw new Exceptions\DatabasePathException($outnam); }
+            return null;
+        }
     }
     
     /**

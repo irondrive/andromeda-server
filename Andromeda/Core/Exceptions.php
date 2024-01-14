@@ -58,13 +58,6 @@ class UnknownAppException extends BaseExceptions\ClientErrorException
     }
 }
 
-class InstallDisabledException extends BaseExceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("HTTP_INSTALL_DISABLED", $details);
-    }
-}
-
 /** Exception indicating that the server is configured as disabled */
 class MaintenanceException extends BaseExceptions\ServiceUnavailableException
 {

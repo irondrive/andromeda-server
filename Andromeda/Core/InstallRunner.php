@@ -32,7 +32,8 @@ class InstallRunner extends BaseRunner
     public function HasDatabase() : bool { return $this->database !== null; }
     
     /** Returns true if the database did not give a DatabaseMissingException */
-    public function HasDatabaseConfig() : bool { return !($this->dbexc instanceof DatabaseExceptions\DatabaseMissingException); }
+    public function HasDatabaseConfig() : bool{ 
+        return !($this->dbexc instanceof DatabaseExceptions\DatabaseMissingException); }
     
     /** 
      * Returns the ObjectDatabase instance
@@ -59,7 +60,6 @@ class InstallRunner extends BaseRunner
      *
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
-     * @throws Exceptions\InstallDisabledException if install is globally disabled
      */
     public function __construct(IOInterface $interface, ErrorManager $errman)
     {
@@ -67,10 +67,6 @@ class InstallRunner extends BaseRunner
         $this->interface = $interface;
         $this->errorman = $errman;
         
-        if (!$interface->isPrivileged() && 
-            defined('ALLOW_HTTP_INSTALL') && !ALLOW_HTTP_INSTALL)
-            throw new Exceptions\InstallDisabledException();
-
         try { $this->database = ApiPackage::InitDatabase($interface); }
         catch (DatabaseExceptions\DatabaseConnectException $e) { $this->dbexc = $e; }
         
