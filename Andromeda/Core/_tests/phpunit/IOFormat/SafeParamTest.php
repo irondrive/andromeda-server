@@ -393,6 +393,12 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->testBad("test:", $getVal);
         $this->testBad("test?", $getVal);
+
+        $this->testBad(".", $getVal);
+        $this->testBad("..", $getVal);
+        $this->testBad("/..", $getVal);
+        $this->testBad("/../", $getVal);
+        $this->testBad("../", $getVal);
     }
     
     public function testFSPath() : void

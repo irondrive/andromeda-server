@@ -145,8 +145,9 @@ class FTP extends FTPBase2
     protected function SubReadFolder(string $path) : array
     {        
         $list = ftp_nlist($this->ftp, $this->GetPath($path));
+        // TODO PHP Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters. 
         if ($list === false) throw new FolderReadFailedException();
-        return array_map(function($item){ return basename($item); }, $list);
+        return array_map(function($item){ return basename($item); }, $list); // TODO why is basename needed? check on . and .. behavior
     }    
     
     protected function SubCreateFolder(string $path) : self

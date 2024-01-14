@@ -20,7 +20,7 @@ Functions are provided to enable and disable individual apps. The core app itsel
 
 Some Andromeda functions (logging) require a server data directory to be configured. This directory must be readable and writable by the server and can be set or unset with the `core setconfig --datadir ?text` command.  
 
-A good example location on Linux would be `/var/log/andromeda`.  Make sure this directory is not accessible over the web!
+A good example location on Linux would be `/var/lib/andromeda-server`.  Make sure this directory is not accessible over the web!
 
 ## Error Logging
 

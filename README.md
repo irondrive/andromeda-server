@@ -91,7 +91,7 @@ Andromeda does not use any OS or webserver-specific functions and should work on
 It is strongly recommended (but not required) to make sure that only the main entry point (`index.php`) is web-accessible.  `Andromeda` and `vendor` should be installed elsewhere (e.g. `/usr/local/lib`).  The `index.php` and `andromeda-server` entry points will check `./`, `/usr/local/lib/andromeda-server/` and `/usr/lib/andromeda-server/` in that order for the `Andromeda` folder.  Hiding the subdirectories is not strictly required, but having them accessible [may create vulnerabilities](https://thephp.cc/articles/phpunit-a-security-risk).  In case the folders must exist in `/var/www`, .htaccess files are included to restrict access with Apache 2.4, but manual configuration is needed for nginx or other servers.  For development, the tools assume that the folders are still in the repository root.  It is recommended for security to ensure that the web server cannot write to any of the PHP code folders.
 
 #### Database Config
-The `./andromeda-install core dbconf` command is used to create database configuration.  By default, it will return the contents of the file instead of writing it anywhere.  Using `--outfile` as a flag will instead store the configuration file (`DBConfig.php`) by in the `Andromeda/` folder.  An alternative output filename can be picked by specifying a path/name with `--outfile path`.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda/`, `/usr/local/etc/andromeda/` and `/etc/andromeda/` in that order for `DBConfig.php`.
+The `./andromeda-install core dbconf` command is used to create and test database configuration. The `--outfile` option controls where to write the configuration file.  Using `--outfile` as a flag will store the configuration file (`DBConfig.php`) in the `Andromeda/` folder.  Using `--outfile -` will return the config string as output.  Otherwise, using `--outfile fspath` will store the config at the specified path.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda-server/`, `/usr/local/etc/andromeda-server/` and `/etc/andromeda-server/` in that order for `DBConfig.php`.
 
 For example to create and use an SQLite database and save the config file in the default location, run `./andromeda-install core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
@@ -112,10 +112,10 @@ This is just a reference and not meant to actually be run.
 ```
 
 # server code:  /usr/local/lib/andromeda-server/
-# index.php:    /var/www/html/andromeda/
+# index.php:    /var/www/html/andromeda-server/
 # entry script: /usr/local/bin/
-# db config:    /usr/local/etc/andromeda/
-# sqlite db:    /var/lib/andromeda/
+# db config:    /usr/local/etc/andromeda-server/
+# sqlite db:    /var/lib/andromeda-server/
 
 # install the server files
 cd /usr/local/lib
@@ -125,31 +125,31 @@ composer install
 
 # copy the entry points
 cp andromeda-server /usr/local/bin/
-cp index.php /var/www/html/andromeda/
+cp index.php /var/www/html/andromeda-server/
 
 # create directories
-mkdir /var/lib/andromeda
-mkdir /usr/local/etc/andromeda
-chown -R www-data:www-data /var/lib/andromeda
-chown -R www-data:www-data /usr/local/etc/andromeda
-chmod -R 770 /var/lib/andromeda
-chmod -R 770 /usr/local/etc/andromeda
+mkdir /var/lib/andromeda-server
+mkdir /usr/local/etc/andromeda-server
+chown -R www-data:www-data /var/lib/andromeda-server
+chown -R www-data:www-data /usr/local/etc/andromeda-server
+chmod -R 770 /var/lib/andromeda-server
+chmod -R 770 /usr/local/etc/andromeda-server
 
-## /usr/local/lib/andromeda-server and /var/www/html/andromeda
+## /usr/local/lib/andromeda-server and /var/www/html/andromeda-server
 ## should NOT be writeable by www-data!
 
 # initialize the SQLite database
 sudo -u www-data \
    ./andromeda-install core dbconf --driver sqlite \
-   --dbpath /var/lib/andromeda/database.s3db \
-   --outfile /usr/local/etc/andromeda/DBConfig.php
+   --dbpath /var/lib/andromeda-server/database.s3db \
+   --outfile /usr/local/etc/andromeda-server/DBConfig.php
    
 sudo -u www-data ./andromeda-install core install-all
 sudo -u www-data ./andromeda-server core scanapps --enable
 
 # set the core datadir (for logging)
 sudo -u www-data andromeda-server core setconfig \
-   --datadir /var/lib/andromeda
+   --datadir /var/lib/andromeda-server
 ```
 
 ### Upgrading
