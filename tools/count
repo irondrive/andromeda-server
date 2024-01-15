@@ -3,9 +3,9 @@
 cd Andromeda
 
 dostats(){
-   LINES=$(xargs -d '\n' wc -l)
+   LINES=`cat`
    echo $(echo "$LINES" | wc -l) files
-   echo "$LINES" | sort -h
+   echo "$LINES" | xargs -d '\n' wc -l
 }
 
 phpcode(){
@@ -29,6 +29,8 @@ for t in phpcode phptests python; do
 
    if [ "$1" == "total" ]; then 
       chunk $t . | grep "SCANNING\|total\>\|files\>"
+   elif [ "$1" == "totals" ]; then
+      for d in . Apps/* Core; do chunk $t $d | grep "SCANNING\|total\>\|files\>"; done
    else
       for d in . Apps/* Core; do chunk $t $d; done
    fi
