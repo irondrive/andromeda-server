@@ -89,7 +89,7 @@ class ApiPackage
         $this->apprunner = new AppRunner($this);
         $this->errorman->SetApiPackage($this);
         
-        $pdoDatabase->popStatsContext(); // end init_stats
+        $pdoDatabase->stopStatsContext(); // end init_stats
     }
 
     /**

@@ -158,7 +158,7 @@ class CoreApp extends BaseApp
 
         $retval = Utilities::CaptureOutput(function(){ phpinfo(); });
         
-        $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
+        $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
             function()use($retval){ return strlen($retval); }, 
             function(Output $output)use($retval){ echo $retval; }));
     }

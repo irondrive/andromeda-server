@@ -123,14 +123,10 @@ class Output
     
     /** 
      * Constructs an Output object representing a success response 
-     * @param array<mixed> $appdata
+     * @param mixed $appdata
      */
-    public static function Success(array $appdata) : Output
+    public static function Success($appdata) : Output
     {
-        // if we only ran a single input, make the output array be that result
-        if (count($appdata) === 1 && array_key_exists(0,$appdata)) 
-            $appdata = $appdata[0];
-        
         $output = new Output();
         $output->appdata = $appdata; 
         return $output;

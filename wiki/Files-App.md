@@ -14,7 +14,7 @@ In order to optimize folder-based storages (like a FUSE client), the `files geti
 
 The `files editfilemeta` and `files editfoldermeta` functions edit metadata for files/folder. Right now the only metadata that can be changed is the item's description field.  
 
-The `files upload` function uploads a file into the specified folder.  The `files download` function is used to download files.  This function disables JSON output and will just output the content of the file.  You can also download multiple files in one request by using batch transactions.  This will use "multi-output" mode which will prefix each file output with its 8 byte length, and also output JSON.  E.g. when downloading 2 files you could get `(8 bytes length)(file 1 content)(8 bytes length)(file 2 content)(8 bytes length)(regular json output)`.  The download function supports the traditional byte range HTTP headers in addition to the `fstart` and `flast` parameters.  
+The `files upload` function uploads a file into the specified folder.  The `files download` function is used to download files.  This function disables JSON output and will just output the content of the file.  The download function supports the traditional byte range HTTP headers in addition to the `fstart` and `flast` parameters.  
 
 The `files writefile` function can overwrite all or part of a file.  It takes a regular file input as the content to write, with an optional starting offset.  The `files ftruncate` function changes a file's size.
 

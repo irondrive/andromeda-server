@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bd5ddaeb251460bdb7b511cbdeb814bf",
+    "content-hash": "fa8fda33c5466ade2d224e70e4c65f12",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -62,16 +62,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.295.10",
+            "version": "3.296.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "4d8b4f47639275248e212bd61b6bc51f9dd709f2"
+                "reference": "38e47bbd3b5f76f008dd71c8a68545f9e4e47b6b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/4d8b4f47639275248e212bd61b6bc51f9dd709f2",
-                "reference": "4d8b4f47639275248e212bd61b6bc51f9dd709f2",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/38e47bbd3b5f76f008dd71c8a68545f9e4e47b6b",
+                "reference": "38e47bbd3b5f76f008dd71c8a68545f9e4e47b6b",
                 "shasum": ""
             },
             "require": {
@@ -151,76 +151,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.295.10"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.296.1"
             },
-            "time": "2024-01-11T19:04:31+00:00"
-        },
-        {
-            "name": "clue/arguments",
-            "version": "v2.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/clue/arguments.git",
-                "reference": "87f2c4bc2ff602173bc52f5935a9c3b70d8c996d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/clue/arguments/zipball/87f2c4bc2ff602173bc52f5935a9c3b70d8c996d",
-                "reference": "87f2c4bc2ff602173bc52f5935a9c3b70d8c996d",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^9.3 || ^5.7 || ^4.8.35"
-            },
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "src/functions.php"
-                ],
-                "psr-4": {
-                    "Clue\\Arguments\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Christian Lück",
-                    "email": "christian@clue.engineering"
-                }
-            ],
-            "description": "The simple way to split your command line string into an array of command arguments in PHP.",
-            "homepage": "https://github.com/clue/arguments",
-            "keywords": [
-                "args",
-                "arguments",
-                "argv",
-                "command",
-                "command line",
-                "explode",
-                "parse",
-                "split"
-            ],
-            "support": {
-                "issues": "https://github.com/clue/arguments/issues",
-                "source": "https://github.com/clue/arguments/tree/v2.1.0"
-            },
-            "funding": [
-                {
-                    "url": "https://clue.engineering/support",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/clue",
-                    "type": "github"
-                }
-            ],
-            "time": "2020-12-08T13:02:50+00:00"
+            "time": "2024-01-14T05:20:33+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",

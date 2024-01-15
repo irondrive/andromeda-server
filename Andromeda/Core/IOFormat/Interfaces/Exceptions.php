@@ -23,9 +23,6 @@ class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
             "\t param% gives the file path as a direct file input (optionally with a new name)",
             "\t param- will attach the stdin stream as a direct file input",
             null,
-            "batch usage 1: php index.php batch@ myfile.txt",
-            "batch usage 2: php index.php batch \"app1 action1 [params+]\" \"app2 action2 [params+]\"...", 
-            null,
             "get version:   php index.php version",
             "get actions:   php index.php core usage"
         ));
@@ -34,31 +31,6 @@ class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
             $usage .= PHP_EOL.PHP_EOL."usage failure details: $details";
         
         parent::__construct($usage);
-    }
-}
-
-/** Exception indicating that the given batch file is not valid */
-class UnknownBatchFileException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_BATCH_FILE", $details);
-    }
-}
-
-/** Exception indicating that the given batch file's syntax is not valid */
-class BatchParseException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?\InvalidArgumentException $e = null) {
-        parent::__construct("BATCH_PARSE_ERROR");
-        if ($e !== null) $this->AppendException($e);
-    }
-}
-
-/** Exception indicating that the HTTP batch syntax is invalid */
-class BatchSyntaxInvalidException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("BATCH_SYNTAX_INVALID", $details);
     }
 }
 
@@ -83,14 +55,6 @@ class IllegalGetFieldException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("ILLEGAL_GET_FIELD", $details);
-    }
-}
-
-/** Exception indicating the given batch sequence has too many actions */
-class LargeBatchException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("BATCH_TOO_LARGE", $details);
     }
 }
 

@@ -38,22 +38,6 @@ class InputFileMissingException extends SafeParamException
     }
 }
 
-/** Exception indicating that a batch with zero actions was given */
-class EmptyBatchException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("EMPTY_BATCH_GIVEN", $details);
-    }
-}
-
-/** Exception indicating that an app action does not allow batches */
-class BatchNotAllowedException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ACTION_DISALLOWS_BATCH", $details);
-    }
-}
-
 /** Exception indicating the given Output to parse is invalid */
 class InvalidParseException extends BaseExceptions\ServerException
 {
@@ -70,11 +54,11 @@ class FileReadFailedException extends BaseExceptions\ServerException
     }
 }
 
-/** Exception indicating that the output mode cannot be set in multi-output mode */
-class MultiOutputJSONException extends BaseExceptions\ServerException
+/** Exception indicating that the output mode cannot be set with a user function set */
+class MultiOutputException extends BaseExceptions\ServerException
 {
-    public function __construct(?int $mode = null) {
-        parent::__construct("MULTI_OUTPUT_JSON", ($mode !== null) ? (string)$mode : null);
+    public function __construct(int $mode) {
+        parent::__construct("MULTI_OUTPUT_CONFLICT", (string)$mode);
     }
 }
 

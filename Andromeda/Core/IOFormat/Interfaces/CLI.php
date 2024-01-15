@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Config, Utilities};
-use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 use Andromeda\Core\IOFormat\{Input,InputPath,InputStream,Output,IOInterface,SafeParam,SafeParams};
 use Andromeda\Core\IOFormat\Interfaces\Exceptions\IncorrectCLIUsageException;
 
@@ -66,9 +65,9 @@ class CLI extends IOInterface
         return $this;
     }
 
-    protected function subLoadInputs() : array
+    protected function LoadInput() : Input
     {
-        global $argv; return $this->LoadCLIInputs($argv, $_SERVER, STDIN); // @phpstan-ignore-line types missing
+        global $argv; return $this->LoadFullInput($argv, $_SERVER, STDIN); // @phpstan-ignore-line types missing
     }
     
     /** Strips -- off the given string and returns (or null if not found) */
@@ -97,13 +96,12 @@ class CLI extends IOInterface
     }
 
     /**
-     * Retries an array of input objects to run
+     * Retrieves the input object to run
      * @param list<string> $argv
      * @param array<string, scalar> $server
      * @param resource $stdin
-     * @return non-empty-array<Input>
      */
-    public function LoadCLIInputs(array $argv, array $server, $stdin) : array
+    public function LoadFullInput(array $argv, array $server, $stdin) : Input
     {
         $argIdx = 1;
         
@@ -166,56 +164,11 @@ class CLI extends IOInterface
             switch ($argv[$argIdx])
             {
                 case 'version': die("Andromeda ".andromeda_version.PHP_EOL);
-
-                case 'batch@':
-                {
-                    if (($fname = self::getNextValue($argv,$argIdx)) === null)
-                        throw new IncorrectCLIUsageException('no batch path');
-                    $lines = self::GetBatchFile($fname, $server,$stdin);
-                    return $this->GetBatch($lines, $server, $stdin);
-                }
-                
-                case 'batch': return self::GetBatch(array_slice($argv,$argIdx+1), $server,$stdin);
-                default: return array(self::GetInput(array_slice($argv,$argIdx), $server,$stdin));
+                default: return self::LoadAppInput(array_slice($argv,$argIdx), $server,$stdin);
             }
         }
 
         throw new IncorrectCLIUsageException('missing app/action');
-    }
-
-    /** 
-     * Reads an array of lines from a batch file
-     * @param array<string, scalar> $server
-     * @param resource $stdin
-     * @return array<string> lines from the file
-     * @throws Exceptions\UnknownBatchFileException if the filename is invalid
-      */
-    private function GetBatchFile(string $file, array $server, $stdin) : array
-    {
-        if (!is_file($file) || ($fdata = file_get_contents($file)) === false)
-            throw new Exceptions\UnknownBatchFileException($file);
-        
-        return array_filter(explode("\n", $fdata));
-    }
-    
-    /**
-     * Fetches an Input object by reading it from the command line
-     * @param array<string> $lines
-     * @param array<string, scalar> $server
-     * @param resource $stdin
-     * @return non-empty-array<Input>
-     * @throws EmptyBatchException if argv is empty
-     * @throws Exceptions\BatchParseException if any line is invalid
-     */
-    private function GetBatch(array $lines, array $server, $stdin) : array
-    {
-        if (count($lines) === 0) throw new EmptyBatchException();
-        
-        return array_map(function($line)use($server,$stdin)
-        {
-            try { return self::GetInput(\Clue\Arguments\split($line),$server,$stdin); } // @phpstan-ignore-line // TODO BATCH remove me
-            catch (\InvalidArgumentException $e) { throw new Exceptions\BatchParseException($e); }
-        }, $lines);
     }
 
     /** 
@@ -224,7 +177,7 @@ class CLI extends IOInterface
      * @param array<string, scalar> $server
      * @param resource $stdin
      */
-    private function GetInput(array $argv, array $server, $stdin) : Input
+    private function LoadAppInput(array $argv, array $server, $stdin) : Input
     {
         if (count($argv) < 2) 
             throw new IncorrectCLIUsageException('missing app/action');
@@ -346,10 +299,7 @@ class CLI extends IOInterface
             $outdata = Utilities::JSONEncode(
                 $output->GetAsArray($this->outprop));
             
-            if ($multi = $this->isMultiOutput()) 
-                echo static::formatSize(strlen($outdata));
-        
-            echo $outdata; if (!$multi) echo PHP_EOL;
+            echo $outdata; echo PHP_EOL;
         }
         
         if ($exit) exit($output->isOK() ? 0 : 1); // TODO IFACE go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry

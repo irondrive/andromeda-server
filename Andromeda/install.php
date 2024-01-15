@@ -14,23 +14,17 @@ if ($interface === null) die('INTERFACE_ERROR');
 
 $errman = new ErrorManager($interface, true);
 
-$inputs = $interface->LoadInputs(); // check early
+$input = $interface->GetInput(); // check early
 
 $runner = new InstallRunner($interface, $errman);
 
 
-/** Run the array of user commands */
+/** Run the user command, save/commit changes, display output */
 
-$retvals = array_map(
-    function(Input $input)use($runner){
-        return $runner->Run($input); }, $inputs);
-
-
-/** Save/commit changes, display output */
-
-$output = Output::Success($retvals);
-
+$retval = $runner->Run($input);
 $runner->commit();
+
+$output = Output::Success($retval);
 
 if ($interface->UserOutput($output))
     $runner->commit();

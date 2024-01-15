@@ -3,7 +3,6 @@
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Exceptions\JSONException;
 use Andromeda\Core\IOFormat\{Input,InputAuth,InputPath,IOInterface,Output,SafeParam,SafeParams};
-use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
 
 /** 
  * The interface for using Andromeda over a web server
@@ -32,84 +31,28 @@ class HTTP extends IOInterface
         return $_SERVER['HTTP_USER_AGENT']; // @phpstan-ignore-line always string
     }
 
-    /** 
-     * Retrieves an array of input objects from the request to run 
-     * 
-     * Requests can put multiple requests to be run in a single 
-     * transaction by using the batch paramter as an array
-     */
-    protected function subLoadInputs() : array
+    /** Retrieves the input object from the request to run */
+    protected function LoadInput() : Input
     {
-        return $this->LoadHTTPInputs($_REQUEST, $_GET, $_FILES, $_SERVER); // @phpstan-ignore-line types missing
+        return $this->LoadHTTPInput($_REQUEST, $_GET, $_FILES, $_SERVER); // @phpstan-ignore-line types missing
     }
     
     /**
-     * Retries an array of input objects to run
+     * Retrieves the input object to run from the HTTP request
+     * 
+     * App and Action must be part of $_GET, everything else can be interchangeably 
+     * in $_GET or $_POST except 'password' and 'auth_' which cannot be in $_GET
      * @param array<scalar|array<scalar|array<scalar>>> $req
      * @param array<scalar|array<scalar|array<scalar>>> $get
      * @param array<array<string, scalar>> $files
      * @param array<string, scalar> $server
-     * @return non-empty-array<Input>
      */
-    public function LoadHTTPInputs(array $req, array $get, array $files, array $server) : array
+    public function LoadHTTPInput(array $req, array $get, array $files, array $server) : Input
     {
         if ($server['REQUEST_METHOD'] !== "GET" && 
             $server['REQUEST_METHOD'] !== "POST")
             throw new Exceptions\MethodNotAllowedException();
 
-        if (isset($req['_bat']))
-        {            
-            $breq = $req['_bat'];
-            $bget = $get['_bat'] ?? array();
-            $bfiles = $files['_bat'] ?? array();
-            
-            if (!is_array($bget) || !is_array($bfiles) || !is_array($breq)) // @phpstan-ignore-line // TODO BATCH remove me
-                throw new Exceptions\BatchSyntaxInvalidException('batch not array');
-
-            $global_req = $req; // copy
-            unset($global_req['_bat']);
-            $global_get = $get; // copy
-            unset($global_get['_bat']);
-            $global_files = $files; // copy
-            unset($global_files['_bat']);
-            
-            $inputs = array(); foreach($breq as $bkeyI=>$breqI)
-            {
-                $bgetI = $bget[$bkeyI] ?? array();
-                $bfilesI = $bfiles[$bkeyI] ?? array();
-                
-                if (!is_array($bgetI) || !is_array($bfilesI) || !is_array($breqI))
-                    throw new Exceptions\BatchSyntaxInvalidException("batch $bkeyI not array");
-
-                // merge with global params that apply to all
-                $breqI += $global_req;
-                $bgetI += $global_get;
-                $bfilesI += $global_files;
-
-                $inputs[$bkeyI] = self::GetInput($breqI, $bgetI, $bfilesI, $server);
-            }
-            
-            if (count($inputs) === 0) throw new EmptyBatchException();
-            if (count($inputs) > 65535) throw new Exceptions\LargeBatchException();
-        }
-        else $inputs = array(self::GetInput($req, $get, $files, $server));
-        
-        return $inputs;
-    }
-
-    /** 
-     * Fetches an input object from the HTTP request 
-     * 
-     * App and Action must be part of $_GET, everything else
-     * can be interchangeably in $_GET or $_POST except
-     * 'password' and 'auth_' which cannot be in $_GET
-     * @param array<scalar|array<scalar|array<scalar>>> $req
-     * @param array<scalar|array<scalar|array<scalar>>> $get
-     * @param array<array<string, scalar>> $files
-     * @param array<string, scalar> $server
-     */
-    private function GetInput(array $req, array $get, array $files, array $server) : Input
-    {
         if (!array_key_exists('_app',$get) || !array_key_exists('_act',$get))
             throw new Exceptions\MissingAppActionException('missing');
         
@@ -130,7 +73,6 @@ class HTTP extends IOInterface
         $params = new SafeParams();
         $params->LoadArray($req);
         
-        // TODO BATCH NOTE does not support batching, not a problem after batching is removed
         foreach ($server as $key=>$val)
         {
             if (mb_strpos($key,"HTTP_X_ANDROMEDA_") === 0)
@@ -182,12 +124,6 @@ class HTTP extends IOInterface
                 http_response_code($output->GetCode());
             
             header("Cache-Control: no-cache");
-            
-            if ($this->isMultiOutput())
-            {
-                header("Content-Type: application/octet-stream");
-                header('Content-Transfer-Encoding: binary');
-            }
         }
     }
     
@@ -225,25 +161,18 @@ class HTTP extends IOInterface
                 header("Content-Type: text/plain");
             }
             
-            $outdata = $output->GetAsArray();
-            echo print_r($outdata, true);
+            echo print_r($output->GetAsArray(), true);
         }
         
         if ($this->outmode === self::OUTPUT_JSON)
         {
-            $multi = $this->isMultiOutput();
-            
-            if (!$multi && !headers_sent()) 
+            if (!headers_sent()) 
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: application/json");
             }
             
-            $outdata = Utilities::JSONEncode($output->GetAsArray());
-            
-            if ($multi) echo parent::formatSize(strlen($outdata));
-            
-            echo $outdata;
+            echo Utilities::JSONEncode($output->GetAsArray());
         }
     }
     

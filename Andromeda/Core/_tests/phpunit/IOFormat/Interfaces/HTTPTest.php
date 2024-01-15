@@ -1,8 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat\Interfaces; require_once("init.php");
 
 use Andromeda\Core\Utilities;
-use Andromeda\Core\IOFormat\Exceptions\EmptyBatchException;
-use Andromeda\Core\IOFormat\{Input, InputAuth, Output, OutputHandler, SafeParam, SafeParams};
+use Andromeda\Core\IOFormat\{Input, InputAuth, Output, SafeParam, SafeParams};
 
 class HTTPTest extends \PHPUnit\Framework\TestCase
 {
@@ -21,43 +20,43 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
     public function testMethod() : void
     {
         $this->expectException(Exceptions\MethodNotAllowedException::class);
-        (new HTTP())->LoadHTTPInputs([], [], [], ['REQUEST_METHOD'=>'PUT']);
+        (new HTTP())->LoadHTTPInput([], [], [], ['REQUEST_METHOD'=>'PUT']);
     }
     
     public function testMissingApp() : void
     {
         $this->expectException(Exceptions\MissingAppActionException::class);
-        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp'], [], ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput([], ['_app'=>'myapp'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testMissingAction() : void
     {
         $this->expectException(Exceptions\MissingAppActionException::class);
-        (new HTTP())->LoadHTTPInputs([], ['_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput([], ['_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testAppActionStrings() : void
     {
         $this->expectException(Exceptions\MissingAppActionException::class);
-        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>[]], [], ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput([], ['_app'=>'myapp','_act'=>[]], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testAppActionGet() : void
     {
         $this->expectException(Exceptions\MissingAppActionException::class);
-        (new HTTP())->LoadHTTPInputs(['_app'=>'myapp','_act'=>'myact'], [], [], ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput(['_app'=>'myapp','_act'=>'myact'], [], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testIllegalGetField() : void
     {
         $this->expectException(Exceptions\IllegalGetFieldException::class);
-        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact','password'=>'test'], [], ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput([], ['_app'=>'myapp','_act'=>'myact','password'=>'test'], [], ['REQUEST_METHOD'=>'GET']);
     }
     
     public function testBadBase64Field() : void
     {
         $this->expectException(Exceptions\Base64DecodeException::class);
-        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET',"HTTP_X_ANDROMEDA_XYZ"=>"bad!"]);
+        (new HTTP())->LoadHTTPInput([], ['_app'=>'myapp','_act'=>'myact'], [], ['REQUEST_METHOD'=>'GET',"HTTP_X_ANDROMEDA_XYZ"=>"bad!"]);
     }
     
     public function testBasicInput() : void
@@ -66,8 +65,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         $req = array('password'=>'test', 'param2'=>['0'=>'0','1'=>'1'], 'obj'=>['0'=>'2','3'=>'4']);
         
         $server = array('REQUEST_TIME'=>0,'HTTP_USER_AGENT'=>"abc","HTTP_X_ANDROMEDA_XYZ"=>base64_encode("123"));
-        $inputs = (new HTTP())->LoadHTTPInputs($req+$get, $get, [], $server+['REQUEST_METHOD'=>'POST']);
-        $this->assertCount(1, $inputs); $input = $inputs[0];
+        $input = (new HTTP())->LoadHTTPInput($req+$get, $get, [], $server+['REQUEST_METHOD'=>'POST']);
         
         $this->assertSame($app, $input->GetApp());
         $this->assertSame($act, $input->GetAction());
@@ -85,50 +83,19 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($req+["xyz"=>"123"], $params->GetClientObject());
     }
     
-    public function testEmptyBatch() : void
+    public function testGetAuth() : void
     {
-        $this->expectException(EmptyBatchException::class);
-        (new HTTP())->LoadHTTPInputs(['_bat'=>[]], ['_bat'=>[]], [], ['REQUEST_METHOD'=>'GET']);
-    }
-    
-    /*public function testBatchIsArray1() : void
-    {
-        $this->expectException(Exceptions\BatchSyntaxInvalidException::class);
-        (new HTTP())->LoadHTTPInputs(['_bat'=>[]], ['_bat'=>[]], ['_bat'=>[]], ['REQUEST_METHOD'=>'GET']);
-    }*/ // TODO BATCH remove me
-    
-    /*public function testBatchIsArray2() : void
-    {
-        $this->expectException(Exceptions\BatchSyntaxInvalidException::class);
-        (new HTTP())->LoadHTTPInputs(['_bat'=>[0=>array()]], ['_bat'=>[0=>array()]], ['_bat'=>[0=>5]], ['REQUEST_METHOD'=>'GET']);
-    }*/ // TODO BATCH remove me
-    
-    public function testGetBatchAndAuth() : void
-    {
-        $get = array('_app'=>'test','_bat'=>array(array('_act'=>'act1','bat1'=>'test1'), array('_act'=>'act2','bat2'=>'test2'), 'third'=>array('_act'=>'act3')));
-        $req = $get; $req['greq'] = 8; $req['_bat'][0]['bat1r'] = 'testA'; $req['_bat'][1]['bat2r'] = 'testB'; // batch3 empty
-        
+        $get = array('_app'=>'test','_act'=>'act1'); $req = $get;        
         $server = array('REQUEST_METHOD'=>'GET','PHP_AUTH_USER'=>$user='myuser','PHP_AUTH_PW'=>$pass='mypass');
-        $inputs = (new HTTP())->LoadHTTPInputs($req, $get, array(), $server); // can't test files...
-        $this->assertCount(3, $inputs); $input0 = $inputs[0]; $input1 = $inputs[1]; $input2 = $inputs['third'];
+        $input = (new HTTP())->LoadHTTPInput($req, $get, array(), $server); // can't test files...
         
-        $this->assertSame('test',$input0->GetApp());
-        $this->assertSame('test',$input1->GetApp());
-        $this->assertSame('test',$input2->GetApp());
+        $this->assertSame('test',$input->GetApp());        
+        $this->assertSame('act1',$input->GetAction());
         
-        $this->assertSame('act1',$input0->GetAction());
-        $this->assertSame('act2',$input1->GetAction());
-        $this->assertSame('act3',$input2->GetAction());
-        
-        $this->assertSame(array('bat1'=>'test1','bat1r'=>'testA','greq'=>8), $input0->GetParams()->GetClientObject());
-        $this->assertSame(array('bat2'=>'test2','bat2r'=>'testB','greq'=>8), $input1->GetParams()->GetClientObject());
-        $this->assertSame(array('greq'=>8), $input2->GetParams()->GetClientObject());
-        
-        $auth = $input0->GetAuth(); assert($auth instanceof InputAuth);
+        $auth = $input->GetAuth(); assert($auth instanceof InputAuth);
         $this->assertSame($user,$auth->GetUsername());
         $this->assertSame($pass,$auth->GetPassword());
-        $this->assertEquals($auth,$input1->GetAuth());
-        $this->assertEquals($auth,$input2->GetAuth());
+        $this->assertEquals($auth,$input->GetAuth());
     }
     
     public function testFiles() : void
@@ -137,7 +104,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         $this->expectException(Exceptions\FileUploadFailException::class);
         
         $files = array('myfile'=>array('tmp_name'=>'test.txt','name'=>'test.txt','error'=>0));
-        (new HTTP())->LoadHTTPInputs([], ['_app'=>'myapp','_act'=>'myact'], $files, ['REQUEST_METHOD'=>'GET']);
+        (new HTTP())->LoadHTTPInput([], ['_app'=>'myapp','_act'=>'myact'], $files, ['REQUEST_METHOD'=>'GET']);
     }
     
     /** @param ?array<mixed> $arrval */
@@ -162,10 +129,6 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         $this->testOutput($iface, HTTP::OUTPUT_PLAIN, null, $arr=[1,2,3,4], '[1,2,3,4]'); // json fallback
         $this->testOutput($iface, HTTP::OUTPUT_PRINTR, null, $arr=[1,2,3,4], print_r($arr,true));
         $this->testOutput($iface, HTTP::OUTPUT_JSON, $str='[1,2,3]', $arr=[1,2,3], $str);
-        
-        // now test the binary JSON multi output version
-        $iface->RegisterOutputHandler(new OutputHandler(function(){ return 0; },function(Output $output){ }));
-        $this->testOutput($iface, HTTP::OUTPUT_JSON, null, $arr, HTTP::formatSize(strlen($str)).$str);
     }
 
     public function testRemoteURL() : void
