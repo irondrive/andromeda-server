@@ -449,7 +449,7 @@ class FilesApp extends BaseApp
 
         // register the data output to happen after the main commit so that we don't get to the
         // end of the download and then fail to insert a stats row and miss counting bandwidth
-        $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
+        $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
             function() use($debugdl,$length){ return $debugdl ? null : $length; },
             function(Output $output) use($file,$fstart,$flast,$debugdl)
         {            

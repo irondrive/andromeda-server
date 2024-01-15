@@ -86,7 +86,7 @@ class TestutilApp extends BaseApp
         
         for ($i = 0; $i < $times; $i++)
         {
-            $this->API->GetInterface()->RegisterOutputHandler(new OutputHandler(
+            $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
                 function()use($data,$i){ return strlen($data)*$i; },
                 function(Output $output)use($data,$i){ echo str_repeat($data,$i); }
             ));

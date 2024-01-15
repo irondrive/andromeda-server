@@ -36,11 +36,8 @@ class PDODatabase
     /** if true, don't allow writes */
     private bool $read_only = false;
     
-    /** 
-     * the stack of DB statistics contexts, for nested API->Run() calls 
-     * @var array<DBStats>
-     */
-    private array $stats_stack = array();
+    /** The current DBStats measure context */
+    private ?DBStats $stats = null;
     
     /** 
      * global history of SQL queries sent to the DB (not a stack), possibly with errors 
@@ -210,7 +207,7 @@ class PDODatabase
     public function __construct(array $config, bool $verbose = false, ?DBStats $init_stats = null)
     {
         if ($init_stats !== null)
-            $this->stats_stack[] = $init_stats;
+            $this->stats = $init_stats;
         
         if (!array_key_exists('DRIVER',$config) || !is_string($config['DRIVER']))
             throw new Exceptions\DatabaseConfigException('missing DRIVER');
@@ -615,29 +612,29 @@ class PDODatabase
     /** Begins timing a query (performance metrics) */
     private function startTimingQuery() : void
     {
-        $s = Utilities::array_last($this->stats_stack);
-        if ($s !== null) $s->startQuery();
+        if ($this->stats !== null) 
+            $this->stats->startQuery();
     }
     
     /** Ends timing a query (performance metrics) */
     private function stopTimingQuery(string $sql, int $type, bool $count = true) : void
     {
-        $s = Utilities::array_last($this->stats_stack);
-        if ($s !== null) $s->endQuery($sql, $type, $count);
+        if ($this->stats !== null) 
+            $this->stats->endQuery($sql, $type, $count);
     }
     
     /** Add a new performance metrics context on to the stack and returns it */
-    public function pushStatsContext() : DBStats
+    public function startStatsContext() : DBStats
     {
-        return $this->stats_stack[] = new DBStats();
+        return $this->stats = new DBStats();
     }
 
     /** Pop the current performance metrics context off of the stack */
-    public function popStatsContext() : ?DBStats
+    public function stopStatsContext() : void
     {
-        $obj = array_pop($this->stats_stack);
-        if ($obj !== null) $obj->stopTiming();
-        return $obj;
+        if ($this->stats !== null) 
+            $this->stats->stopTiming();
+        $this->stats = null;
     }
     
     /** 

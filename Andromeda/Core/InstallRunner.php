@@ -103,6 +103,7 @@ class InstallRunner extends BaseRunner
      *
      * Calls Run() on the requested installer and then saves 
      * (but does not commit) any modified objects.
+     * NOTE this function is NOT re-entrant - do NOT call it from apps!
      * @param Input $input the user input command to run
      * @throws Exceptions\UnknownAppException if the requested app is invalid
      * @return mixed the app-specific return value
@@ -113,8 +114,7 @@ class InstallRunner extends BaseRunner
         if (!array_key_exists($app, $this->installers))
             throw new Exceptions\UnknownAppException();
 
-        $context = new RunContext($input, null);
-        $this->stack[] = $context;
+        $this->context = new RunContext($input, null);
         $this->dirty = true;
         
         $installer = $this->installers[$app];
@@ -123,8 +123,7 @@ class InstallRunner extends BaseRunner
         if ($this->database !== null)
             $this->database->SaveObjects();
         
-        array_pop($this->stack);
-        
+        $this->context = null;
         return $retval;
     }
     

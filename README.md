@@ -59,12 +59,6 @@ Every request will return an object with `ok` and `code`.  `ok` denotes whether 
 ### HTTP Differences
 Parameters can be placed in the URL query string, the POST body as `application/x-www-form-urlencoded` or similar (see PHP $_POST), or cookies.  The only restrictions are app and action must be URL variables, and any parameter starting with `auth_` cannot be in the URL.  Andromeda does not make use of the different HTTP methods, headers, or endpoints.  Only GET or POST are allowed.  The output format is always JSON.  The actual HTTP response code is only used if no JSON is output (e.g. downloading a file).  Example `/index.php?app=myapp&action=myaction&myparam=myval`.
 
-### CLI Batching
-Andromeda also allows making requests that run multiple actions as a single transaction.  If there is an error at any point, all actions are reverted ("all or nothing").  The returned `appdata` will be an array, each entry for the corresponding action.  Batches can be run directly from the command line, or from batch files.  To run a batch file, simply list each command on its own line in a plain text file, then run `./andromeda-server batch@ myfile.txt`.  To run a batch directly from the command line, each app/action must be its own quoted argument.  E.g. `./andromeda-server batch "core setconfig --debug none" "core getconfig"`.  
-
-### HTTP Batching
-Via HTTP, this is done using the `batch` input variable.  Each entry in the `batch` parameter holds the action to be run, while parameters outside `batch` will be run for every action.  Example `index.php?app=testutil&action=random&batch[0]&batch[1][length]=5` will output two random numbers, the second with a length of 5 (ex. `{"ok":true,"code":200,"appdata":["oyxvyz2z2d2yqus1","s7enc"]}`).
-
 ### Arrays and Objects
 Parameters can also be given that are arrays or objects.  On the CLI, this is done using JSON.  E.g. `--myarray "[5,10,15]"` or `--myobj "{test:5}"`.  Via HTTP it would look like `?myarr[0]=test&myarr[1]=test` or `?myobj[key]=val`.
 

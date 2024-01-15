@@ -90,8 +90,8 @@ class MetricsHandler
             if ($db->GetInternal()->inTransaction())
                 throw new Exceptions\MetricsTransactionException();
             
-            // TODO BATCH reate new objdb from existing internal db? although db->time will be wrong...
-            // then objectDB can be more assertive about commitAfterRollback + unset internal DB reference on rollback
+            // TODO BATCH create new objdb from existing internal db? although db->time will be wrong...
+            // then objectDB can be more assertive about SaveAfterRollback + unset internal DB reference on rollback
                 
             $metrics = $this->GetMetrics($apipack, $output, $isError);
              

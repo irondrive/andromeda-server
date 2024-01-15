@@ -103,7 +103,8 @@ class ObjectDatabase
     {
         if (!$onlyAlways)
         {
-            if ($this->rolledBack) throw new Exceptions\SaveAfterRollbackException();
+            if ($this->rolledBack) 
+                throw new Exceptions\SaveAfterRollbackException();
             
             // insert new objects first for foreign keys
             foreach ($this->created as $obj) $obj->Save();

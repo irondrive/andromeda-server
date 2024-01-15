@@ -8,20 +8,14 @@ use Andromeda\Core\IOFormat\Input;
  */
 abstract class BaseRunner
 {
-    /** 
-     * stack frames for nested Run() calls
-     * @var array<RunContext>
-     */
-    protected array $stack = array();
+    /** The RunContext currently being executed */
+    protected ?RunContext $context = null;
     
     /** true if Run() has been called since the last commit or rollback */
     protected bool $dirty = false;
 
     /** Returns the RunContext that is currently being executed, if any */
-    public function GetContext() : ?RunContext 
-    {
-        return Utilities::array_last($this->stack); 
-    }
+    public function GetContext() : ?RunContext { return $this->context; }
 
     public function __construct()
     {

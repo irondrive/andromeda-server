@@ -13,7 +13,7 @@ class OutputTest extends \PHPUnit\Framework\TestCase
 {
     public function testSuccess() : void
     {
-        $output = Output::Success(array('myretval'));
+        $output = Output::Success('myretval');
         
         $this->assertTrue($output->isOK());
         $this->assertSame(Output::CODE_SUCCESS ,$output->GetCode());
@@ -64,10 +64,10 @@ class OutputTest extends \PHPUnit\Framework\TestCase
     
     public function testGetAsString() : void
     {
-        $this->assertSame('SUCCESS', Output::Success(array(null))->GetAsString());
-        $this->assertSame('FALSE', Output::Success(array(false))->GetAsString());
-        $this->assertSame('TRUE', Output::Success(array(true))->GetAsString());
-        $this->assertSame('myretval', Output::Success(array('myretval'))->GetAsString());
+        $this->assertSame('SUCCESS', Output::Success(null)->GetAsString());
+        $this->assertSame('FALSE', Output::Success(false)->GetAsString());
+        $this->assertSame('TRUE', Output::Success(true)->GetAsString());
+        $this->assertSame('myretval', Output::Success('myretval')->GetAsString());
         
         $this->assertNull(Output::Success(array('mykey'=>'myval'))->GetAsString());
         $this->assertNull(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString());

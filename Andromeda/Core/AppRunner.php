@@ -116,6 +116,7 @@ class AppRunner extends BaseRunner
      * Calls Run() on the requested app and then saves (but does not commit) 
      * any modified objects. These calls can be nested - apps can call Run for 
      * other apps but should always do so via the API, not directly to the app
+     * NOTE this function is NOT re-entrant - do NOT call it from apps!
      * @param Input $input the user input command to run
      * @throws Exceptions\UnknownAppException if the requested app is invalid
      * @return mixed the app-specific return value
@@ -135,26 +136,22 @@ class AppRunner extends BaseRunner
             $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
         }
         
-        $context = new RunContext($input, $actionlog);
-        $this->stack[] = $context;
+        $this->context = new RunContext($input, $actionlog);
         $this->dirty = true;
         
         if ($this->apipack->GetMetricsLevel() > 0)
         {
-            $stats = $db->GetInternal()->pushStatsContext();
-            $context->SetMetrics($stats);
-            $this->action_history[] = $context;
+            $stats = $db->GetInternal()->startStatsContext();
+            $this->context->SetMetrics($stats);
+            $this->action_history[] = $this->context;
         }
 
         $retval = $app->Run($input);
-        
         $db->SaveObjects();
-        
-        array_pop($this->stack);
 
-        if ($this->apipack->GetMetricsLevel() > 0)
-            $db->GetInternal()->popStatsContext();
+        if (isset($stats)) $db->GetInternal()->stopStatsContext();
         
+        $this->context = null;
         return $retval;
     }
 
@@ -223,7 +220,7 @@ class AppRunner extends BaseRunner
             
             if ($this->apipack->GetMetricsLevel() > 0)
             {
-                $stats = $db->GetInternal()->pushStatsContext();
+                $stats = $db->GetInternal()->startStatsContext();
                 $this->commit_stats[] = $stats;
             }
             
@@ -233,8 +230,7 @@ class AppRunner extends BaseRunner
             if ($this->requestlog !== null) 
                 $this->requestlog->WriteFile();
 
-            if ($this->apipack->GetMetricsLevel() > 0) 
-                $db->GetInternal()->popStatsContext();
+            if (isset($stats)) $db->GetInternal()->stopStatsContext();
             
             $this->dirty = false;
         });

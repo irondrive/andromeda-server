@@ -56,7 +56,7 @@ Your app also can implement its own commit() and rollback() routines by overridi
 
 If your app uses database tables, it should inherit from `InstalledApp`.  This class takes care of the install and upgrade systems of the app.  The app's version must be stored in the database in a class that inherits from `BaseConfig`. Any other database tables your app requires should be represented with a `BaseObject` or `StandardObject`.  
 
-If your app needs exceptions, they should inherit from `ServerException` or `ClientException`.  `Crypto.php` provides a wrapper around libsodium and `Utilities.php` provides other useful tools. Remember that all input is done via the `Input` object and all output is done by returning a value in `Run()`.  Your app should never use `$_GET` or `printr` or `echo` or anything similar as this breaks CLI/HTTP abstraction.  If your app needs to do its own binary/non-JSON output, it can use the interface's `SetOutputMode()` and `RegisterOutputHandler()` - see CoreApp.php `PHPInfo()` for an example. 
+If your app needs exceptions, they should inherit from `ServerException` or `ClientException`.  `Crypto.php` provides a wrapper around libsodium and `Utilities.php` provides other useful tools. Remember that all input is done via the `Input` object and all output is done by returning a value in `Run()`.  Your app should never use `$_GET` or `printr` or `echo` or anything similar as this breaks CLI/HTTP abstraction.  If your app needs to do its own binary/non-JSON output, it can use the interface's `SetOutputMode()` and `SetOutputHandler()` - see CoreApp.php `PHPInfo()` for an example. 
 
 ## Tools and Scripts
 
