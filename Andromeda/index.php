@@ -11,11 +11,9 @@
  */
 
 use Andromeda\Core\ApiPackage;
-use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
+use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Errors\ErrorManager;
 
-
-/** First create the global resources */
 
 $interface = IOInterface::TryGet(); 
 if ($interface === null) die('INTERFACE_ERROR');
@@ -26,23 +24,4 @@ $input = $interface->GetInput(); // check early
 
 $apipack = new ApiPackage($interface, $errman);
 
-$runner = $apipack->GetAppRunner();
-$metrics = $apipack->GetMetricsHandler();
-
-
-/** Run the action, save/commit changes, display output */
-
-$retval = $runner->Run($input);
-$runner->commit();
-
-$output = Output::Success($retval);
-
-if ($interface->UserOutput($output)) 
-    $runner->commit();
-
-$metrics->SaveMetrics($apipack, $output);
-$interface->FinalOutput($output);
-
-
-
-
+$apipack->GetAppRunner()->Run($input);

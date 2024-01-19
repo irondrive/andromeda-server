@@ -8,7 +8,7 @@ class DBStats
 {
     private float $query_start;
     private float $start_timens;
-    private float $total_timens;
+    private float $total_timens = 0;
     
     private int $reads = 0; 
     private int $writes = 0; 
@@ -78,15 +78,19 @@ class DBStats
         return $this->GetTotalTime() - $this->read_time - $this->write_time;
     }
     
-    /** Adds another DBStats' read/write/query stats to this one (not total/code) */
-    public function Add(self $stats) : void
+    /** 
+     * Adds another DBStats' read/write/query stats to this one
+     * @param bool $total if true, add total/code time also
+     */
+    public function Add(self $stats, bool $total) : void
     {
         $this->reads += $stats->reads;
         $this->read_time += $stats->read_time;
         $this->writes += $stats->writes;
         $this->write_time += $stats->write_time;
-        
-        foreach ($stats->queries as $query)
-            $this->queries[] = $query;
+
+        if ($total) $this->total_timens += $stats->total_timens;
+
+        array_push($this->queries, ...$stats->queries);
     }
 }

@@ -57,8 +57,8 @@ class FileReadFailedException extends BaseExceptions\ServerException
 /** Exception indicating that the output mode cannot be set with a user function set */
 class MultiOutputException extends BaseExceptions\ServerException
 {
-    public function __construct(int $mode) {
-        parent::__construct("MULTI_OUTPUT_CONFLICT", (string)$mode);
+    public function __construct(?int $mode = null) {
+        parent::__construct("MULTI_OUTPUT_CONFLICT", ($mode !== null) ? (string)$mode : null);
     }
 }
 

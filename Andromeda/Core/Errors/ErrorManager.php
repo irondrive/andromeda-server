@@ -103,10 +103,13 @@ class ErrorManager
             }
     
             $output = Output::ClientException($e, $debug);
-            
-            if ($this->apipack !== null)
-                $this->apipack->GetMetricsHandler()
-                    ->SaveMetrics($this->apipack, $output, true);
+
+            if ($this->apipack !== null && $this->runner !== null &&
+                ($context = $this->runner->GetContext()) !== null)
+            {
+                $this->apipack->GetMetricsHandler()->
+                    SaveMetrics($this->apipack, $context, $output, true);
+            }
             
             return $output;
         }

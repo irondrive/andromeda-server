@@ -128,9 +128,9 @@ class CoreApp extends BaseApp
         
     /**
      * Collects usage strings from every installed app and returns them
-     * @return array<string> array of possible commands
+     * @return string|array<string> array of possible commands
      */
-    protected function GetUsages(SafeParams $params) : array
+    protected function GetUsages(SafeParams $params)
     {
         $want = $params->HasParam('appname') ? $params->GetParam('appname')->GetAlphanum() : null;
         
@@ -143,6 +143,10 @@ class CoreApp extends BaseApp
             array_push($output, ...array_map(function($line)use($name){ 
                 return "$name $line"; }, $app->getUsage())); 
         }
+
+        if ($this->API->GetInterface()->GetOutputMode() == IOInterface::OUTPUT_PLAIN)
+            $output = implode("\n", $output);
+
         return $output;
     }
 

@@ -98,10 +98,14 @@ abstract class IOInterface
     /** 
      * Sets a user output handler function to run after the initial commit 
      * NOTE Sets the output mode to null if bytes !== null
+     * @throws Exceptions\MultiOutputException if set more than once
      */
-    public function SetOutputHandler(OutputHandler $f) : self 
+    public function SetOutputHandler(?OutputHandler $f = null) : self 
     {
-        if ($f->GetBytes() !== null)
+        if ($f !== null && $this->userfunc !== null)
+            throw new Exceptions\MultiOutputException();
+
+        if ($f !== null && $f->GetBytes() !== null)
             $this->outmode = 0;
         
         $this->userfunc = $f; return $this; 

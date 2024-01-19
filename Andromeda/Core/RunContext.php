@@ -9,7 +9,9 @@ class RunContext
 { 
     private Input $input;     
     private ?ActionLog $actionlog;
-    private ?DBStats $metrics = null;
+
+    private ?DBStats $actionMetrics = null;
+    private ?DBStats $commitMetrics = null;
     
     public function __construct(Input $input, ?ActionLog $actionlog)
     {
@@ -23,20 +25,41 @@ class RunContext
     /** Returns the action log created for this run */
     public function GetActionLog() : ?ActionLog { return $this->actionlog; }
     
-    /** Returns true if metrics were set */
-    public function HasMetrics() : bool { return $this->metrics !== null; }
+    /** Sets the action metrics created for this context */
+    public function SetActionMetrics(DBStats $metrics) : void { 
+        $this->actionMetrics = $metrics; }
+
+    /** Returns true if action metrics were set */
+    public function HasActionMetrics() : bool { 
+        return $this->actionMetrics !== null; }
 
     /** 
-     * Returns the metrics created for this run
+     * Returns the action metrics created for this run
      * @throws Exceptions\MissingMetricsException if it wasn't set
      */
-    public function GetMetrics() : DBStats 
+    public function GetActionMetrics() : DBStats 
     { 
-        if ($this->metrics === null) 
+        if ($this->actionMetrics === null) 
             throw new Exceptions\MissingMetricsException();
-        else return $this->metrics;
+        else return $this->actionMetrics;
     }
     
-    /** Sets the metrics created for this fun */
-    public function SetMetrics(DBStats $metrics) : void { $this->metrics = $metrics; }
+    /** Sets the commit metrics created for this context */
+    public function SetCommitMetrics(DBStats $metrics) : void { 
+        $this->commitMetrics = $metrics; }
+        
+    /** Returns true if commit metrics were set */
+    public function HasCommitMetrics() : bool { 
+        return $this->commitMetrics !== null; }
+
+    /** 
+     * Returns the commit metrics created for this run
+     * @throws Exceptions\MissingMetricsException if it wasn't set
+     */
+    public function GetCommitMetrics() : DBStats 
+    { 
+        if ($this->commitMetrics === null) 
+            throw new Exceptions\MissingMetricsException();
+        else return $this->commitMetrics;
+    }
 }
