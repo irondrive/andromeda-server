@@ -2,7 +2,7 @@
 
 use Andromeda\Core\{Config, InstallerApp};
 use Andromeda\Core\Database\PDODatabase;
-use Andromeda\Core\IOFormat\{Input, SafeParams};
+use Andromeda\Core\IOFormat\{Input, IOInterface, SafeParams};
 
 /** The core config installer, also can install/upgrade all apps */
 class CoreInstallApp extends InstallerApp
@@ -55,9 +55,9 @@ class CoreInstallApp extends InstallerApp
 
     /**
      * Collects usage strings from every installed app and returns them
-     * @return array<string> array of possible commands
+     * @return string|array<string> array of possible commands
      */
-    protected function GetUsages(SafeParams $params) : array
+    protected function GetUsages(SafeParams $params)
     {
         $want = $params->HasParam('appname') ? $params->GetParam('appname')->GetAlphanum() : null;
         
@@ -70,6 +70,10 @@ class CoreInstallApp extends InstallerApp
             array_push($output, ...array_map(function(string $line)use($name){
                 return "$name $line"; }, $installer->getUsage()));
         }
+        
+        if ($this->runner->GetInterface()->GetOutputMode() == IOInterface::OUTPUT_PLAIN)
+            $output = implode("\n", $output);
+
         return $output;
     }
 

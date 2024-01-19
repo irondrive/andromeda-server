@@ -20,8 +20,7 @@ class TestutilApp extends BaseApp
             'random [--length uint]',
             'getinput',
             'exception',
-            'check-dryrun',
-            'binoutput --data raw [--times uint]'
+            'check-dryrun'
         );
 
         return $retval;
@@ -35,11 +34,8 @@ class TestutilApp extends BaseApp
         {
             case 'random':  return $this->Random($params);  
             case 'getinput': return $this->GetInput($input);
-            
             case 'exception': $this->ServerException(); return;
-            
             case 'check-dryrun': return $this->CheckDryRun();
-            case 'binoutput': $this->BinaryOutput($params); return;
             
             default: throw new UnknownActionException($input->GetAction());
         }
@@ -75,22 +71,6 @@ class TestutilApp extends BaseApp
     protected function CheckDryRun() : bool
     {
         return $this->API->GetInterface()->isDryRun();
-    }
-    
-    protected function BinaryOutput(SafeParams $params) : void
-    {
-        $this->API->GetInterface()->SetOutputMode(0);
-        
-        $data = $params->GetParam('data')->GetRawString();
-        $times = $params->GetOptParam('times',0)->GetUint();
-        
-        for ($i = 0; $i < $times; $i++)
-        {
-            $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
-                function()use($data,$i){ return strlen($data)*$i; },
-                function(Output $output)use($data,$i){ echo str_repeat($data,$i); }
-            ));
-        }
     }
 }
 

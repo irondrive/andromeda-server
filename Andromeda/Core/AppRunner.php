@@ -23,19 +23,7 @@ class AppRunner extends BaseRunner
 
     /** Optional request log for this request */
     private ?RequestLog $requestlog = null;
-    
-    /** 
-     * action/context history
-     * @var array<RunContext> 
-     */
-    protected array $action_history = array();
-    
-    /** 
-     * commit stats 
-     * @var array<DBStats>
-     */
-    private array $commit_stats = array();
-    
+
     /**
      * Gets an array of instantiated apps
      * @return array<string, BaseApp>
@@ -45,12 +33,6 @@ class AppRunner extends BaseRunner
     /** Returns the request log entry for this request */
     public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
     
-    /** @return array<RunContext> action/context history */
-    public function GetActionHistory() : array { return $this->action_history; }
-    
-    /** @return array<DBStats> commit stats */
-    public function GetCommitStats() : array { return $this->commit_stats; }
-
     /** Creates the AppRunner service, loading/constructing all apps */
     public function __construct(ApiPackage $apipack)
     {
@@ -111,17 +93,14 @@ class AppRunner extends BaseRunner
     }
 
     /**
-     * Calls into an app to run the given Input command
+     * Calls into an app to Run() the given Input command, saves all objects,
+     * commits, finally and writes output to the interface
      * 
-     * Calls Run() on the requested app and then saves (but does not commit) 
-     * any modified objects. These calls can be nested - apps can call Run for 
-     * other apps but should always do so via the API, not directly to the app
      * NOTE this function is NOT re-entrant - do NOT call it from apps!
      * @param Input $input the user input command to run
      * @throws Exceptions\UnknownAppException if the requested app is invalid
-     * @return mixed the app-specific return value
      */
-    public function Run(Input $input)
+    public function Run(Input $input) : void
     {
         $appname = $input->GetApp();
         if (!array_key_exists($appname, $this->apps)) 
@@ -129,6 +108,7 @@ class AppRunner extends BaseRunner
 
         $app = $this->apps[$appname];
         $db = $this->apipack->GetDatabase();
+        $innerDb = $db->GetInternal();
         
         $actionlog = null; if ($this->requestlog !== null 
                             && $app->getLogClass() === null)
@@ -136,23 +116,37 @@ class AppRunner extends BaseRunner
             $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
         }
         
-        $this->context = new RunContext($input, $actionlog);
-        $this->dirty = true;
-        
-        if ($this->apipack->GetMetricsLevel() > 0)
-        {
-            $stats = $db->GetInternal()->startStatsContext();
-            $this->context->SetMetrics($stats);
-            $this->action_history[] = $this->context;
-        }
+        $this->context = $context = new RunContext($input, $actionlog);
+
+        if (($doMetrics = $this->apipack->GetMetricsLevel() > 0))
+            $context->SetActionMetrics($innerDb->startStatsContext());
 
         $retval = $app->Run($input);
         $db->SaveObjects();
 
-        if (isset($stats)) $db->GetInternal()->stopStatsContext();
+        if ($doMetrics)
+        {
+            $innerDb->stopStatsContext(); // action
+            $commitStats = new DBStats();
+            $this->timedCommit($commitStats);
+            $context->SetCommitMetrics($commitStats);
+        }
+        else $this->commit();
+
+        $interface = $this->apipack->GetInterface();
+        $output = Output::Success($retval);
         
+        if ($interface->UserOutput($output))
+        {
+            if (!$doMetrics) $this->commit();
+            else $this->timedCommit($commitStats);
+        }
+
+        $this->apipack->GetMetricsHandler()
+            ->SaveMetrics($this->apipack, $context, $output);
+
+        $interface->FinalOutput($output);
         $this->context = null;
-        return $retval;
     }
 
     /**
@@ -201,9 +195,19 @@ class AppRunner extends BaseRunner
                 if ($this->requestlog !== null)
                     $this->requestlog->WriteFile();
             });
-            
-            $this->dirty = false;
         });
+    }
+
+    /** Performs a commit, timing stats and adding to $stats if not null */
+    protected function timedCommit(DBStats $stats) : void
+    {
+        $db = $this->apipack->GetDatabase()->GetInternal();
+        $commitStats = $db->startStatsContext();
+
+        $this->commit();
+
+        $commitStats->stopTiming();
+        $stats->Add($commitStats, true);
     }
     
     /**
@@ -212,27 +216,16 @@ class AppRunner extends BaseRunner
      * First commits each app, then the database.  Does a rollback 
      * instead if the request was specified as a dry run.
      */
-    public function commit() : void
+    protected function commit() : void
     {
         Utilities::RunNoTimeout(function()
         {
             $db = $this->apipack->GetDatabase();
-            
-            if ($this->apipack->GetMetricsLevel() > 0)
-            {
-                $stats = $db->GetInternal()->startStatsContext();
-                $this->commit_stats[] = $stats;
-            }
-            
             $db->SaveObjects();
             $this->doCommit(true);
             
             if ($this->requestlog !== null) 
                 $this->requestlog->WriteFile();
-
-            if (isset($stats)) $db->GetInternal()->stopStatsContext();
-            
-            $this->dirty = false;
         });
     }
     

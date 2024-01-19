@@ -3,7 +3,7 @@
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\Database\Exceptions as DatabaseExceptions;
 use Andromeda\Core\Errors\ErrorManager;
-use Andromeda\Core\IOFormat\{IOInterface, Input};
+use Andromeda\Core\IOFormat\{IOInterface, Input, Output};
 
 /** 
  * A special runner class for loading and running app installers
@@ -99,32 +99,37 @@ class InstallRunner extends BaseRunner
     }
     
     /**
-     * Calls into an installer to run the given Input command
-     *
-     * Calls Run() on the requested installer and then saves 
-     * (but does not commit) any modified objects.
+     * Calls into an installer to Run() the given Input command, saves all objects,
+     * commits, finally and writes output to the interface
+     * 
      * NOTE this function is NOT re-entrant - do NOT call it from apps!
      * @param Input $input the user input command to run
      * @throws Exceptions\UnknownAppException if the requested app is invalid
-     * @return mixed the app-specific return value
      */
-    public function Run(Input $input)
+    public function Run(Input $input) : void
     {
         $app = $input->GetApp();
         if (!array_key_exists($app, $this->installers))
             throw new Exceptions\UnknownAppException();
 
         $this->context = new RunContext($input, null);
-        $this->dirty = true;
-        
+
         $installer = $this->installers[$app];
         $retval = $installer->Run($input);
 
         if ($this->database !== null)
+        {
             $this->database->SaveObjects();
+            $this->commit();
+        }
         
+        $output = Output::Success($retval);
+        
+        if ($this->interface->UserOutput($output))
+            $this->commit();
+            
+        $this->interface->FinalOutput($output);
         $this->context = null;
-        return $retval;
     }
     
     /** Rolls back the current database transaction */
@@ -134,13 +139,11 @@ class InstallRunner extends BaseRunner
         {
             if ($this->database !== null)
                 $this->database->rollback();
-            
-            $this->dirty = false;
         });
     }
     
     /** Commits the current database transaction */
-    public function commit() : void
+    protected function commit() : void
     {
         Utilities::RunNoTimeout(function()
         {
@@ -150,8 +153,6 @@ class InstallRunner extends BaseRunner
                     $this->database->rollback();
                 else $this->database->commit();
             }
-            
-            $this->dirty = false;
         });
     }
 }

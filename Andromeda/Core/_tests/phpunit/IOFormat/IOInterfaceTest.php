@@ -43,6 +43,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $iface->SetOutputHandler(new OutputHandler(function(){ return null; },function(Output $output){ }));
         $this->assertSame(IOInterface::OUTPUT_PLAIN, $iface->GetOutputMode()); // null bytes does not affect outmode
         
+        $iface->SetOutputHandler(null); // reset
         $iface->SetOutputHandler(new OutputHandler(function(){ return 0; },function(Output $output){ }));
         $this->assertSame(0, $iface->GetOutputMode()); // 1st user func sets null
         
@@ -64,6 +65,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $called = false;
         $outfunc->method('DoOutput')->willReturnCallback(
             function()use(&$called){ $called = true; });
+        $iface->SetOutputHandler(null); // reset
         $iface->SetOutputHandler($outfunc);
         $this->assertSame("", Utilities::CaptureOutput(function()use($iface,$output){
             $this->assertSame(true, $iface->UserOutput($output));
@@ -75,9 +77,13 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $outdata = Utilities::Random($len);
         $outfunc->method('DoOutput')->willReturnCallback(
             function()use($outdata){ echo $outdata; });
+        $iface->SetOutputHandler(null); // reset
         $iface->SetOutputHandler($outfunc);
         $this->assertSame($outdata, Utilities::CaptureOutput(function()use($iface,$output){
             $this->assertSame(true, $iface->UserOutput($output));
         }));
+
+        $this->expectException(Exceptions\MultiOutputException::class);
+        $iface->SetOutputHandler($outfunc); // set twice
     }
 }

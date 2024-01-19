@@ -5,6 +5,10 @@ cd tools; if [ ! -d mysql2sqlite ]; then
    git clone https://github.com/dumblob/mysql2sqlite.git
 fi; cd ..
 
+if [ "$1" == "" ]; then
+   echo "which app?"; exit 1
+fi
+
 echo "running pgtransfer..."
 tools/pgtransfer
 
@@ -13,7 +17,7 @@ export MYSQL_PWD
 
 cd Andromeda; for i in Apps/* Core; do if [ -f $i/andromeda.mysql.sql ]; then
 
-   NAME=`basename $i`; if [ "$1" != "" ] && [ "${1,,}" != "${NAME,,}" ]; then continue; fi
+   NAME=`basename $i`; if [ "${1,,}" != "${NAME,,}" ]; then continue; fi
 
    echo "exporting mysql template for $i..."
    il=${i,,}; TABLES=$(mysql -D andromeda -u root -se "SHOW TABLES LIKE '%${il//\//_}%'")

@@ -11,19 +11,16 @@ abstract class BaseRunner
     /** The RunContext currently being executed */
     protected ?RunContext $context = null;
     
-    /** true if Run() has been called since the last commit or rollback */
-    protected bool $dirty = false;
-
     /** Returns the RunContext that is currently being executed, if any */
     public function GetContext() : ?RunContext { return $this->context; }
 
     public function __construct()
     {
         register_shutdown_function(function(){
-            if ($this->dirty) $this->rollback(); });
+            if ($this->context !== null) $this->rollback(); });
         
         if (function_exists('pcntl_signal')) pcntl_signal(SIGTERM, function(){
-            if ($this->dirty) $this->rollback(); });
+            if ($this->context !== null) $this->rollback(); });
     }
     
     /**
@@ -40,5 +37,5 @@ abstract class BaseRunner
     public abstract function rollback(?\Throwable $e = null) : void;
     
     /** Commits the current transaction */
-    public abstract function commit() : void;
+    protected abstract function commit() : void;
 }
