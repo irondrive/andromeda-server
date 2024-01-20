@@ -8,22 +8,29 @@ use Andromeda\Core\Logging\ActionLog;
 class RunContext 
 { 
     private Input $input;     
-    private ?ActionLog $actionlog;
-
+    private ?ActionLog $actionlog = null;
     private ?DBStats $actionMetrics = null;
     private ?DBStats $commitMetrics = null;
     
-    public function __construct(Input $input, ?ActionLog $actionlog)
+    public function __construct(Input $input)
     {
         $this->input = $input;
-        $this->actionlog = $actionlog;
     }
     
     /** Returns the input object being run */
     public function GetInput() : Input { return $this->input; }
     
     /** Returns the action log created for this run */
-    public function GetActionLog() : ?ActionLog { return $this->actionlog; }
+    public function TryGetActionLog() : ?ActionLog { return $this->actionlog; }
+
+    /** 
+     * @template T of ActionLog
+     * Sets the action log to the given object
+     * @param T $log the log object to set
+     * @return T
+     */
+    public function SetActionLog(ActionLog $log) : ActionLog { 
+        return $this->actionlog = $log; }
     
     /** Sets the action metrics created for this context */
     public function SetActionMetrics(DBStats $metrics) : void { 

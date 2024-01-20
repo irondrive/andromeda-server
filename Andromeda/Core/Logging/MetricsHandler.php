@@ -40,24 +40,18 @@ class MetricsHandler
             if ($apipack->GetMetricsLevel() === 0) return; // disabled
             
             $database = $apipack->GetDatabase();
-            $apprunner = $apipack->GetAppRunner();
-            
             // want to re-use DB, saving must be in its own transaction
             if ($database->GetInternal()->inTransaction())
                 throw new Exceptions\MetricsTransactionException();
             
             $total_stats = clone $this->total_stats;
             $total_stats->Add($this->init_stats, false);
+            $total_stats->Add($context->GetActionMetrics(), false);
+            $total_stats->Add($context->GetCommitMetrics(), false);
             $total_stats->stopTiming();
             
-            $metrics = MetricsLog::Create(
-                $mlevel, $database, $apprunner->GetRequestLog(),
-                $this->init_stats, $context, $total_stats);
-
-            // TODO BATCH create new objdb from existing internal db? although db->time will be wrong...
-            // then objectDB can be more assertive about SaveAfterRollback + unset internal DB reference on rollback
-            
-            $metrics->Save();
+            $metrics = MetricsLog::Create($mlevel, $database, 
+                $this->init_stats, $context, $total_stats)->Save();
 
             if ($apipack->isCommitRollback()) 
                 $database->rollback(); 

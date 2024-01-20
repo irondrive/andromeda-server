@@ -53,15 +53,17 @@ class ApiPackage
      *
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
+     * @param AppRunner $apprunner app runner reference
      * @throws DatabaseConnectException if the connection fails
      * @throws Exceptions\InstallRequiredException if the Config is not available
      * @throws Exceptions\UpgradeRequiredException if the Config version is wrong
      * @throws Exceptions\MaintenanceException if the server is not enabled
      */
-    public function __construct(IOInterface $interface, ErrorManager $errman)
+    public function __construct(IOInterface $interface, ErrorManager $errman, AppRunner $apprunner)
     {
         $this->interface = $interface;
         $this->errorman = $errman;
+        $this->apprunner = $apprunner;
         
         $this->metrics = new MetricsHandler();
         $init_stats = $this->metrics->GetInitStats();
@@ -85,9 +87,6 @@ class ApiPackage
             
         $pdoDatabase->SetLogValues(
             $this->GetDebugLevel() >= Config::ERRLOG_SENSITIVE);
-        
-        $this->apprunner = new AppRunner($this);
-        $this->errorman->SetApiPackage($this);
         
         $pdoDatabase->stopStatsContext(); // end init_stats
     }
@@ -114,5 +113,11 @@ class ApiPackage
     public function isCommitRollback() : bool
     {
         return $this->database->isReadOnly() || $this->interface->isDryRun();
+    }
+
+    /** Returns true if an action log should be created */
+    public function isActionLogEnabled() : bool
+    {
+        return !$this->config->isReadOnly() && $this->config->GetEnableActionLog();
     }
 }

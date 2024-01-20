@@ -27,11 +27,11 @@ class Config extends BaseConfig
      */
     private FieldTypes\JsonArray $apps;
     /** True if requests should be logged to DB */
-    private FieldTypes\BoolType $requestlog_db;
+    private FieldTypes\BoolType $actionlog_db;
     /** True if requests should be logged to a file */
-    private FieldTypes\BoolType $requestlog_file;
+    private FieldTypes\BoolType $actionlog_file;
     /** The details level enum for request logging */
-    private FieldTypes\IntType $requestlog_details;
+    private FieldTypes\IntType $actionlog_details;
     /** The debug logging level enum */
     private FieldTypes\IntType $debug;
     /** True if debug/metrics can be sent over HTTP */
@@ -61,7 +61,7 @@ class Config extends BaseConfig
     /** Returns the string detailing the CLI usage for SetConfig */
     public static function GetSetConfigUsage() : string { return 
         "[--read_only bool] [--enabled bool] [--email bool] [--datadir ?fspath] ".
-        "[--requestlog_db bool] [--requestlog_file bool] [--requestlog_details ".implode('|',array_keys(self::RQLOG_DETAILS_TYPES))."] ".
+        "[--actionlog_db bool] [--actionlog_file bool] [--actionlog_details ".implode('|',array_keys(self::ACTLOG_DETAILS_TYPES))."] ".
         "[--debug ".implode('|',array_keys(self::DEBUG_TYPES))."] [--debug_http bool] [--debug_dblog bool] [--debug_filelog bool] ".
         "[--metrics ".implode('|',array_keys(self::METRICS_TYPES))."] [--metrics_dblog bool] [--metrics_filelog bool]"; }
     
@@ -75,9 +75,9 @@ class Config extends BaseConfig
         $fields[] = $this->email =              new FieldTypes\BoolType('email',false, true);
         $fields[] = $this->apps =               new FieldTypes\JsonArray('apps',false);
         
-        $fields[] = $this->requestlog_db =      new FieldTypes\BoolType('requestlog_db',false, false);
-        $fields[] = $this->requestlog_file  =   new FieldTypes\BoolType('requestlog_file',false, false);
-        $fields[] = $this->requestlog_details = new FieldTypes\IntType ('requestlog_details',false, self::RQLOG_DETAILS_BASIC);
+        $fields[] = $this->actionlog_db =      new FieldTypes\BoolType('actionlog_db',false, false);
+        $fields[] = $this->actionlog_file  =   new FieldTypes\BoolType('actionlog_file',false, false);
+        $fields[] = $this->actionlog_details = new FieldTypes\IntType ('actionlog_details',false, self::ACTLOG_DETAILS_BASIC);
         $fields[] = $this->debug =              new FieldTypes\IntType ('debug',false, self::ERRLOG_ERRORS);
         $fields[] = $this->debug_http =         new FieldTypes\BoolType('debug_http',false, false);
         $fields[] = $this->debug_dblog =        new FieldTypes\BoolType('debug_dblog',false, true);
@@ -113,13 +113,13 @@ class Config extends BaseConfig
             $this->datadir->SetValue($datadir);
         }
         
-        if ($params->HasParam('requestlog_db')) $this->requestlog_db->SetValue($params->GetParam('requestlog_db')->GetBool());
-        if ($params->HasParam('requestlog_file')) $this->requestlog_file->SetValue($params->GetParam('requestlog_file')->GetBool());
+        if ($params->HasParam('actionlog_db')) $this->actionlog_db->SetValue($params->GetParam('actionlog_db')->GetBool());
+        if ($params->HasParam('actionlog_file')) $this->actionlog_file->SetValue($params->GetParam('actionlog_file')->GetBool());
 
-        if ($params->HasParam('requestlog_details'))
+        if ($params->HasParam('actionlog_details'))
         {
-            $param = $params->GetParam('requestlog_details')->FromWhitelist(array_keys(self::RQLOG_DETAILS_TYPES));
-            $this->requestlog_details->SetValue(self::RQLOG_DETAILS_TYPES[$param]);
+            $param = $params->GetParam('actionlog_details')->FromWhitelist(array_keys(self::ACTLOG_DETAILS_TYPES));
+            $this->actionlog_details->SetValue(self::ACTLOG_DETAILS_TYPES[$param]);
         }
         
         if ($params->HasParam('debug'))
@@ -227,27 +227,27 @@ class Config extends BaseConfig
     }
     
     /** Returns true if request logging to DB is enabled */
-    public function GetEnableRequestLogDB() : bool { return $this->requestlog_db->GetValue(); }
+    public function GetEnableActionLogDB() : bool { return $this->actionlog_db->GetValue(); }
     
     /** Returns true if request logging to data dir file is enabled */
-    public function GetEnableRequestLogFile() : bool { return $this->requestlog_file->GetValue(); }
+    public function GetEnableActionLogFile() : bool { return $this->actionlog_file->GetValue(); }
     
     /** Returns true if request logging is enabled */
-    public function GetEnableRequestLog() : bool { return $this->GetEnableRequestLogDB() || $this->GetEnableRequestLogFile(); }
+    public function GetEnableActionLog() : bool { return $this->GetEnableActionLogDB() || $this->GetEnableActionLogFile(); }
     
     /** log basic details params and object IDs */
-    public const RQLOG_DETAILS_BASIC = 1;
+    public const ACTLOG_DETAILS_BASIC = 1;
     
     /** log more detailed info, and full objects when deleted */
-    public const RQLOG_DETAILS_FULL = 2;
+    public const ACTLOG_DETAILS_FULL = 2;
     
-    public const RQLOG_DETAILS_TYPES = array(
+    public const ACTLOG_DETAILS_TYPES = array(
         'none'=>0, 
-        'basic'=>self::RQLOG_DETAILS_BASIC, 
-        'full'=>self::RQLOG_DETAILS_FULL);
+        'basic'=>self::ACTLOG_DETAILS_BASIC, 
+        'full'=>self::ACTLOG_DETAILS_FULL);
     
     /** Returns the configured request log details detail level */
-    public function GetRequestLogDetails() : int { return $this->requestlog_details->GetValue(); }
+    public function GetActionLogDetails() : int { return $this->actionlog_details->GetValue(); }
     
     /** show a basic back trace */ 
     public const ERRLOG_ERRORS = 1; 
@@ -335,7 +335,7 @@ class Config extends BaseConfig
      * @param bool $admin if true, show sensitive admin-only values
      * @return array<mixed> `{apiver:int, apps:[string:?string], read_only:bool, enabled:bool}` \
          if admin, add: `{date_created:float, datadir:?string, \
-            requestlog_file:bool, requestlog_db:bool, requestlog_details:enum, \
+            actionlog_file:bool, actionlog_db:bool, actionlog_details:enum, \
             metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
             debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }`
      * @see BaseConfig::GetClientObject()
@@ -362,9 +362,9 @@ class Config extends BaseConfig
             $data['date_created'] =       $this->date_created->GetValue();
             $data['datadir'] =            $this->datadir->TryGetValue();
             $data['email'] =              $this->email->GetValue();
-            $data['requestlog_file'] =    $this->requestlog_file->GetValue();
-            $data['requestlog_db'] =      $this->requestlog_db->GetValue();
-            $data['requestlog_details'] = array_flip(self::RQLOG_DETAILS_TYPES)[$this->requestlog_details->GetValue()];
+            $data['actionlog_file'] =     $this->actionlog_file->GetValue();
+            $data['actionlog_db'] =       $this->actionlog_db->GetValue();
+            $data['actionlog_details'] =  array_flip(self::ACTLOG_DETAILS_TYPES)[$this->actionlog_details->GetValue()];
             $data['metrics'] =            array_flip(self::METRICS_TYPES)[$this->metrics->GetValue(false)]; // no temp
             $data['metrics_dblog'] =      $this->metrics_dblog->GetValue();
             $data['metrics_filelog'] =    $this->metrics_filelog->GetValue();

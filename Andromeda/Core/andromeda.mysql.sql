@@ -29,9 +29,9 @@ CREATE TABLE `a2obj_core_config` (
   `datadir` text DEFAULT NULL,
   `apps` text NOT NULL,
   `date_created` double NOT NULL,
-  `requestlog_db` tinyint(2) NOT NULL,
-  `requestlog_file` tinyint(1) NOT NULL,
-  `requestlog_details` tinyint(2) NOT NULL,
+  `actionlog_db` tinyint(2) NOT NULL,
+  `actionlog_file` tinyint(1) NOT NULL,
+  `actionlog_details` tinyint(2) NOT NULL,
   `debug` tinyint(2) NOT NULL,
   `debug_http` tinyint(1) NOT NULL,
   `debug_dblog` tinyint(1) NOT NULL,
@@ -90,24 +90,28 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL,
-  `requestlog` char(20) NOT NULL,
+  `time` double NOT NULL,
+  `addr` varchar(255) NOT NULL,
+  `agent` text NOT NULL,
+  `errcode` int(11) DEFAULT NULL,
+  `errtext` text DEFAULT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
+  `authuser` varchar(255) DEFAULT NULL,
   `params` text DEFAULT NULL,
   `files` text DEFAULT NULL,
-  `authuser` varchar(255) DEFAULT NULL,
   `details` text DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `requestlog` (`requestlog`),
-  KEY `app_action` (`app`,`action`),
-  CONSTRAINT `a2obj_core_logging_actionlog_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE CASCADE
+  KEY `time` (`time`),
+  KEY `addr` (`addr`),
+  KEY `app_action` (`app`,`action`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_core_logging_metricslog` (
   `id` char(20) NOT NULL,
-  `requestlog` char(20) DEFAULT NULL,
+  `actionlog` char(20) DEFAULT NULL,
   `date_created` double NOT NULL,
   `peak_memory` int(11) NOT NULL,
   `nincludes` smallint(6) NOT NULL,
@@ -118,7 +122,6 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
   `init_db_write_time` double NOT NULL,
   `init_code_time` double NOT NULL,
   `init_total_time` double NOT NULL,
-  `init_queries` text DEFAULT NULL,
   `app` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
   `action_db_reads` int(11) NOT NULL,
@@ -127,7 +130,6 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
   `action_db_write_time` double NOT NULL,
   `action_code_time` double NOT NULL,
   `action_total_time` double NOT NULL,
-  `action_queries` longtext DEFAULT NULL,
   `commit_db_reads` int(11) DEFAULT NULL,
   `commit_db_read_time` double DEFAULT NULL,
   `commit_db_writes` int(11) DEFAULT NULL,
@@ -147,21 +149,9 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
   `queries` longtext DEFAULT NULL,
   `debughints` longtext DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `requestlog` (`requestlog`),
+  UNIQUE KEY `actionlog` (`actionlog`) USING BTREE,
   KEY `app_action` (`app`,`action`),
-  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_core_logging_requestlog` (
-  `id` char(20) NOT NULL,
-  `time` double NOT NULL,
-  `addr` varchar(255) NOT NULL,
-  `agent` text NOT NULL,
-  `errcode` int(11) DEFAULT NULL,
-  `errtext` text DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`actionlog`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

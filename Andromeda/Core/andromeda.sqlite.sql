@@ -14,9 +14,9 @@ CREATE TABLE `a2obj_core_config` (
 ,  `datadir` text DEFAULT NULL
 ,  `apps` text NOT NULL
 ,  `date_created` double NOT NULL
-,  `requestlog_db` integer NOT NULL
-,  `requestlog_file` integer NOT NULL
-,  `requestlog_details` integer NOT NULL
+,  `actionlog_db` integer NOT NULL
+,  `actionlog_file` integer NOT NULL
+,  `actionlog_details` integer NOT NULL
 ,  `debug` integer NOT NULL
 ,  `debug_http` integer NOT NULL
 ,  `debug_dblog` integer NOT NULL
@@ -61,19 +61,22 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
 );
 CREATE TABLE `a2obj_core_logging_actionlog` (
   `id` char(20) NOT NULL
-,  `requestlog` char(20) NOT NULL
+,  `time` double NOT NULL
+,  `addr` varchar(255) NOT NULL
+,  `agent` text NOT NULL
+,  `errcode` integer DEFAULT NULL
+,  `errtext` text DEFAULT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
+,  `authuser` varchar(255) DEFAULT NULL
 ,  `params` text DEFAULT NULL
 ,  `files` text DEFAULT NULL
-,  `authuser` varchar(255) DEFAULT NULL
 ,  `details` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_core_logging_actionlog_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE CASCADE
 );
 CREATE TABLE `a2obj_core_logging_metricslog` (
   `id` char(20) NOT NULL
-,  `requestlog` char(20) DEFAULT NULL
+,  `actionlog` char(20) DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  `peak_memory` integer NOT NULL
 ,  `nincludes` integer NOT NULL
@@ -84,7 +87,6 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `init_db_write_time` double NOT NULL
 ,  `init_code_time` double NOT NULL
 ,  `init_total_time` double NOT NULL
-,  `init_queries` text DEFAULT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
 ,  `action_db_reads` integer NOT NULL
@@ -93,7 +95,6 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `action_db_write_time` double NOT NULL
 ,  `action_code_time` double NOT NULL
 ,  `action_total_time` double NOT NULL
-,  `action_queries` longtext DEFAULT NULL
 ,  `commit_db_reads` integer DEFAULT NULL
 ,  `commit_db_read_time` double DEFAULT NULL
 ,  `commit_db_writes` integer DEFAULT NULL
@@ -113,23 +114,15 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `queries` longtext DEFAULT NULL
 ,  `debughints` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`requestlog`)
-,  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`requestlog`) REFERENCES `a2obj_core_logging_requestlog` (`id`) ON DELETE SET NULL
-);
-CREATE TABLE `a2obj_core_logging_requestlog` (
-  `id` char(20) NOT NULL
-,  `time` double NOT NULL
-,  `addr` varchar(255) NOT NULL
-,  `agent` text NOT NULL
-,  `errcode` integer DEFAULT NULL
-,  `errtext` text DEFAULT NULL
-,  PRIMARY KEY (`id`)
+,  UNIQUE (`actionlog`)
+,  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`actionlog`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE SET NULL
 );
 CREATE INDEX "idx_a2obj_core_errors_errorlog_time" ON "a2obj_core_errors_errorlog" (`time`);
 CREATE INDEX "idx_a2obj_core_errors_errorlog_code" ON "a2obj_core_errors_errorlog" (`code`);
 CREATE INDEX "idx_a2obj_core_errors_errorlog_app" ON "a2obj_core_errors_errorlog" (`app`);
 CREATE INDEX "idx_a2obj_core_errors_errorlog_action" ON "a2obj_core_errors_errorlog" (`action`);
 CREATE INDEX "idx_a2obj_core_errors_errorlog_addr" ON "a2obj_core_errors_errorlog" (`addr`);
-CREATE INDEX "idx_a2obj_core_logging_actionlog_requestlog" ON "a2obj_core_logging_actionlog" (`requestlog`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_time" ON "a2obj_core_logging_actionlog" (`time`);
+CREATE INDEX "idx_a2obj_core_logging_actionlog_addr" ON "a2obj_core_logging_actionlog" (`addr`);
 CREATE INDEX "idx_a2obj_core_logging_actionlog_app_action" ON "a2obj_core_logging_actionlog" (`app`,`action`);
 CREATE INDEX "idx_a2obj_core_logging_metricslog_app_action" ON "a2obj_core_logging_metricslog" (`app`,`action`);

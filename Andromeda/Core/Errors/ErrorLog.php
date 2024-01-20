@@ -86,7 +86,7 @@ class ErrorLog extends BaseLog
     public static function GetPropUsage(ObjectDatabase $database) : string { 
         return "[--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
     {
         $criteria = array();
         

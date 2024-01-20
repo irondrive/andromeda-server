@@ -108,11 +108,11 @@ class InstallRunner extends BaseRunner
      */
     public function Run(Input $input) : void
     {
+        $this->context = new RunContext($input);
+
         $app = $input->GetApp();
         if (!array_key_exists($app, $this->installers))
             throw new Exceptions\UnknownAppException();
-
-        $this->context = new RunContext($input, null);
 
         $installer = $this->installers[$app];
         $retval = $installer->Run($input);

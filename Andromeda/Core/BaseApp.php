@@ -46,6 +46,26 @@ abstract class BaseApp
      */
     public function getLogClass() : ?string { return null; }
 
+    /** Returns true if the app should create its action log */
+    public function wantActionLog() : bool
+    {
+        $context = $this->API->GetAppRunner()->TryGetContext();
+
+        return $this->API->isActionLogEnabled() && 
+            $context !== null && $context->TryGetActionLog() === null;
+    }
+
+    /** 
+     * Sets the app-created action log in the context
+     * @return $this
+     */
+    public function setActionLog(ActionLog $actlog) : self
+    {
+        $context = $this->API->GetAppRunner()->TryGetContext();
+        if ($context !== null) $context->SetActionLog($actlog);
+        return $this;
+    }
+
     /** Tells the app to commit any changes made outside the database */
     public function commit() : void { }
     

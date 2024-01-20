@@ -15,9 +15,9 @@ class MetricsLog extends BaseObject
     
     /** 
      * Link to the main log for this request
-     * @var FieldTypes\NullObjectRefT<RequestLog>
+     * @var FieldTypes\NullObjectRefT<ActionLog>
      */
-    private FieldTypes\NullObjectRefT $requestlog;
+    private FieldTypes\NullObjectRefT $actionlog;
     /** Timestamp of the request */
     private FieldTypes\Timestamp $date_created;
     /** Peak memory usage reported by PHP */
@@ -34,9 +34,6 @@ class MetricsLog extends BaseObject
     private FieldTypes\FloatType $init_code_time;
     private FieldTypes\FloatType $init_total_time;
 
-    /** @var FieldTypes\NullJsonArray<array<array{query:string,time:float}>> */
-    private FieldTypes\NullJsonArray $init_queries;
-
     /** The command action app name */
     private FieldTypes\StringType $app;
     /** The command action name */
@@ -49,9 +46,6 @@ class MetricsLog extends BaseObject
     private FieldTypes\FloatType $action_code_time;
     private FieldTypes\FloatType $action_total_time;
 
-    /** @var FieldTypes\NullJsonArray<array<array{query:string,time:float}>> */
-    private FieldTypes\NullJsonArray $action_queries;
-    
     private FieldTypes\NullIntType $commit_db_reads;
     private FieldTypes\NullFloatType $commit_db_read_time;
     private FieldTypes\NullIntType $commit_db_writes;
@@ -109,7 +103,7 @@ class MetricsLog extends BaseObject
     {
         $fields = array();
         
-        $fields[] = $this->requestlog =   new FieldTypes\NullObjectRefT(RequestLog::class,'requestlog');
+        $fields[] = $this->actionlog =   new FieldTypes\NullObjectRefT(ActionLog::class,'actionlog');
         $fields[] = $this->date_created = new FieldTypes\Timestamp('date_created');
         $fields[] = $this->peak_memory =  new FieldTypes\IntType('peak_memory');
         $fields[] = $this->nincludes =    new FieldTypes\IntType('nincludes');
@@ -121,7 +115,6 @@ class MetricsLog extends BaseObject
         $fields[] = $this->init_db_write_time = new FieldTypes\FloatType('init_db_write_time');
         $fields[] = $this->init_code_time =     new FieldTypes\FloatType('init_code_time');
         $fields[] = $this->init_total_time =    new FieldTypes\FloatType('init_total_time');
-        $fields[] = $this->init_queries =       new FieldTypes\NullJsonArray('init_queries');
 
         $fields[] = $this->app =     new FieldTypes\StringType('app');
         $fields[] = $this->action =  new FieldTypes\StringType('action');
@@ -132,7 +125,6 @@ class MetricsLog extends BaseObject
         $fields[] = $this->action_db_write_time = new FieldTypes\FloatType('action_db_write_time');
         $fields[] = $this->action_code_time =     new FieldTypes\FloatType('action_code_time');
         $fields[] = $this->action_total_time =    new FieldTypes\FloatType('action_total_time');
-        $fields[] = $this->action_queries =       new FieldTypes\NullJsonArray('action_queries');
 
         $fields[] = $this->commit_db_reads =      new FieldTypes\NullIntType('commit_db_reads');
         $fields[] = $this->commit_db_read_time =  new FieldTypes\NullFloatType('commit_db_read_time');
@@ -162,25 +154,24 @@ class MetricsLog extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array(self::class => array('id','requestlog'));
+        return array(self::class => array('id','actionlog'));
     }
     
     /**
      * Logs metrics and returns a metrics object
      * @param int $level logging level
      * @param ObjectDatabase $database database reference
-     * @param RequestLog $reqlog request log for the request
      * @param DBStats $init construct stats
      * @param RunContext $context run context with metrics
      * @param DBStats $total total request stats
      * @return static created metrics object
      */
-    public static function Create(int $level, ObjectDatabase $database, ?RequestLog $reqlog,
-                                  DBStats $init, RunContext $context, DBStats $total) : self
+    public static function Create(int $level, ObjectDatabase $database, DBStats $init, 
+                                RunContext $context, DBStats $total) : self
     {        
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
-        $obj->requestlog->SetObject($reqlog);
+        $obj->actionlog->SetObject($context->TryGetActionLog());
         
         $obj->peak_memory->SetValue(memory_get_peak_usage());
         $obj->nincludes->SetValue(count(get_included_files()));
@@ -232,9 +223,6 @@ class MetricsLog extends BaseObject
             
             $obj->includes->SetArray(get_included_files());
             $obj->objects->SetArray($database->getLoadedObjects());
-
-            $obj->init_queries->SetArray($init->getQueries());
-            $obj->action_queries->SetArray($actionstat->getQueries());
             $obj->queries->SetArray($total->getQueries());
             
             $errman = $database->GetApiPackage()->GetErrorManager();
@@ -269,8 +257,8 @@ class MetricsLog extends BaseObject
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
      * @return array{date_created:float, peak_memory:int, nincludes:int, nobjects:int, 
-     *   init_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float,queries?:?ScalarArray}, 
-     *   action_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float,queries?:?ScalarArray,app:string,action:string}, 
+     *   init_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}, 
+     *   action_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float,app:string,action:string}, 
      *   commit_stats:array{reads:?int,read_time:?float,writes:?int,write_time:?float,code_time:?float,total_time:?float}, 
      *   total_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float},
      *   gcstats?:?ScalarArray, rusage?:?ScalarArray, includes?:?ScalarArray, objects?:?ScalarArray, queries?:?ScalarArray, debughints?:?ScalarArray}
@@ -332,12 +320,6 @@ class MetricsLog extends BaseObject
 
         if (!$isError && $this->objects->TryGetArray() !== null) // duplicated in error log
             $retval['objects'] = $this->objects->TryGetArray();
-
-        if (!$isError && $this->init_queries->TryGetArray() !== null)
-            $retval['init_stats']['queries'] = $this->init_queries->TryGetArray();
-
-        if (!$isError && $this->action_queries->TryGetArray() !== null)
-            $retval['action_stats']['queries'] = $this->action_queries->TryGetArray();
 
         if (!$isError && $this->queries->TryGetArray() !== null) // duplicated in error log
             $retval['queries'] = $this->queries->TryGetArray();

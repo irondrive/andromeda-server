@@ -1,10 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\DBStats; // phpstan
+use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\Errors\BaseExceptions\ClientException;
-use Andromeda\Core\IOFormat\{Input,Output};
+use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
-use Andromeda\Core\Logging\{ActionLog, RequestLog};
+use Andromeda\Core\Logging\ActionLog;
 
 /**
  * The main runner class that loads apps, runs actions, and handles the transaction
@@ -15,14 +16,14 @@ class AppRunner extends BaseRunner
 {
     private ApiPackage $apipack;
 
+    /** Returns the API package reference */
+    public function GetApiPackage() : ApiPackage { return $this->apipack; }
+
     /** 
      * apps indexed by name 
      * @var array<string,BaseApp>
      */
     private array $apps = array(); 
-
-    /** Optional request log for this request */
-    private ?RequestLog $requestlog = null;
 
     /**
      * Gets an array of instantiated apps
@@ -30,33 +31,25 @@ class AppRunner extends BaseRunner
      */
     public function GetApps() : array { return $this->apps; }
 
-    /** Returns the request log entry for this request */
-    public function GetRequestLog() : ?RequestLog { return $this->requestlog; }
-    
     /** Creates the AppRunner service, loading/constructing all apps */
-    public function __construct(ApiPackage $apipack)
+    public function __construct(IOInterface $interface, ErrorManager $errman)
     {
         parent::__construct();
-        $this->apipack = $apipack;
+
+        $this->apipack = new ApiPackage($interface, $errman, $this);
 
         $apps = array();
         
         if (is_file(ROOT."/Apps/Core/CoreApp.php"))
             $apps[] = 'core'; // always enabled if present
         
-        $config = $apipack->GetConfig();
+        $config = $this->apipack->GetConfig();
         
         $apps = array_merge($apps, $config->GetApps());
 
         foreach ($apps as $app) $this->TryLoadApp($app);
         
-        if (!$config->isReadOnly() &&
-            $config->GetEnableRequestLog())
-        {
-            $this->requestlog = RequestLog::Create($apipack);
-        }
-        
-        $apipack->GetErrorManager()->SetRunner($this);
+        $errman->SetRunner($this);
     }
     
     /** Loads the main include file for an app and constructs it */
@@ -102,21 +95,18 @@ class AppRunner extends BaseRunner
      */
     public function Run(Input $input) : void
     {
+        $this->context = $context = new RunContext($input);
+
         $appname = $input->GetApp();
         if (!array_key_exists($appname, $this->apps)) 
             throw new Exceptions\UnknownAppException($appname);
-
         $app = $this->apps[$appname];
+
         $db = $this->apipack->GetDatabase();
         $innerDb = $db->GetInternal();
         
-        $actionlog = null; if ($this->requestlog !== null 
-                            && $app->getLogClass() === null)
-        {
-            $actionlog = $this->requestlog->LogAction($input, ActionLog::class);
-        }
-        
-        $this->context = $context = new RunContext($input, $actionlog);
+        if ($this->apipack->isActionLogEnabled() && $app->getLogClass() === null)
+            $context->SetActionLog(ActionLog::Create($db, $this->apipack->GetInterface(), $input));
 
         if (($doMetrics = $this->apipack->GetMetricsLevel() > 0))
             $context->SetActionMetrics($innerDb->startStatsContext());
@@ -181,19 +171,19 @@ class AppRunner extends BaseRunner
             foreach ($this->apps as $app) $errman->LoggedTry(
                 function()use($app) { $app->rollback(); });
             
-            $db->rollback();
+            $db->rollback(); 
             
             if ($e instanceof ClientException) 
                 $errman->LoggedTry(function()use($e,$db)
             {
-                if ($this->requestlog !== null)
-                    $this->requestlog->SetError($e);
+                if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
+                    $actlog->SetError($e);
                     
                 $db->SaveObjects(true); // any "always" DB fields
                 $this->doCommit(false);
                 
-                if ($this->requestlog !== null)
-                    $this->requestlog->WriteFile();
+                if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
+                    $actlog->WriteFile();
             });
         });
     }
@@ -224,8 +214,8 @@ class AppRunner extends BaseRunner
             $db->SaveObjects();
             $this->doCommit(true);
             
-            if ($this->requestlog !== null) 
-                $this->requestlog->WriteFile();
+            if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
+                $actlog->WriteFile();
         });
     }
     

@@ -12,7 +12,7 @@ abstract class BaseRunner
     protected ?RunContext $context = null;
     
     /** Returns the RunContext that is currently being executed, if any */
-    public function GetContext() : ?RunContext { return $this->context; }
+    public function TryGetContext() : ?RunContext { return $this->context; }
 
     public function __construct()
     {

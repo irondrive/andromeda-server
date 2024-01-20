@@ -3,13 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, ObjectDatabase, QueryBuilder};
 use Andromeda\Core\IOFormat\SafeParams;
 
-/** 
- * Base class for access logs, providing some common DB functions for user viewing 
- * 
- * The access log system starts with a RequestLog to represent a request. A request log
- * then creates one ActionLog for each app action run in the transaction.  The action log
- * can be extended by an app-specific action log if it has extra data to log.
- */
+/** Base class for access logs, providing some common DB functions for user viewing */
 abstract class BaseLog extends BaseObject
 {
     protected const IDLength = 20;
@@ -75,7 +69,8 @@ abstract class BaseLog extends BaseObject
         
         $q->Limit($params->GetOptParam('limit',100)->GetUint());
         
-        if ($params->HasParam('offset')) $q->Offset($params->GetParam('offset')->GetUint());
+        if ($params->HasParam('offset')) 
+            $q->Offset($params->GetParam('offset')->GetUint());
         
         return $database->LoadObjectsByQuery($class, $q);
     }
