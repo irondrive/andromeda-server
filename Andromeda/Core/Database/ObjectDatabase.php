@@ -55,7 +55,7 @@ class ObjectDatabase
     private bool $rolledBack = false;
     
     /** Commits the internal database */
-    public function commit() : void // TODO BATCH also need some form of SaveAfterRollback protection here, there are ways to do queries other than just SaveObjects()...
+    public function commit() : void
     {
         $this->db->commit();
     }
@@ -101,21 +101,16 @@ class ObjectDatabase
      */
     public function SaveObjects(bool $onlyAlways = false) : self
     {
-        if (!$onlyAlways)
-        {
-            if ($this->rolledBack) 
-                throw new Exceptions\SaveAfterRollbackException();
-            
-            // insert new objects first for foreign keys
-            foreach ($this->created as $obj) $obj->Save();
-        }
+        if (!$onlyAlways && $this->rolledBack)
+            throw new Exceptions\SaveAfterRollbackException();
         
-        foreach ($this->modified as $obj) // check created to avoid saving created objects twice
-            if (!array_key_exists(spl_object_hash($obj),$this->created))
-                $obj->Save($onlyAlways);
-
+        // insert new objects first for foreign keys
+        foreach ($this->created as $obj) $obj->Save($onlyAlways);
         $this->created = array();
+        
+        foreach ($this->modified as $obj) $obj->Save($onlyAlways);
         $this->modified = array();
+
         return $this;
     }
     

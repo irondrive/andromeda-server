@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Errors; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{ApiPackage, BaseRunner, Config, Utilities};
+use Andromeda\Core\{ApiPackage, AppRunner, BaseRunner, Config, Utilities};
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\IOFormat\{IOInterface, Output};
 
@@ -17,7 +17,6 @@ class ErrorManager
     private ?ObjectDatabase $database = null;
     private ?Config $config = null;
     private ?BaseRunner $runner = null;
-    private ?ApiPackage $apipack = null;
     
     /** true if the global php error handlers are set */
     private bool $isGlobal = false;
@@ -67,8 +66,6 @@ class ErrorManager
     public function SetConfig(Config $config) : self { $this->config = $config; return $this; }
     /** Sets the base runner reference to use */
     public function SetRunner(BaseRunner $runner) : self { $this->runner = $runner; return $this; }
-    /** Sets the API package reference to use (must be complete!) */
-    public function SetApiPackage(ApiPackage $apipack) : self { $this->apipack = $apipack; return $this; }
 
     /** Returns the debug level for internal logging */
     private function GetDebugLogLevel() : int
@@ -104,13 +101,14 @@ class ErrorManager
     
             $output = Output::ClientException($e, $debug);
 
-            if ($this->apipack !== null && $this->runner !== null &&
-                ($context = $this->runner->GetContext()) !== null)
+            if ($this->runner instanceof AppRunner &&
+                ($context = $this->runner->TryGetContext()) !== null)
             {
-                $this->apipack->GetMetricsHandler()->
-                    SaveMetrics($this->apipack, $context, $output, true);
+                $apipack = $this->runner->GetApiPackage();
+                $apipack->GetMetricsHandler()->SaveMetrics(
+                    $apipack, $context, $output, true);
             }
-            
+
             return $output;
         }
         catch (\Throwable $e2)

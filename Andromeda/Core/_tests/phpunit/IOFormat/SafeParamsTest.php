@@ -67,13 +67,13 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
     
     public function testLogging() : void
     {
-        $this->assertTrue($this->isLogged(Config::RQLOG_DETAILS_FULL, SafeParams::PARAMLOG_ALWAYS));
-        $this->assertTrue($this->isLogged(Config::RQLOG_DETAILS_FULL, SafeParams::PARAMLOG_ONLYFULL));
-        $this->assertFalse($this->isLogged(Config::RQLOG_DETAILS_FULL, SafeParams::PARAMLOG_NEVER));
+        $this->assertTrue($this->isLogged(Config::ACTLOG_DETAILS_FULL, SafeParams::PARAMLOG_ALWAYS));
+        $this->assertTrue($this->isLogged(Config::ACTLOG_DETAILS_FULL, SafeParams::PARAMLOG_ONLYFULL));
+        $this->assertFalse($this->isLogged(Config::ACTLOG_DETAILS_FULL, SafeParams::PARAMLOG_NEVER));
         
-        $this->assertTrue($this->isLogged(Config::RQLOG_DETAILS_BASIC, SafeParams::PARAMLOG_ALWAYS));
-        $this->assertFalse($this->isLogged(Config::RQLOG_DETAILS_BASIC, SafeParams::PARAMLOG_ONLYFULL));
-        $this->assertFalse($this->isLogged(Config::RQLOG_DETAILS_BASIC, SafeParams::PARAMLOG_NEVER));
+        $this->assertTrue($this->isLogged(Config::ACTLOG_DETAILS_BASIC, SafeParams::PARAMLOG_ALWAYS));
+        $this->assertFalse($this->isLogged(Config::ACTLOG_DETAILS_BASIC, SafeParams::PARAMLOG_ONLYFULL));
+        $this->assertFalse($this->isLogged(Config::ACTLOG_DETAILS_BASIC, SafeParams::PARAMLOG_NEVER));
         
         $this->assertFalse($this->isLogged(0, SafeParams::PARAMLOG_ALWAYS));
         $this->assertFalse($this->isLogged(0, SafeParams::PARAMLOG_ONLYFULL));
@@ -82,7 +82,7 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
     
     public function testNestedLog() : void
     {
-        $log = array(); $obj = (new SafeParams())->SetLogRef($log, Config::RQLOG_DETAILS_FULL);
+        $log = array(); $obj = (new SafeParams())->SetLogRef($log, Config::ACTLOG_DETAILS_FULL);
         
         $obj->AddParam('obj','{"test":75}')->GetParam('obj')->GetObject()->GetParam('test')->GetInt();
         

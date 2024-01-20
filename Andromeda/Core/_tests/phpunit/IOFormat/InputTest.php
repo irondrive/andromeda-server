@@ -88,7 +88,7 @@ class InputTest extends \PHPUnit\Framework\TestCase
         // but it seems ->willReturn() cannot return a reference
         
         $config = $this->createStub(Config::class);
-        $config->method('GetRequestLogDetails')->willReturn($level);
+        $config->method('GetActionLogDetails')->willReturn($level);
         
         $apipack = $this->createStub(ApiPackage::class);
         $apipack->method('GetConfig')->willReturn($config);
@@ -129,7 +129,7 @@ class InputTest extends \PHPUnit\Framework\TestCase
         $input->GetFile('test2',SafeParams::PARAMLOG_ALWAYS);
         $this->assertEmpty($logger->GetFilesLogRef());
         
-        $input->SetLogger($logger = $this->getLogger(Config::RQLOG_DETAILS_BASIC));
+        $input->SetLogger($logger = $this->getLogger(Config::ACTLOG_DETAILS_BASIC));
         $input->GetFile('test1',SafeParams::PARAMLOG_ONLYFULL);
         $input->GetFile('test2',SafeParams::PARAMLOG_ONLYFULL);
         $this->assertEmpty($logger->GetFilesLogRef());
@@ -137,7 +137,7 @@ class InputTest extends \PHPUnit\Framework\TestCase
         $input->GetFile('test2',SafeParams::PARAMLOG_ALWAYS);
         $this->assertSame($logarr, $logger->GetFilesLogRef());
         
-        $input->SetLogger($logger = $this->getLogger(Config::RQLOG_DETAILS_FULL));
+        $input->SetLogger($logger = $this->getLogger(Config::ACTLOG_DETAILS_FULL));
         $input->TryGetFile('test1',SafeParams::PARAMLOG_ONLYFULL);
         $input->TryGetFile('test2',SafeParams::PARAMLOG_ONLYFULL);
         $this->assertSame($logarr, $logger->GetFilesLogRef());
@@ -155,13 +155,13 @@ class InputTest extends \PHPUnit\Framework\TestCase
         $params->GetParam('test1',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         $this->assertEmpty($logger->GetParamsLogRef());
         
-        $input->SetLogger($logger = $this->getLogger(Config::RQLOG_DETAILS_BASIC));
+        $input->SetLogger($logger = $this->getLogger(Config::ACTLOG_DETAILS_BASIC));
         $params->GetParam('test1',SafeParams::PARAMLOG_ONLYFULL)->GetAlphanum();
         $this->assertEmpty($logger->GetParamsLogRef());
         $params->GetParam('test1',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
         $this->assertSame($logarr, $logger->GetParamsLogRef());
         
-        $input->SetLogger($logger = $this->getLogger(Config::RQLOG_DETAILS_FULL));
+        $input->SetLogger($logger = $this->getLogger(Config::ACTLOG_DETAILS_FULL));
         $params->GetParam('test1',SafeParams::PARAMLOG_ONLYFULL)->GetAlphanum();
         $this->assertSame($logarr, $logger->GetParamsLogRef());
     }

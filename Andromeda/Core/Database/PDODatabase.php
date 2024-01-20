@@ -266,7 +266,7 @@ class PDODatabase
     
     /** 
      * returns the array of config that was loaded from the config file 
-     * @return array{'DRIVER':string, 'CONNECT':string, 'PERSISTENT':bool, 'USERNAME'?:string, 'PASSWORD'?:true}
+     * @return array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:true}
      */
     public function GetConfig() : array
     {
@@ -280,7 +280,7 @@ class PDODatabase
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array{'driver':string, 'cversion':string, 'sversion':string, 'info'?:string}`
+     * @return array{driver:string, cversion:string, sversion:string, info?:string}`
      */
     public function getInfo() : array
     {
@@ -518,7 +518,7 @@ class PDODatabase
     private function logQuery(string $sql, ?array $params) : string
     {
         if ($params !== null && $this->logValues)
-        {            
+        {
             foreach ($params as $key=>$val)
             {
                 if (is_string($val))

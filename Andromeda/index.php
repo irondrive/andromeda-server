@@ -10,7 +10,7 @@
  * Any exceptions encountered will roll back the entire request safely.
  */
 
-use Andromeda\Core\ApiPackage;
+use Andromeda\Core\AppRunner;
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Errors\ErrorManager;
 
@@ -22,6 +22,4 @@ $errman = new ErrorManager($interface, true);
 
 $input = $interface->GetInput(); // check early
 
-$apipack = new ApiPackage($interface, $errman);
-
-$apipack->GetAppRunner()->Run($input);
+(new AppRunner($interface, $errman))->Run($input);

@@ -140,7 +140,7 @@ class ErrorInfo
         
         $input = null; if ($runner !== null)
         {
-            $context = $runner->GetContext();
+            $context = $runner->TryGetContext();
             if ($context !== null) 
                 $input = $context->GetInput();
         }
@@ -187,8 +187,8 @@ class ErrorInfo
     /**
      * Returns the printable client object of this error info
      * @param ?int $level max debug level for output, null for unfiltered, also depends on the level this was created with
-     * @return array{'time':float,'addr':string,'agent':string,'code':int,'file':string,'message':string,'app':?string,'action':?string,'trace_basic':array<int,string>,
-     *  'trace_full'?:?ScalarArray,'objects'?:?array<string,array<string,string>>,'queries'?:?array<string|array{'query':string,'error':string}>,'hints'?:?ScalarArray, 'params'?:?array<string, NULL|scalar|ScalarArray>}
+     * @return array{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array<int,string>,
+     *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, NULL|scalar|ScalarArray>}
      *  ... details/null level add trace_full,objects,queries,hints, sensitive/null level add params
      */
     public function GetClientObject(?int $level = null) : array

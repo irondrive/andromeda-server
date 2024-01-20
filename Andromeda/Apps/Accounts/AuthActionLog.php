@@ -61,7 +61,7 @@ abstract class AuthActionLog extends BaseActionLog
 
     public static function GetAppPropUsage() : string { return "[--admin bool] [--account id] [--sudouser id] [--client id]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
     {
         $criteria = array();
         
@@ -71,7 +71,7 @@ abstract class AuthActionLog extends BaseActionLog
         foreach (array('account','sudouser','client') as $prop) if ($params->HasParam($prop)) 
             $criteria[] = $q->Equals("$prop", $params->GetParam($prop)->GetRandstr());       
 
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params, $join));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params));
     }
 
     /**

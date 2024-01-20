@@ -75,7 +75,7 @@ class ActionLog extends AuthActionLog
 
     public static function GetAppPropUsage() : string { return "[--file id] [--folder id] [--file_share id] [--folder_share id]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $join = true) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
     {
         $criteria = array();
         
@@ -99,7 +99,7 @@ class ActionLog extends AuthActionLog
                                  $q->Equals("parent_share",$folder));
         }
         
-        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params, $join));
+        return array_merge($criteria, parent::GetPropCriteria($database, $q, $params));
     }
     
     /**

@@ -47,8 +47,6 @@ class CoreApp extends BaseApp
             'deletemailer --mailid id',
             'geterrors '.ErrorLog::GetPropUsage($this->database).' '.ErrorLog::GetLoadUsage(),
             'counterrors '.ErrorLog::GetPropUsage($this->database).' '.ErrorLog::GetCountUsage(),
-            'getrequests '.RequestLog::GetPropUsage($this->database).' '.RequestLog::GetLoadUsage().' [--actions bool [--expand bool]]',
-            'countrequests '.RequestLog::GetPropUsage($this->database).' '.RequestLog::GetCountUsage(),
             'getactions '.BaseActionLog::GetPropUsage($this->database).' '.BaseActionLog::GetLoadUsage().' [--expand bool]',
             ...array_map(function($u){ return "(getactions) $u"; },BaseActionLog::GetAppPropUsages($this->database)),
             'countactions '.BaseActionLog::GetPropUsage($this->database).' '.BaseActionLog::GetCountUsage(),
@@ -83,13 +81,13 @@ class CoreApp extends BaseApp
             $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
         
-        $actionlog = null; if (($reqlog = $this->API->GetAppRunner()->GetRequestLog()) !== null)
+        $actionlog = null; if ($this->wantActionLog())
         {
-            $actionlog = $reqlog->LogAction($input, $this->getLogClass());
-            
+            $actionlog = ActionLog::Create($this->database, $this->API->GetInterface(), $input);
             $actionlog->SetAuth($authenticator)->SetAdmin($isAdmin);
+            $this->setActionLog($actionlog);
         }
-
+        
         $params = $input->GetParams();
 
         switch ($input->GetAction())
@@ -115,9 +113,6 @@ class CoreApp extends BaseApp
             
             case 'geterrors':     return $this->GetErrors($params, $isAdmin);
             case 'counterrors':   return $this->CountErrors($params, $isAdmin);
-            
-            case 'getrequests':   return $this->GetRequests($params, $isAdmin);
-            case 'countrequests': return $this->CountRequests($params, $isAdmin);
             
             case 'getactions':    return $this->GetActions($params, $isAdmin);
             case 'countactions':  return $this->CountActions($params, $isAdmin);
@@ -404,41 +399,6 @@ class CoreApp extends BaseApp
     }
     
     /**
-     * Returns all request logs matching the given input
-     * @throws Exceptions\AdminRequiredException if not admin
-     * @return array<array<mixed>> RequestLog
-     * @see RequestLog::GetFullClientObject()
-     */
-    protected function GetRequests(SafeParams $params, bool $isAdmin) : array
-    {
-        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
-        
-        $actions = $params->GetOptParam('actions',false)->GetBool();
-        $expand = $params->GetOptParam('expand',false)->GetBool();
-
-        $logs = RequestLog::LoadByParams($this->database, $params);
-        
-        $retval = array(); foreach ($logs as $log)
-        {
-            $retval[] = $log->GetFullClientObject($actions,$expand);
-        }
-        
-        return $retval;
-    }
-    
-    /**
-     * Counts all request logs matching the given input
-     * @throws Exceptions\AdminRequiredException if not admin
-     * @return int log entry count
-     */
-    protected function CountRequests(SafeParams $params, bool $isAdmin) : int
-    {
-        if (!$isAdmin) throw new Exceptions\AdminRequiredException();
-        
-        return RequestLog::CountByParams($this->database, $params);
-    }
-    
-    /**
      * Returns all action logs matching the given input
      * @throws Exceptions\AdminRequiredException if not admin
      * @return array<array<mixed>> ActionLog
@@ -454,7 +414,7 @@ class CoreApp extends BaseApp
         
         $retval = array(); foreach ($logs as $log)
         {
-            $retval[] = $log->GetFullClientObject($expand);
+            $retval[] = $log->GetClientObject($expand);
         }
         
         return $retval;
