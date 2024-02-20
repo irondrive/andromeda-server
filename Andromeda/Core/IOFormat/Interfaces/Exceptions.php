@@ -17,11 +17,11 @@ class IncorrectCLIUsageException extends BaseExceptions\ClientErrorException
             "[--debug ".implode('|',array_keys(Config::DEBUG_TYPES))."] ".
             "[--metrics ".implode('|',array_keys(Config::METRICS_TYPES))."]",
             null,
-            "action params: [--\$param value] [--\$param@ file] [--\$param!] [--\$param% file [name]] [--\$param-]",
+            "action params: [--\$param value] [--\$param@ file] [--\$param!] [--\$param% file [name]] [--\$param- [name]]",
             "\t param@ puts the content of the file in the parameter",
             "\t param! will prompt interactively or read stdin for the parameter value",
             "\t param% gives the file path as a direct file input (optionally with a new name)",
-            "\t param- will attach the stdin stream as a direct file input",
+            "\t param- will attach the stdin stream as a direct file input (default name is 'data')",
             null,
             "get version:   php index.php version",
             "get actions:   php index.php core usage"

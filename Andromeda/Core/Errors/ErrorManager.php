@@ -70,14 +70,16 @@ class ErrorManager
     /** Returns the debug level for internal logging */
     private function GetDebugLogLevel() : int
     {
-        return $this->config !== null ? $this->config->GetDebugLevel()
+        return $this->config !== null 
+            ? $this->config->GetDebugLevel()
             : max(Config::ERRLOG_ERRORS, $this->interface->GetDebugLevel());
     }
     
     /** Returns the debug level to be show in output */
     private function GetDebugOutputLevel() : int
     {
-        return $this->config !== null ? $this->config->GetDebugLevel($this->interface)
+        return $this->config !== null
+            ? $this->config->GetDebugLevel($this->interface)
             : $this->interface->GetDebugLevel();
     }
     
@@ -93,13 +95,14 @@ class ErrorManager
     {
         try
         {
-            $debug = null; if ($this->GetDebugOutputLevel() >= Config::ERRLOG_DETAILS) 
+            $debugout = null; if ($this->GetDebugOutputLevel() >= Config::ERRLOG_DETAILS) 
             {
-                $debug = $this->CreateErrorInfo($e)
+                // no logging of client exceptions, just output
+                $debugout = $this->CreateErrorInfo($e)
                     ->GetClientObject($this->GetDebugOutputLevel());
             }
     
-            $output = Output::ClientException($e, $debug);
+            $output = Output::ClientException($e, $debugout);
 
             if ($this->runner instanceof AppRunner &&
                 ($context = $this->runner->TryGetContext()) !== null)
@@ -120,24 +123,25 @@ class ErrorManager
     /** Handles a non-client exception, logging debug data and returning an Output */
     private function HandleThrowable(\Throwable $e) : Output
     {
-        $debug = null; try 
+        $debugout = null; try 
         {
-            if (($errinfo = $this->LogException($e, false)) !== null)
+            if (($errinfo = $this->LogException($e, false)) !== null &&
+                ($outlevel = $this->GetDebugOutputLevel()) > 0)
             {
-                $debug = $errinfo->GetClientObject($this->GetDebugOutputLevel());
+                $debugout = $errinfo->GetClientObject($outlevel);
             }
         }
         catch (\Throwable $e2)
         { 
             if ($this->GetDebugOutputLevel() >= Config::ERRLOG_ERRORS)
             {
-                $debug = array('message'=>
+                $debugout = array('message'=>
                     'ErrorLog failed: '.$e2->getMessage().' in '.
                     $e2->getFile()."(".$e2->getLine().")"); 
             }
         }
         
-        return Output::ServerException($debug);
+        return Output::ServerException($debugout);
     }
 
     /** if false, the file-based log encountered an error on the last entry */
@@ -171,7 +175,7 @@ class ErrorManager
                 if (($logdir = $this->config->GetDataDir()) !== null)
                 {
                     file_put_contents("$logdir/error.log", 
-                        Utilities::JSONEncode($debug)."\r\n", FILE_APPEND); 
+                        Utilities::JSONEncode($debug).PHP_EOL, FILE_APPEND | LOCK_EX); 
                 }
             }
         }

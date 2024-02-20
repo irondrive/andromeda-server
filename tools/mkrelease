@@ -2,13 +2,15 @@
 set -e
 
 TAG=$1
+TAG_=${TAG/\//_}
+RDIR=release_$TAG_
 
 if [ -z "$TAG" ]; then
     echo "tag required"; exit 1
 fi
 
-rm -Rf release || true
-mkdir release; cd release
+rm -Rf ${RDIR} || true
+mkdir ${RDIR}; cd ${RDIR}
 
 git clone git@github.com:irondrive/andromeda-server.git api
 cd api; git checkout $TAG
@@ -37,14 +39,14 @@ cd .. # release
 git clone git@github.com:irondrive/andromeda-server-docs.git docs
 cd docs; git checkout $TAG; cd ..
 
-git clone git@github.com:irondrive/andromeda-server.wiki.git docs/wiki
+mv api/wiki docs/
 
 find . -name ".git*" | while read -r i; do rm -rf $i; done
 
-tar -czvf andromeda-release-$TAG.tar.gz api
-zip -r andromeda-release-$TAG.zip api
+tar -czvf andromeda-release-$TAG_.tar.gz api
+zip -r andromeda-release-$TAG_.zip api
 
-tar -czvf andromeda-docs-$TAG.tar.gz docs
-zip -r andromeda-docs-$TAG.zip docs
+tar -czvf andromeda-docs-$TAG_.tar.gz docs
+zip -r andromeda-docs-$TAG_.zip docs
 
 ls *.tar.gz *.zip | while read -r i; do openssl sha256 $i > $i.sha256; done

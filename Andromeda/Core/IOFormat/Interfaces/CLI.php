@@ -24,8 +24,11 @@ class CLI extends IOInterface
         
         if (array_key_exists("COMPUTERNAME",$_SERVER)) 
             $retval .= " ".$_SERVER["COMPUTERNAME"];
+
         if (array_key_exists("USERNAME",$_SERVER))
             $retval .= " ".$_SERVER["USERNAME"];
+        else if (array_key_exists("USER",$_SERVER))
+            $retval .= " ".$_SERVER["USER"];
         
         return $retval;
     }
@@ -89,9 +92,10 @@ class CLI extends IOInterface
         {
             return explode('=',$args[$i],2)[1];
         }
-
-        if (isset($args[$i+1]) && self::getKey($args[$i+1]) === null) // --key val
+        else if (isset($args[$i+1]) && self::getKey($args[$i+1]) === null) // --key val
+        {
             return $args[++$i];
+        }
         return null; // no value
     }
 
@@ -118,7 +122,7 @@ class CLI extends IOInterface
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
                         throw new IncorrectCLIUsageException('no outprop value');
-                    $outprop = (new SafeParam('outprop',$val))->GetUTF8String();
+                    $outprop = (new SafeParam('outprop',$val))->GetAlphanum();
                     $this->outprop = $outprop;
                     break;
                 }
@@ -275,35 +279,27 @@ class CLI extends IOInterface
         return new Input($app, $action, $params, $files);
     }
     
-    // TODO IFACE when I do a command that gives array input it's no longer removing ok/code and just showing appdata, it did on api-old...
-
     /** @param bool $exit if true, exit() with the proper code */
     public function FinalOutput(Output $output, bool $exit = true) : void
     {
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            // try echoing as a string, switch to printr if it fails
-            $outstr = $output->GetAsString($this->outprop);
-            if ($outstr !== null) echo $outstr.PHP_EOL; 
-            else $this->outmode = self::OUTPUT_PRINTR;
+            echo $output->GetAsString($this->outprop).PHP_EOL;
         }
-        
-        if ($this->outmode === self::OUTPUT_PRINTR)
+        else if ($this->outmode === self::OUTPUT_PRINTR)
         {
             $outdata = $output->GetAsArray($this->outprop);
             echo print_r($outdata, true).PHP_EOL;
         }
-        
-        if ($this->outmode === self::OUTPUT_JSON)
+        else if ($this->outmode === self::OUTPUT_JSON)
         {
-            $outdata = Utilities::JSONEncode(
-                $output->GetAsArray($this->outprop));
-            
-            echo $outdata; echo PHP_EOL;
+            // apps MUST ensure they don't return anything non-utf8
+            echo Utilities::JSONEncode(
+                $output->GetAsArray($this->outprop)).PHP_EOL;
         }
         
-        if ($exit) exit($output->isOK() ? 0 : 1); // TODO IFACE go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
-        
+        if ($exit) exit($output->isOK() ? 0 : 1); 
+        // TODO IFACE go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
         // TODO IFACE triple check that when download a file (outmode none) that an error just results in blank stdout output NOT error json
         // TODO IFACE perhaps errors should go to std::cerr when outmode is none?
     }

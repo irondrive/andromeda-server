@@ -19,7 +19,7 @@ CREATE TABLE `a2obj_apps_accounts_actionlog` (
   `client` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `account` (`account`),
-  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
+  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -30,7 +30,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ftp` (
   `port` smallint(6) DEFAULT NULL,
   `implssl` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -43,7 +43,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
   `implssl` tinyint(1) NOT NULL,
   `secauth` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -54,7 +54,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
   `secure` tinyint(1) NOT NULL,
   `userprefix` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -66,7 +66,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_source` (
   `default_group` char(12) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `default_group` (`default_group`),
-  CONSTRAINT `a2obj_apps_accounts_authsource_source_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
+  CONSTRAINT `a2obj_apps_accounts_authsource_source_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -83,8 +83,8 @@ CREATE TABLE `a2obj_apps_accounts_config` (
   PRIMARY KEY (`id`),
   KEY `default_group` (`default_group`),
   KEY `default_auth` (`default_auth`),
-  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE SET NULL
+  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -105,7 +105,7 @@ CREATE TABLE `a2obj_apps_accounts_entity_account` (
   UNIQUE KEY `username` (`username`),
   KEY `fullname` (`fullname`),
   KEY `authsource` (`authsource`),
-  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`),
+  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -140,7 +140,7 @@ CREATE TABLE `a2obj_apps_accounts_entity_group` (
   `priority` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`),
-  CONSTRAINT `a2obj_apps_accounts_entity_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
+  CONSTRAINT `a2obj_apps_accounts_entity_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

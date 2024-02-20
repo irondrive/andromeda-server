@@ -20,6 +20,7 @@ class CoreInstallApp extends InstallerApp
             'usage [--appname alphanum]',
             'dbconf '.PDODatabase::GetInstallUsage(),
             ...array_map(function($u){ return "(dbconf) $u"; }, PDODatabase::GetInstallUsages()),
+            'scanapps',
         ), parent::getUsage());
     
         $inst_flags = implode(" ",array_map(function(InstallerApp $installer){
@@ -28,8 +29,8 @@ class CoreInstallApp extends InstallerApp
         $upgr_flags = implode(" ",array_map(function(InstallerApp $installer){
             return $installer->getUpgradeFlags(); }, $this->runner->GetInstallers()));
         
-        $retval[] = 'install-all '.$inst_flags;
-        $retval[] = 'upgrade-all '.$upgr_flags;
+        $retval[] = 'setupall [--noenable]'.$inst_flags;
+        $retval[] = 'upgradeall '.$upgr_flags;
         
         return $retval;
     }
@@ -44,10 +45,11 @@ class CoreInstallApp extends InstallerApp
         
         switch ($input->GetAction())
         {
-            case 'usage':       return $this->GetUsages($params);
-            case 'dbconf':      return $this->ConfigDB($params);
-            case 'install-all': return $this->InstallAll($params);
-            case 'upgrade-all': return $this->UpgradeAll($params);
+            case 'usage':      return $this->GetUsages($params);
+            case 'dbconf':     return $this->ConfigDB($params);
+            case 'scanapps':   return $this->ScanApps();
+            case 'setupall':   return $this->SetupAll($params);
+            case 'upgradeall': return $this->UpgradeAll($params);
             
             default: return parent::Run($input);
         }
@@ -71,15 +73,15 @@ class CoreInstallApp extends InstallerApp
                 return "$name $line"; }, $installer->getUsage()));
         }
         
-        if ($this->runner->GetInterface()->GetOutputMode() == IOInterface::OUTPUT_PLAIN)
-            $output = implode("\n", $output);
+        if ($this->runner->GetInterface()->GetOutputMode() === IOInterface::OUTPUT_PLAIN)
+            $output = implode("\r\n", $output);
 
         return $output;
     }
 
     /**
      * Creates a database config with the given input
-     * @throws Exceptions\AdminRequiredException if config exists and not a privileged interface
+     * @throws Exceptions\AdminRequiredException if DB config exists and not a privileged interface
      */
     protected function ConfigDB(SafeParams $params) : ?string
     {
@@ -90,6 +92,23 @@ class CoreInstallApp extends InstallerApp
         }
         
         return PDODatabase::Install($params);
+    }
+    
+    /** 
+     * Scans for available apps to install (in dependency order)
+     * @throws Exceptions\AdminRequiredException if DB config exists and not a privileged interface
+     * @return array<string>
+     */
+    protected function ScanApps() : array
+    {
+        if ($this->runner->HasDatabaseConfig() &&
+            !$this->runner->GetInterface()->isPrivileged())
+        {
+            throw new Exceptions\AdminRequiredException();
+        }
+        
+        return array_keys(static::SortInstallers(
+            $this->runner->GetInstallers()));
     }
     
     /** 
@@ -126,17 +145,32 @@ class CoreInstallApp extends InstallerApp
     }
     
     /**
-     * Installs all available apps (including core)
+     * Installs AND enables all available apps (including core)
      * @return array<string, mixed> map of installed apps to their install retval
+     * @see Config::ScanApps() 
      */
-    protected function InstallAll(SafeParams $params) : array
+    protected function SetupAll(SafeParams $params) : array
     {
         // install all existing apps
         $installers = static::SortInstallers(
             $this->runner->GetInstallers());
 
-        return array_map(function(InstallerApp $installer)use($params){ 
+        $retvals = array_map(function(InstallerApp $installer)use($params){ 
             return $installer->Install($params); }, $installers);
+
+        if ($params->GetOptParam('noenable',false,SafeParams::PARAMLOG_ALWAYS)->GetBool())
+            return $retvals; // don't enable all the apps
+
+        // core must be installed now, can load config
+        $database = $this->runner->RequireDatabase();
+        $config = Config::GetInstance($database);
+
+        foreach (Config::ScanApps() as $appname)
+        {
+            $config->EnableApp($appname, false);
+            $retvals[$appname] ??= null;
+        }
+        return $retvals;
     }
     
     /**

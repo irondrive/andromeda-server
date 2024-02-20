@@ -156,10 +156,10 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
        );
        
        $out = array(
-           'a' => '5',
+           'a' => 5,
            'b' => 'mytest',
            'c' => array(
-               'c0' => '6',
+               'c0' => 6,
                'c1' => array(
                    'test',
                    'Andromeda\Core\TestClass3',
@@ -170,6 +170,6 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
            'd' => 'TestClass1...'
        );
        
-       $this->assertSame($out, Utilities::arrayStrings($in));
+       $this->assertSame($out, Utilities::toScalarArray($in));
    }
 }

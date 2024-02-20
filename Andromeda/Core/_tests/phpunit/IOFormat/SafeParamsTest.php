@@ -37,19 +37,24 @@ class SafeParamsTest extends \PHPUnit\Framework\TestCase
         $obj->GetParam('test');
     }
 
-    public function testGetClientObject() : void
+    public function testGetAllRawValues() : void
     {       
-        $obj = (new SafeParams())->AddParam('test1','75')->AddParam('test2','99');
-        
-        $this->assertSame(array('test1'=>'75','test2'=>'99'), $obj->GetClientObject());
+        $obj = (new SafeParams())->AddParam('test1','75')->AddParam('test2',['57','99'])
+            ->AddParam('test3',(new SafeParams())->AddParam('test3b',250));
+        $this->assertSame(array('test1'=>'75','test2'=>['57','99'],'test3'=>['test3b'=>250]), $obj->GetAllRawValues());
     }
     
+    public function testGetClientObject() : void
+    {
+        $obj = (new SafeParams())->AddParam('test',hex2bin('deadbeef00fe')); // base64 non-utf8
+        $this->assertSame(array('test'=>'3q2+7wD+'), $obj->GetClientObject());
+    }
+
     public function testLoadArray() : void
     {
         $arr = array('test1'=>75, 'test2'=>77, 'myarr'=>array(5,6,7,8), 'myobj'=>array('t1'=>5,'t2'=>7));
-        
         $obj = (new SafeParams())->LoadArray($arr);
-        $this->assertSame($arr, $obj->GetClientObject());
+        $this->assertSame($arr, $obj->GetAllRawValues());
     }
     
     protected function isLogged(int $level, int $minlog) : bool

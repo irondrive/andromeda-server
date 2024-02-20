@@ -14,9 +14,10 @@ docs/
 metrics/
 
 combined.php
-test.s3db
+*.s3db
 
 Andromeda/DBConfig.php
+Andromeda/*.s3db
 
 __pycache__
 

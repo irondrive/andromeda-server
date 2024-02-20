@@ -82,27 +82,27 @@ class ErrorInfo
     public function GetTraceBasic() : array     { return $this->trace_basic; }
     /** 
      * Return the full backtrace including arguments if logged
-     * @return ScalarArray
+     * @return ?ScalarArray
      */
     public function TryGetTraceFull() : ?array  { return $this->trace_full; }
     /** 
      * Return the objects in memory in the database if logged 
-     * @return array<string, array<string,string>>
+     * @return ?array<string, array<string,string>>
      */
     public function TryGetObjects() : ?array    { return $this->objects; }
     /** 
      * Return the db queries that were performed, if logged 
-     * @return array<string|array{'query':string,'error':string}>
+     * @return ?array<string|array{'query':string,'error':string}>
      */
     public function TryGetQueries() : ?array    { return $this->queries; }
     /** 
      * Return the client input parameters, if logged 
-     * @return array<string, NULL|scalar|ScalarArray>
+     * @return ?array<string, NULL|scalar|ScalarArray>
      */
     public function TryGetParams() : ?array     { return $this->params; }
     /** 
      * Return the custom API log hints, if logged 
-     * @return ScalarArray
+     * @return ?ScalarArray
      */
     public function TryGetHints() : ?array      { return $this->hints; }
     
@@ -174,10 +174,10 @@ class ErrorInfo
             foreach ($trace_full as &$val)
             {
                 if (!$sensitive) unset($val['args']);
-                Utilities::arrayStrings($val);
+                Utilities::toScalarArray($val);
             }
             
-            $this->trace_full = $trace_full; // @phpstan-ignore-line called arrayStrings above
+            $this->trace_full = $trace_full; // @phpstan-ignore-line called toScalarArray above
         }
         
         if ($details && $debuglog !== null)

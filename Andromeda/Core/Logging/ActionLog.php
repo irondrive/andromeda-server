@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Logging; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{Config, Utilities};
+use Andromeda\Core\{BaseApp, Config, Utilities};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\{Input, SafeParams, IOInterface};
 
@@ -14,16 +14,18 @@ class ActionLog extends BaseLog
     use TableTypes\HasTable;
 
     /** @return array<string, class-string<self>> */
+    private static function GetLogApps(ObjectDatabase $database) : array
+    {
+        return array_filter(array_map(function(BaseApp $app){ return $app->getLogClass(); },
+            $database->GetApiPackage()->GetAppRunner()->GetApps()));
+    }
+
+    /** @return array<string, class-string<self>> */
     public static function GetChildMap(ObjectDatabase $database) : array 
     {
-        $map = array("" => self::class); 
-        $apps = $database->GetApiPackage()->GetAppRunner()->GetApps();
-
-        foreach ($apps as $name=>$app)
-        {
-            $logclass = $app->getLogClass();
-            if ($logclass !== null) $map[$name] = $logclass;
-        }
+        $map = self::GetLogApps($database);
+        // have to add this so DB Load() knows to load by the base class also
+        $map[""] = self::class;
         return $map;
     }
 
@@ -31,16 +33,14 @@ class ActionLog extends BaseLog
     
     public static function GetWhereChild(ObjectDatabase $database, QueryBuilder $q, string $class) : string
     {
-        $map = array_flip(self::GetChildMap($database));
+        $logapps = self::GetLogApps($database); // appname->class
+        $classmap = array_flip($logapps); // class->appname
         $table = $database->GetClassTableName(self::class);
         
-        if ($class !== self::class && array_key_exists($class, $map))
-            return $q->Equals("$table.app", $map[$class]);
+        if (array_key_exists($class, $classmap))
+            return $q->Equals("$table.app", $classmap[$class]);
         else 
-        {
-            return $q->Not($q->ManyEqualsOr("$table.app",
-                array_keys($database->GetApiPackage()->GetAppRunner()->GetApps())));
-        }
+            return $q->Not($q->ManyEqualsOr("$table.app", array_keys($logapps)));
     }
     
     /** @return class-string<self> child class of row */
@@ -214,14 +214,10 @@ class ActionLog extends BaseLog
     {
         $this->authuser->SetValue($username); return $this;
     }
-    
-    /** @return $this */
-    public function Save(bool $isRollback = false) : self
-    {
-        $config = $this->GetApiPackage()->GetConfig();
-        if (!$config->GetEnableActionLogDB())
-            return $this; // return early
 
+    /** Writes the temporary input logging arrays to their DB values to be saved */
+    private function CollectParams() : void
+    {
         if (isset($this->params_tmp) && count($this->params_tmp) !== 0)
             $this->params->SetArray($this->params_tmp);
         
@@ -230,29 +226,47 @@ class ActionLog extends BaseLog
             
         if (isset($this->details_tmp) && count($this->details_tmp) !== 0)
             $this->details->SetArray($this->details_tmp);
-            
-        if (!$this->GetApiPackage()->GetConfig()->GetEnableActionLogDB())
-            return $this; // might only be doing file logging
-        
-        return parent::Save(); // ignore isRollback
     }
     
     /** 
-     * Writes the log to the log file 
+     * Forces saves to DB regardless of config (testing ONLY)
+     * @return $this
+     */
+    public function ForceDBSave() : self
+    {
+        $this->CollectParams();
+        return parent::Save();
+    }
+    
+    /** @return $this */
+    public function Save(bool $onlyAlways = false) : self
+    {
+        $this->CollectParams();
+            
+        $config = $this->GetApiPackage()->GetConfig();
+        if ($config->GetEnableActionLogDB()) parent::Save();
+        
+        return $this;
+    }
+
+    /** 
+     * Writes the log to the log file - done separately from Save()
+     * so that this is done AFTER all other objects have successfully saved
      * @throws Exceptions\MultiFileWriteException if called > once
      */
     public function WriteFile() : self
     {
         $config = $this->GetApiPackage()->GetConfig();
 
-        if (!$this->writtenToFile && 
-            $config->GetEnableActionLogFile() &&
+        if ($config->GetEnableActionLogFile() &&
             ($logdir = $config->GetDataDir()) !== null)
         {
+            if ($this->writtenToFile)
+                throw new Exceptions\MultiFileWriteException();
             $this->writtenToFile = true;
         
             $data = Utilities::JSONEncode($this->GetClientObject());
-            file_put_contents("$logdir/actions.log", $data."\r\n", FILE_APPEND);
+            file_put_contents("$logdir/actions.log", $data.PHP_EOL, FILE_APPEND | LOCK_EX);
         }
         
         return $this;
@@ -283,7 +297,7 @@ class ActionLog extends BaseLog
         return $retval;
     }
 
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $isCount = false) : array
     {
         $criteria = array();
         
@@ -299,7 +313,7 @@ class ActionLog extends BaseLog
         if ($params->HasParam('app')) $criteria[] = $q->Equals("app", $params->GetParam('app')->GetAlphanum());
         if ($params->HasParam('action')) $criteria[] = $q->Equals("action", $params->GetParam('action')->GetAlphanum());
         
-        $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
+        if (!$isCount) $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
 
         return $criteria;
     }

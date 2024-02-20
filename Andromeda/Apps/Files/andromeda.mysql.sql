@@ -27,7 +27,7 @@ CREATE TABLE `a2obj_apps_files_actionlog` (
   KEY `account` (`account`),
   KEY `file` (`file`),
   KEY `folder` (`folder`),
-  CONSTRAINT `a2obj_apps_files_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
+  CONSTRAINT `a2obj_apps_files_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -85,7 +85,7 @@ CREATE TABLE `a2obj_apps_files_folder` (
   `count_subfiles` int(11) NOT NULL DEFAULT 0,
   `count_subfolders` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_folder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`)
+  CONSTRAINT `a2obj_apps_files_folder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -132,7 +132,7 @@ CREATE TABLE `a2obj_apps_files_limits_accounttimed` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_timeperiod` (`account`,`timeperiod`),
   KEY `account` (`account`),
-  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -147,7 +147,7 @@ CREATE TABLE `a2obj_apps_files_limits_accounttotal` (
   `track_dlstats` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account` (`account`),
-  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -162,7 +162,7 @@ CREATE TABLE `a2obj_apps_files_limits_filesystemtimed` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `filesystem_timeperiod` (`filesystem`,`timeperiod`),
   KEY `filesystem` (`filesystem`),
-  CONSTRAINT `a2obj_apps_files_limits_filesystemtimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_filesystemtimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_filesystemtimed_ibfk_2` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -175,7 +175,7 @@ CREATE TABLE `a2obj_apps_files_limits_filesystemtotal` (
   `track_dlstats` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `filesystem` (`filesystem`),
-  CONSTRAINT `a2obj_apps_files_limits_filesystemtotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_filesystemtotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_filesystemtotal_ibfk_2` FOREIGN KEY (`filesystem`) REFERENCES `a2obj_apps_files_filesystem_fsmanager` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -190,7 +190,7 @@ CREATE TABLE `a2obj_apps_files_limits_grouptimed` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `group_timeperiod` (`group`,`timeperiod`),
   KEY `group` (`group`),
-  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -205,7 +205,7 @@ CREATE TABLE `a2obj_apps_files_limits_grouptotal` (
   `track_dlstats` tinyint(2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `group` (`group`),
-  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`),
+  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -273,7 +273,7 @@ CREATE TABLE `a2obj_apps_files_rootfolder` (
   UNIQUE KEY `owner_filesystem` (`owner`,`filesystem`),
   KEY `owner` (`owner`),
   KEY `filesystem` (`filesystem`),
-  CONSTRAINT `a2obj_apps_files_rootfolder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_folder` (`id`)
+  CONSTRAINT `a2obj_apps_files_rootfolder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_folder` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -320,7 +320,7 @@ CREATE TABLE `a2obj_apps_files_storage_ftp` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` tinyblob DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -329,7 +329,7 @@ CREATE TABLE `a2obj_apps_files_storage_local` (
   `id` char(8) NOT NULL,
   `path` text NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_local_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_local_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -348,7 +348,7 @@ CREATE TABLE `a2obj_apps_files_storage_s3` (
   `secretkey` varbinary(56) DEFAULT NULL,
   `secretkey_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_s3_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_s3_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -368,7 +368,7 @@ CREATE TABLE `a2obj_apps_files_storage_sftp` (
   `privkey_nonce` binary(24) DEFAULT NULL,
   `keypass_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_sftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_sftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -383,7 +383,7 @@ CREATE TABLE `a2obj_apps_files_storage_smb` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_smb_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_smb_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -408,7 +408,7 @@ CREATE TABLE `a2obj_apps_files_storage_webdav` (
   `username_nonce` binary(24) DEFAULT NULL,
   `password_nonce` binary(24) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `a2obj_apps_files_storage_webdav_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_webdav_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -420,7 +420,7 @@ CREATE TABLE `a2obj_apps_files_subitem` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_parent` (`name`,`parent`),
   KEY `parent` (`parent`),
-  CONSTRAINT `a2obj_apps_files_subitem_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`),
+  CONSTRAINT `a2obj_apps_files_subitem_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_files_subitem_ibfk_2` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_folder` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;

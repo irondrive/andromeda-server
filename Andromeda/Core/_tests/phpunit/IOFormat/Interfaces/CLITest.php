@@ -2,6 +2,7 @@
 
 use Andromeda\Core\{Config, Utilities};
 use Andromeda\Core\IOFormat\Exceptions\SafeParamInvalidException;
+use Andromeda\Core\IOFormat\Exceptions\SafeParamNullValueException;
 use Andromeda\Core\IOFormat\{/*phpstan*/Input, InputPath, InputStream, Output, OutputHandler};
 
 class CLITest extends \PHPUnit\Framework\TestCase
@@ -57,6 +58,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
         $stdin = $this->getStream();
         $caught = false; try { (new CLI())->LoadFullInput($argv,array(),$stdin); }
         catch (SafeParamInvalidException $e) { $caught = true; }
+        catch (SafeParamNullValueException $e) { $caught = true; }
         $this->assertTrue($caught);
     }
     
@@ -64,7 +66,10 @@ class CLITest extends \PHPUnit\Framework\TestCase
     {
         $this->checkBadUsage(array());
         $this->checkBadUsage(array(''));
-        
+        $this->checkBadUsage(array('',''));
+        $this->checkBadParam(array('','','')); // app
+        $this->checkBadParam(array('','t','')); // action
+
         // invalid global flag
         $this->checkBadUsage(array('','--','app','action'));
         $this->checkBadUsage(array('','--arg','app','action'));
@@ -294,8 +299,9 @@ class CLITest extends \PHPUnit\Framework\TestCase
         
         $this->testOutput($iface, 0, 'mystring', null, '');
         $this->testOutput($iface, CLI::OUTPUT_PLAIN, $str='mystring', null, $str.PHP_EOL);
-        $this->testOutput($iface, CLI::OUTPUT_PLAIN, null, $arr=[1,2,3,4], print_r($arr,true).PHP_EOL); // printr fallback
-        $this->testOutput($iface, CLI::OUTPUT_PRINTR, null, $arr=[1,2,3,4], print_r($arr,true).PHP_EOL);
+        $arr=[1,2,3,4];
+        $this->testOutput($iface, CLI::OUTPUT_PLAIN, print_r($arr,true), null, print_r($arr,true).PHP_EOL);
+        $this->testOutput($iface, CLI::OUTPUT_PRINTR, null, $arr, print_r($arr,true).PHP_EOL);
         $this->testOutput($iface, CLI::OUTPUT_JSON, $str='[1,2,3]', $arr=[1,2,3], $str.PHP_EOL);
     }
 }

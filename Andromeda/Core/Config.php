@@ -173,6 +173,7 @@ class Config extends BaseConfig
     {
         $valid = function(string $app)
         {
+            if ($app === "Accounts" || $app === "Files") return false; // TODO allow files/accounts when they work!
             if (in_array($app,array('.','..'),true)) return false;
             return is_file(ROOT."/Apps/$app/$app"."App.php");
         };
@@ -180,18 +181,24 @@ class Config extends BaseConfig
         if (($dir = scandir(ROOT."/Apps")) === false)
             throw new Exceptions\FailedScanAppsException();
         $apps = array_values(array_filter($dir, $valid));
-        
+
         return array_map(function(string $s){ return strtolower($s); }, $apps);
     }
     
-    /** Registers the specified app name */
-    public function EnableApp(string $app) : self
+    /** 
+     * Registers the specified app name in config
+     * @param bool $test if true, test load the app
+     */
+    public function EnableApp(string $app, bool $test = true) : self
     {
         $app = strtolower($app);
         
-        $apprunner = $this->GetApiPackage()->GetAppRunner();
-        $apprunner->LoadApp($app);
-        
+        if ($test)
+        {
+            $apprunner = $this->GetApiPackage()->GetAppRunner();
+            $apprunner->LoadApp($app); // test loading
+        }
+
         $capps = $this->GetApps();        
         if (!in_array($app, $capps, true)) $capps[] = $app;
         $this->apps->SetArray($capps); return $this;

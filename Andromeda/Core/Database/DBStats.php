@@ -14,6 +14,7 @@ class DBStats
     private int $writes = 0; 
     private float $read_time = 0; 
     private float $write_time = 0; 
+    private float $autoloader_time = 0;
     
     /** @var array<array{query:string,time:float}> */
     private array $queries = array();
@@ -24,8 +25,15 @@ class DBStats
     /** Constructs a new stats context and logs the current time */
     public function __construct() { $this->start_timens = hrtime(true); }
     
-    /** Stops the overall timers */
-    public function stopTiming() : void { $this->total_timens = hrtime(true) - $this->start_timens; }
+    /** 
+     * Stops the overall timers
+     * @param bool $autoloader if true, measure autoloader time
+     */
+    public function stopTiming(bool $autoloader = true) : void
+    { 
+        if ($autoloader) $this->autoloader_time = get_autoloader_time(); // global
+        $this->total_timens = hrtime(true) - $this->start_timens; 
+    }
 
     /** Begins tracking a query by logging the current time */
     public function startQuery() : void { $this->query_start = hrtime(true); }
@@ -66,8 +74,11 @@ class DBStats
     /** Return the number of database writes */
     public function GetWrites() : int      { return $this->writes; }
     
-    /** Return the time spend writing to the database */
+    /** Return the time spent writing to the database */
     public function GetWriteTime() : float { return $this->write_time; }
+
+    /** Return the time spent running the autoloader */
+    public function GetAutoloaderTime() : float { return $this->autoloader_time; }
     
     /** Return the total elapsed time from construct to stopTiming() */
     public function GetTotalTime() : float { return $this->total_timens/1e9; }
@@ -75,7 +86,7 @@ class DBStats
     /** Return the total non-query (code) time (total-query) */
     public function GetCodeTime() : float
     {
-        return $this->GetTotalTime() - $this->read_time - $this->write_time;
+        return $this->total_timens/1e9 - $this->read_time - $this->write_time;
     }
     
     /** 
@@ -88,6 +99,7 @@ class DBStats
         $this->read_time += $stats->read_time;
         $this->writes += $stats->writes;
         $this->write_time += $stats->write_time;
+        $this->autoloader_time += $stats->autoloader_time;
 
         if ($total) $this->total_timens += $stats->total_timens;
 

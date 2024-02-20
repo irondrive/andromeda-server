@@ -98,7 +98,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
     
     public function testSpecial() : void
     {
-        $q = new QueryBuilder(); $q->Where($q->IsNull('mykey'))
+        $q = new QueryBuilder(); $q->Where($q->Equals('mykey',5))
             ->Limit(15)->Offset(10)->OrderBy('mykey',true);
         
         $this->assertSame(15, $q->GetLimit());
@@ -106,7 +106,7 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $this->assertSame("mykey", $q->GetOrderBy());
         $this->assertSame(true, $q->GetOrderDesc());
         
-        $this->testQuery($q, array(), "WHERE mykey IS NULL ORDER BY mykey DESC LIMIT 15 OFFSET 10");
+        $this->testQuery($q, array(5), "WHERE mykey = :d0 ORDER BY mykey DESC LIMIT 15 OFFSET 10");
         
         $q->Where(null)->Limit(null)->Offset(null)->OrderBy(null); // reset
         $this->assertSame(null, $q->GetLimit());

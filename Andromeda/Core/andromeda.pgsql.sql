@@ -16,6 +16,16 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 
+CREATE TABLE public.a2obj_apps_core_actionlog (
+    id character(20) NOT NULL,
+    admin boolean,
+    account character(12) DEFAULT NULL::bpchar,
+    sudouser character(12) DEFAULT NULL::bpchar,
+    client character(12) DEFAULT NULL::bpchar
+);
+
+
+
 CREATE TABLE public.a2obj_core_config (
     id character(1) NOT NULL,
     version character varying(255) NOT NULL,
@@ -102,6 +112,7 @@ CREATE TABLE public.a2obj_core_logging_metricslog (
     init_db_writes bigint NOT NULL,
     init_db_write_time double precision NOT NULL,
     init_code_time double precision NOT NULL,
+    init_autoloader_time double precision NOT NULL,
     init_total_time double precision NOT NULL,
     app character varying(255) NOT NULL,
     action character varying(255) NOT NULL,
@@ -110,18 +121,21 @@ CREATE TABLE public.a2obj_core_logging_metricslog (
     action_db_writes bigint NOT NULL,
     action_db_write_time double precision NOT NULL,
     action_code_time double precision NOT NULL,
+    action_autoloader_time double precision NOT NULL,
     action_total_time double precision NOT NULL,
     commit_db_reads bigint,
     commit_db_read_time double precision,
     commit_db_writes bigint,
     commit_db_write_time double precision,
     commit_code_time double precision,
+    commit_autoloader_time double precision,
     commit_total_time double precision,
     db_reads bigint NOT NULL,
     db_read_time double precision NOT NULL,
     db_writes bigint NOT NULL,
     db_write_time double precision NOT NULL,
     code_time double precision NOT NULL,
+    autoloader_time double precision NOT NULL,
     total_time double precision NOT NULL,
     gcstats text,
     rusage text,
@@ -133,73 +147,83 @@ CREATE TABLE public.a2obj_core_logging_metricslog (
 
 
 
+ALTER TABLE ONLY public.a2obj_apps_core_actionlog
+    ADD CONSTRAINT idx_78782_primary PRIMARY KEY (id);
+
+
+
 ALTER TABLE ONLY public.a2obj_core_config
-    ADD CONSTRAINT idx_21097_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_78788_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_emailer
-    ADD CONSTRAINT idx_21102_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_78793_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_errors_errorlog
-    ADD CONSTRAINT idx_21109_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_78800_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_actionlog
-    ADD CONSTRAINT idx_21116_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_78807_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_metricslog
-    ADD CONSTRAINT idx_21122_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_78813_primary PRIMARY KEY (id);
 
 
 
-CREATE INDEX idx_21109_action ON public.a2obj_core_errors_errorlog USING btree (action);
+CREATE INDEX idx_78800_action ON public.a2obj_core_errors_errorlog USING btree (action);
 
 
 
-CREATE INDEX idx_21109_addr ON public.a2obj_core_errors_errorlog USING btree (addr);
+CREATE INDEX idx_78800_addr ON public.a2obj_core_errors_errorlog USING btree (addr);
 
 
 
-CREATE INDEX idx_21109_app ON public.a2obj_core_errors_errorlog USING btree (app);
+CREATE INDEX idx_78800_app ON public.a2obj_core_errors_errorlog USING btree (app);
 
 
 
-CREATE INDEX idx_21109_code ON public.a2obj_core_errors_errorlog USING btree (code);
+CREATE INDEX idx_78800_code ON public.a2obj_core_errors_errorlog USING btree (code);
 
 
 
-CREATE INDEX idx_21109_time ON public.a2obj_core_errors_errorlog USING btree ("time");
+CREATE INDEX idx_78800_time ON public.a2obj_core_errors_errorlog USING btree ("time");
 
 
 
-CREATE INDEX idx_21116_addr ON public.a2obj_core_logging_actionlog USING btree (addr);
+CREATE INDEX idx_78807_addr ON public.a2obj_core_logging_actionlog USING btree (addr);
 
 
 
-CREATE INDEX idx_21116_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
+CREATE INDEX idx_78807_app_action ON public.a2obj_core_logging_actionlog USING btree (app, action);
 
 
 
-CREATE INDEX idx_21116_time ON public.a2obj_core_logging_actionlog USING btree ("time");
+CREATE INDEX idx_78807_time ON public.a2obj_core_logging_actionlog USING btree ("time");
 
 
 
-CREATE UNIQUE INDEX idx_21122_actionlog ON public.a2obj_core_logging_metricslog USING btree (actionlog);
+CREATE UNIQUE INDEX idx_78813_actionlog ON public.a2obj_core_logging_metricslog USING btree (actionlog);
 
 
 
-CREATE INDEX idx_21122_app_action ON public.a2obj_core_logging_metricslog USING btree (app, action);
+CREATE INDEX idx_78813_app_action ON public.a2obj_core_logging_metricslog USING btree (app, action);
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_core_actionlog
+    ADD CONSTRAINT a2obj_apps_core_actionlog_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY public.a2obj_core_logging_metricslog
-    ADD CONSTRAINT a2obj_core_logging_metricslog_ibfk_1 FOREIGN KEY (actionlog) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+    ADD CONSTRAINT a2obj_core_logging_metricslog_ibfk_1 FOREIGN KEY (actionlog) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 

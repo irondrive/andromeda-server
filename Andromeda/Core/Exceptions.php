@@ -87,7 +87,7 @@ class UpgradeRequiredException extends BaseExceptions\ServiceUnavailableExceptio
 }
 
 /** An exception indicating that the app is already installed */
-class InstalledAlreadyException extends BaseExceptions\ServiceUnavailableException
+class InstalledAlreadyException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("INSTALLED_ALREADY", $details);
@@ -95,7 +95,7 @@ class InstalledAlreadyException extends BaseExceptions\ServiceUnavailableExcepti
 }
 
 /** Exception indicating that the app is already upgraded to current */
-class UpgradedAlreadyException extends BaseExceptions\ServiceUnavailableException
+class UpgradedAlreadyException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("UPGRADED_ALREADY", $details);

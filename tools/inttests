@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-cd Andromeda
-
 if [ `which python3` ]; then
    py=`which python3`
 elif [ `which python` ]; then
@@ -11,4 +9,5 @@ else
    echo "could not find python!"; exit 1
 fi
 
+cd Andromeda
 $py Core/_tests/integration/main.py $@

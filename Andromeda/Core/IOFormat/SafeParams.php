@@ -126,9 +126,19 @@ class SafeParams
      * Returns a plain associative array of each parameter's name mapped to its raw value
      * @return array<string, NULL|scalar|ScalarArray>
      */
-    public function GetClientObject() : array
+    public function GetAllRawValues() : array
     {
         return array_map(function(SafeParam $param){ 
             return $param->GetNullRawValue(); }, $this->params);
+    }
+
+    /** 
+     * Returns a plain associative array of each parameter's name mapped to its raw value (utf-8/json safe)
+     * @return array<string, NULL|scalar|ScalarArray>
+     */
+    public function GetClientObject() : array
+    {
+        return Utilities::toScalarArray(array_map(function(SafeParam $param){ 
+            return $param->GetNullRawValue(); }, $this->params));
     }
 }

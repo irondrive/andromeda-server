@@ -35,7 +35,7 @@ class CoreApp extends BaseApp
             'phpinfo',
             'serverinfo',
             'testmail [--mailid id] [--dest email]',
-            'scanapps [--enable bool]',
+            'scanapps',
             'enableapp --appname alphanum',
             'disableapp --appname alphanum',
             'getconfig',
@@ -78,7 +78,8 @@ class CoreApp extends BaseApp
         }
         else // not using the accounts app, check interface privilege
         {
-            $authenticator = null; $isAdmin = $this->API->GetInterface()->isPrivileged();
+            $authenticator = null; 
+            $isAdmin = $this->API->GetInterface()->isPrivileged();
         }
         
         $actionlog = null; if ($this->wantActionLog())
@@ -99,7 +100,7 @@ class CoreApp extends BaseApp
             
             case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return;
             
-            case 'scanapps':    return $this->ScanApps($params, $isAdmin);
+            case 'scanapps':    return $this->ScanApps($isAdmin);
             case 'enableapp':   return $this->EnableApp($params, $isAdmin);
             case 'disableapp':  return $this->DisableApp($params, $isAdmin);
             
@@ -139,8 +140,8 @@ class CoreApp extends BaseApp
                 return "$name $line"; }, $app->getUsage())); 
         }
 
-        if ($this->API->GetInterface()->GetOutputMode() == IOInterface::OUTPUT_PLAIN)
-            $output = implode("\n", $output);
+        if ($this->API->GetInterface()->GetOutputMode() === IOInterface::OUTPUT_PLAIN)
+            $output = implode("\r\n", $output);
 
         return $output;
     }
@@ -226,22 +227,15 @@ class CoreApp extends BaseApp
     }
     
     /** 
-     * Scans for available apps, optionally enabling all
+     * Scans for available apps to enable/disable
      * @see Config::ScanApps() 
      * @return array<string>
      */
-    protected function ScanApps(SafeParams $params, bool $isAdmin) : array
+    protected function ScanApps(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
-        $apps = Config::ScanApps();
-        
-        if ($params->GetOptParam('enable',false,SafeParams::PARAMLOG_ALWAYS)->GetBool())
-        {
-            foreach ($apps as $app) $this->config->EnableApp($app);
-        }
-        
-        return $apps;
+        return Config::ScanApps();
     }
     
     /**
@@ -374,7 +368,7 @@ class CoreApp extends BaseApp
     }
     
     /**
-     * Returns the server error log, possibly filtered
+     * Returns the server error log, possibly filtered by input
      * @throws Exceptions\AdminRequiredException if not an admin 
      * @return array<string, array<mixed>>
      */

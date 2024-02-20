@@ -1,10 +1,16 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Errors; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Utilities;
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\Logging\BaseLog;
 
-/** Represents an error log entry in the database */
+/** 
+ * Represents an error log entry in the database 
+ * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-type ErrorLogClientObject array{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array<int,string>,
+ *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, NULL|scalar|ScalarArray>}
+ */
 class ErrorLog extends BaseLog
 {
     protected const IDLength = 12;
@@ -86,7 +92,7 @@ class ErrorLog extends BaseLog
     public static function GetPropUsage(ObjectDatabase $database) : string { 
         return "[--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool]"; }
     
-    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array
+    public static function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $isCount = false) : array
     {
         $criteria = array();
         
@@ -102,8 +108,8 @@ class ErrorLog extends BaseLog
         
         if ($params->HasParam('message')) $criteria[] = $q->Like('message', $params->GetParam('message')->GetUTF8String());
         
-        $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
-        
+        if (!$isCount) $q->OrderBy("time", !$params->GetOptParam('asc',false)->GetBool()); // always sort by time, default desc
+
         return $criteria;
     }
 
@@ -135,10 +141,15 @@ class ErrorLog extends BaseLog
         return $obj;
     }
 
+    /** Deletes all ErrorLog entries, returns the count */
+    public static function DeleteAll(ObjectDatabase $database) : int
+    {
+        return $database->DeleteObjectsByQuery(static::class, new QueryBuilder());
+    }
+
     /**
      * Returns the printable client object of this error log
-     * @return array<mixed> `{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,
-          trace_basic:array,trace_full:array,objects:?array,queries:?array,params:?array,hints:?array}`
+     * @return ErrorLogClientObject
      */
     public function GetClientObject() : array
     {
@@ -159,6 +170,6 @@ class ErrorLog extends BaseLog
             'hints' => $this->hints->TryGetArray()
         );
 
-        return $retval;
+        return $retval; // @phpstan-ignore-line technically the arrays loaded from the DB could be saved with the wrong shapes
     }
 }

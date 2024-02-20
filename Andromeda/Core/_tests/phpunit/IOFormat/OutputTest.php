@@ -69,19 +69,34 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $this->assertSame('TRUE', Output::Success(true)->GetAsString());
         $this->assertSame('myretval', Output::Success('myretval')->GetAsString());
         
-        $this->assertNull(Output::Success(array('mykey'=>'myval'))->GetAsString());
-        $this->assertNull(Output::Success(array('myretval'))->SetMetrics(array('mymetrics'))->GetAsString());
+        $arr=array('mykey'=>'myval');
+        $this->assertSame(Output::Success($arr)->GetAsString(),print_r($arr,true));
+
+        // with debug/metrics, don't narrow down to appdata
+        $output = Output::Success($arr)->SetMetrics(array('mymetrics'));
+        $this->assertNotSame($output->GetAsString(), print_r($arr,true)); // added metrics
+        $this->assertSame($output->GetAsString(), print_r($output->GetAsArray(),true));
+        // outprop still narrows appdata itself w/ metrics
+        $this->assertSame($output->GetAsString('mykey'), print_r($output->GetAsArray('mykey'),true));
+
+        $output = Output::ServerException();
+        $this->assertSame($output->GetAsString(), 'SERVER_ERROR');
+        $this->assertSame($output->GetAsString('mykey'), 'SERVER_ERROR'); // ignore outprop on error
         
-        $this->assertSame('SERVER_ERROR', Output::ServerException()->GetAsString());
-        $this->assertNull(Output::ServerException(array('mydebug'))->GetAsString());
+        // with outprop+error+debug, ignore outprop
+        $output = Output::ServerException(array('mydebug'));
+        $this->assertSame($output->GetAsString('mykey'), print_r($output->GetAsArray(),true));
     }
     
     public function testOutprop() : void
     {
+        $output = Output::ServerException();
+        $this->assertSame(array('ok'=>false,'code'=>500,'message'=>'SERVER_ERROR'), $output->GetAsArray("key1")); // ignore outprop on error
+
         $appdata = array('key1'=>array('key2'=>5));
         $output = Output::Success($appdata);
         
-        $this->assertNull($output->GetAsString("key1"));
+        $this->assertSame($output->GetAsString("key1"),print_r($appdata["key1"],true));
         $this->assertSame('5', $output->GetAsString("key1.key2"));
         
         $this->assertSame(array('ok'=>true,'code'=>200,'appdata'=>$appdata['key1']), $output->GetAsArray("key1"));

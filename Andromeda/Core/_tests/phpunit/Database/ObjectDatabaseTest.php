@@ -184,6 +184,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     public function testCountByQuery() : void
     {
         $database = $this->createMock(PDODatabase::class);
+        $database->method('FullSelectFields')->willReturn(true);
         $objdb = new ObjectDatabase($database);
         
         $q = new QueryBuilder(); $q->Where($q->Equals('mytest',5));
@@ -286,7 +287,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(3))->method('write')->withConsecutive(
             [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
             [ 'UPDATE a2obj_core_database_easyobject SET generalKey=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id) ],
-            [ 'DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0', array('d0'=>$id) ]
+            [ 'DELETE FROM a2obj_core_database_easyobject WHERE id = :d0', array('d0'=>$id) ]
         )->willReturn(1);
         
         $obj->Save(true); // nothing
@@ -333,21 +334,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb->SaveObjects(); // nothing to do now
     }
     
-    private const delete4 =
-        'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4 '.
-            'FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'WHERE a2obj_core_database_polyobject1.id = :d0';
-    
-    private const delete5a =
-        'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4, a2obj_core_database_polyobject5a '.
-            'FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-            'WHERE a2obj_core_database_polyobject1.id = :d0';
-    
     public function testDeleteObject() : void
     {
         $database = $this->createMock(PDODatabase::class);
@@ -356,7 +342,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = new PolyObject5a($objdb, array('id'=>($id='testid1234')));
         
         $database->expects($this->once())->method('write')
-            ->with(self::delete5a, array('d0'=>$id))->willReturn(1);
+            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE id = :d0", array('d0'=>$id))->willReturn(1);
         
         $obj->Delete();
         $this->assertTrue($obj->isDeleted());
@@ -383,7 +369,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
         $database->expects($this->exactly(2))->method('write')->withConsecutive(
             [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
-            [ 'DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0', array('d0'=>$id) ]
+            [ 'DELETE FROM a2obj_core_database_easyobject WHERE id = :d0', array('d0'=>$id) ]
         )->willReturn(1);
         
         $obj->Save(); // is now "loaded"
@@ -392,103 +378,56 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($obj->didPreDelete());
         $this->assertTrue($obj->isDeleted());
     }
-    
-    public function testDeleteByQueryYesReturning() : void
-    {        
-        // loading by every base class should yield the same results!
-        foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
-        {
-            $database = $this->createMock(PDODatabase::class);
-            $objdb = new ObjectDatabase($database);
-            $database->method('SupportsRETURNING')->willReturn(true);
-            
-            // first we load the objects in advance so we can check isDeleted()
-            $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-            
-            $database->expects($this->exactly(3))->method('read')
-                ->withConsecutive(self::select1, self::select2, self::select3)
-                ->willReturnOnConsecutiveCalls([self::row1], [self::row2], []);
-                
-            $objs = $objdb->LoadObjectsByQuery($class, $q);
-            
-            $this->assertSame(2, count($objs));
-            $id1 = self::id1; $obj1 = $objs[$id1];
-            $id2 = self::id2; $obj2 = $objs[$id2];
-            
-            $ondel1 = $this->createMock(OnDelete::class); $ondel1->expects($this->once())->method('Delete'); $obj1->SetOnDelete($ondel1);
-            $ondel2 = $this->createMock(OnDelete::class); $ondel2->expects($this->once())->method('Delete'); $obj2->SetOnDelete($ondel2);
-            
-            // now we delete the objects and hope it deletes the same ones
-            $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-            
-            $deleteStr1 =
-                'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4, a2obj_core_database_polyobject5a '.
-                'FROM a2obj_core_database_polyobject1 '.
-                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-                'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-                'WHERE testprop1 > :d0 RETURNING *';
-                
-            $deleteStr2 =
-                'DELETE a2obj_core_database_polyobject1, a2obj_core_database_polyobject2, a2obj_core_database_polyobject4 '.
-                'FROM a2obj_core_database_polyobject1 '.
-                'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-                'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-                'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1) RETURNING *';
 
-            $database->expects($this->exactly(3))->method('readwrite')
-                ->withConsecutive(
-                    [$deleteStr1, array('d0'=>3)], 
-                    [$deleteStr2, array('d0'=>3, 'd1'=>18)],
-                    [$deleteStr2, array('d0'=>3, 'd1'=>5)])
-                ->willReturnOnConsecutiveCalls(
-                    [self::row1], 
-                    [self::row2], []);
-            
-            $numDeleted = $objdb->DeleteObjectsByQuery($class, $q);
-            
-            $this->assertSame($numDeleted, 2);
-            $this->assertTrue($obj1->isDeleted());
-            $this->assertTrue($obj2->isDeleted());
-        }
-    }
-    
-    public function testDeleteByQueryNoReturning() : void
-    {       
-        // loading by every base class should yield the same results!
-        foreach (array(PolyObject0::class, PolyObject1::class, PolyObject2::class, PolyObject3::class, PolyObject4::class) as $class)
+    public function testDeleteByQuery() : void
+    {
+        $delqueries = array(
+            PolyObject0::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE testprop1 > :d0) AS t)",
+            PolyObject1::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE testprop1 > :d0) AS t)",
+            PolyObject2::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
+                "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE testprop1 > :d0) AS t)",
+            PolyObject3::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
+                "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE testprop1 > :d0) AS t)",
+            PolyObject4::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
+                "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE testprop1 > :d0) AS t)",
+        );
+
+        foreach ($delqueries as $class=>$delquery)
         {
             $database = $this->createMock(PDODatabase::class);
             $objdb = new ObjectDatabase($database);
-            $database->method('SupportsRETURNING')->willReturn(false);
             
             // first we load the objects in advance so we can check isDeleted()
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
             
-            $database->expects($this->exactly(6))->method('read') // can only mock read once
+            // loading by every base class should yield the same results!
+            $database->expects($this->exactly(6))->method('read') // 3x for Load(), 3x for Delete()
                 ->withConsecutive(self::select1, self::select2, self::select3, self::select1, self::select2, self::select3)
                 ->willReturnOnConsecutiveCalls([self::row1], [self::row2], [], [self::row1], [self::row2], []);
                 
-            $objs = $objdb->LoadObjectsByQuery($class, $q);
+            $database->expects($this->exactly(1))->method('write')
+                ->with($delquery,array('d0'=>3))
+                ->willReturn(2);
             
+            $objs = $objdb->LoadObjectsByQuery($class, $q); // SELECT 3x
             $this->assertSame(2, count($objs));
             $id1 = self::id1; $obj1 = $objs[$id1];
             $id2 = self::id2; $obj2 = $objs[$id2];
-            
+
             $ondel1 = $this->createMock(OnDelete::class); $ondel1->expects($this->once())->method('Delete'); $obj1->SetOnDelete($ondel1);
             $ondel2 = $this->createMock(OnDelete::class); $ondel2->expects($this->once())->method('Delete'); $obj2->SetOnDelete($ondel2);
             
             // now we delete the objects and hope it deletes the same ones
             $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-    
-            $database->expects($this->exactly(2))->method('write')
-                ->withConsecutive(
-                    [self::delete5a, array('d0'=>self::id1)], 
-                    [self::delete4, array('d0'=>self::id2)])
-                ->willReturn(1);
-                    
-            $numDeleted = $objdb->DeleteObjectsByQuery($class, $q);
-            
+
+            $numDeleted = $objdb->DeleteObjectsByQuery($class, $q); // SELECT 3x, DELETE
             $this->assertSame($numDeleted, 2);
             $this->assertTrue($obj1->isDeleted());
             $this->assertTrue($obj2->isDeleted());
@@ -568,12 +507,15 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     {
         $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
-        
-        $database->method('SupportsRETURNING')->willReturn(true);
-        
-        $database->expects($this->exactly(3))->method('readwrite')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0 RETURNING *", array('d0'=>5))
+
+        $database->expects($this->exactly(3))->method('read')
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
             ->willReturnOnConsecutiveCalls([], [array('id'=>'test')], [array('id'=>'test1'),array('id'=>'test2')]);
+        
+        $database->expects($this->exactly(3))->method('write')
+            ->with("DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
+                "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0) AS t)", array('d0'=>5))
+            ->willReturnOnConsecutiveCalls(0, 1, 2);
             
         $q = new QueryBuilder(); $q->Where($q->Equals('uniqueKey',5));
         
@@ -618,33 +560,39 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     public function testNonUniqueKeyDelete() : void
     {
         $database = $this->createMock(PDODatabase::class);
-        $database->method('SupportsRETURNING')->willReturn(true);
         $objdb = new ObjectDatabase($database);
 
-        $database->expects($this->exactly(1))->method('readwrite')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE generalKey = :d0 RETURNING *", array('d0'=>5))
-            ->willReturn([array('id'=>'test123','generalKey'=>5)]);
-        $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>6))
-            ->willReturn([array('id'=>$id='test456','generalKey'=>6)]);
-        $database->expects($this->exactly(1))->method('write')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
-            ->willReturn(1);
+        $database->expects($this->exactly(2))->method('read')
+            ->withConsecutive(
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>6)]
+            )->willReturnOnConsecutiveCalls(
+                [array('id'=>$id='test123','generalKey'=>5)],
+                [array('id'=>$id='test124','generalKey'=>6)]
+            );
+        $database->expects($this->exactly(2))->method('write')
+            ->withConsecutive(
+                ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE generalKey = :d0) AS t)", array('d0'=>5)],
+                ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE generalKey = :d0) AS t)", array('d0'=>6)],
+            )->willReturn(1);
         
         // not cached, delete will be by query
-        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5));
-        $this->assertSame(0,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5)); // no-op
+        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5)); // SELECT+DELETE(q)
+        $this->assertSame(0,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 5)); // no-op (known empty)
         
         // load an object to cache, delete directly by cache
-        $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 6);
+        $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 6); // SELECT
         $this->assertCount(1, $objs);
-        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 6));
+        $this->assertSame(1,$objdb->DeleteObjectsByKey(EasyObject::class, 'generalKey', 6)); // DELETE(q)
         $this->assertTrue($objs[$id]->isDeleted());
     }
     
     public function testNonUniqueKeyCount() : void
     {
         $database = $this->createMock(PDODatabase::class);
+        $database->method('FullSelectFields')->willReturn(false);
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(2))->method('read')
@@ -652,7 +600,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
                 ["SELECT COUNT(a2obj_core_database_easyobject.id) FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)], 
                 ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)])
             ->willReturnOnConsecutiveCalls(
-                [array('COUNT(a2obj_core_database_easyobject.id)'=>1)], 
+                [array('count'=>1)], // postgres style
                 [array('id'=>'test123','generalKey'=>5)]);
         
         $this->assertSame(1, $objdb->CountObjectsByKey(EasyObject::class, 'generalKey', 5));
@@ -690,27 +638,31 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     public function testUniqueKeyDelete() : void
     {
         $database = $this->createMock(PDODatabase::class);
-        $database->method('SupportsRETURNING')->willReturn(true);
         $objdb = new ObjectDatabase($database);
         
-        $database->expects($this->exactly(1))->method('readwrite')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0 RETURNING *", array('d0'=>5))
-            ->willReturn([array('id'=>$id='test123','uniqueKey'=>5)]);
-        $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6))
-            ->willReturn([array('id'=>$id='test123','uniqueKey'=>6)]);
-        $database->expects($this->exactly(1))->method('write')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
-            ->willReturn(1);
+        $database->expects($this->exactly(2))->method('read')
+            ->withConsecutive(
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6)]
+            )->willReturnOnConsecutiveCalls(
+                [array('id'=>$id='test123','uniqueKey'=>5)],
+                [array('id'=>$id='test124','uniqueKey'=>6)]
+            );
+        $database->expects($this->exactly(2))->method('write')
+            ->withConsecutive(
+                ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0) AS t)", array('d0'=>5)],
+                ["DELETE FROM a2obj_core_database_easyobject WHERE id = :d0", array('d0'=>'test124')]
+            )->willReturn(1);
         
         // not cached, delete will be by query
-        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5));
-        $this->assertFalse($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5)); // no-op
+        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5)); // SELECT+DELETE(q)
+        $this->assertFalse($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 5)); // no-op (cached)
         
         // load an object to cache, delete directly by cache
-        $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6);
+        $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6); // SELECT
         $this->assertNotNull($obj);
-        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 6));
+        $this->assertTrue($objdb->TryDeleteUniqueByKey(EasyObject::class, 'uniqueKey', 6)); // DELETE(1)
         $this->assertTrue($obj->isDeleted());
     }
     
@@ -815,18 +767,25 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
             ->willReturn([array('id'=>$id1='test123','type'=>101,'testprop5'=>55)]);
+
         $database->expects($this->exactly(1))->method('write')
-            ->with(self::delete5a, array('d0'=>$id1))
+            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
+                        "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
+                        "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
+                        "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
+                        "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
+                        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)) AS t)", 
+                    array('d0'=>55,'d1'=>101))
             ->willReturn(1);
 
-        $objs = $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55);
+        $objs = $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55); // SELECT
         $this->assertCount(1, $objs); $obj1 = $objs[$id1];
 
-        // delete by child class should use the cache (delete directly)
-        $this->assertSame(1, $objdb->DeleteObjectsByKey(PolyObject5aa::class, 'testprop5', 55));
+        // delete by child class should use the cache (no extra SELECT)
+        $this->assertSame(1, $objdb->DeleteObjectsByKey(PolyObject5aa::class, 'testprop5', 55)); // DELETE(q)
         $this->assertTrue($obj1->isDeleted());
 
-        $this->assertCount(0, $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55));
+        $this->assertCount(0, $objdb->LoadObjectsByKey(PolyObject5a::class, 'testprop5', 55)); // no-op
     }
 
     public function testUniqueKeyPolyLoad() : void
@@ -859,7 +818,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
             ->willReturn([array('id'=>$id1='test123','type'=>101,'testprop5'=>55)]);
         $database->expects($this->exactly(1))->method('write')
-            ->with(self::delete5a, array('d0'=>$id1))
+            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE id = :d0", array('d0'=>$id1))
             ->willReturn(1);
 
         $obj = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
@@ -888,7 +847,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(EasyObject::class, $obj1);
         $this->assertInstanceOf(EasyObject::class, $obj2);
         
-        $delstr = "DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0";
+        $delstr = "DELETE FROM a2obj_core_database_easyobject WHERE id = :d0";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$delstr, array('d0'=>$id1)], [$delstr, array('d0'=>$id2)])
             ->willReturn(1);
@@ -918,7 +877,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNotNull($obj);// @phpstan-ignore-line test anyway
 
         $database->expects($this->once())->method('write')
-            ->with("DELETE a2obj_core_database_easyobject FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0", array('d0'=>$id))
+            ->with("DELETE FROM a2obj_core_database_easyobject WHERE id = :d0", array('d0'=>$id))
             ->willReturn(1);
             
         $obj->Delete();
