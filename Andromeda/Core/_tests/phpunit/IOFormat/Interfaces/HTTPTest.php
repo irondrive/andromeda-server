@@ -95,7 +95,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         $auth = $input->GetAuth(); assert($auth instanceof InputAuth);
         $this->assertSame($user,$auth->GetUsername());
         $this->assertSame($pass,$auth->GetPassword());
-        $this->assertEquals($auth,$input->GetAuth());
+        $this->assertSame($auth,$input->GetAuth());
     }
     
     public function testFiles() : void
@@ -116,7 +116,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         if ($arrval !== null) $output->method('GetAsArray')->willReturn($arrval);
         
         $output = Utilities::CaptureOutput(function()use($iface,$output){
-            $iface->FinalOutput($output); });
+            $iface->FinalOutput($output,true); }); // no header output
         $this->assertSame($want,$output);
     }
     
@@ -126,8 +126,9 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
         
         $this->testOutput($iface, 0, $str='mystring', null, '');
         $this->testOutput($iface, HTTP::OUTPUT_PLAIN, $str, null, $str);
-        $this->testOutput($iface, HTTP::OUTPUT_PLAIN, null, $arr=[1,2,3,4], '[1,2,3,4]'); // json fallback
-        $this->testOutput($iface, HTTP::OUTPUT_PRINTR, null, $arr=[1,2,3,4], print_r($arr,true));
+        $arr=[1,2,3,4]; 
+        $this->testOutput($iface, HTTP::OUTPUT_PLAIN, print_r($arr,true), null, print_r($arr,true));
+        $this->testOutput($iface, HTTP::OUTPUT_PRINTR, null, $arr, print_r($arr,true));
         $this->testOutput($iface, HTTP::OUTPUT_JSON, $str='[1,2,3]', $arr=[1,2,3], $str);
     }
 

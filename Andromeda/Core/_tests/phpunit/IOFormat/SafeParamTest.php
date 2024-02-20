@@ -485,7 +485,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
             $this->assertSame($obj->GetParam('key1')->GetInt(), 75);
             $this->assertSame($obj->GetParam('key2')->GetAlphanum(), 'val1');
             
-            $this->assertSame(array('key1'=>75,'key2'=>'val1'), $obj->GetClientObject());
+            $this->assertSame(array('key1'=>75,'key2'=>'val1'), $obj->GetAllRawValues());
             
             $this->testBad("string", $getVal);
             $this->testBad("{test:10}", $getVal);

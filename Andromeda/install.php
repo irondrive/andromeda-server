@@ -14,6 +14,4 @@ $errman = new ErrorManager($interface, true);
 
 $input = $interface->GetInput(); // check early
 
-$runner = new InstallRunner($interface, $errman);
-
-$runner->Run($input);
+(new InstallRunner($interface, $errman))->Run($input);

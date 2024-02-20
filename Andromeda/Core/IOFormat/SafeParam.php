@@ -123,7 +123,7 @@ class SafeParam
         if ($this->arrval !== null)
             return $this->arrval;
         if ($this->objval !== null) 
-            return $this->objval->GetClientObject();
+            return $this->objval->GetAllRawValues();
         return null;
     }
     
@@ -659,7 +659,8 @@ class SafeParam
      * @template T of array<string>
      * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
-     * @return value-of<T> the whitelisted value or null
+     * @throws SafeParamNullValueException if null
+     * @return value-of<T> the whitelisted value
      */
     public function FromWhitelist(array $values) : string
     {

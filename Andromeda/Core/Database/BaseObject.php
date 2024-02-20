@@ -163,10 +163,7 @@ abstract class BaseObject
     {
         $this->idfield = new FieldTypes\StringType('id');
         
-        if (count($tables = static::GetTableClasses()) === 0) 
-            throw new Exceptions\NoBaseTableException(static::class);
-        
-        foreach ($tables as $table)
+        foreach (static::GetTableClasses() as $table)
         {
             // make sure idfield shows up in every fieldsByClass
             $this->RegisterFields(array($this->idfield), $table);
@@ -252,7 +249,6 @@ abstract class BaseObject
     
     /** 
      * Notifies this object that the DB is about to delete it - internal call only
-     * This is ONLY run when deleting a single object directly, not deleting by query!
      * Child classes can extend this if they need extra on-delete logic
      */
     public function NotifyPreDeleted() : void { }

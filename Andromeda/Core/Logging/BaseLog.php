@@ -18,9 +18,10 @@ abstract class BaseLog extends BaseObject
      * @param ObjectDatabase $database database reference
      * @param QueryBuilder $q query to create params with
      * @param SafeParams $params params with user supplied criteria
+     * @param bool $isCount if true, this is a COUNT query
      * @return array<string> array of WHERE strings
      */
-    public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params) : array;
+    public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $isCount = false) : array;
     
     /**
      * Returns the class we should load logs as
@@ -39,11 +40,12 @@ abstract class BaseLog extends BaseObject
      * Returns a compiled query selecting rows from the given input
      * @param ObjectDatabase $database database reference
      * @param SafeParams $params params with user filter params
+     * @param bool $isCount if true, this is a COUNT query
      * @return QueryBuilder built query with WHERE set
      */
-    protected static function GetWhereQuery(ObjectDatabase $database, SafeParams $params) : QueryBuilder
+    protected static function GetWhereQuery(ObjectDatabase $database, SafeParams $params, bool $isCount = false) : QueryBuilder
     {
-        $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $params);
+        $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $params, $isCount);
         
         $or = ($params->HasParam('logic') ? $params->GetParam('logic', SafeParams::PARAMLOG_ONLYFULL)
             ->FromWhitelist(array('and','or')) : null) === 'or'; // default AND
@@ -85,7 +87,7 @@ abstract class BaseLog extends BaseObject
     {
         $class = static::GetPropClass($database, $params);
         
-        $q = static::GetWhereQuery($database, $params);
+        $q = static::GetWhereQuery($database, $params, true);
         
         return $database->CountObjectsByQuery($class, $q);
     }

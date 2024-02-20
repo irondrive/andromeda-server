@@ -73,17 +73,18 @@ abstract class Utilities
     }
 
     /** 
-     * Converts all objects in the array to strings and checks UTF-8, to make it printable
-     * @param array<mixed> $data
-     * @return array<NULL|string|array<NULL|string|array<mixed>>>
+     * Converts all objects in the array to scalars recursively AND checks UTF-8, to make it printable
+     * @template T
+     * @param array<T, mixed> $data
+     * @return array<T, NULL|string|array<NULL|string|array<NULL|string|array<mixed>>>>
      */
-    public static function arrayStrings(array $data) : array
+    public static function toScalarArray(array $data) : array
     {
         foreach ($data as &$val)
         {
             if (is_array($val))
             {
-                $val = self::arrayStrings($val);
+                $val = self::toScalarArray($val);
             }
             else if (is_object($val))
             {
@@ -92,8 +93,7 @@ abstract class Utilities
             }
             else if (is_scalar($val))
             {
-                $val = (string)$val;
-                if (!Utilities::isUTF8($val))
+                if (is_string($val) && !Utilities::isUTF8($val))
                     $val = base64_encode($val);
             }
             else $val = print_r($val,true);

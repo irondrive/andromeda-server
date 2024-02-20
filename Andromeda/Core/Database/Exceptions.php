@@ -36,6 +36,8 @@ class DatabasePathException extends BaseExceptions\ClientErrorException
     }
 }
 
+
+
 /** Exception indicating that a BaseObject was not set up properly */
 abstract class ObjectSetupException extends BaseExceptions\ServerException { }
 
@@ -87,6 +89,7 @@ class ApiPackageException extends BaseExceptions\ServerException
     }
 }
 
+
 /** Base class for database connection initialization exceptions */
 abstract class DatabaseConnectException extends BaseExceptions\ServiceUnavailableException { }
 
@@ -115,50 +118,6 @@ class PDODatabaseConnectException extends DatabaseConnectException
     }
 }
 
-/** Base exception indicating that something went wrong due to concurrency, try again */
-abstract class ConcurrencyException extends BaseExceptions\ServiceUnavailableException { }
-
-/** Exception indicating that the update failed to match any objects */
-class UpdateFailedException extends ConcurrencyException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DB_OBJECT_UPDATE_FAILED", $details);
-    }
-}
-
-/** Exception indicating that the row insert failed */
-class InsertFailedException extends ConcurrencyException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DB_OBJECT_INSERT_FAILED", $details);
-    }
-}
-
-/** Exception indicating that the row delete failed */
-class DeleteFailedException extends ConcurrencyException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DB_OBJECT_DELETE_FAILED", $details);
-    }
-}
-
-
-/** Exception indicating that loading via a foreign key link failed */
-class ForeignKeyException extends ConcurrencyException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
-    }
-}
-
-/** Exception that the DB provided null for a non-null field */
-class FieldDataNullException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("FULL_DATA_NULL", $details);
-    }
-}
-
 /** Exception indicating the file could not be imported because it's missing */
 class ImportFileMissingException extends BaseExceptions\ServerException
 {
@@ -172,6 +131,46 @@ abstract class DatabaseException extends BaseExceptions\ServerException
 {
     public function __construct(string $message = "DATABASE_ERROR", ?string $details = null) {
         parent::__construct($message, $details);
+    }
+}
+
+/** Exception indicating that the update failed to match any objects */
+class UpdateFailedException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_OBJECT_UPDATE_FAILED", $details);
+    }
+}
+
+/** Exception indicating that the row insert failed */
+class InsertFailedException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_OBJECT_INSERT_FAILED", $details);
+    }
+}
+
+/** Exception indicating that the row delete failed */
+class DeleteFailedException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_OBJECT_DELETE_FAILED", $details);
+    }
+}
+
+/** Exception indicating that loading via a foreign key link failed */
+class ForeignKeyException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DB_FOREIGN_KEY_FAILED", $details);
+    }
+}
+
+/** Exception that the DB provided null for a non-null field */
+class FieldDataNullException extends DatabaseException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("FIELD_DATA_NULL", $details);
     }
 }
 

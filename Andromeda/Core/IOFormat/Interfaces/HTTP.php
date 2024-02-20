@@ -58,7 +58,7 @@ class HTTP extends IOInterface
         
         $app = $get['_app']; unset($req['_app']); // app
         $act = $get['_act']; unset($req['_act']); // action
-        
+
         if (!is_string($app) || !is_string($act))
             throw new Exceptions\MissingAppActionException('invalid');
         
@@ -118,44 +118,37 @@ class HTTP extends IOInterface
      */
     private function InitOutput(Output $output) : void
     {
-        if (!headers_sent())
-        {
-            if ($this->outmode === 0)
-                http_response_code($output->GetCode());
-            
-            header("Cache-Control: no-cache");
-        }
+        if ($this->outmode === 0)
+            http_response_code($output->GetCode());
+        
+        header("Cache-Control: no-cache");
     }
     
-    public function UserOutput(Output $output) : bool
+    public function UserOutput(Output $output, bool $skipHeaders = false) : bool
     {
-        $this->InitOutput($output);
+        if (!$skipHeaders) $this->InitOutput($output);
         
         return parent::UserOutput($output);
     }
     
-    public function FinalOutput(Output $output) : void
+    public function FinalOutput(Output $output, bool $skipHeaders = false) : void
     {
-        $this->InitOutput($output);
+        if (!$skipHeaders) $this->InitOutput($output);
 
         if ($this->outmode === self::OUTPUT_PLAIN)
         {
-            if (!headers_sent())
+            if (!$skipHeaders) // unit testing
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
                 http_response_code($output->GetCode());
             }
-            
-            // try echoing as a string, switch to json if it fails
-            $outstr = $output->GetAsString();
-            if ($outstr !== null) echo $outstr;
-            else $this->outmode = self::OUTPUT_JSON;
-        }        
-        
-        if ($this->outmode === self::OUTPUT_PRINTR) 
+
+            echo $output->GetAsString();
+        }
+        else if ($this->outmode === self::OUTPUT_PRINTR) 
         {
-            if (!headers_sent())
+            if (!$skipHeaders) // unit testing
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: text/plain");
@@ -163,15 +156,15 @@ class HTTP extends IOInterface
             
             echo print_r($output->GetAsArray(), true);
         }
-        
-        if ($this->outmode === self::OUTPUT_JSON)
+        else if ($this->outmode === self::OUTPUT_JSON)
         {
-            if (!headers_sent()) 
+            if (!$skipHeaders) // unit testing
             {
                 mb_http_output('UTF-8');
                 header("Content-Type: application/json");
             }
             
+            // apps MUST ensure they don't return anything non-utf8
             echo Utilities::JSONEncode($output->GetAsArray());
         }
     }
@@ -212,7 +205,7 @@ class HTTP extends IOInterface
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
      * @param array<string, NULL|scalar|ScalarArray> $post array of data to place in the POST body
-     * @return ?string the remote response
+     * @return ?string the remote response or null on failure
      */
     public static function HTTPPost(string $url, array $post) : ?string
     {

@@ -1,4 +1,3 @@
-PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2obj_apps_core_actionlog` (
   `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL
@@ -6,7 +5,7 @@ CREATE TABLE `a2obj_apps_core_actionlog` (
 ,  `sudouser` char(12) DEFAULT NULL
 ,  `client` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_core_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
+,  CONSTRAINT `a2obj_apps_core_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_core_config` (
   `id` char(1) NOT NULL
@@ -86,6 +85,7 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `init_db_writes` integer NOT NULL
 ,  `init_db_write_time` double NOT NULL
 ,  `init_code_time` double NOT NULL
+,  `init_autoloader_time` double NOT NULL
 ,  `init_total_time` double NOT NULL
 ,  `app` varchar(255) NOT NULL
 ,  `action` varchar(255) NOT NULL
@@ -94,18 +94,21 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `action_db_writes` integer NOT NULL
 ,  `action_db_write_time` double NOT NULL
 ,  `action_code_time` double NOT NULL
+,  `action_autoloader_time` double NOT NULL
 ,  `action_total_time` double NOT NULL
 ,  `commit_db_reads` integer DEFAULT NULL
 ,  `commit_db_read_time` double DEFAULT NULL
 ,  `commit_db_writes` integer DEFAULT NULL
 ,  `commit_db_write_time` double DEFAULT NULL
 ,  `commit_code_time` double DEFAULT NULL
+,  `commit_autoloader_time` double DEFAULT NULL
 ,  `commit_total_time` double DEFAULT NULL
 ,  `db_reads` integer NOT NULL
 ,  `db_read_time` double NOT NULL
 ,  `db_writes` integer NOT NULL
 ,  `db_write_time` double NOT NULL
 ,  `code_time` double NOT NULL
+,  `autoloader_time` double NOT NULL
 ,  `total_time` double NOT NULL
 ,  `gcstats` text DEFAULT NULL
 ,  `rusage` text DEFAULT NULL
@@ -115,7 +118,7 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
 ,  `debughints` longtext DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`actionlog`)
-,  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`actionlog`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE SET NULL
+,  CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`actionlog`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 );
 CREATE INDEX "idx_a2obj_core_errors_errorlog_time" ON "a2obj_core_errors_errorlog" (`time`);
 CREATE INDEX "idx_a2obj_core_errors_errorlog_code" ON "a2obj_core_errors_errorlog" (`code`);

@@ -19,7 +19,7 @@ class MailSendFailException extends BaseExceptions\ClientErrorException
     }
 }
 
-/** Exception indicating that admin-level access is required */
+/** Exception indicating that admin-level access (or local CLI if no accounts app) is required */
 class AdminRequiredException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {

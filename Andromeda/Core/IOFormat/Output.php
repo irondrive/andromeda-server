@@ -90,29 +90,28 @@ class Output
     }
     
     /** 
-     * Returns the appdata/message as a single string (or null if not possible) 
-     * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c.)
+     * Returns the output as a single human-readable string (narrowed to appdata/message, unless metrics/debug)
+     * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c)
      * @throws Exceptions\InvalidOutpropException if $outprop is invalid
      */
-    public function GetAsString(?string $outprop = null) : ?string
+    public function GetAsString(?string $outprop = null) : string
     {
-        if ($this->debug !== null || $this->metrics !== null) return null;
-        
-        if ($this->ok)
-        {
-            $appdata = $this->NarrowAppdata($outprop);
-            
-            if ($appdata === null)
-                return 'SUCCESS';
-            else if ($appdata === true)
-                return 'TRUE';
-            else if ($appdata === false)
-                return 'FALSE';
-            else if (is_scalar($appdata))
-                return (string)$appdata;
-            else return null;
-        }
-        else return $this->message;
+        if ($this->debug !== null || $this->metrics !== null)
+            return print_r($this->GetAsArray($outprop),true);
+
+        if (!$this->ok) return $this->message;
+
+        $appdata = $this->NarrowAppdata($outprop);
+
+        if ($appdata === null)
+            return 'SUCCESS';
+        else if ($appdata === true)
+            return 'TRUE';
+        else if ($appdata === false)
+            return 'FALSE';
+        else if (is_scalar($appdata))
+            return (string)$appdata;
+        else return print_r($appdata,true);
     }
     
     private function __construct(bool $ok = true, int $code = self::CODE_SUCCESS)

@@ -186,7 +186,12 @@ class QueryBuilder
      */
     public function Where(?string $where) : self 
     {
-        if ($where !== null && $this->where !== null)
+        if ($where === null)
+        {
+            $this->where = null;
+            $this->params = array();
+        }
+        else if ($this->where !== null)
             $this->where = $this->And($this->where, $where);
         else $this->where = $where; 
         return $this;

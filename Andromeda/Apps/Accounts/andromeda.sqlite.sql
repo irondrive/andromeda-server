@@ -1,4 +1,3 @@
-PRAGMA journal_mode = MEMORY;
 CREATE TABLE `a2obj_apps_accounts_actionlog` (
   `id` char(20) NOT NULL
 ,  `admin` integer DEFAULT NULL

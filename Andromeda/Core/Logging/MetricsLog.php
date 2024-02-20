@@ -32,6 +32,7 @@ class MetricsLog extends BaseObject
     private FieldTypes\IntType $init_db_writes;
     private FieldTypes\FloatType $init_db_write_time;
     private FieldTypes\FloatType $init_code_time;
+    private FieldTypes\FloatType $init_autoloader_time;
     private FieldTypes\FloatType $init_total_time;
 
     /** The command action app name */
@@ -44,6 +45,7 @@ class MetricsLog extends BaseObject
     private FieldTypes\IntType $action_db_writes;
     private FieldTypes\FloatType $action_db_write_time;
     private FieldTypes\FloatType $action_code_time;
+    private FieldTypes\FloatType $action_autoloader_time;
     private FieldTypes\FloatType $action_total_time;
 
     private FieldTypes\NullIntType $commit_db_reads;
@@ -51,18 +53,21 @@ class MetricsLog extends BaseObject
     private FieldTypes\NullIntType $commit_db_writes;
     private FieldTypes\NullFloatType $commit_db_write_time;
     private FieldTypes\NullFloatType $commit_code_time;
+    private FieldTypes\NullFloatType $commit_autoloader_time;
     private FieldTypes\NullFloatType $commit_total_time;
 
-    /** The number of read queries */
+    /** The total number of read queries */
     private FieldTypes\IntType $db_reads;
-    /** Time spent on read queries */
+    /** Time total spent on read queries */
     private FieldTypes\FloatType $db_read_time;
-    /** The number of write queries */
+    /** The total number of write queries */
     private FieldTypes\IntType $db_writes;
-    /** Time spent on write queries */
+    /** Time total spent on write queries */
     private FieldTypes\FloatType $db_write_time;
-    /** Time spent on PHP code (non-query) */
+    /** Time total spent on PHP code (non-query) */
     private FieldTypes\FloatType $code_time;
+    /** Time total spent on PHP code (non-query) */
+    private FieldTypes\FloatType $autoloader_time;
     /** Total time measured by the DBStats */
     private FieldTypes\FloatType $total_time;
 
@@ -114,6 +119,7 @@ class MetricsLog extends BaseObject
         $fields[] = $this->init_db_writes =     new FieldTypes\IntType('init_db_writes');
         $fields[] = $this->init_db_write_time = new FieldTypes\FloatType('init_db_write_time');
         $fields[] = $this->init_code_time =     new FieldTypes\FloatType('init_code_time');
+        $fields[] = $this->init_autoloader_time = new FieldTypes\FloatType('init_autoloader_time');
         $fields[] = $this->init_total_time =    new FieldTypes\FloatType('init_total_time');
 
         $fields[] = $this->app =     new FieldTypes\StringType('app');
@@ -124,6 +130,7 @@ class MetricsLog extends BaseObject
         $fields[] = $this->action_db_writes =     new FieldTypes\IntType('action_db_writes');
         $fields[] = $this->action_db_write_time = new FieldTypes\FloatType('action_db_write_time');
         $fields[] = $this->action_code_time =     new FieldTypes\FloatType('action_code_time');
+        $fields[] = $this->action_autoloader_time = new FieldTypes\FloatType('action_autoloader_time');
         $fields[] = $this->action_total_time =    new FieldTypes\FloatType('action_total_time');
 
         $fields[] = $this->commit_db_reads =      new FieldTypes\NullIntType('commit_db_reads');
@@ -131,6 +138,7 @@ class MetricsLog extends BaseObject
         $fields[] = $this->commit_db_writes =     new FieldTypes\NullIntType('commit_db_writes');
         $fields[] = $this->commit_db_write_time = new FieldTypes\NullFloatType('commit_db_write_time');
         $fields[] = $this->commit_code_time =     new FieldTypes\NullFloatType('commit_code_time');
+        $fields[] = $this->commit_autoloader_time = new FieldTypes\NullFloatType('commit_autoloader_time');
         $fields[] = $this->commit_total_time =    new FieldTypes\NullFloatType('commit_total_time');
 
         $fields[] = $this->db_reads =      new FieldTypes\IntType('db_reads');
@@ -138,6 +146,7 @@ class MetricsLog extends BaseObject
         $fields[] = $this->db_writes =     new FieldTypes\IntType('db_writes');
         $fields[] = $this->db_write_time = new FieldTypes\FloatType('db_write_time');
         $fields[] = $this->code_time =     new FieldTypes\FloatType('code_time');
+        $fields[] = $this->autoloader_time = new FieldTypes\FloatType('autoloader_time');
         $fields[] = $this->total_time =    new FieldTypes\FloatType('total_time');
 
         $fields[] = $this->gcstats =  new FieldTypes\NullJsonArray('gcstats');
@@ -168,7 +177,7 @@ class MetricsLog extends BaseObject
      */
     public static function Create(int $level, ObjectDatabase $database, DBStats $init, 
                                 RunContext $context, DBStats $total) : self
-    {        
+    {
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->actionlog->SetObject($context->TryGetActionLog());
@@ -182,6 +191,7 @@ class MetricsLog extends BaseObject
         $obj->init_db_writes->SetValue($init->GetWrites());
         $obj->init_db_write_time->SetValue($init->GetWriteTime());
         $obj->init_code_time->SetValue($init->GetCodeTime());
+        $obj->init_autoloader_time->SetValue($init->GetAutoloaderTime());
         $obj->init_total_time->SetValue($init->GetTotalTime());
 
         $obj->app->SetValue($context->GetInput()->GetApp());
@@ -193,6 +203,7 @@ class MetricsLog extends BaseObject
         $obj->action_db_writes->SetValue($actionstat->GetWrites());
         $obj->action_db_write_time->SetValue($actionstat->GetWriteTime());
         $obj->action_code_time->SetValue($actionstat->GetCodeTime());
+        $obj->action_autoloader_time->SetValue($actionstat->GetAutoloaderTime());
         $obj->action_total_time->SetValue($actionstat->GetTotalTime());
 
         if ($context->HasCommitMetrics())
@@ -203,6 +214,7 @@ class MetricsLog extends BaseObject
             $obj->commit_db_writes->SetValue($commitstat->GetWrites());
             $obj->commit_db_write_time->SetValue($commitstat->GetWriteTime());
             $obj->commit_code_time->SetValue($commitstat->GetCodeTime());
+            $obj->commit_autoloader_time->SetValue($commitstat->GetAutoloaderTime());
             $obj->commit_total_time->SetValue($commitstat->GetTotalTime());
         }
 
@@ -211,6 +223,7 @@ class MetricsLog extends BaseObject
         $obj->db_writes->SetValue($total->GetWrites());
         $obj->db_write_time->SetValue($total->GetWriteTime());
         $obj->code_time->SetValue($total->GetCodeTime());
+        $obj->autoloader_time->SetValue($total->GetAutoloaderTime());
         $obj->total_time->SetValue($total->GetTotalTime());
 
         if ($level >= Config::METRICS_EXTENDED)
@@ -232,12 +245,15 @@ class MetricsLog extends BaseObject
         return $obj;
     }
 
-    /** @return $this */
-    public function Save(bool $isRollback = false) : self
+    /** 
+     * @return $this
+     * @throws Exceptions\MultiFileWriteException if called > once
+     */
+    public function Save(bool $onlyAlways = false) : self
     {
         $config = $this->GetApiPackage()->GetConfig();
         
-        if ($config->GetMetricsLog2DB()) parent::Save(); // ignore $isRollback (not used)
+        if ($config->GetMetricsLog2DB()) parent::Save(); // ignore $onlyAlways (save on error)
         
         if ($config->GetMetricsLog2File() &&
             ($logdir = $config->GetDataDir()) !== null)
@@ -247,7 +263,7 @@ class MetricsLog extends BaseObject
             $this->writtenToFile = true;
             
             $data = Utilities::JSONEncode($this->GetClientObject());
-            file_put_contents("$logdir/metrics.log", $data."\r\n", FILE_APPEND); 
+            file_put_contents("$logdir/metrics.log", $data.PHP_EOL, FILE_APPEND | LOCK_EX); 
         }
 
         return $this;
@@ -257,10 +273,10 @@ class MetricsLog extends BaseObject
      * Returns the printable client object of this metrics
      * @param bool $isError if true, omit duplicated debugging information
      * @return array{date_created:float, peak_memory:int, nincludes:int, nobjects:int, 
-     *   init_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float}, 
-     *   action_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float,app:string,action:string}, 
-     *   commit_stats:array{reads:?int,read_time:?float,writes:?int,write_time:?float,code_time:?float,total_time:?float}, 
-     *   total_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,total_time:float},
+     *   init_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,autoloader_time:float,total_time:float}, 
+     *   action_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,autoloader_time:float,total_time:float,app:string,action:string}, 
+     *   commit_stats:array{reads:?int,read_time:?float,writes:?int,write_time:?float,code_time:?float,autoloader_time:?float,total_time:?float}, 
+     *   total_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,autoloader_time:float,total_time:float},
      *   gcstats?:?ScalarArray, rusage?:?ScalarArray, includes?:?ScalarArray, objects?:?ScalarArray, queries?:?ScalarArray, debughints?:?ScalarArray}
      * ... gcstats,rusage,includes,objects,queries,debughints are set if Config::METRICS_EXTENDED, objects,queries,debughints are only if !wasError
      * @see DBStatsLog::GetDBStatsClientObject()
@@ -279,6 +295,7 @@ class MetricsLog extends BaseObject
                 'writes' =>     $this->init_db_writes->GetValue(),
                 'write_time' => $this->init_db_write_time->GetValue(),
                 'code_time' =>  $this->init_code_time->GetValue(),
+                'autoloader_time' =>  $this->init_autoloader_time->GetValue(),
                 'total_time' => $this->init_total_time->GetValue()
             ),
             'action_stats' => array(
@@ -289,6 +306,7 @@ class MetricsLog extends BaseObject
                 'writes' =>     $this->action_db_writes->GetValue(),
                 'write_time' => $this->action_db_write_time->GetValue(),
                 'code_time' =>  $this->action_code_time->GetValue(),
+                'autoloader_time' =>  $this->action_autoloader_time->GetValue(),
                 'total_time' => $this->action_total_time->GetValue()
             ),
             'commit_stats' => array(
@@ -297,6 +315,7 @@ class MetricsLog extends BaseObject
                 'writes' =>     $this->commit_db_writes->TryGetValue(),
                 'write_time' => $this->commit_db_write_time->TryGetValue(),
                 'code_time' =>  $this->commit_code_time->TryGetValue(),
+                'autoloader_time' =>  $this->commit_autoloader_time->TryGetValue(),
                 'total_time' => $this->commit_total_time->TryGetValue()
             ),
             'total_stats' => array(
@@ -305,6 +324,7 @@ class MetricsLog extends BaseObject
                 'writes' =>     $this->db_writes->GetValue(),
                 'write_time' => $this->db_write_time->GetValue(),
                 'code_time' =>  $this->code_time->GetValue(),
+                'autoloader_time' =>  $this->autoloader_time->GetValue(),
                 'total_time' => $this->total_time->GetValue()
             )
         );

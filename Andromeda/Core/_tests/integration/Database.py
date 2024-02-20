@@ -1,39 +1,61 @@
 
-import os, mysql.connector, psycopg2
+import abc, os, mysql.connector, psycopg2, atexit
 
-import TestUtils
+from Interface import Interface
+from TestUtils import *
 
 class Database():
+    """ Base class for database types """
     def __str__(self):
         return self.__class__.__name__
 
-    def __init__(self, config):
+    def __init__(self, config:dict, dbconf:str):
         self.config = config
+        self.dbconf = dbconf
 
-    def install(self, interface):
-        self.config['outfile'] = None # flag
-        TestUtils.assertOk(interface.run(
-            app='core',action='dbconf',params=self.config))
+    @abc.abstractmethod
+    def install(self, util:TestUtils, interface:Interface):
+        """ Install the database using the given interface """
+        params = self.config.copy()
+        util.assertError(interface.run(app='core',action='dbconf',
+            params=params,install=True), 400, "SAFEPARAM_KEY_MISSING: outfile")
+        
+        params['outfile'] = "-" # return to stdout
+        conf = util.assertOk(interface.run(app='core',action='dbconf',
+            params=params,install=True))
+        util.assertIn('?php', conf)
+        util.assertIn('DRIVER', conf)
+
+        params['outfile'] = None # store to default
+        util.assertOk(interface.run(app='core',action='dbconf',
+            params=params,install=True))
+        atexit.register(self.deinstall)
+
+    @abc.abstractmethod
+    def deinstall(self):
+        """ Cleanup the database that was created """
+        atexit.unregister(self.deinstall)
+        os.remove(self.dbconf)
 
 
 class SQLite(Database):
-    def install(self, interface):        
+    def install(self, util:TestUtils, interface:Interface):
         self.config['driver'] = 'sqlite'
 
         path = self.config['dbpath']
         if not os.path.isabs(path):
             path = os.getcwd()+'/'+path
             self.config['dbpath'] = path
-
-        super().install(interface)
-
-    def deinstall(self):
+        
         if os.path.exists(self.config['dbpath']):
             os.remove(self.config['dbpath'])
+        
+        super().install(util, interface)
 
 
 class MySQL(Database):
-    def install(self, interface):
+    def install(self, util:TestUtils, interface:Interface):
+        self.config['driver'] = 'mysql'
         params = {}
         if 'host' in self.config:
             params['host'] = self.config['host']
@@ -46,19 +68,21 @@ class MySQL(Database):
 
         self.db = mysql.connector.connect(**params)
         self.db.cursor().execute(
+            "DROP DATABASE IF EXISTS {}".format(self.config['dbname']))
+        self.db.cursor().execute(
             "CREATE DATABASE {}".format(self.config['dbname']))
 
-        self.config['driver'] = 'mysql'
-        super().install(interface)
+        super().install(util, interface)
 
     def deinstall(self):
-        self.db.cursor().execute(
-            "DROP DATABASE {}".format(self.config['dbname']))
         self.db.close()
+        super().deinstall()
 
 
 class PostgreSQL(Database):
-    def install(self, interface):
+    def install(self, util:TestUtils, interface:Interface):
+        self.config['driver'] = 'pgsql'
+        self.config['persistent'] = False
         params = {}
         if 'host' in self.config:
             params['host'] = self.config['host']
@@ -70,14 +94,13 @@ class PostgreSQL(Database):
         self.db = psycopg2.connect(**params)
         self.db.autocommit = True
         self.db.cursor().execute(
+            "DROP DATABASE IF EXISTS {}".format(self.config['dbname']))
+        self.db.cursor().execute(
             "CREATE DATABASE {}".format(self.config['dbname']))
 
-        self.config['driver'] = 'pgsql'
-        self.config['persistent'] = False
-        super().install(interface)
+        super().install(util, interface)
 
     def deinstall(self):
-        self.db.cursor().execute(
-            "DROP DATABASE {}".format(self.config['dbname']))
         self.db.close()
+        super().deinstall()
             

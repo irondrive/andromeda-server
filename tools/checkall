@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-tools/analyze; sleep 1
+tools/analyze
 tools/unittests; sleep 1
-#tools/pytests # TODO enable pytests (fix)
+tools/inttests
 
 tools/count total
 echo "---- ALL CHECKS OK! ----"

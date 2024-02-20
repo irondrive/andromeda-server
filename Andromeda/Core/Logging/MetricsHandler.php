@@ -38,24 +38,25 @@ class MetricsHandler
         {
             $mlevel = $apipack->GetMetricsLevel();
             if ($apipack->GetMetricsLevel() === 0) return; // disabled
-            
+
             $database = $apipack->GetDatabase();
             // want to re-use DB, saving must be in its own transaction
             if ($database->GetInternal()->inTransaction())
                 throw new Exceptions\MetricsTransactionException();
             
             $total_stats = clone $this->total_stats;
+            $total_stats->stopTiming(false); // no autoloader, overlaps
+
             $total_stats->Add($this->init_stats, false);
             $total_stats->Add($context->GetActionMetrics(), false);
-            $total_stats->Add($context->GetCommitMetrics(), false);
-            $total_stats->stopTiming();
+            if ($context->HasCommitMetrics())
+                $total_stats->Add($context->GetCommitMetrics(), false);
             
             $metrics = MetricsLog::Create($mlevel, $database, 
-                $this->init_stats, $context, $total_stats)->Save();
+                $this->init_stats, $context, $total_stats);
 
-            if ($apipack->isCommitRollback()) 
-                $database->rollback(); 
-            else $database->commit();
+            if (!$apipack->isCommitRollback()){
+                $metrics->Save(); $database->commit(); }
 
             if ($apipack->GetMetricsLevel(true) !== 0)
                 $output->SetMetrics($metrics->GetClientObject($isError));

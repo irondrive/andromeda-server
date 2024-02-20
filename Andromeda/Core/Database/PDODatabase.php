@@ -255,7 +255,7 @@ class PDODatabase
             $this->connection->rollBack();
             
         if ($this->driver === self::DRIVER_SQLITE)
-            $this->connection->query(
+            $this->connection->exec(
                 "PRAGMA foreign_keys = true;".
                 "PRAGMA trusted_schema = false;".
                 "PRAGMA journal_mode = WAL;"); // https://www.sqlite.org/wal.html
@@ -337,9 +337,6 @@ class PDODatabase
         foreach ($queries as $query) $this->query($query); return $this;
     }
     
-    /** Whether or not the DB supports the RETURNING keyword */
-    public function SupportsRETURNING() : bool { return $this->getDriver() !== self::DRIVER_SQLITE; }
-    
     /** Whether or not the DB aborts transactions after an error and requires use of SAVEPOINTs */
     private function RequiresSAVEPOINT() : bool { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
     
@@ -351,8 +348,11 @@ class PDODatabase
     
     /** Whether or not the DB expects using public. as a prefix for table names */
     public function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
+
+    /** Returns true if "SELECT COUNT(test) returns a column called COUNT(test) rather than "count" */
+    public function FullSelectFields() : bool { return $this->getDriver() !== self::DRIVER_POSTGRESQL; }
     
-    /** Whether or not the returned data rows are always string values (false if the are proper types) */
+    /** Whether or not the returned data rows are always string values (false if they are proper types) */
     public function DataAlwaysStrings() : bool { return $this->getDriver() !== self::DRIVER_MYSQL; }
     
     /** Returns the given arguments concatenated in SQL */
@@ -474,8 +474,8 @@ class PDODatabase
         try
         {
             if ($doSavepoint)
-                $this->connection->query("SAVEPOINT a2save");
-            
+                $this->connection->exec("SAVEPOINT a2save");
+
             $query = $this->connection->prepare($sql);
             assert($query !== false); // phpstan (we are in exception mode)
 
@@ -483,14 +483,14 @@ class PDODatabase
             // ignore return value as we are in exception mode
 
             if ($doSavepoint)
-                $this->connection->query("RELEASE SAVEPOINT a2save");
-            
+                $this->connection->exec("RELEASE SAVEPOINT a2save");
+
             return $query;
         }
         catch (PDOException $e)
         {
             if ($doSavepoint)
-                $this->connection->query("ROLLBACK TO SAVEPOINT a2save");
+                $this->connection->exec("ROLLBACK TO SAVEPOINT a2save");
             
             $this->queries[count($this->queries)-1] = 
                 array('query'=>$logged, 'error'=>$e->getMessage());
@@ -567,7 +567,7 @@ class PDODatabase
             
             if ($this->driver === self::DRIVER_POSTGRESQL)
                 $this->configTransaction();
-                
+
             $this->stopTimingQuery($sql, DBStats::QUERY_READ, false);
         }
     }
@@ -580,7 +580,7 @@ class PDODatabase
         // PostgreSQL default - READ COMMITTED, MySQL default - REPEATABLE READ
         $qstr = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ";
         if ($this->read_only) $qstr .= " READ ONLY";
-        $this->connection->query($qstr);
+        $this->connection->exec($qstr);
     }
 
     /** Rolls back the current database transaction */

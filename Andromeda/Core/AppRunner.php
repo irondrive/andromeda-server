@@ -38,14 +38,10 @@ class AppRunner extends BaseRunner
 
         $this->apipack = new ApiPackage($interface, $errman, $this);
 
-        $apps = array();
-        
-        if (is_file(ROOT."/Apps/Core/CoreApp.php"))
-            $apps[] = 'core'; // always enabled if present
-        
-        $config = $this->apipack->GetConfig();
-        
-        $apps = array_merge($apps, $config->GetApps());
+        $apps = $this->apipack->GetConfig()->GetApps();
+
+        if (!in_array('core',$apps,true) && // always enabled if present
+            is_file(ROOT."/Apps/Core/CoreApp.php")) $apps[] = 'core';
 
         foreach ($apps as $app) $this->TryLoadApp($app);
         
@@ -95,24 +91,22 @@ class AppRunner extends BaseRunner
      */
     public function Run(Input $input) : void
     {
+        $db = $this->apipack->GetDatabase();
+        $innerDb = $db->GetInternal();
         $this->context = $context = new RunContext($input);
+
+        if (($doMetrics = $this->apipack->GetMetricsLevel() > 0))
+            $context->SetActionMetrics($innerDb->startStatsContext());
 
         $appname = $input->GetApp();
         if (!array_key_exists($appname, $this->apps)) 
             throw new Exceptions\UnknownAppException($appname);
         $app = $this->apps[$appname];
-
-        $db = $this->apipack->GetDatabase();
-        $innerDb = $db->GetInternal();
         
         if ($this->apipack->isActionLogEnabled() && $app->getLogClass() === null)
             $context->SetActionLog(ActionLog::Create($db, $this->apipack->GetInterface(), $input));
 
-        if (($doMetrics = $this->apipack->GetMetricsLevel() > 0))
-            $context->SetActionMetrics($innerDb->startStatsContext());
-
         $retval = $app->Run($input);
-        $db->SaveObjects();
 
         if ($doMetrics)
         {
@@ -177,13 +171,13 @@ class AppRunner extends BaseRunner
                 $errman->LoggedTry(function()use($e,$db)
             {
                 if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
-                    $actlog->SetError($e);
+                    $actlog->SetError($e); // gets saved on client errors!
                     
                 $db->SaveObjects(true); // any "always" DB fields
                 $this->doCommit(false);
                 
                 if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
-                    $actlog->WriteFile();
+                    $actlog->WriteFile(); // after everything else is saved successfully
             });
         });
     }
@@ -215,7 +209,7 @@ class AppRunner extends BaseRunner
             $this->doCommit(true);
             
             if ($this->context !== null && ($actlog = $this->context->TryGetActionLog()) !== null)
-                $actlog->WriteFile();
+                $actlog->WriteFile(); // after everything else is saved successfully
         });
     }
     

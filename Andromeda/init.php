@@ -21,10 +21,22 @@ ini_set('assert.exception','1');
 
 require_once(ROOT.'/../vendor/autoload.php');
 
+/** @var float measure total autoloader time */
+$autoloader_time = 0.0;
+/** Returns the total measured autoloader time since the last call */
+function get_autoloader_time() : float { 
+    global $autoloader_time;
+    /** @var float */
+    $retval = $autoloader_time;
+    $autoloader_time = 0; // reset
+    return $retval; 
+}
+
 // the "almost PSR-4 compliant" autoloader?
 // PHP's default seems to require lowercase files
 spl_autoload_register(function(string $class)
 {
+    $start_time = hrtime(true);
     if (strpos($class,"Andromeda\\") !== 0) return;
     $class = substr($class, 10); // strlen("Andromeda\\")
     assert($class != false); // phpstan
@@ -40,4 +52,6 @@ spl_autoload_register(function(string $class)
         $path = ROOT.str_replace("\\","/",$class).'.php';
         if (file_exists($path)) include_once($path);
     }
+    global $autoloader_time;
+    $autoloader_time += (hrtime(true)-$start_time)/1e9;
 });
