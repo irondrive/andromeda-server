@@ -99,7 +99,7 @@ class SafeParams
     /**
     * Gets the requested parameter ($default if not present)
     * @param string $key the parameter key name
-    * @param ?scalar $default parameter value if not given
+    * @param ?scalar $default parameter value if not given (MUST be null/false for bools!)
     * @param int $minlog minimum log level for logging (0 for never)
     */
     public function GetOptParam(string $key, $default, int $minlog = self::PARAMLOG_ONLYFULL) : SafeParam

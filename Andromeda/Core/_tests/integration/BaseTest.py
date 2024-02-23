@@ -15,7 +15,7 @@ class BaseTest():
         self.verbose = verbose
         self.interface = interface
 
-    def runTests(self, testMatch:str|None) -> int:
+    def runTests(self, testMatch:str) -> int:
         """ Run all tests for this module and return the test count """
         testCount = 0
         self.beforeTests()

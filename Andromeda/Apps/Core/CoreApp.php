@@ -34,13 +34,13 @@ class CoreApp extends BaseApp
             'usage [--appname alphanum]',
             'phpinfo',
             'serverinfo',
-            'testmail [--mailid id] [--dest email]',
             'scanapps',
             'enableapp --appname alphanum',
             'disableapp --appname alphanum',
             'getconfig',
             'getdbconfig',
             'setconfig '.Config::GetSetConfigUsage(),
+            'testmail [--mailid id] [--dest email]',
             'getmailers',
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
             ...array_map(function($u){ return "(createmailer) $u"; },Emailer::GetCreateUsages()),
@@ -98,8 +98,6 @@ class CoreApp extends BaseApp
             case 'phpinfo':    $this->PHPInfo($isAdmin); return;
             case 'serverinfo': return $this->ServerInfo($isAdmin);
             
-            case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return;
-            
             case 'scanapps':    return $this->ScanApps($isAdmin);
             case 'enableapp':   return $this->EnableApp($params, $isAdmin);
             case 'disableapp':  return $this->DisableApp($params, $isAdmin);
@@ -108,6 +106,7 @@ class CoreApp extends BaseApp
             case 'getdbconfig': return $this->GetDBConfig($isAdmin);
             case 'setconfig':   return $this->SetConfig($params, $isAdmin);
             
+            case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return;
             case 'getmailers':   return $this->GetMailers($isAdmin); 
             case 'createmailer': return $this->CreateMailer($params, $isAdmin, $authenticator, $actionlog);
             case 'deletemailer': $this->DeleteMailer($params, $isAdmin, $actionlog); return;

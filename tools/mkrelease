@@ -15,33 +15,36 @@ mkdir ${RDIR}; cd ${RDIR}
 git clone git@github.com:irondrive/andromeda-server.git api
 cd api; git checkout $TAG
 
-rm -rf tools Andromeda/Apps/Testutil
-
+# remove development materials
+rm -rf *.md tools Andromeda/Apps/Testutil
 find . -name _tests | while read -r i; do rm -rf $i; done
 
+# install composer dependencies
 export XDEBUG_MODE=off
 composer install --no-dev --optimize-autoloader
 composer licenses --no-dev > vendor/LICENSES.txt
 rm composer.json composer.lock
 
+# reduce the size of the awk-sdk
 cd vendor/aws/aws-sdk-php
-
 mv src src2; mkdir src; cp -av src2/*.php src/; for dir in \
     Api Arn ClientSideMonitoring Credentials data Endpoint EndpointDiscovery Exception Handler Retry S3 Signature
     do cp -av "src2/$dir" src/; done; rm -rf src2
-
 cd src; mv data data2; mkdir data; cp -av data2/*.php data2/s3 data/; rm -rf data2
 
 cd ../../../.. # api
-
 cd .. # release
 
-git clone git@github.com:irondrive/andromeda-server-docs.git docs
-cd docs; git checkout $TAG; cd ..
-
+# add the docs repo and wiki together
+(git clone git@github.com:irondrive/andromeda-server-docs.git docs && cd docs && git checkout $TAG && cd ..) \
+   || (echo "FAILED TO GET DOCS!"; read -p "Press enter to continue")
 mv api/wiki docs/
 
+# remove all git repository data
 find . -name ".git*" | while read -r i; do rm -rf $i; done
+
+# make everything not writeable
+chmod -R -w api docs
 
 tar -czvf andromeda-release-$TAG_.tar.gz api
 zip -r andromeda-release-$TAG_.zip api

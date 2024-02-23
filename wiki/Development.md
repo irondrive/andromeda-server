@@ -1,16 +1,28 @@
+* [Bug Reporting](#bug-reporting)
+* [Generated Documentation](#generated-documentation)
+* [Versioning Scheme](#versioning-scheme)
+* [Main Core Classes](#main-core-classes)
+* [Creating a Basic App](#creating-a-basic-app)
+* [Tools and Scripts](#tools-and-scripts)
+
+
 ## Bug Reporting
 
 Any code 500 server-error response should be considered a bug and reported.  This excludes errors caught when interfacing with a badly-behaving storage backends.  By default, basic backtraces (no personal info) are logged to the database and can be viewed with the `core geterrors` command.  Bug reports made here must include the relevant error log entry if possible.
 
-See the [error logging how-to](https://github.com/irondrive/andromeda-server/wiki/Core-and-CoreApp#error-logging) for more details.
+See the [error logging how-to](Core-and-CoreApp.md#error-logging) for more details.
+
 
 ## Generated Documentation
+
 * [Repository](https://github.com/irondrive/andromeda-server-docs)
 * [Doctum Output](https://irondrive.github.io/andromeda-server-docs/doctum_build)
 
 The API documentation is generated using the `tools/mkdocs` script.
 
+
 ## Versioning Scheme
+
 Andromeda follows the standard major.minor.patch semantic versioning scheme.
 
 External clients need only match the major version exactly, while minor versions bring optional new features.  Non-admin external clients cannot see patch versions.  For the internal core<->app APIs, the minor version must also match exactly as minor releases _may_ change APIs.
@@ -21,73 +33,64 @@ External clients need only match the major version exactly, while minor versions
 | Minor Versions | Small Features | Compatible | Incompatible | Required |
 | Major Versions | Large Features | Incompatible | Incompatible | Required |
 
-## Core Singletons - TODO OUTDATED
-`index.php` implements the basic Andromeda procedure.  It creates the `IOInterface`, `ErrorManager`, and `Main` objects, fetches input objects from the interface, runs them using `Main` and maps them to output, then commits Main and sends the output to the interface.
 
-The `Main` class is the primary API for apps and contains references for all the global core objects.  The `Main` class takes instantiates and takes care of the database, framework config, loading apps, and multiplexing Run requests to the appropriate app.  It also has the primary commit/rollback interface.
+## Main Core Classes
 
-The `IOInterface` takes care of abstracting the differences between HTTP and CLI and is used for input and output handling.  The `ErrorManager` class takes care of logging exceptions to the database and handling uncaught errors and exceptions. It also provides a `LogDebug()` interface for anyone in the code to log custom debug information. 
+`index.php` is a very short wrapper that initializes the `IOInterface`, `ErrorManager`, and `AppRunner` objects, and passes input from the interface to Run().  `init.php` handles some global setup as well as the class autoloader.
 
-Both Main and ErrorManager can be fetched anywhere in the code using the static `GetInstance`.  Andromeda does not support an autoloader and class files must be manually included with require_once().  
+The primary request handler is the `AppRunner`.  This class initializes the `ApiPackage` and loads all apps.  Run() sends the action to the app, handles logging, saves/commits the result, and writes output to the interface.  `ApiPackage` initializes the database and loads config.  It is also the primary API class for apps to use (via `$this->API`), holding references to the `ObjectDatabase`, `Config`, `AppRunner`, `ErrorManager`, and `IOInterface`.  `InstallRunner` is the `AppRunner` equivalent for the install system.  
 
-## Database API - TODO OUTDATED
+The `ErrorManager` class takes care of logging exceptions to the database and handling uncaught errors and exceptions. It also provides `LogDebugHint()` and `LogBreakpoint()` for debug logging. The `IOInterface` takes care of abstracting the differences between HTTP and CLI and is used for input and output handling.  
 
-`Main` also constructs the global `ObjectDatabase`.  This is the object-oriented PDO-based database abstraction.  The basic database structure includes the `Database` class which sets up the PDO connection from config, tracks stats, and abstracts some of the differences between the different drivers.  The `ObjectDatabase` class inherits from this and provides the object-based interfaces that work between `BaseObject` and the lower level database.  All database objects inherit from `BaseObject`.  Objects represent their database fields/columns using classes in the `FieldTypes` database which all inherit from the basic `FieldTypes\Scalar`.  
+### Safe Input Classes
+`Input` contains functions to read file inputs, as well as `GetParams()` to return a `SafeParams`.  The `SafeParams` object has functions to get required or optional input parameters (and specify their defaults or logging settings).  Each parameter is a `SafeParam` which has various functions for safe input validation, null-checking, etc.  For example to read an optional non-null integer named `mytest` with a default value of 0, you could use `$input->GetParams()->GetParam('mytest',0)->GetInt()`.
 
-When developing higher level code, your objects will use the facilities provided by `BaseObject` and `FieldTypes`.  You should not have to touch the ObjectDatabase or make any manual queries.  Every BaseObject at a minimum needs to fill out `GetFieldTemplate` which maps column names to `FieldTypes` instances, which is how the object structure is declared.  BaseObject provides a number of static functions for loading or deleting objects from the database.  New objects are created using the `BaseCreate` function, which should be wrapped by a custom `Create` function.  An instantiated object separates its fields into scalars, objects, and objectrefs (see below), all of which have functions for getting/setting their values.  
 
-When the ObjectDatabase is told to commit, it will automatically save every modified object, building the appropriate query that updates every modified column.  Your code does not have to worry about actual SQL queries or saving anything.
+### Database API
+The `PDODatabase` is the PDO-based database driver that abstracts the different database types.  The next layer, the `ObjectDatabase`, is the object-oriented database abstraction.  It provides an easy way to load and save objects without needing manual SQL.  The `ObjectDatabase` works with `BaseObject`, the base class for all database table classes.  `BaseObject`s use traits in `TableTypes.php` to specify their polymorphism/inheritance structures.  Each field in a `BaseObject` that corresponds to a table column inherits from a class in `FieldTypes.php`.  This provides several different types of fields with appropriate get/set functions, including various scalars, a counter, auto-JSON fields, and object ID references.  The `ObjectDatabase` also provides a unique key cache to reduce duplicate queries.  Andromeda relies on the `REPEATABLE READ` SQL isolation level.  
 
-The `scalar` field functions use FieldTypes including `Scalar` (just a plain value), `Counter` (a field that uses + to update the DB column rather than setting its absolute value) and `JSON` (a field that gets auto JSON encoded and decoded and can be set to an array).  
+Every BaseObject at a minimum needs to override `CreateFields` to new its various fields (and call the parent!).  All DB objects have a random ID string as their primary key, the length of which can be changed.  BaseObjects can add static functions to call the ObjectDatabase to load/count/delete/create objects based on appropriate queries.  
 
-The `object` field functions deal with fields that link to other objects.  This uses the `ObjectRef` (constant type) or `ObjectPoly` (polymorphic type) FieldTypes.  Internally the linked objects ID is stored in the column. 
+Changes are made to FieldTypes, and newly created objects, are not saved immediately.  This can be done manually with `BaseObject::Save()`, or it will happen automatically when the `ObjectDatabase` is told to save before committing.  Newly created objects are saved first in creation order, then modified objects.  
 
-The `objectrefs` field functions deal with fields that link to arrays of other objects.  These use the `ObjectRefs` or `ObjectJoin` types.  These require that the objects in the array "point back" at this object using their own `ObjectRef`, so this is really just a convenience field.  E.g. if A has an array of B objects it would allow doing `A->GetObjectRefs('b')` rather than `B::LoadByA('a')`.  The value stored in the actual DB column is just the reference count.  `ObjectJoin` is more complicated as it implements "many-to-many" relationships, which requires a 3rd "link" table to link the objects together (e.g. this is used for accounts/groups).
 
-`StandardObject` is available and provides some convenience functions, such as always storing the `date_created` for an object, organizing columns into some standard prefixes, and providing counter "limits" that check maximum values of counter fields.  This is optional.   
+## Creating a Basic App
 
-## Creating an App - TODO OUTDATED
+When writing custom server side code, you'll need to create a new app.  An app named 'test' should exist as `TestApp` in `Apps/Test/TestApp.php`.  Apps inherit from `BaseApp`.  Apps are all constructed with $API pointing to `ApiPackage`.  The basic functions your app will need to provide are `getUsage()` which returns the CLI usage strings, `getName()` which returns the app's name, `getVersion()` which returns the version string, and `Run()` which maps `Input` to a returned value (does the actual work).  
 
-When writing custom server side code, you'll need to create a new app.  An app named 'test' should exist as `TestApp` in `Apps/Test/TestApp.php`.  Apps inherit from `BaseApp`.  Apps are all constructed with $API pointing to `Main` for convenience.  The basic functions your app will need to provide are `getUsage()` which returns the CLI usage strings, `getName()` which returns the app's name, and `Run()` which maps `Input` to a returned value (does the actual work).  
+In `Run()`, your app will need to switch based on the `$input->GetAction()` and then run the appropriate routine.  Your app also can implement its own commit() and rollback() routines by overriding the given stub functions.  If your app wants to use the framework's action logging capabilities, `getLogClass()` should return the name of your class that inherits from `BaseAppLog`, and `wantActionLog()` should be checked in Run().  
 
-Apps also need to have a `metadata.json` that contains a JSON object with `api-version` (the API major.minor version this app is compatible with), `version` the version of the app, and `requires`, an array of dependency apps.  If your app wants to use the framework's action logging capabilities, `getLogClass()` should return the name of your class that inherits from `BaseAppLog`.  
+If your app uses database tables or has other install-time requirements, you must create a `Apps/Test/TestInstallApp.php` inheriting from `InstallApp`.  This class takes care of the install and upgrade systems of the app.  Your app must have a config table inheriting from `BaseConfig` that stores its version, and you must implement `getConfigClass()`.  Dependencies on other apps can be specified by implementing `getDependencies()`.
 
-Your app also can implement its own commit() and rollback() routines by overriding the given stub functions.  In `Run()`, your app will need to switch based on the `$input->GetAction()` and then run the appropriate routine.  
+If your app needs exceptions, they should inherit from `ServerException` or `ClientException`.  `Crypto.php` provides a wrapper around libsodium and `Utilities.php` provides other useful tools. Remember that all input is done via the `Input` object (see above) and all output is done by returning a value in `Run()`.  The returned value MUST be UTF-8 safe.  Your app should never use `$_GET` or `printr` or `echo` or anything similar as this breaks CLI/HTTP abstraction.  If your app needs to do its own binary/non-JSON output, it can use the interface's `SetOutputMode()` and `SetOutputHandler()` - see CoreApp.php `PHPInfo()` for an example. 
 
-If your app uses database tables, it should inherit from `InstalledApp`.  This class takes care of the install and upgrade systems of the app.  The app's version must be stored in the database in a class that inherits from `BaseConfig`. Any other database tables your app requires should be represented with a `BaseObject` or `StandardObject`.  
-
-If your app needs exceptions, they should inherit from `ServerException` or `ClientException`.  `Crypto.php` provides a wrapper around libsodium and `Utilities.php` provides other useful tools. Remember that all input is done via the `Input` object and all output is done by returning a value in `Run()`.  Your app should never use `$_GET` or `printr` or `echo` or anything similar as this breaks CLI/HTTP abstraction.  If your app needs to do its own binary/non-JSON output, it can use the interface's `SetOutputMode()` and `SetOutputHandler()` - see CoreApp.php `PHPInfo()` for an example. 
 
 ## Tools and Scripts
 
-Tools and scripts are located in the `tools/` folder and must be run from the repository root.
+Tools and scripts are located in the `tools/` folder and must be run from the repository root.  The `tools/checkall` script runs static analysis, unit testing, and integration tests all at once.
 
 ### Database Export
-
 Development is currently done primarily with mysql and phpmyadmin.  The database is then exported into the database templates that are committed with Andromeda.  This is accomplished with the `tools/dbexport` script.  This requires `pgloader` to be installed.  The [`mysql2sqlite`](https://github.com/dumblob/mysql2sqlite) script will be downloaded automatically from github.  It assumes that MySQL uses the `root` user and Postgres uses the `postgres` user, both on localhost, and that the MySQL database name is `andromeda`.
 
 The tool works by first using `tools/pgtransfer` which uses `pgloader` to transfer the database to postgres.  Then the templates are created for core and each app using `mysqldump`, `pg_dump`, and finally `mysql2sqlite`.  
 
 ### API Docs Generation
-
-Use the `tools/mkdocs` script.  This will output in the docs folder, which should itself be a checkout of the [API server docs](https://github.com/irondrive/andromeda-server-docs) repository.  The resulting documentation can then be committed.  This is normally only run as part of the release process, or when major changes are made.
+Use the `tools/mkdocs` script.  This will output in the docs folder, which should itself be a checkout of the API server docs repository.  The resulting documentation can then be committed.  This is normally only run as part of the release process, or when major changes are made.
 
 ### Release Export
+Use the `tools/mkrelease tag` script. The first argument is the git tag to checkout.  This script will clone the API from github, checkout the given tag, remove everything development related, generate docs, and output release-ready tarballs/zips.  
 
-Use the `tools/mkrelease tag` script. The first argument is the git tag to checkout.  This script will clone the API from github, checkout the given tag, remove everything development related, generate docs, and output release-ready tarballs.  
+### Static Analysis
+The `tools/analyze` script will run PHPStan for static code analysis.  PHPStan is installed via composer.  The script uses a strict set of rules and checks every supported PHP version.
 
-## PHP Unit Testing
+### PHP Unit Testing
+PHPUnit is used for unit testing.  Tests are located in any `_tests/phpunit` folders.  The `tools/unittests` script will run PHPUnit.  PHPUnit is installed via composer.
 
-PHPUnit is used for unit testing.  Tests are located in any `_tests/phpunit` folders.  Unit tests are only used for targeted cases and do not currently have high coverage.  Most functionality is tested externally with the integration tests.  The `tools/unittests` script will run PHPUnit.
+### Integration Testing
+A python test framework is used for integration testing.  The `tools/inttests` script will run the test suite.  The test suite will run as a consumer of the Andromeda API and exhaustively check every command for expected input/output.  It checks both the HTTP and CLI interfaces and can run with all database types.  Integration tests are located in `_tests/integration` in core and apps.
 
-## Integration Testing
+The test framework uses a `pytest-config.json` file that must be located in the `tools/conf/` directory.  This config file specifies which optional components to test based on what you have available in your test environment.  `cli` determines whether to test CLI.  `http` gives the URL for testing via HTTP. `sqlite`, `mysql` and `pgsql` respectively set up which databases to test with.  The objects you set them to use parameters identical to that of the `core dbconf` command, except that pgsql does NOT support persistent connections.  A minimal integration test would use `{"cli":true,"sqlite":"mytest.s3db"}`.  This will run the test suite using CLI with a local SQLite database.
 
-A python test framework is used for integration testing.  The `tools/pytests` script will run the test suite.  The test suite will run as a consumer of the Andromeda API and exhaustively check every command for expected input/output.  It checks both the AJAX and CLI interfaces and can run with all database types.  Integration tests are located in `tests/integration` in core and apps.
+Note that HTTP testing can be done with PHP's integrated web server rather than needing to install a real one, e.g. `php -S localhost:8080`.  
 
-The test framework uses a `pytest-config.json` file that must be located in the `tools/` directory.  This config file specifies which optional components to test based on what you have available in your test environment.  `cli` determines whether to test CLI.  `ajax` gives the URL for testing via HTTP. `sqlite`, `mysql` and `pgsql` respectively set up which databases to test with.  The objects you set them to use parameters identical to that of the `core dbconf` command, except that pgsql does NOT support persistent connections.  Note that HTTP testing can be done with PHP's integrated web server rather than needing to install a real one, e.g. `php -S localhost:8080`.  
-
-A minimal integration test would use `{"cli":true,"sqlite":"mytest.s3db"}`.  This will run the test suite using CLI with a local SQLite database.
-
-## Static Analysis
-
-The `tools/analyze` script will run PHPStan for static code analysis.
+Python 3.9 is the minimum required, so when running on Ubuntu 20.04, `apt install python3.9` is required and you will need to use a venv.  Other (possibly non-exhaustive) requirements: `sudo apt install python3-dev libmysqlclient-dev postgresql-server-dev-all; pip install requests colorama mysql mysql-connector-python psycopg2`

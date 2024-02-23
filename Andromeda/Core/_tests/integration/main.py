@@ -24,8 +24,8 @@ class Main():
     appList:list[str] = [ ] # apps that exist
     appModules:dict[str] = { } # app test modules
 
-    testMatch:str|None = None # filter tests to run
-    appMatch:str|None = None # filter apps to test
+    testMatch:str = None # filter tests to run
+    appMatch:str = None # filter apps to test
 
     testCount = 0 # total number of tests run
     assertCount = 0 # total number of assertions

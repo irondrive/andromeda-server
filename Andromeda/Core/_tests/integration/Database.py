@@ -33,7 +33,8 @@ class Database():
 
     @abc.abstractmethod
     def deinstall(self):
-        """ Cleanup the database that was created """
+        """ Cleanup the database config that was created """
+        # leave the test database itself intact so it can be examined after testing
         atexit.unregister(self.deinstall)
         os.remove(self.dbconf)
 
