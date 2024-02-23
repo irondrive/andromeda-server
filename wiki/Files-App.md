@@ -1,3 +1,6 @@
+# TODO OUTDATED (ignore)
+TODO add table of contents
+
 The files app provides the cloud filesystem implementation.  It includes general file/folder management, with byte-level read/write access.  It allows any number of filesystems that can be either global or user-private, and run on a number of backend storage drivers, possibly with server-side encryption.  It includes social features including file/folder likes and comments, granular sharing of content via public links or to users or group, and granular statistics (e.g. bandwidth) gathering and limits.  Using an account with CLI is generally required.
 
 Note that filesApp file storage has nothing to do with the core's optional data directory.
@@ -88,7 +91,7 @@ Some storages also require additional PHP extensions.
 * FTP requires the PHP FTP extension.
 * S3 requires the PHP simplexml extension.
 
-As the external storages can all store external authentication credentials in the database, the `--fieldcrypt` param allows encrypting these credentials using the [Account encryption service](https://github.com/irondrive/andromeda-server/wiki/Accounts-App#account-cryptography).  FTP/SMB/SFTP use it for username/password while S3 uses it for accesskey/secretkey.  SFTP also uses it for the private key and private key password.  This will only work if your account has server-side encryption enabled.  This will also prevent sharing any content out of the storage to other users (or via link), since they won't have the key to read the authentication information.
+As the external storages can all store external authentication credentials in the database, the `--fieldcrypt` param allows encrypting these credentials using the [Account encryption service](Accounts-App.md#account-cryptography).  FTP/SMB/SFTP use it for username/password while S3 uses it for accesskey/secretkey.  SFTP also uses it for the private key and private key password.  This will only work if your account has server-side encryption enabled.  This will also prevent sharing any content out of the storage to other users (or via link), since they won't have the key to read the authentication information.
 
 ## Administration
 
@@ -118,7 +121,7 @@ Accounts and Groups (not filesystems) also support:
 * `--emailshare` whether users are allowed to email share links
 * `--userstorage` whether users are allowed to add their own filesystems
 
-For accounts/groups, the normal [inheritance rules](https://github.com/irondrive/andromeda-server/wiki/Accounts-App#account-groups) apply.  Group limits are applied to individual member users as an inherited property and do not limit the group as a whole.  For groups, the `--track_items` and `--track_dlstats` have two options.  The `accounts` setting tracks stats for individual group members only.  The 'wholegroup' setting additionally collects stats for the group as a whole.
+For accounts/groups, the normal [inheritance rules](Accounts-App.md#account-groups) apply.  Group limits are applied to individual member users as an inherited property and do not limit the group as a whole.  For groups, the `--track_items` and `--track_dlstats` have two options.  The `accounts` setting tracks stats for individual group members only.  The 'wholegroup' setting additionally collects stats for the group as a whole.
 
 To view all limits and collected stats for an object, use `files getlimits`.  This can optionally print limits for ALL objects if none is specified.  To reset all limits and permissions to default for an object, use `files purgelimits`.
 

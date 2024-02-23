@@ -2,7 +2,7 @@
 from BaseTest import BaseAppTest
 from TestUtils import *
 
-# TODO accounts need to enable/disable the accounts app and test both ways?
+# TODO accounts need to enable/disable the accounts app and test both ways? at least for just one command
     
 class AppTests(BaseAppTest):
     def __str__(self):

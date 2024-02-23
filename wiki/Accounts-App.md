@@ -1,3 +1,6 @@
+# TODO OUTDATED (ignore)
+TODO add table of contents
+
 The accounts app handles user account and privilege management.  It provides an authentication service that other apps can use.  It also keeps track of user contact information, and provides two-factor authentication, account-based server-side cryptography, multi-client/session management, and granular per-account/per-group configuration.  Authentication can be done via external authentication services. Accounts can either be administrators or standard users.
 
 ## Install

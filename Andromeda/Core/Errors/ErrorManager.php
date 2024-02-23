@@ -186,8 +186,9 @@ class ErrorManager
             $errinfo->ReloadHints($this); // update from e2
         }
         
-        try // save to database with a separate connection
-        {
+        // save to database with a separate connection to avoid transaction confusion
+        // normally two connections would be an issue w/ sqlite but with WAL it works
+        try {
             if ($this->dblogok && $this->config !== null && $this->config->GetDebugLog2DB()) 
             {
                 $db2 = ApiPackage::InitDatabase($this->interface);
