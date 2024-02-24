@@ -7,6 +7,7 @@ use Andromeda\Core\IOFormat\{Input,InputAuth,InputPath,IOInterface,Output,SafePa
 /** 
  * The interface for using Andromeda over a web server
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class HTTP extends IOInterface
 {
@@ -23,12 +24,12 @@ class HTTP extends IOInterface
     
     public function getAddress() : string
     {
-        return $_SERVER['REMOTE_ADDR']; // @phpstan-ignore-line always string
+        return (string)$_SERVER['REMOTE_ADDR']; // @phpstan-ignore-line always string
     }
     
     public function getUserAgent() : string
     {
-        return $_SERVER['HTTP_USER_AGENT']; // @phpstan-ignore-line always string
+        return (string)$_SERVER['HTTP_USER_AGENT']; // @phpstan-ignore-line always string
     }
 
     /** Retrieves the input object from the request to run */
@@ -188,7 +189,7 @@ class HTTP extends IOInterface
      * @param string $url the base URL of the API
      * @param Input $input the input describing the request
      * @throws Exceptions\RemoteInvalidException if decoding the response fails
-     * @return array<mixed> the decoded remote response
+     * @return ScalarArray the decoded remote response
      */
     public static function RemoteRequest(string $url, Input $input) : array
     {
@@ -204,7 +205,7 @@ class HTTP extends IOInterface
     /**
      * Helper function to send an HTTP post request
      * @param string $url the URL of the request
-     * @param array<string, NULL|scalar|ScalarArray> $post array of data to place in the POST body
+     * @param array<string, ScalarOrArray> $post array of data to place in the POST body
      * @return ?string the remote response or null on failure
      */
     public static function HTTPPost(string $url, array $post) : ?string

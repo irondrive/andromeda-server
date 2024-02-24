@@ -60,7 +60,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
         $this->fsimpl = new NativeCrypt($filesystem, Crypto::GenerateSecretKey(), self::CHUNK_SIZE);
     }
     
-    /** @var array<string> */
+    /** @var list<string> */
     private array $files = array();
     
     public function tearDown() : void

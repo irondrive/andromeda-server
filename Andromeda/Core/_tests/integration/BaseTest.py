@@ -34,12 +34,12 @@ class BaseTest():
             if rval is False: # return False is skipped test
                 if self.verbose >= 1:
                     printYellowOnBlack('... SKIPPED',func.__name__+'()')
-                else: print('S',end='')
+                else: print('S',end='',flush=True)
             else:
                 testCount += 1
                 if self.verbose >= 1:
                     printYellowOnBlack('... COMPLETE',func.__name__+'()')
-                else: print('.',end='')
+                else: print('.',end='',flush=True)
         if not self.verbose: print()
         self.afterTests()
         return testCount

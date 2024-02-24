@@ -1,11 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, BaseApp, Config, Emailer, EmailRecipient, Utilities};
-use Andromeda\Core\Errors\ErrorLog;
 use Andromeda\Core\Database\PDODatabase;
+use Andromeda\Core\Errors\ErrorLog;
 use Andromeda\Core\Exceptions as CoreExceptions;
 use Andromeda\Core\IOFormat\{Input, Output, SafeParams, OutputHandler, IOInterface};
-use Andromeda\Core\Logging\RequestLog;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
 use Andromeda\Apps\Accounts\Authenticator;
@@ -16,6 +15,12 @@ use Andromeda\Apps\Accounts\Authenticator;
  * Handles getting/setting config/logs, app enable/disable.
  * Depends on the accountsApp being present but this could be refactored away easily.
  * If the accountsApp is disabled, only privileged interfaces are considered admin
+ * @phpstan-import-type ActionLogJ from BaseActionLog
+ * @phpstan-import-type ConfigJ from Config
+ * @phpstan-import-type EmailerJ from Emailer
+ * @phpstan-import-type ErrorLogJ from ErrorLog
+ * @phpstan-import-type PDODatabaseInfoJ from PDODatabase
+ * @phpstan-import-type PDODatabaseConfigJ from PDODatabase
  */
 class CoreApp extends BaseApp
 {
@@ -95,7 +100,7 @@ class CoreApp extends BaseApp
         {
             case 'usage':    return $this->GetUsages($params);
             
-            case 'phpinfo':    $this->PHPInfo($isAdmin); return;
+            case 'phpinfo':    $this->PHPInfo($isAdmin); return null;
             case 'serverinfo': return $this->ServerInfo($isAdmin);
             
             case 'scanapps':    return $this->ScanApps($isAdmin);
@@ -106,10 +111,10 @@ class CoreApp extends BaseApp
             case 'getdbconfig': return $this->GetDBConfig($isAdmin);
             case 'setconfig':   return $this->SetConfig($params, $isAdmin);
             
-            case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return;
+            case 'testmail':   $this->TestMail($params, $isAdmin, $authenticator, $actionlog); return null;
             case 'getmailers':   return $this->GetMailers($isAdmin); 
             case 'createmailer': return $this->CreateMailer($params, $isAdmin, $authenticator, $actionlog);
-            case 'deletemailer': $this->DeleteMailer($params, $isAdmin, $actionlog); return;
+            case 'deletemailer': $this->DeleteMailer($params, $isAdmin, $actionlog); return null;
             
             case 'geterrors':     return $this->GetErrors($params, $isAdmin);
             case 'counterrors':   return $this->CountErrors($params, $isAdmin);
@@ -123,7 +128,7 @@ class CoreApp extends BaseApp
         
     /**
      * Collects usage strings from every installed app and returns them
-     * @return string|array<string> array of possible commands
+     * @return string|list<string> array of possible commands
      */
     protected function GetUsages(SafeParams $params)
     {
@@ -135,7 +140,7 @@ class CoreApp extends BaseApp
         {
             if ($want !== null && $want !== $name) continue;
             
-            array_push($output, ...array_map(function($line)use($name){ 
+            $output = array_merge($output, array_map(function(string $line)use($name){
                 return "$name $line"; }, $app->getUsage())); 
         }
 
@@ -165,25 +170,27 @@ class CoreApp extends BaseApp
     /**
      * Gets miscellaneous server identity information
      * @throws Exceptions\AdminRequiredException if not admin-level access
-     * @return array<mixed> `{uname:string, php_version:string, zend_version:string, 
-        server:[various], load:[int,int,int], db:PDODatabase::getInfo()}`
-     * @see PDODatabase::getInfo()
+     * @return array{uname:string, php_version:string, zend_version:string, 
+     *   server:array<string,scalar>, load:list<int>|false, db:PDODatabaseInfoJ}
      */
     protected function ServerInfo(bool $isAdmin) : array
     {
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
+        /** @var array<string,scalar> */
         $server = array_filter($_SERVER, function($key){ 
             return mb_strpos((string)$key, 'andromeda_') !== 0; }, ARRAY_FILTER_USE_KEY);
-        
         unset($server['argv']); unset($server['argc']);
-        
+
+        /** @var list<int>|false */
+        $load = sys_getloadavg();
+
         return array(
             'server' => $server,
             'uname' => php_uname(),
+            'load' => $load,
             'php_version' => phpversion(),
             'zend_version' => zend_version(),
-            'load' => sys_getloadavg(),
             'db' => $this->database->GetInternal()->getInfo()
         );
     }
@@ -228,7 +235,7 @@ class CoreApp extends BaseApp
     /** 
      * Scans for available apps to enable/disable
      * @see Config::ScanApps() 
-     * @return array<string>
+     * @return list<string>
      */
     protected function ScanApps(bool $isAdmin) : array
     {
@@ -240,7 +247,7 @@ class CoreApp extends BaseApp
     /**
      * Registers (enables) an app
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return array<string> array of enabled apps (not core)
+     * @return list<string> array of enabled apps (not core)
      */
     protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -258,7 +265,7 @@ class CoreApp extends BaseApp
     /**
      * Unregisters (disables) an app
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return array<string> array of enabled apps (not core)
+     * @return list<string> array of enabled apps (not core)
      */
     protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -273,7 +280,7 @@ class CoreApp extends BaseApp
     
     /**
      * Loads server config
-     * @return array<mixed> Config
+     * @return ConfigJ
      * @see Config::GetClientObject() 
      */
     protected function GetConfig(bool $isAdmin) : array
@@ -283,8 +290,8 @@ class CoreApp extends BaseApp
     
     /**
      * Loads server DB config
-     * @return array<mixed> PDODatabase
-     * @see PDODatabase::GetClientObject()
+     * @return PDODatabaseConfigJ
+     * @see PDODatabase::GetConfig()
      */
     protected function GetDBConfig(bool $isAdmin) : array
     {
@@ -296,7 +303,7 @@ class CoreApp extends BaseApp
     /**
      * Sets server config
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return array<mixed> Config
+     * @return ConfigJ
      * @see Config::GetClientObject()
      */
     protected function SetConfig(SafeParams $params, bool $isAdmin) : array
@@ -309,7 +316,7 @@ class CoreApp extends BaseApp
     /**
      * Returns a list of the configured mailers
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return array<string, array<mixed>> [id:Emailer]
+     * @return array<string, EmailerJ> indexed by ID
      * @see Emailer::GetClientObject()
      */
     protected function GetMailers(bool $isAdmin) : array
@@ -323,7 +330,7 @@ class CoreApp extends BaseApp
     /**
      * Creates a new emailer config
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return array<mixed> Emailer
+     * @return EmailerJ
      * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : array
@@ -369,7 +376,8 @@ class CoreApp extends BaseApp
     /**
      * Returns the server error log, possibly filtered by input
      * @throws Exceptions\AdminRequiredException if not an admin 
-     * @return array<string, array<mixed>>
+     * @return array<string, ErrorLogJ> indexed by ID
+     * @see ErrorLog::GetClientObject()
      */
     protected function GetErrors(SafeParams $params, bool $isAdmin) : array
     {
@@ -394,8 +402,8 @@ class CoreApp extends BaseApp
     /**
      * Returns all action logs matching the given input
      * @throws Exceptions\AdminRequiredException if not admin
-     * @return array<array<mixed>> ActionLog
-     * @see ActionLog::GetFullClientObject()
+     * @return array<string, ActionLogJ> indexed by ID
+     * @see BaseActionLog::GetClientObject()
      */
     protected function GetActions(SafeParams $params, bool $isAdmin) : array
     {
@@ -403,20 +411,14 @@ class CoreApp extends BaseApp
         
         $expand = $params->GetOptParam('expand',false)->GetBool();
         
-        $logs = BaseActionLog::LoadByParams($this->database, $params);
-        
-        $retval = array(); foreach ($logs as $log)
-        {
-            $retval[] = $log->GetClientObject($expand);
-        }
-        
-        return $retval;
+        return array_map(function(BaseActionLog $e)use($expand){ return $e->GetClientObject($expand); },
+            BaseActionLog::LoadByParams($this->database, $params));
     }
     
     /**
      * Counts all action logs matching the given input
      * @throws Exceptions\AdminRequiredException if not admin
-     * @return int log entry count
+     * @return int action log entry count
      */
     protected function CountActions(SafeParams $params, bool $isAdmin) : int
     {

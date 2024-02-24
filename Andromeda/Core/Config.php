@@ -3,7 +3,12 @@
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
-/** The global framework config stored in the database */
+/** 
+ * The global framework config stored in the database
+ * @phpstan-type ConfigJ array{apiver:string, apps:array<string,?string>, read_only:bool, enabled:bool}|array{
+ *    apiver:string, apps:array<string,?string>, read_only:bool, enabled:bool, date_created:float, datadir:?string, actionlog_file:bool, actionlog_db:bool, actionlog_details:string, 
+ *       metrics:string, metrics_dblog:bool, metrics_filelog:bool, email:bool, debug:string, debug_http:bool, debug_dblog:bool, debug_filelog:bool }
+ */
 class Config extends BaseConfig
 {
     public static function getAppname() : string { return 'core'; }
@@ -23,7 +28,7 @@ class Config extends BaseConfig
     private FieldTypes\BoolType $email;
     /** 
      * List of installed+enabled apps 
-     * @var FieldTypes\JsonArray<array<string>>
+     * @var FieldTypes\JsonArray<list<string>>
      */
     private FieldTypes\JsonArray $apps;
     /** True if requests should be logged to DB */
@@ -160,14 +165,14 @@ class Config extends BaseConfig
     
     /**
      * returns the array of registered apps
-     * @return array<string>
+     * @return list<string>
      */
     public function GetApps() : array { 
         return $this->apps->GetArray(); } // @phpstan-ignore-line assume array shape here, slow to check...
     
     /** 
      * List all app folders that exist in the filesystem
-     * @return array<string>
+     * @return list<string>
      */
     public static function ScanApps() : array
     {
@@ -340,12 +345,7 @@ class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array<mixed> `{apiver:int, apps:[string:?string], read_only:bool, enabled:bool}` \
-         if admin, add: `{date_created:float, datadir:?string, \
-            actionlog_file:bool, actionlog_db:bool, actionlog_details:enum, \
-            metrics:enum, metrics_dblog:bool, metrics_filelog:bool, email:bool
-            debug:enum, debug_http:bool, debug_dblog:bool, debug_filelog:bool }`
-     * @see BaseConfig::GetClientObject()
+     * @return ConfigJ
      */
     public function GetClientObject(bool $admin = false) : array
     { 

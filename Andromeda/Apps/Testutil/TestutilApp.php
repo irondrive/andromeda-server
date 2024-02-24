@@ -11,8 +11,8 @@ use Andromeda\Apps\Core\ActionLog;
 
 /**
  * Utility app for the python test framework
- * @phpstan-import-type ScalarArray from Utilities
- * @phpstan-import-type ErrorLogClientObject from ErrorLog
+ * @phpstan-import-type ScalarOrArray from Utilities
+ * @phpstan-import-type ErrorLogJ from ErrorLog
  */
 class TestutilApp extends BaseApp
 {
@@ -45,7 +45,7 @@ class TestutilApp extends BaseApp
             case 'geterrors': return $this->GetErrors($input->GetParams());
             case 'clearerrors': return $this->ClearErrors();
             case 'benchdb': return $this->BenchDatabase();
-            case 'testdb': $this->TestDatabase(); return;
+            case 'testdb': $this->TestDatabase(); return null;
             
             default: throw new UnknownActionException($input->GetAction());
         }
@@ -61,7 +61,7 @@ class TestutilApp extends BaseApp
     
     /**
      * Returns the input given, encoding non-UTF8 as b64, exposing various options
-     * @return array{dryrun:bool,params:array<string, NULL|scalar|ScalarArray>,
+     * @return array{dryrun:bool,params:array<string, ScalarOrArray>,
      *   files:array<array{name:string,data:string}>,auth?:array{user:string,pass:string}}
      * @throws UnknownActionException if --clienterror is true
      * @throws ServerException if --servererror is true
@@ -98,7 +98,7 @@ class TestutilApp extends BaseApp
     
     /**
      * Returns the server error log, possibly filtered by input
-     * @return array<string, ErrorLogClientObject>
+     * @return array<string, ErrorLogJ>
      */
     protected function GetErrors(SafeParams $params) : array
     {

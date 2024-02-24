@@ -1,5 +1,6 @@
 includes:
     - ../../vendor/phpstan/phpstan-strict-rules/rules.neon
+#    - phar://phpstan.phar/conf/bleedingEdge.neon
 parameters:
     strictRules:
         strictCalls: false                             # default is true, calling statics with -> should be okay

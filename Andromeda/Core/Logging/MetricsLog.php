@@ -83,7 +83,7 @@ class MetricsLog extends BaseObject
     private FieldTypes\NullJsonArray $rusage;
     /** 
      * List of files included by PHP 
-     * @var FieldTypes\NullJsonArray<array<string>>
+     * @var FieldTypes\NullJsonArray<list<string>>
      */
     private FieldTypes\NullJsonArray $includes;
     /** 
@@ -279,7 +279,6 @@ class MetricsLog extends BaseObject
      *   total_stats:array{reads:int,read_time:float,writes:int,write_time:float,code_time:float,autoloader_time:float,total_time:float},
      *   gcstats?:?ScalarArray, rusage?:?ScalarArray, includes?:?ScalarArray, objects?:?ScalarArray, queries?:?ScalarArray, debughints?:?ScalarArray}
      * ... gcstats,rusage,includes,objects,queries,debughints are set if Config::METRICS_EXTENDED, objects,queries,debughints are only if !wasError
-     * @see DBStatsLog::GetDBStatsClientObject()
      */
     public function GetClientObject(bool $isError = false) : array
     {

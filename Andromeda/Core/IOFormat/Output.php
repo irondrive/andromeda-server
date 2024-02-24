@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Utilities;
 use Andromeda\Core\Errors\BaseExceptions\ClientException;
 
 /** 
@@ -7,6 +8,8 @@ use Andromeda\Core\Errors\BaseExceptions\ClientException;
  * 
  * Output consists of a success/failure flag, an HTTP response code, and a response body.
  * The response body can be anything that is JSON encodable.
+ * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class Output
 {
@@ -21,11 +24,11 @@ class Output
     private bool $ok; 
     private int $code;
     private string $message;
-    /** @var mixed */
+    /** @var ScalarOrArray */
     private $appdata; 
-    /** @var ?array<mixed> */
+    /** @var ?ScalarArray */
     private ?array $metrics = null;
-    /** @var ?array<mixed> */
+    /** @var ?ScalarArray */
     private ?array $debug = null;
     
     /** Returns whether or not the request succeeded */
@@ -39,20 +42,20 @@ class Output
     
     /** 
      * Returns the response body to be returned (only if isOK) 
-     * @return mixed
+     * @return ScalarOrArray
      */
     public function GetAppdata() { return $this->appdata; }
     
     /** 
      * Sets performance metrics to be returned
-     * @param ?array<mixed> $metrics 
+     * @param ?ScalarArray $metrics 
      * @return $this
      */
     public function SetMetrics(?array $metrics) : self { 
         $this->metrics = $metrics; return $this; }
     
     /** 
-     * @return mixed 
+     * @return ScalarOrArray
      * @throws Exceptions\InvalidOutpropException if $outprop is invalid
      */
     private function NarrowAppdata(?string $outprop = null)
@@ -65,23 +68,22 @@ class Output
                     $appdata = $appdata[$key];
                 else throw new Exceptions\InvalidOutpropException($key);
             }
-        return $appdata;
+        return $appdata; // @phpstan-ignore-line no recursive types
     }
     
     /** 
      * Returns the Output object as a client array 
      * @param ?string $outprop if not null, narrow $appdata to the desired property (format a.b.c.)
-     * @return array<mixed> if success: `{ok:true, code:int, appdata:mixed}` \
-         if failure: `{ok:false, code:int, message:string}`
+     * @return array{ok:true,code:int,appdata:ScalarOrArray}|array{ok:false,code:int,message:string}
      * @throws Exceptions\InvalidOutpropException if $outprop is invalid
      */
     public function GetAsArray(?string $outprop = null) : array 
     {
-        $array = array('ok'=>$this->ok, 'code'=>$this->code);
-
-        if ($this->ok) 
-            $array['appdata'] = $this->NarrowAppdata($outprop);
-        else $array['message'] = $this->message;
+        if ($this->ok)
+            $array = array('ok'=>true, 'code'=>$this->code,
+                'appdata'=>$this->NarrowAppdata($outprop));
+        else $array = array('ok'=>false, 'code'=>$this->code,
+                'message'=>$this->message);
         
         if ($this->metrics !== null) $array['metrics'] = $this->metrics;
         if ($this->debug !== null) $array['debug'] = $this->debug;
@@ -122,7 +124,7 @@ class Output
     
     /** 
      * Constructs an Output object representing a success response 
-     * @param mixed $appdata
+     * @param ScalarOrArray $appdata
      */
     public static function Success($appdata) : Output
     {
@@ -133,7 +135,7 @@ class Output
     
     /** 
      * Constructs an Output object representing a client error, showing the exception and possibly extra debug 
-     * @param ?array<mixed> $debug
+     * @param ?ScalarArray $debug
      */
     public static function ClientException(ClientException $e, ?array $debug = null) : Output
     {
@@ -148,7 +150,7 @@ class Output
     
     /** 
      * Constructs an Output object representing a non-client error, possibly with debug 
-     * @param ?array<mixed> $debug
+     * @param ?ScalarArray $debug
      */
     public static function ServerException(?array $debug = null) : Output
     {
@@ -164,7 +166,7 @@ class Output
 
     /**
      * Parses a response from a remote Andromeda API request into an Output object
-     * @param array<mixed> $data the response data from the remote request
+     * @param ScalarArray $data the response data from the remote request
      * @throws Exceptions\InvalidParseException if the response is malformed
      * @return Output the output object constructed from the response
      */
@@ -184,7 +186,7 @@ class Output
                 throw new Exceptions\InvalidParseException();
 
             $output = new Output($ok, $code); 
-            $output->appdata = $data['appdata']; 
+            $output->appdata = $data['appdata']; // @phpstan-ignore-line no recursive ScalarArray type
             return $output;
         }
         else

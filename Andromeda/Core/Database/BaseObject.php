@@ -52,7 +52,7 @@ abstract class BaseObject
      * Returns this class's unique key map (must add parents!)
      * This base function adds 'id' to the base table, so if overriding, add it!
      * NOTE - there isn't a pre-determined map for non-unique keys, instead the DB will cache as Load/Delete by key is used!
-     * @return array<class-string<self>, array<string>>
+     * @return array<class-string<self>, list<string>>
      */
     public static function GetUniqueKeys() : array
     {
@@ -136,7 +136,7 @@ abstract class BaseObject
      * @param array<string, ?scalar> $data db columns
      * @param bool $created true if this is a new object
      */
-    public function __construct(ObjectDatabase $database, array $data, bool $created = false)
+    public function __construct(ObjectDatabase $database, array $data, bool $created)
     {
         $this->database = $database;
         
@@ -148,11 +148,14 @@ abstract class BaseObject
         if ($created)
             $this->idfield->SetValue(static::GenerateID());
         
-        $this->PostConstruct();
+        $this->PostConstruct($created);
     }
     
-    /** Performs any subclass-specific initialization */
-    protected function PostConstruct() : void { }
+    /** 
+     * Performs any subclass-specific initialization
+     * @param bool $created true if this is a new object
+     */
+    protected function PostConstruct(bool $created) : void { }
 
     /**
      * Instantiates the object's database fields - subclasses should override!

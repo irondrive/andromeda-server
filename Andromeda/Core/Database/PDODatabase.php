@@ -18,6 +18,8 @@ use PDO; use PDOStatement; use PDOException;
  * made as part of a transaction, and always used as prepared statements. Performance 
  * statistics and queries are tracked as a stack, but transactions cannot be nested.
  * Queries made must always be compatible with all supported drivers.
+ * @phpstan-type PDODatabaseInfoJ array{driver:string, cversion:string, sversion:string, info?:string}
+ * @phpstan-type PDODatabaseConfigJ array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:true}
  */
 class PDODatabase
 {
@@ -108,7 +110,7 @@ class PDODatabase
     
     /** 
      * Returns the CLI usages specific to each driver 
-     * @return array<string>
+     * @return list<string>
      */
     public static function GetInstallUsages() : array
     {
@@ -266,7 +268,7 @@ class PDODatabase
     
     /** 
      * returns the array of config that was loaded from the config file 
-     * @return array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:true}
+     * @return PDODatabaseConfigJ
      */
     public function GetConfig() : array
     {
@@ -280,7 +282,7 @@ class PDODatabase
     
     /**
      * returns an array with some PDO attributes for debugging 
-     * @return array{driver:string, cversion:string, sversion:string, info?:string}`
+     * @return PDODatabaseInfoJ
      */
     public function getInfo() : array
     {
@@ -325,7 +327,7 @@ class PDODatabase
         
         // get rid of comment lines
         $lines = array_filter($data,function(string $line){ 
-            return mb_substr($line,0,2) != "--"; });
+            return mb_substr($line,0,2) !== "--"; });
         
         // separate queries by ; (end of query)
         $queries = explode(";", implode($lines));

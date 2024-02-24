@@ -2,7 +2,7 @@
 
 use Andromeda\Core\{Crypto,Utilities};
 
-/** @phpstan-import-type ScalarArray from Utilities */
+/** @phpstan-import-type ScalarOrArray from Utilities */
 class SafeParamTest extends \PHPUnit\Framework\TestCase
 {
     public function testEmptyKey() : void
@@ -37,7 +37,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     
     /** 
      * @template T
-     * @param NULL|scalar|ScalarArray|SafeParams $value
+     * @param ScalarOrArray|SafeParams $value
      * @param T $want
      * @param callable(SafeParam):T $func 
      */
@@ -54,7 +54,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     }
     
     /**
-     * @param NULL|scalar|ScalarArray|SafeParams $value 
+     * @param ScalarOrArray|SafeParams $value 
      * @param callable(SafeParam):mixed $func 
      */
     protected function testBad($value, callable $func) : void
@@ -480,8 +480,6 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
             $param = new SafeParam('key',$val);
             $obj = $param->GetObject();
             
-            $this->assertIsObject($obj);
-            
             $this->assertSame($obj->GetParam('key1')->GetInt(), 75);
             $this->assertSame($obj->GetParam('key2')->GetAlphanum(), 'val1');
             
@@ -557,11 +555,9 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $logarr = array(); $param->SetLogRef($logarr, 999); // full logging
         
         $arr = $param->GetObjectArray();
-        $this->assertIsArray($arr);
         $this->assertCount(3, $arr);
         
         $obj1 = $arr[0];
-        $this->assertIsObject($obj1);
         
         $key1 = $obj1->GetParam('key1')->GetArray($getInt);
         $this->assertSame($key1, array(5,6,7,8));
@@ -574,8 +570,6 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($inner2, array(1,2,3));
         
         $obj2 = $arr[1]; $obj3 = $arr[2];
-        $this->assertIsObject($obj2);
-        $this->assertIsObject($obj3);
         
         $this->assertSame("test", $obj2->GetParam("key1")->GetAlphanum());
         $this->assertSame(75, $obj3->GetParam("key2")->GetInt());

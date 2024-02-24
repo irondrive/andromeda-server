@@ -8,6 +8,7 @@ if (!function_exists('json_encode'))
  * @phpstan-type ScalarArray array<NULL|scalar|array<NULL|scalar|array<mixed>>>
  * @phpstan-type ScalarArrayN1 array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<mixed>>>>
  * @phpstan-type ScalarArrayN2 array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<NULL|scalar|array<mixed>>>>>
+ * @phpstan-type ScalarOrArray NULL|scalar|ScalarArray
  */
 abstract class Utilities
 {
@@ -36,7 +37,7 @@ abstract class Utilities
     
     /**
      * Encodes an array as a JSON string
-     * @param array<mixed> $jarr json array
+     * @param ScalarArray $jarr json array
      * @throws Exceptions\JSONException
      * @return string json string
      */
@@ -74,9 +75,9 @@ abstract class Utilities
 
     /** 
      * Converts all objects in the array to scalars recursively AND checks UTF-8, to make it printable
-     * @template T
+     * @template T of array-key
      * @param array<T, mixed> $data
-     * @return array<T, NULL|string|array<NULL|string|array<NULL|string|array<mixed>>>>
+     * @return array<T, ScalarOrArray>
      */
     public static function toScalarArray(array $data) : array
     {
@@ -179,7 +180,7 @@ abstract class Utilities
      * Performs a key-based array map
      * @template T
      * @param callable(string):T $func function to map onto each key
-     * @param array<string> $keys array of keys to feed into $func
+     * @param list<string> $keys array of keys to feed into $func
      * @return array<string, T>
      */
     public static function array_map_keys(callable $func, array $keys) : array

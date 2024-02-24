@@ -2,7 +2,7 @@
 
 class InputPathTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var array<string> */
+    /** @var list<string> */
     private array $files = array();
     
     public function tearDown() : void

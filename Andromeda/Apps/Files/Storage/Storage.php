@@ -190,7 +190,7 @@ abstract class Storage extends BaseObject // TODO was StandardObject
     /**
      * Lists the contents of a folder
      * @param string $path folder path
-     * @return array<string> array of names
+     * @return list<string> array of names
      */
     public function ReadFolder(string $path) : array
     {

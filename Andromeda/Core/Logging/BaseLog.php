@@ -19,7 +19,7 @@ abstract class BaseLog extends BaseObject
      * @param QueryBuilder $q query to create params with
      * @param SafeParams $params params with user supplied criteria
      * @param bool $isCount if true, this is a COUNT query
-     * @return array<string> array of WHERE strings
+     * @return list<string> array of WHERE strings
      */
     public static abstract function GetPropCriteria(ObjectDatabase $database, QueryBuilder $q, SafeParams $params, bool $isCount = false) : array;
     

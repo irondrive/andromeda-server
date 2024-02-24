@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Utilities;
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 
 /** 
@@ -8,6 +9,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
  * 
  * The base class handles the install/upgrade actions automatically
  * Unlike BaseApp() there are no custom app commit/rollback handlers
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 abstract class InstallerApp
 {
@@ -16,7 +18,7 @@ abstract class InstallerApp
 
     /** 
      * Returns the list of apps our database tables depend on
-     * @return array<string>
+     * @return list<string>
      */
     public function getDependencies() : array { return array(); }
     
@@ -27,7 +29,7 @@ abstract class InstallerApp
     
     /**
      * Returns an array of strings showing the CLI usage of the app
-     * @return array<string> possible commands
+     * @return list<string> possible commands
      */
     public function getUsage() : array 
     {
@@ -96,7 +98,7 @@ abstract class InstallerApp
      * 
      * Automatically handles the install/upgrade actions
      * @param Input $input the user input
-     * @return mixed the result value to be output to the user
+     * @return ScalarOrArray the result value to be output to the user
      * @throws Exceptions\UnknownActionException if unknown action
      */
     public function Run(Input $input)
@@ -111,7 +113,7 @@ abstract class InstallerApp
     
     /** 
      * Installs the app by importing its SQL file and creating config 
-     * @return mixed
+     * @return ScalarOrArray
      */
     protected function Install(SafeParams $params)
     {
@@ -141,7 +143,7 @@ abstract class InstallerApp
     /**
      * Iterates over the list of upgrade scripts, running them
      * sequentially until the DB is up to date with the code
-     * @return mixed
+     * @return ScalarOrArray
      */
     protected function Upgrade(SafeParams $params)
     {

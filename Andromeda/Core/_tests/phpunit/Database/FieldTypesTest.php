@@ -12,7 +12,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     public function testBasic() : void
     {
         $database = $this->createMock(ObjectDatabase::class);
-        $parent = new TestObject1($database, array('id'=>$id='test123'));
+        $parent = new TestObject1($database, array('id'=>$id='test123'), false);
         $field = (new StringType('myfield'))->SetParent($parent);
         $this->assertSame("myfield", $field->GetName());
         
@@ -46,7 +46,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
     public function testNotifyModified() : void
     {
         $database = $this->createMock(ObjectDatabase::class);
-        $parent = new TestObject1($database, array());
+        $parent = new TestObject1($database, array(), false);
         $field = (new StringType('myfield'))->SetParent($parent);
         
         $database->expects($this->once())->method('notifyModified');
@@ -742,7 +742,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new NullObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $obj = new TestObject1($database, array('id'=>$id='test456'));
+        $obj = new TestObject1($database, array('id'=>$id='test456'), false);
         
         $database->expects($this->once())
             ->method('TryLoadUniqueByKey')->willReturn($obj);
@@ -790,7 +790,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         
         $field = (new ObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
         
-        $obj = new TestObject1($database, array('id'=>$id='test456'));
+        $obj = new TestObject1($database, array('id'=>$id='test456'), false);
         
         $database->expects($this->once())
             ->method('TryLoadUniqueByKey')->willReturn($obj);

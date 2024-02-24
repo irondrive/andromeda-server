@@ -8,8 +8,9 @@ use Andromeda\Core\Logging\BaseLog;
 /** 
  * Represents an error log entry in the database 
  * @phpstan-import-type ScalarArray from Utilities
- * @phpstan-type ErrorLogClientObject array{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array<int,string>,
- *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, NULL|scalar|ScalarArray>}
+ * @phpstan-import-type ScalarOrArray from Utilities
+ * @phpstan-type ErrorLogJ array{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array<int,string>,
+ *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, ScalarOrArray>}
  */
 class ErrorLog extends BaseLog
 {
@@ -149,7 +150,7 @@ class ErrorLog extends BaseLog
 
     /**
      * Returns the printable client object of this error log
-     * @return ErrorLogClientObject
+     * @return ErrorLogJ
      */
     public function GetClientObject() : array
     {

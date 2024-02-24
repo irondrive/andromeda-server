@@ -7,6 +7,7 @@ use Andromeda\Core\Database\ObjectDatabase;
 /** 
  * Represents an error log entry in the database
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class ErrorInfo
 {
@@ -50,7 +51,7 @@ class ErrorInfo
     private ?array $queries = null;
     /** 
      * all client input parameters 
-     * @var ?array<string, NULL|scalar|ScalarArray>
+     * @var ?array<string, ScalarOrArray>
      */
     private ?array $params = null;
     /** 
@@ -97,7 +98,7 @@ class ErrorInfo
     public function TryGetQueries() : ?array    { return $this->queries; }
     /** 
      * Return the client input parameters, if logged 
-     * @return ?array<string, NULL|scalar|ScalarArray>
+     * @return ?array<string, ScalarOrArray>
      */
     public function TryGetParams() : ?array     { return $this->params; }
     /** 
@@ -188,7 +189,7 @@ class ErrorInfo
      * Returns the printable client object of this error info
      * @param ?int $level max debug level for output, null for unfiltered, also depends on the level this was created with
      * @return array{time:float,addr:string,agent:string,code:int,file:string,message:string,app:?string,action:?string,trace_basic:array<int,string>,
-     *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, NULL|scalar|ScalarArray>}
+     *  trace_full?:?ScalarArray,objects?:?array<string,array<string,string>>,queries?:?array<string|array{query:string,error:string}>,hints?:?ScalarArray, params?:?array<string, ScalarOrArray>}
      *  ... details/null level add trace_full,objects,queries,hints, sensitive/null level add params
      */
     public function GetClientObject(?int $level = null) : array

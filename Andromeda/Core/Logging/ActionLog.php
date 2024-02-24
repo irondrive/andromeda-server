@@ -8,6 +8,9 @@ use Andromeda\Core\IOFormat\{Input, SafeParams, IOInterface};
  * Log entry representing an app action in a request 
  * 
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
+ * @phpstan-type ActionLogJ array{time:float, addr:string, agent:string, app:string, action:string, 
+ *    authuser?:string, params?:ScalarArray, files?:ScalarArray, details?:ScalarArray}
  */
 class ActionLog extends BaseLog
 {
@@ -72,7 +75,7 @@ class ActionLog extends BaseLog
     private FieldTypes\NullStringType $authuser;
     /** 
      * Optional input parameter logging 
-     * @var FieldTypes\NullJsonArray<array<string, NULL|scalar|ScalarArray>>
+     * @var FieldTypes\NullJsonArray<array<string, ScalarOrArray>>
      */
     private FieldTypes\NullJsonArray $params;
     /**
@@ -88,7 +91,7 @@ class ActionLog extends BaseLog
     
     /** 
      * Temporary array of logged input params to be saved 
-     * @var array<string, NULL|scalar|ScalarArray>
+     * @var array<string, ScalarOrArray>
      */
     private array $params_tmp;
     /**
@@ -98,7 +101,7 @@ class ActionLog extends BaseLog
     private array $files_tmp;
     /** 
      * Temporary array of logged details to be saved 
-     * @var array<string, NULL|scalar|ScalarArray>
+     * @var array<string, ScalarOrArray>
      */
     private array $details_tmp;
     
@@ -179,7 +182,7 @@ class ActionLog extends BaseLog
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
      * 
      * @param string $key array key in log
-     * @param NULL|scalar|ScalarArray $value the data value
+     * @param ScalarOrArray $value the data value
      * @return $this
      */
     public function LogDetails(string $key, $value) : self
@@ -191,7 +194,7 @@ class ActionLog extends BaseLog
 
     /** 
      * Returns a direct reference to the input params log array 
-     * @return array<string, NULL|scalar|ScalarArray>
+     * @return array<string, ScalarOrArray>
      */
     public function &GetParamsLogRef() : array
     {
@@ -284,7 +287,7 @@ class ActionLog extends BaseLog
     
     /** 
      * Returns the array of app-specific propUsage strings
-      * @return array<string> 
+      * @return list<string> 
       */
     public static function GetAppPropUsages(ObjectDatabase $database) : array
     {
@@ -350,7 +353,7 @@ class ActionLog extends BaseLog
     /**
      * Returns the printable client object of this action log
      * @param bool $expand if true, expand linked objects
-     * @return array{time:float, addr:string, agent:string, app:string, action:string, authuser?:string, params?:ScalarArray, files?:ScalarArray, details?:ScalarArray}`
+     * @return ActionLogJ
      */
     public function GetClientObject(bool $expand = false) : array
     {

@@ -43,7 +43,7 @@ class QueryBuilder
     public function __toString() : string { return $this->GetText(); }
     
     private ?string $fromalias = null;
-    /** @var array<string> */
+    /** @var list<string> */
     private array $joins = array();
     private ?string $where = null;
     private ?string $orderby = null;

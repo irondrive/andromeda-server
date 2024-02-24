@@ -96,7 +96,7 @@ class InputTest extends \PHPUnit\Framework\TestCase
         $database = $this->createStub(ObjectDatabase::class);
         $database->method('GetApiPackage')->willReturn($apipack);
         
-        return new ActionLog($database, array());
+        return new ActionLog($database, array(), false);
     }
     
     public function testAuthLogger() : void

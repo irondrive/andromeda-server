@@ -7,7 +7,7 @@ use Andromeda\Core\IOFormat\{/*phpstan*/Input, InputPath, InputStream, Output, O
 
 class CLITest extends \PHPUnit\Framework\TestCase
 {
-    /** @var array<string> */
+    /** @var list<string> */
     private array $files = array();
     
     public function tearDown() : void
@@ -25,7 +25,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
     
     public function testStatics() : void
     {
-        $this->assertTrue(CLI::isPrivileged());
+        $this->assertTrue(CLI::isPrivileged()); // @phpstan-ignore-line test anyway
         $this->assertSame(CLI::OUTPUT_PLAIN, CLI::GetDefaultOutmode());
         
         $cli = new CLI();
