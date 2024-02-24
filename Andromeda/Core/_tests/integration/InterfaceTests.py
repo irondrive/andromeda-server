@@ -112,14 +112,14 @@ class CLITests(InterfaceTests):
     def testUsage(self):
         """ Tests the helptext output with invalid usage """
         rval = self.interface.cliRun()[1].decode('utf-8')
-        self.util.assertStartsWith(rval, "general usage")
+        self.util.assertStartsWith(rval, "ERROR: general usage")
         rval = self.interface.cliRun(args=["--outmode","json"],isJson=True)[1]
         self.util.assertError(rval, 400, "general usage", isPrefix=True)
 
         rval = self.interface.cliRun(args=["mytest"])[1].decode('utf-8')
-        self.util.assertStartsWith(rval, "general usage")
+        self.util.assertStartsWith(rval, "ERROR: general usage")
         rval = self.interface.cliRun(args=["--mytest"])[1].decode('utf-8')
-        self.util.assertStartsWith(rval, "general usage")
+        self.util.assertStartsWith(rval, "ERROR: general usage")
 
         rval = self.advCliRun(app="",action="")
         self.util.assertError(rval, 400, "SAFEPARAM_VALUE_NULL: app")
@@ -192,14 +192,14 @@ class CLITests(InterfaceTests):
 
     def testOutmodeOption(self):
         """ Tests the CLI --outmode option """
-        rval = self.advCliRun(outmode=None).decode('utf-8')
-        self.util.assertSame(rval,"UNKNOWN_APP: none"+os.linesep)
+        rval = self.advCliRun(outmode=None).decode('utf-8') # default
+        self.util.assertSame(rval,"ERROR: UNKNOWN_APP: none"+os.linesep)
 
         rval = self.advCliRun(outmode="none").decode('utf-8')
         self.util.assertEmpty(rval)
 
         rval = self.advCliRun(outmode="plain").decode('utf-8')
-        self.util.assertSame(rval,"UNKNOWN_APP: none"+os.linesep)
+        self.util.assertSame(rval,"ERROR: UNKNOWN_APP: none"+os.linesep)
 
         rval = self.advCliRun(outmode="json") # json
         self.util.assertInstance(rval, object)
@@ -209,10 +209,10 @@ class CLITests(InterfaceTests):
         self.util.assertStartsWith(rval, "Array")
 
         rval = self.interface.cliRun(args=["--outmode",""])[1].decode('utf-8') # invalid
-        self.util.assertSame(rval, "SAFEPARAM_VALUE_NULL: outmode"+os.linesep)
+        self.util.assertSame(rval, "ERROR: SAFEPARAM_VALUE_NULL: outmode"+os.linesep)
 
         rval = self.advCliRun(outmode="invalid").decode('utf-8')
-        self.util.assertStartsWith(rval, "SAFEPARAM_INVALID_TYPE: outmode")
+        self.util.assertStartsWith(rval, "ERROR: SAFEPARAM_INVALID_TYPE: outmode")
 
     def testPlainOutputNarrowing(self):
         """ Tests the auto narrowing to appdata/message in plain outmode """
@@ -221,7 +221,7 @@ class CLITests(InterfaceTests):
         self.util.assertSame(self.advCliRun(
             app='testutil',action='testiface',outmode="plain",outprop='params.mytest',params={'mytest':'zzz'}).decode('utf-8'), 'zzz'+os.linesep)
         self.util.assertSame(self.advCliRun(
-            app='testutil',action='zzz',outmode="plain").decode('utf-8'), 'UNKNOWN_ACTION: zzz'+os.linesep)
+            app='testutil',action='zzz',outmode="plain").decode('utf-8'), 'ERROR: UNKNOWN_ACTION: zzz'+os.linesep)
         self.util.assertStartsWith(self.advCliRun(
             app='testutil',action='zzz',outmode="plain",debug="details").decode('utf-8'), 'Array')
         self.util.assertStartsWith(self.advCliRun(
@@ -261,9 +261,9 @@ class CLITests(InterfaceTests):
             app='testutil',action='testiface',outprop='params.mytest',params={'mytest':'myval'},metrics='basic')), 'myval')
         
         # ignore outprop on error
-        self.util.assertSame(self.advCliRun(app='testutil',action='zzz',outprop='mytest',outmode='plain').decode('utf-8'), "UNKNOWN_ACTION: zzz\n")
+        self.util.assertSame(self.advCliRun(app='testutil',action='zzz',outprop='mytest',outmode='plain').decode('utf-8'), "ERROR: UNKNOWN_ACTION: zzz\n")
         ret = self.advCliRun(app='testutil',action='zzz',outprop='mytest',outmode='plain',debug='sensitive').decode('utf-8')
-        self.util.assertStartsWith(ret, "Array\n(\n    [ok] => \n    [code] => 400\n    [message] => UNKNOWN_ACTION: zzz\n")
+        self.util.assertStartsWith(ret, "Array\n(\n    [ok] => \n    [code] => 400\n    [message] => UNKNOWN_ACTION: zzz\n") # has debug
         
     def testParamFileInput(self):
         """ Tests the --param@ file-based param input """

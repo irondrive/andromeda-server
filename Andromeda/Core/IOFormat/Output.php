@@ -101,7 +101,7 @@ class Output
         if ($this->debug !== null || $this->metrics !== null)
             return print_r($this->GetAsArray($outprop),true);
 
-        if (!$this->ok) return $this->message;
+        if (!$this->ok) return "ERROR: ".$this->message;
 
         $appdata = $this->NarrowAppdata($outprop);
 

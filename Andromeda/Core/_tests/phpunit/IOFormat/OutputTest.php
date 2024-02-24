@@ -80,8 +80,8 @@ class OutputTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($output->GetAsString('mykey'), print_r($output->GetAsArray('mykey'),true));
 
         $output = Output::ServerException();
-        $this->assertSame($output->GetAsString(), 'SERVER_ERROR');
-        $this->assertSame($output->GetAsString('mykey'), 'SERVER_ERROR'); // ignore outprop on error
+        $this->assertSame($output->GetAsString(), 'ERROR: SERVER_ERROR');
+        $this->assertSame($output->GetAsString('mykey'), 'ERROR: SERVER_ERROR'); // ignore outprop on error
         
         // with outprop+error+debug, ignore outprop
         $output = Output::ServerException(array('mydebug'));
