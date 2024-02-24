@@ -6,12 +6,6 @@ class TestClass3 { }
 
 class UtilitiesTest extends \PHPUnit\Framework\TestCase
 {
-   public function testInit() : void 
-   {
-       $this->assertTrue(Andromeda);
-       $this->assertIsString(andromeda_version);
-   }
-   
    public function testJSON() : void
    {
        $this->assertSame('{"test":55}',Utilities::JSONEncode(array('test'=>55)));

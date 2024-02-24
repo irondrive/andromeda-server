@@ -76,11 +76,12 @@ abstract class BaseConfig extends SingletonObject
             throw new Exceptions\UpgradeRequiredException(static::getAppname(), (string)$version);
         
         parent::__construct($database, $data, $created);
-        
-        if ($created)
-        {
-            $this->date_created->SetTimeNow();
-            $this->version->SetValue(static::getVersion());
-        }
+    }
+
+    public function PostConstruct(bool $created) : void
+    {
+        if (!$created) return; // early return
+        $this->date_created->SetTimeNow();
+        $this->version->SetValue(static::getVersion());
     }
 }

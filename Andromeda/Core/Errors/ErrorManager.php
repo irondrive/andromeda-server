@@ -10,6 +10,7 @@ use Andromeda\Core\IOFormat\{IOInterface, Output};
  * This class handles uncaught exceptions, logging them and converting to a client Output object.
  * Application code can use LogException() when an exception is caught but still needs to be logged.
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class ErrorManager
 {
@@ -219,7 +220,7 @@ class ErrorManager
     
     /** 
      * Adds an entry to the custom debug log, saved with exceptions 
-     * @param NULL|scalar|ScalarArray $data
+     * @param ScalarOrArray $data
      */
     public function LogDebugHint($data) : self { $this->debughints[] = $data; return $this; }
     

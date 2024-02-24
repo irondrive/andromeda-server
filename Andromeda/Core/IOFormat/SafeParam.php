@@ -10,6 +10,7 @@ use Andromeda\Core\IOFormat\Exceptions\{SafeParamInvalidException, SafeParamNull
  * Provides a consistent interface for sanitizing and validating input values
  * A value is considered null if it is an empty string or the string "null"
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class SafeParam
 {
@@ -31,7 +32,7 @@ class SafeParam
     /** 
      * Construct a new SafeParam with the given key and value
      * @param string $key name of the input param - MUST NOT CONTAIN "-"
-     * @param NULL|scalar|ScalarArray|SafeParams $value
+     * @param ScalarOrArray|SafeParams $value
      * @throws SafeParamInvalidException if the key name is invalid
      */
     public function __construct(string $key, $value)
@@ -56,14 +57,14 @@ class SafeParam
 
     private int $loglevel;
     
-    /** @var ?array<string, NULL|scalar|ScalarArray> */
+    /** @var ?array<string, ScalarOrArray> */
     private ?array $logref = null;
     
     /** 
      * Takes an array reference for logging fetched parameters 
      * NOTE this does NOT pay attention to the loglevel, it only
      * passes it to the sub-SafeParams if you use GetObject()!
-     * @param ?array<string, NULL|scalar|ScalarArray> $logref
+     * @param ?array<string, ScalarOrArray> $logref
      */
     public function SetLogRef(?array &$logref, int $loglevel) : void
     {
@@ -92,7 +93,7 @@ class SafeParam
     /**
      * Returns the given value as an array or null
      * @throws SafeParamInvalidException if other type given
-     * @return ?array<mixed>
+     * @return ?ScalarArray
      */
     protected function tryGetArr() : ?array
     {
@@ -114,7 +115,7 @@ class SafeParam
     
     /** 
      * Returns the value as originally given (UNSAFE), no logging
-     * @return NULL|scalar|ScalarArray
+     * @return ScalarOrArray
      */
     public function GetNullRawValue()
     {
@@ -133,7 +134,7 @@ class SafeParam
     /** 
      * If not null, checks that a custom validation function returns true
      * @param callable(string):bool $valfunc custom function
-     * @throws SafeParamInvalidException@throws Exceptions\valid or not string
+     * @throws SafeParamInvalidException if not valid
      * @return $this
      */
     public function CheckFunction(callable $valfunc) : self
@@ -177,7 +178,7 @@ class SafeParam
 
     /**
      * Checks that the param's value is in the given array or null
-     * @template T of array<string>
+     * @template T of list<string>
      * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
      * @return ?value-of<T> the whitelisted value or null
@@ -656,7 +657,7 @@ class SafeParam
 
     /**
      * Checks that the param's value is in the given array
-     * @template T of array<string>
+     * @template T of list<string>
      * @param T $values whitelisted values
      * @throws SafeParamInvalidException if not valid
      * @throws SafeParamNullValueException if null

@@ -1,10 +1,14 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Utilities;
 use Andromeda\Core\IOFormat\Input;
 use Andromeda\Core\Logging\ActionLog; // phpstan
 use Andromeda\Core\Database\ObjectDatabase;
 
-/** The base class from which apps must inherit */
+/** 
+ * The base class from which apps must inherit
+ * @phpstan-import-type ScalarOrArray from Utilities
+ */
 abstract class BaseApp
 {
     /** Reference to the main API package */
@@ -23,13 +27,13 @@ abstract class BaseApp
     /**
      * Run an action on the app with the given input
      * @param Input $input the user input
-     * @return mixed the value to be output to the user
+     * @return ScalarOrArray the value to be output to the user
      */
     public abstract function Run(Input $input);
 
     /**
      * Returns an array of strings showing the CLI usage of the app
-     * @return array<string> possible commands
+     * @return list<string> possible commands
      */
     public abstract function getUsage() : array;
     

@@ -9,6 +9,7 @@ use Andromeda\Core\{Config, Utilities};
  * because a param can itself contain a collection of other params
  * (see SafeParam::TYPE_OBJECT) represented by another SafeParams
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class SafeParams
 {
@@ -43,7 +44,7 @@ class SafeParams
 
     /**
      * Adds the parameter to this object with the given name and value 
-     * @param NULL|scalar|ScalarArray|SafeParams $value
+     * @param ScalarOrArray|SafeParams $value
      */
     public function AddParam(string $key, $value) : self
     {
@@ -52,12 +53,12 @@ class SafeParams
 
     private int $loglevel;
     
-    /** @var ?array<string, NULL|scalar|ScalarArray> */
+    /** @var ?array<string, ScalarOrArray> */
     private ?array $logref = null;
     
     /** 
      * Takes an array reference for logging fetched parameters 
-     * @param ?array<string, NULL|scalar|ScalarArray> $logref
+     * @param ?array<string, ScalarOrArray> $logref
      */
     public function SetLogRef(?array &$logref, int $loglevel) : self
     {
@@ -124,7 +125,7 @@ class SafeParams
 
     /** 
      * Returns a plain associative array of each parameter's name mapped to its raw value
-     * @return array<string, NULL|scalar|ScalarArray>
+     * @return array<string, ScalarOrArray>
      */
     public function GetAllRawValues() : array
     {
@@ -134,7 +135,7 @@ class SafeParams
 
     /** 
      * Returns a plain associative array of each parameter's name mapped to its raw value (utf-8/json safe)
-     * @return array<string, NULL|scalar|ScalarArray>
+     * @return array<string, ScalarOrArray>
      */
     public function GetClientObject() : array
     {

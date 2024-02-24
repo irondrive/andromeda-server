@@ -1,10 +1,13 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{Config, InstallerApp};
+use Andromeda\Core\{Config, InstallerApp, Utilities};
 use Andromeda\Core\Database\PDODatabase;
 use Andromeda\Core\IOFormat\{Input, IOInterface, SafeParams};
 
-/** The core config installer, also can install/upgrade all apps */
+/** 
+ * The core config installer, also can install/upgrade all apps 
+ * @phpstan-import-type ScalarOrArray from Utilities
+ */
 class CoreInstallApp extends InstallerApp
 {
     public function getName() : string { return 'core'; }
@@ -57,7 +60,7 @@ class CoreInstallApp extends InstallerApp
 
     /**
      * Collects usage strings from every installed app and returns them
-     * @return string|array<string> array of possible commands
+     * @return string|list<string> array of possible commands
      */
     protected function GetUsages(SafeParams $params)
     {
@@ -69,8 +72,8 @@ class CoreInstallApp extends InstallerApp
         {
             if ($want !== null && $want !== $name) continue;
             
-            array_push($output, ...array_map(function(string $line)use($name){
-                return "$name $line"; }, $installer->getUsage()));
+            $output = array_merge($output, array_map(function(string $line)use($name){
+                return "$name $line"; }, $installer->getUsage())); 
         }
         
         if ($this->runner->GetInterface()->GetOutputMode() === IOInterface::OUTPUT_PLAIN)
@@ -97,7 +100,7 @@ class CoreInstallApp extends InstallerApp
     /** 
      * Scans for available apps to install (in dependency order)
      * @throws Exceptions\AdminRequiredException if DB config exists and not a privileged interface
-     * @return array<string>
+     * @return list<string>
      */
     protected function ScanApps() : array
     {
@@ -146,7 +149,7 @@ class CoreInstallApp extends InstallerApp
     
     /**
      * Installs AND enables all available apps (including core)
-     * @return array<string, mixed> map of installed apps to their install retval
+     * @return array<string, ScalarOrArray> map of installed apps to their install retval
      * @see Config::ScanApps() 
      */
     protected function SetupAll(SafeParams $params) : array
@@ -175,7 +178,7 @@ class CoreInstallApp extends InstallerApp
     
     /**
      * Upgrades all installed apps (including core)
-     * @return array<string, mixed> map of upgraded apps to their upgrade retval
+     * @return array<string, ScalarOrArray> map of upgraded apps to their upgrade retval
      */
     protected function UpgradeAll(SafeParams $params) : array
     {

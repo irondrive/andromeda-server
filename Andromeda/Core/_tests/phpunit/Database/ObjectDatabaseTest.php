@@ -621,7 +621,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         
         $this->assertInstanceOf(EasyObject::class, $obj); 
-        $this->assertNotNull($obj);
         $this->assertSame($id, $obj->ID());
         $this->assertSame(5, $obj->GetUniqueKey());
         
@@ -799,7 +798,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
         $this->assertInstanceOf(PolyObject5a::class, $obj1);
         $this->assertInstanceOf(PolyObject5aa::class, $obj1);
-        $this->assertNotNull($obj1);
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(55, $obj1->GetTestProp5());
         
@@ -917,8 +915,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->method('write')->willReturn(1);
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
-        $this->assertInstanceOf(PolyObject5a::class, $obj1); 
-        $this->assertNotNull($obj1);
+        $this->assertInstanceOf(PolyObject5a::class, $obj1);
         
         // check that loading via 5aa leaves the registered base class as 5a
         $objdb->TryLoadUniqueByKey(PolyObject5aa::class, 'testprop5', 75);
@@ -1037,8 +1034,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->method('write')->willReturn(1);
         
         $obj1 = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
-        $this->assertInstanceOf(PolyObject5aa::class, $obj1); 
-        $this->assertNotNull($obj1);
+        $this->assertInstanceOf(PolyObject5aa::class, $obj1);
         $this->assertSame($obj1->ID(), $id1);
         
         $obj1->SetTestProp5(66)->Save();
@@ -1201,7 +1197,6 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $obj1 = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
         $this->assertInstanceOf(EasyObject::class, $obj1); 
-        $this->assertNotNull($obj1);
         $this->assertSame($id1, $obj1->ID());
         $this->assertSame(5, $obj1->GetUniqueKey());
 

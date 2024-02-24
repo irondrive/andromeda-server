@@ -11,6 +11,8 @@ use Andromeda\Core\IOFormat\SafeParams;
  * 
  * Manages PHPMailer configuration and wraps its usage
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-type EmailerJ array{id:string, type:string, hosts:?ScalarArray, username:?string, password:bool,
+ *    from_address:string, from_name:?string, use_reply:bool, date_created:float}
  */
 class Emailer extends BaseObject
 {
@@ -40,7 +42,7 @@ class Emailer extends BaseObject
     private FieldTypes\IntType $type;
     /** 
      * Array of hostnames to try, in order 
-     * @var FieldTypes\NullJsonArray<array<string>>
+     * @var FieldTypes\NullJsonArray<list<string>>
      */
     private FieldTypes\NullJsonArray $hosts;
     /** Optional SMTP username */
@@ -77,7 +79,7 @@ class Emailer extends BaseObject
     
     /** 
      * Returns a array of strings with the CLI usage for each specific driver
-     * @return array<string>
+     * @return array<int,string>
      */
     public static function GetCreateUsages() : array { return array("--type smtp ((--host hostname [--port ?uint16] [--proto ?ssl|tls]) | --hosts json[]) [--username ?utf8] [--password ?raw]"); }
     
@@ -159,8 +161,7 @@ class Emailer extends BaseObject
     
     /**
      * Gets the config as a printable client object
-     * @return array{id:string, type:string, hosts:?ScalarArray, username:?string, password:bool,
-     *  from_address:string, from_name:?string, use_reply:bool, date_created:float}
+     * @return EmailerJ
      */
     public function GetClientObject() : array
     {
@@ -178,7 +179,7 @@ class Emailer extends BaseObject
     }
     
     /** Initializes the PHPMailer instance */
-    protected function PostConstruct() : void
+    protected function PostConstruct(bool $created) : void
     {        
         $mailer = new PHPMailer\PHPMailer(true);
         

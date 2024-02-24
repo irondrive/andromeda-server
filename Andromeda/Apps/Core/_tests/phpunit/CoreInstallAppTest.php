@@ -4,7 +4,7 @@ use Andromeda\Core\InstallerApp;
 
 class CoreInstallAppTest extends \PHPUnit\Framework\TestCase
 {
-    public function testSortInstallers() : void
+    public function testHasDependency() : void
     {
         $a = $this->createMock(InstallerApp::class);
         $a->method('getName')->willReturn('a');
@@ -51,6 +51,30 @@ class CoreInstallAppTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse(CoreInstallApp::HasDependency($installers, $e, $b));
         $this->assertFalse(CoreInstallApp::HasDependency($installers, $e, $c));
         $this->assertFalse(CoreInstallApp::HasDependency($installers, $e, $d));
+    }
+
+    public function testSortInstallers() : void
+    {
+        $a = $this->createMock(InstallerApp::class);
+        $a->method('getName')->willReturn('a');
+        
+        $b = $this->createMock(InstallerApp::class);
+        $b->method('getName')->willReturn('b');
+        $b->method('getDependencies')->willReturn(array('d'));
+        
+        $c = $this->createMock(InstallerApp::class);
+        $c->method('getName')->willReturn('c');
+        $c->method('getDependencies')->willReturn(array('e'));
+        
+        $d = $this->createMock(InstallerApp::class);
+        $d->method('getName')->willReturn('d');
+        $d->method('getDependencies')->willReturn(array('c','e'));
+        
+        $e = $this->createMock(InstallerApp::class);
+        $e->method('getName')->willReturn('e');
+        $e->method('getDependencies')->willReturn(array('a'));
+        
+        $installers = array('a'=>$a, 'b'=>$b, 'c'=>$c, 'd'=>$d, 'e'=>$e);
         
         // D->B, E->C, C->D, E->D, A->E ... expect A E C D B
         $expect = array('a','e','c','d','b');
