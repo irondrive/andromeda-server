@@ -10,16 +10,17 @@
  * Any exceptions encountered will roll back the entire request safely.
  */
 
-use Andromeda\Core\AppRunner;
+use Andromeda\Core\{ApiPackage, AppRunner};
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Errors\ErrorManager;
-
 
 $interface = IOInterface::TryGet(); 
 if ($interface === null) die('INTERFACE_ERROR');
 
 $errman = new ErrorManager($interface, true);
 
-$input = $interface->GetInput(); // check early
+// check input early (before db), but after errman
+$input = $interface->GetInput();
 
-(new AppRunner($interface, $errman))->Run($input);
+$apipack = new ApiPackage($interface, $errman);
+(new AppRunner($apipack))->Run($input);

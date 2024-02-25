@@ -30,6 +30,9 @@ class CLI extends IOInterface
         else if (array_key_exists("USER",$_SERVER))
             $retval .= " ".$_SERVER["USER"];
         
+        if (is_string($_SERVER["SSH_CLIENT"] ?? null))
+            $retval .= " ".explode(' ',$_SERVER["SSH_CLIENT"])[0];
+
         return $retval;
     }
     
@@ -39,6 +42,9 @@ class CLI extends IOInterface
         
         if (array_key_exists("OS",$_SERVER))
             $retval .= " ".$_SERVER["OS"];
+        
+        if (array_key_exists("SHELL",$_SERVER))
+            $retval .= " ".$_SERVER["SHELL"];
 
         return $retval;
     }
@@ -183,9 +189,10 @@ class CLI extends IOInterface
      */
     private function LoadAppInput(array $argv, array $server, $stdin) : Input
     {
-        if (count($argv) < 2) 
+        $app = array_shift($argv);
+        $action = array_shift($argv);
+        if ($app === null || $action === null)
             throw new IncorrectCLIUsageException('missing app/action');
-        $app = $argv[0]; $action = $argv[1];
 
         // add environment variables to argv
         foreach ($server as $key=>$value)
@@ -194,14 +201,14 @@ class CLI extends IOInterface
             {
                 $key = explode('_',$key,2);
                 if ($value === false) $value = "false";
-                array_push($argv, "--".$key[1], (string)$value);
-                    // TODO IFACE these should be prepended so CLI takes precedence
+                // unshift to put these at the front so actual CLI values override
+                array_unshift($argv, "--".$key[1], (string)$value);
             }
         };
         
         $params = new SafeParams(); $files = array();
  
-        for ($i = 2; $i < count($argv); $i++)
+        for ($i = 0; $i < count($argv); $i++)
         {
             $param = self::getKey($argv[$i]); 
             if ($param === null) throw new IncorrectCLIUsageException(
@@ -265,7 +272,7 @@ class CLI extends IOInterface
                     "empty - key at action arg $i");
                 
                 $filename = self::getNextValue($argv,$i) ?? "data";
-                $filename = (new SafeParam('name',$filename))->GetFSName(); // TODO IFACE update readme and helptext
+                $filename = (new SafeParam('name',$filename))->GetFSName();
             
                 $files[$param] = new InputStream($stdin, $filename);
             }
@@ -279,10 +286,16 @@ class CLI extends IOInterface
         return new Input($app, $action, $params, $files);
     }
     
-    /** @param bool $exit if true, exit() with the proper code */
+    /** @param bool $exit if true, exit() with the proper code and allow using stderr */
     public function FinalOutput(Output $output, bool $exit = true) : void
     {
-        if ($this->outmode === self::OUTPUT_PLAIN)
+        if ($this->outmode === 0 && $exit)
+        {
+            // even in NONE output, write errors to stderr
+            if (!$output->isOK()) file_put_contents("php://stderr",
+                $output->GetAsString().PHP_EOL);
+        }
+        else if ($this->outmode === self::OUTPUT_PLAIN)
         {
             echo $output->GetAsString($this->outprop).PHP_EOL;
         }
@@ -299,8 +312,5 @@ class CLI extends IOInterface
         }
         
         if ($exit) exit($output->isOK() ? 0 : 1); 
-        // TODO IFACE go back to exiting with code like before? C++ CLIRunner needs to know if it's an error it can retry
-        // TODO IFACE triple check that when download a file (outmode none) that an error just results in blank stdout output NOT error json
-        // TODO IFACE perhaps errors should go to std::cerr when outmode is none?
     }
 }

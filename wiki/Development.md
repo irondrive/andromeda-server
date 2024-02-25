@@ -36,11 +36,11 @@ External clients need only match the major version exactly, while minor versions
 
 ## Main Core Classes
 
-`index.php` is a very short wrapper that initializes the `IOInterface`, `ErrorManager`, and `AppRunner` objects, and passes input from the interface to Run().  `init.php` handles some global setup as well as the class autoloader.
+`index.php` is a very short wrapper that initializes the `IOInterface`, `ErrorManager`, `ApiPackage`, and `AppRunner` objects, and passes input from the interface to Run().  `init.php` handles some global setup as well as the class autoloader.
 
-The primary request handler is the `AppRunner`.  This class initializes the `ApiPackage` and loads all apps.  Run() sends the action to the app, handles logging, saves/commits the result, and writes output to the interface.  `ApiPackage` initializes the database and loads config.  It is also the primary API class for apps to use (via `$this->API`), holding references to the `ObjectDatabase`, `Config`, `AppRunner`, `ErrorManager`, and `IOInterface`.  `InstallRunner` is the `AppRunner` equivalent for the install system.  
+The `ErrorManager` class takes care of logging exceptions to the database and handling uncaught errors and exceptions. It also provides `LogDebugHint()` and `LogBreakpoint()` for debug logging. The `IOInterface` takes care of abstracting the differences between HTTP and CLI and is used for input and output handling.  `ApiPackage` initializes the database and loads config.  It is also the primary API class for apps to use (via `$this->API`), holding references to the `ObjectDatabase`, `Config`, `AppRunner`, `ErrorManager`, and `IOInterface`.  
 
-The `ErrorManager` class takes care of logging exceptions to the database and handling uncaught errors and exceptions. It also provides `LogDebugHint()` and `LogBreakpoint()` for debug logging. The `IOInterface` takes care of abstracting the differences between HTTP and CLI and is used for input and output handling.  
+The primary request handler is the `AppRunner`.  This class loads and handles running apps.  Run() sends the action to the app, handles logging, saves/commits the result, and writes output to the interface.  `InstallRunner` is the `AppRunner` equivalent for the install system.  
 
 ### Safe Input Classes
 `Input` contains functions to read file inputs, as well as `GetParams()` to return a `SafeParams`.  The `SafeParams` object has functions to get required or optional input parameters (and specify their defaults or logging settings).  Each parameter is a `SafeParam` which has various functions for safe input validation, null-checking, etc.  For example to read an optional non-null integer named `mytest` with a default value of 0, you could use `$input->GetParams()->GetParam('mytest',0)->GetInt()`.

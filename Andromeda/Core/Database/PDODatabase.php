@@ -18,7 +18,7 @@ use PDO; use PDOStatement; use PDOException;
  * made as part of a transaction, and always used as prepared statements. Performance 
  * statistics and queries are tracked as a stack, but transactions cannot be nested.
  * Queries made must always be compatible with all supported drivers.
- * @phpstan-type PDODatabaseInfoJ array{driver:string, cversion:string, sversion:string, info?:string}
+ * @phpstan-type PDODatabaseInfoJ array{driver:string, cversion:string, sversion:string, sinfo?:string}
  * @phpstan-type PDODatabaseConfigJ array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:true}
  */
 class PDODatabase
@@ -155,9 +155,7 @@ class PDODatabase
             if ($driver === 'mysql') $connect .= ";charset=utf8mb4";
             
             $config['CONNECT'] = $connect;
-            
             $config['PERSISTENT'] = $params->GetOptParam('persistent',null)->GetNullBool();
-            
             $config['USERNAME'] = $params->GetOptParam('dbuser',null)->GetNullName();
             $config['PASSWORD'] = $params->GetOptParam('dbpass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString();
         }
@@ -293,7 +291,7 @@ class PDODatabase
         );
         
         if ($this->getDriver() !== self::DRIVER_SQLITE)
-            $retval['info'] = $this->connection->getAttribute(PDO::ATTR_SERVER_INFO);
+            $retval['sinfo'] = $this->connection->getAttribute(PDO::ATTR_SERVER_INFO);
         
         return $retval; // @phpstan-ignore-line getAttribute returns scalar not mixed
     }

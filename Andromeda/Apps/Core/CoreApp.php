@@ -151,7 +151,7 @@ class CoreApp extends BaseApp
     }
 
     /**
-     * Prints the phpinfo() page
+     * Prints the phpinfo() page (and sets outmode to NONE)
      * @throws Exceptions\AdminRequiredException if not admin-level access
      */
     protected function PHPInfo(bool $isAdmin) : void

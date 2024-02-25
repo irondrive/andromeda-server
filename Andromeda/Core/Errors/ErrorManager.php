@@ -66,7 +66,7 @@ class ErrorManager
     /** Sets the core config reference to use */
     public function SetConfig(Config $config) : self { $this->config = $config; return $this; }
     /** Sets the base runner reference to use */
-    public function SetRunner(BaseRunner $runner) : self { $this->runner = $runner; return $this; }
+    public function SetAppRunner(BaseRunner $runner) : self { $this->runner = $runner; return $this; }
 
     /** Returns the debug level for internal logging */
     private function GetDebugLogLevel() : int
