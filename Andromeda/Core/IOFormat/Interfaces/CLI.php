@@ -14,6 +14,9 @@ class CLI extends IOInterface
     
     /** @return true */
     public static function isPrivileged() : bool { return true; }
+
+    /** @return true */
+    public static function isInteractive() : bool { return true; }
     
     /** @return int plain text output by default */
     public static function GetDefaultOutmode() : int { return self::OUTPUT_PLAIN; }

@@ -10,6 +10,7 @@ class DummyInterface extends IOInterface
     public function getInputCalls() : int { return $this->numcalls; }
     
     public static function isPrivileged(): bool     { return true; }
+    public static function isInteractive(): bool    { return true; }
     protected function LoadInput(): Input       { $this->numcalls++; return $this->myinput; }
     public static function GetDefaultOutmode(): int { return 75; }
     public static function isApplicable(): bool     { return true; }

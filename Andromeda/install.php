@@ -3,7 +3,7 @@
 /** A more minimal index.php that runs InstallRunner */
 
 use Andromeda\Core\InstallRunner;
-use Andromeda\Core\IOFormat\{Input, Output, IOInterface};
+use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Errors\ErrorManager;
 
 

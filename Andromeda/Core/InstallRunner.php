@@ -70,12 +70,12 @@ class InstallRunner extends BaseRunner
         try { $this->database = ApiPackage::InitDatabase($interface); }
         catch (DatabaseExceptions\DatabaseConnectException $e) { $this->dbexc = $e; }
         
-        if ($this->database !== null)
-            $this->errorman->SetDatabase($this->database);
-        
         if ($this->database !== null) try
         {
+            $this->errorman->SetDatabase($this->database);
+            
             $config = Config::GetInstance($this->database);
+
             $interface->AdjustConfig($config);
             $this->errorman->SetConfig($config);
         }
