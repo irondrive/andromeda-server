@@ -95,7 +95,7 @@ class InstallRunner extends BaseRunner
             }
         }
         
-        $this->errorman->SetRunner($this);
+        $this->errorman->SetAppRunner($this);
     }
     
     /**

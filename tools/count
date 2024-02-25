@@ -5,7 +5,7 @@ cd Andromeda
 dostats(){
    LINES=`cat`
    echo $(echo "$LINES" | wc -l) files
-   echo "$LINES" | xargs -d '\n' wc -l
+   echo "$LINES" | xargs -d '\n' wc -l | sort -h
 }
 
 phpcode(){

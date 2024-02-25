@@ -36,8 +36,15 @@ class ApiPackage
     /** Returns the global config object */
     public function GetConfig() : Config { return $this->config; }
 
-    /** Returns the created apprunner interface */
+    /** Returns the apprunner interface - WARNING not set until apprunner is created! */
     public function GetAppRunner() : AppRunner { return $this->apprunner; }
+
+    /** Sets the apprunner interface to use */
+    public function SetAppRunner(AppRunner $ar) : void 
+    { 
+        $this->apprunner = $ar; 
+        $this->errorman->SetAppRunner($ar);
+    }
 
     /** Returns the interface used for the current request */
     public function GetInterface() : IOInterface { return $this->interface; }
@@ -53,17 +60,15 @@ class ApiPackage
      *
      * @param IOInterface $interface the interface that began the request
      * @param ErrorManager $errman error manager reference
-     * @param AppRunner $apprunner app runner reference
      * @throws DatabaseConnectException if the connection fails
      * @throws Exceptions\InstallRequiredException if the Config is not available
      * @throws Exceptions\UpgradeRequiredException if the Config version is wrong
      * @throws Exceptions\MaintenanceException if the server is not enabled
      */
-    public function __construct(IOInterface $interface, ErrorManager $errman, AppRunner $apprunner)
+    public function __construct(IOInterface $interface, ErrorManager $errman)
     {
         $this->interface = $interface;
         $this->errorman = $errman;
-        $this->apprunner = $apprunner;
         
         $this->metrics = new MetricsHandler();
         $init_stats = $this->metrics->GetInitStats();

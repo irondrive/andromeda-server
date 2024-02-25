@@ -32,11 +32,10 @@ class AppRunner extends BaseRunner
     public function GetApps() : array { return $this->apps; }
 
     /** Creates the AppRunner service, loading/constructing all apps */
-    public function __construct(IOInterface $interface, ErrorManager $errman)
+    public function __construct(ApiPackage $apipack)
     {
         parent::__construct();
-
-        $this->apipack = new ApiPackage($interface, $errman, $this);
+        $this->apipack = $apipack;
 
         $apps = $this->apipack->GetConfig()->GetApps();
 
@@ -45,7 +44,7 @@ class AppRunner extends BaseRunner
 
         foreach ($apps as $app) $this->TryLoadApp($app);
         
-        $errman->SetRunner($this);
+        $apipack->SetAppRunner($this);
     }
     
     /** Loads the main include file for an app and constructs it */
