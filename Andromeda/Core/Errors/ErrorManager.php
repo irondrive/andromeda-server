@@ -145,6 +145,9 @@ class ErrorManager
         return Output::ServerException($debugout);
     }
 
+    /** If false, the PHP-based log encountered an error on the last entry */
+    private bool $phplogok = true;
+
     /** if false, the file-based log encountered an error on the last entry */
     private bool $filelogok = true;
     
@@ -169,9 +172,24 @@ class ErrorManager
         $debug = $errinfo->GetClientObject($loglevel);
         if ($hintlog) $this->LogDebugHint($debug);
 
-        try // save to file
+        if ($this->phplogok) try // save to PHP (webserver log)
         {
-            if ($this->filelogok && $this->config !== null && $this->config->GetDebugLog2File())
+            // TODO FUTURE add config to disable this, but log by default so errors are logged w/o config being required
+            $elogset = ini_get("error_log");
+            // call error_log if PHP has a custom log set or if not doing CLI
+            if (($elogset !== false && $elogset !== "") || !$this->interface->isInteractive())
+                error_log(Utilities::JSONEncode($debug));
+        }
+        catch (\Throwable $e2) 
+        { 
+            $this->phplogok = false; 
+            $this->LogException($e2);
+            $errinfo->ReloadHints($this); // update from e2
+        }
+
+        if ($this->filelogok) try // save to file
+        {
+            if ($this->config !== null && $this->config->GetDebugLog2File())
             {
                 if (($logdir = $this->config->GetDataDir()) !== null)
                 {
@@ -189,8 +207,9 @@ class ErrorManager
         
         // save to database with a separate connection to avoid transaction confusion
         // normally two connections would be an issue w/ sqlite but with WAL it works
-        try {
-            if ($this->dblogok && $this->config !== null && $this->config->GetDebugLog2DB()) 
+        if ($this->dblogok) try
+        {
+            if ($this->config !== null && $this->config->GetDebugLog2DB()) 
             {
                 $db2 = ApiPackage::InitDatabase($this->interface);
                 $errlog = ErrorLog::Create($db2, $errinfo);

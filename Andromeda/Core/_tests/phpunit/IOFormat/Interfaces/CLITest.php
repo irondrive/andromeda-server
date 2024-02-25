@@ -26,6 +26,7 @@ class CLITest extends \PHPUnit\Framework\TestCase
     public function testStatics() : void
     {
         $this->assertTrue(CLI::isPrivileged()); // @phpstan-ignore-line test anyway
+        $this->assertTrue(CLI::isInteractive()); // @phpstan-ignore-line test anyway
         $this->assertSame(CLI::OUTPUT_PLAIN, CLI::GetDefaultOutmode());
         
         $cli = new CLI();

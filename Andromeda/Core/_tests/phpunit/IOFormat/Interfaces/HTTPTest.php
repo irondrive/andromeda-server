@@ -8,6 +8,7 @@ class HTTPTest extends \PHPUnit\Framework\TestCase
     public function testStatics() : void
     {
         $this->assertFalse(HTTP::isPrivileged()); // @phpstan-ignore-line test anyway
+        $this->assertFalse(HTTP::isInteractive()); // @phpstan-ignore-line test anyway
         $this->assertSame(HTTP::OUTPUT_JSON, HTTP::GetDefaultOutmode());
         
         $http = new HTTP();

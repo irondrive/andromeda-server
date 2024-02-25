@@ -19,6 +19,9 @@ abstract class IOInterface
     /** Returns whether or not the interface grants privileged access */
     abstract public static function isPrivileged() : bool;
 
+    /** Returns true if the interface is considered "interactive" */
+    abstract public static function isInteractive() : bool;
+
     /** The parsed input object */
     protected ?Input $input = null;
 

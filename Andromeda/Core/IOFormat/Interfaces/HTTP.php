@@ -19,6 +19,9 @@ class HTTP extends IOInterface
     /** @return false */
     public static function isPrivileged() : bool { return false; }
     
+    /** @return false */
+    public static function isInteractive() : bool { return false; }
+    
     /** @return int JSON output by default */
     public static function GetDefaultOutmode() : int { return self::OUTPUT_JSON; }
     
