@@ -114,7 +114,7 @@ class CLITests(InterfaceTests):
         rval = self.interface.cliRun()[1].decode('utf-8')
         self.util.assertStartsWith(rval, "ERROR: general usage")
         rval = self.interface.cliRun(args=["--outmode","json"],isJson=True)[1]
-        self.util.assertError(rval, 400, "general usage", isPrefix=True)
+        self.util.assertError(rval, 400, "general usage")
 
         rval = self.interface.cliRun(args=["mytest"])[1].decode('utf-8')
         self.util.assertStartsWith(rval, "ERROR: general usage")
@@ -143,7 +143,7 @@ class CLITests(InterfaceTests):
         rval = self.advCliRun(debug="") # invalid
         self.util.assertError(rval, 400, "SAFEPARAM_VALUE_NULL: debug")
         rval = self.advCliRun(debug="invalid")
-        self.util.assertError(rval, 400, "SAFEPARAM_INVALID_TYPE: debug: must be", isPrefix=True)
+        self.util.assertError(rval, 400, "SAFEPARAM_INVALID_TYPE: debug: must be")
 
         # ClientException debug with details only
         rval = self.advCliRun(debug=None) # default
@@ -188,7 +188,7 @@ class CLITests(InterfaceTests):
         self.util.assertError(rval, 400, "SAFEPARAM_VALUE_NULL: metrics")
 
         rval = self.advCliRun(metrics="invalid")
-        self.util.assertError(rval, 400, "SAFEPARAM_INVALID_TYPE: metrics: must be", isPrefix=True)
+        self.util.assertError(rval, 400, "SAFEPARAM_INVALID_TYPE: metrics: must be")
 
     def testOutmodeOption(self):
         """ Tests the CLI --outmode option """
@@ -250,7 +250,7 @@ class CLITests(InterfaceTests):
         self.util.assertError(self.advCliRun(
             app='testutil',action='testiface',outprop=''), 400, "SAFEPARAM_VALUE_NULL: outprop")
         self.util.assertError(self.advCliRun(
-            app='testutil',action='testiface',outprop='<test>'), 400, "SAFEPARAM_INVALID_TYPE: outprop: must be", isPrefix=True)
+            app='testutil',action='testiface',outprop='<test>'), 400, "SAFEPARAM_INVALID_TYPE: outprop: must be")
         self.util.assertError(self.advCliRun(
             app='testutil',action='testiface',outprop='test'), 400, "INVALID_OUTPROP: test")
         self.util.assertOk(self.advCliRun(

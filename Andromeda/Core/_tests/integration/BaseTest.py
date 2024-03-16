@@ -44,6 +44,10 @@ class BaseTest():
         self.afterTests()
         return testCount
     
+    def afterInstall(self):
+        """ Function to run after install, before appTests """
+        pass
+    
     def beforeTests(self):
         """ Function to run just before runTests() for init """
         pass

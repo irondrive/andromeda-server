@@ -74,7 +74,7 @@ class Main():
             self.interfaces.append(HTTP(
                 interfaces['http'], self.verbose))
             if getpass.getuser() != "www-data":
-                printWhiteOnRed("WARNING HTTP is configured but not running as www-data!")
+                printBlackOnYellow("WARNING HTTP is configured but not running as www-data!")
 
         if not len(self.interfaces):
             raise Exception("no interfaces configured")
@@ -134,8 +134,8 @@ class Main():
         for iface in self.interfaces: 
             apiCount += iface.apiCount
         
-        print(); printWhiteOnGreen("!! ALL TESTS COMPLETE! "
-            f"RAN {self.testCount} TESTS, {apiCount} COMMANDS, {self.assertCount} ASSERTS!")
+        print(); printBlackOnGreen("!! ALL TESTS COMPLETE! "
+            f"RAN {self.testCount} TESTS, {apiCount} API CALLS, {self.assertCount} ASSERTS!")
 
 
     def runTests(self, interface:Interface, database:Database):
@@ -162,6 +162,8 @@ class Main():
         
         appTestList:list = list(appTestMap.values())
         self.random.shuffle(appTestList)
+        for app in appTestList:
+            app.afterInstall()
         for app in appTestList: 
             printCyanOnBlack("-- BEGIN", app, "TESTS --"); 
             testCount += app.runTests(self.testMatch)
@@ -178,6 +180,7 @@ class Main():
     
     def loadModule(self, name:str, path:str):
         """ Loads and returns a python module at the given path """
+        sys.path.append(os.path.dirname(path))
         spec = importlib.util.spec_from_file_location(name, path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

@@ -46,7 +46,7 @@ class ErrorInfo
     private ?array $objects = null;
     /** 
      * db queries that were performed 
-     * @var ?array<string|array{'query':string,'error':string}>
+     * @var ?array<string|array{query:string,error:string}>
      */
     private ?array $queries = null;
     /** 
@@ -93,7 +93,7 @@ class ErrorInfo
     public function TryGetObjects() : ?array    { return $this->objects; }
     /** 
      * Return the db queries that were performed, if logged 
-     * @return ?array<string|array{'query':string,'error':string}>
+     * @return ?array<string|array{query:string,error:string}>
      */
     public function TryGetQueries() : ?array    { return $this->queries; }
     /** 

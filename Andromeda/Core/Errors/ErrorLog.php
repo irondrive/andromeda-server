@@ -142,12 +142,6 @@ class ErrorLog extends BaseLog
         return $obj;
     }
 
-    /** Deletes all ErrorLog entries, returns the count */
-    public static function DeleteAll(ObjectDatabase $database) : int
-    {
-        return $database->DeleteObjectsByQuery(static::class, new QueryBuilder());
-    }
-
     /**
      * Returns the printable client object of this error log
      * @return ErrorLogJ

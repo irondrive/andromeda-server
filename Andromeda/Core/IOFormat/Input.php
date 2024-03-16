@@ -100,7 +100,7 @@ class Input
     }
     
     /**
-     * Gets the file mapped to the parameter name
+     * Gets the file mapped to the parameter name (and immediately logs)
      * @param string $key the parameter key name
      * @throws Exceptions\InputFileMissingException if the key does not exist
      * @return InputFile the uploaded file

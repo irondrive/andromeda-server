@@ -25,8 +25,10 @@ class TestutilApp extends BaseApp
         $retval = array(
             'random [--length uint]',
             'testiface [--outmode '.implode('|',array_keys(IOInterface::OUTPUT_TYPES))."] [--clienterror|--servererror]",
+            'testactlog --logtest1 alphanum --logtest2 alphanum',
             'geterrors '.ErrorLog::GetPropUsage($this->database).' '.ErrorLog::GetLoadUsage(),
             'clearerrors',
+            'clearactions',
             'testdb',
             'benchdb'
         );
@@ -42,8 +44,10 @@ class TestutilApp extends BaseApp
         {
             case 'random':  return $this->Random($params);  
             case 'testiface': return $this->TestInterface($input);
+            case 'testactlog': $this->TestActlog($input); return null;
             case 'geterrors': return $this->GetErrors($input->GetParams());
             case 'clearerrors': return $this->ClearErrors();
+            case 'clearactions': return $this->ClearActions();
             case 'benchdb': return $this->BenchDatabase();
             case 'testdb': $this->TestDatabase(); return null;
             
@@ -95,6 +99,19 @@ class TestutilApp extends BaseApp
 
         return $retval;
     }
+
+    /** Tests action log details level */
+    protected function TestActlog(Input $input) : void
+    {
+        if (($actlog = $this->getActionLog()) !== null)
+        {
+            $input->GetFile('myfile',SafeParams::PARAMLOG_ALWAYS);
+            $input->GetParams()->GetParam('logtest1',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum(); // basic/full
+            $input->GetParams()->GetParam('logtest2')->GetAlphanum(); // only FULL
+            $actlog->LogDetails('mytest1','mydetails1'); // basic/full
+            $actlog->LogDetails('mytest2','mydetails2',true); // only FULL
+        }
+    }
     
     /**
      * Returns the server error log, possibly filtered by input
@@ -110,6 +127,12 @@ class TestutilApp extends BaseApp
     protected function ClearErrors() : int
     {
         return ErrorLog::DeleteAll($this->API->GetDatabase());
+    }
+
+    /** Cleras the ActionLog */
+    protected function ClearActions() : int
+    {
+        return BaseActionLog::DeleteAll($this->API->GetDatabase());
     }
 
     /** Measures the time for 10,000 JOIN/SELECTs */

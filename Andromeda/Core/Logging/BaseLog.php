@@ -12,7 +12,7 @@ abstract class BaseLog extends BaseObject
     public static abstract function GetPropUsage(ObjectDatabase $database) : string;
     
     /**
-     * Adds query filter parameters using the given input
+     * Adds query filter parameters using the given input, default sort by time DESC
      * 
      * MUST prefix column names with the appropriate table name
      * @param ObjectDatabase $database database reference
@@ -37,7 +37,7 @@ abstract class BaseLog extends BaseObject
     public static function GetCountUsage() : string { return "[--logic and|or]"; }
     
     /**
-     * Returns a compiled query selecting rows from the given input
+     * Returns a compiled query selecting and sorting rows from the given input
      * @param ObjectDatabase $database database reference
      * @param SafeParams $params params with user filter params
      * @param bool $isCount if true, this is a COUNT query
@@ -58,7 +58,7 @@ abstract class BaseLog extends BaseObject
     }
     
     /**
-     * Loads log entries the given input
+     * Loads log entries the given input, default 100 max and sort by time DESC
      * @param ObjectDatabase $database database reference
      * @param SafeParams $params user input with selectors
      * @return array<string, static> loaded log entries indexed by ID
@@ -90,5 +90,11 @@ abstract class BaseLog extends BaseObject
         $q = static::GetWhereQuery($database, $params, true);
         
         return $database->CountObjectsByQuery($class, $q);
+    }
+
+    /** Deletes all log entries, returning the count */
+    public static function DeleteAll(ObjectDatabase $database) : int
+    {
+        return $database->DeleteObjectsByQuery(static::class, new QueryBuilder());
     }
 }

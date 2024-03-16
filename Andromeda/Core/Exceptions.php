@@ -43,10 +43,10 @@ class EmailDisabledException extends BaseExceptions\ClientErrorException
 }
 
 /** Exception indicating that a mailer was requested but none are configured */
-class EmailerUnavailableException extends BaseExceptions\ClientErrorException
+class MailerUnavailableException extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("EMAILER_UNAVAILABLE", $details);
+        parent::__construct("MAILER_UNAVAILABLE", $details);
     }
 }
 
@@ -62,7 +62,7 @@ class UnknownAppException extends BaseExceptions\ClientErrorException
 class MaintenanceException extends BaseExceptions\ServiceUnavailableException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("SERVER_DISABLED", $details);
+        parent::__construct("SERVER_MAINTENANCE", $details);
     }
 }
 

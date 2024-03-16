@@ -66,7 +66,7 @@ class AccountsApp extends BaseApp
             'searchaccounts --name alphanum|email',
             'searchgroups --name name',
             'getaccounts [--limit ?uint] [--offset ?uint]',
-            `getgroups [--limit ?uint] [--offset ?uint]',
+            'getgroups [--limit ?uint] [--offset ?uint]',
             'creategroup --name name [--priority ?int8] [--comment ?text]',
             'editgroup --group id [--name name] [--priority int8] [--comment ?text]',
             'getgroup --group id',
@@ -1053,7 +1053,7 @@ class AccountsApp extends BaseApp
 
         $group = Group::Create($this->database, $name, $priority, $comment);
         
-        if ($actionlog) $actionlog->LogDetails('group',$group->ID()); 
+        if ($actionlog) $actionlog->LogDetails('group',$group->ID());
         
         return $group->Initialize()->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }    

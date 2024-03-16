@@ -8,7 +8,7 @@
     {
         "sqlite": 
         {
-            "dbpath":"./integration.s3db"
+            "dbpath":"../integration.s3db"
         },
         "mysql":
         {
@@ -24,6 +24,20 @@
             "host": "localhost",
             "dbuser": "postgres",
             "dbpass": "password" 
+        }
+    },
+    "core":
+    {
+        "datadir":"../inttest_data",
+        "email":
+        {
+            "type":"smtp",
+            "host":"myserver",
+            "from_address":"mytest@test.com",
+            "username":"mytest@test.com",
+            "password":"password",
+            "use_reply":false,
+            "test":"mytest@test.com"
         }
     }
 }
