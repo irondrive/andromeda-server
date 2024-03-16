@@ -171,7 +171,7 @@ class CoreApp extends BaseApp
      * Gets miscellaneous server identity information
      * @throws Exceptions\AdminRequiredException if not admin-level access
      * @return array{uname:string, php_version:string, zend_version:string, 
-     *   server:array<string,scalar>, load:list<int>|false, db:PDODatabaseInfoJ}
+     *   server:array<string,scalar>, load:?list<int>, db:PDODatabaseInfoJ}
      */
     protected function ServerInfo(bool $isAdmin) : array
     {
@@ -183,12 +183,12 @@ class CoreApp extends BaseApp
         unset($server['argv']); unset($server['argc']);
 
         /** @var list<int>|false */
-        $load = sys_getloadavg();
+        $loadb = function_exists('sys_getloadavg') ? sys_getloadavg() : false;
 
         return array(
             'server' => $server,
             'uname' => php_uname(),
-            'load' => $load,
+            'load' => is_array($loadb) ? $loadb : null,
             'php_version' => phpversion(),
             'zend_version' => zend_version(),
             'db' => $this->database->GetInternal()->getInfo()
