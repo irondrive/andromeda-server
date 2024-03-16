@@ -61,7 +61,7 @@ class BaseAppTest(BaseTest):
     config = None
     def __init__(self, util:TestUtils, interface:Interface, verbose:int, config):
         super().__init__(util, interface, verbose)
-        self.config = config
+        self.config = config if config is not None else {}
 
     @abc.abstractmethod
     def requiresInstall(self) -> bool:
