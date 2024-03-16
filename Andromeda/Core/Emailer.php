@@ -129,14 +129,14 @@ class Emailer extends BaseObject
     
     /** 
      * Returns any available (random) Emailer object 
-     * @throws Exceptions\EmailerUnavailableException if none configured
+     * @throws Exceptions\MailerUnavailableException if none configured
      */
     public static function LoadAny(ObjectDatabase $database) : self
     {
         $mailers = static::LoadAll($database);
         
         if (count($mailers) === 0) 
-            throw new Exceptions\EmailerUnavailableException();
+            throw new Exceptions\MailerUnavailableException();
         
         return $mailers[array_rand($mailers)];
     }
@@ -179,7 +179,7 @@ class Emailer extends BaseObject
     }
     
     /** Initializes the PHPMailer instance */
-    protected function PostConstruct(bool $created) : void
+    private function Initialize() : void
     {        
         $mailer = new PHPMailer\PHPMailer(true);
         
@@ -254,16 +254,19 @@ class Emailer extends BaseObject
         if (count($recipients) === 0) 
             throw new Exceptions\EmptyRecipientsException();
         
+        if (!isset($this->mailer)) $this->Initialize();
         $mailer = $this->mailer;
         
-        if ($from === null && $this->GetUseReply())
+        if ($from !== null) 
+        {
+            $mailer->addReplyTo($from->GetAddress(), $from->TryGetName() ?? "");
+        }
+        else if ($this->GetUseReply())
         {
             $mailer->addReplyTo(
                 $this->from_address->GetValue(),
                 $this->from_name->TryGetValue() ?? self::DEFAULT_FROM); 
         }
-        else if ($from !== null) 
-            $mailer->addReplyTo($from->GetAddress(), $from->TryGetName() ?? "");
         
         foreach ($recipients as $recipient) 
         {

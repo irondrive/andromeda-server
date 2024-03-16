@@ -114,7 +114,7 @@ class SafeParam
     }
     
     /** 
-     * Returns the value as originally given (UNSAFE), no logging
+     * Returns the value as originally given (UNSAFE), NEVER logged
      * @return ScalarOrArray
      */
     public function GetNullRawValue()
@@ -128,7 +128,7 @@ class SafeParam
         return null;
     }
     
-    /** Returns the raw unchecked value string (or null), no logging */
+    /** Returns the raw unchecked value string (or null), NEVER logged */
     public function GetNullRawString() : ?string { return $this->tryGetStr(); }
     
     /** 
@@ -671,7 +671,7 @@ class SafeParam
     }
     
     /**
-     * Returns the raw unchecked value string (NOT null), no logging
+     * Returns the raw unchecked value string (NOT null), NEVER logged
      * @throws SafeParamNullValueException if null
      */
     public function GetRawString() : string

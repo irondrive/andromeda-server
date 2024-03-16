@@ -70,6 +70,13 @@ abstract class BaseApp
         return $this;
     }
 
+    /** Returns the current action log if set */
+    public function getActionLog() : ?ActionLog
+    {
+        $context = $this->API->GetAppRunner()->TryGetContext();
+        return ($context !== null) ? $context->TryGetActionLog() : null;
+    }
+
     /** Tells the app to commit any changes made outside the database */
     public function commit() : void { }
     

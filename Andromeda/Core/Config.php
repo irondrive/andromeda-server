@@ -103,6 +103,17 @@ class Config extends BaseConfig
      */
     public function SetConfig(SafeParams $params) : self
     {
+        if ($params->HasParam('read_only')) // do this first in case disabling
+        {
+            $ro = $params->GetParam('read_only')->GetBool();
+            
+            if (!$ro) $this->database->GetInternal()->SetReadOnly(false); // make DB writable
+            
+            $this->read_only->SetValue($ro);
+            
+            if ($ro) $this->read_only->SetValue(false,true); // not really RO yet 
+        }
+        
         if ($params->HasParam('datadir')) 
         {
             $datadir = $params->GetParam('datadir')->GetNullFSPath();
@@ -145,17 +156,6 @@ class Config extends BaseConfig
         
         if ($params->HasParam('metrics_dblog')) $this->metrics_dblog->SetValue($params->GetParam('metrics_dblog')->GetBool());
         if ($params->HasParam('metrics_filelog')) $this->metrics_filelog->SetValue($params->GetParam('metrics_filelog')->GetBool());
-        
-        if ($params->HasParam('read_only')) 
-        {
-            $ro = $params->GetParam('read_only')->GetBool();
-            
-            if (!$ro) $this->database->GetInternal()->SetReadOnly(false); // make DB writable
-            
-            $this->read_only->SetValue($ro);
-            
-            if ($ro) $this->read_only->SetValue(false,true); // not really RO yet 
-        }
         
         if ($params->HasParam('enabled')) $this->enabled->SetValue($params->GetParam('enabled')->GetBool());
         if ($params->HasParam('email')) $this->email->SetValue($params->GetParam('email')->GetBool());

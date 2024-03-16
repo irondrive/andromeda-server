@@ -24,13 +24,11 @@ class RunContext
     public function TryGetActionLog() : ?ActionLog { return $this->actionlog; }
 
     /** 
-     * @template T of ActionLog
-     * Sets the action log to the given object
-     * @param T $log the log object to set
-     * @return T
+     * Sets the action log to the given object or null
+     * @param ?ActionLog $log the log object to set
      */
-    public function SetActionLog(ActionLog $log) : ActionLog { 
-        return $this->actionlog = $log; }
+    public function SetActionLog(?ActionLog $log) : void { 
+        $this->actionlog = $log; }
     
     /** Sets the action metrics created for this context */
     public function SetActionMetrics(DBStats $metrics) : void { 

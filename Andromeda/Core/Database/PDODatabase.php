@@ -28,7 +28,7 @@ class PDODatabase
     
     /** 
      * $config associative array of config for connecting PDO 
-     * @var array{'DRIVER':string, 'CONNECT':string, 'PERSISTENT':bool, 'USERNAME'?:string, 'PASSWORD'?:string}
+     * @var array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:string}
      */
     private array $config;
     
@@ -43,7 +43,7 @@ class PDODatabase
     
     /** 
      * global history of SQL queries sent to the DB (not a stack), possibly with errors 
-     * @var array<string|array{'query':string,'error':string}>
+     * @var array<string|array{query:string,error:string}>
      */
     private array $queries = array();
     
@@ -639,7 +639,7 @@ class PDODatabase
     
     /** 
      * Returns the array of query history 
-     * @return array<string|array{'query':string,'error':string}> string array
+     * @return array<string|array{query:string,error:string}> string array
      */
     public function getAllQueries() : array
     {

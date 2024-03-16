@@ -38,10 +38,6 @@ class AppRunner extends BaseRunner
         $this->apipack = $apipack;
 
         $apps = $this->apipack->GetConfig()->GetApps();
-
-        if (!in_array('core',$apps,true) && // always enabled if present
-            is_file(ROOT."/Apps/Core/CoreApp.php")) $apps[] = 'core';
-
         foreach ($apps as $app) $this->TryLoadApp($app);
         
         $apipack->SetAppRunner($this);
@@ -116,6 +112,9 @@ class AppRunner extends BaseRunner
         }
         else $this->commit();
 
+        // the action log is saved, prevent further writes on 2nd commit/rollback
+        $context->SetActionLog(null);
+        
         $interface = $this->apipack->GetInterface();
         $output = Output::Success($retval);
         
@@ -125,7 +124,7 @@ class AppRunner extends BaseRunner
             else $this->timedCommit($commitStats);
         }
 
-        $this->apipack->GetMetricsHandler()
+        if ($doMetrics) $this->apipack->GetMetricsHandler()
             ->SaveMetrics($this->apipack, $context, $output);
 
         $interface->FinalOutput($output);

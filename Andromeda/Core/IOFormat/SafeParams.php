@@ -73,7 +73,7 @@ class SafeParams
     /** Log the parameter only if details is full */
     public const PARAMLOG_ONLYFULL = Config::ACTLOG_DETAILS_FULL;
     
-    /** Log the parameter if log details are enabled */
+    /** Log the parameter if log details are basic or full */
     public const PARAMLOG_ALWAYS = Config::ACTLOG_DETAILS_BASIC;
     
     /**

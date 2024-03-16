@@ -109,8 +109,9 @@ class ErrorManager
                 ($context = $this->runner->TryGetContext()) !== null)
             {
                 $apipack = $this->runner->GetApiPackage();
-                $apipack->GetMetricsHandler()->SaveMetrics(
-                    $apipack, $context, $output, true);
+                if ($apipack->GetMetricsLevel() > 0)
+                    $apipack->GetMetricsHandler()->SaveMetrics(
+                        $apipack, $context, $output, true);
             }
 
             return $output;
@@ -193,7 +194,7 @@ class ErrorManager
             {
                 if (($logdir = $this->config->GetDataDir()) !== null)
                 {
-                    file_put_contents("$logdir/error.log", 
+                    file_put_contents("$logdir/errors.log", 
                         Utilities::JSONEncode($debug).PHP_EOL, FILE_APPEND | LOCK_EX); 
                 }
             }

@@ -36,9 +36,6 @@ class MetricsHandler
     {
         try // request should still succeed if this fails
         {
-            $mlevel = $apipack->GetMetricsLevel();
-            if ($apipack->GetMetricsLevel() === 0) return; // disabled
-
             $database = $apipack->GetDatabase();
             // want to re-use DB, saving must be in its own transaction
             if ($database->GetInternal()->inTransaction())
@@ -52,8 +49,8 @@ class MetricsHandler
             if ($context->HasCommitMetrics())
                 $total_stats->Add($context->GetCommitMetrics(), false);
             
-            $metrics = MetricsLog::Create($mlevel, $database, 
-                $this->init_stats, $context, $total_stats);
+            $metrics = MetricsLog::Create($apipack->GetMetricsLevel(), 
+                $database, $this->init_stats, $context, $total_stats);
 
             if (!$apipack->isCommitRollback()){
                 $metrics->Save(); $database->commit(); }

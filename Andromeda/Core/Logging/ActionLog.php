@@ -111,11 +111,11 @@ class ActionLog extends BaseLog
     {
         $fields = array();
 
-        $this->time = $fields[] =    new FieldTypes\Timestamp('time');
-        $this->addr = $fields[] =    new FieldTypes\StringType('addr');
-        $this->agent = $fields[] =   new FieldTypes\StringType('agent');
-        $this->errcode = $fields[] = new FieldTypes\NullIntType('errcode');
-        $this->errtext = $fields[] = new FieldTypes\NullStringType('errtext');
+        $fields[] = $this->time =    new FieldTypes\Timestamp('time');
+        $fields[] = $this->addr =    new FieldTypes\StringType('addr');
+        $fields[] = $this->agent =   new FieldTypes\StringType('agent');
+        $fields[] = $this->errcode = new FieldTypes\NullIntType('errcode');
+        $fields[] = $this->errtext = new FieldTypes\NullStringType('errtext');
         $fields[] = $this->app =     new FieldTypes\StringType('app');
         $fields[] = $this->action =  new FieldTypes\StringType('action');
         $fields[] = $this->authuser = new FieldTypes\NullStringType('authuser');
@@ -142,7 +142,8 @@ class ActionLog extends BaseLog
         $obj->app->SetValue($input->GetApp());
         $obj->action->SetValue($input->GetAction());
         
-        $input->SetLogger($obj);
+        $details = $database->GetApiPackage()->GetConfig()->GetActionLogDetails();
+        if ($details !== 0) $input->SetLogger($obj);
         return $obj;
     }
 
@@ -152,12 +153,8 @@ class ActionLog extends BaseLog
     /** Sets the given exception as the request result */
     public function SetError(\Throwable $e) : self
     {
-        if ($this->writtenToFile) 
-            throw new Exceptions\LogAfterWriteException();
-        
         $this->errcode->SetValue((int)$e->getCode());
         $this->errtext->SetValue($e->getMessage());
-        
         return $this;
     }
     
@@ -165,30 +162,29 @@ class ActionLog extends BaseLog
      * Returns the configured details log detail level
      *
      * If 0, details logs will be discarded, else see Config enum
-     * @see \Andromeda\Core\Config::GetActionLogDetails()
+     * @see Config::GetActionLogDetails()
      */
     public function GetDetailsLevel() : int { return $this->GetApiPackage()->GetConfig()->GetActionLogDetails(); }
     
-    /**
-     * Returns true if the configured details log detail level is >= full
-     * @see \Andromeda\Core\Config::GetActionLogDetails()
-     */
-    public function isFullDetails() : bool { return $this->GetDetailsLevel() >= Config::ACTLOG_DETAILS_FULL; }
-    
     /** 
-     * Log to the app-specific "details" field
+     * Log to the app-specific "details" field if not NONE details
      * 
      * This should be used for data that doesn't make sense to have its own DB column.
      * As this field is stored as JSON, its subfields cannot be selected by in the DB.
      * 
      * @param string $key array key in log
      * @param ScalarOrArray $value the data value
+     * @param bool $onlyFull only log if details level is FULL
      * @return $this
      */
-    public function LogDetails(string $key, $value) : self
+    public function LogDetails(string $key, $value, bool $onlyFull = false) : self
     {
-        $this->details_tmp ??= array();
-        $this->details_tmp[$key] = $value;
+        $minlog = $onlyFull ? Config::ACTLOG_DETAILS_FULL : Config::ACTLOG_DETAILS_BASIC;
+        if ($this->GetDetailsLevel() >= $minlog)
+        {
+            $this->details_tmp ??= array();
+            $this->details_tmp[$key] = $value;
+        }
         return $this;
     }
 

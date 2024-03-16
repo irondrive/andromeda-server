@@ -45,7 +45,7 @@ class CoreApp extends BaseApp
             'getconfig',
             'getdbconfig',
             'setconfig '.Config::GetSetConfigUsage(),
-            'testmail [--mailid id] [--dest email]',
+            'testmail [--mailid id] [--dest email] [--testkey int]',
             'getmailers',
             'createmailer [--test email] '.Emailer::GetCreateUsage(),
             ...array_map(function($u){ return "(createmailer) $u"; },Emailer::GetCreateUsages()),
@@ -214,6 +214,9 @@ class CoreApp extends BaseApp
         
         $subject = "Andromeda Email Test";
         $body = "This is a test email from Andromeda";
+
+        if ($params->HasParam('testkey'))
+            $subject .= " ".$params->GetParam('testkey')->GetInt();
         
         if ($params->HasParam('mailid'))
         {
@@ -247,7 +250,8 @@ class CoreApp extends BaseApp
     /**
      * Registers (enables) an app
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return list<string> array of enabled apps (not core)
+     * @throws Exceptions\InvalidAppException if the app is not valid
+     * @return list<string> array of enabled apps
      */
     protected function EnableApp(SafeParams $params, bool $isAdmin) : array
     {
@@ -265,13 +269,17 @@ class CoreApp extends BaseApp
     /**
      * Unregisters (disables) an app
      * @throws Exceptions\AdminRequiredException if not an admin
-     * @return list<string> array of enabled apps (not core)
+     * @throws Exceptions\InvalidAppException if the app is not valid
+     * @return list<string> array of enabled apps
      */
     protected function DisableApp(SafeParams $params, bool $isAdmin) : array
     {
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
         $app = $params->GetParam('appname',SafeParams::PARAMLOG_ALWAYS)->GetAlphanum();
+
+        if ($app === static::getName()) // cannot disable core!
+            throw new Exceptions\InvalidAppException($app);
         
         $this->config->DisableApp($app);
         
@@ -367,14 +375,14 @@ class CoreApp extends BaseApp
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new Exceptions\UnknownMailerException();
         
-        if ($actionlog !== null && $actionlog->isFullDetails()) 
-            $actionlog->LogDetails('mailer', $mailer->GetClientObject()); // @phpstan-ignore-line no recursive ScalarArray
+        if ($actionlog !== null) 
+            $actionlog->LogDetails('mailer', $mailer->GetClientObject(), true); // @phpstan-ignore-line no recursive ScalarArray
         
         $mailer->Delete();
     }
     
     /**
-     * Returns the server error log, possibly filtered by input
+     * Returns all error logs matching the given input, default 100 max and sort by time DESC
      * @throws Exceptions\AdminRequiredException if not an admin 
      * @return array<string, ErrorLogJ> indexed by ID
      * @see ErrorLog::GetClientObject()
@@ -388,7 +396,7 @@ class CoreApp extends BaseApp
     }
     
     /**
-     * Counts server error log entries, possibly filtered
+     * Counts all error logs matching the given input
      * @throws Exceptions\AdminRequiredException if not an admin
      * @return int error log entry count
      */
@@ -400,7 +408,7 @@ class CoreApp extends BaseApp
     }
     
     /**
-     * Returns all action logs matching the given input
+     * Returns all action logs matching the given input, default 100 max and sort by time DESC
      * @throws Exceptions\AdminRequiredException if not admin
      * @return array<string, ActionLogJ> indexed by ID
      * @see BaseActionLog::GetClientObject()
