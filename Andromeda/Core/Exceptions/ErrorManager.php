@@ -76,8 +76,6 @@ class ErrorManager extends Singleton
             
             $this->interface->WriteOutput($output); die();  
         });
-        
-        assert_options(ASSERT_ACTIVE, 1);
     }
     
     public function __destruct() { set_error_handler(null, E_ALL); }
