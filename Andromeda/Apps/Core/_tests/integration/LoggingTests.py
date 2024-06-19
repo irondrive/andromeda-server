@@ -134,7 +134,7 @@ def testErrorLogging(self):
     def getLastError():
         return list(self.util.assertOk(self.interface.run(app='core',action='geterrors',params=self.asAdmin())).values())[0]
 
-    # TODO TESTS implement error log tests like above with action log + check debug_http!
+    # TODO TESTS !! implement error log tests like above with action log + check debug_http!
 
     # TODO TESTS test various get/count filter options
     #core geterrors [--mintime float] [--maxtime float] [--code int32] [--addr utf8] [--agent utf8] [--app alphanum] [--action alphanum] [--message utf8] [--asc bool] [--logic and|or] [--limit uint] [--offset uint]
