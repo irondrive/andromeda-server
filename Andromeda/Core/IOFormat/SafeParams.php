@@ -91,7 +91,7 @@ class SafeParams
         
         if ($this->logref !== null && $minlog > 0 && $this->loglevel >= $minlog)
         {
-            $param->SetLogRef($this->logref, $this->loglevel);
+            $param->SetLogRef($this->logref, $this->loglevel); // @phpstan-ignore-line pass by reference converts to mixed?
         }
         
         return $param;
@@ -117,7 +117,7 @@ class SafeParams
         
         if ($this->logref !== null && $minlog > 0 && $this->loglevel >= $minlog)
         {
-            $param->SetLogRef($this->logref, $this->loglevel);
+            $param->SetLogRef($this->logref, $this->loglevel); // @phpstan-ignore-line pass by reference converts to mixed?
         }
 
         return $param;

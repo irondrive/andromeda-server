@@ -565,7 +565,7 @@ class SafeParam
         if ($this->logref !== null)
         {
             $this->logref[$this->key] = array();
-            $obj->SetLogRef($this->logref[$this->key], $this->loglevel);
+            $obj->SetLogRef($this->logref[$this->key], $this->loglevel); // @phpstan-ignore-line pass by reference converts to mixed?
         }
             
         return $obj;

@@ -178,7 +178,7 @@ class Config extends BaseConfig
     {
         $valid = function(string $app)
         {
-            if ($app === "Accounts" || $app === "Files") return false; // TODO allow files/accounts when they work!
+            if ($app === "Accounts" || $app === "Files") return false; // TODO TEMP allow files/accounts when they work!
             if (in_array($app,array('.','..'),true)) return false;
             return is_file(ROOT."/Apps/$app/$app"."App.php");
         };

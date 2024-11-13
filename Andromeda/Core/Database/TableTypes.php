@@ -125,19 +125,19 @@ trait TableIntTypedChildren
 }
 
 /** TableTypedChildren with an string typefield */
-// trait TableStringTypedChildren // TODO phpstan complains this is unused
-// {
-//     use TableTypedChildren;
+trait TableStringTypedChildren
+{
+    use TableTypedChildren;
 
-//     private FieldTypes\StringType $typefield;
+    private FieldTypes\StringType $typefield;
     
-//     /**
-//      * @return array<FieldTypes\BaseField> an array with the internal type field
-//      * ... to be merged into the field array by users of this trait
-//      */
-//     private function GetTypeFields() : array
-//     {
-//         // only the most derived class will have 'type' accessible
-//         return array($this->typefield = new FieldTypes\StringType('type'));
-//     }
-// }
+    /**
+     * @return array<FieldTypes\BaseField> an array with the internal type field
+     * ... to be merged into the field array by users of this trait
+     */
+    private function GetTypeFields() : array
+    {
+        // only the most derived class will have 'type' accessible
+        return array($this->typefield = new FieldTypes\StringType('type'));
+    }
+}
