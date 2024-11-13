@@ -275,7 +275,7 @@ class QueryBuilder
     {
         $jointable = $database->GetClassTableName($joinclass); 
         
-        $this->fromalias = ", $jointable _tmptable"; // TODO not likely to work correctly now - at least make this (fromalias) more general
+        $this->fromalias = ", $jointable _tmptable"; // TODO FUTURE not likely to work correctly now - at least make this (fromalias) more general
         
         return $this->Where("$jointable.$prop1 = _tmptable.$prop2");
     }

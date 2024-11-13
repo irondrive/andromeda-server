@@ -107,7 +107,7 @@ class Main():
 
         # build the app list by scanning
         for appname in os.listdir(self.phproot+'/Apps'): 
-            if appname == "Accounts" or appname == "Files": continue # TODO accounts enable files/accounts when they work!
+            if appname == "Accounts" or appname == "Files": continue # TODO TEMP accounts enable files/accounts when they work!
             path = self.phproot+'/Apps/'+appname+'/'+appname+'App.php'
             if not os.path.exists(path): continue 
             else: self.appList.append(appname.lower())
