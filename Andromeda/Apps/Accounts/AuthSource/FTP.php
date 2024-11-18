@@ -78,7 +78,7 @@ class FTP extends External
     private $ftpConn;
     
     /** Asserts that the FTP extension exists */
-    public function PostConstruct() : void
+    public function PostConstruct(bool $created) : void
     {
         if (!function_exists('ftp_connect')) 
             throw new FTPExtensionException();

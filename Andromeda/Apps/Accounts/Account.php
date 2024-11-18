@@ -6,8 +6,8 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 
 use Andromeda\Apps\Accounts\Resource\{Contact, Client, RecoveryKey, Session, TwoFactor};
 
-require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
-require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\AuthEntity;
+require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\AuthEntity;
 
 require_once(ROOT."/Apps/Accounts/Crypto/KeySource.php"); use Andromeda\Apps\Accounts\Crypto\KeySource;
 require_once(ROOT."/Apps/Accounts/AuthSource/Local.php");

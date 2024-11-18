@@ -103,7 +103,7 @@ class IMAP extends External
     }
     
     /** Checks for the existence of the IMAP extension */
-    public function PostConstruct() : void
+    public function PostConstruct(bool $created) : void
     {
         if (!function_exists('imap_open')) 
             throw new IMAPExtensionException();

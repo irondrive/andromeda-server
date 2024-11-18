@@ -6,7 +6,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 use Andromeda\Apps\Accounts\{Config, Account};
 use Andromeda\Apps\Accounts\Resource\Contact;
 
-require_once(ROOT."/Apps/Accounts/Groups/GroupStuff.php");
+require_once(ROOT."/Apps/Accounts/GroupStuff.php");
 
 /**
  * A group of user accounts
