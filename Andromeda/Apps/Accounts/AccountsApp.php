@@ -7,7 +7,7 @@ require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{UnknownActionExce
 use Andromeda\Core\IOFormat\{Input, SafeParam, SafeParams};
 require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
-require_once(ROOT."/Apps/Accounts/Groups/Group.php");
+require_once(ROOT."/Apps/Accounts/Group.php");
 use Andromeda\Apps\Accounts\Groups\Group;
 
 use Andromeda\Apps\Accounts\Resource\{Client, Contact, RecoveryKey, Session, TwoFactor};

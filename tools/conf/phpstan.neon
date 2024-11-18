@@ -12,7 +12,10 @@ parameters:
     excludePaths:
         analyse:
             - ../../Andromeda/Apps/Files
-            - ../../Andromeda/Apps/Accounts
+            - ../../Andromeda/Apps/Accounts/AccountsApp.php
+            - ../../Andromeda/Apps/Accounts/AccountsInstallApp.php
+            - ../../Andromeda/Apps/Accounts/Group*.php
+            - ../../Andromeda/Apps/Accounts/Account.php
     checkBenevolentUnionTypes: true
     checkImplicitMixed: true
 ### checkUninitializedProperties: true                 # default is false, does't work with how we do objects

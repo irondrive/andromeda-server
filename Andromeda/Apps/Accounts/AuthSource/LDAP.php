@@ -78,7 +78,7 @@ class LDAP extends External
     private $ldapConn;
 
     /** Checks for the existence of the LDAP extension */
-    public function PostConstruct() : void
+    public function PostConstruct(bool $created) : void
     {        
         if (!function_exists('ldap_bind')) 
             throw new LDAPExtensionException();

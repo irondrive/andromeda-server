@@ -4,7 +4,7 @@ use Andromeda\Core\{BaseConfig, VersionInfo};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
  
-require_once(ROOT."/Apps/Accounts/Groups/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
   
 /** App config stored in the database */
 class Config extends BaseConfig
