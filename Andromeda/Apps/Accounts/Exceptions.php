@@ -282,22 +282,6 @@ class CryptoUnlockRequiredException extends BaseExceptions\ServerException
     }
 }
 
-/** Exception indicating that crypto cannot be unlocked because it does not exist */
-class CryptoNotInitializedException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_NOT_INITIALIZED", $details);
-    }
-}
-
-/** Exception indicating that crypto cannot be initialized because it already exists */
-class CryptoAlreadyInitializedException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_ALREADY_INITIALIZED", $details);
-    }
-}
-
 /** Exception indicating that the given recovery key is not valid */
 class RecoveryKeyFailedException extends BaseExceptions\ServerException
 {

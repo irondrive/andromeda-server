@@ -1,8 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; require_once("init.php");
 
-use Andromeda\Core\Database\{BaseObject, ObjectDatabase, TableTypes};
-
-require_once(ROOT."/Apps/Accounts/Crypto/AuthObjectFull.php");
+use Andromeda\Core\Database\{BaseObject, ObjectDatabase, PDODatabase, TableTypes};
 
 class MyAuthObjectFull extends BaseObject
 { 
@@ -24,7 +22,7 @@ class MyAuthObjectFull extends BaseObject
     /** @return static */
     public static function Create(ObjectDatabase $database, bool $init) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         
         if ($init) $obj->InitAuthKey();
         
@@ -52,7 +50,8 @@ class AuthObjectFullTest extends \PHPUnit\Framework\TestCase
 {
     public function testTryGetFullKey() : void
     {
-        $objdb = $this->createMock(ObjectDatabase::class);
+        $db = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($db);
         $obj = MyAuthObjectFull::Create($objdb, true);
         
         $id = $obj->ID(); $key = $obj->pubTryGetAuthKey();
@@ -64,7 +63,8 @@ class AuthObjectFullTest extends \PHPUnit\Framework\TestCase
     
     public function testCheckFullKey() : void
     {
-        $objdb = $this->createMock(ObjectDatabase::class);
+        $db = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($db);
         $obj = MyAuthObjectFull::Create($objdb, true);
         
         $id = $obj->ID();

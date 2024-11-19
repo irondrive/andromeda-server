@@ -2,8 +2,6 @@
 
 use Andromeda\Core\Database\{BaseObject, TableTypes};
 
-require_once(ROOT."/Apps/Accounts/Crypto/KeySource.php");
-
 class MyKeySource extends BaseObject
 {
     use KeySource, TableTypes\TableNoChildren;

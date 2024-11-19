@@ -2,9 +2,7 @@
 
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\FieldTypes;
-
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Crypto/KeySource.php");
+use Andromeda\Apps\Accounts\Account;
 
 /** 
  * A key source that stores an account master key copy 

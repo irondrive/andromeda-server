@@ -4,8 +4,7 @@ use Andromeda\Core\Crypto;
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Database\ObjectDatabase;
 
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Authenticator.php");
+use Andromeda\Apps\Accounts\Account;
 
 /**
  * Trait allowing objects to store fields encrypted with an account's crypto
