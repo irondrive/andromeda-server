@@ -1,7 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Crypto/AuthObject.php");
-
 /** A trait for getting a serialized user key with both the ID and auth key */
 trait AuthObjectFull
 {

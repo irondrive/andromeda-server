@@ -3,7 +3,7 @@
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\FieldTypes;
 
-require_once(ROOT."/Apps/Accounts/Crypto/Exceptions.php");
+use Andromeda\Apps\Accounts\Crypto\Exceptions\PasswordHashFailedException;
 
 /** 
  * Represents an object that holds an authentication code that can be checked 
@@ -12,13 +12,22 @@ require_once(ROOT."/Apps/Accounts/Crypto/Exceptions.php");
  */
 trait AuthObject
 {
-    /** Return the string length of the auth key */
+    /** 
+     * Return the string length of the auth key
+     * @return positive-int
+     */
     protected function GetKeyLength() : int { return 32; }
     
-    /** Return the time cost for the hashing algorithm */
+    /** 
+     * Return the time cost for the hashing algorithm
+     * @return positive-int
+     */
     protected function GetTimeCost() : int { return 1; }
     
-    /** Return the memory cost in KiB for the hashing algorithm */
+    /** 
+     * Return the memory cost in KiB for the hashing algorithm
+     * @return positive-int
+     */
     protected function GetMemoryCost() : int { return 1024; }
     
     /** The hashed auth key stored in DB */
@@ -50,7 +59,12 @@ trait AuthObject
             'memory_cost'=>static::GetMemoryCost());
         
         if (password_needs_rehash($hash, $algo = PASSWORD_ARGON2ID, $settings))
-            $this->authkey->SetValue(password_hash($key, $algo, $settings));
+        {
+            $hash = password_hash($key, $algo, $settings);
+            if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
+                throw new PasswordHashFailedException();
+            $this->authkey->SetValue($hash);
+        }
         
         return true;
     }
@@ -100,8 +114,9 @@ trait AuthObject
                 'memory_cost'=>static::GetMemoryCost());
             
             $this->authkey_raw = $key;
-            $algo = PASSWORD_ARGON2ID;
-            $hash = password_hash($key, $algo, $settings);
+            $hash = password_hash($key, PASSWORD_ARGON2ID, $settings);
+            if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
+                throw new PasswordHashFailedException();
         }
         
         $this->authkey->SetValue($hash);

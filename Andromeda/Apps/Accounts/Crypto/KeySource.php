@@ -2,7 +2,9 @@
 
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\FieldTypes;
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
+
+use Andromeda\Core\Exceptions\DecryptionFailedException;
+use Andromeda\Apps\Accounts\Crypto\Exceptions\{CryptoAlreadyInitializedException, CryptoNotInitializedException};
 
 /** An object that holds an encrypted copy of a crypto key */
 trait KeySource
@@ -67,10 +69,10 @@ trait KeySource
         if (!$this->hasCrypto()) throw new CryptoNotInitializedException();
         
         $key = $this->master_key->TryGetValue();
-        if ($key === null) return null;
-        
         $master_salt = $this->master_salt->TryGetValue();
         $master_nonce = $this->master_nonce->TryGetValue();
+
+        if ($key === null || $master_salt === null || $master_nonce === null) return null;
         
         $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
         return $this->unlocked_key = Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
