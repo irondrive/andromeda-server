@@ -3,8 +3,6 @@
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\FieldTypes;
 
-use Andromeda\Apps\Accounts\Crypto\Exceptions\PasswordHashFailedException;
-
 /** 
  * Represents an object that holds an authentication code that can be checked 
  * 
@@ -16,19 +14,19 @@ trait AuthObject
      * Return the string length of the auth key
      * @return positive-int
      */
-    protected function GetKeyLength() : int { return 32; }
+    protected static function GetKeyLength() : int { return 32; }
     
     /** 
      * Return the time cost for the hashing algorithm
      * @return positive-int
      */
-    protected function GetTimeCost() : int { return 1; }
+    protected static function GetTimeCost() : int { return 1; }
     
     /** 
      * Return the memory cost in KiB for the hashing algorithm
      * @return positive-int
      */
-    protected function GetMemoryCost() : int { return 1024; }
+    protected static function GetMemoryCost() : int { return 1024; }
     
     /** The hashed auth key stored in DB */
     private FieldTypes\NullStringType $authkey;
@@ -62,7 +60,7 @@ trait AuthObject
         {
             $hash = password_hash($key, $algo, $settings);
             if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
-                throw new PasswordHashFailedException();
+                throw new Exceptions\PasswordHashFailedException();
             $this->authkey->SetValue($hash);
         }
         
@@ -90,7 +88,8 @@ trait AuthObject
     protected function InitAuthKey() : string
     {
         $key = Utilities::Random(static::GetKeyLength());
-        $this->SetAuthKey($key); return $key;
+        $this->SetAuthKey($key);
+        return $key;
     }
     
     // TODO took away BaseCreate here... was InitAuthkey() if second param true (default)
@@ -116,7 +115,7 @@ trait AuthObject
             $this->authkey_raw = $key;
             $hash = password_hash($key, PASSWORD_ARGON2ID, $settings);
             if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
-                throw new PasswordHashFailedException();
+                throw new Exceptions\PasswordHashFailedException();
         }
         
         $this->authkey->SetValue($hash);

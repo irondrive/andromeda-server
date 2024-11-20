@@ -10,7 +10,7 @@ trait AuthObjectFull
     /**
      * Returns the object ID from a full serialized ID+key
      * @param string $code the full user serialized code
-     * @return string the object ID the code is for or null if invalid
+     * @return ?string the object ID the code is for or null if invalid
      */
     public static function TryGetIDFromFullKey(string $code) : ?string
     {
@@ -35,6 +35,7 @@ trait AuthObjectFull
      * Gets the full serialized key value for the user
      *
      * The serialized string contains both the key ID and key value
+     * @return ?string full key or null if the auth key is not in memory
      */
     protected function TryGetFullKey() : ?string
     {

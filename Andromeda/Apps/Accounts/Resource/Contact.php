@@ -57,7 +57,7 @@ abstract class Contact extends BaseObject
         parent::CreateFields();
     }
 
-    protected function GetKeyLength() : int { return 8; }
+    protected static function GetKeyLength() : int { return 8; }
     
     public function CheckFullKey(string $code) : bool
     {

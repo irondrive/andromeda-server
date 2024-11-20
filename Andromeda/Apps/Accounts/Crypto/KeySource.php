@@ -4,7 +4,6 @@ use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\FieldTypes;
 
 use Andromeda\Core\Exceptions\DecryptionFailedException;
-use Andromeda\Apps\Accounts\Crypto\Exceptions\{CryptoAlreadyInitializedException, CryptoNotInitializedException};
 
 /** An object that holds an encrypted copy of a crypto key */
 trait KeySource
@@ -15,9 +14,6 @@ trait KeySource
     private FieldTypes\NullStringType $master_nonce;
     /** The salt used to encrypt the master key */
     private FieldTypes\NullStringType $master_salt;
-    
-    /** The decrypted master key, if in memory */
-    private string $unlocked_key;
     
     protected function KeySourceCreateFields() : void
     {
@@ -37,14 +33,12 @@ trait KeySource
      * Initializes crypto, storing an encrypted copy of the given key
      * @param string $key the key to be encrypted
      * @param string $wrapkey the key to use to encrypt
-     * @throws CryptoAlreadyInitializedException if already initialized
+     * @throws Exceptions\CryptoAlreadyInitializedException if already initialized
      * @return $this
      */
     protected function InitializeCrypto(string $key, string $wrapkey) : self
     {
-        if ($this->hasCrypto()) throw new CryptoAlreadyInitializedException();
-        
-        $this->unlocked_key = $key;
+        if ($this->hasCrypto()) throw new Exceptions\CryptoAlreadyInitializedException();
         
         $master_salt = Crypto::GenerateSalt();
         $master_nonce = Crypto::GenerateSecretNonce();
@@ -60,33 +54,32 @@ trait KeySource
 
     /**
      * Returns the decrypted key using the given key
-     * @param string $wrapkey the key to use to decrypt
-     * @throws CryptoNotInitializedException if no key material exists
+     * @param string $wrapkey the key to use to decrypt if not already decrypted
+     * @throws Exceptions\CryptoNotInitializedException if no key material exists
      * @throws DecryptionFailedException if decryption fails
      */
-    protected function TryGetUnlockedKey(string $wrapkey) : ?string
+    protected function GetUnlockedKey(string $wrapkey) : string
     {
-        if (!$this->hasCrypto()) throw new CryptoNotInitializedException();
-        
         $key = $this->master_key->TryGetValue();
         $master_salt = $this->master_salt->TryGetValue();
         $master_nonce = $this->master_nonce->TryGetValue();
 
-        if ($key === null || $master_salt === null || $master_nonce === null) return null;
+        if ($key === null || $master_salt === null || $master_nonce === null)
+            throw new Exceptions\CryptoNotInitializedException();
         
         $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
-        return $this->unlocked_key = Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
+        return Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
     }
 
-    /** Erases all key material from the object */
+    /** 
+     * Erases all key material from the object
+     * @return $this
+     */
     protected function DestroyCrypto() : self
     {
-        unset($this->unlocked_key);
-        
         $this->master_key->SetValue(null);
         $this->master_salt->SetValue(null);
-        $this->master_nonce->SetValue(null);
-        
+        $this->master_nonce->SetValue(null);   
         return $this;
     }
 }
