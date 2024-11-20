@@ -27,29 +27,22 @@ class MyAuthObject extends BaseObject
         return $obj;
     }
     
-    public function pubTryGetAuthKey() : ?string
-    {
-        return $this->TryGetAuthKey();
-    }
+    public function pubTryGetAuthKey() : ?string {
+        return $this->TryGetAuthKey(); }
     
-    public function pubGetAuthHash() : ?string
-    {
-        return $this->authkey->TryGetValue();
-    }
+    public function pubGetAuthHash() : ?string {
+        return $this->authkey->TryGetValue(); }
     
     /** @return $this */
-    public function pubSetAuthKey(?string $key) : self
-    {
-        return $this->SetAuthKey($key);
-    }
+    public function pubSetAuthKey(?string $key) : self {
+        return $this->SetAuthKey($key); }
 }
 
 class AuthObjectTest extends \PHPUnit\Framework\TestCase
 {
     public function testEmpty() : void
     {
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = MyAuthObject::Create($objdb, false);
 
         $this->assertNull($obj->pubTryGetAuthKey());
@@ -61,8 +54,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testBasic() : void
     {
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = MyAuthObject::Create($objdb, true);
 
         $key = $obj->pubTryGetAuthKey();
@@ -82,8 +74,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testSetKey() : void
     {
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = MyAuthObject::Create($objdb, false);
         
         $key = "mytest123"; $obj->pubSetAuthKey($key);
@@ -99,8 +90,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $key = "1qo95feuuz5ixu9d4o530sxvbto8b99j";
         $hash = '$argon2id$v=19$m=1024,t=1,p=1$SEREcGtDQ2hQaHRDcmZYcQ$rbYiVNjqfVeKKTrseQ0z+eiYGIGhHCzPCoe+5bfOknc';
         
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = new MyAuthObject($objdb, array('id'=>'test123','authkey'=>$hash), false);
         
         $exc = false; try { $obj->pubTryGetAuthKey(); } // key not available yet
@@ -117,8 +107,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $key = "testKey123456789";
         $hash = '$2y$10$JvPO9nS5Papx9Z4KrwLhAOc2DIkJm5kRm1hv8z/dGcMqH23MHEaFi';
         
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = new MyAuthObject($objdb, array('id'=>'test123','authkey'=>$hash), false);
         
         $this->assertSame($hash, $obj->pubGetAuthHash());

@@ -29,29 +29,22 @@ class MyAuthObjectFull extends BaseObject
         return $obj;
     }
     
-    public function pubTryGetAuthKey() : ?string
-    {
-        return $this->TryGetAuthKey();
-    }
+    public function pubTryGetAuthKey() : ?string {
+        return $this->TryGetAuthKey(); }
 
     /** @return $this */
-    public function pubSetAuthKey(?string $key) : self
-    {
-        return $this->SetAuthKey($key);
-    }
+    public function pubSetAuthKey(?string $key) : self {
+        return $this->SetAuthKey($key); }
     
-    public function pubTryGetFullKey() : ?string
-    {
-        return $this->TryGetFullKey();
-    }
+    public function pubTryGetFullKey() : ?string {
+        return $this->TryGetFullKey(); }
 }
 
 class AuthObjectFullTest extends \PHPUnit\Framework\TestCase
 {
     public function testTryGetFullKey() : void
     {
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = MyAuthObjectFull::Create($objdb, true);
         
         $id = $obj->ID(); $key = $obj->pubTryGetAuthKey();
@@ -63,8 +56,7 @@ class AuthObjectFullTest extends \PHPUnit\Framework\TestCase
     
     public function testCheckFullKey() : void
     {
-        $db = $this->createMock(PDODatabase::class);
-        $objdb = new ObjectDatabase($db);
+        $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $obj = MyAuthObjectFull::Create($objdb, true);
         
         $id = $obj->ID();
