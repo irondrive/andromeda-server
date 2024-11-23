@@ -51,7 +51,7 @@ class Config extends BaseConfig
     /** Creates a new Config singleton */
     public static function Create(ObjectDatabase $database) : self 
     {
-        return static::BaseCreate($database);
+        return $database->CreateObject(static::class);
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
@@ -89,7 +89,7 @@ class Config extends BaseConfig
             if (($id = $params->GetParam('default_auth')->GetNullRandstr()) !== null)
             {
                 $manager = AuthSource\External::TryLoadByID($this->database, $id);
-                if ($manager === null) throw new UnknownAuthSourceException();
+                if ($manager === null) throw new Exceptions\UnknownAuthSourceException();
             }
             else $manager = null;
             
