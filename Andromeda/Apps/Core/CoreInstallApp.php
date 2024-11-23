@@ -32,7 +32,7 @@ class CoreInstallApp extends InstallerApp
         $upgr_flags = implode(" ",array_map(function(InstallerApp $installer){
             return $installer->getUpgradeFlags(); }, $this->runner->GetInstallers()));
         
-        $retval[] = 'setupall [--noenable]'.$inst_flags;
+        $retval[] = 'setupall [--noenable] '.$inst_flags;
         $retval[] = 'upgradeall '.$upgr_flags;
         
         return $retval;

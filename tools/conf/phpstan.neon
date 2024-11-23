@@ -13,14 +13,12 @@ parameters:
         analyse:
             - ../../Andromeda/Apps/Files
             - ../../Andromeda/Apps/Accounts/AccountsApp.php
-            - ../../Andromeda/Apps/Accounts/AccountsInstallApp.php
             - ../../Andromeda/Apps/Accounts/Group*.php
             - ../../Andromeda/Apps/Accounts/Account.php
             - ../../Andromeda/Apps/Accounts/Resource
             - ../../Andromeda/Apps/Accounts/Whitelist.php
             - ../../Andromeda/Apps/Accounts/Authenticator.php
             - ../../Andromeda/Apps/Accounts/AuthActionLog.php
-            - ../../Andromeda/Apps/Accounts/Config.php
     checkBenevolentUnionTypes: true
     checkImplicitMixed: true
 ### checkUninitializedProperties: true                 # default is false, does't work with how we do objects

@@ -1,11 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\InstallerApp;
+use Andromeda\Core\Utilities;
 use Andromeda\Core\IOFormat\SafeParams;
 
 /**
  * The accounts app installer
- * @extends InstallerApp<Config>
+ * @phpstan-import-type ScalarOrArray from Utilities
  */
 class AccountsInstallApp extends InstallerApp
 {
@@ -20,9 +21,9 @@ class AccountsInstallApp extends InstallerApp
      * Also optionally creates an admin account
      * @see InstallerApp::Install()
      * @see Account::GetClientObject()
-     * @return ?array Account if admin was created
+     * @return ScalarOrArray
      */
-    protected function Install(SafeParams $params) : ?array
+    protected function Install(SafeParams $params)
     {
         parent::Install($params);
         
@@ -33,8 +34,7 @@ class AccountsInstallApp extends InstallerApp
             $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->CheckLength(127)->GetAlphanum();
             $password = $params->GetParam("password", SafeParams::PARAMLOG_NEVER)->GetRawString();
             
-            return Account::Create($db, AuthSource\Local::GetInstance(), // TODO Auth\local won't have been init'd yet, do in constructor here also? issue though, which if constructed > 1?
-                $username, $password)->SetAdmin(true)->GetClientObject();
+            return Account::Create($db, $username, null, $password)->SetAdmin(true)->GetClientObject(); // @phpstan-ignore-line TODO FIX ME
         }
         else return null;
     }

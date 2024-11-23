@@ -380,12 +380,12 @@ class Account extends AuthEntity
     /**
      * Creates a new user account
      * @param ObjectDatabase $database database reference
-     * @param AuthSource\ISource $source the auth source for the account
      * @param string $username the account's username
-     * @param string $password the account's password, if not external auth
+     * @param ?AuthSource\IAuthSource $source the auth source for the account if external
+     * @param ?string $password the account's password, if not external auth
      * @return static created account
      */
-    public static function Create(ObjectDatabase $database, AuthSource\ISource $source, string $username, string $password = null) : self
+    public static function Create(ObjectDatabase $database, string $username, ?AuthSource\IAuthSource $source = null, ?string $password = null) : self
     {
         $account = static::BaseCreate($database)->SetScalar('username',$username);
         
