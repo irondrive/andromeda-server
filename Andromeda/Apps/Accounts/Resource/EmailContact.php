@@ -2,9 +2,7 @@
 
 use Andromeda\Core\{Emailer, EmailRecipient};
 
-require_once(ROOT."/Apps/Accounts/Resource/Exceptions.php");
-
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Account;
 
 class EmailContact extends Contact
 {

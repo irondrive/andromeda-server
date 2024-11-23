@@ -16,7 +16,6 @@ parameters:
             - ../../Andromeda/Apps/Accounts/AccountsInstallApp.php
             - ../../Andromeda/Apps/Accounts/Group*.php
             - ../../Andromeda/Apps/Accounts/Account.php
-            - ../../Andromeda/Apps/Accounts/AuthSource
             - ../../Andromeda/Apps/Accounts/Resource
             - ../../Andromeda/Apps/Accounts/Whitelist.php
             - ../../Andromeda/Apps/Accounts/Authenticator.php

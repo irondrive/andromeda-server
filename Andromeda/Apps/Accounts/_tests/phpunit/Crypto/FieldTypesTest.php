@@ -18,7 +18,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $noncef->SetParent($parent);
 
         $account = $this->createMock(Account::class);
-        $database->method('TryLoadUniqueByKey')->willReturn($account); // GetObject
+        $database->method('TryLoadUniqueByKey')->willReturn($account); // accountf GetObject
         $accountf->SetObject($account);
         $account->method('isCryptoAvailable')->willReturn(false);
 
@@ -53,7 +53,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $noncef->SetParent($parent);
 
         $account = $this->createMock(Account::class);
-        $database->method('TryLoadUniqueByKey')->willReturn($account); // GetObject
+        $database->method('TryLoadUniqueByKey')->willReturn($account); // accountf GetObject
         $accountf->SetObject($account);
         $account->method('isCryptoAvailable')->willReturn(true);
 

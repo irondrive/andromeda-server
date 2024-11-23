@@ -289,3 +289,11 @@ class RecoveryKeyFailedException extends BaseExceptions\ServerException
         parent::__construct("RECOVERY_KEY_UNLOCK_FAILED", $details);
     }
 }
+
+/** Exception indicating that generating the password hash failed */
+class PasswordHashFailedException extends BaseExceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("PASSWORD_HASH_FAILED", $details);
+    }
+}

@@ -4,10 +4,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\Errors\{BaseExceptions, ErrorManager};
 use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/External.php");
-
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Account;
 
 /** Uses an LDAP server for authentication */
 class LDAP extends External
@@ -75,24 +72,26 @@ class LDAP extends External
         );
     }
     
-    private $ldapConn;
+    /** @var ?resource */
+    private $ldapConn = null;
 
     /** Checks for the existence of the LDAP extension */
     public function PostConstruct(bool $created) : void
     {        
         if (!function_exists('ldap_bind')) 
-            throw new LDAPExtensionException();
+            throw new Exceptions\LDAPExtensionException();
     }
     
     /** Initiates a connection to the LDAP server */
     public function Activate() : self
     {
-        if (isset($this->ldapConn)) return $this;
+        if ($this->ldapConn !== null) return $this;
         
         $protocol = $this->secure->GetValue() ? "ldaps" : "ldap";
         
-        $this->ldapConn = ldap_connect("$protocol://".$this->hostname->GetValue());
-        if (!$this->ldapConn) throw new LDAPConnectionFailure();
+        $ldapConn = ldap_connect("$protocol://".$this->hostname->GetValue());
+        if ($ldapConn === false) throw new Exceptions\LDAPConnectionFailure();
+        $this->ldapConn = $ldapConn; // @phpstan-ignore-line PHP 7/8 ldapConn types differ
         
         ldap_set_option($this->ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
         ldap_set_option($this->ldapConn, LDAP_OPT_REFERRALS, 0);
@@ -103,6 +102,7 @@ class LDAP extends External
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {
         $this->Activate();
+        assert($this->ldapConn !== null); // from Activate
         
         $username = $account->GetUsername();
         
@@ -111,17 +111,24 @@ class LDAP extends External
         
         try 
         {
-            $success = ldap_bind($this->ldapConn, $username, $password); 
+            $success = ldap_bind($this->ldapConn, $username, $password);  // @phpstan-ignore-line PHP 7/8 ldapConn types differ
             
-            ldap_close($this->ldapConn); unset($this->ldapConn); return $success;
+            ldap_close($this->ldapConn); // @phpstan-ignore-line PHP 7/8 ldapConn types differ
+            unset($this->ldapConn);
+            return $success;
         }
         catch (BaseExceptions\PHPError $e) 
         {
-            $errman = ErrorManager::GetInstance(); 
+            $errman = $this->database->GetApiPackage()->GetErrorManager();
             $errman->LogException($e);
             
-            if ($lerr = ldap_error($this->ldapConn)) 
-                $errman->LogException(new LDAPErrorException($lerr));
+            if (($lerr = ldap_error($this->ldapConn)) !== "") // @phpstan-ignore-line PHP 7/8 ldapConn types differ
+            {
+                ldap_get_option($this->ldapConn, LDAP_OPT_DIAGNOSTIC_MESSAGE, $lerr2); // @phpstan-ignore-line PHP 7/8 ldapConn types differ
+                assert(is_string($lerr2)); // this ldap option returns a string
+
+                $errman->LogException(new Exceptions\LDAPErrorException("$lerr: $lerr2"));
+            }
             
             return false; 
         } 

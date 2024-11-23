@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Groups; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\GroupUtil; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes};
 use Andromeda\Core\IOFormat\SafeParams;

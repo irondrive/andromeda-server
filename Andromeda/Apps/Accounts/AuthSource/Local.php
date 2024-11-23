@@ -1,14 +1,14 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/AuthSource/IAuthSource.php");
+use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Exceptions;
 
 /** 
  * The regular internal authentication source
  * 
  * Does not exist in the database. Stores passwords as hashes in the Account object.
  */
-class Local implements IAuthSource // TODO make this not a singleton, get rid of Singleton entirely...
+class Local implements IAuthSource
 {
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {
@@ -26,9 +26,13 @@ class Local implements IAuthSource // TODO make this not a singleton, get rid of
      * Hashes and sets the given password on a given account
      * @param Account $account the account to set
      * @param string $password the password to set
+     * @throws Exceptions\PasswordHashFailedException if hashing fails
      */
     public static function SetPassword(Account $account, string $password) : void
-    {
-        $account->SetPasswordHash(password_hash($password, PASSWORD_ARGON2ID));
+    {    
+        $hash = password_hash($password, PASSWORD_ARGON2ID);
+        if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
+            throw new Exceptions\PasswordHashFailedException();
+        $account->SetPasswordHash($hash);
     }
 }

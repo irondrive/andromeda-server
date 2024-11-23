@@ -5,8 +5,9 @@ use Andromeda\Core\Errors\BaseExceptions;
 /** Exception indicating that the created auth source is invalid */
 class InvalidAuthSourceException extends BaseExceptions\ClientErrorException
 {
-    public function __construct(?string $details = null) {
-        parent::__construct("AUTHSOURCE_FAILED", $details);
+    public function __construct(BaseExceptions\ServerException $ex){
+        parent::__construct("AUTHSOURCE_FAILED");
+        $this->CopyException($ex,true);
     }
 }
 

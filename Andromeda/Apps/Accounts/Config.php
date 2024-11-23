@@ -4,7 +4,7 @@ use Andromeda\Core\{BaseConfig, VersionInfo};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
  
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
+use Andromeda\Apps\Accounts\Group;
   
 /** App config stored in the database */
 class Config extends BaseConfig
@@ -29,7 +29,7 @@ class Config extends BaseConfig
     private FieldTypes\NullObjectRefT $default_group;
     /** 
      * default auth source to use 
-     * @var FieldTypes\NullObjectRefT<AuthSource\Manager>
+     * @var FieldTypes\NullObjectRefT<AuthSource\External>
      */
     private FieldTypes\NullObjectRefT $default_auth;
 
@@ -41,7 +41,7 @@ class Config extends BaseConfig
         $this->require_contact = $fields[] =    new FieldTypes\IntType('requirecontact',false,0);
         $this->username_isContact = $fields[] = new FieldTypes\BoolType('usernameiscontact',false,false);
         $this->default_group = $fields[]      = new FieldTypes\NullObjectRefT(Group::class, 'default_group');
-        $this->default_auth = $fields[]       = new FieldTypes\NullObjectRefT(AuthSource\Manager::class, 'default_auth');
+        $this->default_auth = $fields[]       = new FieldTypes\NullObjectRefT(AuthSource\External::class, 'default_auth');
         
         $this->RegisterFields($fields, self::class);
         
@@ -88,7 +88,7 @@ class Config extends BaseConfig
         {
             if (($id = $params->GetParam('default_auth')->GetNullRandstr()) !== null)
             {
-                $manager = AuthSource\Manager::TryLoadByID($this->database, $id);
+                $manager = AuthSource\External::TryLoadByID($this->database, $id);
                 if ($manager === null) throw new UnknownAuthSourceException();
             }
             else $manager = null;
@@ -114,13 +114,13 @@ class Config extends BaseConfig
     }
     
     /** Returns the auth manager that will be used by default */
-    public function GetDefaultAuth() : ?AuthSource\Manager { return $this->default_auth->TryGetObject(); }
+    public function GetDefaultAuth() : ?AuthSource\External { return $this->default_auth->TryGetObject(); }
     
     /** Returns the ID of the auth manager that will be used by default */
     public function GetDefaultAuthID() : ?string { return $this->default_auth->TryGetObjectID(); }
 
     /** Sets the default auth manager to the given value */
-    public function SetDefaultAuth(?AuthSource\Manager $manager) : self { $this->default_auth->SetObject($manager); return $this; }
+    public function SetDefaultAuth(?AuthSource\External $manager) : self { $this->default_auth->SetObject($manager); return $this; }
     
     /** Only allow creating accounts with whitelisted usernames */
     public const CREATE_WHITELIST = 1; 

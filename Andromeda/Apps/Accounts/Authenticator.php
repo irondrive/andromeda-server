@@ -1,11 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
-
+use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\IOFormat\{Input, IOInterface, SafeParams};
-
-require_once(ROOT."/Apps/Accounts/Exceptions.php");
 
 use Andromeda\Apps\Accounts\Resource\{Client, Session};
 

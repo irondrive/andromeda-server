@@ -4,10 +4,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\Errors\{BaseExceptions, ErrorManager};
 use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/External.php");
-
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Account;
 
 /** Uses an IMAP server for authentication */
 class IMAP extends External
@@ -106,7 +103,7 @@ class IMAP extends External
     public function PostConstruct(bool $created) : void
     {
         if (!function_exists('imap_open')) 
-            throw new IMAPExtensionException();
+            throw new Exceptions\IMAPExtensionException();
     }
     
     public function VerifyAccountPassword(Account $account, string $password) : bool
@@ -116,8 +113,8 @@ class IMAP extends External
         $port = $this->port->TryGetValue();
         if ($port !== null) $hostname .= ":$port";
         
-        $implssl = null; if ($this->implssl->GetValue()) $implssl = 'ssl';
-        $secauth = null; if ($this->secauth->GetValue()) $secauth = 'secure';
+        $implssl = $this->implssl->GetValue() ? 'ssl' : null;
+        $secauth = $this->secauth->GetValue() ? 'secure' : null;
         
         $connectstr = implode("/",array_filter(array($hostname, $this->GetProtocol(), $implssl, $secauth)));
 
@@ -125,16 +122,22 @@ class IMAP extends External
         { 
             $imap = imap_open("{{$connectstr}}", $account->GetUsername(), $password, OP_HALFOPEN); 
             
-            $retval = (bool)($imap); imap_close($imap); return $retval; // TODO (bool) is bad, better check
+            $success = ($imap !== false);
+            if ($success) imap_close($imap);
+            return $success;
         }
         catch (BaseExceptions\PHPError $e) 
         {
-            $errman = ErrorManager::GetInstance(); 
+            $errman = $this->database->GetApiPackage()->GetErrorManager();
             $errman->LogException($e);
-            
-            foreach (imap_errors() as $err) 
-                $errman->LogException(new IMAPErrorException($err)); 
-            
+
+            if (($errs = imap_errors()) !== false) 
+                foreach ($errs as $err)
+            {
+                assert(is_string($err)); // imap_errors returns strings
+                $errman->LogException(new Exceptions\IMAPErrorException($err)); 
+            }
+
             return false; 
         }
     }

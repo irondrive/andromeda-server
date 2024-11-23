@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\DBStats; // phpstan
-use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\Errors\BaseExceptions\ClientException;
 use Andromeda\Core\IOFormat\{Input,Output,IOInterface};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;

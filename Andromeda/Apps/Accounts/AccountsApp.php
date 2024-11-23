@@ -1,21 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, BaseApp, Utilities};
-
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\{UnknownActionException, DecryptionFailedException};
-
+use Andromeda\Core\{UnknownActionException, DecryptionFailedException};
 use Andromeda\Core\IOFormat\{Input, SafeParam, SafeParams};
-require_once(ROOT."/Core/IOFormat/Exceptions.php"); use Andromeda\Core\IOFormat\SafeParamInvalidException;
+use Andromeda\Core\IOFormat\SafeParamInvalidException;
 
-require_once(ROOT."/Apps/Accounts/Group.php");
-use Andromeda\Apps\Accounts\Groups\Group;
-
+use Andromeda\Apps\Accounts\Group;
 use Andromeda\Apps\Accounts\Resource\{Client, Contact, RecoveryKey, Session, TwoFactor};
-
-require_once(ROOT."/Apps/Accounts/AuthSource/Local.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/LDAP.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/IMAP.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/FTP.php");
 
 /**
  * App for managing accounts and authenticating users.
@@ -75,10 +66,10 @@ class AccountsApp extends BaseApp
             'removegroupmember --account id --group id',
             'getmembership --account id --group id',
             'getauthsources',
-            'createauthsource --auth_password raw '.AuthSource\Manager::GetPropUsage().' [--test_username text --test_password raw]',
-            ...array_map(function($u){ return "(createauthsource) $u"; }, AuthSource\Manager::GetPropUsages()),
+            'createauthsource --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
+            ...array_map(function($u){ return "(createauthsource) $u"; }, AuthSource\External::GetPropUsages()),
             'testauthsource --manager id [--test_username alphanum|email --test_password raw]',
-            'editauthsource --manager id --auth_password raw '.AuthSource\Manager::GetPropUsage().' [--test_username text --test_password raw]',
+            'editauthsource --manager id --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --manager id --auth_password raw',
             'setaccountprops --account id '.AuthEntity::GetPropUsage().' [--expirepw bool]',
             'setgroupprops --group id '.AuthEntity::GetPropUsage(),
@@ -220,18 +211,18 @@ class AccountsApp extends BaseApp
     
     /**
      * Returns a list of the configured authentication sources
-     * @return array [id:AuthSource\Manager]
-     * @see AuthSource\Manager::GetClientObject()
+     * @return array [id:AuthSource\External]
+     * @see AuthSource\External::GetClientObject()
      */
     protected function GetAuthSources(?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
-        $auths = AuthSource\Manager::LoadAll($this->database);
+        $auths = AuthSource\External::LoadAll($this->database);
         
-        if (!$admin) $auths = array_filter($auths, function(AuthSource\Manager $m){ return $m->GetEnabled(); });
+        if (!$admin) $auths = array_filter($auths, function(AuthSource\External $m){ return $m->GetEnabled(); });
         
-        return array_map(function(AuthSource\Manager $m)use($admin){ return $m->GetClientObject($admin); }, $auths);
+        return array_map(function(AuthSource\External $m)use($admin){ return $m->GetClientObject($admin); }, $auths);
     }
 
     /**
@@ -525,7 +516,7 @@ class AccountsApp extends BaseApp
         {
             $mgrid = $params->GetParam('authsource', SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
             
-            $reqauthman = AuthSource\Manager::TryLoadByID($this->database,$mgrid);
+            $reqauthman = AuthSource\External::TryLoadByID($this->database,$mgrid);
             if ($reqauthman === null) throw new UnknownAuthSourceException();
         }
         
@@ -550,7 +541,7 @@ class AccountsApp extends BaseApp
             $authman = $reqauthman ?? $this->GetConfig()->GetDefaultAuth();
             if ($authman === null) throw new UnknownAuthSourceException();
             
-            if ($authman->GetEnabled() < AuthSource\Manager::ENABLED_FULL)
+            if ($authman->GetEnabled() < AuthSource\External::ENABLED_FULL)
                 throw new AuthenticationFailedException();
             
             $authsource = $authman->GetAuthSource();
@@ -1235,8 +1226,8 @@ class AccountsApp extends BaseApp
      * This authorizes automatically creating an account for anyone
      * that successfully authenticates against the auth source
      * @throws AuthenticationFailedException if not admin
-     * @return array AuthSource\Manager
-     * @see AuthSource\Manager::GetClientObject()
+     * @return array AuthSource\External
+     * @see AuthSource\External::GetClientObject()
      */
     protected function CreateAuthSource(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1244,7 +1235,7 @@ class AccountsApp extends BaseApp
             throw new AuthenticationFailedException();
         $authenticator->RequireAdmin()->RequirePassword();
 
-        $manager = AuthSource\Manager::Create($this->database, $params);
+        $manager = AuthSource\External::Create($this->database, $params);
         
         if ($params->HasParam('test_username'))
         {
@@ -1262,8 +1253,8 @@ class AccountsApp extends BaseApp
      * @throws AuthenticationFailedException if not admin
      * @throws UnknownAuthSourceException if the auth source is not found
      * @throws AuthSourceTestFailException if the test fails
-     * @return array AuthSource\Manager
-     * @see AuthSource\Manager::GetClientObject()
+     * @return array AuthSource\External
+     * @see AuthSource\External::GetClientObject()
      */
     protected function TestAuthSource(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -1273,7 +1264,7 @@ class AccountsApp extends BaseApp
         
         $manager = $params->GetParam('manager',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
-        $manager = AuthSource\Manager::TryLoadByID($this->database, $manager);
+        $manager = AuthSource\External::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();        
         
         $testuser = self::getUsername($params->GetParam('test_username'));
@@ -1289,8 +1280,8 @@ class AccountsApp extends BaseApp
      * Edits the properties of an existing auth source, optionally testing it
      * @throws AuthenticationFailedException if not admin
      * @throws UnknownAuthSourceException if the auth source is not found
-     * @return array AuthSource\Manager
-     * @see AuthSource\Manager::GetClientObject()
+     * @return array AuthSource\External
+     * @see AuthSource\External::GetClientObject()
      */
     protected function EditAuthSource(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -1300,7 +1291,7 @@ class AccountsApp extends BaseApp
         
         $manager = $params->GetParam('manager',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
-        $manager = AuthSource\Manager::TryLoadByID($this->database, $manager);
+        $manager = AuthSource\External::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
         if ($params->HasParam('test_username')) 
@@ -1322,7 +1313,7 @@ class AccountsApp extends BaseApp
         
         $manager = $params->GetParam('manager',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         
-        $manager = AuthSource\Manager::TryLoadByID($this->database, $manager);
+        $manager = AuthSource\External::TryLoadByID($this->database, $manager);
         if ($manager === null) throw new UnknownAuthSourceException();
         
         if ($actionlog && $actionlog->isFullDetails()) 
