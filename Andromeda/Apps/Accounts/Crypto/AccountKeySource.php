@@ -75,6 +75,7 @@ trait AccountKeySource
      */
     protected function InitializeCrypto(string $wrapkey) : self
     {
+        // Account won't give us the key directly so we can't just call InitializeCryptoFrom
         if ($this->hasCrypto()) throw new CryptoAlreadyInitializedException();
         
         $master_salt = Crypto::GenerateSalt();
