@@ -573,7 +573,7 @@ class Account extends AuthEntity
     private bool $cryptoAvailable = false; 
     
     /** Returns true if crypto has been unlocked in this request and is available for operations */
-    public function CryptoAvailable() : bool { return $this->cryptoAvailable; }
+    public function isCryptoAvailable() : bool { return $this->cryptoAvailable; }
     
     /** Re-keys the account's crypto if it exists, and re-hashes its password (if using local auth) */
     public function ChangePassword(string $new_password) : Account

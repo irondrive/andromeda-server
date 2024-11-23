@@ -290,7 +290,7 @@ class Authenticator
                 $auth->TryRequireCrypto();
         }
         
-        if (!$account->CryptoAvailable())
+        if (!$account->isCryptoAvailable())
             throw new CryptoKeyRequiredException();
     }
 }
