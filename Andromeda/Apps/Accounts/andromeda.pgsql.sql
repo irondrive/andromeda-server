@@ -55,7 +55,7 @@ CREATE TABLE public.a2obj_apps_accounts_authsource_ldap (
 
 
 
-CREATE TABLE public.a2obj_apps_accounts_authsource_source (
+CREATE TABLE public.a2obj_apps_accounts_authsource_external (
     id character(8) NOT NULL,
     enabled smallint NOT NULL,
     description text,
@@ -237,7 +237,7 @@ ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
 
 
 
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_source
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_external
     ADD CONSTRAINT idx_20684_primary PRIMARY KEY (id);
 
 
@@ -306,7 +306,7 @@ CREATE INDEX idx_20667_account ON public.a2obj_apps_accounts_actionlog USING btr
 
 
 
-CREATE INDEX idx_20684_default_group ON public.a2obj_apps_accounts_authsource_source USING btree (default_group);
+CREATE INDEX idx_20684_default_group ON public.a2obj_apps_accounts_authsource_external USING btree (default_group);
 
 
 
@@ -408,22 +408,22 @@ ALTER TABLE ONLY public.a2obj_apps_accounts_actionlog
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_ftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_source(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_ftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_imap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_source(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_imap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_ldap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_source(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_ldap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_source
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_source_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_external
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_external_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE RESTRICT ON DELETE SET NULL;
 
 
 
@@ -433,7 +433,7 @@ ALTER TABLE ONLY public.a2obj_apps_accounts_config
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_config
-    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_2 FOREIGN KEY (default_auth) REFERENCES public.a2obj_apps_accounts_authsource_source(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_2 FOREIGN KEY (default_auth) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE SET NULL;
 
 
 
@@ -443,7 +443,7 @@ ALTER TABLE ONLY public.a2obj_apps_accounts_entity_account
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_account
-    ADD CONSTRAINT a2obj_apps_accounts_entity_account_ibfk_2 FOREIGN KEY (authsource) REFERENCES public.a2obj_apps_accounts_authsource_source(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_entity_account_ibfk_2 FOREIGN KEY (authsource) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 

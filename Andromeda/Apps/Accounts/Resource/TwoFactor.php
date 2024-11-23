@@ -3,7 +3,7 @@
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Account;
 
 /** 
  * Describes an OTP twofactor authentication source for an account 

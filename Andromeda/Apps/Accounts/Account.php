@@ -1,16 +1,15 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
-require_once(ROOT."/Core/Exceptions.php"); use Andromeda\Core\DecryptionFailedException;
+use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 use Andromeda\Apps\Accounts\Resource\{Contact, Client, RecoveryKey, Session, TwoFactor};
 
-require_once(ROOT."/Apps/Accounts/Group.php"); use Andromeda\Apps\Accounts\Groups\Group;
-require_once(ROOT."/Apps/Accounts/GroupStuff.php"); use Andromeda\Apps\Accounts\Groups\AuthEntity;
+use Andromeda\Apps\Accounts\Group;
+use Andromeda\Apps\Accounts\GroupUtil\AuthEntity;
 
-require_once(ROOT."/Apps/Accounts/Crypto/KeySource.php"); use Andromeda\Apps\Accounts\Crypto\KeySource;
-require_once(ROOT."/Apps/Accounts/AuthSource/Local.php");
+use Andromeda\Apps\Accounts\Crypto\KeySource;
 
 /**
  * Class representing a user account in the database
@@ -306,10 +305,10 @@ class Account extends AuthEntity
     /**
      * Returns an array of all accounts based on the given auth source
      * @param ObjectDatabase $database database reference
-     * @param AuthSource\Manager $authman authentication source
+     * @param AuthSource\External $authman authentication source
      * @return array<string, Account> accounts indexed by ID
      */
-    public static function LoadByAuthSource(ObjectDatabase $database, AuthSource\Manager $authman) : array
+    public static function LoadByAuthSource(ObjectDatabase $database, AuthSource\External $authman) : array
     {
         return static::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }
@@ -317,9 +316,9 @@ class Account extends AuthEntity
     /**
      * Deletes all accounts using the given auth source
      * @param ObjectDatabase $database database reference
-     * @param AuthSource\Manager $authman authentication source
+     * @param AuthSource\External $authman authentication source
      */
-    public static function DeleteByAuthSource(ObjectDatabase $database, AuthSource\Manager $authman) : void
+    public static function DeleteByAuthSource(ObjectDatabase $database, AuthSource\External $authman) : void
     {
         static::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
     }   

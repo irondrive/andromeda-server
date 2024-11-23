@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Groups; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
@@ -6,15 +6,13 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 use Andromeda\Apps\Accounts\{Config, Account};
 use Andromeda\Apps\Accounts\Resource\Contact;
 
-require_once(ROOT."/Apps/Accounts/GroupStuff.php");
-
 /**
  * A group of user accounts
  * 
  * Used primarily to manage config for multiple accounts at once, in a many-to-many relationship.
  * Groups use a priority number to resolve conflicting properties.
  */
-class Group extends AuthEntity
+class Group extends GroupUtil\AuthEntity
 {
     public static function GetFieldTemplate() : array
     {
@@ -55,7 +53,7 @@ class Group extends AuthEntity
             return Account::LoadAll($this->database);
         }
         
-        foreach (AuthSource\Manager::LoadAll($this->database) as $authman)
+        foreach (AuthSource\External::LoadAll($this->database) as $authman)
         {
             if ($authman->GetDefaultGroup() === $this)
             {

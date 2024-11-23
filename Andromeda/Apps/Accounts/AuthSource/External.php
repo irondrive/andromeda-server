@@ -5,8 +5,7 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Errors\BaseExceptions;
 
-require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
-use Andromeda\Apps\Accounts\Groups\Group;
+use Andromeda\Apps\Accounts\Group;
 use Andromeda\Apps\Accounts\{Account, Config};
 
 /** 
@@ -19,6 +18,19 @@ use Andromeda\Apps\Accounts\{Account, Config};
 abstract class External extends BaseObject implements IAuthSource
 {
     use TableTypes\TableLinkedChildren;
+    
+    /** 
+     * Returns a map of all external Auth classes as $name=>$class 
+     * @return array<string, class-string<self>>
+     */
+    private static function getAuthClasses() : array
+    {
+        return array(
+            'ftp' => FTP::class, 
+            'imap' => IMAP::class, 
+            'ldap' => LDAP::class
+        );
+    }
     
     /** @return array<string, class-string<self>> */
     public static function GetChildMap(ObjectDatabase $database) : array
@@ -52,29 +64,15 @@ abstract class External extends BaseObject implements IAuthSource
         parent::CreateFields();
     }
 
-    /** 
-     * Returns a map of all external Auth classes as $name=>$class 
-     * @return array<string, class-string<self>>
-     */
-    private static function getAuthClasses() : array
-    {
-        $classes = Utilities::getClassesMatching(self::class); // TODO this is dumb
-        
-        $retval = array(); foreach ($classes as $class)
-        {
-            if ($class !== self::class) continue; // skip self
-            $retval[strtolower(Utilities::ShortClassName($class))] = $class;
-        }
-        
-        return $retval;
-    }
-    
     /** Returns basic command usage for Create() and Edit() */
     public static function GetPropUsage() : string { return "--type ".implode('|',array_keys(self::getAuthClasses())).
                                                             " [--enabled ".implode('|',array_keys(self::ENABLED_TYPES))."]".
                                                             " [--description ?text] [--createdefgroup bool]"; }
     
-    /** Gets command usage specific to external authentication backends */
+    /** 
+     * Gets command usage specific to external authentication backends
+     * @return array<string>
+     */
     final public static function GetPropUsages() : array
     {
         $retval = array();
@@ -83,13 +81,16 @@ abstract class External extends BaseObject implements IAuthSource
         return $retval;
     }
     
-    /** Returns all available external auth objects */
+    /** 
+     * Returns all available external auth objects
+     * @return array<static>
+     */
     public static function LoadAll(ObjectDatabase $database) : array
     {
         return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
     }
     
-    // TODO comment
+    /** Creates and tests a new external auth backend based on the user input */
     public static function TypedCreate(ObjectDatabase $database, SafeParams $params) : self
     {
         $classes = self::getAuthClasses();
@@ -97,17 +98,17 @@ abstract class External extends BaseObject implements IAuthSource
         $type = $params->GetParam('type')->FromWhitelist(array_keys($classes));
         
         try { return $classes[$type]::Create($database, $params)->Activate(); }
-        catch (BaseExceptions\ServerException $e){ throw InvalidAuthSourceException::Copy($e); } // TODO exception Copy is not a thing
-        // TODO catch something better than ServerException - also probably need to catch PHP errors
-        // make a common exception for FTP/LDAP etc. to all use (like Storage does) + also catch PHP errors? or the class could convert it itself
+        catch (BaseExceptions\ServerException $e){ 
+            throw new Exceptions\InvalidAuthSourceException($e); }
     }
 
-    /** Creates and tests a new external authentication backend, creating a manager and optionally, a default group for it */ // TODO fix comments
-    
-    /** @return static */
+    /** 
+     * Creates a new external authentication backend, and optionally a default group for it
+     * @return static
+     */
     protected static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         
         if ($params->HasParam('enabled'))
@@ -153,8 +154,8 @@ abstract class External extends BaseObject implements IAuthSource
         return $this;
     }
     
-    /** Deletes the external authentication source and all accounts created by it */
-    public function notifyDelete() : void
+    /** Deletes the external authentication source and all accounts created by it, and the default group if set */
+    public function NotifyPreDeleted() : void
     {
         $config = Config::GetInstance($this->database);
         if ($config->GetDefaultAuthID() === $this->ID())
@@ -165,7 +166,7 @@ abstract class External extends BaseObject implements IAuthSource
         $defgroup = $this->default_group->TryGetObject();
         if ($defgroup !== null) $defgroup->Delete();
 
-        parent::Delete();
+        $this->database->DeleteObject($this);
     }
     
     /** Returns the class-only (no namespace) of the auth source */

@@ -4,9 +4,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
-require_once(ROOT."/Apps/Accounts/Account.php");
-require_once(ROOT."/Apps/Accounts/Authenticator.php"); 
-require_once(ROOT."/Apps/Accounts/Resource/Client.php"); use Andromeda\Apps\Accounts\Resource\Client;
+use Andromeda\Apps\Accounts\Resource\Client;
 
 /** Provides a base class for apps that use the Authenticator to log auth info */
 abstract class AuthActionLog extends BaseActionLog

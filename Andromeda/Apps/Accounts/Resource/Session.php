@@ -2,10 +2,7 @@
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-
-require_once(ROOT."/Apps/Accounts/Crypto/AuthObject.php");
-require_once(ROOT."/Apps/Accounts/Crypto/AccountKeySource.php");
+use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource};
 
 /**

@@ -13,7 +13,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ftp` (
 ,  `port` integer DEFAULT NULL
 ,  `implssl` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
   `id` char(8) NOT NULL
@@ -23,7 +23,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
 ,  `implssl` integer NOT NULL
 ,  `secauth` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
   `id` char(8) NOT NULL
@@ -31,15 +31,15 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
 ,  `secure` integer NOT NULL
 ,  `userprefix` varchar(255) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
-CREATE TABLE `a2obj_apps_accounts_authsource_source` (
+CREATE TABLE `a2obj_apps_accounts_authsource_external` (
   `id` char(8) NOT NULL
 ,  `enabled` integer NOT NULL
 ,  `description` text DEFAULT NULL
 ,  `default_group` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_source_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
+,  CONSTRAINT `a2obj_apps_accounts_authsource_external_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
 );
 CREATE TABLE `a2obj_apps_accounts_config` (
   `id` char(1) NOT NULL
@@ -52,7 +52,7 @@ CREATE TABLE `a2obj_apps_accounts_config` (
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
-,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`) ON DELETE SET NULL
+,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE SET NULL
 );
 CREATE TABLE `a2obj_apps_accounts_entity_account` (
   `id` char(12) NOT NULL
@@ -69,7 +69,7 @@ CREATE TABLE `a2obj_apps_accounts_entity_account` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)
 ,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_source` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_entity_authentity` (
   `id` char(12) NOT NULL
@@ -191,7 +191,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_whitelist` (
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`type`,`value`)
 );
-CREATE INDEX "idx_a2obj_apps_accounts_authsource_source_default_group" ON "a2obj_apps_accounts_authsource_source" (`default_group`);
+CREATE INDEX "idx_a2obj_apps_accounts_authsource_external_default_group" ON "a2obj_apps_accounts_authsource_external" (`default_group`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_client_account" ON "a2obj_apps_accounts_resource_client" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_client_date_active_account" ON "a2obj_apps_accounts_resource_client" (`date_active`,`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_usedtoken_date_created" ON "a2obj_apps_accounts_resource_usedtoken" (`date_created`);

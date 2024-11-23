@@ -3,11 +3,8 @@
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
-require_once(ROOT."/Apps/Accounts/Crypto/AuthObjectFull.php"); use Andromeda\Apps\Accounts\Crypto\AuthObjectFull;
-
-require_once(ROOT."/Apps/Accounts/Resource/Exceptions.php");
-require_once(ROOT."/Apps/Accounts/Resource/ContactPair.php");
+use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Crypto\AuthObjectFull;
 
 /** An object describing a contact method for a user account */
 abstract class Contact extends BaseObject

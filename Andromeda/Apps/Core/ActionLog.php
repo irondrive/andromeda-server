@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Core; if (!defined('Andromeda')) die();
 
- use Andromeda\Core\Database\TableTypes;
-require_once(ROOT."/Apps/Accounts/AuthActionLog.php"); use Andromeda\Apps\Accounts\AuthActionLog;
+use Andromeda\Core\Database\TableTypes;
+use Andromeda\Apps\Accounts\AuthActionLog;
 
 /** Core app access log for use with the accounts app installed */
 class ActionLog extends AuthActionLog

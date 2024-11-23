@@ -25,11 +25,3 @@ class RawKeyNotAvailableException extends BaseExceptions\ServerException
         parent::__construct("AUTHOBJECT_KEY_NOT_AVAILABLE", $details);
     }
 }
-
-/** Exception indicating that generating the password hash failed */
-class PasswordHashFailedException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("PASSWORD_HASH_FAILED", $details);
-    }
-}

@@ -2,6 +2,7 @@
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Apps\Accounts\Exceptions\PasswordHashFailedException;
 
 /** 
  * Represents an object that holds an authentication code that can be checked 
@@ -60,7 +61,7 @@ trait AuthObject
         {
             $hash = password_hash($key, $algo, $settings);
             if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
-                throw new Exceptions\PasswordHashFailedException();
+                throw new PasswordHashFailedException();
             $this->authkey->SetValue($hash);
         }
         
@@ -115,7 +116,7 @@ trait AuthObject
             $this->authkey_raw = $key;
             $hash = password_hash($key, PASSWORD_ARGON2ID, $settings);
             if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
-                throw new Exceptions\PasswordHashFailedException();
+                throw new PasswordHashFailedException();
         }
         
         $this->authkey->SetValue($hash);

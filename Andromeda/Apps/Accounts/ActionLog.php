@@ -2,8 +2,6 @@
 
 use Andromeda\Core\Database\TableTypes;
 
-require_once(ROOT."/Apps/Accounts/AuthActionLog.php"); 
-
 /** Access log for the accounts app */
 class ActionLog extends AuthActionLog
 {

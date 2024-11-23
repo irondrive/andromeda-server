@@ -4,10 +4,7 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\Errors\{BaseExceptions, ErrorManager};
 use Andromeda\Core\IOFormat\SafeParams;
 
-require_once(ROOT."/Apps/Accounts/AuthSource/Exceptions.php");
-require_once(ROOT."/Apps/Accounts/AuthSource/External.php");
-
-require_once(ROOT."/Apps/Accounts/Account.php"); use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Account;
 
 /** Uses an FTP server for authentication */
 class FTP extends External
@@ -75,28 +72,30 @@ class FTP extends External
         );
     }
     
-    private $ftpConn;
+    /** @var ?resource */
+    private $ftpConn = null;
     
     /** Asserts that the FTP extension exists */
     public function PostConstruct(bool $created) : void
     {
         if (!function_exists('ftp_connect')) 
-            throw new FTPExtensionException();
+            throw new Exceptions\FTPExtensionException();
     }
     
     /** Initiates a connection to the FTP server */
     public function Activate() : self
     {
-        if (isset($this->ftpConn)) return $this;
+        if ($this->ftpConn !== null) return $this;
         
         $host = $this->hostname->GetValue(); 
         $port = $this->port->TryGetValue() ?? 0; // 0 to use default
         
-        if ($this->implssl->GetValue()) 
-             $this->ftpConn = ftp_ssl_connect($host, $port);
-        else $this->ftpConn = ftp_connect($host, $port);
-        
-        if (!$this->ftpConn) throw new FTPConnectionFailure();
+        $ftpConn = $this->implssl->GetValue() ? 
+            ftp_ssl_connect($host,$port) : ftp_connect($host,$port);
+
+        if ($ftpConn === false)
+            throw new Exceptions\FTPConnectionFailure();
+        $this->ftpConn = $ftpConn; // @phpstan-ignore-line PHP 7/8 ftpConn types differ
         
         return $this;
     }
@@ -104,16 +103,21 @@ class FTP extends External
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {
         $this->Activate();
+        assert($this->ftpConn !== null); // from Activate
 
         try 
         { 
-            $success = ftp_login($this->ftpConn, $account->GetUsername(), $password); 
+            $success = ftp_login($this->ftpConn, $account->GetUsername(), $password); // @phpstan-ignore-line PHP 7/8 ftpConn types differ
             
-            ftp_close($this->ftpConn); unset($this->ftpConn); return $success;
+            ftp_close($this->ftpConn); // @phpstan-ignore-line PHP 7/8 ftpConn types differ
+            unset($this->ftpConn);
+            return $success;
         }
         catch (BaseExceptions\PHPError $e) 
         { 
-            ErrorManager::GetInstance()->LogException($e); return false; 
+            $errman = $this->database->GetApiPackage()->GetErrorManager();
+            $errman->LogException($e);
+            return false; 
         }
     }
 }

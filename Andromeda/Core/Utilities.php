@@ -103,9 +103,11 @@ abstract class Utilities
     }
     
     /** Returns a class name with the namespace stripped */
-    public static function ShortClassName(string $class) : ?string 
+    public static function ShortClassName(string $class) : string 
     { 
-        return self::array_last(explode("\\",$class));
+        $ret = self::array_last(explode("\\",$class));
+        assert($ret !== null); // explode will return >= 1
+        return $ret;
     }
     
     /** Returns the given string with the first character capitalized */
