@@ -5,10 +5,6 @@ use Andromeda\Core\DecryptionFailedException;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
 use Andromeda\Apps\Accounts\Resource\{Contact, Client, RecoveryKey, Session, TwoFactor};
-
-use Andromeda\Apps\Accounts\Group;
-use Andromeda\Apps\Accounts\GroupUtil\AuthEntity;
-
 use Andromeda\Apps\Accounts\Crypto\KeySource;
 
 /**
@@ -18,7 +14,7 @@ use Andromeda\Apps\Accounts\Crypto\KeySource;
  * of registered clients, can have registered two factor, 
  * can provide secret-key crypto services, provides contact info
  */
-class Account extends AuthEntity
+class Account extends AuthBase
 {
     public static function GetFieldTemplate() : array
     {

@@ -3,7 +3,6 @@
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 
-use Andromeda\Apps\Accounts\{Config, Account};
 use Andromeda\Apps\Accounts\Resource\Contact;
 
 /**
@@ -12,7 +11,7 @@ use Andromeda\Apps\Accounts\Resource\Contact;
  * Used primarily to manage config for multiple accounts at once, in a many-to-many relationship.
  * Groups use a priority number to resolve conflicting properties.
  */
-class Group extends GroupUtil\AuthEntity
+class Group extends AuthBase
 {
     public static function GetFieldTemplate() : array
     {
