@@ -2,4 +2,4 @@ includes:
     - phpstan.neon
 parameters:
     phpVersion: 80300
-    tmpDir: phpstan-tmp-80300
+    tmpDir: /tmp/phpstan-tmp-80300
