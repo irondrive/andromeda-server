@@ -17,7 +17,7 @@ abstract class Contact extends BaseObject
     
     private const TYPE_EMAIL = 1;
     
-    private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
+    //private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
     
     /** @return array<int, class-string<self>> */
     public static function GetChildMap(ObjectDatabase $database) : array
@@ -54,6 +54,7 @@ abstract class Contact extends BaseObject
         parent::CreateFields();
     }
 
+    /** @return positive-int */
     protected static function GetKeyLength() : int { return 8; }
     
     public function CheckFullKey(string $code) : bool
@@ -83,10 +84,8 @@ abstract class Contact extends BaseObject
     // TODO search/replace info/value (changed to address)
     
     /** 
-     * Returns the contact object matching the given address and type, or null 
-     * @template T of Contact
-     * @param ContactPair<T> $pair
-     * @return ?T
+     * Returns the contact object matching the given address and type, or null
+     * @return ?Contact
      */
     public static function TryLoadByContactPair(ObjectDatabase $database, ContactPair $pair) : ?self
     {
@@ -110,7 +109,7 @@ abstract class Contact extends BaseObject
      * Returns all accounts matching the given public contact address
      * @param ObjectDatabase $database database reference
      * @param string $address contact address to match (wildcard)
-     * @param int $limit return up to this many
+     * @param positive-int $limit return up to this many
      * @return array<Account>
      * @see Account::GetClientObject()
      */
@@ -149,13 +148,13 @@ abstract class Contact extends BaseObject
      * Sets whether this contact should be used as from (can only be one) 
      * @return $this
      */
-    public function SetUseAsFrom(bool $val) : self
+    public function SetUseAsFrom(bool $val) : self // TODO instead - have account store a reference to the contact to use as from
     {
         if ($val)
         {
             $old = static::TryLoadAccountFromContact($this->database, $this->GetAccount());
             
-            if ($old !== null) $old->SetUseFrom(false);
+            if ($old !== null) $old->SetUseAsFrom(false);
         }
         else $val = null;
         
@@ -175,7 +174,7 @@ abstract class Contact extends BaseObject
      */
     protected static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : self
     {
-        $contact = static::BaseCreate($database);
+        $contact = $database->CreateObject(static::class);
         $contact->date_created->SetTimeNow();
         
         $contact->account->SetObject($account);
@@ -199,10 +198,10 @@ abstract class Contact extends BaseObject
     
     /**
      * Fetches a type/value pair from input (depends on the param name given)
-     * @throws ContactNotGivenException if nothing valid was found
+     * @throws Exceptions\ContactNotGivenException if nothing valid was found
      * @return ContactPair
      */
-    public static function FetchPairFromParams(SafeParams $params) : ContactPair
+    public static function FetchPairFromParams(SafeParams $params) : ContactPair // TODO this seems unused, what is it for? seems wrong
     {
         if ($params->HasParam('email')) 
         { 
@@ -210,7 +209,7 @@ abstract class Contact extends BaseObject
             
             $info = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); // TODO move to EmailContact?
         }
-        else throw new ContactNotGivenException();
+        else throw new Exceptions\ContactNotGivenException();
          
         return new ContactPair($class, $info);
     }
@@ -243,14 +242,14 @@ abstract class Contact extends BaseObject
     {
         return array(
             'id' => $this->ID(),
-            'type' => self::TYPES[$this->GetType()],
+            /*'type' => self::TYPES[$this->GetType()],
             'info' => $this->GetInfo(),
             'valid' => $this->GetIsValid(),
             'asfrom' => (bool)($this->TryGetScalar('asfrom')),
             'public' => $this->GetIsPublic(),
             'dates' => array(
                 'created' => $this->GetDateCreated()
-            )
+            )*/
         );
     }
 }

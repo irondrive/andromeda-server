@@ -84,7 +84,7 @@ class TwoFactor extends BaseObject
     /** Creates and returns a new twofactor object for the given account */
     public static function Create(ObjectDatabase $database, Account $account, ?string $comment = null) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->comment->SetValue($comment);
         $obj->account->SetObject($account);
@@ -102,10 +102,11 @@ class TwoFactor extends BaseObject
     {
         if (!isset($this->raw_secret))
         {
-            if ($this->hasCrypto())
+            $nonce = $this->nonce->TryGetValue();
+            if ($nonce !== null) // hasCrypto
             {
                 $this->raw_secret = $this->GetAccount()->DecryptSecret(
-                    $this->secret->GetValue(), $this->nonce->TryGetValue());
+                    $this->secret->GetValue(), $nonce);
             }
             else $this->raw_secret = $this->secret->GetValue();
         }
@@ -113,11 +114,9 @@ class TwoFactor extends BaseObject
         return $this->raw_secret;
     }
     
-    public function NotifyDeleted() : void
+    public function NotifyPreDeleted() : void
     {
-        UsedToken::DeleteByTwoFactor($this->database, $this); // TODO not gonna work! foreign keys must be removed first!
-        
-        parent::NotifyDeleted();
+        UsedToken::DeleteByTwoFactor($this->database, $this);
     }
     
     /** Stores the secret as encrypted by the owner */

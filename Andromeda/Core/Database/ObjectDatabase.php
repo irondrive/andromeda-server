@@ -214,7 +214,7 @@ class ObjectDatabase
 
     /**
      * Immediately delete objects matching the given query
-     * The objects will be loaded and have their NotifyDeleted() run
+     * The objects will be loaded and have their NotifyPreDeleted() run
      * If using ORDER BY and there are child tables, objects may not be deleted in order!
      * But, the ORDER BY will apply correctly as far as LIMIT/OFFSET and WHAT gets deleted
      * @template T of BaseObject

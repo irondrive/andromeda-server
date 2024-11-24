@@ -17,12 +17,14 @@ class EmailContact extends Contact
      */
     public static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
     {
+        $message = $html ?? $plain;
+        $ishtml = ($html !== null);
+        
         $emails = array_filter($recipients, function(Contact $contact){ 
             return $contact instanceof self; });
         
-        $message = $html ?? $plain; $ishtml = ($html !== null);
-        
-        $mailer = Emailer::LoadAny(Main::GetInstance()->GetDatabase());
+        if (count($emails) === 0) return;
+        $mailer = Emailer::LoadAny(array_values($emails)[0]->database);
         
         $recipients = array_map(function(self $contact){
             return $contact->GetAsEmailRecipient(); }, $emails);

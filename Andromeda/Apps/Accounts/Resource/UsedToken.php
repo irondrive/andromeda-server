@@ -39,7 +39,7 @@ class UsedToken extends BaseObject
     /** Prunes old codes from the database that are too old to be valid anyway */
     public static function PruneOldCodes(ObjectDatabase $database) : int
     {
-        $mintime = Main::GetInstance()->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
+        $mintime = $database->GetTime()-(TwoFactor::TIME_TOLERANCE*2*30);
         $q = new QueryBuilder(); $q->Where($q->LessThan('date_created', $mintime));
         
         return $database->DeleteObjectsByQuery(static::class, $q);
@@ -48,7 +48,7 @@ class UsedToken extends BaseObject
     /** Logs a used token with the given twofactor object and code */
     public static function Create(ObjectDatabase $database, TwoFactor $twofactor, string $code) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         
         $obj->code->SetValue($code);

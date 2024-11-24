@@ -1,12 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
-/** @template T of Contact
- * A pair of a contact address and its class type */
+/** A pair of a contact address and its class type */
 class ContactPair
 {
     /** 
      * contact type 
-     * @var class-string<T>
+     * @var class-string<Contact>
      */
     private string $class;
     
@@ -14,7 +13,7 @@ class ContactPair
     private string $addr;
     
     /**
-     * @param class-string<T> $class contact type
+     * @param class-string<Contact> $class contact type
      * @param string $addr contact address
      */
     public function __construct(string $class, string $addr)
@@ -23,7 +22,7 @@ class ContactPair
         $this->addr = $addr;
     }
     
-    /** @return class-string<T> the contact type */
+    /** @return class-string<Contact> the contact type */
     public function GetClass() : string { return $this->class; }
     
     /** Returns the contact address */

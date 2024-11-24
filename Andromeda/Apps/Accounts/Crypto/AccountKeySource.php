@@ -2,6 +2,7 @@
 
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\FieldTypes;
+
 use Andromeda\Apps\Accounts\Account;
 
 /** 
@@ -14,7 +15,7 @@ trait AccountKeySource
     
     /** 
      * The account this key source is for 
-     * @var FieldTypes\ObjectRefT<Account>
+     * @var \Andromeda\Core\Database\FieldTypes\ObjectRefT<\Andromeda\Apps\Accounts\Account> // phpstan bug?
      */
     private FieldTypes\ObjectRefT $account;
     
@@ -69,14 +70,14 @@ trait AccountKeySource
      *
      * Crypto must be unlocked for the account to get a copy of the key
      * @param string $wrapkey the key to use to encrypt
-     * @throws CryptoAlreadyInitializedException if already initialized
+     * @throws Exceptions\CryptoAlreadyInitializedException if already initialized
      * @see Account::GetEncryptedMasterKey()
      * @return $this
      */
     protected function InitializeCrypto(string $wrapkey) : self
     {
         // Account won't give us the key directly so we can't just call InitializeCryptoFrom
-        if ($this->hasCrypto()) throw new CryptoAlreadyInitializedException();
+        if ($this->hasCrypto()) throw new Exceptions\CryptoAlreadyInitializedException();
         
         $master_salt = Crypto::GenerateSalt();
         $master_nonce = Crypto::GenerateSecretNonce();

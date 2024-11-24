@@ -5,7 +5,16 @@ CREATE TABLE `a2obj_apps_accounts_actionlog` (
 ,  `sudouser` char(12) DEFAULT NULL
 ,  `client` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE
+,  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE TABLE `a2obj_apps_accounts_authsource_external` (
+  `id` char(8) NOT NULL
+,  `enabled` integer NOT NULL
+,  `description` text DEFAULT NULL
+,  `date_created` double DEFAULT NULL
+,  `default_group` char(12) DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_external_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_ftp` (
   `id` char(8) NOT NULL
@@ -13,7 +22,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ftp` (
 ,  `port` integer DEFAULT NULL
 ,  `implssl` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_ftp_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
   `id` char(8) NOT NULL
@@ -23,7 +32,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_imap` (
 ,  `implssl` integer NOT NULL
 ,  `secauth` integer NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_authsource_imap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
   `id` char(8) NOT NULL
@@ -31,15 +40,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
 ,  `secure` integer NOT NULL
 ,  `userprefix` varchar(255) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
-);
-CREATE TABLE `a2obj_apps_accounts_authsource_external` (
-  `id` char(8) NOT NULL
-,  `enabled` integer NOT NULL
-,  `description` text DEFAULT NULL
-,  `default_group` char(12) DEFAULT NULL
-,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_authsource_external_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
+,  CONSTRAINT `a2obj_apps_accounts_authsource_ldap_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_config` (
   `id` char(1) NOT NULL
@@ -51,8 +52,8 @@ CREATE TABLE `a2obj_apps_accounts_config` (
 ,  `default_auth` char(8) DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
-,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL
-,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE SET NULL
+,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_1` FOREIGN KEY (`default_group`) REFERENCES `a2obj_apps_accounts_entity_group` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_accounts_config_ibfk_2` FOREIGN KEY (`default_auth`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_entity_account` (
   `id` char(12) NOT NULL
@@ -68,7 +69,7 @@ CREATE TABLE `a2obj_apps_accounts_entity_account` (
 ,  `authsource` char(8) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)
-,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ,  CONSTRAINT `a2obj_apps_accounts_entity_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_entity_authentity` (
@@ -97,7 +98,7 @@ CREATE TABLE `a2obj_apps_accounts_entity_group` (
 ,  `priority` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`name`)
-,  CONSTRAINT `a2obj_apps_accounts_entity_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`)
+,  CONSTRAINT `a2obj_apps_accounts_entity_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_entity_authentity` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_entity_groupjoin` (
   `id` char(12) NOT NULL
@@ -148,6 +149,14 @@ CREATE TABLE `a2obj_apps_accounts_resource_recoverykey` (
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_resource_recoverykey_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_entity_account` (`id`)
 );
+CREATE TABLE `a2obj_apps_accounts_resource_registerallow` (
+  `id` char(12) NOT NULL
+,  `date_created` double NOT NULL
+,  `type` integer NOT NULL
+,  `value` varchar(127) NOT NULL
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`type`,`value`)
+);
 CREATE TABLE `a2obj_apps_accounts_resource_session` (
   `id` char(12) NOT NULL
 ,  `authkey` text NOT NULL
@@ -183,15 +192,6 @@ CREATE TABLE `a2obj_apps_accounts_resource_usedtoken` (
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_resource_usedtoken_ibfk_1` FOREIGN KEY (`twofactor`) REFERENCES `a2obj_apps_accounts_resource_twofactor` (`id`)
 );
-CREATE TABLE `a2obj_apps_accounts_resource_whitelist` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `type` integer NOT NULL
-,  `value` varchar(127) NOT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`type`,`value`)
-);
-CREATE INDEX "idx_a2obj_apps_accounts_authsource_external_default_group" ON "a2obj_apps_accounts_authsource_external" (`default_group`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_client_account" ON "a2obj_apps_accounts_resource_client" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_client_date_active_account" ON "a2obj_apps_accounts_resource_client" (`date_active`,`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_usedtoken_date_created" ON "a2obj_apps_accounts_resource_usedtoken" (`date_created`);
@@ -202,6 +202,7 @@ CREATE INDEX "idx_a2obj_apps_accounts_actionlog_account" ON "a2obj_apps_accounts
 CREATE INDEX "idx_a2obj_apps_accounts_resource_session_account" ON "a2obj_apps_accounts_resource_session" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_session_date_active_account" ON "a2obj_apps_accounts_resource_session" (`date_active`,`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_twofactor_account" ON "a2obj_apps_accounts_resource_twofactor" (`account`);
+CREATE INDEX "idx_a2obj_apps_accounts_authsource_external_default_group" ON "a2obj_apps_accounts_authsource_external" (`default_group`);
 CREATE INDEX "idx_a2obj_apps_accounts_config_default_group" ON "a2obj_apps_accounts_config" (`default_group`);
 CREATE INDEX "idx_a2obj_apps_accounts_config_default_auth" ON "a2obj_apps_accounts_config" (`default_auth`);
 CREATE INDEX "idx_a2obj_apps_accounts_entity_account_fullname" ON "a2obj_apps_accounts_entity_account" (`fullname`);

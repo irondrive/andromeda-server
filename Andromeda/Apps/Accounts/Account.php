@@ -387,7 +387,7 @@ class Account extends AuthEntity
      */
     public static function Create(ObjectDatabase $database, string $username, ?AuthSource\IAuthSource $source = null, ?string $password = null) : self
     {
-        $account = static::BaseCreate($database)->SetScalar('username',$username);
+        $account = $database->CreateObject(static::class)->SetScalar('username',$username);
         
         if ($source instanceof AuthSource\External) 
             $account->SetObject('authsource',$source);
@@ -563,7 +563,7 @@ class Account extends AuthEntity
         $max = $this->GetMaxPasswordAge();
         
         if ($date <= 0) return false; else return 
-            ($max === null || Main::GetInstance()->GetTime() - $date < $max);
+            ($max === null || $database->GetTime() - $date < $max);
     }
     
     /** Returns true if server-side crypto is unavailable on the account */
