@@ -26,6 +26,16 @@ CREATE TABLE public.a2obj_apps_accounts_actionlog (
 
 
 
+CREATE TABLE public.a2obj_apps_accounts_authsource_external (
+    id character(8) NOT NULL,
+    enabled smallint NOT NULL,
+    description text,
+    date_created double precision,
+    default_group character(12) DEFAULT NULL::bpchar
+);
+
+
+
 CREATE TABLE public.a2obj_apps_accounts_authsource_ftp (
     id character(8) NOT NULL,
     hostname character varying(255) NOT NULL,
@@ -51,15 +61,6 @@ CREATE TABLE public.a2obj_apps_accounts_authsource_ldap (
     hostname character varying(255) NOT NULL,
     secure boolean NOT NULL,
     userprefix character varying(255) NOT NULL
-);
-
-
-
-CREATE TABLE public.a2obj_apps_accounts_authsource_external (
-    id character(8) NOT NULL,
-    enabled smallint NOT NULL,
-    description text,
-    default_group character(12) DEFAULT NULL::bpchar
 );
 
 
@@ -172,6 +173,15 @@ CREATE TABLE public.a2obj_apps_accounts_resource_recoverykey (
 
 
 
+CREATE TABLE public.a2obj_apps_accounts_resource_registerallow (
+    id character(12) NOT NULL,
+    date_created double precision NOT NULL,
+    type smallint NOT NULL,
+    value character varying(127) NOT NULL
+);
+
+
+
 CREATE TABLE public.a2obj_apps_accounts_resource_session (
     id character(12) NOT NULL,
     authkey text NOT NULL,
@@ -208,237 +218,228 @@ CREATE TABLE public.a2obj_apps_accounts_resource_usedtoken (
 
 
 
-CREATE TABLE public.a2obj_apps_accounts_resource_whitelist (
-    id character(12) NOT NULL,
-    date_created double precision NOT NULL,
-    type smallint NOT NULL,
-    value character varying(127) NOT NULL
-);
-
-
-
 ALTER TABLE ONLY public.a2obj_apps_accounts_actionlog
-    ADD CONSTRAINT idx_20667_primary PRIMARY KEY (id);
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
-    ADD CONSTRAINT idx_20673_primary PRIMARY KEY (id);
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
-    ADD CONSTRAINT idx_20676_primary PRIMARY KEY (id);
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
-    ADD CONSTRAINT idx_20679_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18870_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_external
-    ADD CONSTRAINT idx_20684_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18876_primary PRIMARY KEY (id);
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
+    ADD CONSTRAINT idx_18882_primary PRIMARY KEY (id);
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
+    ADD CONSTRAINT idx_18885_primary PRIMARY KEY (id);
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
+    ADD CONSTRAINT idx_18888_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_config
-    ADD CONSTRAINT idx_20690_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18893_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_account
-    ADD CONSTRAINT idx_20695_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18898_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_authentity
-    ADD CONSTRAINT idx_20705_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18908_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_group
-    ADD CONSTRAINT idx_20710_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18913_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_groupjoin
-    ADD CONSTRAINT idx_20713_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18916_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_client
-    ADD CONSTRAINT idx_20716_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18919_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_contact
-    ADD CONSTRAINT idx_20722_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18925_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_recoverykey
-    ADD CONSTRAINT idx_20729_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18932_primary PRIMARY KEY (id);
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_resource_registerallow
+    ADD CONSTRAINT idx_18940_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_session
-    ADD CONSTRAINT idx_20737_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18943_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_twofactor
-    ADD CONSTRAINT idx_20745_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18951_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_usedtoken
-    ADD CONSTRAINT idx_20752_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_18958_primary PRIMARY KEY (id);
 
 
 
-ALTER TABLE ONLY public.a2obj_apps_accounts_resource_whitelist
-    ADD CONSTRAINT idx_20755_primary PRIMARY KEY (id);
+CREATE INDEX idx_18870_account ON public.a2obj_apps_accounts_actionlog USING btree (account);
 
 
 
-CREATE INDEX idx_20667_account ON public.a2obj_apps_accounts_actionlog USING btree (account);
+CREATE INDEX idx_18876_default_group ON public.a2obj_apps_accounts_authsource_external USING btree (default_group);
 
 
 
-CREATE INDEX idx_20684_default_group ON public.a2obj_apps_accounts_authsource_external USING btree (default_group);
+CREATE INDEX idx_18893_default_auth ON public.a2obj_apps_accounts_config USING btree (default_auth);
 
 
 
-CREATE INDEX idx_20690_default_auth ON public.a2obj_apps_accounts_config USING btree (default_auth);
+CREATE INDEX idx_18893_default_group ON public.a2obj_apps_accounts_config USING btree (default_group);
 
 
 
-CREATE INDEX idx_20690_default_group ON public.a2obj_apps_accounts_config USING btree (default_group);
+CREATE INDEX idx_18898_authsource ON public.a2obj_apps_accounts_entity_account USING btree (authsource);
 
 
 
-CREATE INDEX idx_20695_authsource ON public.a2obj_apps_accounts_entity_account USING btree (authsource);
+CREATE INDEX idx_18898_fullname ON public.a2obj_apps_accounts_entity_account USING btree (fullname);
 
 
 
-CREATE INDEX idx_20695_fullname ON public.a2obj_apps_accounts_entity_account USING btree (fullname);
+CREATE UNIQUE INDEX idx_18898_username ON public.a2obj_apps_accounts_entity_account USING btree (username);
 
 
 
-CREATE UNIQUE INDEX idx_20695_username ON public.a2obj_apps_accounts_entity_account USING btree (username);
+CREATE UNIQUE INDEX idx_18913_name ON public.a2obj_apps_accounts_entity_group USING btree (name);
 
 
 
-CREATE UNIQUE INDEX idx_20710_name ON public.a2obj_apps_accounts_entity_group USING btree (name);
+CREATE UNIQUE INDEX idx_18916_account_group ON public.a2obj_apps_accounts_entity_groupjoin USING btree (account, "group");
 
 
 
-CREATE UNIQUE INDEX idx_20713_account_group ON public.a2obj_apps_accounts_entity_groupjoin USING btree (account, "group");
+CREATE INDEX idx_18916_accounts ON public.a2obj_apps_accounts_entity_groupjoin USING btree (account);
 
 
 
-CREATE INDEX idx_20713_accounts ON public.a2obj_apps_accounts_entity_groupjoin USING btree (account);
+CREATE INDEX idx_18916_groups ON public.a2obj_apps_accounts_entity_groupjoin USING btree ("group");
 
 
 
-CREATE INDEX idx_20713_groups ON public.a2obj_apps_accounts_entity_groupjoin USING btree ("group");
+CREATE INDEX idx_18919_account ON public.a2obj_apps_accounts_resource_client USING btree (account);
 
 
 
-CREATE INDEX idx_20716_account ON public.a2obj_apps_accounts_resource_client USING btree (account);
+CREATE INDEX idx_18919_date_active_account ON public.a2obj_apps_accounts_resource_client USING btree (date_active, account);
 
 
 
-CREATE INDEX idx_20716_date_active_account ON public.a2obj_apps_accounts_resource_client USING btree (date_active, account);
+CREATE INDEX idx_18925_account ON public.a2obj_apps_accounts_resource_contact USING btree (account);
 
 
 
-CREATE INDEX idx_20722_account ON public.a2obj_apps_accounts_resource_contact USING btree (account);
+CREATE INDEX idx_18925_info ON public.a2obj_apps_accounts_resource_contact USING btree (info);
 
 
 
-CREATE INDEX idx_20722_info ON public.a2obj_apps_accounts_resource_contact USING btree (info);
+CREATE UNIQUE INDEX idx_18925_prefer ON public.a2obj_apps_accounts_resource_contact USING btree (usefrom, account);
 
 
 
-CREATE UNIQUE INDEX idx_20722_prefer ON public.a2obj_apps_accounts_resource_contact USING btree (usefrom, account);
+CREATE UNIQUE INDEX idx_18925_type_info ON public.a2obj_apps_accounts_resource_contact USING btree (type, info);
 
 
 
-CREATE UNIQUE INDEX idx_20722_type_info ON public.a2obj_apps_accounts_resource_contact USING btree (type, info);
+CREATE INDEX idx_18932_account ON public.a2obj_apps_accounts_resource_recoverykey USING btree (account);
 
 
 
-CREATE INDEX idx_20729_account ON public.a2obj_apps_accounts_resource_recoverykey USING btree (account);
+CREATE UNIQUE INDEX idx_18940_type ON public.a2obj_apps_accounts_resource_registerallow USING btree (type, value);
 
 
 
-CREATE INDEX idx_20737_account ON public.a2obj_apps_accounts_resource_session USING btree (account);
+CREATE INDEX idx_18943_account ON public.a2obj_apps_accounts_resource_session USING btree (account);
 
 
 
-CREATE UNIQUE INDEX idx_20737_client ON public.a2obj_apps_accounts_resource_session USING btree (client);
+CREATE UNIQUE INDEX idx_18943_client ON public.a2obj_apps_accounts_resource_session USING btree (client);
 
 
 
-CREATE INDEX idx_20737_date_active_account ON public.a2obj_apps_accounts_resource_session USING btree (date_active, account);
+CREATE INDEX idx_18943_date_active_account ON public.a2obj_apps_accounts_resource_session USING btree (date_active, account);
 
 
 
-CREATE INDEX idx_20745_account ON public.a2obj_apps_accounts_resource_twofactor USING btree (account);
+CREATE INDEX idx_18951_account ON public.a2obj_apps_accounts_resource_twofactor USING btree (account);
 
 
 
-CREATE INDEX idx_20752_date_created ON public.a2obj_apps_accounts_resource_usedtoken USING btree (date_created);
+CREATE INDEX idx_18958_date_created ON public.a2obj_apps_accounts_resource_usedtoken USING btree (date_created);
 
 
 
-CREATE INDEX idx_20752_twofactor ON public.a2obj_apps_accounts_resource_usedtoken USING btree (twofactor);
-
-
-
-CREATE UNIQUE INDEX idx_20755_type ON public.a2obj_apps_accounts_resource_whitelist USING btree (type, value);
+CREATE INDEX idx_18958_twofactor ON public.a2obj_apps_accounts_resource_usedtoken USING btree (twofactor);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_actionlog
-    ADD CONSTRAINT a2obj_apps_accounts_actionlog_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE RESTRICT ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_ftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_imap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_ldap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_actionlog_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_external
-    ADD CONSTRAINT a2obj_apps_accounts_authsource_external_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_external_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_ftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_imap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
+    ADD CONSTRAINT a2obj_apps_accounts_authsource_ldap_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_config
-    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_1 FOREIGN KEY (default_group) REFERENCES public.a2obj_apps_accounts_entity_group(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_config
-    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_2 FOREIGN KEY (default_auth) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+    ADD CONSTRAINT a2obj_apps_accounts_config_ibfk_2 FOREIGN KEY (default_auth) REFERENCES public.a2obj_apps_accounts_authsource_external(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_account
-    ADD CONSTRAINT a2obj_apps_accounts_entity_account_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_entity_authentity(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_entity_account_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_entity_authentity(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -448,7 +449,7 @@ ALTER TABLE ONLY public.a2obj_apps_accounts_entity_account
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_entity_group
-    ADD CONSTRAINT a2obj_apps_accounts_entity_group_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_entity_authentity(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    ADD CONSTRAINT a2obj_apps_accounts_entity_group_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_accounts_entity_authentity(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 

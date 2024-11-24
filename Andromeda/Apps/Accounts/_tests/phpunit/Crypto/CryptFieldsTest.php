@@ -1,10 +1,10 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto\FieldTypes; require_once("init.php");
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto\CryptFields; require_once("init.php");
 
 use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 use Andromeda\Core\Database\FieldTypes\{NullStringType, ObjectRefT};
 use Andromeda\Apps\Accounts\Account;
 
-class FieldTypesTest extends \PHPUnit\Framework\TestCase
+class CryptFieldsTest extends \PHPUnit\Framework\TestCase
 {
     public function testBasicNull() : void
     {

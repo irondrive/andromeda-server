@@ -165,8 +165,6 @@ abstract class External extends BaseObject implements IAuthSource
         
         $defgroup = $this->default_group->TryGetObject();
         if ($defgroup !== null) $defgroup->Delete();
-
-        $this->database->DeleteObject($this);
     }
     
     /** Returns the class-only (no namespace) of the auth source */

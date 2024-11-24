@@ -1,9 +1,9 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
-/** Whitelist entry for allowing account signups */
-class Whitelist extends BaseObject
+/** RegisterAllow entry for allowing account signups */
+class RegisterAllow extends BaseObject
 {
     use TableTypes\TableNoChildren;
     
@@ -46,7 +46,7 @@ class Whitelist extends BaseObject
      */
     public static function Create(ObjectDatabase $database, int $type, string $value) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->type->SetValue($type);
         $obj->value->SetValue($value);

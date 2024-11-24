@@ -54,7 +54,7 @@ class Session extends BaseObject
     /** Create a new session for the given account and client */
     public static function Create(ObjectDatabase $database, Account $account, Client $client) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->client->SetObject($client);
         
@@ -108,7 +108,7 @@ class Session extends BaseObject
     {
         if (($maxage = $account->GetSessionTimeout()) === null) return 0;
         
-        $mintime = Main::GetInstance()->GetTime() - $maxage;
+        $mintime = $database->GetTime() - $maxage;
         
         $q = new QueryBuilder(); $q->Where($q->And(
             $q->Equals('account',$account->ID()),
@@ -120,7 +120,7 @@ class Session extends BaseObject
     /** Sets the timestamp this session was active to now */
     public function SetActiveDate() : self
     {
-        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this; // TODO move up a level
+        if ($this->database->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO move up a level
         
         $this->date_active->SetTimeNow(); return $this;
     }
@@ -135,12 +135,12 @@ class Session extends BaseObject
     {
         if (!$this->BaseCheckKeyMatch($key)) return false;
         
-        $time = Main::GetInstance()->GetTime();
+        $time = $this->database->GetTime();
         $maxage = $this->GetAccount()->GetSessionTimeout(); 
         $active = $this->date_active->TryGetValue();
-        // TODO active probably shouldn't be nullable? below won't work
         
-        if ($maxage !== null && $time - $active > $maxage) return false;
+        if ($maxage !== null && $active !== null &&
+            $time - $active > $maxage) return false;
         
         return true;
     }

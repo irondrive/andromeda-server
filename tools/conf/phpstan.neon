@@ -15,8 +15,6 @@ parameters:
             - ../../Andromeda/Apps/Accounts/AccountsApp.php
             - ../../Andromeda/Apps/Accounts/Group*.php
             - ../../Andromeda/Apps/Accounts/Account.php
-            - ../../Andromeda/Apps/Accounts/Resource
-            - ../../Andromeda/Apps/Accounts/Whitelist.php
             - ../../Andromeda/Apps/Accounts/Authenticator.php
             - ../../Andromeda/Apps/Accounts/AuthActionLog.php
     checkBenevolentUnionTypes: true

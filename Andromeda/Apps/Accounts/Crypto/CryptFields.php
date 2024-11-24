@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto\FieldTypes; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto\CryptFields; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\FieldTypes\{BaseField, NullStringType, ObjectRefT};

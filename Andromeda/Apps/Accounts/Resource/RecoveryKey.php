@@ -42,7 +42,7 @@ class RecoveryKey extends BaseObject
      * Returns a new array of recovery keys of the default set size
      * @param ObjectDatabase $database
      * @param Account $account
-     * @return array
+     * @return array<static>
      */
     public static function CreateSet(ObjectDatabase $database, Account $account) : array
     {        
@@ -51,10 +51,13 @@ class RecoveryKey extends BaseObject
         }, range(0, self::SET_SIZE-1));
     }
  
-    /** Creates a single recovery key for an account */
+    /**
+     * Creates a single recovery key for an account
+     * @return static
+     */
     public static function Create(ObjectDatabase $database, Account $account) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         
         $obj->AccountKeySourceCreate(
@@ -75,7 +78,7 @@ class RecoveryKey extends BaseObject
     /** Deletes all recovery keys owned by the given account */
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
     {
-        return $database->DeleteObjectsByKey(static::class, 'account', $account);
+        return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
     }
 
     /**

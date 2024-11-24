@@ -94,7 +94,7 @@ class Client extends BaseObject
     {
         if (($maxage = $account->GetClientTimeout()) === null) return 0;
         
-        $mintime = $database->GetApiPackage()->GetTime() - $maxage;
+        $mintime = $database->GetTime() - $maxage;
         
         $q = new QueryBuilder(); $q->Where($q->And(
             $q->Equals('account',$account->ID()),
@@ -113,11 +113,11 @@ class Client extends BaseObject
      */
     public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account, ?string $name = null) : self
     {
-        $obj = static::BaseCreate($database);
+        $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         
-        $obj->lastaddr->SetValue($interface->GetAddress());
-        $obj->useragent->SetValue($interface->GetUserAgent());
+        $obj->lastaddr->SetValue($interface->getAddress());
+        $obj->useragent->SetValue($interface->getUserAgent());
         
         $obj->name->SetValue($name);
         $obj->account->SetObject($account);
@@ -125,11 +125,9 @@ class Client extends BaseObject
         $obj->InitAuthKey(); return $obj;
     }
     
-    public function NotifyDeleted() : void
+    public function NotifyPreDeleted() : void
     {
-        Session::DeleteByClient($this->database, $this); // TODO not gonna work! foreign keys must be removed first!
-        
-        parent::NotifyDeleted();
+        Session::DeleteByClient($this->database, $this);
     }
     
     /**
@@ -143,15 +141,15 @@ class Client extends BaseObject
     {        
         if (!$this->BaseCheckKeyMatch($key)) return false;
         
-        $time = $this->GetApiPackage()->GetTime();
+        $time = $this->database->GetTime();
         $maxage = $this->GetAccount()->GetClientTimeout(); 
         $active = $this->date_active->TryGetValue();
-        // TODO active probably shouldn't be nullable? below won't work
         
-        if ($maxage !== null && $time - $active > $maxage) return false;
+        if ($maxage !== null && $active !== null &&
+            $time - $active > $maxage) return false;
         
         $this->useragent->SetValue($interface->getUserAgent());
-        $this->lastaddr->SetValue($interface->GetAddress());  
+        $this->lastaddr->SetValue($interface->getAddress());  
         
         return true;
     }

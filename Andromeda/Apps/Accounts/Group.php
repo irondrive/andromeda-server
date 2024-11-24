@@ -150,7 +150,7 @@ class Group extends GroupUtil\AuthEntity
     /** Creates and returns a new group with the given name, priority, and comment */
     public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
     {
-        $group = static::BaseCreate($database)->SetScalar('name', $name)->SetScalar('priority', $priority ?? 0);
+        $group = $database->CreateObject(static::class)->SetScalar('name', $name)->SetScalar('priority', $priority ?? 0);
         
         if ($comment !== null) $group->SetScalar('comment', $comment);
         
