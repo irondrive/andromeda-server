@@ -60,7 +60,7 @@ trait AccountKeySource
     }
     
     /** Returns the account that owns this key source */
-    protected function GetAccount() : Account
+    public function GetAccount() : Account
     { 
         return $this->account->GetObject();
     }
