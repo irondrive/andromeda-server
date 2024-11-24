@@ -4,18 +4,31 @@ use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Logging\ActionLog as BaseActionLog;
 
+use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Accounts\Resource\Client;
 
-/** Provides a base class for apps that use the Authenticator to log auth info */
+/** 
+ * Provides a base class for apps that use the Authenticator to log auth info
+ * @phpstan-import-type ActionLogJ from BaseActionLog
+ */
 abstract class AuthActionLog extends BaseActionLog
 {
     /** True if the request was done as admin */
     protected FieldTypes\NullBoolType $admin;
-    /** The real account the action was done with */
+    /** 
+     * The real account the action was done with 
+     * @var FieldTypes\NullObjectRefT<Account>
+     */
     protected FieldTypes\NullObjectRefT $account;
-    /** The sudouser the action was done as */
+    /** 
+     * The sudouser the action was done as 
+     * @var FieldTypes\NullObjectRefT<Account>
+     */
     protected FieldTypes\NullObjectRefT $sudouser;
-    /** The client the action was done with */
+    /** 
+     * The client the action was done with 
+     * @var FieldTypes\NullObjectRefT<Client>
+     */
     protected FieldTypes\NullObjectRefT $client;
 
     protected function CreateFields() : void
@@ -75,7 +88,8 @@ abstract class AuthActionLog extends BaseActionLog
     /**
      * Returns the printable client object of this AuthActionLog
      * @param bool $expand if true, expand linked objects
-     * @return array<mixed> `{admin:?bool, ?account:id, ?client:id, ?sudouser:id}`
+     * @return ActionLogJ
+     * // array<mixed> `{admin:?bool, ?account:id, ?client:id, ?sudouser:id}`
         if $expand, `{?account:Account, ?client:Client, ?sudouser:Account}`
        @see Account::GetClientObject()
        @see Client::GetClientObject()
