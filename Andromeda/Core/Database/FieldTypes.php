@@ -881,6 +881,9 @@ class NullObjectRefT extends BaseField
         $this->objId = null;
         $this->class = $class;
     }
+
+    /** @return class-string<T> */
+    public function GetClass() : string { return $this->class; }
     
     /** @return $this */
     public function InitDBValue($value) : self
@@ -964,6 +967,9 @@ class ObjectRefT extends BaseField
         
         $this->class = $class;
     }
+    
+    /** @return class-string<T> */
+    public function GetClass() : string { return $this->class; }
     
     /** @return $this */
     public function InitDBValue($value) : self

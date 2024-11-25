@@ -14,7 +14,7 @@ use Andromeda\Apps\Accounts\Crypto\KeySource;
  * of registered clients, can have registered two factor, 
  * can provide secret-key crypto services, provides contact info
  */
-class Account extends AuthBase
+class Account extends PolicyBase
 {
     public static function GetFieldTemplate() : array
     {

@@ -11,7 +11,7 @@ use Andromeda\Apps\Accounts\Resource\Contact;
  * Used primarily to manage config for multiple accounts at once, in a many-to-many relationship.
  * Groups use a priority number to resolve conflicting properties.
  */
-class Group extends AuthBase
+class Group extends PolicyBase
 {
     public static function GetFieldTemplate() : array
     {

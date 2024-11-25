@@ -12,7 +12,7 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `authsource` char(8) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)
-,  CONSTRAINT `a2obj_apps_accounts_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authbase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_accounts_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_policybase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ,  CONSTRAINT `a2obj_apps_accounts_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_actionlog` (
@@ -23,26 +23,6 @@ CREATE TABLE `a2obj_apps_accounts_actionlog` (
 ,  `client` char(12) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-);
-CREATE TABLE `a2obj_apps_accounts_authbase` (
-  `id` char(12) NOT NULL
-,  `comment` text DEFAULT NULL
-,  `date_created` double NOT NULL
-,  `date_modified` double DEFAULT NULL
-,  `admin` integer DEFAULT NULL
-,  `disabled` integer DEFAULT NULL
-,  `forcetf` integer DEFAULT NULL
-,  `allowcrypto` integer DEFAULT NULL
-,  `accountsearch` integer DEFAULT NULL
-,  `groupsearch` integer DEFAULT NULL
-,  `userdelete` integer DEFAULT NULL
-,  `limit_sessions` integer DEFAULT NULL
-,  `limit_contacts` integer DEFAULT NULL
-,  `limit_recoverykeys` integer DEFAULT NULL
-,  `session_timeout` integer DEFAULT NULL
-,  `client_timeout` integer DEFAULT NULL
-,  `max_password_age` integer DEFAULT NULL
-,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_authsource_external` (
   `id` char(8) NOT NULL
@@ -98,7 +78,7 @@ CREATE TABLE `a2obj_apps_accounts_group` (
 ,  `priority` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`name`)
-,  CONSTRAINT `a2obj_apps_accounts_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authbase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_accounts_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_policybase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE TABLE `a2obj_apps_accounts_groupjoin` (
   `id` char(12) NOT NULL
@@ -109,6 +89,26 @@ CREATE TABLE `a2obj_apps_accounts_groupjoin` (
 ,  UNIQUE (`account`,`group`)
 ,  CONSTRAINT `a2obj_apps_accounts_groupjoin_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_groupjoin_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
+);
+CREATE TABLE `a2obj_apps_accounts_policybase` (
+  `id` char(12) NOT NULL
+,  `comment` text DEFAULT NULL
+,  `date_created` double NOT NULL
+,  `date_modified` double DEFAULT NULL
+,  `admin` integer DEFAULT NULL
+,  `disabled` integer DEFAULT NULL
+,  `forcetf` integer DEFAULT NULL
+,  `allowcrypto` integer DEFAULT NULL
+,  `accountsearch` integer DEFAULT NULL
+,  `groupsearch` integer DEFAULT NULL
+,  `userdelete` integer DEFAULT NULL
+,  `limit_sessions` integer DEFAULT NULL
+,  `limit_contacts` integer DEFAULT NULL
+,  `limit_recoverykeys` integer DEFAULT NULL
+,  `session_timeout` integer DEFAULT NULL
+,  `client_timeout` integer DEFAULT NULL
+,  `max_password_age` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_resource_client` (
   `id` char(12) NOT NULL
