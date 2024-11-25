@@ -1,16 +1,41 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{BaseObject, FieldTypes};
+use Andromeda\Core\Database\{BaseObject, FieldTypes, TableTypes, ObjectDatabase};
 use Andromeda\Core\IOFormat\SafeParams;
 
 /** Base class for account/groups containing properties that can be set per-account or per-group */
-abstract class AuthBase extends BaseObject  // TODO was StandardObject
+abstract class PolicyBase extends BaseObject  // TODO was StandardObject
 {
     public abstract function GetDisplayName() : string;
     
     public abstract function GetContacts() : array;
     
     public abstract function SendMessage(string $subject, ?string $html, string $plain, ?Account $from = null) : void;
+    
+    use TableTypes\TableLinkedChildren;
+    
+    /** @return list<class-string<self>> */
+    public static function GetChildMap(ObjectDatabase $database) : array
+    {
+        return array(Account::class, Group::class);
+    }
+    
+    // TODO RAY !! add fields here including date_created
+
+    protected function CreateFields() : void
+    {
+        $fields = array();
+
+        //$this->date_created =  $fields[] = new FieldTypes\Timestamp('date_created');
+
+        $this->RegisterFields($fields, self::class);
+        
+        parent::CreateFields();
+    }
+
+
+
+
     
     public static function GetFieldTemplate() : array
     {

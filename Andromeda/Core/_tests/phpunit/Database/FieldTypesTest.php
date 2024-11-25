@@ -718,6 +718,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $parent->method('GetDatabase')->willReturn($database);
  
         $field = (new NullObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
+        $this->assertSame(TestObject1::class, $field->GetClass());
         
         $this->assertNull($field->TryGetObject()); // default
         $this->assertNull($field->TryGetObjectID());
@@ -763,6 +764,7 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $parent->method('GetDatabase')->willReturn($database);
         
         $field = (new ObjectRefT(TestObject1::class, 'myobj'))->SetParent($parent);
+        $this->assertSame(TestObject1::class, $field->GetClass());
         
         $this->assertFalse($field->isInitialized());
         

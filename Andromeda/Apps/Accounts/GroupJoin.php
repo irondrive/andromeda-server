@@ -1,50 +1,50 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
+use Andromeda\Core\Database\{JoinObject, FieldTypes, ObjectDatabase, TableTypes};
 
 /** Class representing a group membership, joining an account and a group */
-class GroupJoin extends BaseObject
+class GroupJoin extends JoinObject
 {
     use TableTypes\TableNoChildren;
     
     /** The date this session was created */
     private FieldTypes\Timestamp $date_created;
 
-    // TODO RAY !! not sure if this should become a base class again... the goal though is to get some kind of caching of loads!
-    // should be fairly easy since load/delete of join objects only happen through this class. can intercept and update the cache
-    // maybe present a simple interface - e.g. load by account returns an array of pairs of (Group, GroupJoin) ...
+    /** @var FieldTypes\ObjectRefT<Account> */
+    private FieldTypes\ObjectRefT $account;
 
+    /** @var FieldTypes\ObjectRefT<Group> */
+    private FieldTypes\ObjectRefT $group;
 
+    protected function CreateFields() : void
+    {
+        $fields = array();
+        
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+        $this->account = $fields[] = new FieldTypes\ObjectRefT(Account::class, 'account');
+        $this->group = $fields[] = new FieldTypes\ObjectRefT(Group::class, 'group');
 
-    
+        $this->RegisterFields($fields, self::class);
+        parent::CreateFields();
+    }
 
+    public function GetAccount() : Account { return $this->account->GetObject(); }
+    public function GetGroup() : Group { return $this->group->GetObject(); }
 
-    /** 
-     * Return the column name of the left side of the join
-     * 
-     * Must match the name of the column in the right-side object that refers to this join
-     */
-    protected static function GetLeftField() : string { return 'accounts'; }
-    
-    /**
-     * Return the column name of the right side of the join
-     *
-     * Must match the name of the column in the left-side object that refers to this join
-     */
-    protected static function GetLeftClass() : string { return Account::class; }
-    
-    /** Return the column name of the right side of the join */
-    protected static function GetRightField() : string { return 'groups'; }
-    
-    /** Return the object class referred to by the right side of the join */
-    protected static function GetRightClass() : string { return Group::class; }
-    
-    /** Returns the joined account */
-    public function GetAccount() : Account { return $this->GetObject('accounts'); }
-    
-    /** Returns the joined group */
-    public function GetGroup() : Group { return $this->GetObject('groups'); }
-    
+    /** @return array<string, Account> */
+    public static function LoadAccount(ObjectDatabase $database, Group $group)
+    {
+        return static::LoadFromJoin($database, Account::class, 'account', array('group'=>$group));
+    }
+
+    /** @return array<string, Group> */
+    public static function LoadGroup(ObjectDatabase $database, Account $account)
+    {
+        return static::LoadFromJoin($database, Group::class, 'group', array('account'=>$account));
+    }
+
+    // TODO RAY !! need to set date created in create
+
     /**
      * Returns a printable client object of this group membership
      * @return array<mixed> `{dates:{created:float}}`
@@ -52,7 +52,7 @@ class GroupJoin extends BaseObject
     public function GetClientObject()
     {
         return array(
-            'date_created' => $this->GetDateCreated()
+            'date_created' => $this->date_created->GetValue()
         );
     }
 }

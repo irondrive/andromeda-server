@@ -28,7 +28,7 @@ CREATE TABLE `a2obj_apps_accounts_account` (
   UNIQUE KEY `username` (`username`),
   KEY `fullname` (`fullname`),
   KEY `authsource` (`authsource`),
-  CONSTRAINT `a2obj_apps_accounts_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authbase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `a2obj_apps_accounts_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_policybase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `a2obj_apps_accounts_account_ibfk_2` FOREIGN KEY (`authsource`) REFERENCES `a2obj_apps_accounts_authsource_external` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -43,29 +43,6 @@ CREATE TABLE `a2obj_apps_accounts_actionlog` (
   PRIMARY KEY (`id`),
   KEY `account` (`account`),
   CONSTRAINT `a2obj_apps_accounts_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_accounts_authbase` (
-  `id` char(12) NOT NULL,
-  `comment` text DEFAULT NULL,
-  `date_created` double NOT NULL,
-  `date_modified` double DEFAULT NULL,
-  `admin` tinyint(1) DEFAULT NULL,
-  `disabled` tinyint(1) DEFAULT NULL,
-  `forcetf` tinyint(1) DEFAULT NULL,
-  `allowcrypto` tinyint(1) DEFAULT NULL,
-  `accountsearch` tinyint(4) DEFAULT NULL,
-  `groupsearch` tinyint(4) DEFAULT NULL,
-  `userdelete` tinyint(1) DEFAULT NULL,
-  `limit_sessions` tinyint(4) DEFAULT NULL,
-  `limit_contacts` tinyint(4) DEFAULT NULL,
-  `limit_recoverykeys` tinyint(4) DEFAULT NULL,
-  `session_timeout` bigint(20) DEFAULT NULL,
-  `client_timeout` bigint(20) DEFAULT NULL,
-  `max_password_age` bigint(20) DEFAULT NULL,
-  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -142,7 +119,7 @@ CREATE TABLE `a2obj_apps_accounts_group` (
   `priority` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`),
-  CONSTRAINT `a2obj_apps_accounts_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_authbase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `a2obj_apps_accounts_group_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_policybase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -158,6 +135,29 @@ CREATE TABLE `a2obj_apps_accounts_groupjoin` (
   KEY `groups` (`group`),
   CONSTRAINT `a2obj_apps_accounts_groupjoin_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`),
   CONSTRAINT `a2obj_apps_accounts_groupjoin_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_accounts_policybase` (
+  `id` char(12) NOT NULL,
+  `comment` text DEFAULT NULL,
+  `date_created` double NOT NULL,
+  `date_modified` double DEFAULT NULL,
+  `admin` tinyint(1) DEFAULT NULL,
+  `disabled` tinyint(1) DEFAULT NULL,
+  `forcetf` tinyint(1) DEFAULT NULL,
+  `allowcrypto` tinyint(1) DEFAULT NULL,
+  `accountsearch` tinyint(4) DEFAULT NULL,
+  `groupsearch` tinyint(4) DEFAULT NULL,
+  `userdelete` tinyint(1) DEFAULT NULL,
+  `limit_sessions` tinyint(4) DEFAULT NULL,
+  `limit_contacts` tinyint(4) DEFAULT NULL,
+  `limit_recoverykeys` tinyint(4) DEFAULT NULL,
+  `session_timeout` bigint(20) DEFAULT NULL,
+  `client_timeout` bigint(20) DEFAULT NULL,
+  `max_password_age` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
