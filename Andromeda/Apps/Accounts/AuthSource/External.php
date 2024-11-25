@@ -71,7 +71,7 @@ abstract class External extends BaseObject implements IAuthSource
     
     /** 
      * Gets command usage specific to external authentication backends
-     * @return array<string>
+     * @return list<string>
      */
     final public static function GetPropUsages() : array
     {
@@ -83,7 +83,7 @@ abstract class External extends BaseObject implements IAuthSource
     
     /** 
      * Returns all available external auth objects
-     * @return array<static>
+     * @return array<string, static>
      */
     public static function LoadAll(ObjectDatabase $database) : array
     {

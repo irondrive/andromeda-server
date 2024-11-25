@@ -42,7 +42,7 @@ class RecoveryKey extends BaseObject
      * Returns a new array of recovery keys of the default set size
      * @param ObjectDatabase $database
      * @param Account $account
-     * @return array<static>
+     * @return list<static>
      */
     public static function CreateSet(ObjectDatabase $database, Account $account) : array
     {        

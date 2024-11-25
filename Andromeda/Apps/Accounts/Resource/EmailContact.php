@@ -11,7 +11,7 @@ class EmailContact extends Contact
      * @param string $subject subject line
      * @param string $html html message (optional)
      * @param string $plain plain text message
-     * @param array<Contact> $recipients array of contacts
+     * @param list<Contact> $recipients array of contacts
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */

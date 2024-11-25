@@ -15,7 +15,7 @@ class Authenticator
 {
     private SafeParams $params;
     
-    /** @var array<self> */
+    /** @var list<self> */
     private static array $instances = array();
    
     private ?Account $account = null;
