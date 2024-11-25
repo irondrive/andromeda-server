@@ -675,12 +675,13 @@ class Timestamp extends FloatType
 /**  A field that stores a thread-safe integer counter */
 class Counter extends BaseField
 {
-    private ?NullIntType $limit = null;
+    /** @var NULL|NullIntType|IntType */
+    private ?BaseField $limit = null;
 
     protected int $value;
     
-    /** @param ?NullIntType $limit optional counter limiting field */
-    public function __construct(string $name, bool $saveOnRollback = false, ?NullIntType $limit = null)
+    /** @param NULL|NullIntType|IntType $limit optional counter limiting field */
+    public function __construct(string $name, bool $saveOnRollback = false, ?BaseField $limit = null)
     {
         parent::__construct($name, $saveOnRollback);
         
@@ -718,7 +719,8 @@ class Counter extends BaseField
     {
         if ($delta > 0 && $this->limit !== null)
         {
-            $limit = $this->limit->TryGetValue();
+            $limit = ($this->limit instanceof NullIntType) 
+                ? $this->limit->TryGetValue() : $this->limit->GetValue();
             
             if ($limit !== null && $this->value + $delta > $limit)
             {
