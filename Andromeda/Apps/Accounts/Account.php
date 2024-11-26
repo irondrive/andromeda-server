@@ -30,7 +30,7 @@ class Account extends PolicyBase
             'date_loggedon' => new FieldTypes\Timestamp(),
             'date_active' => new FieldTypes\Timestamp(null, true),
             'obj_authsource'    => new FieldTypes\ObjectPoly(AuthSource\External::class),
-            'objs_sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(),
+            'objs_sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(), // TODO RAY !! no autodelete anymore
             'objs_contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
             'objs_clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
             'objs_twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->autoDelete(),
@@ -602,7 +602,7 @@ class Account extends PolicyBase
      */
     public function EncryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();    
+        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();    
         
         $master = $this->GetScalar('master_key');
         return Crypto::EncryptSecret($data, $nonce, $master);
@@ -617,7 +617,7 @@ class Account extends PolicyBase
      */
     public function DecryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
+        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();
         
         $master = $this->GetScalar('master_key');
         return Crypto::DecryptSecret($data, $nonce, $master);
@@ -632,7 +632,7 @@ class Account extends PolicyBase
      */
     public function GetEncryptedMasterKey(string $nonce, string $key) : string
     {
-        if (!$this->cryptoAvailable) throw new CryptoUnlockRequiredException();
+        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();
         return Crypto::EncryptSecret($this->GetScalar('master_key'), $nonce, $key);
     }
     
@@ -645,7 +645,7 @@ class Account extends PolicyBase
     {
         if ($this->cryptoAvailable) return $this;         
         else if (!$this->hasCrypto())
-           throw new CryptoNotInitializedException();
+           throw new Exceptions\CryptoNotInitializedException();
 
         $master = $this->GetScalar('master_key');
         $master_nonce = $this->GetScalar('master_nonce');
@@ -669,7 +669,7 @@ class Account extends PolicyBase
     {
         if ($this->cryptoAvailable) return $this;
         else if (!$this->hasCrypto())
-            throw new CryptoNotInitializedException();
+            throw new Exceptions\CryptoNotInitializedException();
         
         $master = $source->GetUnlockedKey();
         
@@ -689,16 +689,16 @@ class Account extends PolicyBase
     {
         if ($this->cryptoAvailable) return $this;
         else if (!$this->hasCrypto())
-            throw new CryptoNotInitializedException();
+            throw new Exceptions\CryptoNotInitializedException();
         
         if (!$this->HasRecoveryKeys()) 
-            throw new RecoveryKeyFailedException();
+            throw new Exceptions\RecoveryKeyFailedException();
         
         $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
-        if ($obj === null) throw new RecoveryKeyFailedException();
+        if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
         
         if (!$obj->CheckFullKey($key)) 
-            throw new RecoveryKeyFailedException();
+            throw new Exceptions\RecoveryKeyFailedException();
         
         return $this->UnlockCryptoFromKeySource($obj);
     }
@@ -724,10 +724,10 @@ class Account extends PolicyBase
     public function InitializeCrypto(string $password, bool $rekey = false) : self
     {
         if ($rekey && !$this->cryptoAvailable) 
-            throw new CryptoUnlockRequiredException();
+            throw new Exceptions\CryptoUnlockRequiredException();
         
         if (!$rekey && $this->hasCrypto())
-            throw new CryptoAlreadyInitializedException();
+            throw new Exceptions\CryptoAlreadyInitializedException();
         
         $master_salt = Crypto::GenerateSalt(); 
         $this->SetScalar('master_salt', $master_salt);
@@ -787,7 +787,7 @@ trait GroupInherit
         if (array_key_exists($field, self::GetInheritedFields()))
             $value = $this->TryGetInheritable($field)->GetValue();
         else $value = parent::GetScalar($field, $allowTemp);
-        if ($value !== null) return $value; else throw new NullValueException();
+        if ($value !== null) return $value; else throw new Exceptions\NullValueException();
     }
     
     protected function TryGetScalar(string $field, bool $allowTemp = true)
@@ -802,7 +802,7 @@ trait GroupInherit
         if (array_key_exists($field, self::GetInheritedFields()))
             $value = $this->TryGetInheritable($field, true)->GetValue();
         else $value = parent::GetObject($field);
-        if ($value !== null) return $value; else throw new NullValueException();
+        if ($value !== null) return $value; else throw new Exceptions\NullValueException();
     }
     
     protected function TryGetObject(string $field) : ?BaseObject
