@@ -32,13 +32,13 @@ class GroupJoin extends JoinObject
     public function GetGroup() : Group { return $this->group->GetObject(); }
 
     /** @return array<string, Account> */
-    public static function LoadAccount(ObjectDatabase $database, Group $group)
+    public static function LoadAccounts(ObjectDatabase $database, Group $group)
     {
         return static::LoadFromJoin($database, Account::class, 'account', array('group'=>$group));
     }
 
     /** @return array<string, Group> */
-    public static function LoadGroup(ObjectDatabase $database, Account $account)
+    public static function LoadGroups(ObjectDatabase $database, Account $account)
     {
         return static::LoadFromJoin($database, Group::class, 'group', array('account'=>$account));
     }

@@ -81,15 +81,6 @@ abstract class External extends BaseObject implements IAuthSource
         return $retval;
     }
     
-    /** 
-     * Returns all available external auth objects
-     * @return array<string, static>
-     */
-    public static function LoadAll(ObjectDatabase $database) : array
-    {
-        return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
-    }
-    
     /** Creates and tests a new external auth backend based on the user input */
     public static function TypedCreate(ObjectDatabase $database, SafeParams $params) : self
     {

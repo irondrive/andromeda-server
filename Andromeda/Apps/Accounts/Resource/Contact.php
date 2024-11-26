@@ -20,7 +20,7 @@ abstract class Contact extends BaseObject
     //private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
     
     /** @return array<int, class-string<self>> */
-    public static function GetChildMap(ObjectDatabase $database) : array
+    public static function GetChildMap(?ObjectDatabase $database = null) : array
     {
         return array(self::TYPE_EMAIL => EmailContact::class); // TODO maybe use email STRING for type?
     }
@@ -224,11 +224,30 @@ abstract class Contact extends BaseObject
     }
 
     /**
-     * Sends a message to the given array of contacts
+     * Sends a message to the given array of contacts of any type
      * @param string $subject subject line
      * @param string $html html message (optional)
      * @param string $plain plain text message
-     * @param list<self> $recipients array of contacts
+     * @param array<self> $recipients array of contacts
+     * @param Account $from account sending the message
+     * @param bool $bcc true to use BCC for recipients
+     */
+    public static function SendMessageManyT(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
+    {
+        foreach (self::GetChildMap() as $type)
+        {
+            $subrecipients = array_filter($recipients, 
+                function(Contact $c)use($type){ return $c instanceof $type; });
+            $type::SendMessageMany($subject, $html, $plain, $subrecipients, $bcc, $from);
+        }
+    }
+
+    /**
+     * Sends a message to the given array of contacts of a specific type
+     * @param string $subject subject line
+     * @param string $html html message (optional)
+     * @param string $plain plain text message
+     * @param array<static> $recipients array of contacts
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */

@@ -102,6 +102,19 @@ abstract class PolicyBase extends BaseObject
         return $this;
     }
 
+    // TODO RAY !! add GetClientObject? group will use, but account will override
+
+    /** Gets the comment for the entity (or null) */
+    public function GetComment() : ?string { 
+        return $this->comment->TryGetValue(); }
+    
+    /** 
+     * Sets the comment for the entity (or null)
+     * @reeturn $this
+     */
+    public function SetComment(?string $comment) : self { 
+        $this->comment->SetValue($comment); return $this; }
+    
     /** Returns the descriptive name of this policy entity */
     public abstract function GetDisplayName() : string;
 
