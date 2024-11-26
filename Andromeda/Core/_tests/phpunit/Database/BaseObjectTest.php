@@ -11,8 +11,8 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         ), EasyObject::GetUniqueKeys());
         
         $this->assertSame(array(
-            PolyObject5a::class => array('testprop5'),
-            PolyObject1::class => array('id')
+            PolyObject1::class => array('id'),
+            PolyObject5a::class => array('testprop5')
         ), PolyObject5aa::GetUniqueKeys());
     }
     

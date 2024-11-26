@@ -119,15 +119,6 @@ class Emailer extends BaseObject
     }
     
     /** 
-     * Returns all available Emailer objects 
-     * @return array<string, static>
-     */
-    public static function LoadAll(ObjectDatabase $database) : array 
-    { 
-        return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
-    }
-    
-    /** 
      * Returns any available (random) Emailer object 
      * @throws Exceptions\MailerUnavailableException if none configured
      */

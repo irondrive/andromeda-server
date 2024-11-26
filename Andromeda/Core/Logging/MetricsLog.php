@@ -163,7 +163,9 @@ class MetricsLog extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array(self::class => array('id','actionlog'));
+        $ret = parent::GetUniqueKeys();
+        $ret[self::class][] = 'actionlog';
+        return $ret;
     }
     
     /**

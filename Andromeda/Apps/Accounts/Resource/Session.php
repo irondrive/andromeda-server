@@ -45,7 +45,9 @@ class Session extends BaseObject
     
     public static function GetUniqueKeys() : array
     {
-        return array(self::class => array('id','client'));
+        $ret = parent::GetUniqueKeys();
+        $ret[self::class][] = 'client';
+        return $ret;
     }
     
     /** Returns the client that owns this session */

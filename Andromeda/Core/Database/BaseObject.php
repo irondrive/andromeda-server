@@ -103,6 +103,15 @@ abstract class BaseObject
         return $database->TryLoadUniqueByKey(static::class, 'id', $id);
     }
     
+    /** 
+     * Returns all available external auth objects
+     * @return array<string, static>
+     */
+    public static function LoadAll(ObjectDatabase $database) : array
+    {
+        return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
+    }
+    
     /** Primary reference to the database */
     protected ObjectDatabase $database;
     
