@@ -39,6 +39,8 @@ class Account extends PolicyBase
     /** The date the account last was active (made any request) */
     private FieldTypes\NullTimestamp $date_active;
 
+    // TODO RAY !! re-implement limit sessions/contacts/recoverykeys (can't be automatic, no object refs anymore)
+
     protected function CreateFields() : void
     {
         $fields = array();
@@ -69,8 +71,6 @@ class Account extends PolicyBase
     public const DISABLE_PENDING_CONTACT = 2;
     
     public const DEFAULT_SEARCH_MAX = 3;
-    
-
     
     /** Returns the account's username */
     public function GetUsername() : string  { return $this->username->GetValue(); }
@@ -161,6 +161,68 @@ class Account extends PolicyBase
         return null; // TODO RAY !! return $this->TryGetJoinObject('groups', $group);
     }
 
+    /**
+     * Returns a field from an account or group based on group inheritance
+     * @template T of NullBaseField
+     * @param callable(PolicyBase):T $getfield function to get the field
+     * @return ?T field from correct source or null if unset
+     */
+    protected function GetInheritableField(callable $getfield) : ?NullBaseField
+    {
+        $actfield = $getfield($this);
+        if ($actfield->TryGetValue() !== null) return $actfield;
+
+        $actfield->TryGetValue();
+
+        /** @var ?T */
+        $grpfield = null;
+        $priority = null;
+
+        foreach ($this->GetGroups() as $tempgroup)
+        {
+            $tempfield = $getfield($tempgroup);
+            $temppriority = $tempgroup->GetPriority();
+            if (($tempfield->TryGetValue() !== null) && 
+                ($priority === null || $temppriority > $priority))
+            {
+                $grpfield = $tempfield;
+                $priority = $temppriority;
+            }
+        }
+
+        return ($grpfield !== null) ? $grpfield : null;
+    }
+
+    /**
+    * Returns a an account or group based on group inheritance
+    * @template T of NullBaseField
+    * @param callable(PolicyBase):T $getfield function to get the field
+    * @return ?PolicyBase source of field or null if unset
+    */
+    protected function GetInheritableSource(callable $getfield) : ?PolicyBase
+    {
+        $actfield = $getfield($this);
+        if ($actfield->TryGetValue() !== null) return $this;
+
+        /** @var ?Group */
+        $group = null;
+        $priority = null;
+
+        foreach ($this->GetGroups() as $tempgroup)
+        {
+            $tempfield = $getfield($tempgroup);
+            $temppriority = $tempgroup->GetPriority();
+            if (($tempfield->TryGetValue() !== null) && 
+                ($priority === null || $temppriority > $priority))
+            {
+                $group = $tempgroup;
+                $priority = $temppriority;
+            }
+        }
+
+        return ($group !== null) ? $group : null;
+    }
+
     /** Returns the auth source the account authenticates against */
     public function GetAuthSource() : AuthSource\IAuthSource
     { 
@@ -176,7 +238,7 @@ class Account extends PolicyBase
     public function GetClients() : array { return Client::LoadByAccount($this->database, $this); }
     
     /** Deletes all clients registered to the account */
-    public function DeleteClients() : self{ Client::DeleteByAccount($this->database, $this); return $this; }
+    public function DeleteClients() : self { Client::DeleteByAccount($this->database, $this); return $this; }
     
     /**
      * Returns an array of sessions registered to the account
@@ -184,12 +246,18 @@ class Account extends PolicyBase
      */
     public function GetSessions() : array { return Session::LoadByAccount($this->database, $this); }
     
+    /** Returns true if the account has any recovery keys */
+    public function HasRecoveryKeys() : bool { return RecoveryKey::CountByAccount($this->database, $this) > 0; }
+
     /**
      * Returns an array of recovery keys for the account
      * @return array<string, RecoveryKey> keys indexed by ID
      */
     private function GetRecoveryKeys() : array { return RecoveryKey::LoadByAccount($this->database, $this); }
-    
+
+    /** Returns true if the account has any two factor */
+    public function HasTwoFactor() : bool { return TwoFactor::CountByAccount($this->database, $this) > 0; }
+
     /**
      * Returns an array of twofactors for the account
      * @return array<string, TwoFactor> twofactors indexed by ID
@@ -649,9 +717,10 @@ class Account extends PolicyBase
     {
         if ($this->hasCrypto())
         {
-           $this->InitializeCrypto($new_password, true); // keeps same key
+            $this->InitializeCrypto($new_password, true); // keeps same key
            
-           foreach ($this->GetTwoFactors() as $tf) $tf->InitializeCrypto();
+            foreach ($this->GetTwoFactors() as $tf)
+                $tf->InitializeCrypto();
         }
         
         if ($this->GetAuthSource() instanceof AuthSource\Local)
@@ -831,8 +900,8 @@ class Account extends PolicyBase
         foreach (self::$crypto_handlers as $func) 
             $func($this->database, $this, false);
 
-        foreach ($this->GetSessions() as $session) $session->DestroyCrypto();
-        foreach ($this->GetTwoFactors() as $twofactor) $twofactor->DestroyCrypto();
+        foreach ($this->GetSessions() as $session)         $session->DestroyCrypto();
+        foreach ($this->GetTwoFactors() as $twofactor)     $twofactor->DestroyCrypto();
         foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
 
         $this->BaseDestroyCrypto();
@@ -840,72 +909,4 @@ class Account extends PolicyBase
         $this->cryptoAvailable = false;
         return $this;
     }
-
-    
-
-
-
-    /**
-     * Returns a field from an account or group based on group inheritance
-     * @template T of NullBaseField
-     * @param callable(PolicyBase):T $getfield function to get the field
-     * @return ?T field from correct source or null if unset
-     */
-    public function GetInheritableField(callable $getfield) : ?NullBaseField
-    {
-        $actfield = $getfield($this);
-        if ($actfield->TryGetValue() !== null) return $actfield;
-
-        $actfield->TryGetValue();
-
-        /** @var ?T */
-        $grpfield = null;
-        $priority = null;
-
-        foreach ($this->GetGroups() as $tempgroup)
-        {
-            $tempfield = $getfield($tempgroup);
-            $temppriority = $tempgroup->GetPriority();
-            if (($tempfield->TryGetValue() !== null) && 
-                ($priority === null || $temppriority > $priority))
-            {
-                $grpfield = $tempfield;
-                $priority = $temppriority;
-            }
-        }
-
-        return ($grpfield !== null) ? $grpfield : null;
-    }
-
-    /**
-    * Returns a an account or group based on group inheritance
-    * @template T of NullBaseField
-    * @param callable(PolicyBase):T $getfield function to get the field
-    * @return ?PolicyBase source of field or null if unset
-    */
-    public function GetInheritableSource(callable $getfield) : ?PolicyBase
-    {
-        $actfield = $getfield($this);
-        if ($actfield->TryGetValue() !== null) return $this;
-
-        /** @var ?Group */
-        $group = null;
-        $priority = null;
-
-        foreach ($this->GetGroups() as $tempgroup)
-        {
-            $tempfield = $getfield($tempgroup);
-            $temppriority = $tempgroup->GetPriority();
-            if (($tempfield->TryGetValue() !== null) && 
-                ($priority === null || $temppriority > $priority))
-            {
-                $group = $tempgroup;
-                $priority = $temppriority;
-            }
-        }
-
-        return ($group !== null) ? $group : null;
-    }
-
-    
 }

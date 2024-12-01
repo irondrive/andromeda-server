@@ -15,7 +15,7 @@ class EmailContact extends Contact
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */
-    public static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
+    protected static function SubclassSendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
     {
         $message = $html ?? $plain;
         $ishtml = ($html !== null);

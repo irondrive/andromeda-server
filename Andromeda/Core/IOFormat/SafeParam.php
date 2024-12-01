@@ -183,7 +183,7 @@ class SafeParam
      * @throws SafeParamInvalidException if not valid
      * @return ?value-of<T> the whitelisted value or null
      */
-    public function FromWhitelistNull(array $values) : ?string
+    public function FromAllowlistNull(array $values) : ?string
     {
         $str = $this->tryGetStr();
         
@@ -663,9 +663,9 @@ class SafeParam
      * @throws SafeParamNullValueException if null
      * @return value-of<T> the whitelisted value
      */
-    public function FromWhitelist(array $values) : string
+    public function FromAllowlist(array $values) : string
     {
-        if (($value = $this->FromWhitelistNull($values)) === null)
+        if (($value = $this->FromAllowlistNull($values)) === null)
             throw new SafeParamNullValueException($this->key);
         else return $value;
     }

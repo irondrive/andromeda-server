@@ -89,7 +89,7 @@ class Emailer extends BaseObject
         $mailer = $database->CreateObject(static::class);
         $mailer->date_created->SetTimeNow();
         
-        $type = self::MAIL_TYPES[$params->GetParam('type')->FromWhitelist(array_keys(self::MAIL_TYPES))];
+        $type = self::MAIL_TYPES[$params->GetParam('type')->FromAllowlist(array_keys(self::MAIL_TYPES))];
         
         $mailer->type->SetValue($type);
         
@@ -140,7 +140,7 @@ class Emailer extends BaseObject
         $host = $params->GetParam('host')->GetHostname();
         
         $port = $params->GetOptParam('port',null)->GetNullUint16();
-        $proto =  $params->GetOptParam('proto',null)->FromWhitelistNull(array('tls','ssl'));
+        $proto =  $params->GetOptParam('proto',null)->FromAllowlistNull(array('tls','ssl'));
         
         if ($port !== null) $host .= ":$port";
         if ($proto !== null) $host = "$proto://$host";
