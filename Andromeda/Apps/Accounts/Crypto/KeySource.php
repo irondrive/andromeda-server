@@ -6,7 +6,7 @@ use Andromeda\Core\Database\FieldTypes;
 use Andromeda\Core\Exceptions\DecryptionFailedException;
 
 /** An object that holds an encrypted copy of a crypto key */
-trait KeySource
+trait KeySource // TODO RAY !! why not a base object? need an interface at least
 {
     /** The encrypted copy of the account master key */
     private FieldTypes\NullStringType $master_key;
@@ -31,14 +31,18 @@ trait KeySource
 
     /**
      * Initializes crypto, storing an encrypted copy of the given key
-     * @param string $key the key to be encrypted
+     * @param string $key the key to be encrypted or null to re-key the existing
      * @param string $wrapkey the key to use to encrypt
      * @throws Exceptions\CryptoAlreadyInitializedException if already initialized
      * @return $this
      */
     protected function InitializeCrypto(string $key, string $wrapkey) : self
     {
-        if ($this->hasCrypto()) throw new Exceptions\CryptoAlreadyInitializedException();
+        // TODO RAY !! add key caching here? could even add encryption functions here?
+        // TODO RAY !! add $rekey here? not sure how account should work
+
+        if ($this->hasCrypto())
+            throw new Exceptions\CryptoAlreadyInitializedException();
         
         $master_salt = Crypto::GenerateSalt();
         $master_nonce = Crypto::GenerateSecretNonce();
@@ -75,7 +79,7 @@ trait KeySource
      * Erases all key material from the object
      * @return $this
      */
-    protected function DestroyCrypto() : self
+    public function DestroyCrypto() : self
     {
         $this->master_key->SetValue(null);
         $this->master_salt->SetValue(null);

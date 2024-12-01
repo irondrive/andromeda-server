@@ -74,7 +74,7 @@ abstract class Contact extends BaseObject
      * @param Account $account account of interest
      * @return ?static contact to use as "from" or none if not set
      */
-    public static function TryLoadAccountFromContact(ObjectDatabase $database, Account $account) : ?self
+    public static function TryLoadFromByAccount(ObjectDatabase $database, Account $account) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->IsTrue('asfrom'));
         
@@ -85,13 +85,13 @@ abstract class Contact extends BaseObject
     
     /** 
      * Returns the contact object matching the given address and type, or null
-     * @return ?Contact
+     * @return ?static
      */
-    public static function TryLoadByContactPair(ObjectDatabase $database, ContactPair $pair) : ?self
+    public static function TryLoadByAddress(ObjectDatabase $database, string $address) : ?self
     {
-        $q = new QueryBuilder(); $w = $q->Equals('address',$pair->GetAddr());
+        $q = new QueryBuilder(); $w = $q->Equals('address',$address);
         
-        return $database->TryLoadUniqueByQuery($pair->GetClass(), $q->Where($w));
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
     /** 
@@ -103,6 +103,15 @@ abstract class Contact extends BaseObject
         $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('account',$account->ID()));
         
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
+    }
+
+    /** 
+     * Load all contacts for a given account 
+     * @return array<string, static>
+     */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
+    { 
+        return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
     }
 
     /**
@@ -152,7 +161,7 @@ abstract class Contact extends BaseObject
     {
         if ($val)
         {
-            $old = static::TryLoadAccountFromContact($this->database, $this->GetAccount());
+            $old = static::TryLoadFromByAccount($this->database, $this->GetAccount());
             
             if ($old !== null) $old->SetUseAsFrom(false);
         }
@@ -199,9 +208,9 @@ abstract class Contact extends BaseObject
     /**
      * Fetches a type/value pair from input (depends on the param name given)
      * @throws Exceptions\ContactNotGivenException if nothing valid was found
-     * @return ContactPair
+     * @return array{class:class-string<self>, info:string}
      */
-    public static function FetchPairFromParams(SafeParams $params) : ContactPair // TODO this seems unused, what is it for? seems wrong
+    public static function FetchPairFromParams(SafeParams $params) : array // TODO this seems unused, what is it for? seems wrong
     {
         if ($params->HasParam('email')) 
         { 
@@ -211,7 +220,7 @@ abstract class Contact extends BaseObject
         }
         else throw new Exceptions\ContactNotGivenException();
          
-        return new ContactPair($class, $info);
+        return array('class'=>$class, 'info'=>$info);
     }
 
     /**
@@ -228,11 +237,11 @@ abstract class Contact extends BaseObject
      * @param string $subject subject line
      * @param string $html html message (optional)
      * @param string $plain plain text message
-     * @param array<self> $recipients array of contacts
+     * @param array<static> $recipients array of contacts
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */
-    public static function SendMessageManyT(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
+    public static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void
     {
         foreach (self::GetChildMap() as $type)
         {
@@ -241,17 +250,6 @@ abstract class Contact extends BaseObject
             $type::SendMessageMany($subject, $html, $plain, $subrecipients, $bcc, $from);
         }
     }
-
-    /**
-     * Sends a message to the given array of contacts of a specific type
-     * @param string $subject subject line
-     * @param string $html html message (optional)
-     * @param string $plain plain text message
-     * @param array<static> $recipients array of contacts
-     * @param Account $from account sending the message
-     * @param bool $bcc true to use BCC for recipients
-     */
-    public abstract static function SendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void;
 
     /**
      * Gets this contact as a printable object

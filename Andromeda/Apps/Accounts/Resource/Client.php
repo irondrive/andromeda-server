@@ -61,6 +61,21 @@ class Client extends BaseObject
         parent::CreateFields();
     }
 
+    /** 
+     * Load all clients for a given account 
+     * @return array<string, static>
+     */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
+    { 
+        return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
+    }
+
+    /** Delete all clients for a given account */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
+    { 
+        return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** Gets the interface address last used with this client */
     public function GetLastAddress() : string { return $this->lastaddr->GetValue(); }
     

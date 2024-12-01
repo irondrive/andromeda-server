@@ -79,6 +79,15 @@ class Session extends BaseObject
     }
     
     /** 
+     * Load all sessions for a given account 
+     * @return array<string, static>
+     */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
+    { 
+        return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
+    }
+
+    /** 
      * Deletes all sessions for the given account 
      * @return int the number of deleted sessions
      */
@@ -122,7 +131,7 @@ class Session extends BaseObject
     /** Sets the timestamp this session was active to now */
     public function SetActiveDate() : self
     {
-        if ($this->database->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO move up a level
+        if ($this->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO move up a level
         
         $this->date_active->SetTimeNow(); return $this;
     }

@@ -2,10 +2,12 @@
 
 use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
 use Andromeda\Core\DecryptionFailedException;
-use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabase, TableTypes, QueryBuilder};
 
-use Andromeda\Apps\Accounts\Resource\{Contact, Client, RecoveryKey, Session, TwoFactor};
+use Andromeda\Apps\Accounts\AuthSource\External;
 use Andromeda\Apps\Accounts\Crypto\KeySource;
+use Andromeda\Apps\Accounts\Crypto\Exceptions\{CryptoNotInitializedException, CryptoAlreadyInitializedException};
+use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey, Session, TwoFactor};
 
 /**
  * Class representing a user account in the database
@@ -16,64 +18,68 @@ use Andromeda\Apps\Accounts\Crypto\KeySource;
  */
 class Account extends PolicyBase
 {
-    public static function GetFieldTemplate() : array
+    use KeySource { DestroyCrypto as BaseDestroyCrypto; InitializeCrypto as BaseInitializeCrypto; }
+    use TableTypes\TableNoChildren;
+
+    /** The primary username of the account */
+    private FieldTypes\StringType $username;
+    /** The user-set full descriptive name of the user */
+    private FieldTypes\NullStringType $fullname;
+    /** The password hash used for the account (null if external) */
+    private FieldTypes\NullStringType $password;
+    /** 
+     * @var FieldTypes\NullObjectRefT<External> 
+     * The external auth source used for the account 
+     */
+    private FieldTypes\NullObjectRefT $authsource;
+    /** The date the account last had its password changed */
+    private FieldTypes\NullTimestamp $date_passwordset;
+    /** The date the account last had a new client/session created */
+    private FieldTypes\NullTimestamp $date_loggedon;
+    /** The date the account last was active (made any request) */
+    private FieldTypes\NullTimestamp $date_active;
+
+    protected function CreateFields() : void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'username' => new FieldTypes\StringType(), 
-            'fullname' => new FieldTypes\StringType(), 
-            'comment' => new FieldTypes\StringType(),
-            'master_key' => new FieldTypes\StringType(),
-            'master_nonce' => new FieldTypes\StringType(),
-            'master_salt' => new FieldTypes\StringType(),
-            'password' => new FieldTypes\StringType(),
-            'date_passwordset' => new FieldTypes\Timestamp(),
-            'date_loggedon' => new FieldTypes\Timestamp(),
-            'date_active' => new FieldTypes\Timestamp(null, true),
-            'obj_authsource'    => new FieldTypes\ObjectPoly(AuthSource\External::class),
-            'objs_sessions'      => (new FieldTypes\ObjectRefs(Session::class, 'account'))->autoDelete(), // TODO RAY !! no autodelete anymore
-            'objs_contacts'      => (new FieldTypes\ObjectRefs(Contact::class, 'account'))->autoDelete(),
-            'objs_clients'       => (new FieldTypes\ObjectRefs(Client::class, 'account'))->autoDelete(),
-            'objs_twofactors'    => (new FieldTypes\ObjectRefs(TwoFactor::class, 'account'))->autoDelete(),
-            'objs_recoverykeys'  => (new FieldTypes\ObjectRefs(RecoveryKey::class, 'account'))->autoDelete(),
-            'objs_groups'        => new FieldTypes\ObjectJoin(Group::class, GroupJoin::class, 'accounts')
-        ));
+        $fields = array();
+        $this->username = $fields[] = new FieldTypes\StringType('username');
+        $this->fullname = $fields[] = new FieldTypes\NullStringType('fullname');
+        $this->password = $fields[] = new FieldTypes\NullStringType('password');
+        $this->authsource = $fields[] = new FieldTypes\NullObjectRefT(External::class, 'authsource');
+        $this->date_passwordset = $fields[] = new FieldTypes\NullTimestamp('date_passwordset');
+        $this->date_loggedon = $fields[] = new FieldTypes\NullTimestamp('date_loggedon');
+        $this->date_active = $fields[] = new FieldTypes\NullTimestamp('date_active',true);
+        $this->RegisterFields($fields, self::class);
+        
+        $this->KeySourceCreateFields();
+        parent::CreateFields();
     }
     
-    use GroupInherit;
+    public static function GetUniqueKeys() : array
+    {
+        $ret = parent::GetUniqueKeys();
+        $ret[self::class][] = 'username';
+        return $ret;
+    }
+    
+    // TODO RAY !! had autoDelete on sessions, contacts, clients, twofactors, recoverykeys
+    // TODO RAY !! also need to delete group memberships on delete...
     
     public const DISABLE_PERMANENT = 1;
     public const DISABLE_PENDING_CONTACT = 2;
     
     public const DEFAULT_SEARCH_MAX = 3;
     
-    /**
-     * Gets the fields that can be inherited from a group, with their default values
-     * @return array<string, mixed>
-     */
-    protected static function GetInheritedFields() : array { return array(
-        'session_timeout' => null,
-        'client_timeout' => null,
-        'max_password_age' => null,
-        'admin' => false,
-        'disabled' => false,
-        'forcetf' => false,
-        'allowcrypto' => true,
-        'accountsearch' => self::DEFAULT_SEARCH_MAX,
-        'groupsearch' => self::DEFAULT_SEARCH_MAX,
-        'userdelete' => true,
-        'limit_sessions' => null,
-        'limit_contacts' => null,
-        'limit_recoverykeys' => null
-    ); }
+
     
     /** Returns the account's username */
-    public function GetUsername() : string  { return $this->GetScalar('username'); }
+    public function GetUsername() : string  { return $this->username->GetValue(); }
     
     /** Returns the account's full name if set, else its username */
-    public function GetDisplayName() : string { return $this->TryGetScalar('fullname') ?? $this->GetUsername(); }
+    public function GetDisplayName() : string { return $this->fullname->TryGetValue() ?? $this->GetUsername(); }
     
     /** Sets the account's full name */
-    public function SetFullName(string $data) : self { return $this->SetScalar('fullname',$data); }
+    public function SetFullName(string $name) : self { $this->fullname->SetValue($name); return $this; }
     
     /**
      * Loads the groups that the account implicitly belongs to
@@ -89,7 +95,7 @@ class Account extends PolicyBase
         $authman = $this->GetAuthSource();
         if ($authman instanceof AuthSource\External) 
         {
-            $default = $authman->GetManager()->GetDefaultGroup();
+            $default = $authman->GetDefaultGroup();
             if ($default !== null) $retval[$default->ID()] = $default;
         }
         
@@ -100,34 +106,38 @@ class Account extends PolicyBase
      * Returns a list of all groups that the account belongs to
      * @return array<string, Group> groups indexed by ID
      */
-    public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetMyGroups()); }
+    public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetJoinedGroups()); }
     
     /**
      * Returns a list of all groups that the account explicitly belongs to
      * @return array<string, Group> groups indexed by ID
      */
-    public function GetMyGroups() : array { return $this->GetObjectRefs('groups'); }
+    public function GetJoinedGroups() : array { return GroupJoin::LoadGroups($this->database, $this); }
     
     /** Adds the account to the given group */
-    public function AddGroup(Group $group) : self    { $this->AddObjectRef('groups', $group); return $this; }
+    public function AddGroup(Group $group) : self    { /*$this->AddObjectRef('groups', $group);*/ return $this; } // TODO RAY !! group add
     
     /** Removes the account from the given group */
-    public function RemoveGroup(Group $group) : self { $this->RemoveObjectRef('groups', $group); return $this; }
+    public function RemoveGroup(Group $group) : self { /*$this->RemoveObjectRef('groups', $group);*/ return $this; } // TODO RAY !! group add
     
     /** Returns true if the account is a member of the given group */
     public function HasGroup(Group $group) : bool { return array_key_exists($group->ID(), $this->GetGroups()); }
     
+    /** @var array<callable(ObjectDatabase, self, Group, bool): void> */
     private static array $group_handlers = array();
     
-    /** Registers a function to be run when the account is added to or removed from a group */
-    public static function RegisterGroupChangeHandler(callable $func){ self::$group_handlers[] = $func; }
+    /** 
+     * Registers a function to be run when the account is added to or removed from a group 
+     * @param callable(ObjectDatabase, self, Group, bool): void $func
+     */
+    public static function RegisterGroupChangeHandler(callable $func) : void { self::$group_handlers[] = $func; }
 
     /** Runs all functions registered to handle the account being added to or removed from a group */
-    public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added)
-        { foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
-        // TODO check that it has the group first?
+    public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added) : void { 
+        foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
+        // TODO check that it has the group first? // TODO RAY !! why is this public?
         
-    protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
+    /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         $modified = parent::AddObjectRef($field, $object, $notification);
         
@@ -143,122 +153,159 @@ class Account extends PolicyBase
         if ($field === 'groups' && $modified) static::RunGroupChangeHandlers($this->database, $this, $object, false);
         
         return $modified;
-    }
+    }*/ // TODO RAY !! how was this used? make sure whatever will work
     
     /** Returns the object joining this account to the given group */
     public function GetGroupJoin(Group $group) : ?GroupJoin 
     {
-        return $this->TryGetJoinObject('groups', $group);
+        return null; // TODO RAY !! return $this->TryGetJoinObject('groups', $group);
     }
 
     /** Returns the auth source the account authenticates against */
-    public function GetAuthSource() : AuthSource\ISource
+    public function GetAuthSource() : AuthSource\IAuthSource
     { 
-        $authsource = $this->TryGetObject('authsource');
+        $authsource = $this->authsource->TryGetObject();
         if ($authsource !== null) return $authsource;
-        else return AuthSource\Local::GetInstance();
+        else return (new AuthSource\Local());
     }
     
     /**
      * Returns an array of clients registered to the account
      * @return array<string, Client> clients indexed by ID
      */
-    public function GetClients() : array        { return $this->GetObjectRefs('clients'); }
+    public function GetClients() : array { return Client::LoadByAccount($this->database, $this); }
     
     /** Deletes all clients registered to the account */
-    public function DeleteClients() : self      { $this->DeleteObjects('clients'); return $this; }
+    public function DeleteClients() : self{ Client::DeleteByAccount($this->database, $this); return $this; }
     
     /**
      * Returns an array of sessions registered to the account
      * @return array<string, Session> sessions indexed by ID
      */
-    public function GetSessions() : array       { return $this->GetObjectRefs('sessions'); }
+    public function GetSessions() : array { return Session::LoadByAccount($this->database, $this); }
     
     /**
      * Returns an array of recovery keys for the account
      * @return array<string, RecoveryKey> keys indexed by ID
      */
-    private function GetRecoveryKeys() : array  { return $this->GetObjectRefs('recoverykeys'); }
-    
-    /** True if recovery keys exist for the account */
-    public function HasRecoveryKeys() : bool    { return $this->CountObjectRefs('recoverykeys') > 0; }
+    private function GetRecoveryKeys() : array { return RecoveryKey::LoadByAccount($this->database, $this); }
     
     /**
      * Returns an array of twofactors for the account
      * @return array<string, TwoFactor> twofactors indexed by ID
      */
-    private function GetTwoFactors() : array    { return $this->GetObjectRefs('twofactors'); }
-    
-    /** True if a two factor exists for the account */
-    public function HasTwoFactor() : bool       { return $this->CountObjectRefs('twofactors') > 0; }
+    private function GetTwoFactors() : array { return TwoFactor::LoadByAccount($this->database, $this); }
     
     /** True if two factor should be required to create a session even for a pre-existing client */
-    public function GetForceUseTwoFactor() : bool  { return $this->TryGetFeatureBool('forcetf') ?? self::GetInheritedFields()['forcetf']; }
-    
-    /** True if account-based server-side crypto is allowed */
-    public function GetAllowCrypto() : bool     { return $this->TryGetFeatureBool('allowcrypto') ?? self::GetInheritedFields()['allowcrypto']; }
-    
-    /** Returns 0 if account search is disabled, or N if up to N matches are allowed */
-    public function GetAllowAccountSearch() : int { return $this->TryGetFeatureInt('accountsearch') ?? self::GetInheritedFields()['accountsearch']; }
-
-    /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
-    public function GetAllowGroupSearch() : int { return $this->TryGetFeatureInt('groupsearch') ?? self::GetInheritedFields()['groupsearch']; }
-    
-    /** Returns true if the user is allowed to delete their account */
-    public function GetAllowUserDelete() : bool { return $this->TryGetFeatureBool('userdelete') ?? self::GetInheritedFields()['userdelete']; }
-    
-    /** True if this account has administrator privileges */
-    public function isAdmin() : bool            { return $this->TryGetFeatureBool('admin') ?? self::GetInheritedFields()['admin']; }
-    
-    /** True if this account is enabled */
-    public function isEnabled() : bool       { return !(bool)($this->TryGetFeatureBool('disabled') ?? self::GetInheritedFields()['disabled']); }
-    
-    /** Sets this account's admin-status to the given value */
-    public function SetAdmin(?bool $val) : self { return $this->SetFeatureBool('admin', $val); }
-    
-    /** Sets the account's disabled status to the given enum value */
-    public function SetDisabled(?int $val = self::DISABLE_PERMANENT) : self { return $this->SetFeatureInt('disabled', $val); }    
-    
-    /** Gets the timestamp when this user was last active */
-    public function getActiveDate() : ?float    { return $this->TryGetDate('active'); }
-    
-    /** Sets the last-active timestamp to now */
-    public function SetActiveDate() : self      
+    public function GetForceUseTwoFactor() : bool
     { 
-        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
-        
-        return $this->SetDate('active'); 
+        $default = false;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->forcetf; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
     }
     
+    /** True if account-based server-side crypto is allowed */
+    public function GetAllowCrypto() : bool 
+    { 
+        $default = true;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->allowcrypto; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+    
+    /** Returns 0 if account search is disabled, or N if up to N matches are allowed */
+    public function GetAllowAccountSearch() : int
+    { 
+        $default = self::DEFAULT_SEARCH_MAX;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->account_search; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+
+    /** Returns 0 if group search is disabled, or N if up to N matches are allowed */
+    public function GetAllowGroupSearch() : int
+    { 
+        $default = self::DEFAULT_SEARCH_MAX;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->group_search; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+    
+    /** Returns true if the user is allowed to delete their account */
+    public function GetAllowUserDelete() : bool
+    { 
+        $default = true;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->userdelete; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+    
+    /** True if this account has administrator privileges */
+    public function isAdmin() : bool
+    { 
+        $default = false;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->admin; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+    
+    /** True if this account is enabled */
+    public function isEnabled() : bool
+    { 
+        $default = false;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->disabled; });
+        return (($f !== null) ? $f->TryGetValue() ?? $default : $default) === 0; // invert logic
+    }
+    
+    /** Sets this account's admin-status to the given value */
+    public function SetAdmin(?bool $val) : self { $this->admin->SetValue($val); return $this; }
+    
+    /** Sets the account's disabled status to the given enum value */
+    public function SetDisabled(?int $val = self::DISABLE_PERMANENT) : self { $this->disabled->SetValue($val); return $this; }    
+    
+    /** Gets the timestamp when this user was last active */
+    public function getActiveDate() : ?float { return $this->date_active->TryGetValue(); }
+    
+    /** Sets the last-active timestamp to now (if not global read-only) */
+    public function SetActiveDate() : self      
+    { 
+        if (!$this->GetApiPackage()->GetConfig()->isReadOnly())
+            $this->date_active->SetTimeNow(); 
+        return $this;
+    }
+
     /** Gets the timestamp when this user last created a session */
-    public function getLoggedonDate() : ?float  { return $this->TryGetDate('loggedon'); }
+    public function getLoggedonDate() : ?float { return $this->date_loggedon->TryGetValue(); }
     
     /** Sets the timestamp of last-login to now */
-    public function SetLoggedonDate() : self    { return $this->SetDate('loggedon'); }
+    public function SetLoggedonDate() : self { $this->date_loggedon->SetTimeNow(); return $this; }
     
-    private function getPasswordDate() : ?float { return $this->TryGetDate('passwordset'); }
-    private function SetPasswordDate() : self   { return $this->SetDate('passwordset'); }
+    /** Returns the timestamp that the account's password was last set */
+    private function getPasswordDate() : ?float { return $this->date_passwordset->TryGetValue(); }
+
+    /** Sets the account's password timestamp to now */
+    private function SetPasswordDate() : self { $this->date_passwordset->SetTimeNow(); return $this; } // TODO RAY !! seems like this should be internal to ChangePassword?
     
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
-    public function resetPasswordDate() : self  { return $this->SetDate('passwordset', 0); }
+    public function resetPasswordDate() : self { $this->date_passwordset->SetValue(0); return $this; }
     
     /** Returns the maximum allowed time since a client was last active for it to be valid */
-    public function GetClientTimeout() : ?int   { return $this->TryGetScalar('client_timeout') ?? self::GetInheritedFields()['client_timeout']; }
+    public function GetClientTimeout() : ?int
+    { 
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->client_timeout; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
     
     /** Returns the maximum allowed time since a session was last active for it to be valid */
-    public function GetSessionTimeout() : ?int   { return $this->TryGetScalar('session_timeout') ?? self::GetInheritedFields()['session_timeout']; }
+    public function GetSessionTimeout() : ?int
+    { 
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->session_timeout; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
     
-    private function GetMaxPasswordAge() : ?int  { return $this->TryGetScalar('max_password_age') ?? self::GetInheritedFields()['max_password_age']; }
-    
-    /**
-     * Returns an array of accounts with any part of their full name matching the name given
-     * @param ObjectDatabase $database database reference 
-     * @param string $fullname the name fragment to search for
-     * @return array<string, Account> Accounts indexed by ID
-     */
-    public static function SearchByFullName(ObjectDatabase $database, string $fullname) : array
-    {
-        $q = new QueryBuilder(); return static::LoadByQuery($database, $q->Where($q->Like('fullname',$fullname)));
+    /** Returns the maximum allowed age of the account's password */
+    private function GetMaxPasswordAge() : ?int
+    { 
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->max_password_age; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
     }
     
     /**
@@ -269,54 +316,58 @@ class Account extends PolicyBase
      */
     public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
     {
-        return static::TryLoadByUniqueKey($database, 'username', $username);
+        return $database->TryLoadUniqueByKey(static::class, 'username', $username);
     }
 
     /**
      * Returns all accounts whose username, fullname or contacts match the given info
      * @param ObjectDatabase $database database reference
      * @param string $info username/other info to match by (wildcard)
-     * @param int $limit max # to load - returns nothing if exceeded (in a single category)
-     * @return array Account
+     * @param positive-int $limit max # to load - returns nothing if exceeded
+     * @return array<string, self>
      * @see Account::GetClientObject()
      */
     public static function LoadAllMatchingInfo(ObjectDatabase $database, string $info, int $limit) : array
     {
-        $q1 = new QueryBuilder(); $q2 = new QueryBuilder(); 
-        
         $info = QueryBuilder::EscapeWildcards($info).'%'; // search by prefix
         
-        $loaded1 = static::LoadByQuery($database, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1));
-        if (count($loaded1) >= $limit+1) $loaded1 = array(); else $limit -= count($loaded1);
+        $q1 = new QueryBuilder(); 
+        $loaded = $database->LoadObjectsByQuery(static::class, $q1->Where($q1->Like('username',$info,true))->Limit($limit+1)); // +1 to detect going over
+        if (count($loaded) > $limit) return array(); // not specific enough
+        if (($limit -= count($loaded)) <= 0) return $loaded;
+        assert($limit >= 0); // guaranteed by line above
         
-        $loaded2 = Contact::LoadAccountsMatchingValue($database, $info, $limit+1);
-        if (count($loaded2) >= $limit+1) $loaded2 = array(); else $limit -= count($loaded2);
+        $q2 = new QueryBuilder(); 
+        $loaded += $database->LoadObjectsByQuery(static::class, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
+        if (count($loaded) > $limit) return array(); // not specific enough
+        if (($limit -= count($loaded)) <= 0) return $loaded;
+        assert($limit >= 0); // guaranteed by line above
         
-        $loaded3 = static::LoadByQuery($database, $q2->Where($q2->Like('fullname',$info,true))->Limit($limit+1));
-        if (count($loaded3) >= $limit+1) $loaded3 = array(); else $limit -= count($loaded3);
+        $loaded += Contact::LoadAccountsMatchingValue($database, $info, $limit+1);
+        if (count($loaded) > $limit) return array(); // not specific enough
         
-        return $loaded1 + $loaded2 + $loaded3;
+        return $loaded;
     }
     
     /**
      * Returns an array of all accounts based on the given auth source
      * @param ObjectDatabase $database database reference
-     * @param AuthSource\External $authman authentication source
-     * @return array<string, Account> accounts indexed by ID
+     * @param AuthSource\External $authsrc authentication source
+     * @return array<string, static> accounts indexed by ID
      */
-    public static function LoadByAuthSource(ObjectDatabase $database, AuthSource\External $authman) : array
+    public static function LoadByAuthSource(ObjectDatabase $database, AuthSource\External $authsrc) : array
     {
-        return static::LoadByObject($database, 'authsource', $authman->GetAuthSource(), true);
+        return $database->LoadObjectsByKey(static::class, 'authsource', $authsrc->ID());
     }
     
     /**
      * Deletes all accounts using the given auth source
      * @param ObjectDatabase $database database reference
-     * @param AuthSource\External $authman authentication source
+     * @param AuthSource\External $authsrc authentication source
      */
-    public static function DeleteByAuthSource(ObjectDatabase $database, AuthSource\External $authman) : void
+    public static function DeleteByAuthSource(ObjectDatabase $database, AuthSource\External $authsrc) : int
     {
-        static::DeleteByObject($database, 'authsource', $authman->GetAuthSource(), true);
+        return $database->DeleteObjectsByKey(static::class, 'authsource', $authsrc->ID());
     }   
     
     /**
@@ -326,7 +377,7 @@ class Account extends PolicyBase
      */
     public function GetContacts(bool $valid = true) : array
     {
-        $contacts = $this->GetObjectRefs('contacts');
+        $contacts = Contact::LoadByAccount($this->database, $this);
         
         if ($valid) $contacts = array_filter($contacts, 
             function(Contact $contact){ return $contact->GetIsValid(); });
@@ -341,9 +392,9 @@ class Account extends PolicyBase
     public function GetContactEmails() : array // TODO not wild about email-specific things in Account
     {
         $emails = array_filter($this->GetContacts(), 
-            function(Contact $contact){ return $contact->isEmail(); });
+            function(Contact $contact){ return $contact instanceof EmailContact; });
         
-        return array_map(function(Contact $contact){ 
+        return array_map(function(EmailContact $contact){ 
             return $contact->GetAsEmailRecipient(); }, $emails);
     }
 
@@ -353,9 +404,9 @@ class Account extends PolicyBase
      */
     public function GetEmailFrom() : ?EmailRecipient // TODO not wild about email-specific things in Account
     {
-        $contact = Contact::TryLoadAccountFromContact($this->database, $this);
+        $contact = Contact::TryLoadFromByAccount($this->database, $this);
         
-        return $contact->isEmail() ? $contact->GetAsEmailRecipient() : null;
+        return ($contact instanceof EmailContact) ? $contact->GetAsEmailRecipient() : null;
     }
     
     /**
@@ -370,35 +421,58 @@ class Account extends PolicyBase
     /** Sets this account to enabled if it was disabled pending a valid contact */
     public function NotifyValidContact() : self
     {
-        return ($this->TryGetFeatureInt('disabled') === self::DISABLE_PENDING_CONTACT) ? $this->SetDisabled(null) : $this;
+        if ($this->disabled->TryGetValue() === self::DISABLE_PENDING_CONTACT) // TODO RAY !! is this inherited?
+            $this->SetDisabled(null);
+        
+        return $this;
     }
         
     /**
      * Creates a new user account
      * @param ObjectDatabase $database database reference
      * @param string $username the account's username
-     * @param ?AuthSource\IAuthSource $source the auth source for the account if external
-     * @param ?string $password the account's password, if not external auth
+     * @param string $password the account's password, if not external auth
      * @return static created account
      */
-    public static function Create(ObjectDatabase $database, string $username, ?AuthSource\IAuthSource $source = null, ?string $password = null) : self
+    public static function Create(ObjectDatabase $database, string $username, string $password) : self
     {
-        $account = $database->CreateObject(static::class)->SetScalar('username',$username);
-        
-        if ($source instanceof AuthSource\External) 
-            $account->SetObject('authsource',$source);
-        else $account->ChangePassword($password);
+        $account = $database->CreateObject(static::class);
+        $account->username->SetValue($username);
+        $account->ChangePassword($password);
         
         foreach ($account->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($database, $account, $group, true);
 
         return $account;
     }
+        
+    /**
+     * Creates a new external user account
+     * @param ObjectDatabase $database database reference
+     * @param string $username the account's username
+     * @param AuthSource\External $source the auth source for the account
+     * @return static created account
+     */
+    public static function CreateExternal(ObjectDatabase $database, string $username, AuthSource\External $source) : self
+    {
+        $account = $database->CreateObject(static::class);
+        $account->username->SetValue($username);
+        $account->authsource->SetObject($source);
+
+        foreach ($account->GetDefaultGroups() as $group)
+            static::RunGroupChangeHandlers($database, $account, $group, true);
+
+        return $account;
+    }
     
+    /** @var array<callable(ObjectDatabase, self): void> */
     private static array $delete_handlers = array();
     
-    /** Registers a function to be run when an account is deleted */
-    public static function RegisterDeleteHandler(callable $func){ self::$delete_handlers[] = $func; }
+    /** 
+     * Registers a function to be run when an account is deleted 
+     * @param callable(ObjectDatabase, self): void $func
+     */
+    public static function RegisterDeleteHandler(callable $func) : void { self::$delete_handlers[] = $func; }
     
     /**
      * Deletes this account and all associated objects
@@ -410,9 +484,10 @@ class Account extends PolicyBase
         foreach ($this->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
         
-        foreach (self::$delete_handlers as $func) $func($this->database, $this);
+        foreach (self::$delete_handlers as $func) 
+            $func($this->database, $this);
         
-        parent::Delete();
+        $this->database->DeleteObject($this);
     }
     
     public const OBJECT_FULL = 1; 
@@ -434,7 +509,7 @@ class Account extends PolicyBase
      */
     public function GetClientObject(int $level = 0) : array
     {
-        $mapobj = function($e) { return $e->GetClientObject(); };
+        $mapobj = function($e) { return $e->GetClientObject(); }; // @phpstan-ignore-line // TODO RAY !! fixme
         
         $data = array(
             'id' => $this->ID(),
@@ -442,9 +517,10 @@ class Account extends PolicyBase
             'dispname' => $this->GetDisplayName()
         );
 
-        if ($level & self::OBJECT_FULL || $level & self::OBJECT_ADMIN)
+        if (($level & self::OBJECT_FULL) !== 0 || 
+            ($level & self::OBJECT_ADMIN) !== 0)
         {
-            $data += array(
+            /*$data += array(
                 'client_timeout' => $this->GetClientTimeout(),
                 'session_timeout' => $this->GetSessionTimeout(),
                 'max_password_age' => $this->GetMaxPasswordAge(),
@@ -466,10 +542,10 @@ class Account extends PolicyBase
                 'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                     array('sessions','contacts','recoverykeys')
                 )
-            );
+            );*/ // TODO RAY !! fix me
         }
         
-        if ($level & self::OBJECT_FULL)
+        if (($level & self::OBJECT_FULL) !== 0)
         {
             $data += array(
                 'twofactors' => array_map($mapobj, $this->GetTwoFactors()),
@@ -480,12 +556,12 @@ class Account extends PolicyBase
         else
         {            
             $data['contacts'] = array_map($mapobj, array_filter($this->GetContacts(),
-                function(Contact $c){ return $c->getIsPublic(); }));
+                function(Contact $c){ return $c->GetIsPublic(); }));
         }
 
-        if ($level & self::OBJECT_ADMIN)
+        if (($level & self::OBJECT_ADMIN) !== 0)
         {
-            $data += array(
+            /*$data += array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
                 'groups' => array_keys($this->GetGroups()),
@@ -501,7 +577,7 @@ class Account extends PolicyBase
             );
             
             $data['dates']['modified'] = $this->TryGetDate('modified');
-            $data['counters']['groups'] = $this->CountObjectRefs('groups');
+            $data['counters']['groups'] = $this->CountObjectRefs('groups');*/ // TODO RAY !! fix me
         }
 
         return $data;
@@ -510,8 +586,6 @@ class Account extends PolicyBase
     /** Returns true if the account has a validated two factor and recovery keys */
     public function HasValidTwoFactor() : bool
     {
-        if ($this->CountObjectRefs('recoverykeys') <= 0) return false;
-        
         foreach ($this->GetTwoFactors() as $twofactor) {
             if ($twofactor->GetIsValid()) return true; }
         return false;
@@ -535,13 +609,13 @@ class Account extends PolicyBase
     /** Returns true if the given recovery key matches one (and they exist) */
     public function CheckRecoveryKey(string $key) : bool
     {
-        if (!$this->HasRecoveryKeys()) return false; 
+        //if (!$this->HasRecoveryKeys()) return false; 
         
-        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
+        $obj = null;//RecoveryKey::TryLoadByFullKey($this->database, $key, $this); // TODO RAY !! missing?
 
-        if ($obj === null) return false;
-        
-        else return $obj->CheckFullKey($key);
+        return false;
+        //if ($obj === null) return false;
+        //else return $obj->CheckFullKey($key);
     }
     
     /** Returns true if the given password is correct for this account */
@@ -558,12 +632,12 @@ class Account extends PolicyBase
         $date = $this->getPasswordDate(); 
         $max = $this->GetMaxPasswordAge();
         
-        if ($date <= 0) return false; else return 
-            ($max === null || $database->GetTime() - $date < $max);
+        if ($date <= 0) return false;
+        else return ($max === null || $this->database->GetTime()-$date < $max);
     }
     
     /** Returns true if server-side crypto is unavailable on the account */
-    public function hasCrypto() : bool { return $this->TryGetScalar('master_key') !== null; }
+    public function hasCrypto() : bool { return $this->master_key->TryGetValue() !== null; }
     
     private bool $cryptoAvailable = false; 
     
@@ -587,24 +661,25 @@ class Account extends PolicyBase
         return $this->SetPasswordDate();
     }
     
-    /** Gets the account's password hash */
-    public function GetPasswordHash() : string { return $this->GetScalar('password'); }
+    /** Gets the account's password hash (null if external auth) */
+    public function GetPasswordHash() : ?string { return $this->password->TryGetValue(); }
     
     /** Sets the account's password hash to the given value */
-    public function SetPasswordHash(string $hash) : self { return $this->SetScalar('password',$hash); }
+    public function SetPasswordHash(string $hash) : self { $this->password->SetValue($hash); return $this; }
     
     /**
      * Encrypts a value using the account's crypto
      * @param string $data the plaintext to be encrypted
      * @param string $nonce the nonce to use for crypto
-     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the ciphertext encrypted with the account's secret key
      */
     public function EncryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();    
+        if (!$this->cryptoAvailable)
+            throw new Exceptions\CryptoUnlockRequiredException();    
         
-        $master = $this->GetScalar('master_key');
+        $master = $this->master_key->TryGetValue() ?? ""; // TODO RAY !! fix null
         return Crypto::EncryptSecret($data, $nonce, $master);
     }
     
@@ -612,14 +687,15 @@ class Account extends PolicyBase
      * Decrypts a value using the account's crypto
      * @param string $data the ciphertext to be decrypted
      * @param string $nonce the nonce used for encryption
-     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the plaintext decrypted with the account's key
      */
     public function DecryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();
+        if (!$this->cryptoAvailable) 
+            throw new Exceptions\CryptoUnlockRequiredException();
         
-        $master = $this->GetScalar('master_key');
+        $master = $this->master_key->TryGetValue() ?? ""; // TODO RAY !! fix null
         return Crypto::DecryptSecret($data, $nonce, $master);
     }
 
@@ -627,86 +703,86 @@ class Account extends PolicyBase
      * Gets a copy of the account's master key, encrypted
      * @param string $nonce the nonce to use for encryption
      * @param string $key the key to use for encryption
-     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the encrypted copy of the master key
      */
     public function GetEncryptedMasterKey(string $nonce, string $key) : string
     {
-        if (!$this->cryptoAvailable) throw new Exceptions\CryptoUnlockRequiredException();
-        return Crypto::EncryptSecret($this->GetScalar('master_key'), $nonce, $key);
+        if (!$this->cryptoAvailable) 
+            throw new Exceptions\CryptoUnlockRequiredException();
+        return Crypto::EncryptSecret($this->master_key->TryGetValue() ?? "", $nonce, $key); // TODO RAY !! fix null
     }
     
     /**
      * Attempts to unlock crypto using the given password
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws DecryptionFailedException if decryption fails
      */
     public function UnlockCryptoFromPassword(string $password) : self
     {
-        if ($this->cryptoAvailable) return $this;         
-        else if (!$this->hasCrypto())
-           throw new Exceptions\CryptoNotInitializedException();
+        if ($this->cryptoAvailable) return $this;
+        
+    // * @throws CryptoNotInitializedException if crypto does not exist // TODO RAY !!
+    // * @throws DecryptionFailedException if decryption fails
 
-        $master = $this->GetScalar('master_key');
-        $master_nonce = $this->GetScalar('master_nonce');
-        $master_salt = $this->GetScalar('master_salt');
+        $master = $this->GetUnlockedKey($password);
         
-        $password_key = Crypto::DeriveKey($password, $master_salt, Crypto::SecretKeyLength());        // TODO commonize with KeySource
-        $master = Crypto::DecryptSecret($master, $master_nonce, $password_key);
-        
-        $this->SetScalar('master_key', $master, true);
-        
+        $this->master_key->SetValue($master, true);
         $this->cryptoAvailable = true; return $this;
     }
     
     /**
      * Attempts to unlock crypto using the given unlocked key source
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws DecryptionFailedException if decryption fails
      * @return $this
      */
-    public function UnlockCryptoFromKeySource(KeySource $source) : self
+    public function UnlockCryptoFromKeySource(/*KeySource $source*/) : self // TODO RAY !! this is a trait not an object...
     {
         if ($this->cryptoAvailable) return $this;
-        else if (!$this->hasCrypto())
-            throw new Exceptions\CryptoNotInitializedException();
         
-        $master = $source->GetUnlockedKey();
+    // * @throws CryptoNotInitializedException if crypto does not exist // TODO RAY !!
+    // * @throws DecryptionFailedException if decryption fails
+    
+        $master = null;//$source->GetUnlockedKey(); // TODO RAY !! ??? need caching IN keysource
         
-        $this->SetScalar('master_key', $master, true);
-        
+        $this->master_key->SetValue($master, true);
         $this->cryptoAvailable = true; return $this;
     }
     
     /**
      * Attempts to unlock crypto using a full recovery key
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws RecoveryKeyFailedException if the key is not valid
-     * @throws DecryptionFailedException if decryption fails
      * @return $this
      */
     public function UnlockCryptoFromRecoveryKey(string $key) : self
     {
         if ($this->cryptoAvailable) return $this;
         else if (!$this->hasCrypto())
-            throw new Exceptions\CryptoNotInitializedException();
+            throw new CryptoNotInitializedException();
         
-        if (!$this->HasRecoveryKeys()) 
-            throw new Exceptions\RecoveryKeyFailedException();
+        //if (!$this->HasRecoveryKeys()) 
+        //    throw new Exceptions\RecoveryKeyFailedException();
+
+            // TODO RAY !!
+        //    * @throws CryptoNotInitializedException if crypto does not exist
+        //    * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
+        //    * @throws DecryptionFailedException if decryption fails
         
-        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
+        // TODO RAY !! missing TryLoadByFullKey
+        /*$obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
         
         if (!$obj->CheckFullKey($key)) 
             throw new Exceptions\RecoveryKeyFailedException();
         
-        return $this->UnlockCryptoFromKeySource($obj);
+        return $this->UnlockCryptoFromKeySource($obj);*/
+        return $this;
     }
     
+    /** @var array<callable(ObjectDatabase, self, bool): void> */
     private static array $crypto_handlers = array();
     
-    /** Registers a function to be run when crypto is enabled/disabled on the account */
-    public static function RegisterCryptoHandler(callable $func){ self::$crypto_handlers[] = $func; }
+    /** 
+     * Registers a function to be run when crypto is enabled/disabled on the account
+     * @param callable(ObjectDatabase, self, bool): void $func
+     */
+    public static function RegisterCryptoHandler(callable $func) : void { self::$crypto_handlers[] = $func; }
 
     /**
      * Initializes secret-key crypto on the account
@@ -718,36 +794,33 @@ class Account extends PolicyBase
      * done server-side, but the raw keys are only ever available in memory, not in the database.
      * @param string $password the password to derive keys from
      * @param bool $rekey true if crypto exists and we want to keep the same master key
-     * @throws CryptoUnlockRequiredException if crypto is not unlocked
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto is not unlocked
      * @throws CryptoAlreadyInitializedException if crypto already exists and not re-keying
      */
     public function InitializeCrypto(string $password, bool $rekey = false) : self
     {
-        if ($rekey && !$this->cryptoAvailable) 
-            throw new Exceptions\CryptoUnlockRequiredException();
-        
-        if (!$rekey && $this->hasCrypto())
-            throw new Exceptions\CryptoAlreadyInitializedException();
-        
-        $master_salt = Crypto::GenerateSalt(); 
-        $this->SetScalar('master_salt', $master_salt);
-        
-        $master_nonce = Crypto::GenerateSecretNonce(); 
-        $this->SetScalar('master_nonce',  $master_nonce);   
-        
-        $password_key = Crypto::DeriveKey($password, $master_salt, Crypto::SecretKeyLength());
-        
-        $master = $rekey ? $this->GetScalar('master_key') : Crypto::GenerateSecretKey();
-        $master_encrypted = Crypto::EncryptSecret($master, $master_nonce, $password_key);
-  
-        $this->SetScalar('master_key', $master_encrypted);         
-        $this->SetScalar('master_key', $master, true); sodium_memzero($master);      
-        
+        if ($rekey)
+        {
+            if (!$this->cryptoAvailable)
+                throw new Exceptions\CryptoUnlockRequiredException();
+            $master = $this->master_key->TryGetValue();
+            assert($master !== null); // TODO RAY !! redesign this better
+        }
+        else
+        {
+            if ($this->hasCrypto())
+                throw new CryptoAlreadyInitializedException();
+            $master = Crypto::GenerateSecretKey();
+        }
+
+        $this->BaseInitializeCrypto($master, $password);
         $this->cryptoAvailable = true; 
         
-        foreach ($this->GetTwoFactors() as $twofactor) $twofactor->InitializeCrypto();
+        foreach ($this->GetTwoFactors() as $twofactor) 
+            $twofactor->InitializeCrypto();
         
-        foreach (self::$crypto_handlers as $func) $func($this->database, $this, true);
+        foreach (self::$crypto_handlers as $func) 
+            $func($this->database, $this, true);
         
         return $this;
     }
@@ -755,110 +828,84 @@ class Account extends PolicyBase
     /** Disables crypto on the account, stripping all keys */
     public function DestroyCrypto() : self
     {
-        foreach (self::$crypto_handlers as $func) $func($this->database, $this, false);
+        foreach (self::$crypto_handlers as $func) 
+            $func($this->database, $this, false);
 
         foreach ($this->GetSessions() as $session) $session->DestroyCrypto();
         foreach ($this->GetTwoFactors() as $twofactor) $twofactor->DestroyCrypto();
         foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
-        
-        $this->SetScalar('master_key', null);
-        $this->SetScalar('master_salt', null);
-        $this->SetScalar('master_nonce', null);
+
+        $this->BaseDestroyCrypto();
         
         $this->cryptoAvailable = false;
         return $this;
     }
-    
-    public function __destruct()
-    {
-        $this->scalars['master_key']->EraseValue();
-    }
-}
 
-/** 
- * Trait that overrides some BaseObject functions to allow inheriting properties from Groups 
- * 
- * Classes using this trait must implement GetGroups()
- */
-trait GroupInherit
-{
-    protected function GetScalar(string $field, bool $allowTemp = true)
-    {
-        if (array_key_exists($field, self::GetInheritedFields()))
-            $value = $this->TryGetInheritable($field)->GetValue();
-        else $value = parent::GetScalar($field, $allowTemp);
-        if ($value !== null) return $value; else throw new Exceptions\NullValueException();
-    }
     
-    protected function TryGetScalar(string $field, bool $allowTemp = true)
-    {
-        if (array_key_exists($field, self::GetInheritedFields()))
-            return $this->TryGetInheritable($field)->GetValue();
-        else return parent::TryGetScalar($field, $allowTemp);
-    }
-    
-    protected function GetObject(string $field) : BaseObject
-    {
-        if (array_key_exists($field, self::GetInheritedFields()))
-            $value = $this->TryGetInheritable($field, true)->GetValue();
-        else $value = parent::GetObject($field);
-        if ($value !== null) return $value; else throw new Exceptions\NullValueException();
-    }
-    
-    protected function TryGetObject(string $field) : ?BaseObject
-    {
-        if (array_key_exists($field, self::GetInheritedFields()))
-            return $this->TryGetInheritable($field, true)->GetValue();
-        else return parent::TryGetObject($field);
-    }
-    
-    /** Returns the object that the value of the given field is inherited from */
-    protected function TryGetInheritsScalarFrom(string $field) : ?BaseObject
-    {
-        return $this->TryGetInheritable($field)->GetSource();
-    }
-    
-    /** Returns the object that the value of the given field is inherited from */
-    protected function TryGetInheritsObjectFrom(string $field) : ?BaseObject
-    {
-        return $this->TryGetInheritable($field, true)->GetSource();
-    }
-    
+
+
+
     /**
-     * Returns an inherited property value and source pair
-     * 
-     * Values can be inherited from this account, from any group it is 
-     * a member of, or if using a default value, null
-     * @param string $field the inherited property to find
-     * @param bool $useobj true if this is an object reference, not a scalar
-     * @return InheritedProperty value/source pair
+     * Returns a field from an account or group based on group inheritance
+     * @template T of NullBaseField
+     * @param callable(PolicyBase):T $getfield function to get the field
+     * @return ?T field from correct source or null if unset
      */
-    protected function TryGetInheritable(string $field, bool $useobj = false) : InheritedProperty
+    public function GetInheritableField(callable $getfield) : ?NullBaseField
     {
-        if ($useobj) $value = parent::TryGetObject($field);
-        else $value = parent::TryGetScalar($field);
-        
-        if ($value !== null) return new InheritedProperty($value, $this);
-        
-        $priority = null; $source = null;
-        
-        foreach ($this->GetGroups() as $group)
+        $actfield = $getfield($this);
+        if ($actfield->TryGetValue() !== null) return $actfield;
+
+        $actfield->TryGetValue();
+
+        /** @var ?T */
+        $grpfield = null;
+        $priority = null;
+
+        foreach ($this->GetGroups() as $tempgroup)
         {
-            if ($useobj) $temp_value = $group->TryGetObject($field);
-            else $temp_value = $group->TryGetScalar($field);
-            
-            $temp_priority = $group->GetPriority();
-            
-            if ($temp_value !== null && ($temp_priority > $priority || $priority === null))
+            $tempfield = $getfield($tempgroup);
+            $temppriority = $tempgroup->GetPriority();
+            if (($tempfield->TryGetValue() !== null) && 
+                ($priority === null || $temppriority > $priority))
             {
-                $value = $temp_value; $source = $group;
-                $priority = $temp_priority;
+                $grpfield = $tempfield;
+                $priority = $temppriority;
             }
         }
-        
-        $value ??= self::GetInheritedFields()[$field];
-        
-        return new InheritedProperty($value, $source);
-    }
-}
 
+        return ($grpfield !== null) ? $grpfield : null;
+    }
+
+    /**
+    * Returns a an account or group based on group inheritance
+    * @template T of NullBaseField
+    * @param callable(PolicyBase):T $getfield function to get the field
+    * @return ?PolicyBase source of field or null if unset
+    */
+    public function GetInheritableSource(callable $getfield) : ?PolicyBase
+    {
+        $actfield = $getfield($this);
+        if ($actfield->TryGetValue() !== null) return $this;
+
+        /** @var ?Group */
+        $group = null;
+        $priority = null;
+
+        foreach ($this->GetGroups() as $tempgroup)
+        {
+            $tempfield = $getfield($tempgroup);
+            $temppriority = $tempgroup->GetPriority();
+            if (($tempfield->TryGetValue() !== null) && 
+                ($priority === null || $temppriority > $priority))
+            {
+                $group = $tempgroup;
+                $priority = $temppriority;
+            }
+        }
+
+        return ($group !== null) ? $group : null;
+    }
+
+    
+}

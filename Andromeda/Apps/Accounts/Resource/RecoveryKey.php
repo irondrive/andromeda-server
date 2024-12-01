@@ -75,6 +75,15 @@ class RecoveryKey extends BaseObject
         return $retval;
     }
     
+    /** 
+     * Load all recovery keys for a given account 
+     * @return array<string, static>
+     */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
+    { 
+        return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** Deletes all recovery keys owned by the given account */
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
     {

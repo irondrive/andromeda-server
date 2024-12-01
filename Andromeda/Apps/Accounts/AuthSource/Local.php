@@ -12,7 +12,7 @@ class Local implements IAuthSource
 {
     public function VerifyAccountPassword(Account $account, string $password) : bool
     {
-        $hash = $account->GetPasswordHash();
+        $hash = $account->GetPasswordHash() ?? ""; // TODO RAY !! handle null
         
         $correct = password_verify($password, $hash);
         

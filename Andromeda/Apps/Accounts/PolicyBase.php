@@ -24,7 +24,7 @@ abstract class PolicyBase extends BaseObject
     /** True if this entity is granted admin privileges */
     protected FieldTypes\NullBoolType $admin;
     /** True if the entity is disabled (not allowed access) */
-    protected FieldTypes\NullBoolType $disabled;
+    protected FieldTypes\NullIntType $disabled;
     /** true if two-factor is required to create sessions (not just clients) */
     protected FieldTypes\NullBoolType $forcetf;
     /** true if server-side account crypto is enabled */
@@ -55,7 +55,7 @@ abstract class PolicyBase extends BaseObject
         $this->date_modified = $fields[] = new FieldTypes\NullTimestamp('date_modified');
         $this->comment = $fields[] = new FieldTypes\NullStringType('comment');
         $this->admin = $fields[] = new FieldTypes\NullBoolType('admin');
-        $this->disabled = $fields[] = new FieldTypes\NullBoolType('disabled');
+        $this->disabled = $fields[] = new FieldTypes\NullIntType('disabled');
         $this->forcetf = $fields[] = new FieldTypes\NullBoolType('forcetf');
         $this->allowcrypto = $fields[] = new FieldTypes\NullBoolType('allowcrypto');
         $this->account_search = $fields[] = new FieldTypes\NullIntType('account_search');
