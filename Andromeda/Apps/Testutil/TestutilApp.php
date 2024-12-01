@@ -75,7 +75,7 @@ class TestutilApp extends BaseApp
         $params = $input->GetParams();
         $iface = $this->API->GetInterface();
 
-        $outmode = $params->GetOptParam('outmode',null)->FromWhitelistNull(array_keys(IOInterface::OUTPUT_TYPES));
+        $outmode = $params->GetOptParam('outmode',null)->FromAllowlistNull(array_keys(IOInterface::OUTPUT_TYPES));
         if ($outmode !== null) $iface->SetOutputMode(IOInterface::OUTPUT_TYPES[$outmode]);
 
         if ($params->GetOptParam('clienterror',false)->GetBool())

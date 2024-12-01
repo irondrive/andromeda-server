@@ -48,7 +48,7 @@ abstract class BaseLog extends BaseObject
         $q = new QueryBuilder(); $criteria = static::GetPropCriteria($database, $q, $params, $isCount);
         
         $or = ($params->HasParam('logic') ? $params->GetParam('logic', SafeParams::PARAMLOG_ONLYFULL)
-            ->FromWhitelist(array('and','or')) : null) === 'or'; // default AND
+            ->FromAllowlist(array('and','or')) : null) === 'or'; // default AND
         
         if (count($criteria) === 0)
         {

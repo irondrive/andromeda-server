@@ -86,7 +86,7 @@ abstract class External extends BaseObject implements IAuthSource
     {
         $classes = self::getAuthClasses();
         
-        $type = $params->GetParam('type')->FromWhitelist(array_keys($classes));
+        $type = $params->GetParam('type')->FromAllowlist(array_keys($classes));
         
         try { return $classes[$type]::Create($database, $params)->Activate(); }
         catch (BaseExceptions\ServerException $e){ 
@@ -104,7 +104,7 @@ abstract class External extends BaseObject implements IAuthSource
         
         if ($params->HasParam('enabled'))
         {
-            $enabled = $params->GetParam('enabled')->FromWhitelist(array_keys(self::ENABLED_TYPES));
+            $enabled = $params->GetParam('enabled')->FromAllowlist(array_keys(self::ENABLED_TYPES));
             $obj->enabled->SetValue(self::ENABLED_TYPES[$enabled]);
         }
         
@@ -127,7 +127,7 @@ abstract class External extends BaseObject implements IAuthSource
     {
         if ($params->HasParam('enabled'))
         {
-            $param = $params->GetParam('enabled')->FromWhitelist(array_keys(self::ENABLED_TYPES));
+            $param = $params->GetParam('enabled')->FromAllowlist(array_keys(self::ENABLED_TYPES));
             $this->enabled->SetValue(self::ENABLED_TYPES[$param]);
         }
 

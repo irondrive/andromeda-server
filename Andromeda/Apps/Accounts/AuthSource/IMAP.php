@@ -53,7 +53,7 @@ class IMAP extends External
         $obj = parent::Create($database, $params);
         
         $protocol = self::PROTOCOLS[$params->GetParam('protocol')
-            ->FromWhitelist(array_keys(self::PROTOCOLS))];
+            ->FromAllowlist(array_keys(self::PROTOCOLS))];
         $obj->protocol->SetValue($protocol);
         
         $obj->hostname->SetValue($params->GetParam('hostname')->GetHostname());

@@ -233,11 +233,11 @@ abstract class Contact extends BaseObject
     }
 
     /**
-     * Sends a message to the given array of contacts of any type
+     * Sends a message to the given array of contacts
      * @param string $subject subject line
      * @param string $html html message (optional)
      * @param string $plain plain text message
-     * @param array<static> $recipients array of contacts
+     * @param array<self> $recipients array of contacts
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */
@@ -247,9 +247,20 @@ abstract class Contact extends BaseObject
         {
             $subrecipients = array_filter($recipients, 
                 function(Contact $c)use($type){ return $c instanceof $type; });
-            $type::SendMessageMany($subject, $html, $plain, $subrecipients, $bcc, $from);
+            $type::SubclassSendMessageMany($subject, $html, $plain, $subrecipients, $bcc, $from);
         }
     }
+
+    /**
+     * Sends a message to the given array of contacts
+     * @param string $subject subject line
+     * @param string $html html message (optional)
+     * @param string $plain plain text message
+     * @param array<static> $recipients array of contacts
+     * @param Account $from account sending the message
+     * @param bool $bcc true to use BCC for recipients
+     */
+    abstract protected static function SubclassSendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void;
 
     /**
      * Gets this contact as a printable object

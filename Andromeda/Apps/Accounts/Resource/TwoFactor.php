@@ -81,6 +81,12 @@ class TwoFactor extends BaseObject
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
+    /** Count two factors for a given account */
+    public static function CountByAccount(ObjectDatabase $database, Account $account) : int
+    { 
+        return $database->CountObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** 
      * Load all two factors for a given account 
      * @return array<string, static>

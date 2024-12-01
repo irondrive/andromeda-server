@@ -134,13 +134,13 @@ class Config extends BaseConfig
 
         if ($params->HasParam('actionlog_details'))
         {
-            $param = $params->GetParam('actionlog_details')->FromWhitelist(array_keys(self::ACTLOG_DETAILS_TYPES));
+            $param = $params->GetParam('actionlog_details')->FromAllowlist(array_keys(self::ACTLOG_DETAILS_TYPES));
             $this->actionlog_details->SetValue(self::ACTLOG_DETAILS_TYPES[$param]);
         }
         
         if ($params->HasParam('debug'))
         {
-            $param = $params->GetParam('debug')->FromWhitelist(array_keys(self::DEBUG_TYPES));
+            $param = $params->GetParam('debug')->FromAllowlist(array_keys(self::DEBUG_TYPES));
             $this->debug->SetValue(self::DEBUG_TYPES[$param]);
         }
         
@@ -150,7 +150,7 @@ class Config extends BaseConfig
 
         if ($params->HasParam('metrics'))
         {
-            $param = $params->GetParam('metrics')->FromWhitelist(array_keys(self::METRICS_TYPES));
+            $param = $params->GetParam('metrics')->FromAllowlist(array_keys(self::METRICS_TYPES));
             $this->metrics->SetValue(self::METRICS_TYPES[$param]);
         }
         

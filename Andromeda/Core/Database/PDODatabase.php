@@ -130,7 +130,7 @@ class PDODatabase
      */
     public static function Install(SafeParams $params) : ?string
     {
-        $driver = $params->GetParam('driver')->FromWhitelist(array_keys(self::DRIVERS));
+        $driver = $params->GetParam('driver')->FromAllowlist(array_keys(self::DRIVERS));
         
         $config = array('DRIVER'=>$driver);
         

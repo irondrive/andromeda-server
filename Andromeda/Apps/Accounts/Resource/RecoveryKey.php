@@ -75,6 +75,12 @@ class RecoveryKey extends BaseObject
         return $retval;
     }
     
+    /** Count recovery keys for a given account */
+    public static function CountByAccount(ObjectDatabase $database, Account $account) : int
+    { 
+        return $database->CountObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** 
      * Load all recovery keys for a given account 
      * @return array<string, static>

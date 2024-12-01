@@ -139,7 +139,7 @@ class CLI extends IOInterface
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
                         throw new IncorrectCLIUsageException('no outmode value');
-                    $outmode = (new SafeParam('outmode',$val))->FromWhitelist(array_keys(self::OUTPUT_TYPES));
+                    $outmode = (new SafeParam('outmode',$val))->FromAllowlist(array_keys(self::OUTPUT_TYPES));
                     $this->outmode = self::OUTPUT_TYPES[$outmode];
                     break;
                 }
@@ -147,7 +147,7 @@ class CLI extends IOInterface
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
                         throw new IncorrectCLIUsageException('no debug value');
-                    $debug = (new SafeParam('debug',$val))->FromWhitelist(array_keys(Config::DEBUG_TYPES));
+                    $debug = (new SafeParam('debug',$val))->FromAllowlist(array_keys(Config::DEBUG_TYPES));
                     $this->debug = Config::DEBUG_TYPES[$debug];
                     break;
                 }
@@ -155,7 +155,7 @@ class CLI extends IOInterface
                 {
                     if (($val = self::getNextValue($argv,$argIdx)) === null)
                         throw new IncorrectCLIUsageException('no metrics value');
-                    $metrics = (new SafeParam('metrics',$val))->FromWhitelist(array_keys(Config::METRICS_TYPES));
+                    $metrics = (new SafeParam('metrics',$val))->FromAllowlist(array_keys(Config::METRICS_TYPES));
                     $this->metrics = Config::METRICS_TYPES[$metrics];
                     break;
                 }

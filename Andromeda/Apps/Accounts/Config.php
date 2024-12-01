@@ -65,13 +65,13 @@ class Config extends BaseConfig
     {
         if ($params->HasParam('createaccount')) 
         {
-            $param = $params->GetParam('createaccount')->FromWhitelist(array_keys(self::CREATE_TYPES));
+            $param = $params->GetParam('createaccount')->FromAllowlist(array_keys(self::CREATE_TYPES));
             $this->create_account->SetValue(self::CREATE_TYPES[$param]);
         }
         
         if ($params->HasParam('requirecontact')) 
         {
-            $param = $params->GetParam('requirecontact')->FromWhitelist(array_keys(self::CONTACT_TYPES));
+            $param = $params->GetParam('requirecontact')->FromAllowlist(array_keys(self::CONTACT_TYPES));
             $this->require_contact->SetValue(self::CONTACT_TYPES[$param]);
         }
         

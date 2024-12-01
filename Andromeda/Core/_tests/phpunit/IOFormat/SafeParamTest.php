@@ -176,19 +176,19 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("null", null, $getRaw, false);
     }
     
-    public function testFromWhitelist() : void
+    public function testFromAllowlist() : void
     {
-        $getVal = function(SafeParam $p){ return $p->FromWhitelist(array('a')); };
-        $getValN = function(SafeParam $p){ return $p->FromWhitelistNull(array('a')); };
+        $getVal = function(SafeParam $p){ return $p->FromAllowlist(array('a')); };
+        $getValN = function(SafeParam $p){ return $p->FromAllowlistNull(array('a')); };
         
         $this->testNulls($getVal, $getValN);
         
         $val = "test"; $param = new SafeParam('mykey',$val);
         
-        $this->assertSame($val, $param->FromWhitelist(array($val,'a','b')));
+        $this->assertSame($val, $param->FromAllowlist(array($val,'a','b')));
         
         $this->expectException(Exceptions\SafeParamInvalidException::class);
-        $param->FromWhitelist(array('a','b','c'));
+        $param->FromAllowlist(array('a','b','c'));
     }
     
     public function testBool() : void
