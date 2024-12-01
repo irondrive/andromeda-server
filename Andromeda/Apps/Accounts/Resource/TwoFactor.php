@@ -81,6 +81,15 @@ class TwoFactor extends BaseObject
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
+    /** 
+     * Load all two factors for a given account 
+     * @return array<string, static>
+     */
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
+    { 
+        return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** Creates and returns a new twofactor object for the given account */
     public static function Create(ObjectDatabase $database, Account $account, ?string $comment = null) : self
     {

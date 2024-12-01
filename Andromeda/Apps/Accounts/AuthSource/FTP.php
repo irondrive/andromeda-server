@@ -115,7 +115,7 @@ class FTP extends External
         }
         catch (BaseExceptions\PHPError $e) 
         { 
-            $errman = $this->database->GetApiPackage()->GetErrorManager();
+            $errman = $this->GetApiPackage()->GetErrorManager();
             $errman->LogException($e);
             return false; 
         }

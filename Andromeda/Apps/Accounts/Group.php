@@ -77,13 +77,13 @@ class Group extends PolicyBase
      * Gets the list of all accounts in this group
      * @return array<string, Account> Accounts indexed by ID
      */
-    public function GetAccounts() : array { return $this->GetDefaultAccounts() ?? $this->GetMyAccounts(); }
+    public function GetAccounts() : array { return $this->GetDefaultAccounts() ?? $this->GetJoinedAccounts(); }
     
     /**
      * Gets the list of accounts that are explicitly part of this group
      * @return array<string, Account> Accounts indexed by ID
      */
-    public function GetMyAccounts() : array { return GroupJoin::LoadAccounts($this->database, $this); }
+    public function GetJoinedAccounts() : array { return GroupJoin::LoadAccounts($this->database, $this); }
     
     /** Adds a new account to this group */
     public function AddAccount(Account $account) : self { return $this; } // TODO RAY !! $this->AddObjectRef('accounts', $account); return $this; }
@@ -149,7 +149,7 @@ class Group extends PolicyBase
      */
     public function SendMessage(string $subject, ?string $html, string $plain, ?Account $from = null) : void
     {
-        Contact::SendMessageManyT($subject, $html, $plain, $this->GetContacts(), true, $from);
+        Contact::SendMessageMany($subject, $html, $plain, $this->GetContacts(), true, $from);
     }
     
     /** Creates and returns a new group with the given name, priority, and comment */
@@ -189,7 +189,7 @@ class Group extends PolicyBase
     public static function RegisterDeleteHandler(callable $func) : void { 
         self::$delete_handlers[] = $func; }
     
-    public function NotifyPreDeleted(): void
+    public function NotifyPreDeleted() : void
     {
         foreach (($this->GetDefaultAccounts() ?? array()) as $account)
             Account::RunGroupChangeHandlers($this->database, $account, $this, false);

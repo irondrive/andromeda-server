@@ -9,7 +9,7 @@ use Andromeda\Apps\Accounts\Exceptions\PasswordHashFailedException;
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
  */
-trait AuthObject
+trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
 {
     /** 
      * Return the string length of the auth key

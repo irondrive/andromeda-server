@@ -119,7 +119,7 @@ class LDAP extends External
         }
         catch (BaseExceptions\PHPError $e) 
         {
-            $errman = $this->database->GetApiPackage()->GetErrorManager();
+            $errman = $this->GetApiPackage()->GetErrorManager();
             $errman->LogException($e);
             
             if (($lerr = ldap_error($this->ldapConn)) !== "") // @phpstan-ignore-line PHP 7/8 ldapConn types differ

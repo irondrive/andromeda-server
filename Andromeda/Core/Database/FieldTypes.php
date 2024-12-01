@@ -84,12 +84,37 @@ abstract class BaseField
     }
 }
 
+/**
+ * a not null scalar field
+ * @template T of scalar
+ */
+abstract class RegBaseField extends BaseField
+{
+    /** @return T */
+    abstract public function GetValue();
+
+    abstract public function isInitialized() : bool;
+}
+
+/** 
+ * a possibly-null scalar field
+ * @template T of scalar
+ */
+abstract class NullBaseField extends BaseField
+{
+    /** @return ?T */
+    abstract public function TryGetValue();
+}
+
 // NOTE the reason we have separate classes for all the scalar types
 // is so that we get RUNTIME safety with the types also.  Otherwise
 // you would only get type checking with phpstan based on the comments
 
-/** A possibly-null string */
-class NullStringType extends BaseField
+/** 
+ * A possibly-null string
+ * @extends NullBaseField<string>
+ */
+class NullStringType extends NullBaseField
 {
     /** possibly temporary only */
     protected ?string $tempvalue;
@@ -153,8 +178,11 @@ class NullStringType extends BaseField
     }
 }
 
-/** A non-null string */
-class StringType extends BaseField
+/** 
+ * A non-null string
+ * @extends RegBaseField<string>
+ */
+class StringType extends RegBaseField
 {
     /** possibly temporary only */
     protected string $tempvalue;
@@ -228,8 +256,11 @@ class StringType extends BaseField
     }
 }
 
-/** A possibly-null boolean */
-class NullBoolType extends BaseField
+/** 
+ * A possibly-null boolean
+ * @extends NullBaseField<bool>
+ */
+class NullBoolType extends NullBaseField
 {
     /** possibly temporary only */
     protected ?bool $tempvalue;
@@ -297,8 +328,11 @@ class NullBoolType extends BaseField
     }
 }
 
-/** A non-null boolean */
-class BoolType extends BaseField
+/** 
+ * A non-null boolean
+ * @extends RegBaseField<bool>
+ */
+class BoolType extends RegBaseField
 {
     /** possibly temporary only */
     protected bool $tempvalue;
@@ -372,8 +406,11 @@ class BoolType extends BaseField
     }
 }
 
-/** A possibly-null integer */
-class NullIntType extends BaseField
+/** 
+ * A possibly-null integer
+ * @extends NullBaseField<int>
+ */
+class NullIntType extends NullBaseField
 {
     /** possibly temporary only */
     protected ?int $tempvalue;
@@ -437,8 +474,11 @@ class NullIntType extends BaseField
     }
 }
 
-/** A non-null integer */
-class IntType extends BaseField
+/** 
+ * A non-null integer
+ * @extends RegBaseField<int>
+ */
+class IntType extends RegBaseField
 {
     /** possibly temporary only */
     protected int $tempvalue;
@@ -512,8 +552,11 @@ class IntType extends BaseField
     }
 }
 
-/** A possibly-null float */
-class NullFloatType extends BaseField
+/** 
+ * A possibly-null float
+ * @extends NullBaseField<float>
+ */
+class NullFloatType extends NullBaseField
 {
     /** possibly temporary only */
     protected ?float $tempvalue;
@@ -577,8 +620,11 @@ class NullFloatType extends BaseField
     }
 }
 
-/** A non-null float */
-class FloatType extends BaseField
+/** 
+ * A non-null float
+ * @extends RegBaseField<float>
+ */
+class FloatType extends RegBaseField
 {
     /** possibly temporary only */
     protected float $tempvalue;
