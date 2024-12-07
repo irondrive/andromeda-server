@@ -329,7 +329,7 @@ class Account extends PolicyBase
     public function SetDisabled(?int $val = self::DISABLE_PERMANENT) : self { $this->disabled->SetValue($val); return $this; }    
     
     /** Gets the timestamp when this user was last active */
-    public function getActiveDate() : ?float { return $this->date_active->TryGetValue(); }
+    public function GetActiveDate() : ?float { return $this->date_active->TryGetValue(); }
     
     /** Sets the last-active timestamp to now (if not global read-only) */
     public function SetActiveDate() : self      
@@ -340,19 +340,19 @@ class Account extends PolicyBase
     }
 
     /** Gets the timestamp when this user last created a session */
-    public function getLoggedonDate() : ?float { return $this->date_loggedon->TryGetValue(); }
+    public function GetLoggedonDate() : ?float { return $this->date_loggedon->TryGetValue(); }
     
     /** Sets the timestamp of last-login to now */
     public function SetLoggedonDate() : self { $this->date_loggedon->SetTimeNow(); return $this; }
     
     /** Returns the timestamp that the account's password was last set */
-    private function getPasswordDate() : ?float { return $this->date_passwordset->TryGetValue(); }
+    private function GetPasswordDate() : ?float { return $this->date_passwordset->TryGetValue(); }
 
     /** Sets the account's password timestamp to now */
     private function SetPasswordDate() : self { $this->date_passwordset->SetTimeNow(); return $this; } // TODO RAY !! seems like this should be internal to ChangePassword?
     
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
-    public function resetPasswordDate() : self { $this->date_passwordset->SetValue(0); return $this; }
+    public function ResetPasswordDate() : self { $this->date_passwordset->SetValue(0); return $this; }
     
     /** Returns the maximum allowed time since a client was last active for it to be valid */
     public function GetClientTimeout() : ?int
@@ -605,9 +605,9 @@ class Account extends PolicyBase
                 'max_password_age' => $this->GetMaxPasswordAge(),
                 'dates' => array(
                     'created' => $this->GetDateCreated(),
-                    'passwordset' => $this->getPasswordDate(),
-                    'loggedon' => $this->getLoggedonDate(),
-                    'active' => $this->getActiveDate()
+                    'passwordset' => $this->GetPasswordDate(),
+                    'loggedon' => $this->GetLoggedonDate(),
+                    'active' => $this->GetActiveDate()
                 ),
                 'config' => array_merge(
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
@@ -708,7 +708,7 @@ class Account extends PolicyBase
     {
         if (!($this->GetAuthSource() instanceof AuthSource\Local)) return true;
         
-        $date = $this->getPasswordDate(); 
+        $date = $this->GetPasswordDate(); 
         $max = $this->GetMaxPasswordAge();
         
         if ($date <= 0) return false;

@@ -133,7 +133,8 @@ class Authenticator
             if (($sudouser !== null || $sudoacct !== null) && !$account->isAdmin())
                 throw new Exceptions\AdminRequiredException();
         }
-        else if (!$interface->isPrivileged()) return null; // not authenticated
+        else if (!$interface->isPrivileged())
+            return null; // not authenticated
         
         if ($sudouser !== null)
         {
@@ -147,9 +148,7 @@ class Authenticator
         }
         
         $authenticator->account = $account;
-        
         array_push(self::$instances, $authenticator);
-        
         return $authenticator;
     }
 

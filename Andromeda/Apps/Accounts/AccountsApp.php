@@ -1329,7 +1329,7 @@ class AccountsApp extends BaseApp
         if ($account === null) throw new Exceptions\UnknownAccountException();
         
         if ($params->GetOptParam("expirepw",false)->GetBool()) 
-            $account->resetPasswordDate();
+            $account->ResetPasswordDate();
         
         return $account->SetProperties($params)->GetClientObject(Account::OBJECT_ADMIN);
     }
