@@ -6,7 +6,12 @@ use Andromeda\Core\IOFormat\SafeParams;
 
 use Andromeda\Apps\Accounts\Account;
 
-/** Uses an IMAP server for authentication */
+/** 
+ * Uses an IMAP server for authentication
+ * @phpstan-import-type ExternalJ from External
+ * @phpstan-import-type AdminExternalJ from External
+ * @phpstan-type IMAPJ array{protocol:key-of<self::PROTOCOLS>, hostname:string, port:?int, implssl:bool, secauth:bool}
+ */
 class IMAP extends External
 {
     use TableTypes\TableNoChildren;
@@ -81,12 +86,12 @@ class IMAP extends External
         return $this;
     }
     
+    /** @return key-of<self::PROTOCOLS> */
     private function GetProtocol() : string { return array_flip(self::PROTOCOLS)[$this->protocol->GetValue()]; }
     
     /**
      * Returns a printable client object for this IMAP
-     * @return array<string, mixed> `{protocol:enum, hostname:string, port:?int, implssl:bool, secauth:bool}` + External
-     * @see External::GetClientObject()
+     * @return ($admin is true ? \Union<AdminExternalJ, IMAPJ> : \Union<ExternalJ, IMAPJ>)
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -106,7 +111,7 @@ class IMAP extends External
             throw new Exceptions\IMAPExtensionException();
     }
     
-    public function VerifyAccountPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
         $hostname = $this->hostname->GetValue(); 
         
@@ -120,7 +125,7 @@ class IMAP extends External
 
         try 
         { 
-            $imap = imap_open("{{$connectstr}}", $account->GetUsername(), $password, OP_HALFOPEN); 
+            $imap = imap_open("{{$connectstr}}", $username, $password, OP_HALFOPEN); 
             
             $success = ($imap !== false);
             if ($success) imap_close($imap);

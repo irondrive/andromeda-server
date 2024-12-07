@@ -10,6 +10,9 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObjectFull, AccountKeySource};
  * 
  * Also stores a backup copy of the account's master key, 
  * and as a matter of convention, can byapss two factor
+ * 
+ * @phpstan-type RecoveryKeyJ array{date_created:float}   
+ * // TODO RAY !! authkey or secret? make consistent also authkey should not be null
  */
 class RecoveryKey extends BaseObject
 {
@@ -98,7 +101,7 @@ class RecoveryKey extends BaseObject
 
     /**
      * Gets a printable client object for this key
-     * @return array<mixed> `{authkey:string}` if $secret
+     * @return RecoveryKeyJ
      */
     public function GetClientObject(bool $secret = false) : array
     {

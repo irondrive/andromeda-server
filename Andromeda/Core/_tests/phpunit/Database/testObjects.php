@@ -43,7 +43,6 @@ class EasyObject extends BaseObject
     public function NotifyPreDeleted() : void { $this->preDeleted = true; }
     public function didPreDelete() : bool { return $this->preDeleted; }
     
-    public function Delete() : void { $this->database->DeleteObject($this); }
     public function DeleteMeLater() : void { $this->DeleteLater(); }
     
     public function GetUniqueKey() : ?int { return $this->uniqueKey->TryGetValue(); }
@@ -306,8 +305,6 @@ class PolyObject5a extends PolyObject4
     {
         $this->testprop5->SetValue($val); return $this;
     }
-    
-    public function Delete() : void { $this->database->DeleteObject($this); }
 }
 
 class PolyObject5aa extends PolyObject5a

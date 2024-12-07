@@ -42,11 +42,11 @@ class AccountCreateDeniedException extends BaseExceptions\ClientDeniedException
     }
 }
 
-/** Exception indicating that the requested username is not whitelisted */
-class AccountWhitelistException extends BaseExceptions\ClientDeniedException
+/** Exception indicating that the requested username is not on the register allow list */
+class AccountRegisterAllowException extends BaseExceptions\ClientDeniedException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("USERNAME_NOT_WHITELISTED", $details);
+        parent::__construct("USERNAME_NOT_ALLOWLISTED", $details);
     }
 }
 

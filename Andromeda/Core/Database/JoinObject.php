@@ -78,7 +78,7 @@ abstract class JoinObject extends BaseObject
         $this->database->DeleteObject($this);
     }
 
-    // TODO !! better comments for all functions
+    // TODO RAY !! better comments for all functions
 
     // TODO RAY !! implement caching layer - arr[left class][right id]
     // only get cache on load - add to it only when creating/deleting... no merge semantics

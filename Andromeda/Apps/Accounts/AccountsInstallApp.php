@@ -16,6 +16,8 @@ class AccountsInstallApp extends InstallerApp
     
     protected function getInstallFlags() : string { return '[--username alphanum --password raw]'; }
     
+    public function getDependencies() : array { return array('core'); }
+    
     /**
      * {@inheritDoc}
      * Also optionally creates an admin account
@@ -34,7 +36,7 @@ class AccountsInstallApp extends InstallerApp
             $username = $params->GetParam("username", SafeParams::PARAMLOG_ALWAYS)->CheckLength(127)->GetAlphanum();
             $password = $params->GetParam("password", SafeParams::PARAMLOG_NEVER)->GetRawString();
             
-            return Account::Create($db, $username, null, $password)->SetAdmin(true)->GetClientObject(); // @phpstan-ignore-line TODO FIX ME
+            return Account::Create($db, $username, $password)->SetAdmin(true)->GetClientObject();
         }
         else return null;
     }

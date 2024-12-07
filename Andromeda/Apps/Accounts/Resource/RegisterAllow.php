@@ -2,23 +2,26 @@
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
-/** RegisterAllow entry for allowing account signups */
+/** 
+ * RegisterAllow entry for allowing account signups
+ * @phpstan-type RegisterAllowJ array{date_created:float, type:key-of<self::TYPES>, value:string}
+ */
 class RegisterAllow extends BaseObject
 {
     use TableTypes\TableNoChildren;
     
-    /** A whitelisted username */
+    /** A allowlisted username */
     public const TYPE_USERNAME = 0;
-    /** A whitelisted contact info */
+    /** A allowlisted contact info */
     public const TYPE_CONTACT = 1; // TODO maybe refactor to have actual contact types?
     
     public const TYPES = array(
         'username'=>self::TYPE_USERNAME, 
         'contact'=>self::TYPE_CONTACT);
     
-    /** The type of whitelist entry */
+    /** The type of allowlist entry */
     private FieldTypes\IntType $type; // keep it simple, no polymorphism
-    /** The value of the whitelist entry */
+    /** The value of the allowlist entry */
     private FieldTypes\StringType $value;
     /** Date the entry was created */
     private FieldTypes\Timestamp $date_created;
@@ -38,11 +41,11 @@ class RegisterAllow extends BaseObject
     }
     
     /**
-     * Creates a new whitelist entry
+     * Creates a new allowlist entry
      * @param ObjectDatabase $database database reference
      * @param int $type entry type enum
-     * @param string $value value of whitelist entry
-     * @return static new whitelist entry
+     * @param string $value value of allowlist entry
+     * @return static new allowlist entry
      */
     public static function Create(ObjectDatabase $database, int $type, string $value) : self
     {
@@ -54,11 +57,11 @@ class RegisterAllow extends BaseObject
     }
     
     /**
-     * Checks whether a whitelist entry exists
+     * Checks whether an allowlist entry exists
      * @param ObjectDatabase $database database reference
-     * @param int $type type enum of whitelist entry
-     * @param string $value value of whitelist entry
-     * @return bool true if it exists (is whitelisted)
+     * @param int $type type enum of allowlist entry
+     * @param string $value value of allowlist entry
+     * @return bool true if it exists (is allowlisted)
      */
     public static function ExistsTypeAndValue(ObjectDatabase $database, int $type, string $value) : bool
     {
@@ -68,10 +71,10 @@ class RegisterAllow extends BaseObject
     }
     
     /**
-     * Removes a whitelist entry, if it exists 
+     * Removes an allowlist entry, if it exists 
      * @param ObjectDatabase $database database reference
-     * @param int $type type enum of whitelist entry
-     * @param string $value value of whitelist entry
+     * @param int $type type enum of allowlist entry
+     * @param string $value value of allowlist entry
      */
     public static function DeleteByTypeAndValue(ObjectDatabase $database, int $type, string $value) : bool
     {
@@ -82,7 +85,7 @@ class RegisterAllow extends BaseObject
     
     /**
      * Returns a printable client object for this entry
-     * @return array<mixed> `{date_created:float, type:enum, value:string}`
+     * @return RegisterAllowJ
      */
     public function GetClientObject() : array
     {

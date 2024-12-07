@@ -10,6 +10,8 @@ use Andromeda\Apps\Accounts\Resource\Contact;
  * 
  * Used primarily to manage config for multiple accounts at once, in a many-to-many relationship.
  * Groups use a priority number to resolve conflicting properties.
+ * 
+ * @phpstan-type GroupJ array{id:string, name:string}
  */
 class Group extends PolicyBase
 {
@@ -110,7 +112,7 @@ class Group extends PolicyBase
      * @param ObjectDatabase $database database reference
      * @param string $name name to match (wildcard)
      * @param positive-int $limit max number to load - returns nothing if exceeded
-     * @return array<static>
+     * @return array<string, static>
      * @see Group::GetClientObject()
      */
     public static function LoadAllMatchingName(ObjectDatabase $database, string $name, int $limit) : array
@@ -198,19 +200,14 @@ class Group extends PolicyBase
             $func($this->database, $this);
     }
     
-    /** Deletes this group */
-    public function Delete() : void
-    {
-        $this->database->DeleteObject($this);
-    }
-
     public const OBJECT_FULL = 1; 
     public const OBJECT_ADMIN = 2;
     
     /**
      * Gets this group as a printable object
      * @param int $level if FULL, show list of account IDs, if ADMIN, show details
-     * @return array<mixed> `{id:id, name:string}` \
+     * @return GroupJ
+     * return array<mixed> `{id:id, name:string}` \
         if FULL, add `{accounts:[id]}` \
         if ADMIN, add `{priority:int,comment:?string,dates:{created:float,modified:?float}, session_timeout:?int, client_timeout:?int, max_password_age:?int, \
             config:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
@@ -224,14 +221,14 @@ class Group extends PolicyBase
             'name' => $this->GetDisplayName()
         );
         
-        if (($level & self::OBJECT_ADMIN) !== 0)
+        /*if (($level & self::OBJECT_ADMIN) !== 0)
         {
             $retval += array(
                 'dates' => array( // TODO RAY !! remove subarrays here
                     'created' => $this->date_created->GetValue(),
                     'modified' => $this->date_modified->TryGetValue()
                 ),
-                /*'config' => array_merge( // TODO RAY !! implement/fix me
+                'config' => array_merge( // TODO RAY !! implement/fix me
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
                         array('admin','forcetf','allowcrypto','userdelete')),
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },
@@ -247,12 +244,12 @@ class Group extends PolicyBase
                 'comment' => $this->GetComment(),
                 'session_timeout' => $this->TryGetScalar('session_timeout'),
                 'client_timeout' => $this->TryGetScalar('client_timeout'),
-                'max_password_age' => $this->TryGetScalar('max_password_age')*/
+                'max_password_age' => $this->TryGetScalar('max_password_age')
             );
         }            
         
         if (($level & self::OBJECT_FULL) !== 0) 
-            $retval['accounts'] = array_keys($this->GetAccounts());
+            $retval['accounts'] = array_keys($this->GetAccounts());*/
         
         return $retval;
     }

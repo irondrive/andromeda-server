@@ -132,8 +132,6 @@ class Emailer extends BaseObject
         return $mailers[array_rand($mailers)];
     }
 
-    public function Delete() : void { $this->database->DeleteObject($this); }
-    
     /** Build a PHPMailer-formatted host string from an input */
     private static function BuildHostFromParams(SafeParams $params) : string
     {

@@ -179,9 +179,9 @@ class SafeParam
     /**
      * Checks that the param's value is in the given array or null
      * @template T of list<string>
-     * @param T $values whitelisted values
+     * @param T $values allowlisted values
      * @throws SafeParamInvalidException if not valid
-     * @return ?value-of<T> the whitelisted value or null
+     * @return ?value-of<T> the allowlisted value or null
      */
     public function FromAllowlistNull(array $values) : ?string
     {
@@ -278,7 +278,7 @@ class SafeParam
     /**
      * Returns an unsigned integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>|NULL
+     * @return non-negative-int|NULL
      */
     public function GetNullUint() : ?int
     {
@@ -293,7 +293,7 @@ class SafeParam
     /**
      * Returns an unsigned 32-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>|NULL
+     * @return non-negative-int|NULL
      */
     public function GetNullUint32() : ?int
     {
@@ -308,7 +308,7 @@ class SafeParam
     /**
      * Returns an unsigned 16-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>|NULL
+     * @return non-negative-int|NULL
      */
     public function GetNullUint16() : ?int
     {
@@ -323,7 +323,7 @@ class SafeParam
     /**
      * Returns an unsigned 8-bit integer value, see FILTER_VALIDATE_INT
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>|NULL
+     * @return non-negative-int|NULL
      */
     public function GetNullUint8() : ?int
     {
@@ -658,10 +658,10 @@ class SafeParam
     /**
      * Checks that the param's value is in the given array
      * @template T of list<string>
-     * @param T $values whitelisted values
+     * @param T $values allowlisted values
      * @throws SafeParamInvalidException if not valid
      * @throws SafeParamNullValueException if null
-     * @return value-of<T> the whitelisted value
+     * @return value-of<T> the allowlisted value
      */
     public function FromAllowlist(array $values) : string
     {
@@ -746,7 +746,7 @@ class SafeParam
      * @see SafeParam::GetNullUint()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>
+     * @return non-negative-int
      */
     public function GetUint() : int
     {
@@ -759,7 +759,7 @@ class SafeParam
      * @see SafeParam::GetNullUint32()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>
+     * @return non-negative-int
      */
     public function GetUint32() : int
     {
@@ -772,7 +772,7 @@ class SafeParam
      * @see SafeParam::GetNullUint16()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>
+     * @return non-negative-int
      */
     public function GetUint16() : int
     {
@@ -785,7 +785,7 @@ class SafeParam
      * @see SafeParam::GetNullUint8()
      * @throws SafeParamNullValueException if null
      * @throws SafeParamInvalidException if not valid
-     * @return int<0,max>
+     * @return non-negative-int
      */
     public function GetUint8() : int
     {

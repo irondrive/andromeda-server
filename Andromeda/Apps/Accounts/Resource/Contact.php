@@ -6,7 +6,10 @@ use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Accounts\Crypto\AuthObjectFull;
 
-/** An object describing a contact method for a user account */
+/** 
+ * An object describing a contact method for a user account
+ * @phpstan-type ContactJ array{id:string}
+ */
 abstract class Contact extends BaseObject
 {
     use TableTypes\TableIntTypedChildren;
@@ -17,12 +20,10 @@ abstract class Contact extends BaseObject
     
     private const TYPE_EMAIL = 1;
     
-    //private const TYPES = array(self::TYPE_EMAIL=>'email'); // TODO not really necessary
-    
     /** @return array<int, class-string<self>> */
     public static function GetChildMap(?ObjectDatabase $database = null) : array
     {
-        return array(self::TYPE_EMAIL => EmailContact::class); // TODO maybe use email STRING for type?
+        return array(self::TYPE_EMAIL => EmailContact::class);
     }
     
     /** Address of the contact */
@@ -31,10 +32,10 @@ abstract class Contact extends BaseObject
     private FieldTypes\BoolType $public;
     /** True if this contact should be used as a "from" address */
     private FieldTypes\NullBoolType $asfrom;
-    /** Timestamp this contact info was created */
+    /** Timestamp this contact was created */
     private FieldTypes\Timestamp $date_created;
     /** 
-     * Account this contact info belongs to
+     * Account this contact belongs to
      * @var FieldTypes\ObjectRefT<Account> 
      */
     private FieldTypes\ObjectRefT $account;
@@ -181,7 +182,7 @@ abstract class Contact extends BaseObject
      * @param bool $verify true to send a validation message
      * @return static
      */
-    protected static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : self
+    public static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : self
     {
         $contact = $database->CreateObject(static::class);
         $contact->date_created->SetTimeNow();
@@ -208,19 +209,40 @@ abstract class Contact extends BaseObject
     /**
      * Fetches a type/value pair from input (depends on the param name given)
      * @throws Exceptions\ContactNotGivenException if nothing valid was found
-     * @return array{class:class-string<self>, info:string}
+     * @return array{class:class-string<self>, address:string}
      */
-    public static function FetchPairFromParams(SafeParams $params) : array // TODO this seems unused, what is it for? seems wrong
+    public static function FetchPairFromParams(SafeParams $params) : array
     {
         if ($params->HasParam('email')) 
         { 
             $class = EmailContact::class;
-            
-            $info = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); // TODO move to EmailContact?
+            $address = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); // TODO move to EmailContact?
         }
         else throw new Exceptions\ContactNotGivenException();
          
-        return array('class'=>$class, 'info'=>$info);
+        return array('class'=>$class, 'address'=>$address);
+    }
+
+    /** // TODO RAY !! does FetchPairFromParams need to exist publicly still?
+     * Loads a contact from input (depends on the param name given)
+     * @param array{class:class-string<self>, address:string} $pair contact address
+     * @throws Exceptions\ContactNotGivenException if nothing valid was found
+     */
+    public static function TryLoadFromPair(ObjectDatabase $database, array $pair) : ?self
+    {
+        return $pair['class']::TryLoadByAddress($database, $pair['address']);
+    }
+
+    /**
+     * Creates a new contact from a class/address pair
+     * @param ObjectDatabase $database database reference
+     * @param Account $account account of contact
+     * @param array{class:class-string<self>, address:string} $pair contact address
+     * @param bool $verify true to send a validation message
+     */
+    public static function CreateFromPair(ObjectDatabase $database, Account $account, array $pair, bool $verify = false) : self
+    {
+        return $pair['class']::Create($database, $account, $pair['address'], $verify);
     }
 
     /**
@@ -264,7 +286,7 @@ abstract class Contact extends BaseObject
 
     /**
      * Gets this contact as a printable object
-     * @return array<mixed> `{id:id, type:enum, info:string, valid:bool, asfrom:bool, public:bool, dates:{created:float}}`
+     * @return ContactJ
      */
     public function GetClientObject() : array // TODO fix me
     {

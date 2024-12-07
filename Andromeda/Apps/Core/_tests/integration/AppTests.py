@@ -245,7 +245,8 @@ class AppTests(BaseAppTest):
         
         if not self.interface.isPriv:
             if self.verbose >= 1: print("TODO impossible to test over HTTP currently")
-            # TODO accounts once accounts works, can at least have an option to prompt admin to re-enable the server manually then continue the test (like email test)
+            # TODO accounts once accounts works, can at least have an option to prompt admin to re-enable the server manually then continue the test (like email test)?
+            # maybe not worth it because lots of other accounts app stuff will have this same problem
             return False
         self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='setconfig',params={'enabled':False}))['enabled'], False)
         self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='getconfig'))['enabled'], False) # has no effect on CLI

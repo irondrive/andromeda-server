@@ -14,6 +14,9 @@ use Andromeda\Apps\Accounts\{Account, Config};
  * External auth sources are stored in their own database tables and are
  * their own classes but all belong to a common Manager class (this one) 
  * that manages them and provides a way to enumerate them efficiently.
+ * 
+ * @phpstan-type ExternalJ array{id:string, description:string}
+ * @phpstan-type AdminExternalJ \Union<ExternalJ, array{type:string, enabled:key-of<self::ENABLED_TYPES>, default_group:?string, date_created:float}>
  */
 abstract class External extends BaseObject implements IAuthSource
 {
@@ -97,7 +100,7 @@ abstract class External extends BaseObject implements IAuthSource
      * Creates a new external authentication backend, and optionally a default group for it
      * @return static
      */
-    protected static function Create(ObjectDatabase $database, SafeParams $params) : self
+    public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
@@ -157,7 +160,20 @@ abstract class External extends BaseObject implements IAuthSource
         $defgroup = $this->default_group->TryGetObject();
         if ($defgroup !== null) $defgroup->Delete();
     }
-    
+
+    /**
+     * Verify the password given
+     * @param string $username the username to check
+     * @param string $password the password to check
+     * @return bool true if the password check is valid
+     */
+    abstract public function VerifyUsernamePassword(string $username, string $password) : bool;
+
+    public function VerifyAccountPassword(Account $account, string $password): bool
+    {
+        return $this->VerifyUsernamePassword($account->GetUsername(), $password);
+    }
+
     /** Returns the class-only (no namespace) of the auth source */
     private function GetTypeName() : string { return Utilities::ShortClassName(static::class); }
     
@@ -202,8 +218,7 @@ abstract class External extends BaseObject implements IAuthSource
      * 
      * See the GetClientObject() for each specific auth source type.
      * @param bool $admin if true, show admin-level details
-     * @return array<string, mixed> `{id:id, description:string}` \
-        if $admin, add `{enabled:enum, type:enum, default_group:?id}`
+     * @return ($admin is true ? AdminExternalJ : ExternalJ)
      */
     public function GetClientObject(bool $admin) : array
     {

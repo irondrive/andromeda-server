@@ -10,6 +10,9 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource};
  *
  * Also stores a copy of the account's master key, encrypted by the session key.
  * This allowed account crypto to generally be unlocked for any user command.
+ * 
+ * @phpstan-type SessionJ array{id:string}
+ * client:string, date_created:float, date_active:?float, authkey?:string // TODO RAY !!
  */
 class Session extends BaseObject
 {
@@ -158,8 +161,7 @@ class Session extends BaseObject
     
     /**
      * Returns a printable client object for this session
-     * @return array<mixed> `{id:id,client:id,date_created:float,date_active:?float}`
-         if $secret, add `{authkey:string}`
+     * @return SessionJ
      */
     public function GetClientObject(bool $secret = false) : array
     {

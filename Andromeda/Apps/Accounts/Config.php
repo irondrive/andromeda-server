@@ -6,7 +6,11 @@ use Andromeda\Core\IOFormat\SafeParams;
  
 use Andromeda\Apps\Accounts\Group;
   
-/** App config stored in the database */
+/** 
+ * App config stored in the database
+ * @phpstan-type ConfigJ array{create_account:key-of<self::CREATE_TYPES>, username_iscontact:bool, require_contact:key-of<self::CONTACT_TYPES>, default_auth:?string}
+ * @phpstan-type AdminConfigJ array{date_created:float, default_group:?string}
+ */
 class Config extends BaseConfig
 {
     public static function getAppname() : string { return 'accounts'; }
@@ -122,14 +126,14 @@ class Config extends BaseConfig
     /** Sets the default auth manager to the given value */
     public function SetDefaultAuth(?AuthSource\External $manager) : self { $this->default_auth->SetObject($manager); return $this; }
     
-    /** Only allow creating accounts with whitelisted usernames */
-    public const CREATE_WHITELIST = 1; 
+    /** Only allow creating accounts with allowlisted usernames */
+    public const CREATE_ALLOWLIST = 1; 
     /** Allow anyone to create a new account (public) */
     public const CREATE_PUBLIC = 2;
     
     private const CREATE_TYPES = array(
         'disable'=>0, 
-        'whitelist'=>self::CREATE_WHITELIST, 
+        'allowlist'=>self::CREATE_ALLOWLIST, 
         'public'=>self::CREATE_PUBLIC);
     
     /** Returns whether the API for creating new accounts is enabled */
@@ -163,8 +167,7 @@ class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return array<mixed> `{create_account:enum, username_iscontact:bool, require_contact:enum, default_auth:?id}` \
-         if admin, add: `{date_created:float, default_group:?id}`
+     * @return ($admin is true ? \Union<AdminConfigJ, ConfigJ> : ConfigJ)
      */
     public function GetClientObject(bool $admin = false) : array
     {
