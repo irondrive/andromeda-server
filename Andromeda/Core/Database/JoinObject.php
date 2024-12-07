@@ -28,7 +28,7 @@ abstract class JoinObject extends BaseObject
         foreach ($matchobjs as $matchprop=>$matchobj)
             $q->Where($q->Equals($matchprop, $matchobj->ID()));
 
-        return $q->Join($database, static::class, $destprop, $destclass, 'id');
+        return $q->Join($database, static::class, $destprop, $destclass::GetBaseTableClass(), 'id');
     }
 
     /** 

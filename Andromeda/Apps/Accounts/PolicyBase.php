@@ -58,8 +58,8 @@ abstract class PolicyBase extends BaseObject
         $this->disabled = $fields[] = new FieldTypes\NullIntType('disabled');
         $this->forcetf = $fields[] = new FieldTypes\NullBoolType('forcetf');
         $this->allowcrypto = $fields[] = new FieldTypes\NullBoolType('allowcrypto');
-        $this->account_search = $fields[] = new FieldTypes\NullIntType('account_search');
-        $this->group_search = $fields[] = new FieldTypes\NullIntType('group_search');
+        $this->account_search = $fields[] = new FieldTypes\NullIntType('accountsearch');
+        $this->group_search = $fields[] = new FieldTypes\NullIntType('groupsearch');
         $this->userdelete = $fields[] = new FieldTypes\NullBoolType('userdelete');
         $this->limit_sessions = $fields[] = new FieldTypes\NullIntType('limit_sessions');
         $this->limit_contacts = $fields[] = new FieldTypes\NullIntType('limit_contacts');
