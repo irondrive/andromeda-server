@@ -15,6 +15,7 @@ use Andromeda\Apps\Accounts\Authenticator;
  * Handles getting/setting config/logs, app enable/disable.
  * Depends on the accountsApp being present but this could be refactored away easily.
  * If the accountsApp is disabled, only privileged interfaces are considered admin
+ * 
  * @phpstan-import-type ActionLogJ from BaseActionLog
  * @phpstan-import-type ConfigJ from Config
  * @phpstan-import-type EmailerJ from Emailer

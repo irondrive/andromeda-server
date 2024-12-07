@@ -18,3 +18,7 @@ parameters:
     reportStaticMethodSignatures: false                # strict-rules sets true, objdb has difficult issues with this
     reportUnmatchedIgnoredErrors: false                # default is true, makes analyzing PHP7+8 impossible
     rememberPossiblyImpureFunctionValues: false        # default is true, seems like bad behavior?
+services:
+    - class: \Lipe\Lib\Phpstan\Services\TypeNodeResolver\Union
+      tags:
+          - phpstan.phpDoc.typeNodeResolverExtension

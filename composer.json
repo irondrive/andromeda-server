@@ -38,6 +38,7 @@
         "phpunit/phpunit": "^9.5",
         "code-lts/doctum": "^5.4",
         "phpstan/phpstan": "^1.9",
-        "phpstan/phpstan-strict-rules": "^1.4"
+        "phpstan/phpstan-strict-rules": "^1.4",
+        "lipemat/phpstan-wordpress": "^3.4"
     }
 }

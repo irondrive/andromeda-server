@@ -15,6 +15,8 @@ use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey
  * Can inherit properties from groups.  Can have any number
  * of registered clients, can have registered two factor, 
  * can provide secret-key crypto services, provides contact info
+ * 
+ * @phpstan-type AccountJ array{id:string, username:string, dispname:?string}
  */
 class Account extends PolicyBase
 {
@@ -504,13 +506,8 @@ class Account extends PolicyBase
      */
     public static function Create(ObjectDatabase $database, string $username, string $password) : self
     {
-        $account = $database->CreateObject(static::class);
-        $account->username->SetValue($username);
+        $account = static::CreateCommon($database, $username);
         $account->ChangePassword($password);
-        
-        foreach ($account->GetDefaultGroups() as $group)
-            static::RunGroupChangeHandlers($database, $account, $group, true);
-
         return $account;
     }
         
@@ -523,9 +520,22 @@ class Account extends PolicyBase
      */
     public static function CreateExternal(ObjectDatabase $database, string $username, AuthSource\External $source) : self
     {
-        $account = $database->CreateObject(static::class);
-        $account->username->SetValue($username);
+        $account = static::CreateCommon($database, $username);
         $account->authsource->SetObject($source);
+        return $account;
+    }
+
+    /**
+     * Creates a new user account (no password set)
+     * @param ObjectDatabase $database database reference
+     * @param string $username the account's username
+     * @return static created account
+     */
+    protected static function CreateCommon(ObjectDatabase $database, string $username) : self
+    {
+        $account = $database->CreateObject(static::class);
+        $account->date_created->SetTimeNow();
+        $account->username->SetValue($username);
 
         foreach ($account->GetDefaultGroups() as $group)
             static::RunGroupChangeHandlers($database, $account, $group, true);
@@ -555,7 +565,7 @@ class Account extends PolicyBase
         foreach (self::$delete_handlers as $func) 
             $func($this->database, $this);
         
-        $this->database->DeleteObject($this);
+        parent::Delete();
     }
     
     public const OBJECT_FULL = 1; 
@@ -563,7 +573,8 @@ class Account extends PolicyBase
     
     /**
      * Gets this account as a printable object
-     * @return array<mixed> `{id:id,username:string,dispname:string}` \
+     * @return AccountJ
+     * return array<mixed> `{id:id,username:string,dispname:string}` \
         if OBJECT_FULL or OBJECT_ADMIN, add: {dates:{created:float,passwordset:?float,loggedon:?float,active:?float}, 
             counters:{groups:int,sessions:int,contacts:int,clients:int,twofactors:int,recoverykeys:int}, 
             limits:{sessions:?int,contacts:?int,recoverykeys:?int}, config:{admin:bool,disabled:int,forcetf:bool,allowcrypto:bool
@@ -577,18 +588,18 @@ class Account extends PolicyBase
      */
     public function GetClientObject(int $level = 0) : array
     {
-        $mapobj = function($e) { return $e->GetClientObject(); }; // @phpstan-ignore-line // TODO RAY !! fixme
+        //$mapobj = function($e) { return $e->GetClientObject(); }; // @phpstan-ignore-line // TODO RAY !! fixme
         
         $data = array(
             'id' => $this->ID(),
             'username' => $this->GetUsername(),
-            'dispname' => $this->GetDisplayName()
+            'dispname' => $this->fullname->TryGetValue()
         );
 
-        if (($level & self::OBJECT_FULL) !== 0 || 
+        /*if (($level & self::OBJECT_FULL) !== 0 || 
             ($level & self::OBJECT_ADMIN) !== 0)
         {
-            /*$data += array(
+            $data += array(
                 'client_timeout' => $this->GetClientTimeout(),
                 'session_timeout' => $this->GetSessionTimeout(),
                 'max_password_age' => $this->GetMaxPasswordAge(),
@@ -610,7 +621,7 @@ class Account extends PolicyBase
                 'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                     array('sessions','contacts','recoverykeys')
                 )
-            );*/ // TODO RAY !! fix me
+            ); // TODO RAY !! fix me
         }
         
         if (($level & self::OBJECT_FULL) !== 0)
@@ -629,7 +640,7 @@ class Account extends PolicyBase
 
         if (($level & self::OBJECT_ADMIN) !== 0)
         {
-            /*$data += array(
+            $data += array(
                 'twofactor' => $this->HasValidTwoFactor(),
                 'comment' => $this->TryGetScalar('comment'),
                 'groups' => array_keys($this->GetGroups()),
@@ -645,8 +656,8 @@ class Account extends PolicyBase
             );
             
             $data['dates']['modified'] = $this->TryGetDate('modified');
-            $data['counters']['groups'] = $this->CountObjectRefs('groups');*/ // TODO RAY !! fix me
-        }
+            $data['counters']['groups'] = $this->CountObjectRefs('groups'); // TODO RAY !! fix me
+        }*/
 
         return $data;
     }

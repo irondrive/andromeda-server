@@ -6,7 +6,12 @@ use Andromeda\Core\IOFormat\SafeParams;
 
 use Andromeda\Apps\Accounts\Account;
 
-/** Uses an LDAP server for authentication */
+/** 
+ * Uses an LDAP server for authentication
+ * @phpstan-import-type ExternalJ from External
+ * @phpstan-import-type AdminExternalJ from External
+ * @phpstan-type LDAPJ array{}
+ */
 class LDAP extends External
 {
     use TableTypes\TableNoChildren;
@@ -60,8 +65,7 @@ class LDAP extends External
     
     /**
      * Returns a printable client object for this LDAP
-     * @return array<string, mixed> `{hostname:string, secure:bool, userprefix:?string}` + External
-     * @see External::GetClientObject()
+     * @return ($admin is true ? \Union<AdminExternalJ, LDAPJ> : \Union<ExternalJ, LDAPJ>)
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -99,12 +103,10 @@ class LDAP extends External
         return $this;
     }
     
-    public function VerifyAccountPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
         $this->Activate();
         assert($this->ldapConn !== null); // from Activate
-        
-        $username = $account->GetUsername();
         
         $prefix = $this->userprefix->TryGetValue(); 
         if ($prefix !== null) $username = "$prefix\\$username";

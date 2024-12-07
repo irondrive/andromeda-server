@@ -105,11 +105,14 @@ abstract class BaseObject
     
     /** 
      * Returns all available external auth objects
+     * @param ?non-negative-int $limit limit number of objects
+     * @param ?non-negative-int $offset offset of limited result set
      * @return array<string, static>
      */
-    public static function LoadAll(ObjectDatabase $database) : array
+    public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array // TODO unit test me
     {
-        return $database->LoadObjectsByQuery(static::class, new QueryBuilder()); // empty query
+        $q = (new QueryBuilder())->Limit($limit)->Offset($offset);
+        return $database->LoadObjectsByQuery(static::class, $q); // empty query
     }
     
     /** Primary reference to the database */
@@ -249,6 +252,12 @@ abstract class BaseObject
         foreach ($this->fieldsByName as $field)
             $field->SetUnmodified();
     }
+
+    /** Deletes the object from the database */
+    public function Delete() : void
+    {
+        $this->database->DeleteObject($this);
+    }
     
     /** 
      * Schedules the object to be deleted when Save() is called 
@@ -284,7 +293,8 @@ abstract class BaseObject
     {
         if ($this->isDeleted)
             throw new Exceptions\SaveAfterDeleteException();
-        else if ($this->deleteLater) $this->database->DeleteObject($this);
+        else if ($this->deleteLater)
+            $this->database->DeleteObject($this);
         else $this->database->SaveObject($this, $this->fieldsByClass, $onlyAlways);
         return $this;
     }

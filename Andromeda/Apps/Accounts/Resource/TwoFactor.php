@@ -10,6 +10,8 @@ use Andromeda\Apps\Accounts\Account;
  * 
  * Accounts can have > 1 of these so the user is able to use multiple devices.
  * If account crypto is available, the secret is stored encrypted in the database.
+ * 
+ * @phpstan-type TwoFactorJ array{id:string, comment:?string, date_created:float, date_used:?float, secret?:string, qrcodeurl?:string}
  */
 class TwoFactor extends BaseObject
 {
@@ -73,7 +75,8 @@ class TwoFactor extends BaseObject
     
     /** 
      * Tries to load a two factor object by the given account and ID
-     * @return ?static the loaded object or null if not found */
+     * @return ?static the loaded object or null if not found 
+     */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
@@ -189,8 +192,7 @@ class TwoFactor extends BaseObject
     /**
      * Returns a printable client object for this twofactor
      * @param bool $secret if true, show the OTP secret
-     * @return array<mixed> `{id:id, comment:?string, date_created:float, date_used:?float}` \
-        if $secret, add `{secret:string, qrcodeurl:string}`
+     * @return TwoFactorJ
      */
     public function GetClientObject(bool $secret = false) : array
     {

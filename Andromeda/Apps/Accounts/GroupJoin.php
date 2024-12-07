@@ -2,7 +2,10 @@
 
 use Andromeda\Core\Database\{JoinObject, FieldTypes, ObjectDatabase, TableTypes};
 
-/** Class representing a group membership, joining an account and a group */
+/** 
+ * Class representing a group membership, joining an account and a group
+ * @phpstan-type GroupJoinJ array{date_created:float}
+ */
 class GroupJoin extends JoinObject
 {
     use TableTypes\TableNoChildren;
@@ -47,7 +50,7 @@ class GroupJoin extends JoinObject
 
     /**
      * Returns a printable client object of this group membership
-     * @return array<mixed> `{dates:{created:float}}`
+     * @return GroupJoinJ
      */
     public function GetClientObject()
     {

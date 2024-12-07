@@ -15,6 +15,8 @@ use Andromeda\Apps\Accounts\Crypto\AuthObject;
  * The client is separate from the session mainly so that a user
  * can sign-out securely and not need to use two factor (or remember
  * any other client-specific values) on the next sign in
+ * 
+ * @phpstan-type ClientJ array{id:string}
  */
 class Client extends BaseObject
 {    
@@ -76,6 +78,17 @@ class Client extends BaseObject
         return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
     }
 
+    /** 
+     * Tries to load the object by the given account and ID
+     * @return ?static the loaded object or null if not found 
+     */
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    {
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
+    }
+    
     /** Gets the interface address last used with this client */
     public function GetLastAddress() : string { return $this->lastaddr->GetValue(); }
     
@@ -171,12 +184,14 @@ class Client extends BaseObject
     
     /**
      * Gets this client as a printable object
-     * @return array<mixed> `{id:id, name:?string, lastaddr:string, useragent:string, \
-            dates_created:float, date_loggedon:?float, date_active:?float, session:Session}`
+     * @return ClientJ
      * @see Session::GetClientObject()
      */
     public function GetClientObject(bool $secret = false) : array
-    {
+    { 
+     //* @return array<mixed> `{id:id, name:?string, lastaddr:string, useragent:string, \
+     //dates_created:float, date_loggedon:?float, date_active:?float, session:Session}` // TODO RAY !!
+
         $data = array(
             'id' => $this->ID(),
             'name' => $this->name->TryGetValue(),

@@ -24,6 +24,10 @@ __pycache__
 tools/mysql2sqlite
 
 pytest-config.json
+pytest-config.*.json
+-pytest-config.example.json
+-pytest-config.minimal.json
+
 .phpunit.result.cache
 phpstan-tmp-*
 inttest_data/

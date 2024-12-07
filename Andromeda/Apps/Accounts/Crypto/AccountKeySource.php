@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Crypto;
-use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Core\Database\{FieldTypes, QueryBuilder, ObjectDatabase};
 
 use Andromeda\Apps\Accounts\Account;
 
@@ -30,18 +30,16 @@ trait AccountKeySource
         $this->KeySourceCreateFields();
     }
     
-    /**
-     * Attemps to load the object with the given account and ID
-     * @param ObjectDatabase $database database reference
-     * @param Account $account account that owns this object
-     * @param string $id the ID of this object
-     * @return ?static loaded object or null if not found
+    /** 
+     * Tries to load the object by the given account and ID
+     * @return ?static the loaded object or null if not found 
      */
-    /*public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
-     {
-     $q = new QueryBuilder(); $w = $q->And($q->Equals('obj_account',$account->ID()),$q->Equals('id',$id));
-     return self::TryLoadUniqueByQuery($database, $q->Where($w));
-     }*/ // TODO maybe this will be needed here? shouldn't be public though? unsure, check usages
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    {
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
+        
+        return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
+    }
     
     /** 
      * Sets the given account for the newly created key source

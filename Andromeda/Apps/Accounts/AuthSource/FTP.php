@@ -6,7 +6,12 @@ use Andromeda\Core\IOFormat\SafeParams;
 
 use Andromeda\Apps\Accounts\Account;
 
-/** Uses an FTP server for authentication */
+/** 
+ * Uses an FTP server for authentication
+ * @phpstan-import-type ExternalJ from External
+ * @phpstan-import-type AdminExternalJ from External
+ * @phpstan-type FTPJ array{}
+ */
 class FTP extends External
 {
     use TableTypes\TableNoChildren;
@@ -60,8 +65,7 @@ class FTP extends External
     
     /**
      * Returns a printable client object for this FTP
-     * @return array<string, mixed> `{hostname:string, port:?int, implssl:bool}` + External
-     * @see External::GetClientObject()
+     * @return ($admin is true ? \Union<AdminExternalJ, FTPJ> : \Union<ExternalJ, FTPJ>)
      */
     public function GetClientObject(bool $admin) : array
     {
@@ -100,14 +104,14 @@ class FTP extends External
         return $this;
     }
     
-    public function VerifyAccountPassword(Account $account, string $password) : bool
+    public function VerifyUsernamePassword(string $username, string $password) : bool
     {
         $this->Activate();
         assert($this->ftpConn !== null); // from Activate
 
         try 
         { 
-            $success = ftp_login($this->ftpConn, $account->GetUsername(), $password); // @phpstan-ignore-line PHP 7/8 ftpConn types differ
+            $success = ftp_login($this->ftpConn, $username, $password); // @phpstan-ignore-line PHP 7/8 ftpConn types differ
             
             ftp_close($this->ftpConn); // @phpstan-ignore-line PHP 7/8 ftpConn types differ
             unset($this->ftpConn);

@@ -17,7 +17,7 @@ The primary function `accounts getaccount` with no arguments returns the Account
 
 ### Account Creation
 
-If admin or if public account creation is enabled (see global config `createaccount`), you can create new accounts with `accounts createaccount`.  Admins can use `--admin` to create an admin account.  Depending on config, a user name or contact info (or both) may be required (see global config `requirecontact` and `usernameiscontact`).  The admin whitelist may enable only certain usernames to be registered (see global config `createaccount`).
+If admin or if public account creation is enabled (see global config `createaccount`), you can create new accounts with `accounts createaccount`.  Admins can use `--admin` to create an admin account.  Depending on config, a user name or contact info (or both) may be required (see global config `requirecontact` and `usernameiscontact`).  The admin allowlist may enable only certain usernames to be registered (see global config `createaccount`).
 
 If the `requirecontact` config is set to `valid` then the new account's contact info will have to be validated before the account can be used.  The server will send a validation code to the contact info, which you then use with the `accounts verifycontact` function to enable the account.
 
@@ -127,7 +127,7 @@ The `accounts getaccounts` function lists accounts while `accounts getgroups` li
 
 Global config is read/set using `accounts getconfig` and `accounts setconfig`.
 
-The `--createaccount` parameter allows enabling/disabling public account creation (or allowing via the whitelist) - default is disabled.  The `--requirecontact` parameter determines whether publically created accounts must have contact info or not - default is disabled.  The `verify` setting requires that the contact is also verified before the account is enabled.  The `usernameiscontact` parameter determines whether contact info is used as a username - default is disabled.  E.g. if set to true, accounts' usernames would be their email addresses, not a separate username.  
+The `--createaccount` parameter allows enabling/disabling public account creation (or allowing via the allowlist) - default is disabled.  The `--requirecontact` parameter determines whether publically created accounts must have contact info or not - default is disabled.  The `verify` setting requires that the contact is also verified before the account is enabled.  The `usernameiscontact` parameter determines whether contact info is used as a username - default is disabled.  E.g. if set to true, accounts' usernames would be their email addresses, not a separate username.  
 
 `--createdefgroup` will create a global "default" group.  All users will implicitly be a member of this group.  The default group is how you set granular config to apply globally.  There is no default group by default.  
 
@@ -165,6 +165,6 @@ External authentication services must be configured by an administrator.  This i
 
 The currently supported backend services are FTP, IMAP and LDAP.  They are only used for username/password checks (LDAP is not integrated with groups or anything else).  They require the PHP-FTP, PHP-IMAP and PHP-LDAP extensions respectively.  
 
-### Account Whitelist
+### Account Registration Allowlist
 
-If the `createaccount` config is set to `whitelist`, public account creation is enabled but only if they match a pre-defined list of admin-configured usernames or contact infos (a whitelist).  To add to or remove from the whitelist, use `accounts addwhitelist` and `accounts removewhitelist`.  To see the currently configured list, use `accounts getwhitelist`.  
+If the `createaccount` config is set to `allowlist`, public account creation is enabled but only if they match a pre-defined list of admin-configured usernames or contact infos (an allowlist).  To add to or remove from the allowlist, use `accounts addallowlist` and `accounts removeallowlist`.  To see the currently configured list, use `accounts getallowlist`.  
