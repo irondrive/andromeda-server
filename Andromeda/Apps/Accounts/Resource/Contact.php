@@ -22,7 +22,7 @@ abstract class Contact extends BaseObject
     
     public const TYPES = array('email'=>self::TYPE_EMAIL);
     
-    /** @return array<int, class-string<self>> */
+    /** @return array<value-of<self::TYPES>, class-string<self>> */
     public static function GetChildMap(?ObjectDatabase $database = null) : array
     {
         return array(self::TYPE_EMAIL => EmailContact::class);
@@ -31,6 +31,7 @@ abstract class Contact extends BaseObject
     /** 
      * Returns the TYPE enum value for a given child class
      * @param class-string<self> $class
+     * @return value-of<self::TYPES>
      */
     public static function ChildClassToType(string $class) : int
     {
@@ -124,6 +125,15 @@ abstract class Contact extends BaseObject
         return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
     }
 
+    /** 
+     * Deletes all contacts for the given account 
+     * @return int the number of deleted contacts
+     */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
+    {
+        return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+    }
+    
     /**
      * Returns all accounts matching the given public contact address
      * @param ObjectDatabase $database database reference

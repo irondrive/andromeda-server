@@ -154,17 +154,14 @@ class Group extends PolicyBase
         Contact::SendMessageMany($subject, $html, $plain, $this->GetContacts(), true, $from);
     }
     
-    /** Creates and returns a new group with the given name, priority, and comment */
-    public static function Create(ObjectDatabase $database, string $name, ?int $priority = null, ?string $comment = null) : self
+    /** Creates and returns a new group with the given name, priority */
+    public static function Create(ObjectDatabase $database, string $name, ?int $priority = null) : self
     {
         $group = $database->CreateObject(static::class);
         // TODO RAY !! PolicyBase needs a base create that sets date created
         
         $group->name->SetValue($name);
         $group->priority->SetValue($priority ?? 0);
-        
-        if ($comment !== null) 
-            $group->comment->SetValue($comment);
         
         return $group;
     }
@@ -193,7 +190,9 @@ class Group extends PolicyBase
     
     public function NotifyPreDeleted() : void
     {
-        foreach (($this->GetDefaultAccounts() ?? array()) as $account)
+        GroupJoin::DeleteByGroup($this->database, $this);
+
+        foreach (($this->GetDefaultAccounts() ?? array()) as $account) // TODO RAY !! move to GroupJoin?
             Account::RunGroupChangeHandlers($this->database, $account, $this, false);
             
         foreach (self::$delete_handlers as $func) 

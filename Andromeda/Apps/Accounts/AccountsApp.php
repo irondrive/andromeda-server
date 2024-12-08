@@ -42,8 +42,8 @@ class AccountsApp extends BaseApp
     { 
         return array(
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey randstr] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
+            '- STANDARD API: ',
             'getconfig',
-            'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
             'enablecrypto --auth_password raw [--auth_twofactor int]',
@@ -68,23 +68,25 @@ class AccountsApp extends BaseApp
             'editcontact --contact id [--usefrom bool] [--public bool]',
             'searchaccounts --name alphanum|email',
             'searchgroups --name name',
+            'getauthsources',
+            
+            '- ADMIN-ONLY API: ',
+            'setconfig '.Config::GetSetConfigUsage(),
             'getaccounts [--limit ?uint] [--offset ?uint]',
             'getgroups [--limit ?uint] [--offset ?uint]',
-            'creategroup --name name [--priority ?int8] [--comment ?text]',
-            'editgroup --group id [--name name] [--priority int8] [--comment ?text]',
+            'creategroup --name name [--priority ?int8]',
             'getgroup --group id',
             'deletegroup --group id',
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
             'getmembership --account id --group id',
-            'getauthsources',
             'createauthsource --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
             ...array_map(function($u){ return "(createauthsource) $u"; }, AuthSource\External::GetPropUsages()),
             'testauthsource --authsrc id [--test_username alphanum|email --test_password raw]',
             'editauthsource --authsrc id --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --authsrc id --auth_password raw',
-            'setaccountprops --account id '.PolicyBase::GetPropUsage().' [--expirepw bool]',
-            'setgroupprops --group id '.PolicyBase::GetPropUsage(),
+            'setaccountprops --account id [--expirepw bool] '.PolicyBase::GetPropUsage(),
+            'setgroupprops --group id  [--name name] [--priority int8] '.PolicyBase::GetPropUsage(),
             'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
             'addregisterallow '.RegisterAllow::GetUsage(),
             'removeregisterallow '.RegisterAllow::GetUsage(),
@@ -160,7 +162,6 @@ class AccountsApp extends BaseApp
             case 'getaccounts':         return $this->GetAccounts($params, $authenticator);
             case 'getgroups':           return $this->GetGroups($params, $authenticator);
             case 'creategroup':         return $this->CreateGroup($params, $authenticator, $actionlog);
-            case 'editgroup':           return $this->EditGroup($params, $authenticator); 
             case 'getgroup':            return $this->GetGroup($params, $authenticator);
             case 'deletegroup':         $this->DeleteGroup($params, $authenticator, $actionlog); return null;
             case 'addgroupmember':      return $this->AddGroupMember($params, $authenticator);
@@ -254,12 +255,16 @@ class AccountsApp extends BaseApp
         
         $objtype = 0;
         
-        $admin = $authenticator->isAdmin();
+        $admin = $authenticator->isRealAdmin();
         if ($admin) $objtype |= Account::OBJECT_ADMIN;
         
         $self = ($account === $authenticator->GetAccount());
-        $full = $params->GetOptParam("full",false)->GetBool();
-        if ($full && ($admin || $self)) $objtype |= Account::OBJECT_FULL;
+        if ($params->GetOptParam("full",false)->GetBool())
+        {
+            if ($admin || $self)
+                $objtype |= Account::OBJECT_FULL;
+            else throw new Exceptions\AdminRequiredException();
+        }
 
         return $account->GetClientObject($objtype);
     }
@@ -306,14 +311,6 @@ class AccountsApp extends BaseApp
         $account->ChangePassword($new_password);
     }
     
-    /** Returns the given string with each character after a space capitalized */
-    private static function capitalizeWords(string $str) : string 
-    { 
-        return implode(" ",array_map(function(string $p){ 
-            return Utilities::FirstUpper($p);
-        }, explode(" ", trim($str)))); 
-    }
-    
     /**
      * Sets the user's full (real) name
      * @throws Exceptions\AuthenticationFailedException if not logged in
@@ -323,7 +320,7 @@ class AccountsApp extends BaseApp
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
         
-        $fullname = self::capitalizeWords($params->GetParam('fullname')->GetName());
+        $fullname = Utilities::CapitalizeWords($params->GetParam('fullname')->GetName());
         
         $authenticator->GetAccount()->SetFullName($fullname);
     }
@@ -457,7 +454,8 @@ class AccountsApp extends BaseApp
 
         $password = $params->GetParam("password", SafeParams::PARAMLOG_NEVER)->GetRawString();
         
-        if (Account::TryLoadByUsername($this->database, $username) !== null) throw new Exceptions\AccountExistsException();
+        if (Account::TryLoadByUsername($this->database, $username) !== null)
+            throw new Exceptions\AccountExistsException();
 
         $account = Account::Create($this->database, $username, $password);
        
@@ -473,9 +471,11 @@ class AccountsApp extends BaseApp
             Contact::CreateFromPair($this->database, $account, $cpair, $valid);
         }
         
-        if ($admin && $params->GetOptParam('admin',false)->GetBool()) $account->SetAdmin(true);
+        if ($admin && $params->GetOptParam('admin',false)->GetBool())
+            $account->SetAdmin(true);
         
-        if ($actionlog !== null) $actionlog->LogDetails('account',$account->ID()); 
+        if ($actionlog !== null)
+            $actionlog->LogDetails('account',$account->ID()); 
 
         return $account->GetClientObject(Account::OBJECT_FULL);
     }
@@ -849,7 +849,7 @@ class AccountsApp extends BaseApp
             $authenticator->RequireAdmin()->TryRequireTwoFactor();
             $this->database->DeleteObjectsByQuery(Client::class, new QueryBuilder()); // delete ALL
         }
-        else $authenticator->GetAccount()->DeleteClients();
+        else Client::DeleteByAccount($this->database, $authenticator->GetAccount());
     }
     
     /**
@@ -1033,50 +1033,16 @@ class AccountsApp extends BaseApp
         $name = $params->GetParam("name")->CheckLength(127)->GetName();
         
         $priority = $params->GetOptParam('priority',null)->GetNullInt8();
-        $comment = $params->GetOptParam('comment',null)->GetNullHTMLText();
         
         $duplicate = Group::TryLoadByName($this->database, $name);
         if ($duplicate !== null) throw new Exceptions\GroupExistsException();
 
-        $group = Group::Create($this->database, $name, $priority, $comment);
+        $group = Group::Create($this->database, $name, $priority);
         
         if ($actionlog !== null) $actionlog->LogDetails('group',$group->ID());
         
         return $group->Initialize()->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }    
-    
-    /**
-     * Edits properties of an existing group
-     * @throws Exceptions\AuthenticationFailedException if not admin
-     * @throws Exceptions\UnknownGroupException if the group is not found
-     * @return GroupJ
-     */
-    protected function EditGroup(SafeParams $params, ?Authenticator $authenticator) : array
-    {
-        if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
-        $authenticator->RequireAdmin();
-        
-        $groupid = $params->GetParam("group",SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
-        
-        $group = Group::TryLoadByID($this->database, $groupid);
-        if ($group === null) throw new Exceptions\UnknownGroupException();
-        
-        if ($params->HasParam('name')) 
-        {
-            $name = $params->GetParam("name")->CheckLength(127)->GetName();
-            
-            $duplicate = Group::TryLoadByName($this->database, $name);
-            if ($duplicate !== null) throw new Exceptions\GroupExistsException();
-            
-            $group->SetDisplayName($name);
-        }
- 
-        if ($params->HasParam('priority')) $group->SetPriority($params->GetParam("priority")->GetInt8());
-        if ($params->HasParam('comment')) $group->SetComment($params->GetParam("comment")->GetNullHTMLText());
-        
-        return $group->GetClientObject(Group::OBJECT_ADMIN);
-    }
     
     /**
      * Returns the requested group object
@@ -1351,6 +1317,19 @@ class AccountsApp extends BaseApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new Exceptions\UnknownGroupException();
 
+        if ($params->HasParam('name')) 
+        {
+            $name = $params->GetParam("name")->CheckLength(127)->GetName();
+            
+            $duplicate = Group::TryLoadByName($this->database, $name);
+            if ($duplicate !== null) throw new Exceptions\GroupExistsException();
+            
+            $group->SetDisplayName($name);
+        }
+ 
+        if ($params->HasParam('priority'))
+            $group->SetPriority($params->GetParam("priority")->GetInt8());
+        
         return $group->SetProperties($params)->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
     

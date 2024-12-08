@@ -100,7 +100,7 @@ abstract class BaseObject
      */
     final public static function TryLoadByID(ObjectDatabase $database, string $id) : ?BaseObject
     {
-        return $database->TryLoadUniqueByKey(static::class, 'id', $id);
+        return $database->TryLoadUniqueByKey(static::class, 'id', $id, true);
     }
     
     /** 

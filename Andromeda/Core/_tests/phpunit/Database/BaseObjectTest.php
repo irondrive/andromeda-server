@@ -102,6 +102,19 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $obj->Save(); // deletes
     }
 
+    public function testLoadByID() : void
+    {
+        $db = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($db);
+
+        $id = "test123";
+        $db->expects($this->exactly(1))->method('read')->with( // NOTE id is ambiguous so it has the table name
+            "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0",
+            array('d0'=>$id))->willReturn([]);
+
+        EasyObject::TryLoadByID($objdb, $id);
+    }
+
     public function testLoadAll() : void
     {
         $db = $this->createMock(PDODatabase::class);
@@ -109,8 +122,8 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
 
         $limit = 5; $offset = 7;
         $db->expects($this->exactly(2))->method('read')->withConsecutive(
-            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject "],
-            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject LIMIT $limit OFFSET $offset"])->willReturn([]);
+            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject ", array()],
+            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject LIMIT $limit OFFSET $offset", array()])->willReturn([]);
 
         EasyObject::LoadAll($objdb);
         EasyObject::LoadAll($objdb, $limit, $offset);

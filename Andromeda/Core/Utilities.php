@@ -116,6 +116,13 @@ abstract class Utilities
         return mb_strtoupper(mb_substr($str,0,1)).mb_substr($str,1); 
     }
     
+    /** Returns the given string trimmed and with each character after a space capitalized */
+    public static function CapitalizeWords(string $str) : string
+    { 
+        return implode(" ",array_map(function(string $p){ 
+            return Utilities::FirstUpper($p); }, explode(" ", mb_trim($str)))); 
+    }
+    
     /**
      * Returns a size string converted to bytes
      * @param string $val a size string e.g. 32M or 4K
@@ -123,11 +130,11 @@ abstract class Utilities
      */
     public static function return_bytes(string $val) : int
     {
-        $val = trim($val); 
+        $val = mb_trim($val); 
         if ($val === "") return 0;
         
         $num = (int)($val);
-        switch (substr($val, -1)) {
+        switch (mb_substr($val, -1)) {
             case 'T': $num *= 1024;
             case 'G': $num *= 1024;
             case 'M': $num *= 1024;
