@@ -91,8 +91,8 @@ abstract class PolicyBase extends BaseObject
                 $field->SetValue($params->GetParam($field->GetName())->GetNullUint());
 
         foreach (array($this->limit_sessions, $this->limit_contacts, $this->limit_recoverykeys, $this->account_search, $this->group_search) as $field)
-        if ($params->HasParam($field->GetName())) 
-            $field->SetValue($params->GetParam($field->GetName())->GetNullUint8());
+            if ($params->HasParam($field->GetName())) 
+                $field->SetValue($params->GetParam($field->GetName())->GetNullUint8());
 
         foreach (array($this->admin, $this->disabled, $this->forcetf, $this->allowcrypto, $this->userdelete) as $field)
             if ($params->HasParam($field->GetName())) 

@@ -101,7 +101,7 @@ class Client extends BaseObject
     /** Sets the timestamp this client was active to now */
     public function SetActiveDate() : self
     {
-        if ($this->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO move up a level
+        if ($this->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO RAY !! move up a level
         
         $this->date_active->SetTimeNow(); return $this;
     }

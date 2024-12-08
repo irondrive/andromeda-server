@@ -150,7 +150,7 @@ CREATE TABLE public.a2obj_apps_accounts_resource_client (
 CREATE TABLE public.a2obj_apps_accounts_resource_contact (
     id character(12) NOT NULL,
     type smallint NOT NULL,
-    info character varying(127) NOT NULL,
+    address character varying(127) NOT NULL,
     valid boolean DEFAULT false NOT NULL,
     usefrom boolean,
     public boolean DEFAULT false NOT NULL,
@@ -219,187 +219,187 @@ CREATE TABLE public.a2obj_apps_accounts_resource_usedtoken (
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_account
-    ADD CONSTRAINT idx_19516_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20384_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_actionlog
-    ADD CONSTRAINT idx_19526_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20394_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_external
-    ADD CONSTRAINT idx_19532_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20400_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ftp
-    ADD CONSTRAINT idx_19538_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20406_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_imap
-    ADD CONSTRAINT idx_19541_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20409_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_authsource_ldap
-    ADD CONSTRAINT idx_19544_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20412_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_config
-    ADD CONSTRAINT idx_19549_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20417_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_group
-    ADD CONSTRAINT idx_19554_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20422_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_groupjoin
-    ADD CONSTRAINT idx_19557_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20425_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_policybase
-    ADD CONSTRAINT idx_19560_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20428_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_client
-    ADD CONSTRAINT idx_19565_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20433_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_contact
-    ADD CONSTRAINT idx_19571_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20439_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_recoverykey
-    ADD CONSTRAINT idx_19578_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20446_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_registerallow
-    ADD CONSTRAINT idx_19586_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20454_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_session
-    ADD CONSTRAINT idx_19589_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20457_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_twofactor
-    ADD CONSTRAINT idx_19597_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20465_primary PRIMARY KEY (id);
 
 
 
 ALTER TABLE ONLY public.a2obj_apps_accounts_resource_usedtoken
-    ADD CONSTRAINT idx_19604_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_20472_primary PRIMARY KEY (id);
 
 
 
-CREATE INDEX idx_19516_authsource ON public.a2obj_apps_accounts_account USING btree (authsource);
+CREATE INDEX idx_20384_authsource ON public.a2obj_apps_accounts_account USING btree (authsource);
 
 
 
-CREATE INDEX idx_19516_fullname ON public.a2obj_apps_accounts_account USING btree (fullname);
+CREATE INDEX idx_20384_fullname ON public.a2obj_apps_accounts_account USING btree (fullname);
 
 
 
-CREATE UNIQUE INDEX idx_19516_username ON public.a2obj_apps_accounts_account USING btree (username);
+CREATE UNIQUE INDEX idx_20384_username ON public.a2obj_apps_accounts_account USING btree (username);
 
 
 
-CREATE INDEX idx_19526_account ON public.a2obj_apps_accounts_actionlog USING btree (account);
+CREATE INDEX idx_20394_account ON public.a2obj_apps_accounts_actionlog USING btree (account);
 
 
 
-CREATE INDEX idx_19532_default_group ON public.a2obj_apps_accounts_authsource_external USING btree (default_group);
+CREATE INDEX idx_20400_default_group ON public.a2obj_apps_accounts_authsource_external USING btree (default_group);
 
 
 
-CREATE INDEX idx_19549_default_auth ON public.a2obj_apps_accounts_config USING btree (default_auth);
+CREATE INDEX idx_20417_default_auth ON public.a2obj_apps_accounts_config USING btree (default_auth);
 
 
 
-CREATE INDEX idx_19549_default_group ON public.a2obj_apps_accounts_config USING btree (default_group);
+CREATE INDEX idx_20417_default_group ON public.a2obj_apps_accounts_config USING btree (default_group);
 
 
 
-CREATE UNIQUE INDEX idx_19554_name ON public.a2obj_apps_accounts_group USING btree (name);
+CREATE UNIQUE INDEX idx_20422_name ON public.a2obj_apps_accounts_group USING btree (name);
 
 
 
-CREATE UNIQUE INDEX idx_19557_account_group ON public.a2obj_apps_accounts_groupjoin USING btree (account, "group");
+CREATE UNIQUE INDEX idx_20425_account_group ON public.a2obj_apps_accounts_groupjoin USING btree (account, "group");
 
 
 
-CREATE INDEX idx_19557_accounts ON public.a2obj_apps_accounts_groupjoin USING btree (account);
+CREATE INDEX idx_20425_accounts ON public.a2obj_apps_accounts_groupjoin USING btree (account);
 
 
 
-CREATE INDEX idx_19557_groups ON public.a2obj_apps_accounts_groupjoin USING btree ("group");
+CREATE INDEX idx_20425_groups ON public.a2obj_apps_accounts_groupjoin USING btree ("group");
 
 
 
-CREATE INDEX idx_19565_account ON public.a2obj_apps_accounts_resource_client USING btree (account);
+CREATE INDEX idx_20433_account ON public.a2obj_apps_accounts_resource_client USING btree (account);
 
 
 
-CREATE INDEX idx_19565_date_active_account ON public.a2obj_apps_accounts_resource_client USING btree (date_active, account);
+CREATE INDEX idx_20433_date_active_account ON public.a2obj_apps_accounts_resource_client USING btree (date_active, account);
 
 
 
-CREATE INDEX idx_19571_account ON public.a2obj_apps_accounts_resource_contact USING btree (account);
+CREATE INDEX idx_20439_account ON public.a2obj_apps_accounts_resource_contact USING btree (account);
 
 
 
-CREATE INDEX idx_19571_info ON public.a2obj_apps_accounts_resource_contact USING btree (info);
+CREATE UNIQUE INDEX idx_20439_account_type_from ON public.a2obj_apps_accounts_resource_contact USING btree (usefrom, account, type);
 
 
 
-CREATE UNIQUE INDEX idx_19571_prefer ON public.a2obj_apps_accounts_resource_contact USING btree (usefrom, account);
+CREATE INDEX idx_20439_address ON public.a2obj_apps_accounts_resource_contact USING btree (address);
 
 
 
-CREATE UNIQUE INDEX idx_19571_type_info ON public.a2obj_apps_accounts_resource_contact USING btree (type, info);
+CREATE UNIQUE INDEX idx_20439_type_address ON public.a2obj_apps_accounts_resource_contact USING btree (type, address);
 
 
 
-CREATE INDEX idx_19578_account ON public.a2obj_apps_accounts_resource_recoverykey USING btree (account);
+CREATE INDEX idx_20446_account ON public.a2obj_apps_accounts_resource_recoverykey USING btree (account);
 
 
 
-CREATE UNIQUE INDEX idx_19586_type ON public.a2obj_apps_accounts_resource_registerallow USING btree (type, value);
+CREATE UNIQUE INDEX idx_20454_type ON public.a2obj_apps_accounts_resource_registerallow USING btree (type, value);
 
 
 
-CREATE INDEX idx_19589_account ON public.a2obj_apps_accounts_resource_session USING btree (account);
+CREATE INDEX idx_20457_account ON public.a2obj_apps_accounts_resource_session USING btree (account);
 
 
 
-CREATE UNIQUE INDEX idx_19589_client ON public.a2obj_apps_accounts_resource_session USING btree (client);
+CREATE UNIQUE INDEX idx_20457_client ON public.a2obj_apps_accounts_resource_session USING btree (client);
 
 
 
-CREATE INDEX idx_19589_date_active_account ON public.a2obj_apps_accounts_resource_session USING btree (date_active, account);
+CREATE INDEX idx_20457_date_active_account ON public.a2obj_apps_accounts_resource_session USING btree (date_active, account);
 
 
 
-CREATE INDEX idx_19597_account ON public.a2obj_apps_accounts_resource_twofactor USING btree (account);
+CREATE INDEX idx_20465_account ON public.a2obj_apps_accounts_resource_twofactor USING btree (account);
 
 
 
-CREATE INDEX idx_19604_date_created ON public.a2obj_apps_accounts_resource_usedtoken USING btree (date_created);
+CREATE INDEX idx_20472_date_created ON public.a2obj_apps_accounts_resource_usedtoken USING btree (date_created);
 
 
 
-CREATE INDEX idx_19604_twofactor ON public.a2obj_apps_accounts_resource_usedtoken USING btree (twofactor);
+CREATE INDEX idx_20472_twofactor ON public.a2obj_apps_accounts_resource_usedtoken USING btree (twofactor);
 
 
 

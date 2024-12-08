@@ -101,4 +101,18 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $obj->DeleteMeLater();
         $obj->Save(); // deletes
     }
+
+    public function testLoadAll() : void
+    {
+        $db = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($db);
+
+        $limit = 5; $offset = 7;
+        $db->expects($this->exactly(2))->method('read')->withConsecutive(
+            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject "],
+            ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject LIMIT $limit OFFSET $offset"])->willReturn([]);
+
+        EasyObject::LoadAll($objdb);
+        EasyObject::LoadAll($objdb, $limit, $offset);
+    }
 }

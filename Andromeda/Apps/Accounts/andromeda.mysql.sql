@@ -183,7 +183,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_client` (
 CREATE TABLE `a2obj_apps_accounts_resource_contact` (
   `id` char(12) NOT NULL,
   `type` tinyint(2) NOT NULL,
-  `info` varchar(127) NOT NULL,
+  `address` varchar(127) NOT NULL,
   `valid` tinyint(1) NOT NULL DEFAULT 0,
   `usefrom` tinyint(1) DEFAULT NULL,
   `public` tinyint(1) NOT NULL DEFAULT 0,
@@ -191,9 +191,9 @@ CREATE TABLE `a2obj_apps_accounts_resource_contact` (
   `date_created` double NOT NULL,
   `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `type_info` (`type`,`info`),
-  UNIQUE KEY `prefer` (`usefrom`,`account`),
-  KEY `info` (`info`),
+  UNIQUE KEY `type_address` (`type`,`address`),
+  UNIQUE KEY `account_type_from` (`usefrom`,`account`,`type`) USING BTREE,
+  KEY `address` (`address`),
   KEY `account` (`account`),
   CONSTRAINT `a2obj_apps_accounts_resource_contact_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

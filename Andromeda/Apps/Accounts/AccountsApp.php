@@ -86,8 +86,8 @@ class AccountsApp extends BaseApp
             'setaccountprops --account id '.PolicyBase::GetPropUsage().' [--expirepw bool]',
             'setgroupprops --group id '.PolicyBase::GetPropUsage(),
             'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
-            'addregisterallow --type '.implode('|',array_keys(RegisterAllow::TYPES)).' --value alphanum|email', // TODO specifically use Contact usage (plus alphanum for usernames)
-            'removeregisterallow --type '.implode('|',array_keys(RegisterAllow::TYPES)).' --value alphanum|email',
+            'addregisterallow '.RegisterAllow::GetUsage(),
+            'removeregisterallow '.RegisterAllow::GetUsage(),
             'getregisterallow'
         );
     }
@@ -451,7 +451,7 @@ class AccountsApp extends BaseApp
                 throw new Exceptions\AccountRegisterAllowException();
             
             if (isset($cpair) && !RegisterAllow::ExistsTypeAndValue(
-                $this->database, RegisterAllow::TYPE_CONTACT, $cpair['address']))
+                $this->database, Contact::ChildClassToType($cpair['class']), $cpair['address']))
                     throw new Exceptions\AccountRegisterAllowException();
         }
 
@@ -1401,14 +1401,9 @@ class AccountsApp extends BaseApp
             throw new Exceptions\AuthenticationFailedException();
         $authenticator->RequireAdmin();
         
-        $type = RegisterAllow::TYPES[$params->GetParam('type',SafeParams::PARAMLOG_ALWAYS)
-            ->FromAllowlist(array_keys(RegisterAllow::TYPES))];
+        $pair = RegisterAllow::FetchPairFromParams($params);
         
-        // TODO actually switch safeparam type based on registerallow type!
-        
-        $value = self::getUsername($params->GetParam('value',SafeParams::PARAMLOG_ALWAYS));
-        
-        return RegisterAllow::Create($this->database, $type, $value)->GetClientObject();
+        return RegisterAllow::Create($this->database, $pair['type'], $pair['value'])->GetClientObject();
     }
     
     /**
@@ -1420,15 +1415,10 @@ class AccountsApp extends BaseApp
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
         $authenticator->RequireAdmin();
+
+        $pair = RegisterAllow::FetchPairFromParams($params);
         
-        $type = RegisterAllow::TYPES[$params->GetParam('type',SafeParams::PARAMLOG_ALWAYS)
-            ->FromAllowlist(array_keys(RegisterAllow::TYPES))];
-        
-        // TODO actually switch safeparam type based on registerallow type!
-        
-        $value = self::getUsername($params->GetParam('value',SafeParams::PARAMLOG_ALWAYS));
-        
-        RegisterAllow::DeleteByTypeAndValue($this->database, $type, $value);
+        RegisterAllow::DeleteByTypeAndValue($this->database, $pair['type'], $pair['value']);
     }
     
     /**

@@ -135,7 +135,10 @@ class Authenticator
         }
         else if (!$interface->isPrivileged())
             return null; // not authenticated
-        
+
+        // on a privileged interface, account can be null.  Might be non-null if using a session or sudouser/sudoacct
+        // on a non-privileged interface, account cannot be null, must use a session.  Admins only can use sudouser/sudoacct
+
         if ($sudouser !== null)
         {
             $account = Account::TryLoadByUsername($database, $sudouser);
@@ -147,7 +150,7 @@ class Authenticator
             if ($account === null) throw new Exceptions\UnknownAccountException();
         }
         
-        $authenticator->account = $account;
+        $authenticator->account = $account; // CAN be null
         array_push(self::$instances, $authenticator);
         return $authenticator;
     }
@@ -252,7 +255,7 @@ class Authenticator
         
         if ($session !== null)
         {
-            /*try { $account->UnlockCryptoFromKeySource($session); } // TODO FIX ME after Account refactor (probably need to create IKeySource)
+            /*try { $account->UnlockCryptoFromKeySource($session); } // TODO RAY !! FIX ME after Account refactor (probably need to create IKeySource)
             catch (DecryptionFailedException $e) { 
                 throw new Exceptions\AuthenticationFailedException(); }*/
         }

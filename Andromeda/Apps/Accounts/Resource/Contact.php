@@ -18,12 +18,23 @@ abstract class Contact extends BaseObject
     
     protected static function GetFullKeyPrefix() : string { return "ci"; }
     
-    private const TYPE_EMAIL = 1;
+    public const TYPE_EMAIL = 0;
+    
+    public const TYPES = array('email'=>self::TYPE_EMAIL);
     
     /** @return array<int, class-string<self>> */
     public static function GetChildMap(?ObjectDatabase $database = null) : array
     {
         return array(self::TYPE_EMAIL => EmailContact::class);
+    }
+
+    /** 
+     * Returns the TYPE enum value for a given child class
+     * @param class-string<self> $class
+     */
+    public static function ChildClassToType(string $class) : int
+    {
+        return array_flip(self::GetChildMap())[$class];
     }
     
     /** Address of the contact */
@@ -81,8 +92,6 @@ abstract class Contact extends BaseObject
         
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
-    
-    // TODO search/replace info/value (changed to address)
     
     /** 
      * Returns the contact object matching the given address and type, or null
@@ -158,12 +167,11 @@ abstract class Contact extends BaseObject
      * Sets whether this contact should be used as from (can only be one) 
      * @return $this
      */
-    public function SetUseAsFrom(bool $val) : self // TODO instead - have account store a reference to the contact to use as from
+    public function SetUseAsFrom(bool $val) : self
     {
         if ($val)
         {
             $old = static::TryLoadFromByAccount($this->database, $this->GetAccount());
-            
             if ($old !== null) $old->SetUseAsFrom(false);
         }
         else $val = null;
@@ -203,27 +211,38 @@ abstract class Contact extends BaseObject
         
         return $contact;
     }
-    
-    public static function GetFetchUsage() : string { return "--email email"; } // TODO make sure this is used enough? // TODO get from all subclasses
+
+    abstract public static function SubclassGetFetchUsage() : string;
+
+    public static function GetFetchUsage() : string
+    { 
+        return implode("|", array_map(function(string $class){ return $class::SubclassGetFetchUsage(); }, self::GetChildMap()));
+    }
     
     /**
-     * Fetches a type/value pair from input (depends on the param name given)
+     * Fetches a type/address pair from input (depends on the param name given)
+     * @throws Exceptions\ContactNotGivenException if nothing valid was found
+     * @return ?array{class:class-string<self>, address:string}
+     */
+    abstract public static function SubclassFetchPairFromParams(SafeParams $params) : ?array;
+    
+    /**
+     * Fetches a type/address pair from input (depends on the param name given)
      * @throws Exceptions\ContactNotGivenException if nothing valid was found
      * @return array{class:class-string<self>, address:string}
      */
     public static function FetchPairFromParams(SafeParams $params) : array
     {
-        if ($params->HasParam('email')) 
-        { 
-            $class = EmailContact::class;
-            $address = $params->GetParam('email',SafeParams::PARAMLOG_ALWAYS)->GetEmail(); // TODO move to EmailContact?
+        foreach (self::GetChildMap() as $class)
+        {
+            $ret = $class::SubclassFetchPairFromParams($params);
+            if ($ret !== null) return $ret;
         }
-        else throw new Exceptions\ContactNotGivenException();
-         
-        return array('class'=>$class, 'address'=>$address);
+        
+        throw new Exceptions\ContactNotGivenException();
     }
 
-    /** // TODO RAY !! does FetchPairFromParams need to exist publicly still?
+    /**
      * Loads a contact from input (depends on the param name given)
      * @param array{class:class-string<self>, address:string} $pair contact address
      * @throws Exceptions\ContactNotGivenException if nothing valid was found
@@ -282,18 +301,18 @@ abstract class Contact extends BaseObject
      * @param Account $from account sending the message
      * @param bool $bcc true to use BCC for recipients
      */
-    abstract protected static function SubclassSendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void;
+    abstract public static function SubclassSendMessageMany(string $subject, ?string $html, string $plain, array $recipients, bool $bcc, ?Account $from = null) : void;
 
     /**
      * Gets this contact as a printable object
      * @return ContactJ
      */
-    public function GetClientObject() : array // TODO fix me
+    public function GetClientObject() : array // TODO RAY !! fix me
     {
         return array(
             'id' => $this->ID(),
             /*'type' => self::TYPES[$this->GetType()],
-            'info' => $this->GetInfo(),
+            'address' => $this->GetAddress(),
             'valid' => $this->GetIsValid(),
             'asfrom' => (bool)($this->TryGetScalar('asfrom')),
             'public' => $this->GetIsPublic(),

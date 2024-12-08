@@ -112,7 +112,7 @@ class Config extends BaseConfig
         if ($this->default_group->TryGetObjectID() !== null) return $this;
         
         $group = Group::Create($this->database, "Global Group");
-        $this->default_group->SetObject($group); // TODO need to save here?
+        $this->default_group->SetObject($group);
         
         $group->Initialize(); return $this;
     }
