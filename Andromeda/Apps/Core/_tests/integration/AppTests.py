@@ -4,7 +4,7 @@ from BaseTest import BaseAppTest
 from TestUtils import *
 import LoggingTests
 
-# TODO accounts need to enable/disable the accounts app and test both ways? at least for just one command
+# TODO ACCOUNTS need to enable/disable the accounts app and test both ways? at least for just one command
     
 class AppTests(BaseAppTest):
     def __str__(self):
@@ -32,7 +32,7 @@ class AppTests(BaseAppTest):
 
     def addAdmin(self, params:dict):
         """ Adds the required parameters to be admin """
-        # TODO accounts see accounts test, do login here
+        # TODO ACCOUNTS see accounts test, do login here
         return params
     
     def asAdmin(self, params:dict = {}):
@@ -245,7 +245,7 @@ class AppTests(BaseAppTest):
         
         if not self.interface.isPriv:
             if self.verbose >= 1: print("TODO impossible to test over HTTP currently")
-            # TODO accounts once accounts works, can at least have an option to prompt admin to re-enable the server manually then continue the test (like email test)?
+            # TODO ACCOUNTS once accounts works, can at least have an option to prompt admin to re-enable the server manually then continue the test (like email test)?
             # maybe not worth it because lots of other accounts app stuff will have this same problem
             return False
         self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='setconfig',params={'enabled':False}))['enabled'], False)
@@ -287,7 +287,7 @@ class AppTests(BaseAppTest):
             if self.verbose >= 1: print("no email test configured, skipping")
             return False
         
-        # TODO accounts if authenticated, can test without a "dest" here, should send to contact emails
+        # TODO ACCOUNTS if authenticated, can test without a "dest" here, should send to contact emails
         params = self.asAdmin({'dest':self.config['email']['test'], 'testkey':self.util.random.randint(0,999999)})
         self.util.assertOk(self.interface.run(app='core',action='testmail',params=params)) # no mailid = use any
         self.util.assertSame(str(params['testkey']), input("Enter testkey sent in email:"))

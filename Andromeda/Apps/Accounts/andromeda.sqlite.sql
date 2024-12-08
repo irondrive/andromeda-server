@@ -126,7 +126,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_client` (
 CREATE TABLE `a2obj_apps_accounts_resource_contact` (
   `id` char(12) NOT NULL
 ,  `type` integer NOT NULL
-,  `info` varchar(127) NOT NULL
+,  `address` varchar(127) NOT NULL
 ,  `valid` integer NOT NULL DEFAULT 0
 ,  `usefrom` integer DEFAULT NULL
 ,  `public` integer NOT NULL DEFAULT 0
@@ -134,8 +134,8 @@ CREATE TABLE `a2obj_apps_accounts_resource_contact` (
 ,  `date_created` double NOT NULL
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`type`,`info`)
-,  UNIQUE (`usefrom`,`account`)
+,  UNIQUE (`type`,`address`)
+,  UNIQUE (`usefrom`,`account`,`type`)
 ,  CONSTRAINT `a2obj_apps_accounts_resource_contact_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 );
 CREATE TABLE `a2obj_apps_accounts_resource_recoverykey` (
@@ -196,7 +196,7 @@ CREATE INDEX "idx_a2obj_apps_accounts_resource_client_account" ON "a2obj_apps_ac
 CREATE INDEX "idx_a2obj_apps_accounts_resource_client_date_active_account" ON "a2obj_apps_accounts_resource_client" (`date_active`,`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_usedtoken_date_created" ON "a2obj_apps_accounts_resource_usedtoken" (`date_created`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_usedtoken_twofactor" ON "a2obj_apps_accounts_resource_usedtoken" (`twofactor`);
-CREATE INDEX "idx_a2obj_apps_accounts_resource_contact_info" ON "a2obj_apps_accounts_resource_contact" (`info`);
+CREATE INDEX "idx_a2obj_apps_accounts_resource_contact_address" ON "a2obj_apps_accounts_resource_contact" (`address`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_contact_account" ON "a2obj_apps_accounts_resource_contact" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_actionlog_account" ON "a2obj_apps_accounts_actionlog" (`account`);
 CREATE INDEX "idx_a2obj_apps_accounts_resource_session_account" ON "a2obj_apps_accounts_resource_session" (`account`);

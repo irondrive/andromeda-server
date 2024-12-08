@@ -109,7 +109,7 @@ abstract class BaseObject
      * @param ?non-negative-int $offset offset of limited result set
      * @return array<string, static>
      */
-    public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array // TODO unit test me
+    public static function LoadAll(ObjectDatabase $database, ?int $limit = null, ?int $offset = null) : array
     {
         $q = (new QueryBuilder())->Limit($limit)->Offset($offset);
         return $database->LoadObjectsByQuery(static::class, $q); // empty query

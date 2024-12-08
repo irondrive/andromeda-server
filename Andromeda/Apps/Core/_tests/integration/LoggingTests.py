@@ -39,7 +39,7 @@ def testActionLogging(self):
                 self.util.assertNotIn(prop, actions[i])
         self.util.assertNotIn('admin', actions[0]) # testutil
         self.util.assertSame(actions[1]['admin'], self.interface.isPriv) # core
-        # TODO accounts check the action log for the account/client/session field too
+        # TODO ACCOUNTS check the action log for the account/client/session field too
 
     # test logging to db only and basic getactions/countactions
     self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='setconfig',params=self.asAdmin({'actionlog_db':True})))['actionlog_db'], True)

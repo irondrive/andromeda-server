@@ -117,7 +117,7 @@ class Group extends PolicyBase
      */
     public static function LoadAllMatchingName(ObjectDatabase $database, string $name, int $limit) : array
     {
-        // TODO possible security issue here, see note in QueryBuilder... maybe just REMOVE all wildcard characters? safer hard though because _ counts!
+        // TODO RAY !! possible security issue here, see note in QueryBuilder... maybe just REMOVE all wildcard characters? safer hard though because _ counts!
         
         $q = new QueryBuilder(); $name = QueryBuilder::EscapeWildcards($name).'%'; // search by prefix
         

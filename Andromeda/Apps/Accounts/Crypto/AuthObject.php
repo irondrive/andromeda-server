@@ -93,7 +93,7 @@ trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
         return $key;
     }
     
-    // TODO took away BaseCreate here... was InitAuthkey() if second param true (default)
+    // TODO RAY !! took away BaseCreate here... was InitAuthkey() if second param true (default)
     
     /**
      * Sets the auth key to the given value and hashes it

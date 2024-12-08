@@ -36,7 +36,7 @@ class LDAP extends External
         parent::CreateFields();
     }
 
-    public static function GetPropUsage() : string { return "--hostname hostname [--secure bool] [--userprefix ?utf8]"; } // TODO should this call parent? unclear - check usages ... maybe rename like GetSubPropUsage
+    public static function GetPropUsage() : string { return "--hostname hostname [--secure bool] [--userprefix ?utf8]"; } // TODO RAY !! should this call parent? unclear - check usages ... maybe rename like GetSubPropUsage
     
     public static function Create(ObjectDatabase $database, SafeParams $params) : self
     {

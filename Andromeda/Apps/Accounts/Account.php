@@ -137,7 +137,7 @@ class Account extends PolicyBase
     /** Runs all functions registered to handle the account being added to or removed from a group */
     public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added) : void { 
         foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
-        // TODO check that it has the group first? // TODO RAY !! why is this public?
+        // TODO RAY !! check that it has the group first? // TODO RAY !! why is this public?
         
     /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
@@ -459,7 +459,7 @@ class Account extends PolicyBase
      * Returns EmailReceipient objects for all email contacts
      * @return array<string, EmailRecipient>
      */
-    public function GetContactEmails() : array // TODO not wild about email-specific things in Account
+    public function GetContactEmails() : array
     {
         $emails = array_filter($this->GetContacts(), 
             function(Contact $contact){ return $contact instanceof EmailContact; });
@@ -468,17 +468,6 @@ class Account extends PolicyBase
             return $contact->GetAsEmailRecipient(); }, $emails);
     }
 
-    /**
-     * Returns the EmailRecipient to use for sending email FROM this account
-     * @return ?EmailRecipient email recipient object or null if not set
-     */
-    public function GetEmailFrom() : ?EmailRecipient // TODO not wild about email-specific things in Account
-    {
-        $contact = Contact::TryLoadFromByAccount($this->database, $this);
-        
-        return ($contact instanceof EmailContact) ? $contact->GetAsEmailRecipient() : null;
-    }
-    
     /**
      * Sends a message to all of this account's valid contacts
      * @see Contact::SendMessageMany()
@@ -736,13 +725,13 @@ class Account extends PolicyBase
         
         if ($this->GetAuthSource() instanceof AuthSource\Local)
             AuthSource\Local::SetPassword($this, $new_password);
-        // TODO move check for external auth here
+        // TODO RAY !! move check for external auth here ???
 
         return $this->SetPasswordDate();
     }
     
     /** Gets the account's password hash (null if external auth) */
-    public function GetPasswordHash() : ?string { return $this->password->TryGetValue(); }
+    public function TryGetPasswordHash() : ?string { return $this->password->TryGetValue(); }
     
     /** Sets the account's password hash to the given value */
     public function SetPasswordHash(string $hash) : self { $this->password->SetValue($hash); return $this; }
@@ -821,6 +810,7 @@ class Account extends PolicyBase
     // * @throws DecryptionFailedException if decryption fails
     
         $master = null;//$source->GetUnlockedKey(); // TODO RAY !! ??? need caching IN keysource
+        // rather than having account have its master key directly... have a link to a key source that we can pass the encrypt/decrypt to
         
         $this->master_key->SetValue($master, true);
         $this->cryptoAvailable = true; return $this;
@@ -836,23 +826,18 @@ class Account extends PolicyBase
         else if (!$this->hasCrypto())
             throw new CryptoNotInitializedException();
         
-        //if (!$this->HasRecoveryKeys()) 
-        //    throw new Exceptions\RecoveryKeyFailedException();
-
             // TODO RAY !!
         //    * @throws CryptoNotInitializedException if crypto does not exist
         //    * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
         //    * @throws DecryptionFailedException if decryption fails
         
-        // TODO RAY !! missing TryLoadByFullKey
-        /*$obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
         
         if (!$obj->CheckFullKey($key)) 
             throw new Exceptions\RecoveryKeyFailedException();
         
-        return $this->UnlockCryptoFromKeySource($obj);*/
-        return $this;
+        return $this->UnlockCryptoFromKeySource();
     }
     
     /** @var array<callable(ObjectDatabase, self, bool): void> */
