@@ -9,6 +9,9 @@
     "config": {
         "platform": {
             "php": "7.4.0"
+        },
+        "allow-plugins": {
+            "phpstan/extension-installer": false
         }
     },
     "require" : {
