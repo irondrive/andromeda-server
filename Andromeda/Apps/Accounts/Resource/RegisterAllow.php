@@ -40,7 +40,7 @@ class RegisterAllow extends BaseObject
     /**
      * Creates a new allowlist entry
      * @param ObjectDatabase $database database reference
-     * @param int $type entry type enum
+     * @param value-of<self::TYPES> $type entry type enum
      * @param string $value value of allowlist entry
      * @return static new allowlist entry
      */
@@ -61,7 +61,7 @@ class RegisterAllow extends BaseObject
     /**
      * Fetches a type/value pair from input (depends on the param name given)
      * @throws Exceptions\ContactNotGivenException if nothing valid was found
-     * @return array{type:int, value:string}
+     * @return array{type:value-of<self::TYPES>, value:string}
      */
     public static function FetchPairFromParams(SafeParams $params) : array
     {
@@ -78,7 +78,7 @@ class RegisterAllow extends BaseObject
     /**
      * Checks whether an allowlist entry exists
      * @param ObjectDatabase $database database reference
-     * @param int $type type enum of allowlist entry (can be a contact type)
+     * @param value-of<self::TYPES> $type type enum of allowlist entry
      * @param string $value value of allowlist entry
      * @return bool true if it exists (is allowlisted)
      */
@@ -92,7 +92,7 @@ class RegisterAllow extends BaseObject
     /**
      * Removes an allowlist entry, if it exists 
      * @param ObjectDatabase $database database reference
-     * @param int $type type enum of allowlist entry (can be a contact type)
+     * @param value-of<self::TYPES> $type type enum of allowlist entry
      * @param string $value value of allowlist entry
      */
     public static function DeleteByTypeAndValue(ObjectDatabase $database, int $type, string $value) : bool

@@ -46,6 +46,26 @@ class GroupJoin extends JoinObject
         return static::LoadFromJoin($database, Group::class, 'group', array('account'=>$account));
     }
 
+    /** 
+     * Deletes all group joins for the given account 
+     * @return int the number of deleted group joins
+     */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
+    {
+        return 0; // TODO RAY !! implement me
+        //return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+    }
+    
+    /** 
+     * Deletes all group joins for the given group
+     * @return int the number of deleted group joins
+     */
+    public static function DeleteByGroup(ObjectDatabase $database, Group $group) : int
+    {
+        return 0; // TODO RAY !! implement me
+        //return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+    }
+    
     // TODO RAY !! need to set date created in create
 
     /**

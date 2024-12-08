@@ -791,11 +791,12 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the object
      * @param string $key data key to match
      * @param scalar $value data value to match
+     * @param bool $ambiguousKey the key is ambiguous, prefix it with its table name
      * @throws Exceptions\UnknownUniqueKeyException if the key is not registered
      * @throws Exceptions\MultipleUniqueKeyException if > 1 object is loaded
      * @return ?T loaded object or null
      */
-    public function TryLoadUniqueByKey(string $class, string $key, $value) : ?BaseObject
+    public function TryLoadUniqueByKey(string $class, string $key, $value, bool $ambiguousKey = false) : ?BaseObject
     {
         $this->RegisterUniqueKeys($class);
         
@@ -806,7 +807,8 @@ class ObjectDatabase
 
         if (!array_key_exists($validx, $this->uniqueByKey[$class][$key]))
         {
-            $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
+            $qkey = $ambiguousKey ? $this->GetClassTableName($class).".$key" : $key;
+            $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value));
             $objs = $this->LoadObjectsByQuery($class, $q);
             
             if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");

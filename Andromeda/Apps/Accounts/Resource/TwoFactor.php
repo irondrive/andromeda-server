@@ -99,6 +99,15 @@ class TwoFactor extends BaseObject
         return $database->LoadObjectsByKey(static::class, 'account', $account->ID());
     }
 
+    /** 
+     * Deletes all two factors for the given account 
+     * @return int the number of deleted two factors
+     */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
+    {
+        return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+    }
+    
     /** Creates and returns a new twofactor object for the given account */
     public static function Create(ObjectDatabase $database, Account $account, ?string $comment = null) : self
     {

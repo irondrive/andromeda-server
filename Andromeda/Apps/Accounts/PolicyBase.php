@@ -73,7 +73,7 @@ abstract class PolicyBase extends BaseObject
     }
 
     /** defines command usage for SetProperties() */
-    public static function GetPropUsage() : string { return "[--session_timeout ?uint] [--client_timeout ?uint] [--max_password_age ?uint] ".
+    public static function GetPropUsage() : string { return "[--comment ?text] [--session_timeout ?uint] [--client_timeout ?uint] [--max_password_age ?uint] ".
                                                             "[--limit_sessions ?uint8] [--limit_contacts ?uint8] [--limit_recoverykeys ?uint8] ".
                                                             "[--admin ?bool] [--disabled ?bool] [--forcetf ?bool] [--allowcrypto ?bool] ".
                                                             "[--account_search ?uint8] [--group_search ?uint8] [--userdelete ?bool]"; }
@@ -84,7 +84,8 @@ abstract class PolicyBase extends BaseObject
      */
     public function SetProperties(SafeParams $params) : self
     {
-        // TODO RAY !! what about set comment?
+        if ($params->HasParam('comment'))
+            $this->comment->SetValue($params->GetParam("comment")->GetNullHTMLText());
 
         foreach (array($this->session_timeout, $this->client_timeout, $this->max_password_age) as $field)
             if ($params->HasParam($field->GetName())) 
@@ -107,13 +108,6 @@ abstract class PolicyBase extends BaseObject
     /** Gets the comment for the entity (or null) */
     public function GetComment() : ?string { 
         return $this->comment->TryGetValue(); }
-    
-    /** 
-     * Sets the comment for the entity (or null)
-     * @reeturn $this
-     */
-    public function SetComment(?string $comment) : self { 
-        $this->comment->SetValue($comment); return $this; }
     
     /** Returns the descriptive name of this policy entity */
     public abstract function GetDisplayName() : string;

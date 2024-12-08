@@ -66,9 +66,6 @@ class Account extends PolicyBase
         return $ret;
     }
     
-    // TODO RAY !! had autoDelete on sessions, contacts, clients, twofactors, recoverykeys
-    // TODO RAY !! also need to delete group memberships on delete...
-    
     public const DISABLE_PERMANENT = 1;
     public const DISABLE_PENDING_CONTACT = 2;
     
@@ -238,9 +235,6 @@ class Account extends PolicyBase
      * @return array<string, Client> clients indexed by ID
      */
     public function GetClients() : array { return Client::LoadByAccount($this->database, $this); }
-    
-    /** Deletes all clients registered to the account */
-    public function DeleteClients() : self { Client::DeleteByAccount($this->database, $this); return $this; }
     
     /**
      * Returns an array of sessions registered to the account
@@ -541,22 +535,22 @@ class Account extends PolicyBase
      */
     public static function RegisterDeleteHandler(callable $func) : void { self::$delete_handlers[] = $func; }
     
-    /**
-     * Deletes this account and all associated objects
-     * @see BaseObject::Delete()
-     */
-    public function Delete() : void
+    public function NotifyPreDeleted() : void
     {
+        Client::DeleteByAccount($this->database, $this);
+        Contact::DeleteByAccount($this->database, $this);
+        TwoFactor::DeleteByAccount($this->database, $this);
+        RecoveryKey::DeleteByAccount($this->database, $this);
+        GroupJoin::DeleteByAccount($this->database, $this);
+        
         // non-default groups will be handled in ref setting
-        foreach ($this->GetDefaultGroups() as $group)
+        foreach ($this->GetDefaultGroups() as $group) // TODO RAY !! move to GroupJoin?
             static::RunGroupChangeHandlers($this->database, $this, $group, false);
         
         foreach (self::$delete_handlers as $func) 
             $func($this->database, $this);
-        
-        parent::Delete();
     }
-    
+
     public const OBJECT_FULL = 1; 
     public const OBJECT_ADMIN = 2;
     
