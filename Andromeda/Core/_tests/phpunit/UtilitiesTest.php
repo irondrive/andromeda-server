@@ -104,6 +104,10 @@ class UtilitiesTest extends \PHPUnit\Framework\TestCase
         // test \_ \\_ \\\_ \\\\_ _%\%_ 2 -> test \\\_ \\\\\_ \\\\\\\_ \\\\\\\\\_ \_\%\\\%\_ 2
         $this->assertSame("test \\\\\\_ \\\\\\\\\\_ \\\\\\\\\\\\\\_ \\\\\\\\\\\\\\\\\\_ \\_\\_\\\\\\_\\_ 2", 
             Utilities::escape_all("test \\_ \\\\_ \\\\\\_ \\\\\\\\_ __\\__ 2",['_','%']));
+
+        // 90 should not get escaped as this is part of a UTF-8 character
+        $this->assertTrue(Utilities::isUTF8($str="\xe1\x8b\x90"));
+        //$this->assertSame(bin2hex("$str"),bin2hex(Utilities::escape_all("$str",["\x90"])));
     }
     
     public function testArrayMapKeys() : void

@@ -130,6 +130,9 @@ abstract class BaseObject
      */
     private array $fieldsByClass = array();
     
+    /** true if the object is newly created and not yet saved */
+    private bool $isCreated = false;
+
     /** true if the object has been deleted */
     private bool $isDeleted = false;
     
@@ -150,6 +153,7 @@ abstract class BaseObject
      */
     public function __construct(ObjectDatabase $database, array $data, bool $created)
     {
+        $this->isCreated = $created;
         $this->database = $database;
         
         $this->CreateFields();
@@ -233,6 +237,9 @@ abstract class BaseObject
         return $obj !== null ? (string)$obj : null; 
     }
     
+    /** Returns true if this object is newly created and not yet saved */
+    final public function isCreated() : bool { return $this->isCreated; }
+    
     /** Returns true if this object has been deleted */
     final public function isDeleted() : bool { return $this->isDeleted; }
     
@@ -296,6 +303,8 @@ abstract class BaseObject
         else if ($this->deleteLater)
             $this->database->DeleteObject($this);
         else $this->database->SaveObject($this, $this->fieldsByClass, $onlyAlways);
+
+        $this->isCreated = false;
         return $this;
     }
 }

@@ -29,7 +29,7 @@ abstract class SingletonObject extends BaseObject
         
         if (!array_key_exists($key, self::$instances))
         {
-            $obj = $database->TryLoadUniqueByKey(static::class,'id','A');
+            $obj = (static::class)::TryLoadByID($database,'A');
             if ($obj === null) throw new Exceptions\SingletonNotFoundException(static::class);
             
             self::$instances[$key] = $obj;

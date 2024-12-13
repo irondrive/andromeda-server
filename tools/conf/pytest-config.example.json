@@ -14,16 +14,16 @@
         {
             "dbname": "a2test",
             "host": "localhost",
-            "dbuser": "root", 
-            "dbpass": "password", 
+            "user": "root", 
+            "password": "password",
             "persistent": true
         },
         "pgsql":
         {
             "dbname": "a2test",
             "host": "localhost",
-            "dbuser": "postgres",
-            "dbpass": "password" 
+            "user": "postgres",
+            "password": "password" 
         }
     },
     "core":

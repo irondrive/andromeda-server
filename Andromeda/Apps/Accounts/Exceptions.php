@@ -74,6 +74,14 @@ class DuplicateGroupMembershipException extends BaseExceptions\ClientErrorExcept
     }
 }
 
+/** Exception indicating that the group is a default and has implicit memberships */
+class ImplicitGroupMembershipException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("DEFAULT_GROUP_IMPLICIT_MEMBERSHIP", $details);
+    }
+}
+
 /** Exception indicating that the password for an account using external authentication cannot be changed */
 class ChangeExternalPasswordException extends BaseExceptions\ClientErrorException
 {
@@ -266,6 +274,8 @@ class SessionRequiredException extends BaseExceptions\ClientErrorException
     }
 }
 
+
+
 /** Exception indicating that crypto must be unlocked by the client */
 class CryptoUnlockRequiredException extends BaseExceptions\ServerException
 {
@@ -275,7 +285,7 @@ class CryptoUnlockRequiredException extends BaseExceptions\ServerException
 }
 
 /** Exception indicating that the given recovery key is not valid */
-class RecoveryKeyFailedException extends BaseExceptions\ServerException
+class RecoveryKeyFailedException extends BaseExceptions\ServerException // TODO RAY !! why is this a server exception?
 {
     public function __construct(?string $details = null) {
         parent::__construct("RECOVERY_KEY_UNLOCK_FAILED", $details);

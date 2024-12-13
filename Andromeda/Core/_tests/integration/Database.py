@@ -17,6 +17,13 @@ class Database():
     def install(self, util:TestUtils, interface:Interface):
         """ Install the database using the given interface """
         params = self.config.copy()
+        if 'user' in params:
+            params['dbuser'] = params['user']
+            del params['user']
+        if 'password' in params:
+            params['dbpass'] = params['password']
+            del params['password']
+
         util.assertError(interface.run(app='core',action='dbconf',
             params=params,install=True), 400, "SAFEPARAM_KEY_MISSING: outfile")
         
@@ -57,17 +64,12 @@ class SQLite(Database):
 class MySQL(Database):
     def install(self, util:TestUtils, interface:Interface):
         self.config['driver'] = 'mysql'
-        params = {}
-        if 'host' in self.config:
-            params['host'] = self.config['host']
-        if 'dbuser' in self.config:
-            params['user'] = self.config['dbuser']
-        if 'dbpass' in self.config:
-            params['password'] = self.config['dbpass']
-        if 'unix_socket' in self.config:
-            params['unix_socket'] = self.config['unix_socket']
-        if 'ssl_disabled' in self.config:
-            params['ssl_disabled'] = self.config['ssl_disabled']
+
+        params = self.config.copy()
+        del params['dbname']
+        del params['driver']
+        if 'persistent' in params:
+            del params['persistent']
 
         self.db = mysql.connector.connect(**params)
         self.db.cursor().execute(
@@ -85,14 +87,12 @@ class MySQL(Database):
 class PostgreSQL(Database):
     def install(self, util:TestUtils, interface:Interface):
         self.config['driver'] = 'pgsql'
-        self.config['persistent'] = False
-        params = {}
-        if 'host' in self.config:
-            params['host'] = self.config['host']
-        if 'dbuser' in self.config:
-            params['user'] = self.config['dbuser']
-        if 'dbpass' in self.config:
-            params['password'] = self.config['dbpass']
+
+        params = self.config.copy()
+        del params['dbname']
+        del params['driver']
+        if 'persistent' in params:
+            del params['persistent']
 
         self.db = psycopg2.connect(**params)
         self.db.autocommit = True

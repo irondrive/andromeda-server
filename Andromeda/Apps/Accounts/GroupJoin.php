@@ -105,7 +105,8 @@ class GroupJoin extends JoinObject
      */
     public static function Create(ObjectDatabase $database, Account $account, Group $group) : self
     {
-        // TODO RAY !! make sure the group is not a default
+        if ($group->isDefault())
+            throw new Exceptions\ImplicitGroupMembershipException();
         
         $obj = parent::CreateJoin($database, $account, $group, 
             function(self $obj){ $obj->date_created->SetTimeNow(); });

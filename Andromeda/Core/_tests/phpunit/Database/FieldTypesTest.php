@@ -755,6 +755,11 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetObject(null);
         $this->assertSame(null, $field->TryGetObject());
         $this->assertSame(null, $field->TryGetObjectID());
+
+        // test not setting a newly created object
+        $obj = new TestObject1($database, array('id'=>$id), true);
+        $this->expectException(Exceptions\ObjectRefNotSavedException::class);
+        $field->SetObject($obj);
     }
     
     public function testObjectInit() : void
@@ -800,5 +805,10 @@ class FieldTypesTest extends \PHPUnit\Framework\TestCase
         $field->SetObject($obj);
         $this->assertSame($obj, $field->GetObject());
         $this->assertSame($id, $field->GetObjectID());
+        
+        // test not setting a newly created object
+        $obj = new TestObject1($database, array('id'=>$id), true);
+        $this->expectException(Exceptions\ObjectRefNotSavedException::class);
+        $field->SetObject($obj);
     }
 }
