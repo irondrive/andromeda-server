@@ -12,7 +12,7 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource};
  * This allowed account crypto to generally be unlocked for any user command.
  * 
  * @phpstan-type SessionJ array{id:string}
- * client:string, date_created:float, date_active:?float, authkey?:string // TODO RAY !!
+ * client:string, date_created:float, date_active:?float, authkey?:string // TODO RAY !! GetClientObject
  */
 class Session extends BaseObject
 {
@@ -59,6 +59,8 @@ class Session extends BaseObject
     /** Create a new session for the given account and client */
     public static function Create(ObjectDatabase $database, Account $account, Client $client) : self
     {
+        $account->CheckLimitSessions();
+
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         $obj->client->SetObject($client);
@@ -81,6 +83,12 @@ class Session extends BaseObject
         return $database->TryDeleteUniqueByKey(static::class, 'client', $client->ID());
     }
     
+    /** Count all sessions for a given account */
+    public static function CountByAccount(ObjectDatabase $database, Account $account) : int
+    { 
+        return $database->CountObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** 
      * Load all sessions for a given account 
      * @return array<string, static>

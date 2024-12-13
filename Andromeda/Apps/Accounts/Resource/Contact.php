@@ -116,6 +116,12 @@ abstract class Contact extends BaseObject
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
 
+    /** Count contacts for a given account */
+    public static function CountByAccount(ObjectDatabase $database, Account $account) : int
+    { 
+        return $database->CountObjectsByKey(static::class, 'account', $account->ID());
+    }
+
     /** 
      * Load all contacts for a given account 
      * @return array<string, static>
@@ -201,6 +207,8 @@ abstract class Contact extends BaseObject
      */
     public static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : self
     {
+        $account->CheckLimitContacts();
+        
         $contact = $database->CreateObject(static::class);
         $contact->date_created->SetTimeNow();
         
@@ -316,7 +324,7 @@ abstract class Contact extends BaseObject
      * Gets this contact as a printable object
      * @return ContactJ
      */
-    public function GetClientObject() : array // TODO RAY !! fix me
+    public function GetClientObject() : array // TODO RAY !! GetClientObject
     {
         return array(
             'id' => $this->ID(),
