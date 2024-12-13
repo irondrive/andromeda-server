@@ -12,7 +12,7 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObjectFull, AccountKeySource};
  * and as a matter of convention, can byapss two factor
  * 
  * @phpstan-type RecoveryKeyJ array{date_created:float}   
- * // TODO RAY !! authkey or secret? make consistent also authkey should not be null
+ * // TODO RAY !! GetClientObject authkey or secret? make consistent also authkey should not be null
  */
 class RecoveryKey extends BaseObject
 {
@@ -60,6 +60,8 @@ class RecoveryKey extends BaseObject
      */
     public static function Create(ObjectDatabase $database, Account $account) : self
     {
+        $account->CheckLimitRecoveryKeys();
+
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
         

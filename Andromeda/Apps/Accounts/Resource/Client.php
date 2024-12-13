@@ -187,7 +187,7 @@ class Client extends BaseObject
     public function GetClientObject(bool $secret = false) : array
     { 
      //* @return array<mixed> `{id:id, name:?string, lastaddr:string, useragent:string, \
-     //dates_created:float, date_loggedon:?float, date_active:?float, session:Session}` // TODO RAY !!
+     //dates_created:float, date_loggedon:?float, date_active:?float, session:Session}` // TODO RAY !! GetClientObject
 
         $data = array(
             'id' => $this->ID(),

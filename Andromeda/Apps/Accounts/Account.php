@@ -3,6 +3,7 @@
 use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
 use Andromeda\Core\Exceptions\DecryptionFailedException;
 use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabase, TableTypes, QueryBuilder};
+use Andromeda\Core\Database\Exceptions\CounterOverLimitException;
 
 use Andromeda\Apps\Accounts\AuthSource\External;
 use Andromeda\Apps\Accounts\Crypto\KeySource;
@@ -40,8 +41,6 @@ class Account extends PolicyBase
     private FieldTypes\NullTimestamp $date_loggedon;
     /** The date the account last was active (made any request) */
     private FieldTypes\NullTimestamp $date_active;
-
-    // TODO RAY !! re-implement limit sessions/contacts/recoverykeys (can't be automatic, no object refs anymore)
 
     protected function CreateFields() : void
     {
@@ -317,12 +316,66 @@ class Account extends PolicyBase
     
     /** Returns the maximum allowed age of the account's password */
     private function GetMaxPasswordAge() : ?int
-    { 
+    {
         $default = null;
         $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->max_password_age; });
         return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
     }
     
+    /** Returns the maximum allowed number of sessions */
+    private function GetLimitSessions() : ?int
+    {
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->limit_sessions; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+
+    /** Returns the maximum allowed number of contacts */
+    private function GetLimitContacts() : ?int
+    {
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->limit_contacts; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+
+    /** Returns the maximum allowed number of recoverykeys */
+    private function GetLimitRecoveryKeys() : ?int
+    {
+        $default = null;
+        $f = $this->GetInheritableField(function(PolicyBase $b){ return $b->limit_recoverykeys; });
+        return ($f !== null) ? $f->TryGetValue() ?? $default : $default;
+    }
+
+    /** 
+     * Checks that the current session count + delta is within the limit 
+     * @throws CounterOverLimitException if over the limit
+     */
+    public function CheckLimitSessions(int $delta = 1) : void
+    {
+        if (Session::CountByAccount($this->database, $this)+$delta > $this->GetLimitSessions())
+            throw new CounterOverLimitException('sessions');
+    }
+
+    /** 
+     * Checks that the current contacts count + delta is within the limit 
+     * @throws CounterOverLimitException if over the limit
+     */
+    public function CheckLimitContacts(int $delta = 1) : void
+    {
+        if (Contact::CountByAccount($this->database, $this)+$delta > $this->GetLimitContacts())
+            throw new CounterOverLimitException('contacts');
+    }
+
+    /** 
+     * Checks that the current recovery key count + delta is within the limit 
+     * @throws CounterOverLimitException if over the limit
+     */
+    public function CheckLimitRecoveryKeys(int $delta = 1) : void
+    {
+        if (RecoveryKey::CountByAccount($this->database, $this)+$delta > $this->GetLimitRecoveryKeys())
+            throw new CounterOverLimitException('recoverykeys');
+    }
+
     /**
      * Attempts to load an account with the given username
      * @param ObjectDatabase $database database reference
