@@ -22,7 +22,6 @@ class AccountsInstallApp extends InstallerApp
      * {@inheritDoc}
      * Also optionally creates an admin account
      * @see InstallerApp::Install()
-     * @see Account::GetClientObject()
      * @return ScalarOrArray
      */
     protected function Install(SafeParams $params)

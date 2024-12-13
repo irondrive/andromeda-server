@@ -101,8 +101,6 @@ class Client extends BaseObject
     /** Sets the timestamp this client was active to now */
     public function SetActiveDate() : self
     {
-        if ($this->GetApiPackage()->GetConfig()->isReadOnly()) return $this; // TODO RAY !! move up a level
-        
         $this->date_active->SetTimeNow(); return $this;
     }
     
@@ -185,7 +183,6 @@ class Client extends BaseObject
     /**
      * Gets this client as a printable object
      * @return ClientJ
-     * @see Session::GetClientObject()
      */
     public function GetClientObject(bool $secret = false) : array
     { 

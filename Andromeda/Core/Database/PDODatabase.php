@@ -383,6 +383,9 @@ class PDODatabase
     {
         $this->startTimingQuery();
         
+        if ($this->UseBacktickQuotes())
+            $sql = str_replace('"','`',$sql);
+        
         $query = $this->query($sql, $data);
 
         $result = $query->fetchAll(PDO::FETCH_ASSOC);
@@ -411,6 +414,9 @@ class PDODatabase
         
         $this->startTimingQuery();
         
+        if ($this->UseBacktickQuotes())
+            $sql = str_replace('"','`',$sql);
+        
         $query = $this->query($sql, $data);
         
         $result = $query->rowCount();
@@ -435,6 +441,9 @@ class PDODatabase
         
         $this->startTimingQuery();
         
+        if ($this->UseBacktickQuotes())
+            $sql = str_replace('"','`',$sql);
+        
         $query = $this->query($sql, $data);
         
         $result = $query->fetchAll(PDO::FETCH_ASSOC);
@@ -458,9 +467,6 @@ class PDODatabase
      */
     protected function query(string $sql, ?array $params = null) : PDOStatement
     {
-        if ($this->UseBacktickQuotes())
-            $sql = str_replace('"','`',$sql);
-        
         if (!$this->connection->inTransaction())
             $this->beginTransaction();
             

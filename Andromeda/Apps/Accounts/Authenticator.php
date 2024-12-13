@@ -16,7 +16,7 @@ class Authenticator
     private SafeParams $params;
     
     /** @var list<self> */
-    private static array $instances = array();
+    private static array $instances = array(); // TODO RAY !! not great for unit tests... see GetCustomCache
    
     private ?Account $account = null;
     
@@ -112,25 +112,28 @@ class Authenticator
         $sudouser = $params->HasParam('auth_sudouser') ? AccountsApp::getUsername($params->GetParam('auth_sudouser',SafeParams::PARAMLOG_ALWAYS)) : null;
         $sudoacct = $params->HasParam('auth_sudoacct') ? $params->GetParam('auth_sudoacct',SafeParams::PARAMLOG_ALWAYS)->GetRandstr() : null;
         
-        $account = null; $authenticator = new Authenticator($params);
+        $auth = new Authenticator($params);
         
         if ($sessionid !== null && $sessionkey !== null)
         {
-            $session = Session::TryLoadByID($database, $sessionid);
+            $auth->session = Session::TryLoadByID($database, $sessionid);
             
-            if ($session === null || !$session->CheckKeyMatch($sessionkey)) 
+            if ($auth->session === null || !$auth->session->CheckKeyMatch($sessionkey)) 
                 throw new Exceptions\InvalidSessionException();
             
-            $account = $session->GetAccount();
+            $auth->account = $auth->session->GetAccount();
             
-            if (!$account->isEnabled()) 
+            if (!$auth->account->isEnabled()) 
                 throw new Exceptions\AccountDisabledException();
             
-            $authenticator->realaccount = $account->SetActiveDate();
-            $authenticator->session = $session->SetActiveDate();
-            $authenticator->client = $session->GetClient()->SetActiveDate();
+            if (!$database->GetApiPackage()->GetConfig()->isReadOnly())
+            {
+                $auth->account->SetActiveDate();
+                $auth->session->SetActiveDate();
+                $auth->session->GetClient()->SetActiveDate();
+            }
             
-            if (($sudouser !== null || $sudoacct !== null) && !$account->isAdmin())
+            if (($sudouser !== null || $sudoacct !== null) && !$auth->account->isAdmin())
                 throw new Exceptions\AdminRequiredException();
         }
         else if (!$interface->isPrivileged())
@@ -141,18 +144,17 @@ class Authenticator
 
         if ($sudouser !== null)
         {
-            $account = Account::TryLoadByUsername($database, $sudouser);
-            if ($account === null) throw new Exceptions\UnknownAccountException();           
+            $auth->account = Account::TryLoadByUsername($database, $sudouser);
+            if ($auth->account === null) throw new Exceptions\UnknownAccountException();           
         }
         else if ($sudoacct !== null)
         {
-            $account = Account::TryLoadByID($database, $sudoacct);
-            if ($account === null) throw new Exceptions\UnknownAccountException();
+            $auth->account = Account::TryLoadByID($database, $sudoacct);
+            if ($auth->account === null) throw new Exceptions\UnknownAccountException();
         }
         
-        $authenticator->account = $account; // CAN be null
-        array_push(self::$instances, $authenticator);
-        return $authenticator;
+        array_push(self::$instances, $auth);
+        return $auth;
     }
 
     /**

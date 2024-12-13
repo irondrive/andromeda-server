@@ -5,8 +5,7 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Core\Errors\BaseExceptions;
 
-use Andromeda\Apps\Accounts\Group;
-use Andromeda\Apps\Accounts\{Account, Config};
+use Andromeda\Apps\Accounts\{Account, Config, Group, GroupJoin};
 
 /** 
  * Manages configured external authentication sources 
@@ -188,8 +187,8 @@ abstract class External extends BaseObject implements IAuthSource
         $name = $this->GetTypeName(); $id = $this->ID();
         $group = Group::Create($this->database, "$name Accounts ($id)");
         
-        $this->default_group->SetObject($group); 
-        $group->Initialize(); // init AFTER set default
+        $this->default_group->SetObject($group);
+        $group->PostDefaultCreateInitialize(); // init AFTER set default
         return $this;
     }
 

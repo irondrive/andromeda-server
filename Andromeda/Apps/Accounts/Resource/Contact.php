@@ -140,7 +140,6 @@ abstract class Contact extends BaseObject
      * @param string $address contact address to match (wildcard)
      * @param positive-int $limit return up to this many
      * @return array<string, Account>
-     * @see Account::GetClientObject()
      */
     public static function LoadAccountsMatchingValue(ObjectDatabase $database, string $address, int $limit) : array
     {

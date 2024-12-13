@@ -42,8 +42,8 @@ class AccountsApp extends BaseApp
     { 
         return array(
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey randstr] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
-            '- STANDARD API: ',
             'getconfig',
+            'setconfig '.Config::GetSetConfigUsage(),
             'getaccount [--account id] [--full bool]',
             'setfullname --fullname name',
             'enablecrypto --auth_password raw [--auth_twofactor int]',
@@ -68,10 +68,6 @@ class AccountsApp extends BaseApp
             'editcontact --contact id [--usefrom bool] [--public bool]',
             'searchaccounts --name alphanum|email',
             'searchgroups --name name',
-            'getauthsources',
-            
-            '- ADMIN-ONLY API: ',
-            'setconfig '.Config::GetSetConfigUsage(),
             'getaccounts [--limit ?uint] [--offset ?uint]',
             'getgroups [--limit ?uint] [--offset ?uint]',
             'creategroup --name name [--priority ?int8]',
@@ -80,14 +76,15 @@ class AccountsApp extends BaseApp
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
             'getmembership --account id --group id',
+            'editaccount --account id [--expirepw bool] '.PolicyBase::GetPropUsage(),
+            'editgroup --group id  [--name name] [--priority int8] '.PolicyBase::GetPropUsage(),
+            'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
+            'getauthsources',
             'createauthsource --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
             ...array_map(function($u){ return "(createauthsource) $u"; }, AuthSource\External::GetPropUsages()),
             'testauthsource --authsrc id [--test_username alphanum|email --test_password raw]',
             'editauthsource --authsrc id --auth_password raw '.AuthSource\External::GetPropUsage().' [--test_username text --test_password raw]',
             'deleteauthsource --authsrc id --auth_password raw',
-            'setaccountprops --account id [--expirepw bool] '.PolicyBase::GetPropUsage(),
-            'setgroupprops --group id  [--name name] [--priority int8] '.PolicyBase::GetPropUsage(),
-            'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
             'addregisterallow '.RegisterAllow::GetUsage(),
             'removeregisterallow '.RegisterAllow::GetUsage(),
             'getregisterallow'
@@ -168,8 +165,8 @@ class AccountsApp extends BaseApp
             case 'removegroupmember':   return $this->RemoveGroupMember($params, $authenticator);
             case 'getmembership':       return $this->GetMembership($params, $authenticator);
             
-            case 'setaccountprops':     return $this->SetAccountProps($params, $authenticator);
-            case 'setgroupprops':       return $this->SetGroupProps($params, $authenticator);
+            case 'editaccount':     return $this->EditAccount($params, $authenticator);
+            case 'editgroup':       return $this->EditGroup($params, $authenticator);
             
             case 'sendmessage':         $this->SendMessage($params, $authenticator); return null;
             
@@ -258,10 +255,9 @@ class AccountsApp extends BaseApp
         $admin = $authenticator->isRealAdmin();
         if ($admin) $objtype |= Account::OBJECT_ADMIN;
         
-        $self = ($account === $authenticator->GetAccount());
         if ($params->GetOptParam("full",false)->GetBool())
         {
-            if ($admin || $self)
+            if ($admin || ($account === $authenticator->GetAccount()))
                 $objtype |= Account::OBJECT_FULL;
             else throw new Exceptions\AdminRequiredException();
         }
@@ -622,7 +618,7 @@ class AccountsApp extends BaseApp
         
         /* update object dates */
         $client->SetLoggedonDate();
-        $account->SetLoggedonDate()->SetActiveDate();
+        $account->SetLoggedonDate();
         
         return array('client'=>$client->GetClientObject(true), 
                      'account'=>$account->GetClientObject());
@@ -1041,7 +1037,7 @@ class AccountsApp extends BaseApp
         
         if ($actionlog !== null) $actionlog->LogDetails('group',$group->ID());
         
-        return $group->Initialize()->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
+        return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }    
     
     /**
@@ -1109,8 +1105,10 @@ class AccountsApp extends BaseApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new Exceptions\UnknownGroupException();
 
-        if (!$account->HasGroup($group)) $account->AddGroup($group);
-        else throw new Exceptions\DuplicateGroupMembershipException();
+        if (GroupJoin::TryLoadByMembership($this->database, $account, $group) !== null)
+            throw new Exceptions\DuplicateGroupMembershipException();
+
+        GroupJoin::Create($this->database, $account, $group);
 
         return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
     }
@@ -1120,7 +1118,6 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\AuthenticationFailedException if not admin 
      * @throws Exceptions\UnknownAccountException if the account is not found
      * @throws Exceptions\UnknownGroupException if the group is not found
-     * @throws Exceptions\ImmutableGroupException if the group is a default group
      * @throws Exceptions\UnknownGroupMembershipException if the group membership does not exist
      * @return GroupJ
      */
@@ -1139,10 +1136,8 @@ class AccountsApp extends BaseApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new Exceptions\UnknownGroupException();
         
-        if (array_key_exists($group->ID(), $account->GetDefaultGroups()))
-            throw new Exceptions\ImmutableGroupException();
-        
-        if ($account->HasGroup($group)) $account->RemoveGroup($group);
+        $join = GroupJoin::TryLoadByMembership($this->database, $account, $group);
+        if ($join !== null) $join->Delete();
         else throw new Exceptions\UnknownGroupMembershipException();
         
         return $group->GetClientObject(Group::OBJECT_FULL | Group::OBJECT_ADMIN);
@@ -1171,7 +1166,7 @@ class AccountsApp extends BaseApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new Exceptions\UnknownGroupException();
         
-        $joinobj = $account->GetGroupJoin($group);
+        $joinobj = GroupJoin::TryLoadByMembership($this->database, $account, $group);
         if ($joinobj === null) throw new Exceptions\UnknownGroupMembershipException();
         
         return $joinobj->GetClientObject();
@@ -1283,7 +1278,7 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\UnknownAccountException if the account is not found
      * @return AccountJ
      */
-    protected function SetAccountProps(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function EditAccount(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
@@ -1306,7 +1301,7 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\UnknownGroupException if the group is not found
      * @return GroupJ
      */
-    protected function SetGroupProps(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function EditGroup(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();

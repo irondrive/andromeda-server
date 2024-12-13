@@ -112,9 +112,10 @@ class Config extends BaseConfig
         if ($this->default_group->TryGetObjectID() !== null) return $this;
         
         $group = Group::Create($this->database, "Global Group");
-        $this->default_group->SetObject($group);
         
-        $group->Initialize(); return $this;
+        $this->default_group->SetObject($group);
+        $group->PostDefaultCreateInitialize(); // init AFTER set default
+        return $this;
     }
     
     /** Returns the auth manager that will be used by default */

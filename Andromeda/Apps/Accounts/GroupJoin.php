@@ -1,10 +1,12 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{JoinObject, FieldTypes, ObjectDatabase, TableTypes};
+use Andromeda\Core\Database\FieldTypes\ObjectRefT;
 
 /** 
  * Class representing a group membership, joining an account and a group
  * @phpstan-type GroupJoinJ array{date_created:float}
+ * @extends JoinObject<Account,Group>
  */
 class GroupJoin extends JoinObject
 {
@@ -31,19 +33,37 @@ class GroupJoin extends JoinObject
         parent::CreateFields();
     }
 
+    protected function GetLeftField() : FieldTypes\ObjectRefT { return $this->account; }
+    protected function GetRightField() : FieldTypes\ObjectRefT { return $this->group; }
+
     public function GetAccount() : Account { return $this->account->GetObject(); }
     public function GetGroup() : Group { return $this->group->GetObject(); }
 
-    /** @return array<string, Account> */
-    public static function LoadAccounts(ObjectDatabase $database, Group $group)
+    /** 
+     * Loads all accounts joined to the given group
+     * @return array<string, Account> array indexed by ID
+     */
+    public static function LoadAccounts(ObjectDatabase $database, Group $group) : array
     {
-        return static::LoadFromJoin($database, Account::class, 'account', array('group'=>$group));
+        return static::LoadFromJoin($database, 'account', Account::class, 'group', $group);
     }
 
-    /** @return array<string, Group> */
-    public static function LoadGroups(ObjectDatabase $database, Account $account)
+    /** 
+     * Loads all groups joined to the given account
+     * @return array<string, Group> array indexed by ID
+     */
+    public static function LoadGroups(ObjectDatabase $database, Account $account) : array
     {
-        return static::LoadFromJoin($database, Group::class, 'group', array('account'=>$account));
+        return static::LoadFromJoin($database, 'group', Group::class, 'account', $account);
+    }
+
+    /** 
+     * Loads the join object (group membership) for the given account and group
+     * @return ?static join object or null if not joined
+     */
+    public static function TryLoadByMembership(ObjectDatabase $database, Account $account, Group $group) : ?self
+    {
+        return static::TryLoadJoinObject($database, 'account', $account, 'group', $group);
     }
 
     /** 
@@ -52,8 +72,7 @@ class GroupJoin extends JoinObject
      */
     public static function DeleteByAccount(ObjectDatabase $database, Account $account) : int
     {
-        return 0; // TODO RAY !! implement me
-        //return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+        return static::DeleteJoinsFrom($database, 'account', $account);
     }
     
     /** 
@@ -62,11 +81,44 @@ class GroupJoin extends JoinObject
      */
     public static function DeleteByGroup(ObjectDatabase $database, Group $group) : int
     {
-        return 0; // TODO RAY !! implement me
-        //return $database->DeleteObjectsByKey(static::class, 'account', $account->ID());
+        return static::DeleteJoinsFrom($database, 'group', $group);
     }
     
-    // TODO RAY !! need to set date created in create
+    /** @var array<callable(ObjectDatabase, Account, Group, bool): void> */
+    private static array $change_handlers = array();
+    
+    /** 
+     * Registers a function to be run when the account is added to or removed from a group 
+     * @param callable(ObjectDatabase, Account, Group, bool): void $func
+     */
+    public static function RegisterChangeHandler(callable $func) : void { self::$change_handlers[] = $func; }
+
+    /** Runs all functions registered to handle the account being added to or removed from a group */
+    public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added) : void { 
+        foreach (self::$change_handlers as $func) $func($database, $account, $group, $added); }
+    
+    /**
+     * Creates a new groupjoin object, adding the account to the group
+     * @param Account $account account to add to the group
+     * @param Group $group group to be added to
+     * @return static
+     */
+    public static function Create(ObjectDatabase $database, Account $account, Group $group) : self
+    {
+        // TODO RAY !! make sure the group is not a default
+        
+        $obj = parent::CreateJoin($database, $account, $group, 
+            function(self $obj){ $obj->date_created->SetTimeNow(); });
+
+        self::RunGroupChangeHandlers($database, $account, $group, true);
+
+        return $obj;
+    }
+
+    public function NotifyPreDeleted() : void
+    {
+        self::RunGroupChangeHandlers($this->database, $this->GetAccount(), $this->GetGroup(), false);
+    }
 
     /**
      * Returns a printable client object of this group membership
