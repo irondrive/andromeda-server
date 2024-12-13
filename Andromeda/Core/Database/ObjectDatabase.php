@@ -51,6 +51,20 @@ class ObjectDatabase
     { 
         $this->apipack = $apipack; return $this; 
     }
+
+    /** @var array<string, array<mixed>> */
+    private array $caches = array();
+
+    /**
+     * Registers a custom "static" cache that is tied to this DB's lifetime
+     * @return array<mixed>
+     */
+    public function &GetCustomCache(string $name) : array
+    {
+        if (!array_key_exists($name, $this->caches))
+            $this->caches[$name] = array();
+        return $this->caches[$name];
+    }
     
     private bool $rolledBack = false;
     
@@ -350,7 +364,7 @@ class ObjectDatabase
         $bclass = null; foreach ($classes as $pclass)
         {
             if ($bclass !== null) // join base -> parent (child fields override)
-                $query->Join($this, $pclass,'id', $bclass,'id');
+                $query->Join($this, $pclass,'id', $bclass,'id',false);
             $bclass = $pclass;
         }
         
@@ -575,16 +589,16 @@ class ObjectDatabase
                 
                 if ($val === null)
                 {
-                    $sets[] = "$key=NULL";
+                    $sets[] = "\"$key\"=NULL";
                 }
                 else if ($field instanceof FieldTypes\Counter)
                 {
-                    $sets[] = "$key=$key+:d$i";
+                    $sets[] = "\"$key\"=\"$key\"+:d$i";
                     $data['d'.$i++] = $val;
                 }
                 else
                 {
-                    $sets[] = "$key=:d$i";
+                    $sets[] = "\"$key\"=:d$i";
                     $data['d'.$i++] = $val;
                 }
             }
@@ -632,7 +646,7 @@ class ObjectDatabase
                 $key = $field->GetName();
                 $val = $field->GetDBValue();
                 
-                $columns[] = $key;
+                $columns[] = "\"$key\"";
                 if ($val === null)
                 {
                     $indexes[] = "NULL";
@@ -807,8 +821,8 @@ class ObjectDatabase
 
         if (!array_key_exists($validx, $this->uniqueByKey[$class][$key]))
         {
-            $qkey = $ambiguousKey ? $this->GetClassTableName($class).".$key" : $key;
-            $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value));
+            $qkey = $ambiguousKey ? $this->GetClassTableName($class).".\"$key\"" : "\"$key\"";
+            $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value, false));
             $objs = $this->LoadObjectsByQuery($class, $q);
             
             if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");

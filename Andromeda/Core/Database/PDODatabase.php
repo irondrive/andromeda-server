@@ -349,6 +349,9 @@ class PDODatabase
     /** Whether or not the DB expects using public. as a prefix for table names */
     public function UsePublicSchema() : bool   { return $this->getDriver() === self::DRIVER_POSTGRESQL; }
 
+    /** Returns true if the DB quotes column names with ` instead of " */
+    public function UseBacktickQuotes() : bool { return $this->getDriver() === self::DRIVER_MYSQL; }
+
     /** Returns true if "SELECT COUNT(test) returns a column called COUNT(test) rather than "count" */
     public function FullSelectFields() : bool { return $this->getDriver() !== self::DRIVER_POSTGRESQL; }
     
@@ -455,6 +458,9 @@ class PDODatabase
      */
     protected function query(string $sql, ?array $params = null) : PDOStatement
     {
+        if ($this->UseBacktickQuotes())
+            $sql = str_replace('"','`',$sql);
+        
         if (!$this->connection->inTransaction())
             $this->beginTransaction();
             
@@ -470,7 +476,7 @@ class PDODatabase
                     $value = pg_escape_bytea($value);
             }
         }
-        
+
         try
         {
             if ($doSavepoint)

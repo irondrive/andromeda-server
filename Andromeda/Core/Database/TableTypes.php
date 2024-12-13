@@ -67,7 +67,7 @@ trait TableTypedChildren
             throw new Exceptions\BadPolyClassException($class);
         
         $table = $database->GetClassTableName(self::class);
-        return $q->Equals("$table.type",$map[$class]);
+        return $q->Equals("$table.type",$map[$class],false);
     }
     
     /** @return class-string<self> child class of row */

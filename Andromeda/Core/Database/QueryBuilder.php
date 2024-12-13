@@ -23,11 +23,11 @@ class QueryBuilder
             $query .= " JOIN $joinstr";
         
         if ($this->where !== null) 
-            $query .= " WHERE ".$this->where;
+            $query .= " WHERE $this->where";
 
         if ($this->orderby !== null) 
         {
-            $query .= " ORDER BY ".$this->orderby;
+            $query .= " ORDER BY \"$this->orderby\"";
             if ($this->orderdesc) $query .= " DESC"; // default is ASC
         }
         
@@ -72,8 +72,14 @@ class QueryBuilder
         return Utilities::escape_all($query,['_','%']);
     }
     
-    /** Returns a string asserting the given column is null */
-    public function IsNull(string $key) : string { return "$key IS NULL"; }
+    /**
+     * Returns a string asserting the given column is null
+     * @param bool $quotes if true, surround key with ""
+     */
+    public function IsNull(string $key, bool $quotes = true) : string 
+    { 
+        return ($quotes ? "\"$key\"" : $key)." IS NULL";
+    }
     
     /**
      * Returns a string comparing the given column to a value using LIKE
@@ -85,7 +91,7 @@ class QueryBuilder
     public function Like(string $key, string $val, bool $hasMatch = false) : string 
     {
         if (!$hasMatch) $val = '%'.static::EscapeWildcards($val).'%';
-        return "$key LIKE ".$this->AddParam($val). " ESCAPE '\\'"; 
+        return "\"$key\" LIKE ".$this->AddParam($val). " ESCAPE '\\'"; 
     }
     
     /** 
@@ -94,7 +100,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function LessThan(string $key, $val) : string { 
-        return "$key < ".$this->AddParam($val); }
+        return "\"$key\" < ".$this->AddParam($val); }
     
     /** 
      * Returns a query string asserting the given column is less or equal to the given value 
@@ -102,7 +108,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function LessThanEquals(string $key, $val) : string { 
-        return "$key <= ".$this->AddParam($val); }
+        return "\"$key\" <= ".$this->AddParam($val); }
     
     /**
      * Returns a query string asserting the given column is greater than the given value 
@@ -110,7 +116,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function GreaterThan(string $key, $val) : string { 
-        return "$key > ".$this->AddParam($val); }
+        return "\"$key\" > ".$this->AddParam($val); }
     
     /** 
      * Returns a query string asserting the given column is greater than or equal to the given value 
@@ -118,7 +124,7 @@ class QueryBuilder
      * @param scalar $val the column value to compare
      */
     public function GreaterThanEquals(string $key, $val) : string { 
-        return "$key >= ".$this->AddParam($val); }
+        return "\"$key\" >= ".$this->AddParam($val); }
     
     /** Returns a query string asserting the given column is "true" (greater than zero) */
     public function IsTrue(string $key) : string {
@@ -128,11 +134,12 @@ class QueryBuilder
      * Returns a query string asserting the given column is equal to the given value 
      * @param string $key the name of the column to compare
      * @param ?scalar $val the column value to compare
+     * @param bool $quotes if true, surround key with ""
      */
-    public function Equals(string $key, $val) : string 
+    public function Equals(string $key, $val, bool $quotes = true) : string 
     { 
-        if ($val === null) return $this->IsNull($key);
-        return "$key = ".$this->AddParam($val);
+        if ($val === null) return $this->IsNull($key, $quotes);
+        return ($quotes ? "\"$key\"" : $key)." = ".$this->AddParam($val);
     }
     
     /**
@@ -143,19 +150,20 @@ class QueryBuilder
     public function NotEquals(string $key, $val) : string 
     { 
         if ($val === null) return $this->Not($this->IsNull($key));
-        return "$key <> ".$this->AddParam($val);
+        return "\"$key\" <> ".$this->AddParam($val);
     }
     
     /**
      * Syntactic sugar function to check many OR conditions at once
      * @param string $key the column to compare against
      * @param array<?scalar> $vals array of possible values for the column
+     * @param bool $quotes if true, surround key with ""
      * @return string the built query string
      */
-    public function ManyEqualsOr(string $key, array $vals) : string
+    public function ManyEqualsOr(string $key, array $vals, bool $quotes = true) : string
     {
-        return $this->Or(...array_map(function($val)use($key){
-            return $this->Equals($key,$val); },$vals));
+        return $this->Or(...array_map(function($val)use($key,$quotes){
+            return $this->Equals($key,$val,$quotes); },$vals));
     }
     
     /**
@@ -250,17 +258,21 @@ class QueryBuilder
      * @param string $joinprop the column name of the join table that matches the destprop
      * @param class-string<BaseObject> $destclass the class of the destination object
      * @param string $destprop the column name of the destination object that matches the joinprop
+     * @param bool $quotes if true, surround key with ""
      * @return $this
      */
-    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop) : self
+    public function Join(ObjectDatabase $database, string $joinclass, string $joinprop, string $destclass, string $destprop, bool $quotes = true) : self
     {
         $joinclass = $database->GetClassTableName($joinclass); 
         $destclass = $database->GetClassTableName($destclass);
+
+        if ($quotes)
+        {
+            $joinprop = "\"$joinprop\"";
+            $destprop = "\"$destprop\"";
+        }
         
-        $joinstr = "$joinclass.$joinprop";
-        $deststr = "$destclass.$destprop";
-        
-        $this->joins[] = "$joinclass ON $joinstr = $deststr"; return $this;
+        $this->joins[] = "$joinclass ON $joinclass.$joinprop = $destclass.$destprop"; return $this;
     }
 
     /**
@@ -269,13 +281,20 @@ class QueryBuilder
      * @param class-string<BaseObject> $joinclass the table to join to itself 
      * @param string $prop1 the column to match to prop2
      * @param string $prop2 the column to match to prop1
+     * @param bool $quotes if true, surround key with ""
      * @return $this
      */
-    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2) : self
+    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2, bool $quotes = true) : self
     {
         $jointable = $database->GetClassTableName($joinclass); 
         
         $this->fromalias = ", $jointable _tmptable"; // TODO FUTURE not likely to work correctly now - at least make this (fromalias) more general
+
+        if ($quotes)
+        {
+            $prop1 = "\"$prop1\"";
+            $prop2 = "\"$prop2\"";
+        }
         
         return $this->Where("$jointable.$prop1 = _tmptable.$prop2");
     }

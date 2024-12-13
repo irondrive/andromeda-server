@@ -41,9 +41,9 @@ class ActionLog extends BaseLog
         $table = $database->GetClassTableName(self::class);
         
         if (array_key_exists($class, $classmap))
-            return $q->Equals("$table.app", $classmap[$class]);
+            return $q->Equals("$table.app", $classmap[$class],false);
         else 
-            return $q->Not($q->ManyEqualsOr("$table.app", array_keys($logapps)));
+            return $q->Not($q->ManyEqualsOr("$table.app", array_keys($logapps),false));
     }
     
     /** @return class-string<self> child class of row */
