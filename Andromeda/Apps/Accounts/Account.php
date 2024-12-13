@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
-use Andromeda\Core\DecryptionFailedException;
+use Andromeda\Core\Exceptions\DecryptionFailedException;
 use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabase, TableTypes, QueryBuilder};
 
 use Andromeda\Apps\Accounts\AuthSource\External;
@@ -113,53 +113,9 @@ class Account extends PolicyBase
      */
     public function GetJoinedGroups() : array { return GroupJoin::LoadGroups($this->database, $this); }
     
-    /** Adds the account to the given group */
-    public function AddGroup(Group $group) : self    { /*$this->AddObjectRef('groups', $group);*/ return $this; } // TODO RAY !! group add
-    
-    /** Removes the account from the given group */
-    public function RemoveGroup(Group $group) : self { /*$this->RemoveObjectRef('groups', $group);*/ return $this; } // TODO RAY !! group add
-    
     /** Returns true if the account is a member of the given group */
     public function HasGroup(Group $group) : bool { return array_key_exists($group->ID(), $this->GetGroups()); }
     
-    /** @var array<callable(ObjectDatabase, self, Group, bool): void> */
-    private static array $group_handlers = array();
-    
-    /** 
-     * Registers a function to be run when the account is added to or removed from a group 
-     * @param callable(ObjectDatabase, self, Group, bool): void $func
-     */
-    public static function RegisterGroupChangeHandler(callable $func) : void { self::$group_handlers[] = $func; }
-
-    /** Runs all functions registered to handle the account being added to or removed from a group */
-    public static function RunGroupChangeHandlers(ObjectDatabase $database, Account $account, Group $group, bool $added) : void { 
-        foreach (self::$group_handlers as $func) $func($database, $account, $group, $added); }
-        // TODO RAY !! check that it has the group first? // TODO RAY !! why is this public?
-        
-    /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
-    {
-        $modified = parent::AddObjectRef($field, $object, $notification);
-        
-        if ($field === 'groups' && $modified) static::RunGroupChangeHandlers($this->database, $this, $object, true);
-        
-        return $modified;
-    }
-    
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
-    {
-        $modified = parent::RemoveObjectRef($field, $object, $notification);
-        
-        if ($field === 'groups' && $modified) static::RunGroupChangeHandlers($this->database, $this, $object, false);
-        
-        return $modified;
-    }*/ // TODO RAY !! how was this used? make sure whatever will work
-    
-    /** Returns the object joining this account to the given group */
-    public function GetGroupJoin(Group $group) : ?GroupJoin 
-    {
-        return null; // TODO RAY !! return $this->TryGetJoinObject('groups', $group);
-    }
-
     /**
      * Returns a field from an account or group based on group inheritance
      * @template T of NullBaseField
@@ -327,9 +283,7 @@ class Account extends PolicyBase
     
     /** Sets the last-active timestamp to now (if not global read-only) */
     public function SetActiveDate() : self      
-    { 
-        if (!$this->GetApiPackage()->GetConfig()->isReadOnly())
-            $this->date_active->SetTimeNow(); 
+    {
         return $this;
     }
 
@@ -342,9 +296,6 @@ class Account extends PolicyBase
     /** Returns the timestamp that the account's password was last set */
     private function GetPasswordDate() : ?float { return $this->date_passwordset->TryGetValue(); }
 
-    /** Sets the account's password timestamp to now */
-    private function SetPasswordDate() : self { $this->date_passwordset->SetTimeNow(); return $this; } // TODO RAY !! seems like this should be internal to ChangePassword?
-    
     /** Sets the account's last password change date to 0, potentially forcing a password reset */
     public function ResetPasswordDate() : self { $this->date_passwordset->SetValue(0); return $this; }
     
@@ -389,7 +340,6 @@ class Account extends PolicyBase
      * @param string $info username/other info to match by (wildcard)
      * @param positive-int $limit max # to load - returns nothing if exceeded
      * @return array<string, self>
-     * @see Account::GetClientObject()
      */
     public static function LoadAllMatchingInfo(ObjectDatabase $database, string $info, int $limit) : array
     {
@@ -474,7 +424,7 @@ class Account extends PolicyBase
     /** Sets this account to enabled if it was disabled pending a valid contact */
     public function NotifyValidContact() : self
     {
-        if ($this->disabled->TryGetValue() === self::DISABLE_PENDING_CONTACT) // TODO RAY !! is this inherited?
+        if ($this->disabled->TryGetValue() === self::DISABLE_PENDING_CONTACT)
             $this->SetDisabled(null);
         
         return $this;
@@ -521,7 +471,7 @@ class Account extends PolicyBase
         $account->username->SetValue($username);
 
         foreach ($account->GetDefaultGroups() as $group)
-            static::RunGroupChangeHandlers($database, $account, $group, true);
+            GroupJoin::RunGroupChangeHandlers($database, $account, $group, true);
 
         return $account;
     }
@@ -543,9 +493,8 @@ class Account extends PolicyBase
         RecoveryKey::DeleteByAccount($this->database, $this);
         GroupJoin::DeleteByAccount($this->database, $this);
         
-        // non-default groups will be handled in ref setting
-        foreach ($this->GetDefaultGroups() as $group) // TODO RAY !! move to GroupJoin?
-            static::RunGroupChangeHandlers($this->database, $this, $group, false);
+        foreach ($this->GetDefaultGroups() as $group)
+            GroupJoin::RunGroupChangeHandlers($this->database, $this, $group, false);
         
         foreach (self::$delete_handlers as $func) 
             $func($this->database, $this);
@@ -565,13 +514,10 @@ class Account extends PolicyBase
         if OBJECT_FULL, add: {contacts:[id:Contact], clients:[id:Client], twofactors:[id:TwoFactor]} \
         if OBJECT_ADMIN, add: {twofactor:bool, comment:?string, groups:[id], limits_from:[string:"id:class"], dates:{modified:?float},
             config_from:[string:"id:class"], session_timeout_from:"id:class", client_timeout_from:"id:class", max_password_age_from:"id:class"}
-     * @see Contact::GetClientObject()
-     * @see TwoFactor::GetClientObject()
-     * @see Client::GetClientObject()
      */
     public function GetClientObject(int $level = 0) : array
     {
-        //$mapobj = function($e) { return $e->GetClientObject(); }; // @phpstan-ignore-line // TODO RAY !! fixme
+        //$mapobj = function($e) { return $e->GetClientObject(); }; // @phpstan-ignore-line
         
         $data = array(
             'id' => $this->ID(),
@@ -604,7 +550,7 @@ class Account extends PolicyBase
                 'limits' => Utilities::array_map_keys(function($p){ return $this->TryGetCounterLimit($p); },
                     array('sessions','contacts','recoverykeys')
                 )
-            ); // TODO RAY !! fix me
+            );
         }
         
         if (($level & self::OBJECT_FULL) !== 0)
@@ -639,7 +585,7 @@ class Account extends PolicyBase
             );
             
             $data['dates']['modified'] = $this->TryGetDate('modified');
-            $data['counters']['groups'] = $this->CountObjectRefs('groups'); // TODO RAY !! fix me
+            $data['counters']['groups'] = $this->CountObjectRefs('groups');
         }*/
 
         return $data;
@@ -671,13 +617,10 @@ class Account extends PolicyBase
     /** Returns true if the given recovery key matches one (and they exist) */
     public function CheckRecoveryKey(string $key) : bool
     {
-        //if (!$this->HasRecoveryKeys()) return false; 
-        
-        $obj = null;//RecoveryKey::TryLoadByFullKey($this->database, $key, $this); // TODO RAY !! missing?
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
 
-        return false;
-        //if ($obj === null) return false;
-        //else return $obj->CheckFullKey($key);
+        if ($obj === null) return false;
+        else return $obj->CheckFullKey($key);
     }
     
     /** Returns true if the given password is correct for this account */
@@ -719,9 +662,9 @@ class Account extends PolicyBase
         
         if ($this->GetAuthSource() instanceof AuthSource\Local)
             AuthSource\Local::SetPassword($this, $new_password);
-        // TODO RAY !! move check for external auth here ???
 
-        return $this->SetPasswordDate();
+        $this->date_passwordset->SetTimeNow(); 
+        return $this;
     }
     
     /** Gets the account's password hash (null if external auth) */
@@ -778,14 +721,13 @@ class Account extends PolicyBase
     
     /**
      * Attempts to unlock crypto using the given password
+     * @throws CryptoNotInitializedException if crypto does not exist
+     * @throws DecryptionFailedException if decryption fails
      */
     public function UnlockCryptoFromPassword(string $password) : self
     {
         if ($this->cryptoAvailable) return $this;
         
-    // * @throws CryptoNotInitializedException if crypto does not exist // TODO RAY !!
-    // * @throws DecryptionFailedException if decryption fails
-
         $master = $this->GetUnlockedKey($password);
         
         $this->master_key->SetValue($master, true);
@@ -794,14 +736,15 @@ class Account extends PolicyBase
     
     /**
      * Attempts to unlock crypto using the given unlocked key source
+     * @throws CryptoNotInitializedException if crypto does not exist
+     * @throws DecryptionFailedException if decryption fails
      * @return $this
      */
     public function UnlockCryptoFromKeySource(/*KeySource $source*/) : self // TODO RAY !! this is a trait not an object...
     {
         if ($this->cryptoAvailable) return $this;
         
-    // * @throws CryptoNotInitializedException if crypto does not exist // TODO RAY !!
-    // * @throws DecryptionFailedException if decryption fails
+    
     
         $master = null;//$source->GetUnlockedKey(); // TODO RAY !! ??? need caching IN keysource
         // rather than having account have its master key directly... have a link to a key source that we can pass the encrypt/decrypt to
@@ -812,6 +755,9 @@ class Account extends PolicyBase
     
     /**
      * Attempts to unlock crypto using a full recovery key
+     * @throws CryptoNotInitializedException if crypto does not exist
+     * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
+     * @throws DecryptionFailedException if decryption fails
      * @return $this
      */
     public function UnlockCryptoFromRecoveryKey(string $key) : self
@@ -819,11 +765,6 @@ class Account extends PolicyBase
         if ($this->cryptoAvailable) return $this;
         else if (!$this->hasCrypto())
             throw new CryptoNotInitializedException();
-        
-            // TODO RAY !!
-        //    * @throws CryptoNotInitializedException if crypto does not exist
-        //    * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
-        //    * @throws DecryptionFailedException if decryption fails
         
         $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
         if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();

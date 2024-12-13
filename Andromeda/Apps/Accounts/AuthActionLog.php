@@ -91,8 +91,6 @@ abstract class AuthActionLog extends BaseActionLog
      * @return ActionLogJ
      * // array<mixed> `{admin:?bool, ?account:id, ?client:id, ?sudouser:id}`
         if $expand, `{?account:Account, ?client:Client, ?sudouser:Account}`
-       @see Account::GetClientObject()
-       @see Client::GetClientObject()
      */
     public function GetClientObject(bool $expand = false) : array
     {        

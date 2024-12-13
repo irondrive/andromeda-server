@@ -290,7 +290,6 @@ class CoreApp extends BaseApp
     /**
      * Loads server config
      * @return ConfigJ
-     * @see Config::GetClientObject() 
      */
     protected function GetConfig(bool $isAdmin) : array
     {
@@ -300,7 +299,6 @@ class CoreApp extends BaseApp
     /**
      * Loads server DB config
      * @return PDODatabaseConfigJ
-     * @see PDODatabase::GetConfig()
      */
     protected function GetDBConfig(bool $isAdmin) : array
     {
@@ -313,7 +311,6 @@ class CoreApp extends BaseApp
      * Sets server config
      * @throws Exceptions\AdminRequiredException if not an admin
      * @return ConfigJ
-     * @see Config::GetClientObject()
      */
     protected function SetConfig(SafeParams $params, bool $isAdmin) : array
     {
@@ -326,7 +323,6 @@ class CoreApp extends BaseApp
      * Returns a list of the configured mailers
      * @throws Exceptions\AdminRequiredException if not an admin
      * @return array<string, EmailerJ> indexed by ID
-     * @see Emailer::GetClientObject()
      */
     protected function GetMailers(bool $isAdmin) : array
     {
@@ -340,7 +336,6 @@ class CoreApp extends BaseApp
      * Creates a new emailer config
      * @throws Exceptions\AdminRequiredException if not an admin
      * @return EmailerJ
-     * @see Emailer::GetClientObject()
      */
     protected function CreateMailer(SafeParams $params, bool $isAdmin, ?Authenticator $authenticator, ?BaseActionLog $actionlog) : array
     {
@@ -386,7 +381,6 @@ class CoreApp extends BaseApp
      * Returns all error logs matching the given input, default 100 max and sort by time DESC
      * @throws Exceptions\AdminRequiredException if not an admin 
      * @return array<string, ErrorLogJ> indexed by ID
-     * @see ErrorLog::GetClientObject()
      */
     protected function GetErrors(SafeParams $params, bool $isAdmin) : array
     {
@@ -412,7 +406,6 @@ class CoreApp extends BaseApp
      * Returns all action logs matching the given input, default 100 max and sort by time DESC
      * @throws Exceptions\AdminRequiredException if not admin
      * @return array<string, ActionLogJ> indexed by ID
-     * @see BaseActionLog::GetClientObject()
      */
     protected function GetActions(SafeParams $params, bool $isAdmin) : array
     {

@@ -87,20 +87,6 @@ class Group extends PolicyBase
      */
     public function GetJoinedAccounts() : array { return GroupJoin::LoadAccounts($this->database, $this); }
     
-    /** Adds a new account to this group */
-    public function AddAccount(Account $account) : self { return $this; } // TODO RAY !! $this->AddObjectRef('accounts', $account); return $this; }
-    
-    /** Removes an account from this group */
-    public function RemoveAccount(Account $account) : self { return $this; } // TODO RAY !! $this->RemoveObjectRef('accounts', $account); return $this; }
-    
-    /** Returns the object joining this group to the given account */
-    public function GetAccountJoin(Account $account) : ?GroupJoin
-    {
-        return null;
-        //return $this->TryGetJoinObject('accounts', $account);
-        // TODO RAY !! not sure what to do here. load all accounts and pull out of array? or load groupjoin separately? what is usage?
-    }
-    
     /** Tries to load a group by name, returning null if not found */
     public static function TryLoadByName(ObjectDatabase $database, string $name) : ?self
     {
@@ -113,7 +99,6 @@ class Group extends PolicyBase
      * @param string $name name to match (wildcard)
      * @param positive-int $limit max number to load - returns nothing if exceeded
      * @return array<string, static>
-     * @see Group::GetClientObject()
      */
     public static function LoadAllMatchingName(ObjectDatabase $database, string $name, int $limit) : array
     {
@@ -136,11 +121,7 @@ class Group extends PolicyBase
         $output = array();
         
         foreach ($this->GetAccounts() as $account)
-        {
-            // TODO RAY !! foreach is inefficient here, use += or array_merge?
-            foreach ($account->GetContacts() as $contact)
-                $output[$contact->ID()] = $contact;
-        }
+            $output += $account->GetContacts();
         
         return $output;
     }
@@ -158,7 +139,7 @@ class Group extends PolicyBase
     public static function Create(ObjectDatabase $database, string $name, ?int $priority = null) : self
     {
         $group = $database->CreateObject(static::class);
-        // TODO RAY !! PolicyBase needs a base create that sets date created
+        $group->date_created->SetTimeNow();
         
         $group->name->SetValue($name);
         $group->priority->SetValue($priority ?? 0);
@@ -167,13 +148,10 @@ class Group extends PolicyBase
     }
     
     /** Initializes a newly created group by running group change handlers on its implicit accounts */
-    public function Initialize() : self
+    public function PostDefaultCreateInitialize() : self
     {
-        //if (!$this->isCreated()) return $this;  // TODO RAY !! don't have isCreated anymore, only PostConstruct bool $created...
-        // why does Initialize need to exist? something about do this after setting the default... seems like a good reason 
-        
-        foreach (($this->GetDefaultAccounts() ?? array()) as $account)
-            Account::RunGroupChangeHandlers($this->database, $account, $this, true);
+        foreach (($this->GetDefaultAccounts() ?? []) as $account)
+            GroupJoin::RunGroupChangeHandlers($this->database, $account, $this, true);
         
         return $this;
     }
@@ -192,8 +170,8 @@ class Group extends PolicyBase
     {
         GroupJoin::DeleteByGroup($this->database, $this);
 
-        foreach (($this->GetDefaultAccounts() ?? array()) as $account) // TODO RAY !! move to GroupJoin?
-            Account::RunGroupChangeHandlers($this->database, $account, $this, false);
+        foreach (($this->GetDefaultAccounts() ?? []) as $account)
+            GroupJoin::RunGroupChangeHandlers($this->database, $account, $this, false);
             
         foreach (self::$delete_handlers as $func) 
             $func($this->database, $this);
@@ -211,7 +189,6 @@ class Group extends PolicyBase
         if ADMIN, add `{priority:int,comment:?string,dates:{created:float,modified:?float}, session_timeout:?int, client_timeout:?int, max_password_age:?int, \
             config:{admin:?bool,disabled:?int,forcetf:?bool,allowcrypto:?bool,accountsearch:?int,groupsearch:?int,userdelete:bool}, \
             counters:{accounts:int}, limits:{sessions:?int,contacts:?int,recoverykeys:?int}}`
-     * @see Account::GetClientObject()
      */
     public function GetClientObject(int $level = 0) : array
     {
@@ -223,11 +200,11 @@ class Group extends PolicyBase
         /*if (($level & self::OBJECT_ADMIN) !== 0)
         {
             $retval += array(
-                'dates' => array( // TODO RAY !! remove subarrays here
+                'dates' => array(
                     'created' => $this->date_created->GetValue(),
                     'modified' => $this->date_modified->TryGetValue()
                 ),
-                'config' => array_merge( // TODO RAY !! implement/fix me
+                'config' => array_merge(
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureBool($p); },
                         array('admin','forcetf','allowcrypto','userdelete')),
                     Utilities::array_map_keys(function($p){ return $this->GetFeatureInt($p); },

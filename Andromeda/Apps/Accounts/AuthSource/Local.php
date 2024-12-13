@@ -32,8 +32,10 @@ class Local implements IAuthSource
     public static function SetPassword(Account $account, string $password) : void
     {    
         $hash = password_hash($password, PASSWORD_ARGON2ID);
+
         if (!is_string($hash)) // @phpstan-ignore-line PHP7.4 only can return false
             throw new Exceptions\PasswordHashFailedException();
+        
         $account->SetPasswordHash($hash);
     }
 }

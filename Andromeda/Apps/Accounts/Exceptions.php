@@ -26,14 +26,6 @@ class ContactExistsException extends BaseExceptions\ClientErrorException
     }
 }
 
-/** Exception indicating that this group membership is for a default group and cannot be changed */
-class ImmutableGroupException extends BaseExceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("GROUP_MEMBERSHIP_REQUIRED", $details);
-    }
-}
-
 /** Exception indicating that creating accounts is not allowed */
 class AccountCreateDeniedException extends BaseExceptions\ClientDeniedException
 {
