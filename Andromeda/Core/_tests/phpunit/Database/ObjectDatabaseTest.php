@@ -47,21 +47,21 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
         'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id '.
-        'WHERE testprop1 > :d0', array('d0'=>3));
+        'WHERE "testprop1" > :d0', array('d0'=>3));
         
     private const select2 = array(
         'SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.* '.
         'FROM a2obj_core_database_polyobject1 '.
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-        'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>18));
+        'WHERE ("testprop1" > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>18));
     
     private const select3 = array(
         'SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.* '.
         'FROM a2obj_core_database_polyobject1 '.
         'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
         'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-        'WHERE (testprop1 > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>5));
+        'WHERE ("testprop1" > :d0 AND a2obj_core_database_polyobject4.type = :d1)', array('d0'=>3, 'd1'=>5));
     
     private const id1 = 'testid1234';
     private const id2 = 'testid4567';
@@ -189,24 +189,24 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $q = new QueryBuilder(); $q->Where($q->Equals('mytest',5));
         
-        $qstr1 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 WHERE mytest = :d0';
+        $qstr1 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 WHERE "mytest" = :d0';
         
         $qstr2 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
-            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE mytest = :d0';
+            'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE "mytest" = :d0';
         
         $qstr4 = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
             'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
-            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE mytest = :d0';
+            'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE "mytest" = :d0';
         
         $qstr5a = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
             'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
             'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id WHERE mytest = :d0';
+            'JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id WHERE "mytest" = :d0';
         
         $qstr5b = 'SELECT COUNT(a2obj_core_database_polyobject1.id) FROM a2obj_core_database_polyobject1 '.
             'JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id '.
             'JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id '.
-            'WHERE (mytest = :d0 AND a2obj_core_database_polyobject4.type = :d1)';
+            'WHERE ("mytest" = :d0 AND a2obj_core_database_polyobject4.type = :d1)';
         
         $database->expects($this->exactly(7))->method('read')
             ->withConsecutive(
@@ -245,10 +245,10 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
         $database->expects($this->exactly(4))->method('write')
             ->withConsecutive(
-                [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject2 (testprop15,id) VALUES (:d0,:d1)', array('d0'=>15,'d1'=>$id) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,testprop4c,id) VALUES (:d0,:d1,:d2,:d3)', array('d0'=>13,'d1'=>100,'d2'=>5,'d3'=>$id) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id) ]
+                [ 'INSERT INTO a2obj_core_database_polyobject1 ("id") VALUES (:d0)', array('d0'=>$id) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject2 ("testprop15","id") VALUES (:d0,:d1)', array('d0'=>15,'d1'=>$id) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 ("type","testprop4","testprop4c","id") VALUES (:d0,:d1,:d2,:d3)', array('d0'=>13,'d1'=>100,'d2'=>5,'d3'=>$id) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject5a ("type","id") VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id) ]
             )->willReturn(1);
         
         $obj->Save();
@@ -263,9 +263,9 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(3))->method('write')
             ->withConsecutive(
-                [ 'UPDATE a2obj_core_database_polyobject5a SET testprop5=:d0 WHERE id=:id', array('d0'=>11,'id'=>$id) ],
-                [ 'UPDATE a2obj_core_database_polyobject4 SET testprop4=:d0, testprop4n=NULL, testprop4c=testprop4c+:d1 WHERE id=:id', array('d0'=>10,'d1'=>23,'id'=>$id) ],
-                [ 'UPDATE a2obj_core_database_polyobject2 SET testprop15=:d0 WHERE id=:id', array('d0'=>15,'id'=>$id) ],
+                [ 'UPDATE a2obj_core_database_polyobject5a SET "testprop5"=:d0 WHERE id=:id', array('d0'=>11,'id'=>$id) ],
+                [ 'UPDATE a2obj_core_database_polyobject4 SET "testprop4"=:d0, "testprop4n"=NULL, "testprop4c"="testprop4c"+:d1 WHERE id=:id', array('d0'=>10,'d1'=>23,'id'=>$id) ],
+                [ 'UPDATE a2obj_core_database_polyobject2 SET "testprop15"=:d0 WHERE id=:id', array('d0'=>15,'id'=>$id) ],
             )->willReturn(1);
             
         $obj->Save(); // nothing
@@ -285,9 +285,9 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = EasyObject::Create($objdb); $id = $obj->ID();
         
         $database->expects($this->exactly(3))->method('write')->withConsecutive(
-            [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
-            [ 'UPDATE a2obj_core_database_easyobject SET generalKey=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id) ],
-            [ 'DELETE FROM a2obj_core_database_easyobject WHERE id = :d0', array('d0'=>$id) ]
+            [ 'INSERT INTO a2obj_core_database_easyobject ("id") VALUES (:d0)', array('d0'=>$id) ],
+            [ 'UPDATE a2obj_core_database_easyobject SET "generalKey"=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id) ],
+            [ 'DELETE FROM a2obj_core_database_easyobject WHERE "id" = :d0', array('d0'=>$id) ]
         )->willReturn(1);
         
         $obj->Save(true); // nothing
@@ -317,17 +317,17 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(11))->method('write')
             ->withConsecutive( // insert first, in order, then updates
-                [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id1) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject2 (id) VALUES (:d0)', array('d0'=>$id1) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,id) VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>100,'d2'=>$id1) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id1) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject1 (id) VALUES (:d0)', array('d0'=>$id4) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject2 (id) VALUES (:d0)', array('d0'=>$id4) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject4 (type,testprop4,id) VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>103,'d2'=>$id4) ],
-                [ 'INSERT INTO a2obj_core_database_polyobject5a (type,id) VALUES (:d0,:d1)', array('d0'=>102,'d1'=>$id4) ],
-                [ 'UPDATE a2obj_core_database_polyobject1 SET testprop1=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id2) ],
-                [ 'UPDATE a2obj_core_database_polyobject1 SET testprop1=:d0 WHERE id=:id', array('d0'=>65,'id'=>$id3) ],
-                [ 'UPDATE a2obj_core_database_polyobject4 SET testprop4c=testprop4c+:d0 WHERE id=:id', array('d0'=>10,'id'=>$id5) ]
+                [ 'INSERT INTO a2obj_core_database_polyobject1 ("id") VALUES (:d0)', array('d0'=>$id1) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject2 ("id") VALUES (:d0)', array('d0'=>$id1) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 ("type","testprop4","id") VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>100,'d2'=>$id1) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject5a ("type","id") VALUES (:d0,:d1)', array('d0'=>100,'d1'=>$id1) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject1 ("id") VALUES (:d0)', array('d0'=>$id4) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject2 ("id") VALUES (:d0)', array('d0'=>$id4) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject4 ("type","testprop4","id") VALUES (:d0,:d1,:d2)', array('d0'=>13,'d1'=>103,'d2'=>$id4) ],
+                [ 'INSERT INTO a2obj_core_database_polyobject5a ("type","id") VALUES (:d0,:d1)', array('d0'=>102,'d1'=>$id4) ],
+                [ 'UPDATE a2obj_core_database_polyobject1 SET "testprop1"=:d0 WHERE id=:id', array('d0'=>55,'id'=>$id2) ],
+                [ 'UPDATE a2obj_core_database_polyobject1 SET "testprop1"=:d0 WHERE id=:id', array('d0'=>65,'id'=>$id3) ],
+                [ 'UPDATE a2obj_core_database_polyobject4 SET "testprop4c"="testprop4c"+:d0 WHERE id=:id', array('d0'=>10,'id'=>$id5) ]
             )->willReturn(1);
         
         $objdb->SaveObjects(); // insert/update
@@ -342,7 +342,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = new PolyObject5a($objdb, array('id'=>($id='testid1234')));
         
         $database->expects($this->once())->method('write')
-            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE id = :d0", array('d0'=>$id))->willReturn(1);
+            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE \"id\" = :d0", array('d0'=>$id))->willReturn(1);
         
         $obj->Delete();
         $this->assertTrue($obj->isDeleted());
@@ -368,8 +368,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj = EasyObject::Create($objdb); $id = $obj->ID();
 
         $database->expects($this->exactly(2))->method('write')->withConsecutive(
-            [ 'INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)', array('d0'=>$id) ],
-            [ 'DELETE FROM a2obj_core_database_easyobject WHERE id = :d0', array('d0'=>$id) ]
+            [ 'INSERT INTO a2obj_core_database_easyobject ("id") VALUES (:d0)', array('d0'=>$id) ],
+            [ 'DELETE FROM a2obj_core_database_easyobject WHERE "id" = :d0', array('d0'=>$id) ]
         )->willReturn(1);
         
         $obj->Save(); // is now "loaded"
@@ -383,20 +383,20 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
     {
         $delqueries = array(
             PolyObject0::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
-                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE testprop1 > :d0) AS t)",
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE \"testprop1\" > :d0) AS t)",
             PolyObject1::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
-                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE testprop1 > :d0) AS t)",
+                "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 WHERE \"testprop1\" > :d0) AS t)",
             PolyObject2::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
                 "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
-                "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE testprop1 > :d0) AS t)",
+                "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id WHERE \"testprop1\" > :d0) AS t)",
             PolyObject3::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
                 "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
                 "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
-                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE testprop1 > :d0) AS t)",
+                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE \"testprop1\" > :d0) AS t)",
             PolyObject4::class => "DELETE FROM a2obj_core_database_polyobject1 WHERE id IN (SELECT id FROM ".
                 "(SELECT a2obj_core_database_polyobject1.id FROM a2obj_core_database_polyobject1 ".
                 "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
-                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE testprop1 > :d0) AS t)",
+                "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id WHERE \"testprop1\" > :d0) AS t)",
         );
 
         foreach ($delqueries as $class=>$delquery)
@@ -472,8 +472,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)],
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)])
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5)])
             ->willReturnOnConsecutiveCalls([], []);
         
         $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5));
@@ -489,7 +489,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(3))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5))
             ->willReturnOnConsecutiveCalls([], [array('id'=>'test')], [array('id'=>'test1'),array('id'=>'test2')]);
         
         $q = new QueryBuilder(); $q->Where($q->Equals('uniqueKey',5));
@@ -509,12 +509,12 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
 
         $database->expects($this->exactly(3))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5))
             ->willReturnOnConsecutiveCalls([], [array('id'=>'test')], [array('id'=>'test1'),array('id'=>'test2')]);
         
         $database->expects($this->exactly(3))->method('write')
             ->with("DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
-                "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0) AS t)", array('d0'=>5))
+                "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0) AS t)", array('d0'=>5))
             ->willReturnOnConsecutiveCalls(0, 1, 2);
             
         $q = new QueryBuilder(); $q->Where($q->Equals('uniqueKey',5));
@@ -531,7 +531,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)], [$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)], []);
@@ -564,8 +564,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
 
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)],
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>6)]
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>6)]
             )->willReturnOnConsecutiveCalls(
                 [array('id'=>$id='test123','generalKey'=>5)],
                 [array('id'=>$id='test124','generalKey'=>6)]
@@ -573,9 +573,9 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive(
                 ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
-                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE generalKey = :d0) AS t)", array('d0'=>5)],
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0) AS t)", array('d0'=>5)],
                 ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
-                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE generalKey = :d0) AS t)", array('d0'=>6)],
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0) AS t)", array('d0'=>6)],
             )->willReturn(1);
         
         // not cached, delete will be by query
@@ -597,8 +597,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT COUNT(a2obj_core_database_easyobject.id) FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)], 
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5)])
+                ["SELECT COUNT(a2obj_core_database_easyobject.id) FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>5)], 
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>5)])
             ->willReturnOnConsecutiveCalls(
                 [array('count'=>1)], // postgres style
                 [array('id'=>'test123','generalKey'=>5)]);
@@ -613,7 +613,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id='test123','uniqueKey'=>5)], []);
@@ -641,8 +641,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>6)]
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>6)]
             )->willReturnOnConsecutiveCalls(
                 [array('id'=>$id='test123','uniqueKey'=>5)],
                 [array('id'=>$id='test124','uniqueKey'=>6)]
@@ -650,8 +650,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive(
                 ["DELETE FROM a2obj_core_database_easyobject WHERE id IN (SELECT id FROM ".
-                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0) AS t)", array('d0'=>5)],
-                ["DELETE FROM a2obj_core_database_easyobject WHERE id = :d0", array('d0'=>'test124')]
+                    "(SELECT a2obj_core_database_easyobject.id FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0) AS t)", array('d0'=>5)],
+                ["DELETE FROM a2obj_core_database_easyobject WHERE \"id\" = :d0", array('d0'=>'test124')]
             )->willReturn(1);
         
         // not cached, delete will be by query
@@ -705,7 +705,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $selstr1 = "SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
-            "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id WHERE mykey = :d0";
+            "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id WHERE \"mykey\" = :d0";
         
         $selstr2 = "SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase ".
             "JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id";
@@ -729,7 +729,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
         "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-        "WHERE testprop5 = :d0", array('d0'=>55));
+        "WHERE \"testprop5\" = :d0", array('d0'=>55));
     
     private const polySelect2 = array(
         "SELECT a2obj_core_database_polyobject1.*, a2obj_core_database_polyobject2.*, a2obj_core_database_polyobject4.*, a2obj_core_database_polyobject5a.* ".
@@ -737,7 +737,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
         "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)", array('d0'=>75,'d1'=>101));
+        "WHERE (\"testprop5\" = :d0 AND a2obj_core_database_polyobject5a.type = :d1)", array('d0'=>75,'d1'=>101));
     
     public function testNonUniqueKeyPolyLoad() : void
     {
@@ -773,7 +773,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
                         "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
                         "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
                         "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-                        "WHERE (testprop5 = :d0 AND a2obj_core_database_polyobject5a.type = :d1)) AS t)", 
+                        "WHERE (\"testprop5\" = :d0 AND a2obj_core_database_polyobject5a.type = :d1)) AS t)", 
                     array('d0'=>55,'d1'=>101))
             ->willReturn(1);
 
@@ -816,7 +816,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(1))->method('read')->with(...self::polySelect1)
             ->willReturn([array('id'=>$id1='test123','type'=>101,'testprop5'=>55)]);
         $database->expects($this->exactly(1))->method('write')
-            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE id = :d0", array('d0'=>$id1))
+            ->with("DELETE FROM a2obj_core_database_polyobject1 WHERE \"id\" = :d0", array('d0'=>$id1))
             ->willReturn(1);
 
         $obj = $objdb->TryLoadUniqueByKey(PolyObject5a::class, 'testprop5', 55);
@@ -836,7 +836,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0", array('d0'=>5))
             ->willReturn([array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)]);
         
         $objs = $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 5);
@@ -845,7 +845,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(EasyObject::class, $obj1);
         $this->assertInstanceOf(EasyObject::class, $obj2);
         
-        $delstr = "DELETE FROM a2obj_core_database_easyobject WHERE id = :d0";
+        $delstr = "DELETE FROM a2obj_core_database_easyobject WHERE \"id\" = :d0";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$delstr, array('d0'=>$id1)], [$delstr, array('d0'=>$id2)])
             ->willReturn(1);
@@ -867,7 +867,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $objdb = new ObjectDatabase($database);
         
         $database->expects($this->exactly(1))->method('read')
-            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5))
+            ->with("SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5))
             ->willReturn([array('id'=>$id='test123','uniqueKey'=>5)]);
             
         $obj = $objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 5);
@@ -875,7 +875,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNotNull($obj);// @phpstan-ignore-line test anyway
 
         $database->expects($this->once())->method('write')
-            ->with("DELETE FROM a2obj_core_database_easyobject WHERE id = :d0", array('d0'=>$id))
+            ->with("DELETE FROM a2obj_core_database_easyobject WHERE \"id\" = :d0", array('d0'=>$id))
             ->willReturn(1);
             
         $obj->Delete();
@@ -934,7 +934,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
 
-        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([$ar1=array('id'=>$id1='test123','generalKey'=>5), array('id'=>$id2='test456','generalKey'=>5)], [$ar1]);
@@ -945,7 +945,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(EasyObject::class, $obj1);
         $this->assertInstanceOf(EasyObject::class, $obj2);
         
-        $updstr = "UPDATE a2obj_core_database_easyobject SET generalKey=:d0 WHERE id=:id";
+        $updstr = "UPDATE a2obj_core_database_easyobject SET \"generalKey\"=:d0 WHERE id=:id";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$updstr, array('id'=>$id1,'d0'=>6)],[$updstr, array('id'=>$id2,'d0'=>6)])
             ->willReturn(1);
@@ -977,7 +977,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database = $this->createMock(PDODatabase::class);
         $objdb = new ObjectDatabase($database);
         
-        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>5)],[$selstr, array('d0'=>6)])
             ->willReturnOnConsecutiveCalls([array('id'=>$id='test123','uniqueKey'=>5)], []);
@@ -989,7 +989,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($objdb->TryLoadUniqueByKey(EasyObject::class, 'uniqueKey', 6));
         
         $database->expects($this->once())->method('write')
-            ->with("UPDATE a2obj_core_database_easyobject SET uniqueKey=:d0 WHERE id=:id", array('id'=>$id,'d0'=>6))
+            ->with("UPDATE a2obj_core_database_easyobject SET \"uniqueKey\"=:d0 WHERE id=:id", array('id'=>$id,'d0'=>6))
             ->willReturn(1);
         
         $obj->SetUniqueKey(6)->Save();
@@ -1053,7 +1053,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = EasyObject::Create($objdb); $id1 = $obj1->ID();
         $obj2 = EasyObject::Create($objdb); $id2 = $obj2->ID();
         
-        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE generalKey = :d0";
+        $selstr = "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"generalKey\" = :d0";
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive([$selstr, array('d0'=>33)], [$selstr, array('d0'=>5)])
             ->willReturnOnConsecutiveCalls([], [array('id'=>$id1,'generalKey'=>5)]);
@@ -1061,7 +1061,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         // unlike unique, querying 33 does not set us up to load 5 w/o a query
         $this->assertCount(0, $objdb->LoadObjectsByKey(EasyObject::class, 'generalKey', 33)); // different value!
 
-        $insstr = "INSERT INTO a2obj_core_database_easyobject (generalKey,id) VALUES (:d0,:d1)";
+        $insstr = "INSERT INTO a2obj_core_database_easyobject (\"generalKey\",\"id\") VALUES (:d0,:d1)";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive([$insstr, array('d0'=>5,'d1'=>$id1)], [$insstr, array('d0'=>5,'d1'=>$id2)])
             ->willReturn(1);
@@ -1089,7 +1089,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(0))->method('read');
 
         $database->expects($this->exactly(1))->method('write')->willReturn(1)
-            ->with("INSERT INTO a2obj_core_database_easyobject (uniqueKey,id) VALUES (:d0,:d1)", array('d0'=>5,'d1'=>$obj->ID()));
+            ->with("INSERT INTO a2obj_core_database_easyobject (\"uniqueKey\",\"id\") VALUES (:d0,:d1)", array('d0'=>5,'d1'=>$obj->ID()));
         
         $obj->SetUniqueKey(5)->Save();
         
@@ -1152,8 +1152,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $obj1 = EasyObject::Create($objdb)->SetGeneralKey(null)->SetGeneralKey2(null); $id1 = $obj1->ID();
         $obj2 = EasyObject::Create($objdb)->SetGeneralKey(0)->SetGeneralKey2(false); $id2 = $obj2->ID();
         
-        $insstr1 = "INSERT INTO a2obj_core_database_easyobject (id) VALUES (:d0)";
-        $insstr2 = "INSERT INTO a2obj_core_database_easyobject (generalKey,generalKey2,id) VALUES (:d0,:d1,:d2)";
+        $insstr1 = "INSERT INTO a2obj_core_database_easyobject (\"id\") VALUES (:d0)";
+        $insstr2 = "INSERT INTO a2obj_core_database_easyobject (\"generalKey\",\"generalKey2\",\"id\") VALUES (:d0,:d1,:d2)";
         $database->expects($this->exactly(2))->method('write')
             ->withConsecutive(
                 [$insstr1, array('d0'=>$id1)], 
@@ -1189,8 +1189,8 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->exactly(2))->method('read')
             ->withConsecutive(
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey = :d0", array('d0'=>5)],
-                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE uniqueKey IS NULL", array()]) // LoadObjectsByKey
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" = :d0", array('d0'=>5)],
+                ["SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE \"uniqueKey\" IS NULL", array()]) // LoadObjectsByKey
             ->willReturnOnConsecutiveCalls(
                 [array('id'=>$id1='test123','uniqueKey'=>5)], 
                 [array('id'=>$id2='test456','uniqueKey'=>null), array('id'=>$id3='test789','uniqueKey'=>null)]);
@@ -1226,12 +1226,12 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         
         $database->expects($this->once())->method('read')
             ->with('SELECT a2obj_core_database_myobjectbase.*, a2obj_core_database_myobjectchild.* FROM a2obj_core_database_myobjectbase '.
-                'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject.prop1 = a2obj_core_database_myobjectbase.prop2 '.
+                'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject."prop1" = a2obj_core_database_myobjectbase."prop2" '.
                 'JOIN a2obj_core_database_myobjectchild ON a2obj_core_database_myobjectchild.id = a2obj_core_database_myobjectbase.id '.
                 'WHERE a2obj_core_database_myobjectbase.id IN '.
                     '(SELECT id FROM (SELECT a2obj_core_database_myobjectbase.id '.
                     'FROM a2obj_core_database_myobjectbase '. // no child class join in subquery
-                    'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject.prop1 = a2obj_core_database_myobjectbase.prop2 '.
+                    'JOIN a2obj_core_database_easyobject ON a2obj_core_database_easyobject."prop1" = a2obj_core_database_myobjectbase."prop2" '.
                     'LIMIT 3 OFFSET 2) AS t)', []);
         
         $objdb->LoadObjectsByQuery(MyObjectBase::class, $q);
@@ -1249,7 +1249,7 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             "JOIN a2obj_core_database_polyobject2 ON a2obj_core_database_polyobject2.id = a2obj_core_database_polyobject1.id ".
             "JOIN a2obj_core_database_polyobject4 ON a2obj_core_database_polyobject4.id = a2obj_core_database_polyobject2.id ".
             "JOIN a2obj_core_database_polyobject5a ON a2obj_core_database_polyobject5a.id = a2obj_core_database_polyobject4.id ".
-            "ORDER BY testprop LIMIT 3 OFFSET 2", []);
+            "ORDER BY \"testprop\" LIMIT 3 OFFSET 2", []);
         
         $objdb->LoadObjectsByQuery(PolyObject5a::class, $q); // loading via cast, no subquery
     }

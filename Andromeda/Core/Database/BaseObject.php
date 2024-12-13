@@ -276,7 +276,7 @@ abstract class BaseObject
     
     /** 
      * Notifies this object that the DB has deleted it - internal call only
-     * Child classes can extend this if they need extra on-delete logic
+     * Child classes can extend this if they need extra on-delete logic - MUST call parent
      */
     public function NotifyPostDeleted() : void
     {

@@ -66,6 +66,8 @@ class MySQL(Database):
             params['password'] = self.config['dbpass']
         if 'unix_socket' in self.config:
             params['unix_socket'] = self.config['unix_socket']
+        if 'ssl_disabled' in self.config:
+            params['ssl_disabled'] = self.config['ssl_disabled']
 
         self.db = mysql.connector.connect(**params)
         self.db.cursor().execute(
