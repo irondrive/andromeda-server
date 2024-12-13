@@ -2,6 +2,8 @@
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\FieldTypes;
+
+use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Accounts\Exceptions\PasswordHashFailedException;
 
 /** 
@@ -9,7 +11,7 @@ use Andromeda\Apps\Accounts\Exceptions\PasswordHashFailedException;
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
  */
-trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
+trait AuthObject
 {
     /** 
      * Return the string length of the auth key
@@ -43,7 +45,7 @@ trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
 
         $this->RegisterChildFields($fields);
     }
-    
+
     /** Returns true if the given key is valid, and stores it in memory for TryGetAuthKey() */
     public function CheckKeyMatch(string $key) : bool
     {
@@ -69,14 +71,22 @@ trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
     }
     
     /**
-     * Returns the auth key if available or null if none
+     * Returns the raw auth key if available or null if none
      * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory
      */
     protected function TryGetAuthKey() : ?string
     {
         if ($this->authkey->TryGetValue() === null)
             return null; // no key/hash
-        
+        return $this->GetAuthKey();
+    }
+
+    /**
+     * Returns the raw auth key
+     * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory or is nullnull
+     */
+    protected function GetAuthKey() : string
+    {
         if (!isset($this->authkey_raw))
             throw new Exceptions\RawKeyNotAvailableException();
         return $this->authkey_raw;
@@ -92,8 +102,6 @@ trait AuthObject // TODO RAY !! why not a baseobject? need an interface at least
         $this->SetAuthKey($key);
         return $key;
     }
-    
-    // TODO RAY !! took away BaseCreate here... was InitAuthkey() if second param true (default)
     
     /**
      * Sets the auth key to the given value and hashes it

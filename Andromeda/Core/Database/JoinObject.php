@@ -12,7 +12,7 @@ abstract class JoinObject extends BaseObject
     /** @return array<class-string<static>, array<class-string<BaseObject>, array<string, BaseObject>>> */
     private static function &GetCache(ObjectDatabase $database) : array
     {
-        return $database->GetCustomCache(self::class); // @phpstan-ignore-line
+        return $database->GetCustomCache(self::class); // @phpstan-ignore-line cast generic to desired
     }
 
     /** @return FieldTypes\ObjectRefT<T> */

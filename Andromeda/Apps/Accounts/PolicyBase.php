@@ -103,7 +103,7 @@ abstract class PolicyBase extends BaseObject
         return $this;
     }
 
-    // TODO RAY !! add GetClientObject? group will use, but account will override
+    // TODO RAY !! GetClientObject? group will use, but account will override
 
     /** Gets the comment for the entity (or null) */
     public function GetComment() : ?string { 

@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{JoinObject, FieldTypes, ObjectDatabase, TableTypes};
-use Andromeda\Core\Database\FieldTypes\ObjectRefT;
 
 /** 
  * Class representing a group membership, joining an account and a group

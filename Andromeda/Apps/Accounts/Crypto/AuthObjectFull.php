@@ -55,16 +55,26 @@ trait AuthObjectFull
     }
     
     /**
-     * Gets the full serialized key value for the user
+     * Gets the full serialized key value for the user or null if not set
      *
      * The serialized string contains both the key ID and key value
      * @return ?string full key or null if the auth key is not in memory
+     * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory
      */
-    protected function TryGetFullKey() : ?string
+    public function TryGetFullKey() : ?string
     {
-        $key = $this->TryGetAuthKey();
-        if ($key === null) return null;
-        
-        return implode(":",array(static::GetFullKeyPrefix(), $this->ID(), $key));
+        return ($this->TryGetAuthKey() === null) ? null : $this->GetFullKey();
+    }
+
+    /**
+     * Gets the full serialized key value for the user
+     *
+     * The serialized string contains both the key ID and key value
+     * @return string full key if the auth key is not in memory
+     * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory or is null
+     */
+    public function GetFullKey() : ?string
+    {
+        return implode(":",array(static::GetFullKeyPrefix(), $this->ID(), $this->GetAuthKey()));
     }
 }

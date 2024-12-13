@@ -3,7 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, TableTypes};
 
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Accounts\Crypto\{AuthObjectFull, AccountKeySource};
+use Andromeda\Apps\Accounts\Crypto\{AuthObjectFull, AccountKeySource, IKeySource};
 
 /**
  * A recovery key allows account recovery by bypassing a password
@@ -14,11 +14,11 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObjectFull, AccountKeySource};
  * @phpstan-type RecoveryKeyJ array{date_created:float}   
  * // TODO RAY !! GetClientObject authkey or secret? make consistent also authkey should not be null
  */
-class RecoveryKey extends BaseObject
+class RecoveryKey extends BaseObject implements IKeySource
 {
     use TableTypes\TableNoChildren;
     
-    use AccountKeySource, AuthObjectFull { CheckFullKey as BaseCheckFullKey; }
+    use AccountKeySource, AuthObjectFull { CheckFullKey as BaseCheckFullKey; CheckKeyMatch as BaseCheckKeyMatch; }
 
     protected static function GetFullKeyPrefix() : string { return "rk"; } 
     
@@ -74,12 +74,22 @@ class RecoveryKey extends BaseObject
     public function CheckFullKey(string $code) : bool
     {
         $retval = $this->BaseCheckFullKey($code);
-        
+
         if ($retval) $this->DeleteLater();
         
         return $retval;
     }
-    
+
+    public function CheckKeyMatch(string $key) : bool
+    {
+        if (!$this->BaseCheckKeyMatch($key)) return false;
+        
+        if ($this->hasCrypto())
+            $this->UnlockCrypto($key); // shouldn't throw if key matches
+        
+        return true;
+    }
+
     /** Count recovery keys for a given account */
     public static function CountByAccount(ObjectDatabase $database, Account $account) : int
     { 
@@ -111,7 +121,7 @@ class RecoveryKey extends BaseObject
             'date_created' => $this->date_created->GetValue()
         );
         
-        if ($secret) $retval['authkey'] = $this->TryGetFullKey();
+        if ($secret) $retval['authkey'] = $this->GetFullKey();
     
         return $retval;
     }

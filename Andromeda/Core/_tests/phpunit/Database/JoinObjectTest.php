@@ -70,7 +70,6 @@ class TestJoinObject extends JoinObject
     {
         return parent::CreateJoin($database, $obj1, $obj2);
     }
-
 }
 
 class JoinObjectTest extends \PHPUnit\Framework\TestCase

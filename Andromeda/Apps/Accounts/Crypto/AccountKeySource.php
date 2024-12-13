@@ -11,14 +11,11 @@ use Andromeda\Apps\Accounts\Account;
  */
 trait AccountKeySource
 {
-    use KeySource { InitializeCrypto as InitializeCryptoFrom; }
+    use KeySource;
     
-    /** 
-     * The account this key source is for 
-     * @var \Andromeda\Core\Database\FieldTypes\ObjectRefT<\Andromeda\Apps\Accounts\Account> // phpstan bug?
-     */
+    /** @var \Andromeda\Core\Database\FieldTypes\ObjectRefT<\Andromeda\Apps\Accounts\Account> */ // phpstan bug? needs full namespace
     private FieldTypes\ObjectRefT $account;
-    
+
     protected function AccountKeySourceCreateFields() : void
     {
         $fields = array();
@@ -52,16 +49,13 @@ trait AccountKeySource
         $this->account->SetObject($account);
         
         if ($wrapkey !== null && $account->hasCrypto())
-            $this->InitializeCrypto($wrapkey);
+            $this->InitializeCryptoFromAccount($wrapkey);
         
         return $this;
     }
     
     /** Returns the account that owns this key source */
-    public function GetAccount() : Account
-    { 
-        return $this->account->GetObject();
-    }
+    public function GetAccount() : Account { return $this->account->GetObject(); }
     
     /**
      * Initializes crypto, storing a copy of the account's master key
@@ -72,7 +66,7 @@ trait AccountKeySource
      * @see Account::GetEncryptedMasterKey()
      * @return $this
      */
-    protected function InitializeCrypto(string $wrapkey) : self
+    protected function InitializeCryptoFromAccount(string $wrapkey) : self
     {
         // Account won't give us the key directly so we can't just call InitializeCryptoFrom
         if ($this->hasCrypto()) throw new Exceptions\CryptoAlreadyInitializedException();

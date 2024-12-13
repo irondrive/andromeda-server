@@ -18,6 +18,14 @@ class CryptoAlreadyInitializedException extends BaseExceptions\ServerException
     }
 }
 
+/** Exception indicating that crypto must be unlocked by the client */
+class CryptoUnlockRequiredException extends BaseExceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("CRYPTO_UNLOCK_REQUIRED", $details);
+    }
+}
+
 /** Exception indicating that the raw (non-hashed) key does not exist in memory */
 class RawKeyNotAvailableException extends BaseExceptions\ServerException
 {

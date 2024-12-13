@@ -3,7 +3,7 @@ includes:
 #    - phar://phpstan.phar/conf/bleedingEdge.neon
 parameters:
     parallel:
-        jobSize: 5
+        jobSize: 10
     strictRules:
         strictCalls: false                             # default is true, calling statics with -> should be okay
     level: 9
