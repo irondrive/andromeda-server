@@ -955,7 +955,7 @@ class NullObjectRefT extends BaseField
     {
         if ($this->objId === null) return null;
         
-        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
+        $obj = ($this->class)::TryLoadByID($this->database, $this->objId);
         
         if ($obj !== null) return $obj;
         throw new Exceptions\ForeignKeyException($this->class);
@@ -966,12 +966,12 @@ class NullObjectRefT extends BaseField
     
     /**
      * Sets the field's value
-     * @param ?T $value object value
+     * @param ?T $object object value
      * @return bool true if the field was modified
      */
-    public function SetObject(?BaseObject $value) : bool
+    public function SetObject(?BaseObject $object) : bool
     {
-        if ($value === null)
+        if ($object === null)
         {
             if ($this->objId === null) 
                 return false;
@@ -980,11 +980,14 @@ class NullObjectRefT extends BaseField
             $this->delta++;
             return true;
         }
+
+        if ($object->ID() === $this->objId) return false;
         
-        if ($value->ID() === $this->objId) return false;
-        
+        if ($object->isCreated())
+            throw new Exceptions\ObjectRefNotSavedException();
+
         $this->NotifyModified();
-        $this->objId = $value->ID();
+        $this->objId = $object->ID();
         $this->delta++;
         return true;
     }
@@ -1040,7 +1043,7 @@ class ObjectRefT extends BaseField
      */
     public function GetObject() : BaseObject
     {
-        $obj = $this->database->TryLoadUniqueByKey($this->class, 'id', $this->objId);
+        $obj = ($this->class)::TryLoadByID($this->database, $this->objId);
         
         if ($obj !== null) return $obj;
         throw new Exceptions\ForeignKeyException($this->class);
@@ -1054,15 +1057,18 @@ class ObjectRefT extends BaseField
     
     /**
      * Sets the field's value
-     * @param T $value object value
+     * @param T $object object value
      * @return bool true if the field was modified
      */
-    public function SetObject(BaseObject $value) : bool
+    public function SetObject(BaseObject $object) : bool
     {
-        if (isset($this->objId) && $value->ID() === $this->objId) return false;
+        if (isset($this->objId) && $object->ID() === $this->objId) return false;
+
+        if ($object->isCreated())
+            throw new Exceptions\ObjectRefNotSavedException();
 
         $this->NotifyModified();
-        $this->objId = $value->ID();
+        $this->objId = $object->ID();
         $this->delta++;
         return true;
     }

@@ -75,6 +75,21 @@ class Group extends PolicyBase
         return null; // not a default group
     }
 
+    /** Returns true if this group is used as a default (implicit memberships) */
+    public function isDefault() : bool
+    {
+        if (Config::GetInstance($this->database)->GetDefaultGroup() === $this)
+            return true;
+        
+        foreach (AuthSource\External::LoadAll($this->database) as $authman)
+        {
+            if ($authman->GetDefaultGroup() === $this)
+                return true;
+        }
+        
+        return false; // not a default group
+    }
+
     /**
      * Gets the list of all accounts in this group
      * @return array<string, Account> Accounts indexed by ID

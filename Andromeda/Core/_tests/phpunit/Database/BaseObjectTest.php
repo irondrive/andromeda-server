@@ -70,6 +70,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
             ->willReturnCallback(function()use($database){ return new EasyObject($database,array(),true) ;});
         
         $obj = EasyObject::Create($database);
+        $this->assertTrue($obj->isCreated());
         
         $this->assertInstanceOf(EasyObject::class, $obj);
         $this->assertSame(12, strlen($obj->ID()));
@@ -92,11 +93,13 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         // test Create, construct, ID()
         $database = $this->createMock(ObjectDatabase::class);
         $obj = new EasyObject($database,array(),true); $id = $obj->ID();
+        $this->assertTrue($obj->isCreated());
 
         $database->expects($this->once())->method('SaveObject');
         $database->expects($this->once())->method('DeleteObject');
 
         $obj->Save(); // regular save
+        $this->assertFalse($obj->isCreated());
 
         $obj->DeleteMeLater();
         $obj->Save(); // deletes
@@ -110,9 +113,11 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
         $id = "test123";
         $db->expects($this->exactly(1))->method('read')->with( // NOTE id is ambiguous so it has the table name
             "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.\"id\" = :d0",
-            array('d0'=>$id))->willReturn([]);
+            array('d0'=>$id))->willReturn([['id'=>$id]]);
 
-        EasyObject::TryLoadByID($objdb, $id);
+        $obj = EasyObject::TryLoadByID($objdb, $id);
+        assert($obj !== null);
+        $this->assertFalse($obj->isCreated());
     }
 
     public function testLoadAll() : void
