@@ -345,7 +345,7 @@ class AccountsApp extends BaseApp
         if ($account->hasCrypto() || $account->HasValidTwoFactor()) 
             throw new Exceptions\RecoveryKeyCreateException();
 
-        $key = "";// TODO RAY !! // RecoveryKey::Create($this->database, $account)->GetFullKey();
+        $key = RecoveryKey::Create($this->database, $account)->GetFullKey();
         
         $subject = "Andromeda Account Recovery Key";
         $body = "Your recovery key is: $key";       
@@ -383,8 +383,7 @@ class AccountsApp extends BaseApp
         
         if (($session = $authenticator->TryGetSession()) !== null)
         {
-            //$session->InitializeCrypto(); // TODO RAY !!
-            
+            $session->InitializeCrypto(); // account has crypto, session key is available
             Session::DeleteByAccountExcept($this->database, $account, $session);
         }
         else Session::DeleteByAccount($this->database, $account);

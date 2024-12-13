@@ -15,11 +15,14 @@ class Authenticator
 {
     private SafeParams $params;
     
-    /** @var list<self> */
-    private static array $instances = array(); // TODO RAY !! not great for unit tests... see GetCustomCache
-   
     private ?Account $account = null;
     
+    /** @return list<self> */
+    private static function &GetInstances(ObjectDatabase $database) : array
+    {
+        return $database->GetCustomCache(self::class); // @phpstan-ignore-line cast generic to desired
+    }
+
     /** Returns the authenticated user account (or null) */
     public function TryGetAccount() : ?Account { return $this->account; }
     
@@ -153,7 +156,7 @@ class Authenticator
             if ($auth->account === null) throw new Exceptions\UnknownAccountException();
         }
         
-        array_push(self::$instances, $auth);
+        self::GetInstances($database)[] = $auth;
         return $auth;
     }
 
@@ -251,15 +254,14 @@ class Authenticator
     /** @see Authenticator::RequireCrypto() */
     public static function StaticRequireCrypto(SafeParams $params, Account $account, ?Session $session = null) : void
     {
-        if ($account->isCryptoAvailable()) return;
+        if ($account->isCryptoAvailable()) return; // already available
         
-        if (!$account->hasCrypto()) throw new Exceptions\CryptoInitRequiredException();
+        if (!$account->hasCrypto())
+            throw new Exceptions\CryptoInitRequiredException();
         
-        if ($session !== null)
+        if ($session !== null && $session->isCryptoAvailable())
         {
-            /*try { $account->UnlockCryptoFromKeySource($session); } // TODO RAY !! FIX ME after Account refactor (probably need to create IKeySource)
-            catch (DecryptionFailedException $e) { 
-                throw new Exceptions\AuthenticationFailedException(); }*/
+            $account->SetCryptoKeySource($session);
         }
         else if ($params->HasParam('auth_recoverykey'))
         {
@@ -277,7 +279,9 @@ class Authenticator
             catch (DecryptionFailedException $e) { 
                 throw new Exceptions\AuthenticationFailedException(); }
         }
-        else throw new Exceptions\CryptoKeyRequiredException();
+        
+        if (!$account->isCryptoAvailable())
+            throw new Exceptions\CryptoKeyRequiredException();
     }
   
     /** 
@@ -286,7 +290,7 @@ class Authenticator
      */
     public static function RequireCryptoFor(Account $account) : void
     {
-        foreach (self::$instances as $auth) 
+        foreach (self::GetInstances($account->GetDatabase()) as $auth) 
         {
             if ($auth->TryGetAccount() === $account)
                 $auth->TryRequireCrypto();

@@ -6,8 +6,8 @@ use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabas
 use Andromeda\Core\Database\Exceptions\CounterOverLimitException;
 
 use Andromeda\Apps\Accounts\AuthSource\External;
-use Andromeda\Apps\Accounts\Crypto\KeySource;
-use Andromeda\Apps\Accounts\Crypto\Exceptions\{CryptoNotInitializedException, CryptoAlreadyInitializedException};
+use Andromeda\Apps\Accounts\Crypto\{KeySource, IKeySource};
+use Andromeda\Apps\Accounts\Crypto\Exceptions\CryptoUnlockRequiredException;
 use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey, Session, TwoFactor};
 
 /**
@@ -19,9 +19,18 @@ use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey
  * 
  * @phpstan-type AccountJ array{id:string, username:string, dispname:?string}
  */
-class Account extends PolicyBase
+class Account extends PolicyBase implements IKeySource
 {
-    use KeySource { DestroyCrypto as BaseDestroyCrypto; InitializeCrypto as BaseInitializeCrypto; }
+    use KeySource 
+    { 
+        isCryptoAvailable as BaseIsCryptoAvailable;
+        EncryptSecret as BaseEncryptSecret;
+        DecryptSecret as BaseDecryptSecret;
+        GetEncryptedMasterKey as BaseGetEncryptedMasterKey;
+        DestroyCrypto as BaseDestroyCrypto; 
+        InitializeCrypto as BaseInitializeCrypto; 
+    }
+
     use TableTypes\TableNoChildren;
 
     /** The primary username of the account */
@@ -694,24 +703,11 @@ class Account extends PolicyBase
         else return ($max === null || $this->database->GetTime()-$date < $max);
     }
     
-    /** Returns true if server-side crypto is unavailable on the account */
-    public function hasCrypto() : bool { return $this->master_key->TryGetValue() !== null; }
-    
-    private bool $cryptoAvailable = false; 
-    
-    /** Returns true if crypto has been unlocked in this request and is available for operations */
-    public function isCryptoAvailable() : bool { return $this->cryptoAvailable; }
-    
     /** Re-keys the account's crypto if it exists, and re-hashes its password (if using local auth) */
     public function ChangePassword(string $new_password) : Account
     {
         if ($this->hasCrypto())
-        {
             $this->InitializeCrypto($new_password, true); // keeps same key
-           
-            foreach ($this->GetTwoFactors() as $tf)
-                $tf->InitializeCrypto();
-        }
         
         if ($this->GetAuthSource() instanceof AuthSource\Local)
             AuthSource\Local::SetPassword($this, $new_password);
@@ -726,106 +722,79 @@ class Account extends PolicyBase
     /** Sets the account's password hash to the given value */
     public function SetPasswordHash(string $hash) : self { $this->password->SetValue($hash); return $this; }
     
+    /** Alternate available key source */
+    private IKeySource $keysource;
+
+    /**
+     * Sets the given key source as an alternate key source (must already be unlocked)
+     * @return $this
+     */
+    public function SetCryptoKeySource(IKeySource $source) : self {
+        $this->keysource = $source; return $this; }
+    
+    /** Returns true if crypto has been unlocked in this request and is available for operations */
+    public function isCryptoAvailable() : bool { return isset($this->keysource) || $this->BaseIsCryptoAvailable(); }
+    
+    /** Unlocks crypto from the given account password */
+    public function UnlockCryptoFromPassword(string $password) : self {
+        return $this->UnlockCrypto($password); }
+
+    /**
+     * Checks and unlocks a recovery key, then sets us to use it for crypto
+     * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
+     * @return $this
+     */
+    public function UnlockCryptoFromRecoveryKey(string $key) : self
+    {
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
+        if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
+        
+        if (!$obj->CheckFullKey($key)) 
+            throw new Exceptions\RecoveryKeyFailedException();
+
+        return $this->SetCryptoKeySource($obj);
+    }
+    
     /**
      * Encrypts a value using the account's crypto
      * @param string $data the plaintext to be encrypted
      * @param string $nonce the nonce to use for crypto
-     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the ciphertext encrypted with the account's secret key
      */
     public function EncryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable)
-            throw new Exceptions\CryptoUnlockRequiredException();    
-        
-        $master = $this->master_key->TryGetValue() ?? ""; // TODO RAY !! fix null
-        return Crypto::EncryptSecret($data, $nonce, $master);
+        if (isset($this->keysource))
+            return $this->keysource->EncryptSecret($data, $nonce);
+        return $this->BaseEncryptSecret($data, $nonce);
     }
     
     /**
      * Decrypts a value using the account's crypto
      * @param string $data the ciphertext to be decrypted
      * @param string $nonce the nonce used for encryption
-     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the plaintext decrypted with the account's key
      */
     public function DecryptSecret(string $data, string $nonce) : string
     {
-        if (!$this->cryptoAvailable) 
-            throw new Exceptions\CryptoUnlockRequiredException();
-        
-        $master = $this->master_key->TryGetValue() ?? ""; // TODO RAY !! fix null
-        return Crypto::DecryptSecret($data, $nonce, $master);
+        if (isset($this->keysource))
+            return $this->keysource->DecryptSecret($data, $nonce);
+        return $this->BaseDecryptSecret($data, $nonce);
     }
 
     /**
      * Gets a copy of the account's master key, encrypted
      * @param string $nonce the nonce to use for encryption
-     * @param string $key the key to use for encryption
-     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @param string $wrapkey the key to use for encryption
+     * @throws CryptoUnlockRequiredException if crypto has not been unlocked
      * @return string the encrypted copy of the master key
      */
-    public function GetEncryptedMasterKey(string $nonce, string $key) : string
+    public function GetEncryptedMasterKey(string $nonce, string $wrapkey) : string
     {
-        if (!$this->cryptoAvailable) 
-            throw new Exceptions\CryptoUnlockRequiredException();
-        return Crypto::EncryptSecret($this->master_key->TryGetValue() ?? "", $nonce, $key); // TODO RAY !! fix null
-    }
-    
-    /**
-     * Attempts to unlock crypto using the given password
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws DecryptionFailedException if decryption fails
-     */
-    public function UnlockCryptoFromPassword(string $password) : self
-    {
-        if ($this->cryptoAvailable) return $this;
-        
-        $master = $this->GetUnlockedKey($password);
-        
-        $this->master_key->SetValue($master, true);
-        $this->cryptoAvailable = true; return $this;
-    }
-    
-    /**
-     * Attempts to unlock crypto using the given unlocked key source
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws DecryptionFailedException if decryption fails
-     * @return $this
-     */
-    public function UnlockCryptoFromKeySource(/*KeySource $source*/) : self // TODO RAY !! this is a trait not an object...
-    {
-        if ($this->cryptoAvailable) return $this;
-        
-    
-    
-        $master = null;//$source->GetUnlockedKey(); // TODO RAY !! ??? need caching IN keysource
-        // rather than having account have its master key directly... have a link to a key source that we can pass the encrypt/decrypt to
-        
-        $this->master_key->SetValue($master, true);
-        $this->cryptoAvailable = true; return $this;
-    }
-    
-    /**
-     * Attempts to unlock crypto using a full recovery key
-     * @throws CryptoNotInitializedException if crypto does not exist
-     * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
-     * @throws DecryptionFailedException if decryption fails
-     * @return $this
-     */
-    public function UnlockCryptoFromRecoveryKey(string $key) : self
-    {
-        if ($this->cryptoAvailable) return $this;
-        else if (!$this->hasCrypto())
-            throw new CryptoNotInitializedException();
-        
-        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
-        if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
-        
-        if (!$obj->CheckFullKey($key)) 
-            throw new Exceptions\RecoveryKeyFailedException();
-        
-        return $this->UnlockCryptoFromKeySource();
+        if (isset($this->keysource))
+            return $this->keysource->GetEncryptedMasterKey($nonce, $wrapkey);
+        return $this->BaseGetEncryptedMasterKey($nonce, $wrapkey);
     }
     
     /** @var array<callable(ObjectDatabase, self, bool): void> */
@@ -847,28 +816,12 @@ class Account extends PolicyBase
      * done server-side, but the raw keys are only ever available in memory, not in the database.
      * @param string $password the password to derive keys from
      * @param bool $rekey true if crypto exists and we want to keep the same master key
-     * @throws Exceptions\CryptoUnlockRequiredException if crypto is not unlocked
-     * @throws CryptoAlreadyInitializedException if crypto already exists and not re-keying
+     * @throws CryptoUnlockRequiredException if crypto is not unlocked
      */
     public function InitializeCrypto(string $password, bool $rekey = false) : self
     {
-        if ($rekey)
-        {
-            if (!$this->cryptoAvailable)
-                throw new Exceptions\CryptoUnlockRequiredException();
-            $master = $this->master_key->TryGetValue();
-            assert($master !== null); // TODO RAY !! redesign this better
-        }
-        else
-        {
-            if ($this->hasCrypto())
-                throw new CryptoAlreadyInitializedException();
-            $master = Crypto::GenerateSecretKey();
-        }
+        $this->BaseInitializeCrypto($password, $rekey);
 
-        $this->BaseInitializeCrypto($master, $password);
-        $this->cryptoAvailable = true; 
-        
         foreach ($this->GetTwoFactors() as $twofactor) 
             $twofactor->InitializeCrypto();
         
@@ -889,8 +842,6 @@ class Account extends PolicyBase
         foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
 
         $this->BaseDestroyCrypto();
-        
-        $this->cryptoAvailable = false;
         return $this;
     }
 }

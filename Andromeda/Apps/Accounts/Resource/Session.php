@@ -3,7 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource};
+use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource, IKeySource};
 
 /**
  * Implements an account session, the primary implementor of authentication
@@ -14,11 +14,12 @@ use Andromeda\Apps\Accounts\Crypto\{AuthObject, AccountKeySource};
  * @phpstan-type SessionJ array{id:string}
  * client:string, date_created:float, date_active:?float, authkey?:string // TODO RAY !! GetClientObject
  */
-class Session extends BaseObject
+class Session extends BaseObject implements IKeySource
 {
     use TableTypes\TableNoChildren;
     
-    use AccountKeySource, AuthObject { CheckKeyMatch as BaseCheckKeyMatch; }
+    use AccountKeySource { InitializeCrypto as BaseInitializeCrypto; }
+    use AuthObject { CheckKeyMatch as BaseCheckKeyMatch; }
     
     /** The date this session was created */
     private FieldTypes\Timestamp $date_created;
@@ -155,6 +156,9 @@ class Session extends BaseObject
     {
         if (!$this->BaseCheckKeyMatch($key)) return false;
         
+        if ($this->hasCrypto())
+            $this->UnlockCrypto($key); // shouldn't throw if key matches
+        
         $time = $this->database->GetTime();
         $maxage = $this->GetAccount()->GetSessionTimeout(); 
         $active = $this->date_active->TryGetValue();
@@ -164,9 +168,18 @@ class Session extends BaseObject
         
         return true;
     }
+
+    /**
+     * Initializes crypto for the session
+     * The account must have crypto unlocked, and this session must have its raw auth key available
+     */
+    public function InitializeCrypto() : self
+    {
+        return $this->InitializeCryptoFromAccount($this->GetAuthKey());
+    }
     
     /**
-     * Returns a printable client object for this session
+     * Returns a printable client object for this session from its account
      * @return SessionJ
      */
     public function GetClientObject(bool $secret = false) : array
@@ -178,7 +191,7 @@ class Session extends BaseObject
             'date_active' => $this->date_active->TryGetValue()
         );
         
-        if ($secret) $retval['authkey'] = $this->TryGetAuthKey();
+        if ($secret) $retval['authkey'] = $this->GetAuthKey();
         
         return $retval;
     }

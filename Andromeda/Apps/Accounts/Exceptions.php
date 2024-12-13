@@ -276,16 +276,8 @@ class SessionRequiredException extends BaseExceptions\ClientErrorException
 
 
 
-/** Exception indicating that crypto must be unlocked by the client */
-class CryptoUnlockRequiredException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CRYPTO_UNLOCK_REQUIRED", $details);
-    }
-}
-
 /** Exception indicating that the given recovery key is not valid */
-class RecoveryKeyFailedException extends BaseExceptions\ServerException // TODO RAY !! why is this a server exception?
+class RecoveryKeyFailedException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("RECOVERY_KEY_UNLOCK_FAILED", $details);

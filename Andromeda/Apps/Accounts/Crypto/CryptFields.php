@@ -7,7 +7,6 @@ use Andromeda\Core\Database\Exceptions\FieldDataNullException;
 use Andromeda\Apps\Accounts\{Account, Authenticator};
 
 // TODO FILES possibly will need to bring back OptFieldCrypt, and the object-central parts of FieldCrypt (SetEncrypted?)
-// TODO RAY !! add @throws for all functions in this file that call Account stuff
 
 /** 
  * A field that is encrypted with an account's crypto

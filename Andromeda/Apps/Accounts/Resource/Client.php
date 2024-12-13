@@ -199,7 +199,7 @@ class Client extends BaseObject
             'date_active' => $this->date_active->TryGetValue()
         );
         
-        if ($secret) $data['authkey'] = $this->TryGetAuthKey();
+        if ($secret) $data['authkey'] = $this->GetAuthKey();
         
         $session = Session::TryLoadByClient($this->database, $this);
         

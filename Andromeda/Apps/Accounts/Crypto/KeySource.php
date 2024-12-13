@@ -5,15 +5,54 @@ use Andromeda\Core\Database\FieldTypes;
 
 use Andromeda\Core\Exceptions\DecryptionFailedException;
 
-/** An object that holds an encrypted copy of a crypto key */
-trait KeySource // TODO RAY !! why not a base object? need an interface at least
+interface IKeySource
 {
-    /** The encrypted copy of the account master key */
+    /**
+     * Encrypts a value using the source's crypto
+     * @param string $data the plaintext to be encrypted
+     * @param string $nonce the nonce to use for crypto
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @return string the ciphertext encrypted with the source's secret key
+     */
+    public function EncryptSecret(string $data, string $nonce) : string;
+    
+    /**
+     * Decrypts a value using the source's crypto
+     * @param string $data the ciphertext to be decrypted
+     * @param string $nonce the nonce used for encryption
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @return string the plaintext decrypted with the source's key
+     */
+    public function DecryptSecret(string $data, string $nonce) : string;
+
+    /**
+     * Gets a copy of the master key, encrypted
+     * @param string $nonce the nonce to use for encryption
+     * @param string $wrapkey the key to use for encryption
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto has not been unlocked
+     * @return string the encrypted copy of the master key
+     */
+    public function GetEncryptedMasterKey(string $nonce, string $wrapkey) : string;
+}
+
+/** An object that holds an encrypted copy of a crypto key */
+trait KeySource
+{
+    /** The encrypted copy of the source master key */
     private FieldTypes\NullStringType $master_key;
     /** The nonce used to encrypt the master key */
     private FieldTypes\NullStringType $master_nonce;
     /** The salt used to encrypt the master key */
     private FieldTypes\NullStringType $master_salt;
+
+    /** Returns true if server-side crypto is available on the source */
+    public function hasCrypto() : bool { return $this->master_key->TryGetValue() !== null; }
+    
+    /** The decrypted master key if available */
+    private string $master_raw;
+    
+    /** Returns true if crypto has been unlocked in this request and is available for operations */
+    public function isCryptoAvailable() : bool { return isset($this->master_raw); }
     
     protected function KeySourceCreateFields() : void
     {
@@ -26,30 +65,30 @@ trait KeySource // TODO RAY !! why not a base object? need an interface at least
         $this->RegisterChildFields($fields);
     }
     
-    /** Returns true if this key source contains key material */
-    protected function hasCrypto() : bool { return $this->master_key->TryGetValue() !== null; }
-
     /**
-     * Initializes crypto, storing an encrypted copy of the given key
-     * @param string $key the key to be encrypted or null to re-key the existing
-     * @param string $wrapkey the key to use to encrypt
-     * @throws Exceptions\CryptoAlreadyInitializedException if already initialized
+     * Initializes crypto with a new key, storing an encrypted copy of the given key
+     * @param string $wrapkey the key to use to wrap the master key
+     * @param bool $rekey true if crypto exists and we want to keep the same master key
+     * @throws Exceptions\CryptoUnlockRequiredException if crypto is not unlocked, and rekeying
+     * @throws Exceptions\CryptoAlreadyInitializedException if crypto already exists and not re-keying
      * @return $this
      */
-    protected function InitializeCrypto(string $key, string $wrapkey) : self
+    protected function InitializeCrypto(string $wrapkey, bool $rekey = false) : self
     {
-        // TODO RAY !! add key caching here? could even add encryption functions here?
-        // TODO RAY !! add $rekey here? not sure how account should work
-
-        if ($this->hasCrypto())
+        if (!$rekey && $this->hasCrypto())
             throw new Exceptions\CryptoAlreadyInitializedException();
-        
+
+        if ($rekey && !isset($this->master_raw))
+            throw new Exceptions\CryptoUnlockRequiredException();
+
         $master_salt = Crypto::GenerateSalt();
         $master_nonce = Crypto::GenerateSecretNonce();
         $this->master_salt->SetValue($master_salt);
         $this->master_nonce->SetValue($master_nonce);
         
         $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
+
+        $key = $rekey ? $this->master_raw : Crypto::GenerateSecretKey();
         $master_key = Crypto::EncryptSecret($key, $master_nonce, $wrapkey);
         $this->master_key->SetValue($master_key);
         
@@ -57,13 +96,14 @@ trait KeySource // TODO RAY !! why not a base object? need an interface at least
     }
 
     /**
-     * Returns the decrypted key using the given key
-     * @param string $wrapkey the key to use to decrypt if not already decrypted
+     * Attempts to unlock crypto using the given password
      * @throws Exceptions\CryptoNotInitializedException if no key material exists
      * @throws DecryptionFailedException if decryption fails
      */
-    protected function GetUnlockedKey(string $wrapkey) : string
+    protected function UnlockCrypto(string $wrapkey) : self
     {
+        if (isset($this->master_raw)) return $this; // already unlocked
+        
         $key = $this->master_key->TryGetValue();
         $master_salt = $this->master_salt->TryGetValue();
         $master_nonce = $this->master_nonce->TryGetValue();
@@ -72,15 +112,42 @@ trait KeySource // TODO RAY !! why not a base object? need an interface at least
             throw new Exceptions\CryptoNotInitializedException();
         
         $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
-        return Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
+        $this->master_raw = Crypto::DecryptSecret($key, $master_nonce, $wrapkey);
+
+        return $this;
+    }
+    
+    public function EncryptSecret(string $data, string $nonce) : string
+    {
+        if (!isset($this->master_raw))
+            throw new Exceptions\CryptoUnlockRequiredException();    
+        
+        return Crypto::EncryptSecret($data, $nonce, $this->master_raw);
+    }
+    
+    public function DecryptSecret(string $data, string $nonce) : string
+    {
+        if (!isset($this->master_raw)) 
+            throw new Exceptions\CryptoUnlockRequiredException();
+        
+        return Crypto::DecryptSecret($data, $nonce, $this->master_raw);
     }
 
+    public function GetEncryptedMasterKey(string $nonce, string $wrapkey) : string
+    {
+        if (!isset($this->master_raw)) 
+            throw new Exceptions\CryptoUnlockRequiredException();
+
+        return Crypto::EncryptSecret($this->master_raw, $nonce, $wrapkey);
+    }
+    
     /** 
      * Erases all key material from the object
      * @return $this
      */
     public function DestroyCrypto() : self
     {
+        unset($this->master_raw);
         $this->master_key->SetValue(null);
         $this->master_salt->SetValue(null);
         $this->master_nonce->SetValue(null);   
