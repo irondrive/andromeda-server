@@ -680,12 +680,10 @@ class Account extends PolicyBase implements IKeySource
     }
     
     /** Returns true if the given recovery key matches one (and they exist) */
-    public function CheckRecoveryKey(string $key) : bool
+    public function CheckRecoveryKey(string $fullkey) : bool
     {
-        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
-
-        if ($obj === null) return false;
-        else return $obj->CheckFullKey($key);
+        $obj = RecoveryKey::TryLoadByFullKey($this->database, $fullkey, $this);
+        return ($obj === null) ? false : $obj->CheckFullKey($fullkey);
     }
     
     /** Returns true if the given password is correct for this account */
@@ -736,28 +734,13 @@ class Account extends PolicyBase implements IKeySource
         $this->keysource = $source; return $this; }
     
     /** Returns true if crypto has been unlocked in this request and is available for operations */
-    public function isCryptoAvailable() : bool { return isset($this->keysource) || $this->BaseIsCryptoAvailable(); }
+    public function isCryptoAvailable() : bool { 
+        return isset($this->keysource) || $this->BaseIsCryptoAvailable(); }
     
     /** Unlocks crypto from the given account password */
     public function UnlockCryptoFromPassword(string $password) : self {
         return $this->UnlockCrypto($password); }
 
-    /**
-     * Checks and unlocks a recovery key, then sets us to use it for crypto
-     * @throws Exceptions\RecoveryKeyFailedException if the key is not valid
-     * @return $this
-     */
-    public function UnlockCryptoFromRecoveryKey(string $key) : self
-    {
-        $obj = RecoveryKey::TryLoadByFullKey($this->database, $key, $this);
-        if ($obj === null) throw new Exceptions\RecoveryKeyFailedException();
-        
-        if (!$obj->CheckFullKey($key)) 
-            throw new Exceptions\RecoveryKeyFailedException();
-
-        return $this->SetCryptoKeySource($obj);
-    }
-    
     /**
      * Encrypts a value using the account's crypto
      * @param string $data the plaintext to be encrypted

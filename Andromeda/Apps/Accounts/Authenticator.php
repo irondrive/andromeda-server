@@ -4,7 +4,7 @@ use Andromeda\Core\Exceptions\DecryptionFailedException;
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\IOFormat\{Input, IOInterface, SafeParams};
 
-use Andromeda\Apps\Accounts\Resource\{Client, Session};
+use Andromeda\Apps\Accounts\Resource\{Client, Session, RecoveryKey};
 
 /**
  * The class used to authenticate requests
@@ -266,10 +266,14 @@ class Authenticator
         else if ($params->HasParam('auth_recoverykey'))
         {
             $recoverykey = $params->GetParam('auth_recoverykey',SafeParams::PARAMLOG_NEVER)->GetUTF8String();
+
+            $keyobj = RecoveryKey::TryLoadByFullKey($account->GetDatabase(), $recoverykey, $account);
+            if ($keyobj === null) throw new Exceptions\AuthenticationFailedException();
             
-            try { $account->UnlockCryptoFromRecoveryKey($recoverykey); }
-            catch (DecryptionFailedException | Exceptions\RecoveryKeyFailedException $e) { 
-                throw new Exceptions\AuthenticationFailedException(); }
+            if (!$keyobj->CheckFullKey($recoverykey)) // unlocks crypto
+                throw new Exceptions\AuthenticationFailedException();
+    
+            $account->SetCryptoKeySource($keyobj);
         }
         else if ($params->HasParam('auth_password'))
         {
