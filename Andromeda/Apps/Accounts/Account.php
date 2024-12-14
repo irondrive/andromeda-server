@@ -361,7 +361,8 @@ class Account extends PolicyBase implements IKeySource
      */
     public function CheckLimitSessions(int $delta = 1) : void
     {
-        if (Session::CountByAccount($this->database, $this)+$delta > $this->GetLimitSessions())
+        if (($limit = $this->GetLimitSessions()) === null) return;
+        if (Session::CountByAccount($this->database, $this)+$delta > $limit)
             throw new CounterOverLimitException('sessions');
     }
 
@@ -371,7 +372,8 @@ class Account extends PolicyBase implements IKeySource
      */
     public function CheckLimitContacts(int $delta = 1) : void
     {
-        if (Contact::CountByAccount($this->database, $this)+$delta > $this->GetLimitContacts())
+        if (($limit = $this->GetLimitContacts()) === null) return;
+        if (Contact::CountByAccount($this->database, $this)+$delta > $limit)
             throw new CounterOverLimitException('contacts');
     }
 
@@ -381,7 +383,8 @@ class Account extends PolicyBase implements IKeySource
      */
     public function CheckLimitRecoveryKeys(int $delta = 1) : void
     {
-        if (RecoveryKey::CountByAccount($this->database, $this)+$delta > $this->GetLimitRecoveryKeys())
+        if (($limit = $this->GetLimitRecoveryKeys()) === null) return;
+        if (RecoveryKey::CountByAccount($this->database, $this)+$delta > $limit)
             throw new CounterOverLimitException('recoverykeys');
     }
 

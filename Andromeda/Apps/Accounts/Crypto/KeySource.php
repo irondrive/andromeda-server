@@ -88,8 +88,8 @@ trait KeySource
         
         $wrapkey = Crypto::DeriveKey($wrapkey, $master_salt, Crypto::SecretKeyLength(), true);
 
-        $key = $rekey ? $this->master_raw : Crypto::GenerateSecretKey();
-        $master_key = Crypto::EncryptSecret($key, $master_nonce, $wrapkey);
+        $this->master_raw = $rekey ? $this->master_raw : Crypto::GenerateSecretKey();
+        $master_key = Crypto::EncryptSecret($this->master_raw, $master_nonce, $wrapkey);
         $this->master_key->SetValue($master_key);
         
         return $this;

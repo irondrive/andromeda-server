@@ -725,7 +725,7 @@ class ObjectDatabase
     public function CountObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
-        $this->objectsByKey[$class][$key] ??= array();
+        $this->RegisterNonUniqueKey($class, $key);
         
         if (array_key_exists($validx, $this->objectsByKey[$class][$key]))
             return count($this->objectsByKey[$class][$key][$validx]);
@@ -748,7 +748,7 @@ class ObjectDatabase
     public function LoadObjectsByKey(string $class, string $key, $value) : array
     {
         $validx = self::ValueToIndex($value);
-        $this->objectsByKey[$class][$key] ??= array();
+        $this->RegisterNonUniqueKey($class, $key);
         
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {
@@ -776,7 +776,7 @@ class ObjectDatabase
     public function DeleteObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
-        $this->objectsByKey[$class][$key] ??= array();
+        $this->RegisterNonUniqueKey($class, $key);
 
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {
@@ -898,12 +898,9 @@ class ObjectDatabase
      * @param string $key name of the key field
      * @param string $validx index value of the key field
      * @param array<string, T> $objs array of objects to set
-     * @param ?class-string<T> $bclass base class for property
      */
-    private function SetNonUniqueKeyObjects(string $class, string $key, string $validx, array $objs, ?string $bclass = null) : void
+    private function SetNonUniqueKeyObjects(string $class, string $key, string $validx, array $objs) : void
     {
-        $bclass ??= $class;
-        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx] = $objs;
         
         foreach ($class::GetChildMap($this) as $child)
@@ -911,7 +908,7 @@ class ObjectDatabase
             if ($child !== $class)
             {
                 $objs2 = array_filter($objs, function(BaseObject $obj)use($child){ return $obj instanceof $child; });
-                $this->SetNonUniqueKeyObjects($child, $key, $validx, $objs2, $bclass);
+                $this->SetNonUniqueKeyObjects($child, $key, $validx, $objs2);
             }    
         }
     }
@@ -923,12 +920,9 @@ class ObjectDatabase
      * @param string $key name of the key field
      * @param string $validx index value of the key field
      * @param T $obj object to add to the array
-     * @param ?class-string<T> $bclass base class for property
      */
-    private function AddNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $obj, ?string $bclass = null) : void
+    private function AddNonUniqueKeyObject(string $class, string $key, string $validx, BaseObject $obj) : void
     {
-        $bclass ??= $class;
-        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->objectsByKey[$class][$key][$validx][$obj->ID()] = $obj;
         
         foreach ($class::GetChildMap($this) as $child)
@@ -936,7 +930,7 @@ class ObjectDatabase
             if ($child !== $class)
             {
                 if ($obj instanceof $child)
-                    $this->AddNonUniqueKeyObject($child, $key, $validx, $obj, $bclass);
+                    $this->AddNonUniqueKeyObject($child, $key, $validx, $obj);
             }
         }
     }
@@ -987,18 +981,34 @@ class ObjectDatabase
     }
 
     /**
+     * Registers a class's non-unique key so caching can happen
+     * @template T of BaseObject
+     * @param class-string<T> $class class being cached (recurses on children)
+     * @param ?class-string<T> $bclass base class for property
+     */
+    private function RegisterNonUniqueKey(string $class, string $key, ?string $bclass = null) : void
+    {
+        $bclass ??= $class;
+        $this->SetKeyBaseClass($class, $key, $bclass); 
+        $this->objectsByKey[$class][$key] ??= array();
+
+        foreach ($class::GetChildMap($this) as $child)
+        {
+            if ($child !== $class)
+                $this->RegisterNonUniqueKey($child, $key, $bclass);
+        }
+    }
+
+    /**
      * Sets the given object to a unique key cache
      * @template T of BaseObject
      * @param class-string<T> $class class being cached (recurses on children)
      * @param string $key name of the key field
      * @param string $validx index value of the key field
      * @param ?T $obj object to set as the cached object or null
-     * @param ?class-string<T> $bclass base class for property
      */
-    private function SetUniqueKeyObject(string $class, string $key, string $validx, ?BaseObject $obj, ?string $bclass = null) : void
+    private function SetUniqueKeyObject(string $class, string $key, string $validx, ?BaseObject $obj) : void
     {
-        $bclass ??= $class;
-        $this->SetKeyBaseClass($class, $key, $bclass);
         $this->uniqueByKey[$class][$key][$validx] = $obj;
         
         foreach ($class::GetChildMap($this) as $child)
@@ -1006,7 +1016,7 @@ class ObjectDatabase
             if ($child !== $class)
             {
                 $obj2 = ($obj !== null && $obj instanceof $child) ? $obj : null;
-                $this->SetUniqueKeyObject($child, $key, $validx, $obj2, $bclass);
+                $this->SetUniqueKeyObject($child, $key, $validx, $obj2);
             }
         }
     }
