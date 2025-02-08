@@ -385,8 +385,10 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("  test\n", "test", $getVal); // trim
         $this->testGood($val="my %file.txt", $val, $getVal);
         
+        $this->testBad("/test", $getVal);
         $this->testBad("./test", $getVal);
         $this->testBad("../test", $getVal);
+        $this->testBad("test/", $getVal);
         $this->testBad("test/test", $getVal);
         $this->testBad("test/../test", $getVal);
         $this->testBad("test\\test", $getVal);
@@ -399,6 +401,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testBad("/..", $getVal);
         $this->testBad("/../", $getVal);
         $this->testBad("../", $getVal);
+        $this->testBad("ftp://test", $getVal);
     }
     
     public function testFSPath() : void

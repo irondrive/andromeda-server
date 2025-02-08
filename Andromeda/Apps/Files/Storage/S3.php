@@ -300,8 +300,8 @@ class S3 extends FWrapper
     protected static function supportsReadWrite() : bool { return false; }
     protected static function supportsSeekReuse() : bool { return false; }
     
-    protected function OpenReadHandle(string $path){ throw new Exceptions\FileOpenFailedException(); }
-    protected function OpenWriteHandle(string $path){  throw new Exceptions\FileOpenFailedException(); }
+    protected function OpenHandle(string $path, bool $isWrite){ 
+        throw new Exceptions\FileOpenFailedException(); }
     
     protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {

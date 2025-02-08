@@ -23,7 +23,17 @@ abstract class FWrapper extends Storage
     
     public function ItemStat(string $path) : ItemStat
     {
-        $data = @stat($this->GetFullURL($path));
+        if (array_key_exists($path, $this->contexts))
+        {
+            // TODO will fstat work in remote storage? could do ClosePath
+            $data = @fstat($this->contexts[$path]->handle);
+        }
+        else 
+        {
+            clearstatcache();
+            $data = @stat($this->GetFullURL($path));
+        }
+
         if ($data === false) throw new Exceptions\ItemStatFailedException($path);
         return new ItemStat($data['atime'], $data['ctime'], $data['mtime'], $data['size']);
     }
@@ -66,7 +76,7 @@ abstract class FWrapper extends Storage
     
     protected function SubCreateFile(string $path) : parent
     {
-        if (file_put_contents($this->GetFullURL($path),'') === false)
+        if (@file_put_contents($this->GetFullURL($path),'') === false)
             throw new Exceptions\FileCreateFailedException($path);
         return $this;
     }
@@ -75,24 +85,36 @@ abstract class FWrapper extends Storage
     {
         $this->ClosePath($dest);
         
-        if (!copy($src, $this->GetFullURL($dest)))
+        // assume this is a remote filesystem, can't just "move"
+        if (!@copy($src, $this->GetFullURL($dest)))
             throw new Exceptions\FileCopyFailedException($src);
+        return $this;
+    }
+    
+    protected function SubCopyFile(string $old, string $new) : parent
+    {
+        $this->ClosePath($new);
+        
+        if (!@copy($this->GetFullURL($old), $this->GetFullURL($new)))
+            throw new Exceptions\FileCopyFailedException($old);
         return $this;
     }
     
     protected function SubTruncate(string $path, int $length) : parent
     {
+        // don't want to depend on seeking (doesn't work for all remotes), 
+        // so just close open handles and open a new one manually
         $this->ClosePath($path);
         
-        if (($handle = static::OpenWriteHandle($path)) === false)
+        if (($handle = static::OpenHandle($path, isWrite:true)) === false)
             throw new Exceptions\FileWriteFailedException($path);
 
-        if (!ftruncate($handle, $length))
+        if (!@ftruncate($handle, $length))
             throw new Exceptions\FileWriteFailedException($path);
         
-        if (!fclose($handle))
+        if (!@fclose($handle))
             throw new Exceptions\FileWriteFailedException($path);
-        
+
         return $this;
     }    
     
@@ -100,7 +122,7 @@ abstract class FWrapper extends Storage
     {
         $this->ClosePath($path);
         
-        if (!unlink($this->GetFullURL($path))) 
+        if (!@unlink($this->GetFullURL($path))) 
             throw new Exceptions\FileDeleteFailedException($path);
         else return $this;
     }    
@@ -117,7 +139,7 @@ abstract class FWrapper extends Storage
         $this->ClosePath($old);
         $this->ClosePath($new);
         
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+        if (!@rename($this->GetFullURL($old), $this->GetFullURL($new)))
             throw new Exceptions\FileRenameFailedException($old);
         return $this;
     }
@@ -134,7 +156,7 @@ abstract class FWrapper extends Storage
         $this->ClosePath($old);
         $this->ClosePath($new);
         
-        if (!rename($this->GetFullURL($old), $this->GetFullURL($new)))
+        if (!@rename($this->GetFullURL($old), $this->GetFullURL($new)))
             throw new Exceptions\FileMoveFailedException($old);
         return $this;
     }
@@ -146,18 +168,9 @@ abstract class FWrapper extends Storage
         return $this;
     }
     
-    protected function SubCopyFile(string $old, string $new) : parent
-    {
-        $this->ClosePath($new);
-        
-        if (!copy($this->GetFullURL($old), $this->GetFullURL($new)))
-            throw new Exceptions\FileCopyFailedException($old);
-        return $this;
-    }
-    
     protected function SubReadBytes(string $path, int $start, int $length) : string
     {
-        $context = $this->GetContext($path, $start, false);
+        $context = $this->GetContext($path, $start, isWrite:false);
         $data = FileUtils::ReadStream($context->handle, $length);
         $context->offset += $length;
         return $data;
@@ -165,7 +178,7 @@ abstract class FWrapper extends Storage
     
     protected function SubWriteBytes(string $path, int $start, string $data) : self
     {        
-        $context = $this->GetContext($path, $start, true);
+        $context = $this->GetContext($path, $start, isWrite:true);
         FileUtils::WriteStream($context->handle, $data);
         $context->offset += strlen($data);
         return $this;
@@ -181,19 +194,13 @@ abstract class FWrapper extends Storage
     protected static function supportsSeekReuse() : bool { return true; }
     
     /** 
-     * Returns a read handle for the given path
+     * Returns a handle for the given path
+     * @param bool $isWrite true if this is a write
      * @return resource|false
      */
-    protected function OpenReadHandle(string $path) { 
-        return fopen($this->GetFullURL($path),'rb'); }
-    
-    /** 
-     * Returns a write handle for the given path
-     * @return resource|false
-     */
-    protected function OpenWriteHandle(string $path) { 
-        return fopen($this->GetFullURL($path),'rb+'); }
-    
+    protected function OpenHandle(string $path, bool $isWrite) {
+        return @fopen($this->GetFullURL($path), $isWrite?'rb+':'rb'); }
+        
     /**
      * Returns a new handle for the given path
      * @param string $path path of file
@@ -205,13 +212,11 @@ abstract class FWrapper extends Storage
      */
     protected function OpenContext(string $path, int $offset, bool $isWrite) : FileContext
     {
-        $handle = $isWrite ? $this->OpenWriteHandle($path) : $this->OpenReadHandle($path);
-        
-        if ($handle === false) 
+        if (($handle = $this->OpenHandle($path, $isWrite)) === false) 
             throw new Exceptions\FileOpenFailedException($path);
         
-        if (fseek($handle, $offset) !== 0)
-            throw new Exceptions\FileSeekFailedException($path);
+        if (@fseek($handle, $offset) !== 0)
+            throw new Exceptions\FileSeekFailedException($path); // TODO replace these with just return false then throw read/write failed
         
         return new FileContext($handle, $offset, false);
     }
@@ -245,7 +250,7 @@ abstract class FWrapper extends Storage
         
         if ($context->offset !== $offset)
         {
-            if (fseek($context->handle, $offset) !== 0)
+            if (@fseek($context->handle, $offset) !== 0)
                 throw new Exceptions\FileSeekFailedException($path);
                 
             $context->offset = $offset;
@@ -259,7 +264,7 @@ abstract class FWrapper extends Storage
     {
         if (array_key_exists($path, $this->contexts))
         {
-            if (!fclose($this->contexts[$path]->handle))
+            if (!@fclose($this->contexts[$path]->handle))
                 throw new Exceptions\FileCloseFailedException($path);
                 
             unset($this->contexts[$path]);

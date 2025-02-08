@@ -56,7 +56,7 @@ class Local extends FWrapper
 
     protected function GetFullURL(string $path = "") : string
     {
-        return $this->GetPath($path); // TODO use file:// ?
+        return "/".$this->GetPath($path);
     }
     
     /**
@@ -65,8 +65,10 @@ class Local extends FWrapper
      */
     protected function SubImportFile(string $src, string $dest, bool $istemp) : self
     {
-        if (!$istemp) return parent::SubImportFile($src, $dest, $istemp);
-        
+        if (!$istemp) return parent::SubImportFile($src, $dest, $istemp); // copy
+
+        $this->ClosePath($dest);
+
         if (!rename($src, $this->GetFullURL($dest)))
             throw new Exceptions\FileCreateFailedException();
         return $this;

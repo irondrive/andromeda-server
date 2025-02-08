@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Storage; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, TableTypes, QueryBuilder};
-use Andromeda\Core\Errors\ErrorManager;
 use Andromeda\Core\IOFormat\{Input, SafeParams};
 use Andromeda\Core\{Crypto, Utilities};
 
@@ -19,7 +18,7 @@ class ItemStat
         public int $size = 0) {}
 }
 
-// TODO RAY !! missing @throws
+// TODO RAY !! missing @throws (here and filesystem)
 
 /** 
  * A Storage implements the on-disk functions that actually store data.
@@ -539,8 +538,8 @@ abstract class Storage extends BaseObject
     protected abstract function SubCreateFile(string $path) : self;
     
     /**
-     * Imports an existing file into the storage - overwrites if already exists
-     * @param string $src file to import
+     * Imports a local file into the storage - overwrites if already exists
+     * @param string $src file to import (must be local)
      * @param string $dest path of new file
      * @param bool $istemp true if we can move the src
      * @return $this
@@ -560,6 +559,26 @@ abstract class Storage extends BaseObject
      * @return $this
      */
     protected abstract function SubImportFile(string $src, string $dest, bool $istemp) : self;
+
+    /** 
+     * Copies a remote file from $old to $new (path and name can change) - overwrites if already exists
+     * @return $this
+     */
+    public function CopyFile(string $old, string $new) : self
+    {
+        $this->AssertNotReadOnly();
+        if ($this->isDryRun()) return $this;
+        
+        $this->SubCopyFile($old, $new);
+        return $this;
+    }
+    
+    /**
+     * The storage-specific CopyFile
+     * @see Storage::CopyFile()
+     * @return $this
+     */
+    protected abstract function SubCopyFile(string $old, string $new) : self;
 
     /**
      * Reads data from a file
@@ -635,7 +654,6 @@ abstract class Storage extends BaseObject
         if ($this->isDryRun()) return $this;
         
         if (!$this->isFile($path)) return $this;
-        
         return $this->SubDeleteFile($path);
     }
     
@@ -648,7 +666,7 @@ abstract class Storage extends BaseObject
     
     /** 
      * Deletes the **empty** folder with the given path
-     * This will FAIL is the folder is not empty
+     * This will FAIL if the folder is not empty
      * @return $this
      */
     public function DeleteFolder(string $path) : self
@@ -678,6 +696,9 @@ abstract class Storage extends BaseObject
     {
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
+
+        if (dirname($old) !== dirname($new))
+            throw new Exceptions\FileRenameFailedException('dirname changed');
         
         $this->SubRenameFile($old, $new);
         return $this;
@@ -692,13 +713,17 @@ abstract class Storage extends BaseObject
     
     /** 
      * Renames a folder from $old to $new - path shall not change - overwrites if already exists
+     * Overwriting will FAIL if the overwritten folder is not empty
      * @return $this
      */
     public function RenameFolder(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
-        
+
+        if (dirname($old) !== dirname($new))
+            throw new Exceptions\FolderRenameFailedException('dirname changed');
+
         $this->SubRenameFolder($old, $new);
         return $this;
     }
@@ -712,12 +737,16 @@ abstract class Storage extends BaseObject
     
     /** 
      * Moves a file from $old to $new - name shall not change - overwrites if already exists
+     * @param $new new path including the file's name (no trailing /)
      * @return $this
      */
     public function MoveFile(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
+
+        if (basename($old) !== basename($new))
+            throw new Exceptions\FileMoveFailedException('basename changed');
         
         $this->SubMoveFile($old, $new);
         return $this;
@@ -732,12 +761,17 @@ abstract class Storage extends BaseObject
     
     /** 
      * Moves a folder from $old to $new - name shall not change - overwrites if already exists
+     * Overwriting will FAIL if the overwritten folder is not empty
+     * @param $new new path including the folder's name (no trailing /)
      * @return $this
      */
     public function MoveFolder(string $old, string $new) : self
     {
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
+        
+        if (basename($old) !== basename($new))
+            throw new Exceptions\FolderMoveFailedException('basename changed');
         
         $this->SubMoveFolder($old, $new);
         return $this;
@@ -750,26 +784,6 @@ abstract class Storage extends BaseObject
      */
     protected abstract function SubMoveFolder(string $old, string $new) : self;
     
-    /** 
-     * Copies a file from $old to $new (path and name can change) - overwrites if already exists
-     * @return $this
-     */
-    public function CopyFile(string $old, string $new) : self
-    {
-        $this->AssertNotReadOnly();
-        if ($this->isDryRun()) return $this;
-        
-        $this->SubCopyFile($old, $new);
-        return $this;
-    }
-    
-    /**
-     * The storage-specific CopyFile
-     * @see Storage::CopyFile()
-     * @return $this
-     */
-    protected abstract function SubCopyFile(string $old, string $new) : self;
-
     /** Marks the storage as not dirty (for invalid rollback checking) */
     public function commit() : void { $this->written = false; }
 
@@ -787,21 +801,21 @@ abstract class Storage extends BaseObject
     /** Commits all instantiated storages */
     public static function commitAll(ObjectDatabase $database) : void
     { 
-        foreach ($database->getLoadedObjects(self::class) as $fs)
+        foreach ($database->getLoadedObjects(self::class) as $storage)
         {
-            if (!$fs->isDeleted())
-                $fs->commit(); 
+            if (!$storage->isDeleted())
+                $storage->commit(); 
         }
     }
     
     /** Rolls back all instantiated storages */
     public static function rollbackAll(ObjectDatabase $database) : void
     {
-        foreach ($database->getLoadedObjects(self::class) as $fs)
+        foreach ($database->getLoadedObjects(self::class) as $storage)
         {
-            if ($fs->isDeleted()) continue;
-            $database->GetApiPackage()->GetErrorManager()->LoggedTry(
-                function()use($fs){ $fs->rollback(); });
+            if (!$storage->isDeleted())
+                $database->GetApiPackage()->GetErrorManager()->LoggedTry(
+                    function()use($storage){ $storage->rollback(); });
         }
     }    
 }

@@ -145,8 +145,8 @@ class SMB extends FWrapper
     }
     
     // WORKAROUND: php-smbclient does not support b fopen flag
-    protected function OpenReadHandle(string $path){ return fopen($this->GetFullURL($path),'r'); }
-    protected function OpenWriteHandle(string $path){ return fopen($this->GetFullURL($path),'r+'); }
+    protected function OpenHandle(string $path, bool $isWrite){ 
+        return fopen($this->GetFullURL($path), $isWrite?'r+':'r'); }
     
     // WORKAROUND: php-smbclient <= 3.0.5 does not implement stream ftruncate
     protected function SubTruncate(string $path, int $length) : self
