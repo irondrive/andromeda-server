@@ -144,6 +144,11 @@ class External extends Filesystem
         $this->GetStorage()->CreateFile($this->GetFilePath($file)); return $this;
     }
     
+    public function CopyFile(File $file, File $dest) : self 
+    {
+        $this->GetStorage()->CopyFile($this->GetFilePath($file), $this->GetFilePath($dest)); return $this; 
+    }
+    
     public function DeleteFile(File $file) : self
     {
         $this->GetStorage()->DeleteFile($this->GetFilePath($file)); return $this;
@@ -162,11 +167,6 @@ class External extends Filesystem
     public function Truncate(File $file, int $length) : self
     {
         $this->GetStorage()->Truncate($this->GetFilePath($file), $length); return $this;
-    }
-    
-    public function CopyFile(File $file, File $dest) : self 
-    {
-        $this->GetStorage()->CopyFile($this->GetFilePath($file), $this->GetFilePath($dest)); return $this; 
     }
     
     public function RenameFile(File $file, string $name) : self
