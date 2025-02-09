@@ -233,7 +233,7 @@ class LocalTest extends \PHPUnit\Framework\TestCase
         $storage->CreateFolder($p="mytest");
         $storage->CreateFolder("$p/2");
         $storage->CreateFile("$p/3.txt");
-        $this->assertSame(['2','3.txt'], array_values($storage->ReadFolder($p)));
+        $this->assertEqualsCanonicalizing(['2','3.txt'], $storage->ReadFolder($p));
 
         $this->expectException(Exceptions\FolderReadFailedException::class);
         $storage->ReadFolder("$p/3.txt");
@@ -472,7 +472,7 @@ class LocalTest extends \PHPUnit\Framework\TestCase
 
         $storage->RenameFolder($p, $p="mytest2");
         $this->assertTrue($storage->isFolder($p));
-        $this->assertSame(['test.txt'], array_values($storage->ReadFolder($p)));
+        $this->assertEqualsCanonicalizing(['test.txt'], $storage->ReadFolder($p));
 
         $this->expectException(Exceptions\FolderRenameFailedException::class);
         $storage->RenameFolder("222$p", "none"); // src does not exist
@@ -509,7 +509,7 @@ class LocalTest extends \PHPUnit\Framework\TestCase
         $storage->CreateFile("$p2/test.txt");
 
         $storage->MoveFolder($p2, $p2="$p1/$p2");
-        $this->assertSame(['test.txt'], array_values($storage->ReadFolder($p2)));
+        $this->assertEqualsCanonicalizing(['test.txt'], $storage->ReadFolder($p2));
 
         $this->expectException(Exceptions\FolderMoveFailedException::class);
         $storage->MoveFolder($p2, "$p2/$p1"); // src does not exist
