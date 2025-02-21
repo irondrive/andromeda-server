@@ -1,35 +1,27 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Items; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Files\Filesystem\FSManager;
+use Andromeda\Apps\Files\Storage\Storage;
 
 /** A root folder has no parent or name */
 class RootFolder extends Folder
-{
-    /** @return class-string<self> */
-    public static function GetObjClass(array $row) : string { return self::class; }
+{    use TableTypes\NoChildren;
+
+    public function GetName() : string { return $this->storage->GetName(); }
     
-    public function GetName() : string 
+    public function SetName(string $name, bool $overwrite = false) : bool
     { 
-        return $this->GetFilesystem()->GetName(); 
-    }
-    
-    public function SetName(string $name, bool $overwrite = false) : self 
-    { 
-        $this->GetFilesystem()->SetName($name); return $this; 
+        return $this->storage->GetObject()->SetName($name);
     }
     
     /** Returned if this root's filesystem is owned by $account */
     public function isFSOwnedBy(Account $account) : bool
     {
-        return $this->GetFilesystem()->GetOwnerID() === $account->ID();
+        return $this->storage->GetObject()->TryGetOwnerID() === $account->ID();
     }
     
-    public function GetParent() : ?Folder { return null; }
-    public function GetParentID() : ?string { return null; }
-    
-    public function SetParent(Folder $folder, bool $overwrite = false) : self                     { throw new Exceptions\InvalidRootOpException(); }
+    public function SetParent(Folder $folder, bool $overwrite = false) : bool                     { throw new Exceptions\InvalidRootOpException(); }
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self     { throw new Exceptions\InvalidRootOpException(); }
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self { throw new Exceptions\InvalidRootOpException(); }
     
@@ -39,39 +31,45 @@ class RootFolder extends Folder
      * Loads the root folder for given account and FS, creating it if it doesn't exist
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner of the root folder
-     * @param FSManager $filesystem the filesystem of the root, or null to get the default
+     * @param Storage $storage the filesystem of the root, or null to get the default
      * @return ?static loaded folder or null if a default FS does not exist and none is given
      */
-    public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?FSManager $filesystem = null) : ?self
+    public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?Storage $storage = null) : ?self
     {
-        $filesystem ??= FSManager::LoadDefaultByAccount($database, $account); if (!$filesystem) return null;
+        $storage ??= Storage::LoadDefaultByAccount($database, $account); 
+        if ($storage === null) return null;
+
+        // TODO RAY check this still makes sense with the new schema
+        $q = new QueryBuilder(); 
+        $where = $q->And($q->Equals('storage',$storage->ID()), $q->IsNull('parent'),
+            $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
         
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_filesystem',$filesystem->ID()), $q->IsNull('obj_parent'),
-            $q->Or($q->IsNull('obj_owner'),$q->Equals('obj_owner',$account->ID())));
-        
-        $loaded = static::TryLoadUniqueByQuery($database, $q->Where($where));
-        if ($loaded) return $loaded;
+        $loaded = $database->TryLoadUniqueByQuery(static::class, $q->Where($where));
+        if ($loaded !== null) return $loaded;
         else
         {
-            $owner = $filesystem->isExternal() ? $filesystem->GetOwner() : $account;
-            
-            return static::BaseCreate($database)
-                ->SetObject('filesystem',$filesystem)
-                ->SetObject('owner',$owner)->Refresh();
+            $obj = $database->CreateObject(static::class); // insert new root
+            $obj->storage->SetObject($storage);
+
+            $owner = $storage->isExternal() ? $storage->TryGetOwner() : $account;
+            $obj->owner->SetObject($owner);
+
+            $obj->Refresh();
+            return $obj;
         }
     }
     
     /**
      * Loads all root folders on the given filesystem
      * @param ObjectDatabase $database database reference
-     * @param FSManager $filesystem the filesystem
+     * @param Storage $storage the filesystem
      * @return array<string, RootFolder> folders indexed by ID
      */
-    public static function LoadRootsByFSManager(ObjectDatabase $database, FSManager $filesystem) : array
+    public static function LoadRootsByStorage(ObjectDatabase $database, Storage $storage) : array
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_filesystem',$filesystem->ID()), $q->IsNull('obj_parent'));
-        
-        return static::LoadByQuery($database, $q->Where($where));
+        $q = new QueryBuilder(); 
+        $q->Where($q->And($q->Equals('storage',$storage->ID()), $q->IsNull('parent')));
+        return $database->LoadObjectsByQuery(static::class, $q);
     }
     
     /**
@@ -82,21 +80,23 @@ class RootFolder extends Folder
      */
     public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_owner',$account->ID()), $q->IsNull('obj_parent'));
-        
-        return static::LoadByQuery($database, $q->Where($where));
+        $q = new QueryBuilder();
+        $q->Where($q->And($q->Equals('owner',$account->ID()), $q->IsNull('parent')));
+        return $database->LoadObjectsByQuery(static::class, $q);
     }
-    
+
+    //TODO RootFolder - DeleteRoots is dumb, shouldn't load first, also Delete() should be the one to decide notify/not based on external!
     /** Deletes all root folders on the given filesystem - if the FS is external or $unlink, only remove DB objects */
-    public static function DeleteRootsByFSManager(ObjectDatabase $database, FSManager $filesystem, bool $unlink = false) : void
+    public static function DeleteRootsByStorage(ObjectDatabase $database, Storage $storage, bool $unlink = false) : void
     {
-        $unlink = $filesystem->isExternal() || $unlink;
-        
-        $roots = static::LoadRootsByFSManager($database, $filesystem);
+        $unlink = $storage->isExternal() || $unlink;
+        $roots = static::LoadRootsByStorage($database, $storage);
         
         foreach ($roots as $folder)
         {
-            if ($unlink) $folder->NotifyFSDeleted(); else $folder->Delete();
+            if ($unlink) 
+                $folder->NotifyFSDeleted(); 
+            else $folder->Delete();
         }
     }
     
@@ -105,7 +105,9 @@ class RootFolder extends Folder
     {
         foreach (static::LoadRootsByAccount($database, $account) as $folder)
         {
-            if ($folder->GetFilesystem()->isExternal()) $folder->NotifyFSDeleted(); else $folder->Delete();
+            if ($folder->storage->GetObject()->isExternal())
+                $folder->NotifyFSDeleted(); 
+            else $folder->Delete();
         }
     }
     

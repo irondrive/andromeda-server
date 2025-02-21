@@ -47,6 +47,14 @@ CREATE TABLE `a2obj_apps_files_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `a2obj_apps_files_items_file` (
+  `id` char(16) NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `a2obj_apps_files_items_file_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `a2obj_apps_files_items_folder` (
   `id` char(16) NOT NULL,
   `count_subfiles` int(11) NOT NULL DEFAULT 0,
@@ -62,41 +70,27 @@ CREATE TABLE `a2obj_apps_files_items_item` (
   `size` bigint(20) NOT NULL,
   `owner` char(12) DEFAULT NULL,
   `storage` char(8) NOT NULL,
+  `parent` char(16) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `isroot` tinyint(1) DEFAULT NULL,
+  `ispublic` tinyint(1) DEFAULT NULL,
   `date_created` double NOT NULL,
   `date_modified` double DEFAULT NULL,
   `date_accessed` double DEFAULT NULL,
   `description` text DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `owner` (`owner`),
-  KEY `storage` (`storage`),
-  CONSTRAINT `a2obj_apps_files_items_item_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`),
-  CONSTRAINT `a2obj_apps_files_items_item_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_files_items_rootfolder` (
-  `id` char(16) NOT NULL,
-  `owner` char(12) DEFAULT NULL,
-  `storage` char(12) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `owner_storage` (`owner`,`storage`),
-  KEY `owner` (`owner`),
-  KEY `storage` (`storage`),
-  CONSTRAINT `a2obj_apps_files_items_rootfolder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_folder` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `a2obj_apps_files_items_subitem` (
-  `id` char(16) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `parent` char(16) NOT NULL,
-  PRIMARY KEY (`id`),
   UNIQUE KEY `name_parent` (`name`,`parent`),
+  UNIQUE KEY `storage_isroot_owner` (`storage`,`isroot`,`owner`),
+  UNIQUE KEY `storage_isroot_ispublic` (`storage`,`isroot`,`ispublic`),
+  KEY `owner` (`owner`),
+  KEY `storage` (`storage`),
   KEY `parent` (`parent`),
-  CONSTRAINT `a2obj_apps_files_items_subitem_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `a2obj_apps_files_items_subitem_ibfk_2` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_items_folder` (`id`)
+  CONSTRAINT `a2obj_apps_files_items_item_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`),
+  CONSTRAINT `a2obj_apps_files_items_item_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`),
+  CONSTRAINT `a2obj_apps_files_items_item_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_items_item` (`id`),
+  CONSTRAINT `CONSTRAINT_1` CHECK (`size` >= 0),
+  CONSTRAINT `CONSTRAINT_2` CHECK (`parent` is null and `name` is null and `isroot` is not null and `isroot` = 1 or `parent` is not null and `name` is not null and `isroot` is null),
+  CONSTRAINT `CONSTRAINT_3` CHECK (`owner` is null and `ispublic` is not null and `ispublic` = 1 or `owner` is not null and `ispublic` is null)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

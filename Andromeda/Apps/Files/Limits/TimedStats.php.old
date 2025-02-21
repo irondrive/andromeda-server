@@ -3,6 +3,9 @@
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
 
+//TODO timedStats should also catch DatabaseIntegrityException in addition to InsertFailedException
+//NOTE that a failure now is permanent due to REPEATABLE READ, rewrite with that in mind
+
 /**
  * Stores an entry of statistics for a Timed limit
  *

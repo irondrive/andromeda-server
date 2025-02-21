@@ -85,7 +85,7 @@ class NativeCryptTest extends \PHPUnit\Framework\TestCase
             assert($notify);
             assert($size >= 0);
             $this->sizes[$file->ID()] = $size;
-            return $file;
+            return true;
         }));
         
         $file->method('GetSize')->will($this->returnCallback(

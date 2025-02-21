@@ -24,6 +24,11 @@ CREATE TABLE `a2obj_apps_files_config` (
 ,  `timedstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
+CREATE TABLE `a2obj_apps_files_items_file` (
+  `id` char(16) NOT NULL
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_items_file_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+);
 CREATE TABLE `a2obj_apps_files_items_folder` (
   `id` char(16) NOT NULL
 ,  `count_subfiles` integer NOT NULL DEFAULT 0
@@ -36,30 +41,24 @@ CREATE TABLE `a2obj_apps_files_items_item` (
 ,  `size` integer NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `storage` char(8) NOT NULL
+,  `parent` char(16) DEFAULT NULL
+,  `name` varchar(255) DEFAULT NULL
+,  `isroot` integer DEFAULT NULL
+,  `ispublic` integer DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  `date_modified` double DEFAULT NULL
 ,  `date_accessed` double DEFAULT NULL
 ,  `description` text DEFAULT NULL
 ,  PRIMARY KEY (`id`)
+,  UNIQUE (`name`,`parent`)
+,  UNIQUE (`storage`,`isroot`,`owner`)
+,  UNIQUE (`storage`,`isroot`,`ispublic`)
 ,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
-);
-CREATE TABLE `a2obj_apps_files_items_rootfolder` (
-  `id` char(16) NOT NULL
-,  `owner` char(12) DEFAULT NULL
-,  `storage` char(12) NOT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`owner`,`storage`)
-,  CONSTRAINT `a2obj_apps_files_items_rootfolder_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_folder` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-);
-CREATE TABLE `a2obj_apps_files_items_subitem` (
-  `id` char(16) NOT NULL
-,  `name` varchar(255) NOT NULL
-,  `parent` char(16) NOT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`name`,`parent`)
-,  CONSTRAINT `a2obj_apps_files_items_subitem_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_items_subitem_ibfk_2` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_items_folder` (`id`)
+,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_items_item` (`id`)
+,  CONSTRAINT `CONSTRAINT_1` CHECK (`size` >= 0)
+,  CONSTRAINT `CONSTRAINT_2` CHECK (`parent` is null and `name` is null and `isroot` is not null and `isroot` = 1 or `parent` is not null and `name` is not null and `isroot` is null)
+,  CONSTRAINT `CONSTRAINT_3` CHECK (`owner` is null and `ispublic` is not null and `ispublic` = 1 or `owner` is not null and `ispublic` is null)
 );
 CREATE TABLE `a2obj_apps_files_limits_accounttimed` (
   `id` char(12) NOT NULL
@@ -320,8 +319,6 @@ CREATE TABLE `a2obj_apps_files_storage_webdav` (
 );
 CREATE INDEX "idx_a2obj_apps_files_limits_storagetimed_storage" ON "a2obj_apps_files_limits_storagetimed" (`storage`);
 CREATE INDEX "idx_a2obj_apps_files_limits_grouptimed_group" ON "a2obj_apps_files_limits_grouptimed" (`group`);
-CREATE INDEX "idx_a2obj_apps_files_items_rootfolder_owner" ON "a2obj_apps_files_items_rootfolder" (`owner`);
-CREATE INDEX "idx_a2obj_apps_files_items_rootfolder_storage" ON "a2obj_apps_files_items_rootfolder" (`storage`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_account" ON "a2obj_apps_files_actionlog" (`account`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_file" ON "a2obj_apps_files_actionlog" (`file`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_folder" ON "a2obj_apps_files_actionlog" (`folder`);
@@ -331,10 +328,10 @@ CREATE INDEX "idx_a2obj_apps_files_storage_storage_owner" ON "a2obj_apps_files_s
 CREATE INDEX "idx_a2obj_apps_files_storage_storage_name" ON "a2obj_apps_files_storage_storage" (`name`);
 CREATE INDEX "idx_a2obj_apps_files_items_item_owner" ON "a2obj_apps_files_items_item" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_items_item_storage" ON "a2obj_apps_files_items_item" (`storage`);
+CREATE INDEX "idx_a2obj_apps_files_items_item_parent" ON "a2obj_apps_files_items_item" (`parent`);
 CREATE INDEX "idx_a2obj_apps_files_social_share_dest" ON "a2obj_apps_files_social_share" (`dest`);
 CREATE INDEX "idx_a2obj_apps_files_social_share_owner" ON "a2obj_apps_files_social_share" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_social_share_item" ON "a2obj_apps_files_social_share" (`item`);
-CREATE INDEX "idx_a2obj_apps_files_items_subitem_parent" ON "a2obj_apps_files_items_subitem" (`parent`);
 CREATE INDEX "idx_a2obj_apps_files_social_tag_owner" ON "a2obj_apps_files_social_tag" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_social_tag_item" ON "a2obj_apps_files_social_tag" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_like_item" ON "a2obj_apps_files_social_like" (`item`);

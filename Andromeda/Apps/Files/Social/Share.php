@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Social; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
@@ -18,7 +18,9 @@ class Share extends BaseObject
     use AuthObject;
     
     protected const IDLength = 16;
-    
+
+    // TODO RAY !! add count bandwidth? use save on rollback
+
     public static function GetFieldTemplate() : array
     {
         return array_merge(parent::GetFieldTemplate(), array(
@@ -90,6 +92,7 @@ class Share extends BaseObject
     {
         if ($this->IsExpired()) throw new Exceptions\ShareExpiredException();
         return $this->SetDate('accessed')->DeltaCounter('accessed');
+        //  TODO RAY !! only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
     }
 
     /**

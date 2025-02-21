@@ -766,16 +766,20 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
      * @param ?scalar $value data value to match
+     * @param non-negative-int $limit the max number of files to load 
+     * @param non-negative-int $offset the offset to start loading from
      * @return array<string, T> loaded objects indexed by ID
      */
-    public function LoadObjectsByKey(string $class, string $key, $value) : array
+    public function LoadObjectsByKey(string $class, string $key, $value, ?int $limit = null, ?int $offset = null) : array
     {
         $validx = self::ValueToIndex($value);
         $this->RegisterNonUniqueKey($class, $key);
         
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {
-            $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
+            $q = new QueryBuilder();
+            $q->Where($q->Equals($key, $value));
+            $q->Limit($limit)->Offset($offset);
             $objs = $this->LoadObjectsByQuery($class, $q);
             
             $this->SetNonUniqueKeyObjects($class, $key, $validx, $objs);
@@ -783,6 +787,9 @@ class ObjectDatabase
             foreach ($objs as $obj)
                 $this->objectsKeyValues[spl_object_hash($obj)][$key] = $validx;
         }
+
+        // TODO RAY !! unit test limit/offset here and below
+        // TODO RAY !! need to consider limit/offset in the cached case
 
         return $this->objectsByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
     }
@@ -794,23 +801,26 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
      * @param ?scalar $value data value to match
+     * @param non-negative-int $limit the max number of files to load 
+     * @param non-negative-int $offset the offset to start loading from
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByKey(string $class, string $key, $value) : int
+    public function DeleteObjectsByKey(string $class, string $key, $value, ?int $limit = null, ?int $offset = null) : int
     {
         $validx = self::ValueToIndex($value);
         $this->RegisterNonUniqueKey($class, $key);
 
+        $q = new QueryBuilder();
+        $q->Where($q->Equals($key, $value));
+        $q->Limit($limit)->Offset($offset);
+
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {
-            $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
             $count = $this->DeleteObjectsByQuery($class, $q);
         }
         else if (($count = count($this->objectsByKey[$class][$key][$validx])) !== 0)
         {
             // rely on REPEATABLE READ - delete query result should match the cache
-            $q = new QueryBuilder(); $q->Where($q->Equals($key, $value));
-            
             if (($count2 = $this->DeleteObjectsByQuery($class, $q, 
                     $this->objectsByKey[$class][$key][$validx])) !== $count)
                 throw new Exceptions\DeleteFailedException("$class want:$count ret:$count2");

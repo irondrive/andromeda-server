@@ -10,6 +10,7 @@ createdb -h localhost -U postgres andromeda
 echo "LOAD DATABASE
     FROM mysql://root:$MYSQL_PWD@localhost/andromeda
     INTO pgsql://postgres:$PGPASSWORD@localhost/andromeda
+    WITH schema only
 ALTER SCHEMA 'andromeda' rename to 'public';" > tmp.load
 
 pgloader tmp.load; RET=$?; rm tmp.load; exit $RET

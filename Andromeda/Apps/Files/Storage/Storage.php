@@ -39,14 +39,15 @@ abstract class Storage extends BaseObject
      * @var array<string, class-string<self>>
      */
     public const TYPES = array(
-        'local' => Local::class, 
+        'local' => Local::class, // FIRST
+        // TODO make the DB stop after the first table result when loading by unique for performance
         'smb' => SMB::class, 
         'sftp' => SFTP::class, 
         's3' => S3::class,
         'ftp' => FTP::class
     );
     
-    /** @return array<string, class-string<self>> */
+    /** @return array<class-string<self>> */
     public static function GetChildMap(ObjectDatabase $database) : array { return self::TYPES; }
     
     public const FSTYPE_NATIVE = 0; 
@@ -198,18 +199,15 @@ abstract class Storage extends BaseObject
     /** Returns the name of this storage (or the default if null) */
     public function GetName() : string { return $this->name->GetValue(); }
     
-    /** 
-     * Sets the name of this storage, checking uniqueness
-     * @return $this
-     */
-    public function SetName(?string $name) : self 
+    /** Sets the name of this storage, checking uniqueness */
+    public function SetName(?string $name) : bool
     {
         $name ??= self::DEFAULT_NAME;
 
         if (static::TryLoadByAccountAndName($this->database, $this->TryGetOwner(), $name) !== null)
             throw new Exceptions\InvalidNameException();
         
-        $this->name->SetValue($name); return $this;
+        return $this->name->SetValue($name);
     }
     
     /** Returns the common command usage of Create() */

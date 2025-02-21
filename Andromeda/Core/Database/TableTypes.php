@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\Database\TableTypes; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{BaseObject, Exceptions, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{Exceptions, FieldTypes, ObjectDatabase, QueryBuilder};
 
 /** A trait for classes that have a database table */
 trait HasTable
