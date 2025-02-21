@@ -1,49 +1,41 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Items; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\ObjectDatabase;
+use Andromeda\Core\Database\{ObjectDatabase, TableTypes};
 use Andromeda\Apps\Accounts\Account;
 
 /** A subfolder has a parent */
 class SubFolder extends Folder
 {
-    /** @return class-string<self> */
-    public static function GetObjClass(array $row) : string { return self::class; }
-    
-    public function GetName() : string { return $this->GetScalar('name'); }
-    public function GetParent() : Folder { return $this->GetObject('parent'); }
-    public function GetParentID() : string { return $this->GetObjectID('parent'); }
+    use TableTypes\NoChildren;
 
-    public function SetName(string $name, bool $overwrite = false) : self
+    public function SetName(string $name, bool $overwrite = false) : bool
     {
         static::CheckName($name, $overwrite, false);
         
         $this->GetFilesystem()->RenameFolder($this, $name);
-        return $this->SetScalar('name', $name);
+        return $this->name->SetValue($name);
     }
     
-    public function SetParent(Folder $parent, bool $overwrite = false) : self
+    public function SetParent(Folder $parent, bool $overwrite = false) : bool
     {
-        $this->CheckIsNotChildOrSelf($parent);
+        $this->CheckNotChildOrSelf($parent);
         static::CheckParent($parent, $overwrite, false); 
         
         $this->GetFilesystem()->MoveFolder($this, $parent);
-        return $this->SetObject('parent', $parent);
+        return $this->parent->SetObject($parent);
     }
 
     /**
      * Copy to a folder by copying our individual contents
-     * @param self $dest new object for destination
-     * @return self $dest
+     * @param Folder $dest new object for destination
      */
-    protected function CopyToFolder(self $dest) : self
+    protected function CopyToFolder(Folder $dest) : void
     {
         foreach ($this->GetFiles() as $item)
-            $item->CopyToParent($dest->GetOwner(), $dest);
+            $item->CopyToParent($dest->TryGetOwner(), $dest);
         
         foreach ($this->GetFolders() as $item)
-            $item->CopyToParent($dest->GetOwner(), $dest);
-        
-        return $dest;
+            $item->CopyToParent($dest->TryGetOwner(), $dest);
     }
     
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
@@ -55,12 +47,13 @@ class SubFolder extends Folder
         
         $this->GetFilesystem(false)->CreateFolder($folder); 
         
-        return $this->CopyToFolder($folder);
+        $this->CopyToFolder($folder);
+        return $folder;
     }
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
     {
-        $this->CheckIsNotChildOrSelf($parent);
+        $this->CheckNotChildOrSelf($parent);
         
         $folder = static::CheckParent($parent, $overwrite, true);
         if ($folder !== null) $folder->DeleteChildren();
@@ -69,24 +62,8 @@ class SubFolder extends Folder
         
         $this->GetFilesystem(false)->CreateFolder($folder);
         
-        return $this->CopyToFolder($folder);
-    }
-    
-    /**
-     * Creates a new non-root folder in DB only
-     * @param ObjectDatabase $database database reference
-     * @param Folder $parent the parent folder of this folder
-     * @param Account $account the owner of this folder (or null)
-     * @param string $name the name of this folder
-     * @return static
-     */
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
-    {
-        return static::BaseCreate($database)
-            ->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('parent',$parent)            
-            ->SetObject('owner',$account)
-            ->SetScalar('name',$name)->CountCreate();
+        $this->CopyToFolder($folder);
+        return $folder;
     }
     
     /**
@@ -104,7 +81,7 @@ class SubFolder extends Folder
     }
     
     /** Deletes the folder and its contents from DB and disk */
-    public function Delete() : void
+    public function Delete() : void // TODO RAY re-do all deletes
     {
         if ($this->GetParent()->isFSDeleted())
             { $this->NotifyFSDeleted(); return; }

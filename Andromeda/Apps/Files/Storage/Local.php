@@ -56,6 +56,7 @@ class Local extends FWrapper
 
     protected function GetFullURL(string $path = "") : string
     {
+        // ensures there is no :// at the beginning
         return "/".$this->GetPath($path);
     }
     

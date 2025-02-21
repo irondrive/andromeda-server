@@ -28,7 +28,7 @@ cd Andromeda; for i in Apps/* Core; do if [ -f $i/andromeda.mysql.sql ]; then
 
    echo "exporting pgsql template for $i..."
    pg_dump --schema-only --table public.a2obj_"*"${il//\//_}"*" --dbname andromeda \
-      --host localhost --username postgres --no-owner | grep -v "^--" > $i/andromeda.pgsql.sql
+      --host localhost --username postgres --no-owner > $i/andromeda.pgsql.sql
    sed -i "s/DEFAULT '\\\x4e554c4c'::bytea/DEFAULT NULL::bytea/" $i/andromeda.pgsql.sql
 
    echo "exporting sqlite template for $i..."

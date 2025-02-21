@@ -86,12 +86,13 @@ class FileUtils
             
             $rlen = min($nbyte-$byte, $fstart+$length-$byte);
             
+            assert($rlen >= 0); // guaranteed by intdiv math
             $data = $file->ReadBytes($byte, $rlen);
             
             if (strlen($data) !== $rlen)
                 throw new FileReadFailedException();
                 
-            $file->CountBandwidth($rlen);
+            //$file->CountBandwidth($rlen); // TODO LIMITS
             $byte += $rlen;
             
             if (!$debugdl) { echo $data; flush(); } // TODO take a stream here too instead of echo directly - debugdl can be a dummy stream (ofc check benchmark)

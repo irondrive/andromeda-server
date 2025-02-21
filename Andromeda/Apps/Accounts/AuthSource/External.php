@@ -211,7 +211,7 @@ abstract class External extends BaseObject implements IAuthSource
     private const ENABLED_TYPES = array(
         'disable'=>ExternalState::Disabled->value, 
         'preexist'=>ExternalState::PreExisting->value, 
-        'fullenable'=>ExternalState::FullEnable->value);
+        'fullenable'=>ExternalState::FullEnable->value); // TODO RAY !! does not work with PHP 8.1
     
     /** Returns the enum of how/if this is enabled */
     public function GetEnabled() : ExternalState { 

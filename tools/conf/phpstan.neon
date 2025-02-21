@@ -13,7 +13,6 @@ parameters:
         - ../../Andromeda/init.php
     excludePaths:
         analyse:
-            - ../../Andromeda/Apps/Files/Items
             - ../../Andromeda/Apps/Files/Limits
             - ../../Andromeda/Apps/Files/Social
             - ../../Andromeda/Apps/Files/ActionLog.php

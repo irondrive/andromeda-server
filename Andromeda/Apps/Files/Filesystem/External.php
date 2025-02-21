@@ -25,7 +25,8 @@ class External extends Filesystem
      */
     protected function GetItemPath(Item $item, ?string $child = null) : string
     {
-        $parent = $item->GetParent();
+        $parent = $item->TryGetParent();
+        // TODO replace this with an iterative version, not recursive
         
         $path = ($parent === null) ? "" :
             $this->GetItemPath($parent, $item->GetName());
@@ -51,6 +52,7 @@ class External extends Filesystem
             $file->NotifyFSDeleted(); return $this; }
 
         $stat = $storage->ItemStat($path); 
+        assert($stat->size >= 0); // OS guarantee?
         $file->SetSize($stat->size,true);
 
         if ($stat->atime !== 0.0) $file->SetAccessed($stat->atime);
@@ -107,9 +109,10 @@ class External extends Filesystem
                     $database = $this->GetStorage()->GetDatabase();
                     $owner = $this->GetStorage()->TryGetOwner();
                     
-                    $class = $isfile ? File::class : Folder::class;
+                    $class = $isfile ? File::class : SubFolder::class;
                     $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
-                    $dbitem->Refresh()->Save(); // update metadata, and insert to the DB immediately
+                    $dbitem->Refresh(); // update metadata
+                    $dbitem->Save(); // insert to the DB immediately
                 }
             }
             
@@ -180,7 +183,7 @@ class External extends Filesystem
     public function RenameFolder(Folder $folder, string $name) : self
     { 
         $oldpath = $this->GetItemPath($folder);
-        $newpath = $this->GetItemPath($folder->GetParent(),$name); // @phpstan-ignore-line TODO parent can be null, only allow this with subfolders
+        $newpath = $this->GetItemPath($folder->GetParent(),$name);
         $this->GetStorage()->RenameFolder($oldpath, $newpath);
         return $this;
     }

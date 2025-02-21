@@ -1,4 +1,9 @@
+--
+-- PostgreSQL database dump
+--
 
+-- Dumped from database version 16.6 (Ubuntu 16.6-0ubuntu0.24.10.1)
+-- Dumped by pg_dump version 16.6 (Ubuntu 16.6-0ubuntu0.24.10.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -15,6 +20,9 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+--
+-- Name: a2obj_apps_files_actionlog; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_actionlog (
     id character(20) NOT NULL,
@@ -31,6 +39,9 @@ CREATE TABLE public.a2obj_apps_files_actionlog (
 );
 
 
+--
+-- Name: a2obj_apps_files_config; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_config (
     id character(1) NOT NULL,
@@ -44,6 +55,18 @@ CREATE TABLE public.a2obj_apps_files_config (
 );
 
 
+--
+-- Name: a2obj_apps_files_items_file; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.a2obj_apps_files_items_file (
+    id character(16) NOT NULL
+);
+
+
+--
+-- Name: a2obj_apps_files_items_folder; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_items_folder (
     id character(16) NOT NULL,
@@ -52,12 +75,19 @@ CREATE TABLE public.a2obj_apps_files_items_folder (
 );
 
 
+--
+-- Name: a2obj_apps_files_items_item; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_items_item (
     id character(16) NOT NULL,
     size bigint NOT NULL,
     owner character(12) DEFAULT NULL::bpchar,
     storage character(8) NOT NULL,
+    parent character(16) DEFAULT NULL::bpchar,
+    name character varying(255) DEFAULT NULL::character varying,
+    isroot boolean,
+    ispublic boolean,
     date_created double precision NOT NULL,
     date_modified double precision,
     date_accessed double precision,
@@ -65,22 +95,9 @@ CREATE TABLE public.a2obj_apps_files_items_item (
 );
 
 
-
-CREATE TABLE public.a2obj_apps_files_items_rootfolder (
-    id character(16) NOT NULL,
-    owner character(12) DEFAULT NULL::bpchar,
-    storage character(12) NOT NULL
-);
-
-
-
-CREATE TABLE public.a2obj_apps_files_items_subitem (
-    id character(16) NOT NULL,
-    name character varying(255) NOT NULL,
-    parent character(16) NOT NULL
-);
-
-
+--
+-- Name: a2obj_apps_files_limits_accounttimed; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_accounttimed (
     id character(12) NOT NULL,
@@ -91,6 +108,9 @@ CREATE TABLE public.a2obj_apps_files_limits_accounttimed (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_accounttotal; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_accounttotal (
     id character(12) NOT NULL,
@@ -102,6 +122,9 @@ CREATE TABLE public.a2obj_apps_files_limits_accounttotal (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptimed; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_grouptimed (
     id character(12) NOT NULL,
@@ -112,6 +135,9 @@ CREATE TABLE public.a2obj_apps_files_limits_grouptimed (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptotal; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_grouptotal (
     id character(12) NOT NULL,
@@ -123,6 +149,9 @@ CREATE TABLE public.a2obj_apps_files_limits_grouptotal (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetimed; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_storagetimed (
     id character(8) NOT NULL,
@@ -133,6 +162,9 @@ CREATE TABLE public.a2obj_apps_files_limits_storagetimed (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetotal; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_storagetotal (
     id character(8) NOT NULL,
@@ -142,6 +174,9 @@ CREATE TABLE public.a2obj_apps_files_limits_storagetotal (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_timed; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_timed (
     id character(12) NOT NULL,
@@ -152,6 +187,9 @@ CREATE TABLE public.a2obj_apps_files_limits_timed (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_timedstats; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_timedstats (
     id character(12) NOT NULL,
@@ -167,6 +205,9 @@ CREATE TABLE public.a2obj_apps_files_limits_timedstats (
 );
 
 
+--
+-- Name: a2obj_apps_files_limits_total; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_limits_total (
     id character(12) NOT NULL,
@@ -190,6 +231,9 @@ CREATE TABLE public.a2obj_apps_files_limits_total (
 );
 
 
+--
+-- Name: a2obj_apps_files_social_comment; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_social_comment (
     id character(16) NOT NULL,
@@ -201,6 +245,9 @@ CREATE TABLE public.a2obj_apps_files_social_comment (
 );
 
 
+--
+-- Name: a2obj_apps_files_social_like; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_social_like (
     id character(12) NOT NULL,
@@ -211,6 +258,9 @@ CREATE TABLE public.a2obj_apps_files_social_like (
 );
 
 
+--
+-- Name: a2obj_apps_files_social_share; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_social_share (
     id character(16) NOT NULL,
@@ -234,6 +284,9 @@ CREATE TABLE public.a2obj_apps_files_social_share (
 );
 
 
+--
+-- Name: a2obj_apps_files_social_tag; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_social_tag (
     id character(16) NOT NULL,
@@ -244,6 +297,9 @@ CREATE TABLE public.a2obj_apps_files_social_tag (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_ftp; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_ftp (
     id character(8) NOT NULL,
@@ -258,6 +314,9 @@ CREATE TABLE public.a2obj_apps_files_storage_ftp (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_local; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_local (
     id character(8) NOT NULL,
@@ -265,6 +324,9 @@ CREATE TABLE public.a2obj_apps_files_storage_local (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_s3; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_s3 (
     id character(8) NOT NULL,
@@ -281,6 +343,9 @@ CREATE TABLE public.a2obj_apps_files_storage_s3 (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_sftp; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_sftp (
     id character(8) NOT NULL,
@@ -299,6 +364,9 @@ CREATE TABLE public.a2obj_apps_files_storage_sftp (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_smb; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_smb (
     id character(8) NOT NULL,
@@ -312,6 +380,9 @@ CREATE TABLE public.a2obj_apps_files_storage_smb (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_storage; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_storage (
     id character(8) NOT NULL,
@@ -325,6 +396,9 @@ CREATE TABLE public.a2obj_apps_files_storage_storage (
 );
 
 
+--
+-- Name: a2obj_apps_files_storage_webdav; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.a2obj_apps_files_storage_webdav (
     id character(8) NOT NULL,
@@ -337,454 +411,739 @@ CREATE TABLE public.a2obj_apps_files_storage_webdav (
 );
 
 
+--
+-- Name: a2obj_apps_files_actionlog idx_149811_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_actionlog
-    ADD CONSTRAINT idx_134677_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149811_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_config idx_149823_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_config
-    ADD CONSTRAINT idx_134689_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149823_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_items_file idx_149828_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.a2obj_apps_files_items_file
+    ADD CONSTRAINT idx_149828_primary PRIMARY KEY (id);
+
+
+--
+-- Name: a2obj_apps_files_items_folder idx_149831_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_items_folder
-    ADD CONSTRAINT idx_134694_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149831_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_items_item idx_149836_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_items_item
-    ADD CONSTRAINT idx_134699_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149836_primary PRIMARY KEY (id);
 
 
-
-ALTER TABLE ONLY public.a2obj_apps_files_items_rootfolder
-    ADD CONSTRAINT idx_134705_primary PRIMARY KEY (id);
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_files_items_subitem
-    ADD CONSTRAINT idx_134709_primary PRIMARY KEY (id);
-
-
+--
+-- Name: a2obj_apps_files_limits_accounttimed idx_149844_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttimed
-    ADD CONSTRAINT idx_134712_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149844_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_accounttotal idx_149847_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttotal
-    ADD CONSTRAINT idx_134715_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149847_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptimed idx_149850_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptimed
-    ADD CONSTRAINT idx_134718_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149850_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptotal idx_149853_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptotal
-    ADD CONSTRAINT idx_134721_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149853_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetimed idx_149856_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetimed
-    ADD CONSTRAINT idx_134724_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149856_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetotal idx_149859_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetotal
-    ADD CONSTRAINT idx_134727_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149859_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_timed idx_149862_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_timed
-    ADD CONSTRAINT idx_134730_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149862_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_timedstats idx_149865_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_timedstats
-    ADD CONSTRAINT idx_134733_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149865_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_limits_total idx_149873_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_total
-    ADD CONSTRAINT idx_134741_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149873_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_social_comment idx_149881_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_comment
-    ADD CONSTRAINT idx_134749_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149881_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_social_like idx_149886_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_like
-    ADD CONSTRAINT idx_134754_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149886_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_social_share idx_149889_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_share
-    ADD CONSTRAINT idx_134757_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149889_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_social_tag idx_149896_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_tag
-    ADD CONSTRAINT idx_134764_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149896_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_ftp idx_149899_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_ftp
-    ADD CONSTRAINT idx_134767_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149899_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_local idx_149905_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_local
-    ADD CONSTRAINT idx_134773_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149905_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_s3 idx_149910_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_s3
-    ADD CONSTRAINT idx_134778_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149910_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_sftp idx_149917_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_sftp
-    ADD CONSTRAINT idx_134785_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149917_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_smb idx_149926_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_smb
-    ADD CONSTRAINT idx_134794_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149926_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_storage idx_149934_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_storage
-    ADD CONSTRAINT idx_134802_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149934_primary PRIMARY KEY (id);
 
 
+--
+-- Name: a2obj_apps_files_storage_webdav idx_149943_primary; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_webdav
-    ADD CONSTRAINT idx_134811_primary PRIMARY KEY (id);
+    ADD CONSTRAINT idx_149943_primary PRIMARY KEY (id);
 
 
+--
+-- Name: idx_149811_account; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134677_account ON public.a2obj_apps_files_actionlog USING btree (account);
+CREATE INDEX idx_149811_account ON public.a2obj_apps_files_actionlog USING btree (account);
 
 
+--
+-- Name: idx_149811_file; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134677_file ON public.a2obj_apps_files_actionlog USING btree (file);
+CREATE INDEX idx_149811_file ON public.a2obj_apps_files_actionlog USING btree (file);
 
 
+--
+-- Name: idx_149811_folder; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134677_folder ON public.a2obj_apps_files_actionlog USING btree (folder);
+CREATE INDEX idx_149811_folder ON public.a2obj_apps_files_actionlog USING btree (folder);
 
 
+--
+-- Name: idx_149836_name_parent; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134699_owner ON public.a2obj_apps_files_items_item USING btree (owner);
+CREATE UNIQUE INDEX idx_149836_name_parent ON public.a2obj_apps_files_items_item USING btree (name, parent);
 
 
+--
+-- Name: idx_149836_owner; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134699_storage ON public.a2obj_apps_files_items_item USING btree (storage);
+CREATE INDEX idx_149836_owner ON public.a2obj_apps_files_items_item USING btree (owner);
 
 
+--
+-- Name: idx_149836_parent; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134705_owner ON public.a2obj_apps_files_items_rootfolder USING btree (owner);
+CREATE INDEX idx_149836_parent ON public.a2obj_apps_files_items_item USING btree (parent);
 
 
+--
+-- Name: idx_149836_storage; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134705_owner_storage ON public.a2obj_apps_files_items_rootfolder USING btree (owner, storage);
+CREATE INDEX idx_149836_storage ON public.a2obj_apps_files_items_item USING btree (storage);
 
 
+--
+-- Name: idx_149836_storage_isroot_ispublic; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134705_storage ON public.a2obj_apps_files_items_rootfolder USING btree (storage);
+CREATE UNIQUE INDEX idx_149836_storage_isroot_ispublic ON public.a2obj_apps_files_items_item USING btree (storage, isroot, ispublic);
 
 
+--
+-- Name: idx_149836_storage_isroot_owner; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134709_name_parent ON public.a2obj_apps_files_items_subitem USING btree (name, parent);
+CREATE UNIQUE INDEX idx_149836_storage_isroot_owner ON public.a2obj_apps_files_items_item USING btree (storage, isroot, owner);
 
 
+--
+-- Name: idx_149844_account; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134709_parent ON public.a2obj_apps_files_items_subitem USING btree (parent);
+CREATE INDEX idx_149844_account ON public.a2obj_apps_files_limits_accounttimed USING btree (account);
 
 
+--
+-- Name: idx_149844_account_timeperiod; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134712_account ON public.a2obj_apps_files_limits_accounttimed USING btree (account);
+CREATE UNIQUE INDEX idx_149844_account_timeperiod ON public.a2obj_apps_files_limits_accounttimed USING btree (account, timeperiod);
 
 
+--
+-- Name: idx_149847_account; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134712_account_timeperiod ON public.a2obj_apps_files_limits_accounttimed USING btree (account, timeperiod);
+CREATE UNIQUE INDEX idx_149847_account ON public.a2obj_apps_files_limits_accounttotal USING btree (account);
 
 
+--
+-- Name: idx_149850_group; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134715_account ON public.a2obj_apps_files_limits_accounttotal USING btree (account);
+CREATE INDEX idx_149850_group ON public.a2obj_apps_files_limits_grouptimed USING btree ("group");
 
 
+--
+-- Name: idx_149850_group_timeperiod; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134718_group ON public.a2obj_apps_files_limits_grouptimed USING btree ("group");
+CREATE UNIQUE INDEX idx_149850_group_timeperiod ON public.a2obj_apps_files_limits_grouptimed USING btree ("group", timeperiod);
 
 
+--
+-- Name: idx_149853_group; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134718_group_timeperiod ON public.a2obj_apps_files_limits_grouptimed USING btree ("group", timeperiod);
+CREATE UNIQUE INDEX idx_149853_group ON public.a2obj_apps_files_limits_grouptotal USING btree ("group");
 
 
+--
+-- Name: idx_149856_storage; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134721_group ON public.a2obj_apps_files_limits_grouptotal USING btree ("group");
+CREATE INDEX idx_149856_storage ON public.a2obj_apps_files_limits_storagetimed USING btree (storage);
 
 
+--
+-- Name: idx_149856_storage_timeperiod; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134724_storage ON public.a2obj_apps_files_limits_storagetimed USING btree (storage);
+CREATE UNIQUE INDEX idx_149856_storage_timeperiod ON public.a2obj_apps_files_limits_storagetimed USING btree (storage, timeperiod);
 
 
+--
+-- Name: idx_149859_storage; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134724_storage_timeperiod ON public.a2obj_apps_files_limits_storagetimed USING btree (storage, timeperiod);
+CREATE UNIQUE INDEX idx_149859_storage ON public.a2obj_apps_files_limits_storagetotal USING btree (storage);
 
 
+--
+-- Name: idx_149865_limit_iscurrent; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134727_storage ON public.a2obj_apps_files_limits_storagetotal USING btree (storage);
+CREATE UNIQUE INDEX idx_149865_limit_iscurrent ON public.a2obj_apps_files_limits_timedstats USING btree ("limit", iscurrent);
 
 
+--
+-- Name: idx_149865_limit_timestart; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134733_limit_iscurrent ON public.a2obj_apps_files_limits_timedstats USING btree ("limit", iscurrent);
+CREATE UNIQUE INDEX idx_149865_limit_timestart ON public.a2obj_apps_files_limits_timedstats USING btree ("limit", date_timestart);
 
 
+--
+-- Name: idx_149881_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134733_limit_timestart ON public.a2obj_apps_files_limits_timedstats USING btree ("limit", date_timestart);
+CREATE INDEX idx_149881_item ON public.a2obj_apps_files_social_comment USING btree (item);
 
 
+--
+-- Name: idx_149881_owner_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134749_item ON public.a2obj_apps_files_social_comment USING btree (item);
+CREATE INDEX idx_149881_owner_item ON public.a2obj_apps_files_social_comment USING btree (owner, item);
 
 
+--
+-- Name: idx_149886_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134749_owner_item ON public.a2obj_apps_files_social_comment USING btree (owner, item);
+CREATE INDEX idx_149886_item ON public.a2obj_apps_files_social_like USING btree (item);
 
 
+--
+-- Name: idx_149886_owner_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134754_item ON public.a2obj_apps_files_social_like USING btree (item);
+CREATE UNIQUE INDEX idx_149886_owner_item ON public.a2obj_apps_files_social_like USING btree (owner, item);
 
 
+--
+-- Name: idx_149889_dest; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134754_owner_item ON public.a2obj_apps_files_social_like USING btree (owner, item);
+CREATE INDEX idx_149889_dest ON public.a2obj_apps_files_social_share USING btree (dest);
 
 
+--
+-- Name: idx_149889_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134757_dest ON public.a2obj_apps_files_social_share USING btree (dest);
+CREATE INDEX idx_149889_item ON public.a2obj_apps_files_social_share USING btree (item);
 
 
+--
+-- Name: idx_149889_item_owner_dest; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134757_item ON public.a2obj_apps_files_social_share USING btree (item);
+CREATE UNIQUE INDEX idx_149889_item_owner_dest ON public.a2obj_apps_files_social_share USING btree (item, owner, dest);
 
 
+--
+-- Name: idx_149889_owner; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134757_item_owner_dest ON public.a2obj_apps_files_social_share USING btree (item, owner, dest);
+CREATE INDEX idx_149889_owner ON public.a2obj_apps_files_social_share USING btree (owner);
 
 
+--
+-- Name: idx_149896_item; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134757_owner ON public.a2obj_apps_files_social_share USING btree (owner);
+CREATE INDEX idx_149896_item ON public.a2obj_apps_files_social_tag USING btree (item);
 
 
+--
+-- Name: idx_149896_item_tag; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134764_item ON public.a2obj_apps_files_social_tag USING btree (item);
+CREATE UNIQUE INDEX idx_149896_item_tag ON public.a2obj_apps_files_social_tag USING btree (item, tag);
 
 
+--
+-- Name: idx_149896_owner; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE UNIQUE INDEX idx_134764_item_tag ON public.a2obj_apps_files_social_tag USING btree (item, tag);
+CREATE INDEX idx_149896_owner ON public.a2obj_apps_files_social_tag USING btree (owner);
 
 
+--
+-- Name: idx_149934_name; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134764_owner ON public.a2obj_apps_files_social_tag USING btree (owner);
+CREATE INDEX idx_149934_name ON public.a2obj_apps_files_storage_storage USING btree (name);
 
 
+--
+-- Name: idx_149934_owner; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134802_name ON public.a2obj_apps_files_storage_storage USING btree (name);
+CREATE INDEX idx_149934_owner ON public.a2obj_apps_files_storage_storage USING btree (owner);
 
 
+--
+-- Name: idx_149934_owner_name; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE INDEX idx_134802_owner ON public.a2obj_apps_files_storage_storage USING btree (owner);
+CREATE UNIQUE INDEX idx_149934_owner_name ON public.a2obj_apps_files_storage_storage USING btree (owner, name);
 
 
-
-CREATE UNIQUE INDEX idx_134802_owner_name ON public.a2obj_apps_files_storage_storage USING btree (owner, name);
-
-
+--
+-- Name: a2obj_apps_files_actionlog a2obj_apps_files_actionlog_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_actionlog
     ADD CONSTRAINT a2obj_apps_files_actionlog_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_core_logging_actionlog(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_items_file a2obj_apps_files_items_file_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.a2obj_apps_files_items_file
+    ADD CONSTRAINT a2obj_apps_files_items_file_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: a2obj_apps_files_items_folder a2obj_apps_files_items_folder_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_items_folder
     ADD CONSTRAINT a2obj_apps_files_items_folder_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_items_item a2obj_apps_files_items_item_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_items_item
     ADD CONSTRAINT a2obj_apps_files_items_item_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_items_item a2obj_apps_files_items_item_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_items_item
     ADD CONSTRAINT a2obj_apps_files_items_item_ibfk_2 FOREIGN KEY (storage) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_items_item a2obj_apps_files_items_item_ibfk_3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
-ALTER TABLE ONLY public.a2obj_apps_files_items_rootfolder
-    ADD CONSTRAINT a2obj_apps_files_items_rootfolder_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_items_folder(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY public.a2obj_apps_files_items_subitem
-    ADD CONSTRAINT a2obj_apps_files_items_subitem_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY public.a2obj_apps_files_items_item
+    ADD CONSTRAINT a2obj_apps_files_items_item_ibfk_3 FOREIGN KEY (parent) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
-
-ALTER TABLE ONLY public.a2obj_apps_files_items_subitem
-    ADD CONSTRAINT a2obj_apps_files_items_subitem_ibfk_2 FOREIGN KEY (parent) REFERENCES public.a2obj_apps_files_items_folder(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
-
-
+--
+-- Name: a2obj_apps_files_limits_accounttimed a2obj_apps_files_limits_accounttimed_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttimed
     ADD CONSTRAINT a2obj_apps_files_limits_accounttimed_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_timed(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_accounttimed a2obj_apps_files_limits_accounttimed_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttimed
     ADD CONSTRAINT a2obj_apps_files_limits_accounttimed_ibfk_2 FOREIGN KEY (account) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_accounttotal a2obj_apps_files_limits_accounttotal_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttotal
     ADD CONSTRAINT a2obj_apps_files_limits_accounttotal_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_total(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_accounttotal a2obj_apps_files_limits_accounttotal_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_accounttotal
     ADD CONSTRAINT a2obj_apps_files_limits_accounttotal_ibfk_2 FOREIGN KEY (account) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptimed a2obj_apps_files_limits_grouptimed_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptimed
     ADD CONSTRAINT a2obj_apps_files_limits_grouptimed_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_timed(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptimed a2obj_apps_files_limits_grouptimed_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptimed
     ADD CONSTRAINT a2obj_apps_files_limits_grouptimed_ibfk_2 FOREIGN KEY ("group") REFERENCES public.a2obj_apps_accounts_group(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptotal a2obj_apps_files_limits_grouptotal_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptotal
     ADD CONSTRAINT a2obj_apps_files_limits_grouptotal_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_total(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_grouptotal a2obj_apps_files_limits_grouptotal_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_grouptotal
     ADD CONSTRAINT a2obj_apps_files_limits_grouptotal_ibfk_2 FOREIGN KEY ("group") REFERENCES public.a2obj_apps_accounts_group(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetimed a2obj_apps_files_limits_storagetimed_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetimed
     ADD CONSTRAINT a2obj_apps_files_limits_storagetimed_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_timed(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetimed a2obj_apps_files_limits_storagetimed_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetimed
     ADD CONSTRAINT a2obj_apps_files_limits_storagetimed_ibfk_2 FOREIGN KEY (storage) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetotal a2obj_apps_files_limits_storagetotal_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetotal
     ADD CONSTRAINT a2obj_apps_files_limits_storagetotal_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_limits_total(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_limits_storagetotal a2obj_apps_files_limits_storagetotal_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_storagetotal
     ADD CONSTRAINT a2obj_apps_files_limits_storagetotal_ibfk_2 FOREIGN KEY (storage) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_limits_timedstats a2obj_apps_files_limits_timedstats_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_limits_timedstats
     ADD CONSTRAINT a2obj_apps_files_limits_timedstats_ibfk_1 FOREIGN KEY ("limit") REFERENCES public.a2obj_apps_files_limits_timed(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_comment a2obj_apps_files_social_comment_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_comment
     ADD CONSTRAINT a2obj_apps_files_social_comment_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_comment a2obj_apps_files_social_comment_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_comment
     ADD CONSTRAINT a2obj_apps_files_social_comment_ibfk_2 FOREIGN KEY (item) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_like a2obj_apps_files_social_like_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_like
     ADD CONSTRAINT a2obj_apps_files_social_like_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_like a2obj_apps_files_social_like_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_like
     ADD CONSTRAINT a2obj_apps_files_social_like_ibfk_2 FOREIGN KEY (item) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_share a2obj_apps_files_social_share_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_share
     ADD CONSTRAINT a2obj_apps_files_social_share_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_share a2obj_apps_files_social_share_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_share
     ADD CONSTRAINT a2obj_apps_files_social_share_ibfk_2 FOREIGN KEY (item) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_share a2obj_apps_files_social_share_ibfk_3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_share
     ADD CONSTRAINT a2obj_apps_files_social_share_ibfk_3 FOREIGN KEY (dest) REFERENCES public.a2obj_apps_accounts_policybase(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_tag a2obj_apps_files_social_tag_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_tag
     ADD CONSTRAINT a2obj_apps_files_social_tag_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_social_tag a2obj_apps_files_social_tag_ibfk_2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_social_tag
     ADD CONSTRAINT a2obj_apps_files_social_tag_ibfk_2 FOREIGN KEY (item) REFERENCES public.a2obj_apps_files_items_item(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_storage_storage a2obj_apps_files_storage_fsmanager_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_storage
     ADD CONSTRAINT a2obj_apps_files_storage_fsmanager_ibfk_1 FOREIGN KEY (owner) REFERENCES public.a2obj_apps_accounts_account(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
+--
+-- Name: a2obj_apps_files_storage_ftp a2obj_apps_files_storage_ftp_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_ftp
     ADD CONSTRAINT a2obj_apps_files_storage_ftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_storage_local a2obj_apps_files_storage_local_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_local
     ADD CONSTRAINT a2obj_apps_files_storage_local_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_storage_s3 a2obj_apps_files_storage_s3_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_s3
     ADD CONSTRAINT a2obj_apps_files_storage_s3_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_storage_sftp a2obj_apps_files_storage_sftp_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_sftp
     ADD CONSTRAINT a2obj_apps_files_storage_sftp_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_storage_smb a2obj_apps_files_storage_smb_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_smb
     ADD CONSTRAINT a2obj_apps_files_storage_smb_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- Name: a2obj_apps_files_storage_webdav a2obj_apps_files_storage_webdav_ibfk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.a2obj_apps_files_storage_webdav
     ADD CONSTRAINT a2obj_apps_files_storage_webdav_ibfk_1 FOREIGN KEY (id) REFERENCES public.a2obj_apps_files_storage_storage(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
+--
+-- PostgreSQL database dump complete
+--
+
+
+----------------------------------------------------------------------------------------------
+--- NOTE pgloader DOES NOT transfer CHECK constraints from MySQL, copy these over manually ---
+----------------------------------------------------------------------------------------------
+
+ALTER TABLE ONLY public.a2obj_apps_files_items_item ADD CONSTRAINT CONSTRAINT_1
+    CHECK (size >= 0);
+    
+ALTER TABLE ONLY public.a2obj_apps_files_items_item ADD CONSTRAINT CONSTRAINT_2
+    CHECK (parent is null and name is null and isroot is not null and isroot = true or parent is not null and name is not null and isroot is null);
+
+ALTER TABLE ONLY public.a2obj_apps_files_items_item ADD CONSTRAINT CONSTRAINT_3
+    CHECK (owner is null and ispublic is not null and ispublic = true or owner is not null and ispublic is null);
 

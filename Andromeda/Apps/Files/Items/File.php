@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Items; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\InputPath;
 use Andromeda\Apps\Accounts\Account;
 
@@ -12,32 +12,8 @@ use Andromeda\Apps\Accounts\Account;
  */
 class File extends Item
 {
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'size' => new FieldTypes\IntType(),   
-            'obj_parent' => new FieldTypes\ObjectRef(Folder::class, 'files')
-        ));
-    }
-    
-    /** Returns the name of this file */
-    public function GetName() : string { return $this->GetScalar('name'); }
-    
-    /** Returns the parent folder of this file */
-    public function GetParent() : Folder { return $this->GetObject('parent'); }
-    
-    /** Returns the ID of the parent folder */
-    public function GetParentID() : string { return $this->GetObjectID('parent'); }
-    
-    /** 
-     * Returns the size of the file, in bytes
-     * @return non-negative-int
-     */
-    public function GetSize() : int { return $this->TryGetScalar('size') ?? 0; }
-    
-    /** Returns the number of share objects belonging to the file */
-    public function GetNumShares() : int { return $this->CountObjectRefs('shares'); }
-    
+    use TableTypes\TableNoChildren;
+
     /**
      * Sets the size of the file and update stats
      * 
@@ -45,22 +21,20 @@ class File extends Item
      * The call will be sent to the filesystem and modify the on-disk object.  If $notify
      * is true, then this is a notification coming up from the filesystem, alerting that the
      * on-disk object has changed in size and the database object needs to be updated
-     * @param int $size the new size of the file
+     * @param non-negative-int $size the new size of the file
      * @param bool $notify if true, this is a notification coming up from the filesystem
-     * @return $this
      */
-    public function SetSize(int $size, bool $notify = false) : self 
+    public function SetSize(int $size, bool $notify = false) : bool
     {
-        $delta = $size - ($this->TryGetScalar('size') ?? 0);
-        
+        $delta = $size - $this->size->GetValue();
         $this->GetParent()->DeltaSize($delta);        
         
-        $this->MapToLimits(function(Limits\Base $lim)use($delta,$notify){
-            if (!$this->onOwnerFS()) $lim->CountSize($delta,$notify); });
+        //$this->MapToLimits(function(Limits\Base $lim)use($delta,$notify){
+        //    if (!$this->onOwnerFS()) $lim->CountSize($delta,$notify); });
         
         if (!$notify) $this->GetFilesystem()->Truncate($this, $size);
-        
-        return $this->SetScalar('size', $size); 
+        return false; // TODO RAY !! cannot SetValue on counter... $this->size->SetValue($size); 
+        // maybe implement a way in the DB to force a counter to a certain value? count have counter extend IntType also
     }
     
     /**
@@ -71,17 +45,17 @@ class File extends Item
      */
     public function CheckSize(int $size) : self
     {
-        $delta = $size - ($this->TryGetScalar('size') ?? 0);
+        /*$delta = $size - ($this->TryGetScalar('size') ?? 0);
         
         return $this->MapToLimits(function(Limits\Base $lim)use($delta){
-            if (!$this->onOwnerFS()) $lim->CheckSize($delta); });
+            if (!$this->onOwnerFS()) $lim->CheckSize($delta); });*/ return $this;
     }
     
     /** 
      * Counts a download by updating limits, and notifying parents if $public 
      * @param bool $public if false, only updates the timestamp and not limit counters
      */
-    public function CountDownload(bool $public = true) : self
+    /*public function CountDownload(bool $public = true) : self
     {
         if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         
@@ -94,19 +68,20 @@ class File extends Item
             return parent::CountPublicDownload();
         }
         else return $this;
-    }
+    }*/
     
     /** Counts bandwidth by updating the count and notifying parents */
-    public function CountBandwidth(int $bytes) : self
+    /*public function CountBandwidth(int $bytes) : self
     {
         if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         
-        $fs = $this->GetFilesystem(); if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
+        $fs = $this->GetFilesystem();
+        if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
         $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });
         
         return parent::CountBandwidth($bytes);
-    }
+    }*/
     
     /**
      * Checks if the given bandwidth would exceed the limit
@@ -114,45 +89,41 @@ class File extends Item
      * @see Limits\Base::CheckBandwidth()
      * @return $this
      */
-    public function CheckBandwidth(int $bytes) : self
+    /*public function CheckBandwidth(int $bytes) : self
     {
-        $fs = $this->GetFilesystem(); if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
+        $fs = $this->GetFilesystem();
+        if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
         return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
-    }
+    }*/ // TODO LIMITS
     
-    protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
-        
-    private bool $refreshed = false;
+    //protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); } // TODO STATS
     
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
-    public function Refresh() : self
+    public function Refresh() : void
     {
-        if ($this->refreshed) return $this;
-
-        if ($this->isCreated() || $this->isDeleted()) return $this;
+        if ($this->refreshed || $this->isCreated() || $this->isDeleted()) return;
 
         $this->refreshed = true;
-        
+        // TODO RAY why is requireExist for filesystem here true? this whole chain makes no sense
+        // what to do if it doesn't exist anymore? throw? need to rethink all refreshing
         $this->GetFilesystem()->RefreshFile($this);
-        
-        return $this;
     }
 
-    public function SetName(string $name, bool $overwrite = false) : self
+    public function SetName(string $name, bool $overwrite = false) : bool
     {
         static::CheckName($name, $overwrite, false);
         
         $this->GetFilesystem()->RenameFile($this, $name); 
-        return $this->SetScalar('name', $name);
+        return $this->name->SetValue($name);
     }
     
-    public function SetParent(Folder $parent, bool $overwrite = false) : self
+    public function SetParent(Folder $parent, bool $overwrite = false) : bool
     {
         static::CheckParent($parent, $overwrite, false);
         
         $this->GetFilesystem()->MoveFile($this, $parent);
-        return $this->SetObject('parent', $parent);
+        return $this->parent->SetObject($parent);
     }
 
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
@@ -161,7 +132,9 @@ class File extends Item
 
         $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFilesystem()->CopyFile($this, $file->SetSize($this->GetSize(),true)); return $file;
+        $this->GetFilesystem()->CopyFile($this, $file);
+        $file->SetSize($this->GetSize(),notify:true);
+        return $file;
     }
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
@@ -170,19 +143,11 @@ class File extends Item
         
         $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFilesystem()->CopyFile($this, $file->SetSize($this->GetSize(),true)); return $file;
+        $this->GetFilesystem()->CopyFile($this, $file);
+        $file->SetSize($this->GetSize(),notify:true);
+        return $file;
     }
 
-    /** @return static */
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
-    {        
-        return static::BaseCreate($database)
-            ->SetObject('filesystem',$parent->GetFilesystem())
-            ->SetObject('parent',$parent)
-            ->SetObject('owner', $account)
-            ->SetScalar('name',$name)->CountCreate();
-    }
-    
     /**
      * Creates a new empty file in the DB and checks for duplicates
      * @param ObjectDatabase $database database reference
@@ -195,9 +160,14 @@ class File extends Item
     protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
         $parent->Refresh(true);
+        // TODO RAY !! there will be complication with needing Save()...
+        // probably need a global look at saving. maybe make the DB throw an exception
+        // if there are things to be saved at the end of the request.  could be temporary debug only?
+        // files in for example SetParent should save right away since the FS is now changed
         
         $file = static::TryLoadByParentAndName($database, $parent, $name);
-        if ($file !== null && !$overwrite) throw new Exceptions\DuplicateItemException();
+        if ($file !== null && !$overwrite)
+            throw new Exceptions\DuplicateItemException();
         
         return $file ?? static::NotifyCreate($database, $parent, $account, $name);
     }
@@ -214,8 +184,9 @@ class File extends Item
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
     {
         $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
-        
-        $file->SetSize(0,true)->GetFilesystem()->CreateFile($file); return $file;
+        $file->GetFilesystem()->CreateFile($file);
+        $file->SetSize(0,notify:true);
+        return $file;
     }
     
     /**
@@ -229,81 +200,78 @@ class File extends Item
      */
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : self
     {
-        return static::BasicCreate($database, $parent, $account, $infile->GetName(), $overwrite)->SetContents($infile);
+        $obj = static::BasicCreate($database, $parent, $account, $infile->GetName(), $overwrite);
+        $obj->SetContents($infile);
+        return $obj;
     }
     
     /**
      * Sets the file's contents to the file of the given path
      * @param InputPath $infile file to load content from
-     * @return $this
      */
-    public function SetContents(InputPath $infile) : self
+    public function SetContents(InputPath $infile) : void
     {
-        $this->SetSize($infile->GetSize(), true);
-        
-        $this->GetFilesystem(false)->ImportFile($this, $infile); return $this;
+        $this->GetFilesystem(false)->ImportFile($this, $infile);
+        $this->SetSize($infile->GetSize(), notify:true);
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
     public function GetChunkSize() : ?int { return $this->GetFilesystem()->GetChunkSize(); }
     
     /** Returns true if the file resides on a user-added storage */
-    public function onOwnerFS() : bool { return $this->GetFilesystem()->isUserOwned(); }
+    public function onOwnerFS() : bool { return $this->storage->GetObject()->isUserOwned(); }
     
     /**
      * Reads content from the file
-     * @param int $start the starting byte to read from
-     * @param int $length the number of bytes to read
+     * @param non-negative-int $start the starting byte to read from
+     * @param non-negative-int $length the number of bytes to read
      * @return string the returned data
      */
     public function ReadBytes(int $start, int $length) : string
     {
-        $this->SetAccessed(); return $this->GetFilesystem()->ReadBytes($this, $start, $length);
+        $this->SetAccessed();
+        return $this->GetFilesystem()->ReadBytes($this, $start, $length);
     }
     
     /**
      * Writes content to the file
-     * @param int $start the byte offset to write to
+     * @param non-negative-int $start the byte offset to write to
      * @param string $data the data to write
-     * @return $this
      */
-    public function WriteBytes(int $start, string $data) : self
+    public function WriteBytes(int $start, string $data) : void
     {
+        $this->SetModified();
         $length = max($this->GetSize(), $start+strlen($data)); 
         
         $this->CheckSize($length); 
-        
         $this->GetFilesystem()->WriteBytes($this, $start, $data); 
-        
-        $this->SetSize($length, true); 
-        
-        $this->SetModified(); return $this;
+        // TODO RAY should the Filesystem call SetSize notify?
+        $this->SetSize($length, notify:true);         
     }    
     
     /** Deletes the file from the DB only */
     public function NotifyFSDeleted() : void 
     {
-        if (!$this->isDeleted())
+        /*if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){
                 if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
 
-        parent::Delete(); 
+        parent::Delete(); */
     }
 
     /** Deletes the file from both the DB and disk */
     public function Delete() : void
     {
-        if (!$this->isDeleted() && !$this->GetParent()->isFSDeleted()) 
+        /*if (!$this->isDeleted() && !$this->GetParent()->isFSDeleted()) 
         {
             $this->GetFilesystem(false)->DeleteFile($this);
         }
         
-        $this->NotifyFSDeleted();
+        $this->NotifyFSDeleted();*/ // TODO delete semantics needs investigation/fixing
     }    
     
     /**
-     * Returns all items with a parent that is not owned by the item owner
-     *
+     * Returns all items that account owns but that reside in a parent that they don't own
      * Does not return items that are world accessible
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns the items
@@ -313,37 +281,39 @@ class File extends Item
     {
         $q = new QueryBuilder();
         
-        $q->Join($database, Folder::class, 'id', static::class, 'obj_parent')->Where($q->And(
-            $q->Equals($database->GetClassTableName(File::class).'.obj_owner', $account->ID()),
-            $q->NotEquals($database->GetClassTableName(Folder::class).'.obj_owner', $account->ID())));
+        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
+            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
+            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
 
-        return array_filter(static::LoadByQuery($database, $q), function(File $file){ return !$file->isWorldAccess(); });
+        $objs = $database->LoadObjectsByQuery(static::class, $q);
+        return array_filter($objs, function(File $file){ return !$file->isWorldAccess(); });
     }
     
     /**
      * @see File::TryGetClientObject()
-     * @throws DeletedByStorageException if the item is deleted
+     * @throws Exceptions\DeletedByStorageException if the item is deleted
+     * @return array{}
      */
     public function GetClientObject(bool $owner = false, bool $details = false) : array
     {
-        $retval = $this->TryGetClientObject($owner,$details);
+        /*$retval = $this->TryGetClientObject($owner,$details);
         if ($retval === null) throw new Exceptions\DeletedByStorageException();
-        else return $retval;
+        else return $retval;*/ return [];
     }
     
     /**
      * Returns a printable client object of the file
      * @see Item::SubGetClientObject()
-     * @return ?array null if deleted, else `{size:int}`
+     * @return ?array{} null if deleted, else `{size:int}`
      */
     public function TryGetClientObject(bool $owner = false, bool $details = false) : ?array
     {
-        $this->Refresh(); if ($this->isDeleted()) return null;
+        /*$this->Refresh(); if ($this->isDeleted()) return null; // TODO would make more sense if the caller had to do refresh instead
         
         $data = parent::SubGetClientObject($owner,$details);
         
         $data['size'] = $this->GetSize();
         
-        return $data;
+        return $data;*/ return [];
     }
 }
