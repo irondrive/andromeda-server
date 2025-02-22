@@ -58,7 +58,7 @@ class Client extends BaseObject
         $this->account =       $fields[] = new FieldTypes\ObjectRefT(Account::class, 'account');
         
         $this->RegisterFields($fields, self::class);
-        
+
         $this->AuthObjectCreateFields();
         parent::CreateFields();
     }

@@ -122,42 +122,10 @@ class InvalidSharePasswordException extends BaseExceptions\ClientDeniedException
     }
 }
 
-/** Exception indicating that the requested share has expired */
-class ShareExpiredException extends BaseExceptions\ClientDeniedException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARE_EXPIRED", $details);
-    }
-}
-
-/** Exception indicating that the requested share already exists */
-class ShareExistsException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("SHARE_EXISTS", $details);
-    }
-}
-
-/** Exception indicating that a share was requested for a public item */
-class SharePublicItemException extends BaseExceptions\ClientErrorException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("CANNOT_SHARE_PUBLIC_ITEM", $details);
-    }
-}
-
 /** Exception indicating that only one file/folder access can logged */
 class ItemLogFullException extends BaseExceptions\ServerException
 {
     public function __construct(?string $details = null) {
         parent::__construct("ITEM_LOG_SLOT_FULL", $details);
-    }
-}
-
-/** Exception indicating that an unknown item type was given */
-class BadItemTypeException extends BaseExceptions\ServerException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_ITEM_TYPE", $details);
     }
 }

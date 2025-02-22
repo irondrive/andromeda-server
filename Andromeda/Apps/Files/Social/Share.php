@@ -1,8 +1,10 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Social; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Utilities;
-use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Apps\Accounts\{Account, Group, PolicyBase};
+use Andromeda\Apps\Accounts\Crypto\AuthObject;
+use Andromeda\Apps\Files\Items\Item;
 
 /**
  * A share granting access to an item
@@ -15,106 +17,168 @@ use Andromeda\Core\IOFormat\SafeParams;
  */
 class Share extends BaseObject
 {
-    use AuthObject;
-    
     protected const IDLength = 16;
 
-    // TODO RAY !! add count bandwidth? use save on rollback
-
-    public static function GetFieldTemplate() : array
-    {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'shares'), // item being shared
-            'obj_owner' => new FieldTypes\ObjectRef(Account::class),    // the account that made the share
-            'obj_dest' => new FieldTypes\ObjectPoly(AuthEntity::class), // the group or account target of the share
-            'label' => new FieldTypes\StringType(), // user-supplied label
-            'password' => new FieldTypes\StringType(0), // possible password set on the share
-            'date_accessed' => new FieldTypes\Timestamp(null, true),
-            'count_accessed' => new FieldTypes\Counter(), // the count of accesses
-            'limit_accessed' => new FieldTypes\Limit(),     // the maximum number of accesses
-            'date_expires' => new FieldTypes\Timestamp(),   // the timestamp past which the share is not valid
-            'read' => new FieldTypes\BoolType(true),
-            'upload' => new FieldTypes\BoolType(false),
-            'modify' => new FieldTypes\BoolType(false),
-            'social' => new FieldTypes\BoolType(true),
-            'reshare' => new FieldTypes\BoolType(false),
-            'keepowner' => new FieldTypes\BoolType(true)
-        ));
-    }
+    use AuthObject, TableTypes\TableNoChildren;
     
+    /** 
+     * The account that created this share
+     * @var FieldTypes\ObjectRefT<Account>
+     */
+    protected FieldTypes\ObjectRefT $owner;
+    /**
+     * The item that this share refers to
+     * @var FieldTypes\ObjectRefT<Item>
+     */
+    protected FieldTypes\ObjectRefT $item;
+    /**
+     * The target account or group of the share (or null if link-based)
+     * @var FieldTypes\NullObjectRefT<PolicyBase>
+     */
+    protected FieldTypes\NullObjectRefT $dest;
+    /** The optional label of the share */
+    protected FieldTypes\NullStringType $label;
+    /** The optional password hash for the share */
+    protected FieldTypes\NullStringType $password;
+    /** The date this share was created */
+    protected FieldTypes\Timestamp $date_created;
+    /** The date this share was last accessed */
+    protected FieldTypes\NullTimestamp $date_accessed;
+    /** The access count for this share */
+    protected FieldTypes\Counter $count_accessed;
+    /** The limit of the access count */
+    protected FieldTypes\NullIntType $limit_accessed;
+    /** The optional expiration date of the share */
+    protected FieldTypes\NullTimestamp $date_expires;
+
+    /** True if the share allows read access */
+    protected FieldTypes\BoolType $can_read;
+    /** True if the share allows upload access to the item */
+    protected FieldTypes\BoolType $can_upload; // TODO RAY what is the difference between upload/modify?
+    /** True if the share allows modifying the item */
+    protected FieldTypes\BoolType $can_modify;
+    /** True if the share allows creating new social objects on the item */
+    protected FieldTypes\BoolType $can_social;
+    /** True if the shrae allows creating new share objects on the item */
+    protected FieldTypes\BoolType $can_reshare;
+    /** True if uploaders to this folder remain the owner of their items (they become adopted) */
+    protected FieldTypes\BoolType $keepowner;
+
+    protected function CreateFields(): void
+    {
+        $fields = array();
+        $this->owner = $fields[] = new FieldTypes\ObjectRefT(Account::class, 'owner');
+        $this->item = $fields[] = new FieldTypes\ObjectRefT(Item::class, 'item');
+        $this->dest = $fields[] = new FieldTypes\NullObjectRefT(PolicyBase::class, 'dest');
+        $this->label = $fields[] = new FieldTypes\NullStringType('label');
+        $this->password = $fields[] = new FieldTypes\NullStringType('password');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+        $this->date_accessed = $fields[] = new FieldTypes\NullTimestamp('date_accessed',saveOnRollback:true);
+        $this->limit_accessed = $fields[] = new FieldTypes\NullIntType('limit_accessed');
+        $this->count_accessed = $fields[] = new FieldTypes\Counter('count_accessed',limit:$this->limit_accessed);
+        $this->date_expires = $fields[] = new FieldTypes\NullTimestamp('date_expires');
+
+        $this->can_read = $fields[] = new FieldTypes\BoolType('can_read',       default:true);
+        $this->can_upload = $fields[] = new FieldTypes\BoolType('can_upload',   default:false);
+        $this->can_modify = $fields[] = new FieldTypes\BoolType('can_modify',   default:false);
+        $this->can_social = $fields[] = new FieldTypes\BoolType('can_social',   default:true);
+        $this->can_reshare = $fields[] = new FieldTypes\BoolType('can_reshare', default:false);
+        $this->keepowner = $fields[] = new FieldTypes\BoolType('keepowner',     default:true);
+
+        $this->RegisterFields($fields, self::class);
+
+        $this->AuthObjectCreateFields();
+        parent::CreateFields();
+    }
+
     /** Returns true if this share is via a link rather than to an account/group */
-    public function IsLink() : bool { return (bool)($this->TryGetScalar('authkey')); }
+    public function IsLink() : bool { return $this->authkey->TryGetValue() !== null; }
     
     /** Returns the item being shared */
-    public function GetItem() : Item { return $this->GetObject('item'); }
+    public function GetItem() : Item { return $this->item->GetObject(); }
     
     /** Returns the ID of the item being shared */
-    public function GetItemID() : string { return $this->GetObjectID('item'); }
+    public function GetItemID() : string { return $this->item->GetObjectID(); }
     
     /** Returns the account that created the share */
-    public function GetOwner() : Account { return $this->GetObject('owner'); }
+    public function GetOwner() : Account { return $this->owner->GetObject(); }
     
     /** Returns the ID of the account that created the share */
-    public function GetOwnerID() : string { return $this->GetObjectID('owner'); }
+    public function GetOwnerID() : string { return $this->owner->GetObjectID(); }
     
     /** Returns the destination user/group of this share */
-    public function GetDest() : ?AuthEntity { return $this->TryGetObject('dest'); }
+    public function TryGetDest() : ?PolicyBase { return $this->dest->TryGetObject(); }
     
     /** Returns true if the share grants read access to the item */
-    public function CanRead() : bool { return $this->GetFeatureBool('read'); }
+    public function CanRead() : bool { return $this->can_read->GetValue(); }
     
     /** Returns true if the share grants upload (create new files) to the item */
-    public function CanUpload() : bool { return $this->GetFeatureBool('upload'); }
+    public function CanUpload() : bool { return $this->can_upload->GetValue(); }
     
     /** Returns true if the share grants write access to the item */
-    public function CanModify() : bool { return $this->GetFeatureBool('modify'); }
+    public function CanModify() : bool { return $this->can_modify->GetValue(); }
     
     /** Returns true if the share allows social features (comments, likes) on the item */
-    public function CanSocial() : bool { return $this->GetFeatureBool('social'); }
+    public function CanSocial() : bool { return $this->can_social->GetValue(); }
     
     /** Returns true if the share allows the target to re-share the item */
-    public function CanReshare() : bool { return $this->GetFeatureBool('reshare'); }
+    public function CanReshare() : bool { return $this->can_reshare->GetValue(); }
     
     /** True if the uploader should stay the owner, else the owner of the parent is the owner */
-    public function KeepOwner() : bool { return $this->GetFeatureBool('keepowner'); }
+    public function KeepOwner() : bool { return $this->keepowner->GetValue(); }
 
     /** Returns true if the share is expired, either by access count or expiry time  */
     public function IsExpired() : bool
     {
-        $expires = $this->TryGetDate('expires');
-        if ($expires !== null && Main::GetInstance()->GetTime() > $expires) return true;
+        $expires = $this->date_expires->TryGetValue();
+        if ($expires !== null && $this->database->GetTime() > $expires)
+            return true; // time expired
         
-        return !$this->CheckCounter('accessed', 1, false);
+        return !$this->count_accessed->CheckDelta(1,throw:false);
     }
     
     /** Sets the share's access date to now and increments the access counter */
-    public function SetAccessed() : self 
+    public function SetAccessed() : void
     {
-        if ($this->IsExpired()) throw new Exceptions\ShareExpiredException();
-        return $this->SetDate('accessed')->DeltaCounter('accessed');
-        //  TODO RAY !! only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
+        if ($this->IsExpired())
+            throw new Exceptions\ShareExpiredException();
+        $this->date_accessed->SetTimeNow();
+        $this->count_accessed->DeltaValue();
+        // TODO  only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
     }
+
+    // TODO RAY get rid of share2everyone because you can just share to the default group
+    // have a DB check constraint that you must have either dest or authkey
 
     /**
      * Creates a new share to a share target
      * @param ObjectDatabase $database database reference
      * @param Account $owner the owner of the share
      * @param Item $item the item being shared
-     * @param AuthEntity $dest account or group target, or null for everyone
+     * @param PolicyBase $dest account or group target, or null for everyone
      * @return static new share object
      */
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?AuthEntity $dest) : self
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?PolicyBase $dest) : self
     {
-        if ($item->isWorldAccess()) throw new Exceptions\SharePublicItemException();
+        if ($item->isWorldAccess())
+            throw new Exceptions\SharePublicItemException();
         
-        $q = new QueryBuilder(); $w = $q->And(
-            $q->IsNull('authkey'), $q->Equals('owner',$owner->ID()),
-            $q->Equals('item',FieldTypes\ObjectPoly::GetObjectDBValue($item)),
-            $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($dest)));
+        $q = new QueryBuilder(); 
+        $q->Where($q->And(
+            $q->IsNull('authkey'), 
+            $q->Equals('owner',$owner->ID()),
+            $q->Equals('item',$item->ID()), 
+            $q->Equals('dest',$dest?->ID())));
             
-        if (static::TryLoadUniqueByQuery($database, $q->Where($w)) !== null) throw new Exceptions\ShareExistsException(); 
-        
-        return static::BaseCreate($database,false)->SetObject('owner',$owner)->SetObject('item',$item->CountShare())->SetObject('dest',$dest);
+        if ($database->TryLoadUniqueByQuery(static::class, $q) !== null)
+            throw new Exceptions\ShareExistsException(); 
+
+        $obj = $database->CreateObject(static::class);
+        $obj->date_created->SetTimeNow();
+        $obj->owner->SetObject($owner);
+        $obj->item->SetObject($item);
+        $obj->dest->SetObject($dest);
+        return $obj;
     }
 
     /**
@@ -126,44 +190,46 @@ class Share extends BaseObject
      */
     public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
     {
-        return static::BaseCreate($database)->SetObject('owner',$owner)->SetObject('item',$item->CountShare());
-    }
-    
-    /** Deletes the share */
-    public function Delete() : void
-    {
-        if ($this->HasObject('item'))
-            $this->GetItem()->CountShare(false);
-        
-        parent::Delete();
+        $obj = $database->CreateObject(static::class);
+        $obj->date_created->SetTimeNow();
+        $obj->owner->SetObject($owner);
+        $obj->item->SetObject($item);
+        $obj->InitAuthKey();
+        return $obj;
     }
     
     /** Returns true if this share requires a password to access */
-    public function NeedsPassword() : bool { return (bool)($this->TryGetScalar('password')); }
+    public function NeedsPassword() : bool { return $this->password->TryGetValue() !== null; }
     
     /** Returns true if the given password matches this share */
     public function CheckPassword(string $password) : bool
     {
-        $hash = $this->GetScalar('password');        
+        $hash = $this->password->TryGetValue();
+        if ($hash === null) return false;
+        
         $correct = password_verify($password, $hash);
-        if ($correct) $this->SetPassword($password, true);
+        
+        if ($correct)
+            $this->SetPassword($password, check:true);
+            
         return $correct;
     }
     
     /**
      * Sets the given password for this share
      * @param string $password the password to set
-     * @param bool $check if true, only set the password if a rehash is required
-     * @return $this
+     * @param bool $check if true, only set the password if it's already set and a rehash is required
      */
-    protected function SetPassword(?string $password, bool $check = false) : self
+    protected function SetPassword(?string $password, bool $check = false) : void
     {
-        if ($password === null) return $this->SetScalar('password',null);
-             
-        if (!$check || password_needs_rehash($this->GetScalar('password'), PASSWORD_ARGON2ID))
-            $this->SetScalar('password', password_hash($password, PASSWORD_ARGON2ID));
-        
-        return $this;
+        if ($password === null)
+            $this->password->SetValue(null);
+        else
+        {
+            $oldpw = $this->password->TryGetValue();
+            if (!$check || $oldpw === null || password_needs_rehash($oldpw, PASSWORD_ARGON2ID))
+                $this->password->SetValue(password_hash($password, PASSWORD_ARGON2ID));
+        }
     }
     
     /** Returns the command usage for SetOptions() */
@@ -172,43 +238,40 @@ class Share extends BaseObject
     
     /**
      * Modifies share permissions and properties from the given input
-     * @param Share $access if not null, the share object granting this request access
-     * @return $this
+     * @param Share $access if not null, the share object granting this request access (caps permissions)
      */
-    public function SetOptions(SafeParams $params, ?Share $access = null) : self
+    public function SetOptions(SafeParams $params, ?Share $access = null) : void
     {
         if ($params->HasParam('read'))
-            $this->SetFeatureBool('read', $params->GetParam('read')->GetBool() && ($access === null || $access->CanRead()));
+            $this->can_read->SetValue($params->GetParam('read')->GetBool() && ($access === null || $access->CanRead()));
         // TODO double check logic here, why allow setting to false? seems weird
     
         if ($params->HasParam('upload'))
-            $this->SetFeatureBool('upload', $params->GetParam('upload')->GetBool() && ($access === null || $access->CanUpload()));
+            $this->can_upload->SetValue($params->GetParam('upload')->GetBool() && ($access === null || $access->CanUpload()));
         
         if ($params->HasParam('modify'))
-            $this->SetFeatureBool('modify', $params->GetParam('modify')->GetBool() && ($access === null || $access->CanModify()));
+            $this->can_modify->SetValue($params->GetParam('modify')->GetBool() && ($access === null || $access->CanModify()));
         
         if ($params->HasParam('social'))
-            $this->SetFeatureBool('social', $params->GetParam('social')->GetBool() && ($access === null || $access->CanSocial()));
+            $this->can_social->SetValue($params->GetParam('social')->GetBool() && ($access === null || $access->CanSocial()));
         
         if ($params->HasParam('reshare'))
-            $this->SetFeatureBool('reshare', $params->GetParam('reshare')->GetBool() && ($access === null || $access->CanReshare()));
+            $this->can_reshare->SetValue($params->GetParam('reshare')->GetBool() && ($access === null || $access->CanReshare()));
         
         if ($params->HasParam('keepowner'))
-            $this->SetFeatureBool('keepowner', $params->GetParam('keepowner')->GetBool() && ($access === null || $access->KeepOwner()));
+            $this->keepowner->SetValue($params->GetParam('keepowner')->GetBool() && ($access === null || $access->KeepOwner()));
 
-        if ($params->HasParam('label')) $this->SetScalar('label',
-            $params->GetParam('label')->GetNullHTMLText());
+        if ($params->HasParam('label'))
+            $this->label->SetValue($params->GetParam('label')->GetNullHTMLText());
         
-        if ($params->HasParam('spassword')) $this->SetPassword(
-            $params->GetParam('spassword',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+        if ($params->HasParam('spassword')) 
+            $this->SetPassword($params->GetParam('spassword',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
         
-        if ($params->HasParam('expires')) $this->SetDate('expires',
-            $params->GetParam('expires')->GetNullFloat());
+        if ($params->HasParam('expires')) 
+            $this->date_expires->SetValue($params->GetParam('expires')->GetNullFloat());
         
-        if ($params->HasParam('maxaccess')) $this->SetCounterLimit('maxaccess',
-            $params->GetParam('maxaccess')->GetNullUint32());
-        
-        return $this;
+        if ($params->HasParam('maxaccess')) 
+            $this->limit_accessed->SetValue($params->GetParam('maxaccess')->GetNullUint32());
     }
 
     /**
@@ -219,34 +282,38 @@ class Share extends BaseObject
      */
     public static function LoadByAccountOwner(ObjectDatabase $database, Account $account) : array
     {
-        return static::LoadByObject($database, 'owner', $account);
+        return $database->LoadObjectsByKey(static::class, 'owner', $account->ID());
     }
     
     /**
      * Returns all shares targeted at the given account or any of its groups
      * @param ObjectDatabase $database database reference
      * @param Account $account share target
-     * @return array<string, Share> shares indexed by ID
+     * @return array<string, static> shares indexed by ID
      */
     public static function LoadByAccountDest(ObjectDatabase $database, Account $account) : array
     {
+        // first load shares targeted at the account's groups
         $q = new QueryBuilder(); 
         
-        $q->Join($database, GroupJoin::class, 'objs_groups', self::class, 'obj_dest', Group::class);        
-        $w = $q->Equals($database->GetClassTableName(GroupJoin::class).'.objs_accounts', $account->ID());
+        //$q->Join($database, GroupJoin::class, 'objs_groups', self::class, 'obj_dest', Group::class);        
+        //$q->Where($q->Equals($database->GetClassTableName(GroupJoin::class).'.objs_accounts', $account->ID()));
+        // TODO RAY figure out how to re-implement this
 
-        $shares = static::LoadByQuery($database, $q->Where($w));
-        
+        $gshares = $database->LoadObjectsByQuery(static::class, $q);
+
+        // then load shares targeted at this account or its default groups
         $q = new QueryBuilder(); 
         
-        $defgroups = $q->Or(...array_map(function(Group $group)use($q){ 
-            return $q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($group));
+        $defgroupsq = $q->Or(...array_map(function(Group $group)use($q){ 
+            return $q->Equals('dest',$group->ID());
         }, array_values($account->GetDefaultGroups())));
 
-        $w = $q->Or($q->Equals('dest',FieldTypes\ObjectPoly::GetObjectDBValue($account)),
-                    $defgroups, $q->And($q->IsNull('authkey'),$q->IsNull('dest')));
+        $q->Where($q->Or($defgroupsq, // default groups
+            $q->Equals('dest',$account->ID()), // this account
+            $q->And($q->IsNull('authkey'),$q->IsNull('dest')))); // everyone
 
-        return $shares + static::LoadByQuery($database, $q->Where($w));
+        return $gshares + $database->LoadObjectsByQuery(static::class, $q);
     }
 
     /**
@@ -266,14 +333,12 @@ class Share extends BaseObject
         {
             if ($item->ID() === $this->GetItemID())
             {
-                $destobj = $this->GetDest();
-                
+                $destobj = $this->TryGetDest();
                 if ($destobj === null || $destobj === $account) return true;
-                
-                else if ($destobj instanceof Group && $account->HasGroup($destobj)) return true;
+                if ($destobj instanceof Group && $account->HasGroup($destobj)) return true;
             }
         }
-        while (($item = $item->GetParent()) !== null);
+        while (($item = $item->TryGetParent()) !== null);
         
         return false;
     }
@@ -291,7 +356,7 @@ class Share extends BaseObject
         if (!$this->IsLink() || !$this->CheckKeyMatch($key)) return false;
         
         do { if ($item->ID() === $this->GetItemID()) return true; }
-        while (($item = $item->GetParent()) !== null);
+        while (($item = $item->TryGetParent()) !== null);
         
         return false;
     }
@@ -300,13 +365,14 @@ class Share extends BaseObject
      * Returns a printable client object of this share
      * @param bool $item if true, show the item client object
      * @param bool $owner if true, we are showing the owner of the share
-     * @return array<mixed> `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
+     * @return array{} `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
         expired:bool, dates:{created:float, expires:?float}, config:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
         if owner, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
      * @see Item::SubGetClientObject()
      */
     public function GetClientObject(bool $item = false, bool $owner = true, bool $secret = false) : array
     {
+        return [];/*
         $data = array(
             'id' => $this->ID(),
             'owner' => $this->GetOwnerID(),
@@ -350,6 +416,6 @@ class Share extends BaseObject
 
         if ($secret) $data['authkey'] = $this->GetAuthKey();
         
-        return $data;
+        return $data;*/
     }
 }

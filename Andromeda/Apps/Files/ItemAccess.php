@@ -6,7 +6,10 @@ use Andromeda\Core\IOFormat\SafeParams;
 
 use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Accounts\Authenticator;
-use Andromeda\Apps\Accounts\AuthenticationFailedException;
+use Andromeda\Apps\Accounts\Exceptions\AuthenticationFailedException;
+
+use Andromeda\Apps\Files\Items\{File, Folder, Item};
+use Andromeda\Apps\Files\Social\Share;
 
 /** 
  * Authenticator class that implements item access rules 
@@ -62,7 +65,7 @@ class ItemAccess
      * @param SafeParams $params user input possibly containing share info
      * @param Authenticator $authenticator current account auth
      * @param ?Item $item the item being requested access to (or null if implicit via the share)
-     * @throws InvalidSharePasswordException if the input share password is invalid
+     * @throws Exceptions\InvalidSharePasswordException if the input share password is invalid
      * @throws AuthenticationFailedException if a specific item is requested and auth is null
      * @return self new ItemAccess object
      */
@@ -86,7 +89,7 @@ class ItemAccess
             }
             else 
             {
-                if ($authenticator === null) throw new Exceptions\AuthenticationFailedException();
+                if ($authenticator === null) throw new AuthenticationFailedException();
                 $account = $authenticator->GetAccount();
                 
                 if (!$share->Authenticate($account, $item))
@@ -99,10 +102,10 @@ class ItemAccess
         }
         else if ($item !== null)
         {
-            if ($authenticator === null) throw new Exceptions\AuthenticationFailedException();
+            if ($authenticator === null) throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
             
-            if ($item->GetOwner() !== $account && !static::ItemOwnerAccess($item, $account))
+            if ($item->TryGetOwner() !== $account && !static::ItemOwnerAccess($item, $account))
             {
                 throw new Exceptions\ItemAccessDeniedException();
             }
@@ -110,7 +113,7 @@ class ItemAccess
         }
         else throw new Exceptions\UnknownItemException();       
         
-        if ($share) $share->SetAccessed();
+        if ($share !== null) $share->SetAccessed();
 
         return new self($item, $share);
     }
@@ -128,9 +131,9 @@ class ItemAccess
         if ($item->isWorldAccess()) return true;
         
         do {
-            if ($item->GetOwnerID() === $account->ID()) return true;
+            if ($item->TryGetOwnerID() === $account->ID()) return true;
         }
-        while (($item = $item->GetParent()) !== null); return false;
+        while (($item = $item->TryGetParent()) !== null); return false;
     }
     
     /**

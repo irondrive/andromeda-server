@@ -115,6 +115,7 @@ class RootFolder extends Folder
     public function Delete() : void
     {
         $this->DeleteChildren();
+        // no FS DeleteFolder on root
 
         parent::Delete();
     }

@@ -4,11 +4,9 @@ CREATE TABLE `a2obj_apps_files_actionlog` (
 ,  `account` char(12) DEFAULT NULL
 ,  `sudouser` char(12) DEFAULT NULL
 ,  `client` char(12) DEFAULT NULL
-,  `file` char(16) DEFAULT NULL
-,  `folder` char(16) DEFAULT NULL
+,  `item` char(16) DEFAULT NULL
 ,  `parent` char(16) DEFAULT NULL
-,  `file_share` char(16) DEFAULT NULL
-,  `folder_share` char(16) DEFAULT NULL
+,  `item_share` char(16) DEFAULT NULL
 ,  `parent_share` char(16) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_files_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -176,9 +174,9 @@ CREATE TABLE `a2obj_apps_files_social_comment` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` char(16) NOT NULL
-,  `comment` text NOT NULL
+,  `value` text NOT NULL
 ,  `date_created` double NOT NULL
-,  `date_modified` double NOT NULL
+,  `date_modified` double DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_files_social_comment_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ,  CONSTRAINT `a2obj_apps_files_social_comment_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_items_item` (`id`)
@@ -207,11 +205,11 @@ CREATE TABLE `a2obj_apps_files_social_share` (
 ,  `count_accessed` integer NOT NULL DEFAULT 0
 ,  `limit_accessed` integer DEFAULT NULL
 ,  `date_expires` double DEFAULT NULL
-,  `read` integer NOT NULL
-,  `upload` integer NOT NULL
-,  `modify` integer NOT NULL
-,  `social` integer NOT NULL
-,  `reshare` integer NOT NULL
+,  `can_read` integer NOT NULL
+,  `can_upload` integer NOT NULL
+,  `can_modify` integer NOT NULL
+,  `can_social` integer NOT NULL
+,  `can_reshare` integer NOT NULL
 ,  `keepowner` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`item`,`owner`,`dest`)
@@ -223,10 +221,10 @@ CREATE TABLE `a2obj_apps_files_social_tag` (
   `id` char(16) NOT NULL
 ,  `owner` char(12) NOT NULL
 ,  `item` char(16) NOT NULL
-,  `tag` varchar(127) NOT NULL
+,  `value` varchar(127) NOT NULL
 ,  `date_created` double NOT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`item`,`tag`)
+,  UNIQUE (`item`,`value`)
 ,  CONSTRAINT `a2obj_apps_files_social_tag_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ,  CONSTRAINT `a2obj_apps_files_social_tag_ibfk_2` FOREIGN KEY (`item`) REFERENCES `a2obj_apps_files_items_item` (`id`)
 );
@@ -320,8 +318,7 @@ CREATE TABLE `a2obj_apps_files_storage_webdav` (
 CREATE INDEX "idx_a2obj_apps_files_limits_storagetimed_storage" ON "a2obj_apps_files_limits_storagetimed" (`storage`);
 CREATE INDEX "idx_a2obj_apps_files_limits_grouptimed_group" ON "a2obj_apps_files_limits_grouptimed" (`group`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_account" ON "a2obj_apps_files_actionlog" (`account`);
-CREATE INDEX "idx_a2obj_apps_files_actionlog_file" ON "a2obj_apps_files_actionlog" (`file`);
-CREATE INDEX "idx_a2obj_apps_files_actionlog_folder" ON "a2obj_apps_files_actionlog" (`folder`);
+CREATE INDEX "idx_a2obj_apps_files_actionlog_item" ON "a2obj_apps_files_actionlog" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_comment_item" ON "a2obj_apps_files_social_comment" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_comment_owner_item" ON "a2obj_apps_files_social_comment" (`owner`,`item`);
 CREATE INDEX "idx_a2obj_apps_files_storage_storage_owner" ON "a2obj_apps_files_storage_storage" (`owner`);

@@ -34,6 +34,11 @@ External clients need only match the major version exactly, while minor versions
 | Major Versions | Large Features | Incompatible | Incompatible | Required |
 
 
+## Code Standards
+
+* assert() is only to be used to placate phpstan.  Do not rely on it for runtime correctness, as production environments usually disable asserts.  Throw exceptions instead.
+
+
 ## Main Core Classes
 
 `index.php` is a very short wrapper that initializes the `IOInterface`, `ErrorManager`, `ApiPackage`, and `AppRunner` objects, and passes input from the interface to Run().  `init.php` handles some global setup as well as the class autoloader.
