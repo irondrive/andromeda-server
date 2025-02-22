@@ -1,6 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Social; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder};
+use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
+use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Files\Items\Item;
 
 /** 
  * A user-like (or dislike) on an item 
@@ -11,14 +13,34 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 class Like extends BaseObject // TODO was StandardObject
 {
     protected const IDLength = 16;
-    
-    public static function GetFieldTemplate() : array
+
+    use TableTypes\TableNoChildren;
+
+    /** 
+     * The account that created this like
+     * @var FieldTypes\ObjectRefT<Account>
+     */
+    protected FieldTypes\ObjectRefT $owner;
+    /**
+     * The item that this like refers to
+     * @var FieldTypes\ObjectRefT<Item>
+     */
+    protected FieldTypes\ObjectRefT $item;
+    /** True if it's a like, false if it's a dislike */
+    protected FieldTypes\BoolType $value;
+    /** The date this like was created */
+    protected FieldTypes\Timestamp $date_created;
+
+    protected function CreateFields(): void
     {
-        return array_merge(parent::GetFieldTemplate(), array(
-            'obj_owner' => new FieldTypes\ObjectRef(Account::class),
-            'obj_item' => new FieldTypes\ObjectPoly(Item::Class, 'likes'),
-            'value' => new FieldTypes\BoolType() // true if this is a like, false if a dislike
-        ));
+        $fields = array();
+        $this->owner = $fields[] = new FieldTypes\ObjectRefT(Account::class, 'owner');
+        $this->item = $fields[] = new FieldTypes\ObjectRefT(Item::class, 'item');
+        $this->value = $fields[] = new FieldTypes\BoolType('value');
+        $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
+
+        $this->RegisterFields($fields, self::class);
+        parent::CreateFields();
     }
 
     /**
@@ -31,39 +53,42 @@ class Like extends BaseObject // TODO was StandardObject
      */
     public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?self
     {
-        $q = new QueryBuilder(); $where = $q->And($q->Equals('obj_owner',$owner->ID()),$q->Equals('obj_item',FieldTypes\ObjectPoly::GetObjectDBValue($item)));
+        $q = new QueryBuilder(); 
+        $q->Where($q->And($q->Equals('owner',$owner->ID()),$q->Equals('item',$item->ID())));
         
         // load an existing like (can only like an item once)
-        $likeobj = static::TryLoadUniqueByQuery($database, $q->Where($where));
+        $obj = $database->TryLoadUniqueByQuery(static::class, $q);
         
         // create a new one if it doesn't exist
-        $likeobj ??= static::BaseCreate($database)->SetObject('obj_owner',$owner)->SetObject('obj_item',$item);
-                
-        // "un-count" the old like first
-        $item->CountLike($likeobj->TryGetScalar('value') ?? 0, true);
+        if ($obj === null)
+        {
+            $obj = $database->CreateObject(static::class);
+            $obj->owner->SetObject($owner);
+            $obj->item->SetObject($item);
+        }
         
         if ($value !== null)
         {
-            $item->CountLike($value);
-            
-            return $likeobj->SetScalar('value',$value)->SetDate('created');
+            $obj->date_created->SetTimeNow();
+            $obj->value->SetValue($value);
+            return $obj;
         }
-        else { $likeobj->Delete(); return null; }
+        else { $obj->Delete(); return null; }
     }
     
     /**
      * Returns a printable client object of this like
-     * @return array<mixed> `{owner:id, item:id, value:bool, dates:{created:float}}`
+     * @return array{} `{owner:id, item:id, value:bool, dates:{created:float}}`
      */
     public function GetClientObject() : array
     {
         return array(
-            'owner' => $this->GetObject('owner'),
+            /*'owner' => $this->GetObject('owner'),
             'item' => $this->GetObjectID('item'),
             'value' => (bool)$this->GetScalar('value'),
             'dates' => array(
                 'created' => $this->GetDateCreated()
-            ),
+            ),*/
         );
     }
 }

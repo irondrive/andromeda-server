@@ -173,6 +173,7 @@ class FilesApp extends BaseApp
             case 'download':   $this->DownloadFile($params, $authenticator, $actionlog); return null;
             case 'ftruncate':  return $this->TruncateFile($params, $authenticator, $actionlog);
             case 'writefile':  return $this->WriteToFile($input, $authenticator, $actionlog);
+            
             case 'createfolder':  return $this->CreateFolder($params, $authenticator, $actionlog);
             case 'filemeta':      return $this->GetFileMeta($params, $authenticator, $actionlog);
             case 'getfolder':     return $this->GetFolder($params, $authenticator, $actionlog);
@@ -181,6 +182,7 @@ class FilesApp extends BaseApp
             case 'ownfolder': return $this->OwnFolder($params, $authenticator, $actionlog);
             case 'editfilemeta':   return $this->EditFileMeta($params, $authenticator, $actionlog);
             case 'editfoldermeta': return $this->EditFolderMeta($params, $authenticator, $actionlog);
+            // TODO ownfile/folder could be combined with edit metadata
            
             case 'deletefile':   $this->DeleteFile($params, $authenticator, $actionlog); return null;
             case 'deletefolder': $this->DeleteFolder($params, $authenticator, $actionlog); return null;
@@ -189,6 +191,9 @@ class FilesApp extends BaseApp
             case 'movefile':     return $this->MoveFile($params, $authenticator, $actionlog);
             case 'movefolder':   return $this->MoveFolder($params, $authenticator, $actionlog);
             
+            // TODO RAY most of these non-performance-critical ops can just be combined
+            // to a single item operatino now that Item base load stuff works
+
             case 'likefile':      return $this->LikeFile($params, $authenticator, $actionlog);
             case 'likefolder':    return $this->LikeFolder($params, $authenticator, $actionlog);
             case 'tagfile':       return $this->TagFile($params, $authenticator, $actionlog);
@@ -202,7 +207,8 @@ class FilesApp extends BaseApp
             case 'getfolderlikes': return $this->GetFolderLikes($params, $authenticator, $actionlog);
             case 'getfilecomments':   return $this->GetFileComments($params, $authenticator, $actionlog);
             case 'getfoldercomments': return $this->GetFolderComments($params, $authenticator, $actionlog);
-            
+            // TODO RAY combine get likes and get comments into one action? or just use flags with getfolder/getfilemeta
+
             case 'sharefile':    return $this->ShareFile($params, $authenticator, $actionlog);
             case 'sharefolder':  return $this->ShareFolder($params, $authenticator, $actionlog);
             case 'editshare':    return $this->EditShare($params, $authenticator, $actionlog);
@@ -816,7 +822,7 @@ class FilesApp extends BaseApp
         if ($folder->isWorldAccess()) 
             throw new Exceptions\ItemAccessDeniedException();
         
-        $actionlog->LogAccess($folder, null);
+        if ($actionlog) $actionlog->LogAccess($folder, null);
         
         $parent = $folder->GetParent();
         if ($parent === null || $parent->GetOwner() !== $account)

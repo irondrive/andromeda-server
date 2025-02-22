@@ -192,7 +192,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_contact` (
   `account` char(12) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `type_address` (`type`,`address`),
-  UNIQUE KEY `account_type_from` (`isfrom`,`account`,`type`) USING BTREE,
+  UNIQUE KEY `account_type_isfrom` (`isfrom`,`account`,`type`) USING BTREE,
   KEY `address` (`address`),
   KEY `account` (`account`),
   CONSTRAINT `a2obj_apps_accounts_resource_contact_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
@@ -221,7 +221,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_registerallow` (
   `type` tinyint(2) NOT NULL,
   `value` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `type` (`type`,`value`)
+  UNIQUE KEY `type_value` (`type`,`value`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

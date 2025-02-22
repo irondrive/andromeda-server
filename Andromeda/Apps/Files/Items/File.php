@@ -33,8 +33,9 @@ class File extends Item
         //    if (!$this->onOwnerFS()) $lim->CountSize($delta,$notify); });
         
         if (!$notify) $this->GetFilesystem()->Truncate($this, $size);
-        return false; // TODO RAY !! cannot SetValue on counter... $this->size->SetValue($size); 
+        return false; // TODO cannot SetValue on counter... $this->size->SetValue($size); 
         // maybe implement a way in the DB to force a counter to a certain value? count have counter extend IntType also
+        // make base field have a getValueOperator() and make base int type work w/ both delta and set value, then counter can exist only for limits
     }
     
     /**

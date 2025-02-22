@@ -31,7 +31,7 @@ abstract class Item extends BaseObject
      * The account that owns the item (null if on public external storage)
      * @var FieldTypes\NullObjectRefT<Account>
      */
-    protected FieldTypes\NullObjectRefT $owner; // TODO RAY !! add ownernn (just a string) and SetOwner() function
+    protected FieldTypes\NullObjectRefT $owner;
     /** 
      * The storage that holds this item
      * @var FieldTypes\ObjectRefT<Storage>
@@ -46,6 +46,8 @@ abstract class Item extends BaseObject
     protected FieldTypes\NullStringType $name;
     /** True if this item is the filesystem root */
     protected FieldTypes\BoolType $isroot;
+    /** True if this item has no owner */
+    protected FieldTypes\BoolType $ispublic;
     /** Timestamp when the item was created */
     protected FieldTypes\Timestamp $date_created;
     /** Timestamp when the item was last written */
@@ -64,6 +66,7 @@ abstract class Item extends BaseObject
         $this->parent = $fields[] = new FieldTypes\NullObjectRefT(Folder::class, 'parent');
         $this->name = $fields[] = new FieldTypes\NullStringType('name');
         $this->isroot = $fields[] = new FieldTypes\BoolType('isroot');
+        $this->ispublic = $fields[] = new FieldTypes\BoolType('ispublic');
         $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
         $this->date_modified = $fields[] = new FieldTypes\NullTimestamp('date_modified',saveOnRollback:true);
         $this->date_accessed = $fields[] = new FieldTypes\NullTimestamp('date_accessed',saveOnRollback:true);

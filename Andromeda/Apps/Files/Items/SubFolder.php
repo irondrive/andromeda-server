@@ -72,12 +72,13 @@ class SubFolder extends Folder
      */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
     {
-        $folder = static::TryLoadByParentAndName($database, $parent, $name);
-        if ($folder !== null) throw new Exceptions\DuplicateItemException();
+        if (static::TryLoadByParentAndName($database, $parent, $name) !== null)
+            throw new Exceptions\DuplicateItemException();
 
         $folder = static::NotifyCreate($database, $parent, $account, $name);
         
-        $folder->GetFilesystem(false)->CreateFolder($folder); return $folder;
+        $folder->GetFilesystem(false)->CreateFolder($folder);
+        return $folder;
     }
     
     /** Deletes the folder and its contents from DB and disk */
