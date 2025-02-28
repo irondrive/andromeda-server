@@ -60,7 +60,7 @@ class GroupJoin extends JoinObject
      * Loads the join object (group membership) for the given account and group
      * @return ?static join object or null if not joined
      */
-    public static function TryLoadByMembership(ObjectDatabase $database, Account $account, Group $group) : ?self
+    public static function TryLoadByMembership(ObjectDatabase $database, Account $account, Group $group) : ?static
     {
         return static::TryLoadJoinObject($database, 'account', $account, 'group', $group);
     }

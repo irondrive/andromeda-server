@@ -51,7 +51,7 @@ class Like extends BaseObject // TODO was StandardObject
      * @param bool $value true if like, false if dislike, null to unset
      * @return ?static like object if $value is not null
      */
-    public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?self
+    public static function CreateOrUpdate(ObjectDatabase $database, Account $owner, Item $item, ?bool $value) : ?static
     {
         $q = new QueryBuilder(); 
         $q->Where($q->And($q->Equals('owner',$owner->ID()),$q->Equals('item',$item->ID())));

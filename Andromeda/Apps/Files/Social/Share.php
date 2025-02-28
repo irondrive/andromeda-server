@@ -158,7 +158,7 @@ class Share extends BaseObject
      * @param PolicyBase $dest account or group target, or null for everyone
      * @return static new share object
      */
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?PolicyBase $dest) : self
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?PolicyBase $dest) : static
     {
         if ($item->isWorldAccess())
             throw new Exceptions\SharePublicItemException();
@@ -188,7 +188,7 @@ class Share extends BaseObject
      * @param Item $item item being shared
      * @return static new share object
      */
-    public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : self
+    public static function CreateLink(ObjectDatabase $database, Account $owner, Item $item) : static
     {
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();

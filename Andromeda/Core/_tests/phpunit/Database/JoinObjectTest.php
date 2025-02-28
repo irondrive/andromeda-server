@@ -50,8 +50,7 @@ class TestJoinObject extends JoinObject
         return static::LoadFromJoin($database, 'obj2', TestObject2::class, 'obj1', $obj1);
     }
 
-    /** @return ?static */
-    public static function TryLoadByJoin(ObjectDatabase $database, TestObject1 $obj1, TestObject2 $obj2) : ?self
+    public static function TryLoadByJoin(ObjectDatabase $database, TestObject1 $obj1, TestObject2 $obj2) : ?static
     {
         return static::TryLoadJoinObject($database, 'obj1', $obj1, 'obj2', $obj2);
     }

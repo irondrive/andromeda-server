@@ -19,16 +19,19 @@ CREATE TABLE `a2obj_apps_files_config` (
 ,  `rwchunksize` integer NOT NULL
 ,  `crchunksize` integer NOT NULL
 ,  `upload_maxsize` integer DEFAULT NULL
-,  `timedstats` integer NOT NULL
+,  `periodicstats` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 );
 CREATE TABLE `a2obj_apps_files_items_file` (
   `id` char(16) NOT NULL
+,  `size` integer NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_files_items_file_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_items_item` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `CONSTRAINT_1` CHECK (`size` >= 0)
 );
 CREATE TABLE `a2obj_apps_files_items_folder` (
   `id` char(16) NOT NULL
+,  `count_size` integer NOT NULL DEFAULT 0
 ,  `count_subfiles` integer NOT NULL DEFAULT 0
 ,  `count_subfolders` integer NOT NULL DEFAULT 0
 ,  PRIMARY KEY (`id`)
@@ -36,7 +39,6 @@ CREATE TABLE `a2obj_apps_files_items_folder` (
 );
 CREATE TABLE `a2obj_apps_files_items_item` (
   `id` char(16) NOT NULL
-,  `size` integer NOT NULL
 ,  `owner` char(12) DEFAULT NULL
 ,  `storage` char(8) NOT NULL
 ,  `parent` char(16) DEFAULT NULL
@@ -54,121 +56,109 @@ CREATE TABLE `a2obj_apps_files_items_item` (
 ,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 ,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 ,  CONSTRAINT `a2obj_apps_files_items_item_ibfk_3` FOREIGN KEY (`parent`) REFERENCES `a2obj_apps_files_items_item` (`id`)
-,  CONSTRAINT `CONSTRAINT_1` CHECK (`size` >= 0)
-,  CONSTRAINT `CONSTRAINT_2` CHECK (`parent` is null and `name` is null and `isroot` is not null and `isroot` = 1 or `parent` is not null and `name` is not null and `isroot` is null)
-,  CONSTRAINT `CONSTRAINT_3` CHECK (`owner` is null and `ispublic` is not null and `ispublic` = 1 or `owner` is not null and `ispublic` is null)
+,  CONSTRAINT `CONSTRAINT_1` CHECK (`parent` is null and `name` is null and `isroot` is not null and `isroot` = 1 or `parent` is not null and `name` is not null and `isroot` is null)
+,  CONSTRAINT `CONSTRAINT_2` CHECK (`owner` is null and `ispublic` is not null and `ispublic` = 1 or `owner` is not null and `ispublic` is null)
 );
-CREATE TABLE `a2obj_apps_files_limits_accounttimed` (
+CREATE TABLE `a2obj_apps_files_policy_periodic` (
+  `id` char(12) NOT NULL
+,  `date_created` double NOT NULL
+,  `timestart` integer NOT NULL
+,  `timeperiod` integer NOT NULL
+,  `max_stats_age` integer DEFAULT NULL
+,  `limit_pubdownloads` integer DEFAULT NULL
+,  `limit_bandwidth` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+);
+CREATE TABLE `a2obj_apps_files_policy_periodicaccount` (
   `id` char(12) NOT NULL
 ,  `account` char(12) NOT NULL
-,  `timeperiod` integer NOT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
-,  UNIQUE (`account`,`timeperiod`)
-,  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_accounttimed_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_periodicaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_periodic` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_periodicaccount_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 );
-CREATE TABLE `a2obj_apps_files_limits_accounttotal` (
+CREATE TABLE `a2obj_apps_files_policy_periodicgroup` (
+  `id` char(12) NOT NULL
+,  `group` char(12) NOT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_periodicgroup_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_periodic` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_periodicgroup_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_policy_periodicstats` (
+  `id` char(12) NOT NULL
+,  `limit` char(12) NOT NULL
+,  `dateidx` integer NOT NULL
+,  `count_size` integer NOT NULL DEFAULT 0
+,  `count_items` integer NOT NULL DEFAULT 0
+,  `count_pubdownloads` integer NOT NULL DEFAULT 0
+,  `count_bandwidth` integer NOT NULL DEFAULT 0
+,  PRIMARY KEY (`id`)
+,  UNIQUE (`limit`,`dateidx`)
+,  CONSTRAINT `a2obj_apps_files_policy_periodicstats_ibfk_1` FOREIGN KEY (`limit`) REFERENCES `a2obj_apps_files_policy_periodic` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_policy_periodicstorage` (
+  `id` char(8) NOT NULL
+,  `storage` char(8) NOT NULL
+,  `track_items` integer DEFAULT NULL
+,  `track_dlstats` integer DEFAULT NULL
+,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_periodicstorage_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_periodic` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_periodicstorage_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
+);
+CREATE TABLE `a2obj_apps_files_policy_standard` (
+  `id` char(12) NOT NULL
+,  `date_created` double NOT NULL
+,  `date_download` double DEFAULT NULL
+,  `date_upload` double DEFAULT NULL
+,  `can_itemshare` integer DEFAULT NULL
+,  `can_share2groups` integer DEFAULT NULL
+,  `can_publicupload` integer DEFAULT NULL
+,  `can_publicmodify` integer DEFAULT NULL
+,  `can_randomwrite` integer DEFAULT NULL
+,  `limit_size` integer DEFAULT NULL
+,  `limit_items` integer DEFAULT NULL
+,  `count_size` integer NOT NULL DEFAULT 0
+,  `count_items` integer NOT NULL DEFAULT 0
+,  `count_pubdownloads` integer NOT NULL DEFAULT 0
+,  `count_bandwidth` integer NOT NULL DEFAULT 0
+,  PRIMARY KEY (`id`)
+);
+CREATE TABLE `a2obj_apps_files_policy_standardaccount` (
   `id` char(12) NOT NULL
 ,  `account` char(2) NOT NULL
-,  `emailshare` integer DEFAULT NULL
-,  `userstorage` integer DEFAULT NULL
+,  `can_emailshare` integer DEFAULT NULL
+,  `can_userstorage` integer DEFAULT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`account`)
-,  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_accounttotal_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_standardaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_standard` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_standardaccount_ibfk_2` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
 );
-CREATE TABLE `a2obj_apps_files_limits_grouptimed` (
+CREATE TABLE `a2obj_apps_files_policy_standardgroup` (
   `id` char(12) NOT NULL
 ,  `group` char(12) NOT NULL
-,  `timeperiod` integer NOT NULL
-,  `track_items` integer DEFAULT NULL
-,  `track_dlstats` integer DEFAULT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`group`,`timeperiod`)
-,  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_grouptimed_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
-);
-CREATE TABLE `a2obj_apps_files_limits_grouptotal` (
-  `id` char(12) NOT NULL
-,  `group` char(12) NOT NULL
-,  `emailshare` integer DEFAULT NULL
-,  `userstorage` integer DEFAULT NULL
+,  `can_emailshare` integer DEFAULT NULL
+,  `can_userstorage` integer DEFAULT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`group`)
-,  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_grouptotal_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_standardgroup_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_standard` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_standardgroup_ibfk_2` FOREIGN KEY (`group`) REFERENCES `a2obj_apps_accounts_group` (`id`)
 );
-CREATE TABLE `a2obj_apps_files_limits_storagetimed` (
-  `id` char(8) NOT NULL
-,  `storage` char(8) NOT NULL
-,  `timeperiod` integer NOT NULL
-,  `track_items` integer DEFAULT NULL
-,  `track_dlstats` integer DEFAULT NULL
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`storage`,`timeperiod`)
-,  CONSTRAINT `a2obj_apps_files_limits_storagetimed_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_timed` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_storagetimed_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
-);
-CREATE TABLE `a2obj_apps_files_limits_storagetotal` (
+CREATE TABLE `a2obj_apps_files_policy_standardstorage` (
   `id` char(8) NOT NULL
 ,  `storage` char(8) NOT NULL
 ,  `track_items` integer DEFAULT NULL
 ,  `track_dlstats` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`storage`)
-,  CONSTRAINT `a2obj_apps_files_limits_storagetotal_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_limits_total` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-,  CONSTRAINT `a2obj_apps_files_limits_storagetotal_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
-);
-CREATE TABLE `a2obj_apps_files_limits_timed` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `max_stats_age` integer DEFAULT NULL
-,  `limit_pubdownloads` integer DEFAULT NULL
-,  `limit_bandwidth` integer DEFAULT NULL
-,  PRIMARY KEY (`id`)
-);
-CREATE TABLE `a2obj_apps_files_limits_timedstats` (
-  `id` char(12) NOT NULL
-,  `limit` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `date_timestart` integer NOT NULL
-,  `iscurrent` integer DEFAULT NULL
-,  `count_size` integer NOT NULL DEFAULT 0
-,  `count_items` integer NOT NULL DEFAULT 0
-,  `count_shares` integer NOT NULL DEFAULT 0
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
-,  PRIMARY KEY (`id`)
-,  UNIQUE (`limit`,`date_timestart`)
-,  UNIQUE (`limit`,`iscurrent`)
-,  CONSTRAINT `a2obj_apps_files_limits_timedstats_ibfk_1` FOREIGN KEY (`limit`) REFERENCES `a2obj_apps_files_limits_timed` (`id`)
-);
-CREATE TABLE `a2obj_apps_files_limits_total` (
-  `id` char(12) NOT NULL
-,  `date_created` double NOT NULL
-,  `date_download` double DEFAULT NULL
-,  `date_upload` double DEFAULT NULL
-,  `itemsharing` integer DEFAULT NULL
-,  `share2everyone` integer DEFAULT NULL
-,  `share2groups` integer DEFAULT NULL
-,  `publicupload` integer DEFAULT NULL
-,  `publicmodify` integer DEFAULT NULL
-,  `randomwrite` integer DEFAULT NULL
-,  `count_size` integer NOT NULL DEFAULT 0
-,  `count_items` integer NOT NULL DEFAULT 0
-,  `count_shares` integer NOT NULL DEFAULT 0
-,  `limit_size` integer DEFAULT NULL
-,  `limit_items` integer DEFAULT NULL
-,  `limit_shares` integer DEFAULT NULL
-,  `count_pubdownloads` integer NOT NULL DEFAULT 0
-,  `count_bandwidth` integer NOT NULL DEFAULT 0
-,  PRIMARY KEY (`id`)
+,  CONSTRAINT `a2obj_apps_files_policy_standardstorage_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_policy_standard` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+,  CONSTRAINT `a2obj_apps_files_policy_standardstorage_ibfk_2` FOREIGN KEY (`storage`) REFERENCES `a2obj_apps_files_storage_storage` (`id`)
 );
 CREATE TABLE `a2obj_apps_files_social_comment` (
   `id` char(16) NOT NULL
@@ -315,12 +305,11 @@ CREATE TABLE `a2obj_apps_files_storage_webdav` (
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_files_storage_webdav_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_files_storage_storage` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE INDEX "idx_a2obj_apps_files_limits_storagetimed_storage" ON "a2obj_apps_files_limits_storagetimed" (`storage`);
-CREATE INDEX "idx_a2obj_apps_files_limits_grouptimed_group" ON "a2obj_apps_files_limits_grouptimed" (`group`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_account" ON "a2obj_apps_files_actionlog" (`account`);
 CREATE INDEX "idx_a2obj_apps_files_actionlog_item" ON "a2obj_apps_files_actionlog" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_comment_item" ON "a2obj_apps_files_social_comment" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_comment_owner_item" ON "a2obj_apps_files_social_comment" (`owner`,`item`);
+CREATE INDEX "idx_a2obj_apps_files_policy_periodicstorage_storage" ON "a2obj_apps_files_policy_periodicstorage" (`storage`);
 CREATE INDEX "idx_a2obj_apps_files_storage_storage_owner" ON "a2obj_apps_files_storage_storage" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_storage_storage_name" ON "a2obj_apps_files_storage_storage" (`name`);
 CREATE INDEX "idx_a2obj_apps_files_items_item_owner" ON "a2obj_apps_files_items_item" (`owner`);
@@ -331,5 +320,6 @@ CREATE INDEX "idx_a2obj_apps_files_social_share_owner" ON "a2obj_apps_files_soci
 CREATE INDEX "idx_a2obj_apps_files_social_share_item" ON "a2obj_apps_files_social_share" (`item`);
 CREATE INDEX "idx_a2obj_apps_files_social_tag_owner" ON "a2obj_apps_files_social_tag" (`owner`);
 CREATE INDEX "idx_a2obj_apps_files_social_tag_item" ON "a2obj_apps_files_social_tag" (`item`);
+CREATE INDEX "idx_a2obj_apps_files_policy_periodicaccount_account" ON "a2obj_apps_files_policy_periodicaccount" (`account`);
 CREATE INDEX "idx_a2obj_apps_files_social_like_item" ON "a2obj_apps_files_social_like" (`item`);
-CREATE INDEX "idx_a2obj_apps_files_limits_accounttimed_account" ON "a2obj_apps_files_limits_accounttimed" (`account`);
+CREATE INDEX "idx_a2obj_apps_files_policy_periodicgroup_group" ON "a2obj_apps_files_policy_periodicgroup" (`group`);

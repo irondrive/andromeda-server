@@ -399,7 +399,7 @@ class Account extends PolicyBase implements IKeySource
      * @param string $username username to load for
      * @return ?static loaded account or null if not found
      */
-    public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?self
+    public static function TryLoadByUsername(ObjectDatabase $database, string $username) : ?static
     {
         return $database->TryLoadUniqueByKey(static::class, 'username', $username);
     }

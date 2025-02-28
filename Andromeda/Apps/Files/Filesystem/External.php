@@ -56,7 +56,7 @@ class External extends Filesystem
         $file->SetSize($stat->size,true);
 
         if ($stat->atime !== 0.0) $file->SetAccessed($stat->atime);
-        if ($stat->ctime !== 0.0) $file->SetCreated($stat->ctime);
+        if ($stat->ctime !== 0.0) $file->SetCreated($stat->ctime); // TODO later will have separate atime/ctime/mtime
         if ($stat->mtime !== 0.0) $file->SetModified($stat->mtime); 
         
         return $this;
@@ -113,6 +113,7 @@ class External extends Filesystem
                     $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
                     $dbitem->Refresh(); // update metadata
                     $dbitem->Save(); // insert to the DB immediately
+                    // TODO RAY catch DatabaseIntegrityExceptions here to catch threading issues, return 503
                 }
             }
             

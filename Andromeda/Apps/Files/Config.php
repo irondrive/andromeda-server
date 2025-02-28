@@ -23,17 +23,17 @@ class Config extends BaseConfig
     /** The maximum allowed upload size (not enforceable) */
     private FieldTypes\NullIntType $upload_maxsize;
     /** True if timed stats as a whole is enabled */
-    private FieldTypes\BoolType $timedstats;
+    private FieldTypes\BoolType $periodicstats;
     
     protected function CreateFields() : void
     {
         $fields = array();
 
         $this->apiurl = $fields[] =         new FieldTypes\NullStringType('apiurl');
-        $this->rwchunksize = $fields[] =    new FieldTypes\IntType('rwchunksize',false, 4*1024*1024); // 4M
-        $this->crchunksize = $fields[] =    new FieldTypes\IntType('crchunksize',false, 1*1024*1024); // 1M
+        $this->rwchunksize = $fields[] =    new FieldTypes\IntType('rwchunksize', default:16*1024*1024); // 16M
+        $this->crchunksize = $fields[] =    new FieldTypes\IntType('crchunksize', default:128*1024); // 128K
         $this->upload_maxsize = $fields[] = new FieldTypes\NullIntType('upload_maxsize');
-        $this->timedstats = $fields[] =     new FieldTypes\BoolType('timedstats',false, false);
+        $this->periodicstats = $fields[] =  new FieldTypes\BoolType('periodicstats', default:false);
         
         $this->RegisterFields($fields, self::class);
         
@@ -49,7 +49,7 @@ class Config extends BaseConfig
     /** Returns the command usage for SetConfig() */
     public static function GetSetConfigUsage() : string { return 
         "[--rwchunksize uint32] [--crchunksize uint32] ".
-        "[--upload_maxsize ?uint] [--timedstats bool] [--apiurl ?url]"; }
+        "[--upload_maxsize ?uint] [--periodicstats bool] [--apiurl ?url]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
     public function SetConfig(SafeParams $params) : self
@@ -66,8 +66,8 @@ class Config extends BaseConfig
         if ($params->HasParam('upload_maxsize')) 
             $this->upload_maxsize->SetValue($params->GetParam('upload_maxsize')->GetNullUint());
         
-        if ($params->HasParam('timedstats')) 
-            $this->timedstats->SetValue($params->GetParam('timedstats')->GetBool());
+        if ($params->HasParam('periodicstats')) 
+            $this->periodicstats->SetValue($params->GetParam('periodicstats')->GetBool());
         
         return $this;
     }
@@ -78,11 +78,11 @@ class Config extends BaseConfig
     /** Returns the default block size for encrypted filesystems */
     public function GetCryptoChunkSize() : int { return $this->crchunksize->GetValue(); }
     
-    /** Returns whether the timed-stats system as a whole is enabled */
-    public function GetAllowTimedStats() : bool { return $this->timedstats->GetValue(); }
+    /** Returns whether the periodic-stats system as a whole is enabled */
+    public function GetAllowPeriodicStats() : bool { return $this->periodicstats->GetValue(); }
         
-    /** Returns the URL this server API is accessible from over HTTP */
-    public function GetAPIUrl() : ?string { return $this->apiurl->TryGetValue(); }
+    /** Returns the URL this server API is accessible from over HTTP if known */
+    public function GetApiUrl() : ?string { return $this->apiurl->TryGetValue(); }
     
     /**
      * Return the maximum allowed upload size as min(php post_max, php upload_max, admin config)
@@ -107,7 +107,7 @@ class Config extends BaseConfig
      * @param bool $admin if true, show admin-only values
      * @return array<mixed> `{upload_maxbytes:?int, upload_maxfiles:int}` \
         if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, \
-            date_created:float, apiurl:?string, config:{timedstats:bool}}`
+            date_created:float, apiurl:?string, config:{periodicstats:bool}}`
      */
     public function GetClientObject(bool $admin = false) : array
     {
@@ -129,7 +129,7 @@ class Config extends BaseConfig
             $retval['upload_maxbytes_admin'] = $this->upload_maxsize->TryGetValue();
             $retval['php_post_max_size'] = ($iniA !== false) ? Utilities::return_bytes($iniA) : null;
             $retval['php_upload_max_filesize'] = ($iniB !== false) ? Utilities::return_bytes($iniB) : null;
-            $retval['timedstats'] = $this->timedstats->GetValue();
+            $retval['periodicstats'] = $this->periodicstats->GetValue();
         }
         
         return $retval;

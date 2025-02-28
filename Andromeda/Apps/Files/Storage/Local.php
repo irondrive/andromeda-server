@@ -25,7 +25,7 @@ class Local extends FWrapper
     
     public static function GetEditUsage() : string { return self::GetBasePathEditUsage(); }
 
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     {
         if ($owner !== null && !$owner->isAdmin()) 
             throw new Exceptions\LocalNonAdminException();

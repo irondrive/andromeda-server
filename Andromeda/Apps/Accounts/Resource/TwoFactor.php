@@ -78,7 +78,7 @@ class TwoFactor extends BaseObject
      * Tries to load a two factor object by the given account and ID
      * @return ?static the loaded object or null if not found 
      */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?static
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->Equals('id',$id));
         

@@ -755,7 +755,7 @@ class Counter extends BaseField
     public function GetValue() : int { return $this->value; }
 
     /**
-     * Checks if the given delta would exceed the limit (if it exists)
+     * Checks if the given delta is positive and would exceed the limit (if it exists)
      * @param int $delta delta to check
      * @param bool $throw if true, throw, else return
      * @throws Exceptions\CounterOverLimitException if $throw and the limit is exceeded
@@ -781,14 +781,17 @@ class Counter extends BaseField
     /**
      * Increments the counter by the given value
      * @param int $delta amount to increment
-     * @param bool $ignoreLimit true to ignore the limit
+     * @param bool $noLimit true to ignore the limit
+     * @throws Exceptions\CounterOverLimitException if not $noLimit and the limit is exceeded
      * @return bool true if the field was modified
      */
-    public function DeltaValue(int $delta = 1, bool $ignoreLimit = false) : bool
+    public function DeltaValue(int $delta = 1, bool $noLimit = false) : bool
     {
-        if ($delta === 0) return false;
+        if ($delta === 0) 
+            return false;
 
-        if (!$ignoreLimit) $this->CheckDelta($delta);
+        if (!$noLimit) 
+            $this->CheckDelta($delta);
         
         $this->NotifyModified();
         

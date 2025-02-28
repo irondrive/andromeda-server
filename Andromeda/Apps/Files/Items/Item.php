@@ -2,9 +2,7 @@
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Files\Config;
-//use Andromeda\Apps\Files\Limits;
-use Andromeda\Apps\Files\Social;
+use Andromeda\Apps\Files\{Config, Policy, Social};
 use Andromeda\Apps\Files\Filesystem\Filesystem;
 use Andromeda\Apps\Files\Storage\Storage;
 
@@ -26,7 +24,7 @@ abstract class Item extends BaseObject
         return array(File::class, Folder::class); }
 
     /** The disk space size of the item (bytes) */
-    protected FieldTypes\Counter $size;
+    protected FieldTypes\Counter $size; // TODO RAY !! separate into counter_size for folders, size for files
     /** 
      * The account that owns the item (null if on public external storage)
      * @var FieldTypes\NullObjectRefT<Account>
@@ -83,7 +81,7 @@ abstract class Item extends BaseObject
      * @param string $name the name of the item to load
      * @return ?static loaded item or null if not found
      */
-    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?self
+    public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?static
     {
         $q = new QueryBuilder(); 
         $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name));        
@@ -147,7 +145,7 @@ abstract class Item extends BaseObject
      * @param string $name the name of the item
      * @return static newly created object
      */
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
     {
         $obj = $database->CreateObject(static::class);
 
@@ -259,7 +257,7 @@ abstract class Item extends BaseObject
      * @param bool $overwrite if true, reuse the duplicate object
      * @return static the newly created object
      */
-    public abstract function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self;
+    public abstract function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static;
     
     /**
      * Copies the item to a new parent.  If $overwrite, deletes an object if the target already exists.
@@ -268,7 +266,7 @@ abstract class Item extends BaseObject
      * @param bool $overwrite if true, reuse the duplicate object
      * @return static the newly created object
      */
-    public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self;
+    public abstract function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static;
     
     /**
      * Asserts that this item can be moved to the given name
@@ -279,7 +277,7 @@ abstract class Item extends BaseObject
      * @throws Exceptions\InvalidRootOpException if used on a root folder
      * @return ?static existing item to be re-used
      */
-    protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?self
+    protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?static
     {
         $parent = $this->GetParent();
         $parent->Refresh(true);
@@ -307,7 +305,7 @@ abstract class Item extends BaseObject
      * @throws Exceptions\InvalidRootOpException if used on a root folder
      * @return ?static existing item to be re-used
      */
-    protected function CheckParent(Folder $parent, bool $overwrite, bool $reuse) : ?self
+    protected function CheckParent(Folder $parent, bool $overwrite, bool $reuse) : ?static
     {
         if ($parent->storage->GetObjectID() !== $this->storage->GetObjectID())
             throw new Exceptions\CrossFilesystemException();
@@ -365,20 +363,28 @@ abstract class Item extends BaseObject
     /** Sets the item's access time to the given value or now if null */
     public function SetAccessed(?float $time = null) : bool
     { 
-        //if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
-        //return $this->SetDate('accessed', max($this->TryGetDate('accessed'), $time)); 
-        return false;        // TODO RAY !! fix me
+        if ($this->database->isReadOnly()) return false;
+        return ($time !== null)
+            ? $this->date_accessed->SetValue($time)
+            : $this->date_accessed->SetTimeNow();
     }
     
     /** Sets the item's created time to the given value or now if null */
-    public function SetCreated(?float $time = null) : bool { return $this->date_created->SetTimeNow(); } // TODO RAY !! what is $time used for?
+    public function SetCreated(?float $time = null) : bool 
+    { 
+        return ($time !== null)
+            ? $this->date_created->SetValue($time)
+            : $this->date_created->SetTimeNow();
+    }
     
     /** Sets the item's modified time to the given value or now if null */
-    public function SetModified(?float $time = null) : bool { return $this->date_modified->SetTimeNow(); } // TODO RAY !! what is $time used for?
-    // TODO maybe modified and accessed should be set within the filesystem, not files app
-
-    // TODO limits CountCreate() used to MapToLimits(CountItem) and MapToTotalLimits(SetUploadDate)
-    // TODO limits CountShare() used to forward to MapToLimits also
+    public function SetModified(?float $time = null) : bool
+    { 
+        return ($time !== null)
+            ? $this->date_modified->SetValue($time)
+            : $this->date_modified->SetTimeNow();
+    }
+    // TODO maybe times should be set within the filesystem, not files app
 
     /** 
      * Maps the given function to all applicable limit objects 
@@ -452,6 +458,7 @@ abstract class Item extends BaseObject
     
     /** Adds this item's stats to the given limit, substracting if not $add */
     //protected abstract function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void;
+    // TODO LIMITS
     
     /**
      * Returns a config bool for the item by checking applicable limits
@@ -459,36 +466,36 @@ abstract class Item extends BaseObject
      * @param Account $account the account to check the permission for, or null for defaults
      * @return bool true if (the FS value is null or true) and the account value is true
      */
-    /*protected function GetLimitsBool(callable $func, ?Account $account) : bool
+    protected function GetPolicyBool(callable $func, ?Account $account) : bool
     {
-        $fslim = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem());
-        $aclim = Limits\AccountTotal::LoadByAccount($this->database, $account, true);
+        $fslim = Policy\StandardStorage::TryLoadByStorage($this->database, $this->storage->GetObject());
+
+        $aclim = ($account === null) ? null :
+            Policy\StandardAccount::TryLoadByAccount($this->database, $account);
+        $aclim ??= Policy\StandardAccount::GetDefault($this->database);
+
         return ($fslim === null || $func($fslim) !== false) && $func($aclim);
-    }*/
+    }
     
     /** Returns true if the item should allow public modifications */
-    /*public function GetAllowPublicModify() : bool {
-       return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowPublicModify(); }, null); }*/
+    public function GetAllowPublicModify() : bool {
+       return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowPublicModify(); }, null); }
     
     /** Returns true if the item should allow public uploading */
-    /*public function GetAllowPublicUpload() : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowPublicUpload(); }, null); }*/
+    public function GetAllowPublicUpload() : bool {
+        return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowPublicUpload(); }, null); }
     
     /** Returns true if the item should allow random/partial writes */
-    /*public function GetAllowRandomWrite(Account $account) : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowRandomWrite(); }, $account); }*/
+    public function GetAllowRandomWrite(Account $account) : bool {
+        return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowRandomWrite(); }, $account); }
     
     /** Returns true if the item should allow sharing */
-    /*public function GetAllowItemSharing(Account $account) : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowItemSharing(); }, $account); }*/
+    public function GetAllowItemSharing(Account $account) : bool {
+        return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowItemSharing(); }, $account); }
 
     /** Returns true if the item should allow group shares (shares with a group) */
-    /*public function GetAllowShareToGroups(Account $account) : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareToGroups(); }, $account); }*/
-        
-    /** Returns true if the item should allow public shares (shares with all users) */
-    /*public function GetAllowShareToEveryone(Account $account) : bool {
-        return $this->GetLimitsBool(function(Limits\Total $lim){ return $lim->GetAllowShareToEveryone(); }, $account); }*/ // TODO LIMITS
+    public function GetAllowShareToGroups(Account $account) : bool {
+        return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowShareToGroups(); }, $account); }
     
     /** Deletes the item from the DB only */
     public abstract function NotifyFSDeleted() : void;

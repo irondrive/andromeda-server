@@ -38,7 +38,7 @@ class SubFolder extends Folder
             $item->CopyToParent($dest->TryGetOwner(), $dest);
     }
     
-    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static
     {
         $folder = static::CheckName($name, $overwrite, true);
         if ($folder !== null) $folder->DeleteChildren();
@@ -51,7 +51,7 @@ class SubFolder extends Folder
         return $folder;
     }
     
-    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
+    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static
     {
         $this->CheckNotChildOrSelf($parent);
         
@@ -70,7 +70,7 @@ class SubFolder extends Folder
      * Creates a new non-root folder both in DB and on disk
      * @see Folder::NotifyCreate()
      */
-    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self
+    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
     {
         if (static::TryLoadByParentAndName($database, $parent, $name) !== null)
             throw new Exceptions\DuplicateItemException();

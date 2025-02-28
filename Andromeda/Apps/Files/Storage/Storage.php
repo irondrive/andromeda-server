@@ -5,7 +5,7 @@ use Andromeda\Core\IOFormat\{Input, SafeParams};
 use Andromeda\Core\{Crypto, Utilities};
 
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Files\Config;
+use Andromeda\Apps\Files\{Config, Policy};
 use Andromeda\Apps\Files\Filesystem\{Filesystem, Native, NativeCrypt, External};
 
 /** Class representing a file stat result */
@@ -108,9 +108,8 @@ abstract class Storage extends BaseObject
      * Attempts to load a storage with the given owner and ID
      * @param string $id the storage ID to load
      * @param bool $public if true, allow owner being null (public storage)
-     * @return ?static 
      */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $owner, string $id, bool $public = true) : ?self
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $owner, string $id, bool $public = true) : ?static
     {
         $q = new QueryBuilder(); 
         $ownerq = $q->Equals('owner',$owner->ID());
@@ -172,8 +171,8 @@ abstract class Storage extends BaseObject
 
         //RootFolder::DeleteRootsByStorage($this->database, $this, $unlink); // TODO RAY !!
         
-        //Limits\FilesystemTotal::DeleteByClient($this->database, $this); // LIMITS
-        //Limits\FilesystemTimed::DeleteByClient($this->database, $this); // LIMITS
+        Policy\StandardStorage::DeleteByStorage($this->database, $this);
+        Policy\PeriodicStorage::DeleteByStorage($this->database, $this);
     }
 
     /** Returns true if this storage has an owner (not global) */
@@ -239,9 +238,8 @@ abstract class Storage extends BaseObject
      * Creates a new storage based on user input 
      * @param ObjectDatabase $database database reference
      * @param ?Account $owner owner of the storage (public if null)
-     * @return static
      */
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self 
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     {
         // TODO RAY !! we used to Test() here too, but now do not. caller should do it (see auth source)
         $params = $input->GetParams();
@@ -264,9 +262,6 @@ abstract class Storage extends BaseObject
             $chunksize = null; 
             if ($params->HasParam('chunksize'))
             {
-                //if (!Limits\AccountTotal::LoadByAccount($database, $owner, true)->GetAllowRandomWrite())
-                //    throw new Exceptions\RandomWriteDisabledException(); // LIMITS
-                
                 $checkSize = function(string $v){ $v = (int)$v; 
                     return $v >= 4*1024 && $v <= 1*1024*1024; }; // check in range [4K,1M]
                 $chunksize = $params->GetParam('chunksize')->CheckFunction($checkSize)->GetUint();

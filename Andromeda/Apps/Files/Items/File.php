@@ -15,6 +15,25 @@ class File extends Item
     use TableTypes\TableNoChildren;
 
     /**
+     * Returns all items that account owns but that reside in a parent that they don't own
+     * Does not return items that are world accessible
+     * @param ObjectDatabase $database database reference
+     * @param Account $account the account that owns the items
+     * @return array<string, static> items indexed by ID
+     */
+    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder();
+        
+        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
+            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
+            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
+
+        $objs = $database->LoadObjectsByQuery(static::class, $q);
+        return array_filter($objs, function(File $file){ return !$file->isWorldAccess(); });
+    }
+    
+    /**
      * Sets the size of the file and update stats
      * 
      * if $notify is false, this is a user call to actually change the size of the file.
@@ -30,12 +49,12 @@ class File extends Item
         $this->GetParent()->DeltaSize($delta);        
         
         //$this->MapToLimits(function(Limits\Base $lim)use($delta,$notify){
-        //    if (!$this->onOwnerFS()) $lim->CountSize($delta,$notify); });
+        //    if (!$this->onOwnerStorage()) $lim->CountSize($delta,$notify); });
+        // TODO LIMITS move onOwnerStorage checks inside limits - account should not care, filesystems should
         
-        if (!$notify) $this->GetFilesystem()->Truncate($this, $size);
-        return false; // TODO cannot SetValue on counter... $this->size->SetValue($size); 
-        // maybe implement a way in the DB to force a counter to a certain value? count have counter extend IntType also
-        // make base field have a getValueOperator() and make base int type work w/ both delta and set value, then counter can exist only for limits
+        if (!$notify) 
+            $this->GetFilesystem()->Truncate($this, $size);
+        return false; // TODO $this->size->SetValue($size); 
     }
     
     /**
@@ -49,7 +68,7 @@ class File extends Item
         /*$delta = $size - ($this->TryGetScalar('size') ?? 0);
         
         return $this->MapToLimits(function(Limits\Base $lim)use($delta){
-            if (!$this->onOwnerFS()) $lim->CheckSize($delta); });*/ return $this;
+            if (!$this->onOwnerStorage()) $lim->CheckSize($delta); });*/ return $this;
     }
     
     /** 
@@ -127,7 +146,7 @@ class File extends Item
         return $this->parent->SetObject($parent);
     }
 
-    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static
     {
         $file = static::CheckName($name, $overwrite, true);
 
@@ -138,7 +157,7 @@ class File extends Item
         return $file;
     }
     
-    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : self
+    public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static
     {
         $file = static::CheckParent($parent, $overwrite, true);
         
@@ -158,7 +177,7 @@ class File extends Item
      * @param bool $overwrite if true (reuses the same object)
      * @return static newly created object
      */
-    protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
+    protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : static
     {
         $parent->Refresh(true);
         // TODO RAY !! there will be complication with needing Save()...
@@ -182,7 +201,7 @@ class File extends Item
      * @param bool $overwrite if true (reuses the same object)
      * @return static newly created object
      */
-    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : self
+    public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : static
     {
         $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
         $file->GetFilesystem()->CreateFile($file);
@@ -199,7 +218,7 @@ class File extends Item
      * @param bool $overwrite if true (reuses the same object)
      * @return static newly created object
      */
-    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : self
+    public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : static
     {
         $obj = static::BasicCreate($database, $parent, $account, $infile->GetName(), $overwrite);
         $obj->SetContents($infile);
@@ -220,7 +239,7 @@ class File extends Item
     public function GetChunkSize() : ?int { return $this->GetFilesystem()->GetChunkSize(); }
     
     /** Returns true if the file resides on a user-added storage */
-    public function onOwnerFS() : bool { return $this->storage->GetObject()->isUserOwned(); }
+    public function onOwnerStorage() : bool { return $this->storage->GetObject()->isUserOwned(); }
     
     /**
      * Reads content from the file
@@ -255,7 +274,7 @@ class File extends Item
     {
         /*if (!$this->isDeleted())
             $this->MapToLimits(function(Limits\Base $lim){
-                if (!$this->onOwnerFS()) $lim->CountSize($this->GetSize()*-1); });
+                if (!$this->onOwnerStorage()) $lim->CountSize($this->GetSize()*-1); });
 
         parent::Delete(); */
     }
@@ -270,25 +289,6 @@ class File extends Item
         
         $this->NotifyFSDeleted();*/ // TODO delete semantics needs investigation/fixing
     }    
-    
-    /**
-     * Returns all items that account owns but that reside in a parent that they don't own
-     * Does not return items that are world accessible
-     * @param ObjectDatabase $database database reference
-     * @param Account $account the account that owns the items
-     * @return array<string, static> items indexed by ID
-     */
-    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
-    {
-        $q = new QueryBuilder();
-        
-        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
-            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
-            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
-
-        $objs = $database->LoadObjectsByQuery(static::class, $q);
-        return array_filter($objs, function(File $file){ return !$file->isWorldAccess(); });
-    }
     
     /**
      * @see File::TryGetClientObject()
