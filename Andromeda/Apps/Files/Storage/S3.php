@@ -84,7 +84,7 @@ class S3 extends FWrapper
         " --endpoint fspath --bucket alphanum --region alphanum [--path_style ?bool]".
         " [--port ?uint16] [--usetls ?bool] [--accesskey ?randstr] [--secretkey ?randstr]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     {
         $params = $input->GetParams();
         $obj = parent::Create($database, $input, $owner);

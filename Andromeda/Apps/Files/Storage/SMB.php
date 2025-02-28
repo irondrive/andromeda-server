@@ -53,7 +53,7 @@ class SMB extends FWrapper
         return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
         " --hostname alphanum [--workgroup ?alphanum]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     {
         $params = $input->GetParams();
         $obj = parent::Create($database, $input, $owner);

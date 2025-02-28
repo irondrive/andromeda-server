@@ -56,7 +56,7 @@ class Comment extends BaseObject // TODO was StandardObject
      * @param string $comment the text value of the comment
      * @return static new comment object
      */
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : self
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $comment) : static
     {
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
@@ -67,7 +67,7 @@ class Comment extends BaseObject // TODO was StandardObject
     }
     
     /** Tries to load a comment object by the given account and comment ID */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?static
     {
         $q = new QueryBuilder(); 
         $q->Where($q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id)));

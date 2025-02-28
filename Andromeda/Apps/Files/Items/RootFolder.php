@@ -21,11 +21,11 @@ class RootFolder extends Folder
         return $this->storage->GetObject()->TryGetOwnerID() === $account->ID();
     }
     
-    public function SetParent(Folder $folder, bool $overwrite = false) : bool                     { throw new Exceptions\InvalidRootOpException(); }
-    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : self     { throw new Exceptions\InvalidRootOpException(); }
-    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : self { throw new Exceptions\InvalidRootOpException(); }
+    public function SetParent(Folder $folder, bool $overwrite = false) : bool                       { throw new Exceptions\InvalidRootOpException(); }
+    public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static     { throw new Exceptions\InvalidRootOpException(); }
+    public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : static { throw new Exceptions\InvalidRootOpException(); }
     
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : self { throw new Exceptions\InvalidRootOpException(); }
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static { throw new Exceptions\InvalidRootOpException(); }
 
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
@@ -34,7 +34,7 @@ class RootFolder extends Folder
      * @param Storage $storage the filesystem of the root, or null to get the default
      * @return ?static loaded folder or null if a default FS does not exist and none is given
      */
-    public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?Storage $storage = null) : ?self
+    public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?Storage $storage = null) : ?static
     {
         $storage ??= Storage::LoadDefaultByAccount($database, $account); 
         if ($storage === null) return null;

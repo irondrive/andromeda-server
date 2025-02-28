@@ -13,7 +13,7 @@ parameters:
         - ../../Andromeda/init.php
     excludePaths:
         analyse:
-            - ../../Andromeda/Apps/Files/Limits
+            - ../../Andromeda/Apps/Files/Limits-old
             - ../../Andromeda/Apps/Files/FilesApp.php
     checkBenevolentUnionTypes: true
     checkImplicitMixed: true

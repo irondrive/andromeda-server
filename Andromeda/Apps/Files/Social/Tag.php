@@ -55,7 +55,7 @@ class Tag extends BaseObject
      * @param string $tag the text value of the tag
      * @return static new tag object
      */
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $tag) : self
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, string $tag) : static
     {
         $q = new QueryBuilder(); 
         $q->Where($q->And($q->Equals('item',$item->ID()),$q->Equals('value',$tag)));

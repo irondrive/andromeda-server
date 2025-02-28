@@ -31,7 +31,7 @@ trait AuthObjectFull
      * @param Account $account the owner of the authObject or null for any
      * @return ?static loaded object or null if not found
      */
-    public static function TryLoadByFullKey(ObjectDatabase $database, string $code, ?Account $account = null) : ?self
+    public static function TryLoadByFullKey(ObjectDatabase $database, string $code, ?Account $account = null) : ?static
     {
         $code = explode(":", $code, 3);
         

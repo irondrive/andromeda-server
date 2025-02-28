@@ -98,7 +98,7 @@ abstract class BaseObject
      * @param string $id the ID of the object
      * @return ?static object or null if not found
      */
-    final public static function TryLoadByID(ObjectDatabase $database, string $id) : ?BaseObject
+    final public static function TryLoadByID(ObjectDatabase $database, string $id) : ?static
     {
         return $database->TryLoadUniqueByKey(static::class, 'id', $id, true);
     }

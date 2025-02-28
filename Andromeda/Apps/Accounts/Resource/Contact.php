@@ -89,29 +89,23 @@ abstract class Contact extends BaseObject
      * @param Account $account account of interest
      * @return ?static contact to use as "from" or none if not set
      */
-    public static function TryLoadFromByAccount(ObjectDatabase $database, Account $account) : ?self
+    public static function TryLoadFromByAccount(ObjectDatabase $database, Account $account) : ?static
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),$q->IsTrue('isfrom'));
         
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
-    /** 
-     * Returns the contact object matching the given address and type, or null
-     * @return ?static
-     */
-    public static function TryLoadByAddress(ObjectDatabase $database, string $address) : ?self
+    /** Returns the contact object matching the given address and type, or null */
+    public static function TryLoadByAddress(ObjectDatabase $database, string $address) : ?static
     {
         $q = new QueryBuilder(); $w = $q->Equals('address',$address);
         
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }
     
-    /** 
-     * Attempts to load a contact by the given ID for the given account
-     * @return ?static
-     */
-    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?self
+    /** Attempts to load a contact by the given ID for the given account */
+    public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?static
     {
         $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('account',$account->ID()));
         

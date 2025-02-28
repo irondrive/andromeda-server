@@ -73,7 +73,7 @@ class SFTP extends FWrapper
         return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
         " --hostname alphanum [--port ?uint16] [--privkey% path | --privkey-] [--keypass ?raw]"; }
     
-    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : self
+    public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     { 
         $params = $input->GetParams();
         $obj = parent::Create($database, $input, $owner);
