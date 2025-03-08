@@ -34,11 +34,11 @@ class UnknownObjectException extends BaseExceptions\ClientNotFoundException
     }
 }
 
-/** Exception indicating that the requested filesystem does not exist */
-class UnknownFilesystemException extends BaseExceptions\ClientNotFoundException
+/** Exception indicating that the requested storage does not exist */
+class UnknownStorageException extends BaseExceptions\ClientNotFoundException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_FILESYSTEM", $details);
+        parent::__construct("UNKNOWN_STORAGE", $details);
     }
 }
 
