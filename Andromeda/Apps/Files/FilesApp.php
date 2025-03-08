@@ -3,19 +3,15 @@
 use Andromeda\Core\{ApiPackage, BaseApp, Emailer, EmailRecipient};
 use Andromeda\Core\IOFormat\{Input, InputPath, IOInterface, Output, OutputHandler, SafeParams};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
+use Andromeda\Core\Exceptions\UnknownActionException;
 
+use Andromeda\Apps\Accounts\{Account, Group, Authenticator};
+use Andromeda\Apps\Accounts\Exceptions\{AuthenticationFailedException, AdminRequiredException, UnknownAccountException, UnknownGroupException};
+
+use Andromeda\Apps\Files\Items\{Item, File, Folder};
+use Andromeda\Apps\Files\Social\Share;
 use Andromeda\Apps\Files\Storage\Storage;
 use Andromeda\Apps\Files\Storage\Exceptions\{FileReadFailedException, FileWriteFailedException};
-
-use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Accounts\Groups\Group;
-use Andromeda\Apps\Accounts\Authenticator;
-use Andromeda\Apps\Accounts\{AuthenticationFailedException, UnknownAccountException, UnknownGroupException};
-
-
-
-
-
 
 // when an account is deleted, need to delete files-related stuff also
 /*Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
@@ -34,10 +30,6 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
         SMB::DecryptAccount($database, $account); 
     }
 }*/
-            
-
-
-
 
 /**
  * App that provides user-facing filesystem services.
@@ -50,24 +42,23 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
  * likes and comments, sharing of content via links or to users or groups,
  * configurable rules per-account or per-storage, and granular statistics
  * gathering and limiting for accounts/groups/storages.
- * @extends InstalledApp<Config>
  */
 class FilesApp extends BaseApp
 {
     private Config $config;
-
+    
     public function getName() : string { return 'files'; }
-
+    
     public function getVersion() : string { return andromeda_version; }
     
     /** @return class-string<ActionLog> */
     public function getLogClass() : string { return ActionLog::class; }
-
+    
     public function getUsage() : array 
     { 
         return array(
             'getconfig',
-            /*'setconfig '.Config::GetSetConfigUsage(),
+            'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
             'upload (--file% path [name] | --file- name) --parent id [--overwrite bool]',
             'download --file id [--fstart uint] [--flast int] [--debugdl bool]',
@@ -109,7 +100,7 @@ class FilesApp extends BaseApp
             'deleteshare --share id',
             'shareinfo --sid id [--skey randstr] [--spassword raw]',
             'getshares [--mine bool]',
-            'getadopted',*/
+            'getadopted',
 
             'getstorage [--storage id] [--activate bool]',
             'getstorages [--everyone bool [--limit ?uint] [--offset ?uint]]',
@@ -232,7 +223,7 @@ class FilesApp extends BaseApp
             //case 'purgelimits':      $this->PurgeLimits($params, $authenticator); return null;
             //case 'purgetimedlimits': $this->PurgeTimedLimits($params, $authenticator); return null; // LIMITS
             
-            default: throw new Exceptions\UnknownActionException($input->GetAction());
+            default: throw new UnknownActionException($input->GetAction());
         }
     }
     
@@ -337,7 +328,7 @@ class FilesApp extends BaseApp
      */
     protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array
     {
-        if ($authenticator === null) throw new Exceptions\AdminRequiredException();
+        if ($authenticator === null) throw new AdminRequiredException();
         
         $authenticator->RequireAdmin();
 
@@ -347,7 +338,7 @@ class FilesApp extends BaseApp
     /**
      * Uploads a new file to the given folder. Bandwidth is counted.
      * @throws AuthenticationFailedException if not signed in and public upload not allowed
-     * @throws ItemAccessDeniedException if accessing via share and share does not allow upload
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and share does not allow upload
      * @return array File newly created file
      * @see File::GetClientObject()
      */
@@ -362,7 +353,7 @@ class FilesApp extends BaseApp
         $parent = $paccess->GetFolder(); $share = $paccess->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $overwrite = $params->GetOptParam('overwrite',false)->GetBool();
         
@@ -384,7 +375,7 @@ class FilesApp extends BaseApp
             //$name = $params->GetParam('name')->GetFSName();
             $name = $infile->GetName(); // TODO check not null! used to have above
             
-            if (!($handle = $infile->GetHandle())) throw new Exceptions\FileReadFailedException();
+            if (!($handle = $infile->GetHandle())) throw new FileReadFailedException();
             
             $fileobj = File::Create($this->database, $parent, $owner, $name, $overwrite);
             
@@ -400,8 +391,8 @@ class FilesApp extends BaseApp
      * Downloads a file or part of a file
      * 
      * Can accept an input byte range. Also accepts the HTTP_RANGE header.
-     * @throws ItemAccessDeniedException if accessing via share and read is not allowed
-     * @throws InvalidDLRangeException if the given byte range is invalid
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and read is not allowed
+     * @throws Exceptions\InvalidDLRangeException if the given byte range is invalid
      */
     protected function DownloadFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {
@@ -484,8 +475,8 @@ class FilesApp extends BaseApp
      * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback writes.
      * The FS will restore the original size of the file but writes within the original size are permanent.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
-     * @throws RandomWriteDisabledException if random write is not allowed on the file
-     * @throws ItemAccessDeniedException if acessing via share and share doesn't allow modify
+     * @throws Exceptions\RandomWriteDisabledException if random write is not allowed on the file
+     * @throws Exceptions\ItemAccessDeniedException if acessing via share and share doesn't allow modify
      * @return array File
      * @see File::GetClientObject()
      */
@@ -510,7 +501,7 @@ class FilesApp extends BaseApp
         }
         
         if (!$account && !$file->GetAllowPublicModify())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
             
         if ($share !== null && !$share->CanModify()) 
             throw new Exceptions\ItemAccessDeniedException();   
@@ -530,12 +521,12 @@ class FilesApp extends BaseApp
                 throw new Exceptions\RandomWriteDisabledException();
             
             if (!($handle = $infile->GetHandle())) 
-                throw new Exceptions\FileReadFailedException();
+                throw new FileReadFailedException();
             
             $wlength = FileUtils::ChunkedWrite($this->database, $handle, $file, $wstart); fclose($handle);
             
             if ($infile instanceof InputPath && $wlength !== $infile->GetSize())
-                throw new Exceptions\FileWriteFailedException();
+                throw new FileWriteFailedException();
             
             if ($actionlog) $actionlog->LogDetails('wlength',$wlength);
             
@@ -549,8 +540,8 @@ class FilesApp extends BaseApp
      * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback truncates.
      * The FS will restore the original size of the file but if the file was shrunk, data will be zeroed.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
-     * @throws RandomWriteDisabledException if random writes are not enabled on the file
-     * @throws ItemAccessDeniedException if access via share and share does not allow modify
+     * @throws Exceptions\RandomWriteDisabledException if random writes are not enabled on the file
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share does not allow modify
      * @return array File
      * @see File::GetClientObject()
      */
@@ -562,7 +553,7 @@ class FilesApp extends BaseApp
         $account = $authenticator ? $authenticator->GetAccount() : null;
         
         if (!$account && !$file->GetAllowPublicModify())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         if (!$file->GetAllowRandomWrite($account))
             throw new Exceptions\RandomWriteDisabledException();
@@ -578,7 +569,7 @@ class FilesApp extends BaseApp
 
     /**
      * Returns file metadata
-     * @throws ItemAccessDeniedException if accessing via share and reading is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and reading is not allowed
      * @return array File
      * @see File::GetClientObject()
      */
@@ -599,10 +590,10 @@ class FilesApp extends BaseApp
 
     /**
      * Lists folder metadata and optionally the items in a folder (or filesystem root)
-     * @throws ItemAccessDeniedException if accessing via share and reading is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and reading is not allowed
      * @throws AuthenticationFailedException if public access and no folder ID is given
-     * @throws UnknownFilesystemException if the given filesystem does not exist
-     * @throws UnknownFolderException if the given folder does not exist
+     * @throws Exceptions\UnknownStorageException if the given storage does not exist
+     * @throws Exceptions\UnknownFolderException if the given folder does not exist
      * @return array Folder
      * @see Folder::GetClientObject()
      */
@@ -620,7 +611,7 @@ class FilesApp extends BaseApp
         else
         {
             if ($authenticator === null) 
-                throw new Exceptions\AuthenticationFailedException();
+                throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
             
             $filesystem = $params->HasParam('filesystem') ? $params->GetParam('filesystem')->GetRandstr() : null;
@@ -628,7 +619,7 @@ class FilesApp extends BaseApp
             if ($filesystem !== null)
             {
                 $filesystem = FSManager::TryLoadByAccountAndID($this->database, $account, $filesystem, true);  
-                if ($filesystem === null) throw new Exceptions\UnknownFilesystemException();
+                if ($filesystem === null) throw new Exceptions\UnknownStorageException();
             }
                 
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesystem);
@@ -659,11 +650,11 @@ class FilesApp extends BaseApp
      * Reads an item by a path (rather than by ID) - can specify a root folder or filesystem
      * 
      * NOTE that /. and /.. have no special meaning - no traversal allowed
-     * @throws ItemAccessDeniedException if access via share and read is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and read is not allowed
      * @throws AuthenticationFailedException if public access and no root is given
-     * @throws UnknownFilesystemException if the given filesystem is not found
-     * @throws UnknownFolderException if the given folder is not found
-     * @throws UnknownItemException if the given item path is invalid
+     * @throws Exceptions\UnknownStorageException if the given storage is not found
+     * @throws Exceptions\UnknownFolderException if the given folder is not found
+     * @throws Exceptions\UnknownItemException if the given item path is invalid
      * @return array File|Folder with {isfile:bool}
      * @see File::GetClientObject()
      * @see Folder::GetClientObject()
@@ -679,7 +670,7 @@ class FilesApp extends BaseApp
         else // no root folder given
         {
             if ($authenticator === null) 
-                throw new Exceptions\AuthenticationFailedException();
+                throw new AuthenticationFailedException();
             $account = $authenticator->GetAccount();
 
             $filesystem = $params->HasParam('filesystem') ? $params->GetParam('filesystem')->GetRandstr() : null;
@@ -687,7 +678,7 @@ class FilesApp extends BaseApp
             if ($filesystem !== null)
             {
                 $filesystem = FSManager::TryLoadByID($this->database, $filesystem);
-                if ($filesystem === null) throw new Exceptions\UnknownFilesystemException();
+                if ($filesystem === null) throw new Exceptions\UnknownStorageException();
             }
             
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $filesystem);
@@ -762,7 +753,7 @@ class FilesApp extends BaseApp
     /**
      * Edits item metadata
      * @param ItemAccess $access access object for item
-     * @throws ItemAccessDeniedException if accessing via share and can't modify
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and can't modify
      * @return array Item
      * @see Item::GetClientObject()
      */
@@ -787,7 +778,7 @@ class FilesApp extends BaseApp
     protected function OwnFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $id = $params->GetParam('file',SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -811,7 +802,7 @@ class FilesApp extends BaseApp
     protected function OwnFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $id = $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -840,7 +831,7 @@ class FilesApp extends BaseApp
     /**
      * Creates a folder in the given parent
      * @throws AuthenticationFailedException if public access and public upload not allowed
-     * @throws ItemAccessDeniedException if accessing via share and share upload not allowed
+     * @throws Exceptions\ItemAccessDeniedException if accessing via share and share upload not allowed
      * @return array Folder
      * @see Folder::GetClientObject()
      */
@@ -853,7 +844,7 @@ class FilesApp extends BaseApp
         $parent = $access->GetFolder(); $share = $access->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         if ($share !== null && !$share->CanUpload()) 
             throw new Exceptions\ItemAccessDeniedException();
@@ -896,7 +887,7 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify is not allowed
-     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share modify is not allowed
      */
     private function DeleteItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {        
@@ -906,7 +897,7 @@ class FilesApp extends BaseApp
         $itemobj = $access->GetItem(); $share = $access->GetShare();
         
         if (!$authenticator && !$itemobj->GetAllowPublicModify())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         if ($share !== null && !$share->CanModify())
             throw new Exceptions\ItemAccessDeniedException();
@@ -943,7 +934,7 @@ class FilesApp extends BaseApp
      * Renames or copies an item
      * @param string $class item class
      * @param string $key input param for a single item
-     * @throws ItemAccessDeniedException if access via share and share upload/modify is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share upload/modify is not allowed
      * @throws AuthenticationFailedException if public access and public upload/modify is not allowed
      */
     private function RenameItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
@@ -969,7 +960,7 @@ class FilesApp extends BaseApp
         if ($copy)
         {
             if (!$authenticator && !$parent->GetAllowPublicUpload())
-                throw new Exceptions\AuthenticationFailedException();
+                throw new AuthenticationFailedException();
             
             if ($pshare !== null && !$pshare->CanUpload())
                 throw new Exceptions\ItemAccessDeniedException();
@@ -981,7 +972,7 @@ class FilesApp extends BaseApp
         else
         {
             if (!$authenticator && !$parent->GetAllowPublicModify())
-                throw new Exceptions\AuthenticationFailedException();
+                throw new AuthenticationFailedException();
             
             if ($share !== null && !$share->CanModify()) 
                 throw new Exceptions\ItemAccessDeniedException();
@@ -1019,7 +1010,7 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify/upload not allowed
-     * @throws ItemAccessDeniedException if access via share and share modify/upload not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share modify/upload not allowed
      */
     private function MoveItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1032,7 +1023,7 @@ class FilesApp extends BaseApp
         $parent = $paccess->GetFolder(); $pshare = $paccess->GetShare();
         
         if (!$authenticator && !$parent->GetAllowPublicUpload())
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
             
         if ($pshare !== null && !$pshare->CanUpload()) 
             throw new Exceptions\ItemAccessDeniedException();
@@ -1052,7 +1043,7 @@ class FilesApp extends BaseApp
         else 
         {
             if (!$authenticator && !$item->GetAllowPublicModify())
-                throw new Exceptions\AuthenticationFailedException();
+                throw new AuthenticationFailedException();
             
             if ($share !== null && !$share->CanModify()) 
                 throw new Exceptions\ItemAccessDeniedException();
@@ -1086,14 +1077,14 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
-     * @throws ItemAccessDeniedException if access via share if social is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share if social is not allowed
      * @return array ?Like
      * @see Like::GetClientObject()
      */
     private function LikeItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $id = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -1133,14 +1124,14 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
-     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share modify is not allowed
      * @return array Tag
      * @see Tag::GetClientObject()
      */
     private function TagItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $tag = $params->GetParam('tag')->CheckLength(127)->GetAlphanum();
@@ -1162,13 +1153,13 @@ class FilesApp extends BaseApp
     /**
      * Deletes an item tag
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownItemException if the given tag is not found
-     * @throws ItemAccessDeniedException if access via share and share modify is not allowed
+     * @throws Exceptions\UnknownItemException if the given tag is not found
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share modify is not allowed
      */
     protected function DeleteTag(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $id = $params->GetParam('tag',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
         $tag = Tag::TryLoadByID($this->database, $id);
@@ -1210,14 +1201,14 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
-     * @throws ItemAccessDeniedException if access via share and share social is not allowed
+     * @throws Exceptions\ItemAccessDeniedException if access via share and share social is not allowed
      * @return array Comment
      * @see Comment::GetClientObject()
      */
     private function CommentItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $id = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -1238,14 +1229,14 @@ class FilesApp extends BaseApp
     /**
      * Edits an existing comment properties
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownItemException if the comment is not found
+     * @throws Exceptions\UnknownItemException if the comment is not found
      * @return array Comment
      * @see Comment::GetClientObject()
      */
     protected function EditComment(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
                 
         $id = $params->GetParam('commentid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
@@ -1262,12 +1253,12 @@ class FilesApp extends BaseApp
     /**
      * Deletes a comment
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownItemException if the comment is not found
+     * @throws Exceptions\UnknownItemException if the comment is not found
      */
     protected function DeleteComment(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $id = $params->GetParam('commentid',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
@@ -1302,7 +1293,7 @@ class FilesApp extends BaseApp
     /**
      * Returns comments on an item
      * @param ItemAccess $access file or folder access object
-     * @throws ItemAccessDeniedException if access via share and can't read
+     * @throws Exceptions\ItemAccessDeniedException if access via share and can't read
      * @return array Comment
      * @see Comment::GetClientObject()
      */
@@ -1342,7 +1333,7 @@ class FilesApp extends BaseApp
     /**
      * Returns likes on an item
      * @param ItemAccess $access file or folder access object
-     * @throws ItemAccessDeniedException if access via share and can't read
+     * @throws Exceptions\ItemAccessDeniedException if access via share and can't read
      * @return array Like
      * @see Like::GetClientObject()
      */
@@ -1384,17 +1375,18 @@ class FilesApp extends BaseApp
      * @param string $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify/upload not allowed
-     * @throws UnknownDestinationException if the given share target is not found
-     * @throws UnknownItemException if the given item to share is not found
-     * @throws EmailShareDisabledException if emailing shares is not enabled
-     * @throws ShareURLGenerateException if the URL to email could be not determined
+     * @throws UnknownAccountException if sharing to an account and it's not found
+     * @throws UnknownGroupException if sharing to a group and it's not found
+     * @throws Exceptions\UnknownItemException if the given item to share is not found
+     * @throws Exceptions\EmailShareDisabledException if emailing shares is not enabled
+     * @throws Exceptions\ShareURLGenerateException if the URL to email could be not determined
      * @return array Share
      * @see Share::GetClientObject()
      */
     private function ShareItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $item = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -1417,7 +1409,7 @@ class FilesApp extends BaseApp
                 $acctid = $params->GetParam('account')->GetRandstr();
                 
                 if (($dest = Account::TryLoadByID($this->database, $acctid)) === null)
-                    throw new Exceptions\UnknownAccountException();
+                    throw new UnknownAccountException();
             }
             else if ($params->HasParam('group'))
             {
@@ -1427,7 +1419,7 @@ class FilesApp extends BaseApp
                     throw new Exceptions\ShareTargetDisabledException();
                     
                 if (($dest = Group::TryLoadByID($this->database, $groupid)) === null)
-                    throw new Exceptions\UnknownGroupException();
+                    throw new UnknownGroupException();
             }
             else if ($params->GetOptParam('everyone',false)->GetBool())
             {
@@ -1479,15 +1471,15 @@ class FilesApp extends BaseApp
     /**
      * Edits properties of an existing share
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownItemException if the given share is not found
-     * @throws ItemAccessDeniedException if not allowed
+     * @throws Exceptions\UnknownItemException if the given share is not found
+     * @throws Exceptions\ItemAccessDeniedException if not allowed
      * @return array Share
      * @see Share::GetClientObject()
      */
     protected function EditShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $share = Share::TryLoadByID($this->database, 
@@ -1505,13 +1497,13 @@ class FilesApp extends BaseApp
     /**
      * Deletes an existing share
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownItemException if the given share is not found
-     * @throws ItemAccessDeniedException if not allowed
+     * @throws Exceptions\UnknownItemException if the given share is not found
+     * @throws Exceptions\ItemAccessDeniedException if not allowed
      */
     protected function DeleteShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $share = Share::TryLoadByID($this->database,
@@ -1557,7 +1549,7 @@ class FilesApp extends BaseApp
     protected function GetShares(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $mine = $params->GetOptParam('mine',false)->GetBool();
@@ -1584,7 +1576,7 @@ class FilesApp extends BaseApp
     protected function GetAdopted(?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $files = File::LoadAdoptedByOwner($this->database, $account);
@@ -1597,16 +1589,16 @@ class FilesApp extends BaseApp
     }
     
     /**
-     * Returns filesystem metadata (default if none specified)
+     * Returns storage metadata (default if none specified)
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownFilesystemException if no filesystem was specified or is the default
+     * @throws Exceptions\UnknownStorageException if no storage was specified or is the default
      * @return array FSManager
      * @see FSManager::GetClientObject()
      */
-    protected function GetFilesystem(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    protected function GetStorage(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         if ($params->HasParam('filesystem'))
@@ -1617,7 +1609,7 @@ class FilesApp extends BaseApp
         else $filesystem = FSManager::LoadDefaultByAccount($this->database, $account);
         
         if ($filesystem === null) 
-            throw new Exceptions\UnknownFilesystemException();
+            throw new Exceptions\UnknownStorageException();
 
         if ($actionlog) $actionlog->LogDetails('filesystem',$filesystem->ID());
         
@@ -1637,7 +1629,7 @@ class FilesApp extends BaseApp
     protected function GetStorages(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
 
         if ($params->GetOptParam('everyone',false)->GetBool())
@@ -1658,7 +1650,7 @@ class FilesApp extends BaseApp
     /**
      * Creates a new filesystem
      * @throws AuthenticationFailedException if not signed in
-     * @throws UserStorageDisabledException if not admin and user storage is not allowed
+     * @throws Exceptions\UserStorageDisabledException if not admin and user storage is not allowed
      * @return array FSManager
      * @see FSManager::GetClientObject()
      */
@@ -1667,7 +1659,7 @@ class FilesApp extends BaseApp
         $params = $input->GetParams();
         
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $global = $params->GetOptParam('global',false)->GetBool();
@@ -1686,7 +1678,7 @@ class FilesApp extends BaseApp
     /**
      * Edits an existing filesystem
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownStorageException if the given filesystem is not found
+     * @throws Exceptions\UnknownStorageException if the given storage is not found
      * @return array FSManager
      * @see FSManager::GetClientObject()
      */
@@ -1695,7 +1687,7 @@ class FilesApp extends BaseApp
         $params = $input->GetParams();
         
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
         $fsid = $params->GetParam('filesystem',SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
@@ -1713,12 +1705,12 @@ class FilesApp extends BaseApp
     /**
      * Removes a filesystem (and potentially its content)
      * @throws AuthenticationFailedException if not signed in
-     * @throws UnknownStorageException if the given filesystem is not found
+     * @throws Exceptions\UnknownStorageException if the given storage is not found
      */
     protected function DeleteStorage(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $authenticator->RequirePassword();
         $account = $authenticator->GetAccount();
@@ -1755,8 +1747,8 @@ class FilesApp extends BaseApp
      * @param bool $timed if true, return a timed limit class (not total)
      * @throws UnknownGroupException if the given group is not found
      * @throws UnknownAccountException if the given account is not found
-     * @throws UnknownFilesystemException if the given filesystem is not found
-     * @throws UnknownObjectException if nothing valid was specified
+     * @throws Exceptions\UnknownStorageException if the given storage is not found
+     * @throws Exceptions\UnknownObjectException if nothing valid was specified
      * @return array<mixed> `{class:string, obj:object, full:bool}`
      */
     /*private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array
@@ -1768,32 +1760,32 @@ class FilesApp extends BaseApp
             if (($group = $params->GetParam('group',SafeParams::PARAMLOG_ALWAYS)->GetNullRandstr()) !== null)
             {
                 $obj = Group::TryLoadByID($this->database, $group);
-                if ($obj === null) throw new Exceptions\UnknownGroupException();
+                if ($obj === null) throw new UnknownGroupException();
             }
             
             $class = $timed ? Limits\GroupTimed::class : Limits\GroupTotal::class; 
             
-            $full = true; if (!$admin) throw new Exceptions\UnknownGroupException();
+            $full = true; if (!$admin) throw new UnknownGroupException();
         }
         else if ($params->HasParam('account'))
         {
             if (($account = $params->GetParam('account',SafeParams::PARAMLOG_ALWAYS)->GetNullRandstr()) !== null)
             {
                 $obj = Account::TryLoadByID($this->database, $account);
-                if ($obj === null) throw new Exceptions\UnknownAccountException();
+                if ($obj === null) throw new UnknownAccountException();
             }
             
             $class = $timed ? Limits\AccountTimed::class : Limits\AccountTotal::class;
 
             $full = $admin; if (!$admin && $obj !== $authenticator->GetAccount()) 
-                throw new Exceptions\UnknownAccountException();
+                throw new UnknownAccountException();
         }
         else if ($params->HasParam('filesystem'))
         {
             if (($filesystem = $params->GetParam('filesystem',SafeParams::PARAMLOG_ALWAYS)->GetNullRandstr()) !== null)
             {
                 $obj = FSManager::TryLoadByID($this->database, $filesystem);
-                if ($obj === null) throw new Exceptions\UnknownFilesystemException();
+                if ($obj === null) throw new Exceptions\UnknownStorageException();
             }
             
             $class = $timed ? Limits\FilesystemTimed::class : Limits\FilesystemTotal::class;
@@ -1802,7 +1794,7 @@ class FilesApp extends BaseApp
             
             // non-admins can view a subset of total info (feature config) for global filesystems
             if (!$full && ($timed || ($obj->GetOwnerID() !== null))) 
-                throw new Exceptions\UnknownFilesystemException();
+                throw new Exceptions\UnknownStorageException();
         }
         else if ($allowAuto) 
         {
@@ -1830,7 +1822,7 @@ class FilesApp extends BaseApp
     /*protected function GetLimits(SafeParams $params, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $lobj = $this->GetLimitObject($params, $authenticator, true, true, false);
         $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full'];
@@ -1863,7 +1855,7 @@ class FilesApp extends BaseApp
     /*protected function GetTimedLimits(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $lobj = $this->GetLimitObject($params, $authenticator, true, true, true);
         $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full']; // TODO replace this with a class
@@ -1895,7 +1887,7 @@ class FilesApp extends BaseApp
     /*protected function GetTimedStatsFor(SafeParams $params, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $lobj = $this->GetLimitObject($params, $authenticator, true, false, true);
         $class = $lobj['class']; $obj = $lobj['obj'];
@@ -1924,7 +1916,7 @@ class FilesApp extends BaseApp
     /*protected function GetTimedStatsAt(SafeParams $params, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AuthenticationFailedException();
+            throw new AuthenticationFailedException();
         
         $period = $params->GetParam('timeperiod')->GetUint();
         $attime = $params->GetParam('matchtime')->GetUint();
@@ -1967,7 +1959,7 @@ class FilesApp extends BaseApp
     /*protected function ConfigLimits(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null)
-            throw new Exceptions\AdminRequiredException();
+            throw new AdminRequiredException();
         $authenticator->RequireAdmin();
         
         $lobj = $this->GetLimitObject($params, $authenticator, false, false, false);
@@ -1986,7 +1978,7 @@ class FilesApp extends BaseApp
     /*protected function ConfigTimedLimits(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
-            throw new Exceptions\AdminRequiredException();
+            throw new AdminRequiredException();
         $authenticator->RequireAdmin();
         
         $lobj = $this->GetLimitObject($params, $authenticator, false, false, true);
@@ -2003,7 +1995,7 @@ class FilesApp extends BaseApp
     /*protected function PurgeLimits(SafeParams $params, ?Authenticator $authenticator) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AdminRequiredException();
+            throw new AdminRequiredException();
         $authenticator->RequireAdmin();
         
         $lobj = $this->GetLimitObject($params, $authenticator, false, false, false);
@@ -2020,7 +2012,7 @@ class FilesApp extends BaseApp
     /*protected function PurgeTimedLimits(SafeParams $params, ?Authenticator $authenticator) : void
     {
         if ($authenticator === null) 
-            throw new Exceptions\AdminRequiredException();
+            throw new AdminRequiredException();
         $authenticator->RequireAdmin();
         
         $lobj = $this->GetLimitObject($params, $authenticator, false, false, true);
