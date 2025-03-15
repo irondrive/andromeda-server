@@ -193,7 +193,8 @@ class FTP extends FWrapper
         if (($handle = fopen($this->GetFullURL($path),'w')) === false) 
             throw new Exceptions\FileCreateFailedException();
         
-        if (!fclose($handle)) throw new Exceptions\FileCreateFailedException(); 
+        if (!fclose($handle))
+            throw new Exceptions\FileCreateFailedException(); 
         
         return $this;
     }

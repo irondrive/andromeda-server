@@ -60,24 +60,23 @@ class File extends Item
     /**
      * Checks if the given total size would exceed the limit
      * @param int $size the new size of the file
-     * @see Limits\Base::CheckSize()
-     * @return $this
+     * @see Limits\Base::AssertSize()
      */
-    public function CheckSize(int $size) : self
+    public function AssertSize(int $size) : void
     {
         /*$delta = $size - ($this->TryGetScalar('size') ?? 0);
         
         return $this->MapToLimits(function(Limits\Base $lim)use($delta){
-            if (!$this->onOwnerStorage()) $lim->CheckSize($delta); });*/ return $this;
+            if (!$this->onOwnerStorage()) $lim->AssertSize($delta); });*/
     }
     
     /** 
      * Counts a download by updating limits, and notifying parents if $public 
      * @param bool $public if false, only updates the timestamp and not limit counters
      */
-    /*public function CountDownload(bool $public = true) : self
+    public function CountDownload(bool $public = true) : void
     {
-        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        /*if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         
         $this->MapToTotalLimits(function(Limits\Total $lim){ $lim->SetDownloadDate(); });
         
@@ -87,35 +86,34 @@ class File extends Item
             
             return parent::CountPublicDownload();
         }
-        else return $this;
-    }*/
+        else return $this;*/
+    }
     
     /** Counts bandwidth by updating the count and notifying parents */
-    /*public function CountBandwidth(int $bytes) : self
+    public function CountBandwidth(int $bytes) : void
     {
-        if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
+        /*if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         
         $fs = $this->GetFilesystem();
         if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
         $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CountBandwidth($bytes); });
         
-        return parent::CountBandwidth($bytes);
-    }*/
+        return parent::CountBandwidth($bytes);*/
+    }
     
     /**
      * Checks if the given bandwidth would exceed the limit
      * @param int $bytes the bandwidth delta
-     * @see Limits\Base::CheckBandwidth()
-     * @return $this
+     * @see Limits\Base::AssertBandwidth()
      */
-    /*public function CheckBandwidth(int $bytes) : self
+    public function AssertBandwidth(int $bytes) : void
     {
-        $fs = $this->GetFilesystem();
+        /*$fs = $this->GetFilesystem();
         if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
-        return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->CheckBandwidth($bytes); });
-    }*/ // TODO LIMITS
+        return $this->MapToLimits(function(Limits\Base $lim)use($bytes){ $lim->AssertBandwidth($bytes); });*/ // TODO LIMITS
+    }
     
     //protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); } // TODO STATS
     
@@ -263,7 +261,7 @@ class File extends Item
         $this->SetModified();
         $length = max($this->GetSize(), $start+strlen($data)); 
         
-        $this->CheckSize($length); 
+        $this->AssertSize($length); 
         $this->GetFilesystem()->WriteBytes($this, $start, $data); 
         // TODO RAY should the Filesystem call SetSize notify?
         $this->SetSize($length, notify:true);         

@@ -18,7 +18,7 @@ class SubFolder extends Folder
     
     public function SetParent(Folder $parent, bool $overwrite = false) : bool
     {
-        $this->CheckNotChildOrSelf($parent);
+        $this->AssertNotChildOrSelf($parent);
         static::CheckParent($parent, $overwrite, false); 
         
         $this->GetFilesystem()->MoveFolder($this, $parent);
@@ -53,7 +53,7 @@ class SubFolder extends Folder
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static
     {
-        $this->CheckNotChildOrSelf($parent);
+        $this->AssertNotChildOrSelf($parent);
         
         $folder = static::CheckParent($parent, $overwrite, true);
         if ($folder !== null) $folder->DeleteChildren();

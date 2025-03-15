@@ -82,13 +82,13 @@ abstract class Base extends BaseObject // TODO was StandardObject
      * Checks if the given size delta would exceed the size limit 
      * @see StandardObject::CheckCounter()
      */
-    public function CheckSize(int $delta) : void { $this->CheckCounter('size',$delta); }
+    public function AssertSize(int $delta) : void { $this->CheckCounter('size',$delta); }
     
     /**
      * Checks if the given bandwidth would exceed the limit
      * @see StandardObject::CheckCounter()
      */
-    public function CheckBandwidth(int $delta) : void { $this->CheckCounter('bandwidth',$delta); }    
+    public function AssertBandwidth(int $delta) : void { $this->CheckCounter('bandwidth',$delta); }    
         
     /** Adds stats from the given file to this limit object */
     public function AddFileCounts(File $file, bool $add = true, bool $noLimit = false) : self

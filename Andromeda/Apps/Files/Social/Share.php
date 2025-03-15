@@ -128,7 +128,7 @@ class Share extends BaseObject
     public function KeepOwner() : bool { return $this->keepowner->GetValue(); }
 
     /** Returns true if the share is expired, either by access count or expiry time  */
-    public function IsExpired() : bool
+    public function isExpired() : bool
     {
         $expires = $this->date_expires->TryGetValue();
         if ($expires !== null && $this->database->GetTime() > $expires)
@@ -140,7 +140,7 @@ class Share extends BaseObject
     /** Sets the share's access date to now and increments the access counter */
     public function SetAccessed() : void
     {
-        if ($this->IsExpired())
+        if ($this->isExpired())
             throw new Exceptions\ShareExpiredException();
         $this->date_accessed->SetTimeNow();
         $this->count_accessed->DeltaValue();
@@ -155,10 +155,10 @@ class Share extends BaseObject
      * @param ObjectDatabase $database database reference
      * @param Account $owner the owner of the share
      * @param Item $item the item being shared
-     * @param PolicyBase $dest account or group target, or null for everyone
+     * @param PolicyBase $dest account or group target
      * @return static new share object
      */
-    public static function Create(ObjectDatabase $database, Account $owner, Item $item, ?PolicyBase $dest) : static
+    public static function Create(ObjectDatabase $database, Account $owner, Item $item, PolicyBase $dest) : static
     {
         if ($item->isWorldAccess())
             throw new Exceptions\SharePublicItemException();
@@ -168,7 +168,7 @@ class Share extends BaseObject
             $q->IsNull('authkey'), 
             $q->Equals('owner',$owner->ID()),
             $q->Equals('item',$item->ID()), 
-            $q->Equals('dest',$dest?->ID())));
+            $q->Equals('dest',$dest->ID())));
             
         if ($database->TryLoadUniqueByQuery(static::class, $q) !== null)
             throw new Exceptions\ShareExistsException(); 
@@ -198,6 +198,15 @@ class Share extends BaseObject
         return $obj;
     }
     
+    /**
+     * Load all shares for the given item
+     * @return array<string, static>
+     */
+    public static function LoadByItem(ObjectDatabase $database, Item $item) : array
+    {
+        return $database->LoadObjectsByKey(static::class, 'item', $item->ID());
+    }
+
     /** Returns true if this share requires a password to access */
     public function NeedsPassword() : bool { return $this->password->TryGetValue() !== null; }
     
@@ -386,7 +395,7 @@ class Share extends BaseObject
             'dest' => $this->TryGetObjectID('dest'),
             'desttype' => Utilities::ShortClassName($this->TryGetObjectType('dest')),
             
-            'expired' => $this->IsExpired(),
+            'expired' => $this->isExpired(),
             'dates' => array(
                 'created' => $this->GetDateCreated(),
                 'expires' => $this->TryGetDate('expires')

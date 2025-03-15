@@ -77,6 +77,17 @@ class Like extends BaseObject // TODO was StandardObject
     }
     
     /**
+     * Load all likes for the given item
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
+     * @return array<string, static>
+     */
+    public static function LoadByItem(ObjectDatabase $database, Item $item, ?int $limit = null, ?int $offset = null) : array
+    {
+        return $database->LoadObjectsByKey(static::class, 'item', $item->ID(), $limit, $offset);
+    }
+
+    /**
      * Returns a printable client object of this like
      * @return array{} `{owner:id, item:id, value:bool, dates:{created:float}}`
      */

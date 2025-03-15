@@ -230,7 +230,7 @@ class CoreApp extends BaseApp
         
         if ($actionlog !== null) $actionlog->LogDetails('mailer',$mailer->ID());
         
-        try { $mailer->SendMail($subject, $body, false, $dests, false); }
+        try { $mailer->SendMail($subject, $body, isHtml:false, recipients:$dests, usebcc:false); }
         catch (CoreExceptions\MailSendException $e) { 
             throw new Exceptions\MailSendFailException($e); }
     }

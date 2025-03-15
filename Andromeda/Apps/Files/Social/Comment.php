@@ -73,6 +73,17 @@ class Comment extends BaseObject // TODO was StandardObject
         $q->Where($q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id)));
         return $database->TryLoadUniqueByQuery(static::class, $q);
     }
+
+    /**
+     * Load all comments for the given item
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
+     * @return array<string, static>
+     */
+    public static function LoadByItem(ObjectDatabase $database, Item $item, ?int $limit = null, ?int $offset = null) : array
+    {
+        return $database->LoadObjectsByKey(static::class, 'item', $item->ID(), $limit, $offset);
+    }
     
     /**
      * Returns a printable client object of this comment

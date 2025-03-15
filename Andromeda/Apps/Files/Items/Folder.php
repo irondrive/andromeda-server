@@ -79,8 +79,8 @@ abstract class Folder extends Item
     
     /**
      * Returns an array of the files in this folder (not recursive)
-     * @param non-negative-int $limit the max number of files to load
-     * @param non-negative-int $offset the offset to start loading from
+     * @param ?non-negative-int $limit the max number of files to load
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, File> files indexed by ID
      */
     public function GetFiles(?int $limit = null, ?int $offset = null) : array
@@ -91,8 +91,8 @@ abstract class Folder extends Item
         
     /**
      * Returns an array of the folders in this folder (not recursive)
-     * @param non-negative-int $limit the max number of folders to load
-     * @param non-negative-int $offset the offset to start loading from
+     * @param ?non-negative-int $limit the max number of folders to load
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, SubFolder> folders indexed by ID
      */
     public function GetFolders(?int $limit = null, ?int $offset = null) : array
@@ -133,7 +133,7 @@ abstract class Folder extends Item
      * i.e. that $folder is not equal to $this, or any of its children
      * @throws Exceptions\InvalidFolderParentException if the check fails
      */
-    protected function CheckNotChildOrSelf(Folder $folder) : void
+    protected function AssertNotChildOrSelf(Folder $folder) : void
     {
         do { if ($folder === $this)
                 throw new Exceptions\InvalidFolderParentException(); }
@@ -233,8 +233,8 @@ abstract class Folder extends Item
      * Recursively lists subitems in this folder
      * @param bool $files if true, load files
      * @param bool $folders if true, load folders
-     * @param non-negative-int $limit max number of items to load
-     * @param non-negative-int $offset offset of items to load
+     * @param ?non-negative-int $limit max number of items to load
+     * @param ?non-negative-int $offset offset of items to load
      * @return array<string, Item> items indexed by ID
      */
     private function RecursiveItems(?bool $files = true, ?bool $folders = true, ?int $limit = null, ?int $offset = null) : array // @phpstan-ignore-line TODO should have a client function for this?
@@ -268,7 +268,8 @@ abstract class Folder extends Item
     {
         return [];
         /*$retval = $this->TryGetClientObject($owner,$details,$files,$folders,$recursive,$limit,$offset);
-        if ($retval === null) throw new Exceptions\DeletedByStorageException(); else return $retval;*/
+        if ($retval !== null) return $retval;
+        else throw new Exceptions\DeletedByStorageException(); */
     }
     
     /**

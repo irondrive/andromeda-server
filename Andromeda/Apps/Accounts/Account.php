@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{Crypto, EmailRecipient, Utilities};
+use Andromeda\Core\EmailRecipient;
 use Andromeda\Core\Exceptions\DecryptionFailedException;
 use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabase, TableTypes, QueryBuilder};
 use Andromeda\Core\Database\Exceptions\CounterOverLimitException;
@@ -364,7 +364,7 @@ class Account extends PolicyBase implements IKeySource
      * Checks that the current client count + delta is within the limit 
      * @throws CounterOverLimitException if over the limit
      */
-    public function CheckLimitClients(int $delta = 1) : void
+    public function AssertLimitClients(int $delta = 1) : void
     {
         if (($limit = $this->GetLimitClients()) === null) return;
         if (Client::CountByAccount($this->database, $this)+$delta > $limit)
@@ -375,7 +375,7 @@ class Account extends PolicyBase implements IKeySource
      * Checks that the current contacts count + delta is within the limit 
      * @throws CounterOverLimitException if over the limit
      */
-    public function CheckLimitContacts(int $delta = 1) : void
+    public function AssertLimitContacts(int $delta = 1) : void
     {
         if (($limit = $this->GetLimitContacts()) === null) return;
         if (Contact::CountByAccount($this->database, $this)+$delta > $limit)
@@ -386,7 +386,7 @@ class Account extends PolicyBase implements IKeySource
      * Checks that the current recovery key count + delta is within the limit 
      * @throws CounterOverLimitException if over the limit
      */
-    public function CheckLimitRecoveryKeys(int $delta = 1) : void
+    public function AssertLimitRecoveryKeys(int $delta = 1) : void
     {
         if (($limit = $this->GetLimitRecoveryKeys()) === null) return;
         if (RecoveryKey::CountByAccount($this->database, $this)+$delta > $limit)

@@ -70,6 +70,15 @@ class Tag extends BaseObject
     }
 
     /**
+     * Load all tags for the given item
+     * @return array<string, static>
+     */
+    public static function LoadByItem(ObjectDatabase $database, Item $item) : array
+    {
+        return $database->LoadObjectsByKey(static::class, 'item', $item->ID());
+    }
+
+    /**
      * Returns a printable client object of this tag
      * @return array{} `{id:id, owner:id, item:id, tag:string, dates:{created:float}}`
      */

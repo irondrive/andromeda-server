@@ -26,11 +26,11 @@ class UnknownFolderException extends BaseExceptions\ClientNotFoundException
     }
 }
 
-/** Exception indicating that the requested object does not exist */
-class UnknownObjectException extends BaseExceptions\ClientNotFoundException
+/** Exception indicating that the requested share does not exist */
+class UnknownShareException extends BaseExceptions\ClientNotFoundException
 {
     public function __construct(?string $details = null) {
-        parent::__construct("UNKNOWN_OBJECT", $details);
+        parent::__construct("UNKNOWN_SHARE", $details);
     }
 }
 

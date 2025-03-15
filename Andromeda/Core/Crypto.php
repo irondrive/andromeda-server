@@ -206,7 +206,7 @@ class Crypto
      * @throws Exceptions\DecryptionFailedException if authentication fails
      * @see self::TryCheckAuthCode()
      */
-    public static function CheckAuthCode(string $mac, string $msg, string $key) : void
+    public static function AssertAuthCode(string $mac, string $msg, string $key) : void
     {
         if (!static::TryCheckAuthCode($mac, $msg, $key)) 
             throw new Exceptions\DecryptionFailedException();

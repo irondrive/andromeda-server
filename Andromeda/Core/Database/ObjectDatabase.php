@@ -766,8 +766,8 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
      * @param ?scalar $value data value to match
-     * @param non-negative-int $limit the max number of files to load 
-     * @param non-negative-int $offset the offset to start loading from
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, T> loaded objects indexed by ID
      */
     public function LoadObjectsByKey(string $class, string $key, $value, ?int $limit = null, ?int $offset = null) : array
@@ -801,18 +801,15 @@ class ObjectDatabase
      * @param class-string<T> $class class name of the objects
      * @param string $key data key to match
      * @param ?scalar $value data value to match
-     * @param non-negative-int $limit the max number of files to load 
-     * @param non-negative-int $offset the offset to start loading from
      * @return int number of deleted objects
      */
-    public function DeleteObjectsByKey(string $class, string $key, $value, ?int $limit = null, ?int $offset = null) : int
+    public function DeleteObjectsByKey(string $class, string $key, $value) : int
     {
         $validx = self::ValueToIndex($value);
         $this->RegisterNonUniqueKey($class, $key);
 
         $q = new QueryBuilder();
         $q->Where($q->Equals($key, $value));
-        $q->Limit($limit)->Offset($offset);
 
         if (!array_key_exists($validx, $this->objectsByKey[$class][$key]))
         {

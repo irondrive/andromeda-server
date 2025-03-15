@@ -33,7 +33,10 @@ class ItemAccess
     /** Returns the item that is being accessed */
     public function GetItem() : Item { return $this->item; }
     
-    /** Returns the item that is being accessed (if applicable) */
+    /** 
+     * Returns the item that is being accessed (if applicable) 
+     * @throws Exceptions\UnknownItemException if not a file
+     */
     public function GetFile() : File 
     {
         if (!is_a($this->item, File::class))
@@ -41,7 +44,10 @@ class ItemAccess
         return $this->item; 
     }
     
-    /** Returns the item that is being accessed (if applicable) */
+    /** 
+     * Returns the item that is being accessed (if applicable) 
+     * @throws Exceptions\UnknownItemException if not a folder
+     */
     public function GetFolder() : Folder 
     { 
         if (!is_a($this->item, Folder::class))
@@ -50,7 +56,18 @@ class ItemAccess
     }
         
     /** Returns the share object that grants access, or null if the item is owned */
-    public function GetShare() : ?Share { return $this->share; }
+    public function TryGetShare() : ?Share { return $this->share; }
+
+    /** 
+     * Returns the share object that grants access
+     * @throws Exceptions\UnknownShareException if not a share
+     */
+    public function GetShare() : Share 
+    { 
+        if ($this->share === null)
+            throw new Exceptions\UnknownShareException();
+        return $this->share; 
+    }
 
     /**
      * Primary authentication routine for granting access to an item
@@ -64,12 +81,12 @@ class ItemAccess
      * @param ObjectDatabase $database database reference
      * @param SafeParams $params user input possibly containing share info
      * @param Authenticator $authenticator current account auth
-     * @param ?Item $item the item being requested access to (or null if implicit via the share)
+     * @param ?Item $item the item being requested access to (or null if implicit via a share)
      * @throws Exceptions\InvalidSharePasswordException if the input share password is invalid
      * @throws AuthenticationFailedException if a specific item is requested and auth is null
      * @return self new ItemAccess object
      */
-    public static function Authenticate(ObjectDatabase $database, SafeParams $params, ?Authenticator $authenticator, ?Item $item = null) : self
+    public static function Authenticate(ObjectDatabase $database, SafeParams $params, ?Authenticator $authenticator, ?Item $item) : self
     {
         if ($params->HasParam('sid'))
         {

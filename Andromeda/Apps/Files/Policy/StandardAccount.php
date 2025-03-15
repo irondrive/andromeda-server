@@ -31,10 +31,14 @@ class StandardAccount extends Standard
         parent::CreateFields();
     }
 
-    /** Returns self with no database values set (will return default policy) */
-    public static function GetDefault(ObjectDatabase $database) : static
+    /** 
+     * Returns the policy object corresponding to the given account 
+     * If account is null, or no object is found, returns self with no database values set (default policies)
+     */
+    public static function ForceLoadByAccount(ObjectDatabase $database, ?Account $account) : static
     {
-        return new static($database, array(), false);
+        $aclim = ($account === null) ? null : static::TryLoadByAccount($database, $account);
+        return $aclim ?? new static($database, array(), false);
     }
 
     /** Loads the policy object corresponding to the given account */
@@ -48,4 +52,29 @@ class StandardAccount extends Standard
     {
         return $database->TryDeleteUniqueByKey(static::class, 'account', $account->ID());
     }
+
+    // TODO RAY !! account should always return non-null values, right?
+    // TODO RAY !! need to implement getting from group policy
+
+    /** Returns true if the limited object should allow sharing items */
+    public function GetAllowItemSharing() : bool { return $this->can_itemshare->TryGetValue(); }
+    
+    /** Returns true if the limited object should allow sharing to groups */
+    public function GetAllowShareToGroups() : bool { return $this->can_share2groups->TryGetValue(); }
+    
+    /** Returns true if the limited object should allow public upload to folders */
+    public function GetAllowPublicUpload() : bool { return $this->can_publicupload->TryGetValue(); }
+    
+    /** Returns true if the limited object should allow public modification of files */
+    public function GetAllowPublicModify() : bool { return $this->can_publicmodify->TryGetValue(); } 
+    
+    /** Returns true if the limited object should allow random writes to files */
+    public function GetAllowRandomWrite() : bool { return $this->can_randomwrite->TryGetValue(); }
+    
+    /** Returns true if sending shared via server email is allowed */
+    public function GetAllowEmailShare() : bool { return $this->can_emailshare->TryGetValue(); }
+    
+    /** Returns true if creating user-defined storages is allowed */
+    public function GetAllowUserStorage() : bool { return $this->can_userstorage->TryGetValue(); }
+
 }

@@ -48,7 +48,7 @@ class RecoveryKey extends BaseObject implements IKeySource
      */
     public static function CreateSet(ObjectDatabase $database, Account $account) : array
     {        
-        $account->CheckLimitRecoveryKeys(self::SET_SIZE);
+        $account->AssertLimitRecoveryKeys(self::SET_SIZE);
 
         return array_map(function($i)use($database, $account){ 
             return static::Create($database, $account); 
@@ -58,7 +58,7 @@ class RecoveryKey extends BaseObject implements IKeySource
     /** Creates a single recovery key for an account */
     public static function Create(ObjectDatabase $database, Account $account) : static
     {
-        $account->CheckLimitRecoveryKeys();
+        $account->AssertLimitRecoveryKeys();
 
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();

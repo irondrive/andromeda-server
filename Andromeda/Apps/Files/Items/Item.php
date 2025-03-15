@@ -92,8 +92,8 @@ abstract class Item extends BaseObject
      * Loads objects with the given parent
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the parent folder of the item
-     * @param non-negative-int $limit the max number of files to load 
-     * @param non-negative-int $offset the offset to start loading from
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, static> items indexed by ID
      */
     public static function LoadByParent(ObjectDatabase $database, Folder $parent, ?int $limit = null, ?int $offset = null) : array
@@ -105,8 +105,8 @@ abstract class Item extends BaseObject
      * Returns an array of all items belonging to the given owner
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner to load objects for
-     * @param non-negative-int $limit the max number of files to load 
-     * @param non-negative-int $offset the offset to start loading from
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, static> items indexed by ID
      */
     public static function LoadByOwner(ObjectDatabase $database, Account $account, ?int $limit = null, ?int $offset = null) : array
@@ -129,12 +129,10 @@ abstract class Item extends BaseObject
      * Deletes objects with the given parent
      * @param ObjectDatabase $database database reference
      * @param Folder $parent the parent folder of the item
-     * @param non-negative-int $limit the max number of files to load 
-     * @param non-negative-int $offset the offset to start loading from
      */
-    public static function DeleteByParent(ObjectDatabase $database, Folder $parent, ?int $limit = null, ?int $offset = null) : int
+    public static function DeleteByParent(ObjectDatabase $database, Folder $parent) : int
     {
-        return $database->DeleteObjectsByKey(static::class, 'parent', $parent->ID(), $limit, $offset);
+        return $database->DeleteObjectsByKey(static::class, 'parent', $parent->ID());
     }
     
     /**
@@ -228,27 +226,35 @@ abstract class Item extends BaseObject
 
     /** 
      * Returns all comment objects for this item 
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, Social\Comment>
      */
-    //public function GetComments() : array { return Social\Comment::LoadByItem($this->database, $this); }
+    public function GetComments(?int $limit = null, ?int $offset = null) : array { 
+        return Social\Comment::LoadByItem($this->database, $this, $limit, $offset); }
 
     /** 
      * Returns all like objects for this item 
+     * @param ?non-negative-int $limit the max number of files to load 
+     * @param ?non-negative-int $offset the offset to start loading from
      * @return array<string, Social\Like>
      */
-    //public function GetLikes() : array { return Social\Like::LoadByItem($this->database, $this); }
+    public function GetLikes(?int $limit = null, ?int $offset = null) : array { 
+        return Social\Like::LoadByItem($this->database, $this, $limit, $offset); }
 
     /** 
      * Returns all tag objects for this item 
      * @return array<string, Social\Tag>
      */
-    //public function GetTags() : array { return Social\Tag::LoadByItem($this->database, $this); }
+    public function GetTags() : array { 
+        return Social\Tag::LoadByItem($this->database, $this); }
 
     /** 
      * Returns all share objects for this item 
      * @return array<string, Social\Share>
      */
-    //public function GetShares() : array { return Social\Share::LoadByItem($this->database, $this); } // TODO RAY !! fix these
+    public function GetShares() : array {
+        return Social\Share::LoadByItem($this->database, $this); }
     
     /**
      * Copies the item to a new name.  If $overwrite, deletes an object if the target already exists.
@@ -469,10 +475,7 @@ abstract class Item extends BaseObject
     protected function GetPolicyBool(callable $func, ?Account $account) : bool
     {
         $fslim = Policy\StandardStorage::TryLoadByStorage($this->database, $this->storage->GetObject());
-
-        $aclim = ($account === null) ? null :
-            Policy\StandardAccount::TryLoadByAccount($this->database, $account);
-        $aclim ??= Policy\StandardAccount::GetDefault($this->database);
+        $aclim = Policy\StandardAccount::ForceLoadByAccount($this->database, $account);
 
         return ($fslim === null || $func($fslim) !== false) && $func($aclim);
     }

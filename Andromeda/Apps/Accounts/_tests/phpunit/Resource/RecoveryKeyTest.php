@@ -19,7 +19,7 @@ class RecoveryKeyTest extends \PHPUnit\Framework\TestCase
     {
         $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $account = $this->createMock(Account::class);
-        $account->expects($this->any())->method('CheckLimitRecoveryKeys');
+        $account->expects($this->any())->method('AssertLimitRecoveryKeys');
 
         $keys = RecoveryKeyTest_RecoveryKey::CreateSet($objdb, $account);
         assert(count($keys) === RecoveryKey::SET_SIZE);

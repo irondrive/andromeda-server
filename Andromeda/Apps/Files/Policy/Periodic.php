@@ -30,13 +30,13 @@ abstract class Periodic extends Base
     protected function canTrackItems() : bool { return false; }
     protected function canTrackDLStats() : bool { return false; }
     public function GetSize() : int { return 0; }
-    public function CheckSize(int $delta) : void { }
+    public function AssertSize(int $delta) : void { }
     public function CountSize(int $delta, bool $noLimit = false) : void { }
     public function GetItems() : int { return 0; }
     public function CountItems(int $delta = 1, bool $noLimit = false) : void { }
     public function GetPublicDownloads() : int { return 0; }
     public function CountPublicDownloads(int $delta = 1, bool $noLimit = false) : void { }
     public function GetBandwidth() : int { return 0; }
-    public function CheckBandwidth(int $delta) : void { }
+    public function AssertBandwidth(int $delta) : void { }
     public function CountBandwidth(int $delta, bool $noLimit = false) : void { }
 }

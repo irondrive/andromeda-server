@@ -205,7 +205,7 @@ abstract class Contact extends BaseObject
      */
     public static function Create(ObjectDatabase $database, Account $account, string $address, bool $verify = false) : static
     {
-        $account->CheckLimitContacts();
+        $account->AssertLimitContacts();
         
         $contact = $database->CreateObject(static::class);
         $contact->date_created->SetTimeNow();

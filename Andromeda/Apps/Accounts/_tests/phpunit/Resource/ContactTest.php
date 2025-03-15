@@ -27,7 +27,7 @@ class ContactTest extends \PHPUnit\Framework\TestCase
     {
         $objdb = new ObjectDatabase($this->createMock(PDODatabase::class));
         $account = $this->createMock(Account::class);
-        $account->expects($this->once())->method('CheckLimitContacts');
+        $account->expects($this->once())->method('AssertLimitContacts');
 
         $contact = ContactTest_Contact::Create($objdb, $account, $address="test@test.com");
 

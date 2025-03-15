@@ -119,12 +119,12 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
             bin2hex($mac = Crypto::MakeAuthCode($msg, $key)));
         
         $this->assertTrue(Crypto::TryCheckAuthCode($mac, $msg, $key));
-        Crypto::CheckAuthCode($mac, $msg, $key); // no throw
+        Crypto::AssertAuthCode($mac, $msg, $key); // no throw
         
         $badmac = (string)hex2bin("abc6a1077b910511bb3f9af766e469726d3e461783f48cf156e8d9966434dbc4");
         $this->assertFalse(Crypto::TryCheckAuthCode($badmac, $msg, $key));
         
         $this->expectException(Exceptions\DecryptionFailedException::class);
-        Crypto::CheckAuthCode($badmac, $msg, $key);
+        Crypto::AssertAuthCode($badmac, $msg, $key);
     }
 }

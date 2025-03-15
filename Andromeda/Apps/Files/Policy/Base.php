@@ -37,7 +37,7 @@ abstract class Base extends BaseObject
     public abstract function GetSize() : int;
     
     /** Checks if the given size delta would exceed the size limit */
-    public abstract function CheckSize(int $delta) : void; 
+    public abstract function AssertSize(int $delta) : void; 
     // TODO RAY add @throws to Check and Count functions
     
     /** Adds to the size counter, if item tracking is allowed */
@@ -59,7 +59,7 @@ abstract class Base extends BaseObject
     public abstract function GetBandwidth() : int;
     
     /** Checks if the given bandwidth would exceed the limit */
-    public abstract function CheckBandwidth(int $delta) : void;  
+    public abstract function AssertBandwidth(int $delta) : void;  
     
     /** Adds to the bandwidth counter, if download tracking is allowed */
     public abstract function CountBandwidth(int $delta, bool $noLimit = false) : void;

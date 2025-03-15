@@ -146,7 +146,7 @@ class Client extends BaseObject
      */
     public static function Create(IOInterface $interface, ObjectDatabase $database, Account $account, ?string $name = null) : static
     {
-        $account->CheckLimitClients();
+        $account->AssertLimitClients();
 
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();

@@ -72,7 +72,7 @@ abstract class Standard extends Base
     public function GetSize() : int { 
         return $this->count_size->GetValue(); }
 
-    public function CheckSize(int $delta) : void { 
+    public function AssertSize(int $delta) : void { 
         $this->count_size->CheckDelta($delta); }
 
     public function CountSize(int $delta, bool $noLimit = false) : void {
@@ -93,7 +93,7 @@ abstract class Standard extends Base
     public function GetBandwidth() : int {
         return $this->count_bandwidth->GetValue(); }
 
-    public function CheckBandwidth(int $delta) : void {
+    public function AssertBandwidth(int $delta) : void {
         $this->count_bandwidth->CheckDelta($delta); }
 
     public function CountBandwidth(int $delta, bool $noLimit = false) : void {
