@@ -92,7 +92,7 @@ class FileUtils
             if (strlen($data) !== $rlen)
                 throw new FileReadFailedException();
                 
-            //$file->CountBandwidth($rlen); // TODO LIMITS
+            $file->CountBandwidth($rlen);
             $byte += $rlen;
             
             if (!$debugdl) { echo $data; flush(); } // TODO take a stream here too instead of echo directly - debugdl can be a dummy stream (ofc check benchmark)
@@ -100,7 +100,7 @@ class FileUtils
     }
 
     /**
-     * Perform a chunked write to a file
+     * Perform a chunked write to a file, counting bandwidth
      * @param resource $stream input data stream
      * @param File $file write destination
      * @param non-negative-int $wstart write offset
@@ -121,10 +121,12 @@ class FileUtils
             assert($nbyte-$wbyte >= 0); // guaranteed by intdiv math
             $data = self::ReadStream($stream, $nbyte-$wbyte, false);
             
-            if (strlen($data) === 0) continue; // stream could be 0 bytes
+            $wlen = strlen($data);
+            if ($wlen === 0) continue; // stream could be 0 bytes
             
             $file->WriteBytes($wbyte, $data);
-            $wbyte += strlen($data);
+            $file->CountBandwidth($wlen);
+            $wbyte += $wlen;
         }
         
         assert($wbyte-$wstart >= 0); // wbyte only gets incremented

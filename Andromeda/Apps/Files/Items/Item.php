@@ -489,15 +489,15 @@ abstract class Item extends BaseObject
         return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowPublicUpload(); }, null); }
     
     /** Returns true if the item should allow random/partial writes */
-    public function GetAllowRandomWrite(Account $account) : bool {
+    public function GetAllowRandomWrite(?Account $account) : bool {
         return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowRandomWrite(); }, $account); }
     
     /** Returns true if the item should allow sharing */
-    public function GetAllowItemSharing(Account $account) : bool {
+    public function GetAllowItemSharing(?Account $account) : bool {
         return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowItemSharing(); }, $account); }
 
     /** Returns true if the item should allow group shares (shares with a group) */
-    public function GetAllowShareToGroups(Account $account) : bool {
+    public function GetAllowShareToGroups(?Account $account) : bool {
         return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowShareToGroups(); }, $account); }
     
     /** Deletes the item from the DB only */

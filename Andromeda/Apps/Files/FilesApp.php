@@ -12,7 +12,7 @@ use Andromeda\Apps\Accounts\Exceptions\{AuthenticationFailedException, AdminRequ
 use Andromeda\Apps\Files\Items\{Item, File, Folder, RootFolder, SubFolder};
 use Andromeda\Apps\Files\Social\{Like, Share, Comment, Tag};
 use Andromeda\Apps\Files\Storage\Storage;
-use Andromeda\Apps\Files\Storage\Exceptions\{FileReadFailedException, FileWriteFailedException};
+use Andromeda\Apps\Files\Storage\Exceptions\FileWriteFailedException;
 
 // when an account is deleted, need to delete files-related stuff also
 /*Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
@@ -362,7 +362,7 @@ class FilesApp extends BaseApp
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
         $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true);
+        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
         $parent = $paccess->GetFolder(); $share = $paccess->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
@@ -378,14 +378,11 @@ class FilesApp extends BaseApp
         $infile = $input->GetFile('file');
         if ($infile instanceof InputPath)
         {
-            $parent->CountBandwidth($infile->GetSize());
-            
             $fileobj = File::Import($this->database, $parent, $owner, $infile, $overwrite);
         }
         else // can't import handles directly
         {
-            //$name = $params->GetParam('name')->GetFSName();
-            $name = $infile->GetName(); // TODO check not null! used to have above
+            $name = $infile->GetName();
             $handle = $infile->GetHandle();
             
             $fileobj = File::Create($this->database, $parent, $owner, $name, $overwrite);
@@ -428,9 +425,10 @@ class FilesApp extends BaseApp
         $fstart = $params->GetOptParam('fstart',0,SafeParams::PARAMLOG_NEVER)->GetUint(); // logged below
         $flast  = $params->GetOptParam('flast',$fsize-1,SafeParams::PARAMLOG_NEVER)->GetInt(); // logged below
         
-        if (isset($_SERVER['HTTP_RANGE']))
+        $range = $_SERVER['HTTP_RANGE'] ?? null;
+        if (is_string($range))
         {
-            $ranges = explode('=',$_SERVER['HTTP_RANGE']);
+            $ranges = explode('=',$range);
             if (count($ranges) !== 2 || trim($ranges[0]) !== "bytes")
                 throw new Exceptions\InvalidDLRangeException();
             
@@ -438,9 +436,9 @@ class FilesApp extends BaseApp
             if (count($ranges) !== 2)
                 throw new Exceptions\InvalidDLRangeException();
             
-            $fstart = (int)$ranges[0]; 
-            $flast2 = (int)$ranges[1]; 
-            if ($flast2) $flast = $flast2;
+            $fstart = (int)$ranges[0];
+            if ($ranges[1] !== "")
+                $flast = (int)$ranges[1];
         }
 
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
@@ -451,6 +449,7 @@ class FilesApp extends BaseApp
         
         // check required bandwidth ahead of time
         $length = $flast-$fstart+1;
+        assert($length >= 0); // see exception above
         $file->AssertBandwidth($length);
 
         if ($flast === $fsize-1) // the end of the file
@@ -476,11 +475,12 @@ class FilesApp extends BaseApp
         // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
             function() use($debugdl,$length){ return $debugdl ? null : $length; },
-            function(Output $output) use($file,$fstart,$flast,$debugdl)
+            function(Output $output) use($file,$fstart,$length,$debugdl)
         {            
-            set_time_limit(0); ignore_user_abort(true);
+            set_time_limit(0); 
+            ignore_user_abort(true);
             
-            FileUtils::ChunkedRead($this->database,$file,$fstart,$flast-$fstart+1,$debugdl);
+            FileUtils::ChunkedRead($this->database,$file,$fstart,$length,$debugdl);
         }));
     }
         
@@ -503,8 +503,8 @@ class FilesApp extends BaseApp
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
         
-        $account = $authenticator ? $authenticator->GetAccount() : null;
-        
+        $account = $authenticator?->GetAccount();
+
         $wstart = $params->GetOptParam('offset',$file->GetSize(),SafeParams::PARAMLOG_NEVER)->GetUint();
         
         if ($actionlog !== null) 
@@ -512,24 +512,20 @@ class FilesApp extends BaseApp
         
         $infile = $input->GetFile('data');
         
-        if ($infile instanceof InputPath)
-        {
-            $file->CountBandwidth($infile->GetSize());
-        }
-        
-        if (!$account && !$file->GetAllowPublicModify())
+        if ($account === null && !$file->GetAllowPublicModify())
             throw new AuthenticationFailedException();
             
         if ($share !== null && !$share->CanModify()) 
             throw new Exceptions\ItemAccessDeniedException();   
 
-        if ($infile instanceof InputPath && !$wstart && $infile->GetSize() >= $file->GetSize())
+        if ($infile instanceof InputPath && ($wstart === 0) && $infile->GetSize() >= $file->GetSize())
         {
             // for a full overwrite, we can call SetContents for efficiency
             if ($share !== null && !$share->CanUpload())
                 throw new Exceptions\ItemAccessDeniedException();
             
-            return $file->SetContents($infile)->GetClientObject(($share === null));
+            $file->SetContents($infile);
+            return $file->GetClientObject(($share === null));
         }
         else
         {
@@ -537,10 +533,9 @@ class FilesApp extends BaseApp
             if ($wstart !== $file->GetSize() && !$file->GetAllowRandomWrite($account))
                 throw new Exceptions\RandomWriteDisabledException();
             
-            if (!($handle = $infile->GetHandle())) 
-                throw new FileReadFailedException();
-            
-            $wlength = FileUtils::ChunkedWrite($this->database, $handle, $file, $wstart); fclose($handle);
+            $handle = $infile->GetHandle();
+            $wlength = FileUtils::ChunkedWrite($this->database, $handle, $file, $wstart); 
+            fclose($handle);
             
             if ($infile instanceof InputPath && $wlength !== $infile->GetSize())
                 throw new FileWriteFailedException();
@@ -568,9 +563,9 @@ class FilesApp extends BaseApp
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
 
-        $account = $authenticator ? $authenticator->GetAccount() : null;
+        $account = $authenticator?->GetAccount();
         
-        if (!$account && !$file->GetAllowPublicModify())
+        if ($account === null && !$file->GetAllowPublicModify())
             throw new AuthenticationFailedException();
         
         if (!$file->GetAllowRandomWrite($account))
@@ -591,7 +586,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function GetFileMeta(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    protected function GetFileMeta(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
     {
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
@@ -615,6 +610,7 @@ class FilesApp extends BaseApp
      */
     protected function GetFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
     {
+        $share = null;
         if ($params->HasParam('folder'))
         {
             $fid = $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
@@ -640,8 +636,8 @@ class FilesApp extends BaseApp
                 
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
             
-            if ($actionlog !== null) 
-                $actionlog->LogAccess($folder, null);
+            if ($actionlog !== null && $folder !== null) 
+                $actionlog->LogItemAccess($folder, null);
         }
 
         if ($folder === null) 
@@ -655,12 +651,8 @@ class FilesApp extends BaseApp
         $offset = $params->GetOptParam('offset',null)->GetNullUint();
         
         $details = $params->GetOptParam('details',false)->GetBool();
-        
-        $public = isset($share) && $share !== null;
-
-        if ($public && ($files || $folders)) $folder->CountPublicVisit();
-        
-        return $folder->GetClientObject(!$public,$details,$files,$folders,$recursive,$limit,$offset);
+        return $folder->GetClientObject(owner:($share === null),details:$details,
+            files:$files,folders:$folders,recursive:$recursive,limit:$limit,offset:$offset);
     }
 
     /**
@@ -700,8 +692,8 @@ class FilesApp extends BaseApp
             
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
 
-            if ($actionlog !== null) 
-                $actionlog->LogAccess($folder, null);
+            if ($actionlog !== null && $folder !== null) 
+                $actionlog->LogItemAccess($folder, null);
         }        
         
         if ($folder === null) 
@@ -742,23 +734,23 @@ class FilesApp extends BaseApp
 
         if ($item instanceof File) 
         {
-            $retval = $item->GetClientObject(($share === null));
+            $retval = $item->GetClientObject(owner:($share === null));
         }
-        else if ($item instanceof Folder)
+        else if ($item instanceof Folder) // @phpstan-ignore-line remove as per below comment // TODO
         {
-            if ($share !== null) $item->CountPublicVisit();
-            $retval = $item->GetClientObject(($share === null),false,true,true);
+            $retval = $item->GetClientObject(owner:($share === null),details:false,files:true,folders:true);
         }
         // TODO make folder client object default files/folders to true, just use Item->GetClientObject here
         
-        $retval['isfile'] = ($item instanceof File); return $retval;
+        $retval['isfile'] = ($item instanceof File);
+        return $retval;
     }
     
     /**
      * Edits file metadata
      * @see FilesApp::EditItemMeta()
      */
-    protected function EditFileMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : ?array
+    protected function EditFileMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
     {
         return $this->EditItemMeta($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
     }
@@ -767,7 +759,7 @@ class FilesApp extends BaseApp
      * Edits folder metadata
      * @see FilesApp::EditItemMeta()
      */
-    protected function EditFolderMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : ?array
+    protected function EditFolderMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
     {
         return $this->EditItemMeta($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
     }
@@ -863,7 +855,7 @@ class FilesApp extends BaseApp
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
         $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true);
+        $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
         $parent = $access->GetFolder(); $share = $access->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
@@ -874,7 +866,7 @@ class FilesApp extends BaseApp
 
         $name = $params->GetParam('name')->GetFSName();
         
-        $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;
+        $owner = ($share !== null && !$share->KeepOwner()) ? $parent->TryGetOwner() : $account;
 
         $folder = SubFolder::Create($this->database, $parent, $owner, $name);
         
@@ -971,13 +963,13 @@ class FilesApp extends BaseApp
         
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
-        if ($item instanceof RootFolder && (!$account || !$item->isFSOwnedBy($account)))
+        if ($item instanceof RootFolder && ($account === null || !$item->isFSOwnedBy($account)))
             throw new Exceptions\ItemAccessDeniedException();
         
         $name = $params->GetParam('name')->GetFSName();
         $overwrite = $params->GetOptParam('overwrite',false)->GetBool();
         
-        $paccess = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $item->GetParent(), true);
+        $paccess = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $item->GetParent(), true); // TODO AuthenticateParentAccess
         
         $parent = $paccess->GetFolder(); $pshare = $paccess->TryGetShare();
         
@@ -989,9 +981,10 @@ class FilesApp extends BaseApp
             if ($pshare !== null && !$pshare->CanUpload())
                 throw new Exceptions\ItemAccessDeniedException();
             
-            $owner = ($share !== null && !$share->KeepOwner()) ? $parent->GetOwner() : $account;            
+            $owner = ($share !== null && !$share->KeepOwner()) ? $parent->TryGetOwner() : $account;
             
             $retitem = $item->CopyToName($owner, $name, $overwrite);
+            return $retitem->GetClientObject(owner:($share === null));
         }
         else
         {
@@ -1001,10 +994,9 @@ class FilesApp extends BaseApp
             if ($share !== null && !$share->CanModify()) 
                 throw new Exceptions\ItemAccessDeniedException();
             
-            $retitem = $item->SetName($name, $overwrite);
+            $item->SetName($name, $overwrite);
+            return $item->GetClientObject(owner:($share === null));
         }
-        
-        return $retitem->GetClientObject(($share === null));
     }
     
     /**
@@ -1043,7 +1035,7 @@ class FilesApp extends BaseApp
         $itemid = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
         
         $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true);
+        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
         $parent = $paccess->GetFolder(); $pshare = $paccess->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
@@ -1060,11 +1052,10 @@ class FilesApp extends BaseApp
 
         if ($copy)
         {
-            $owner = ($share !== null && !$share->KeepOwner())
-                ? $parent->TryGetOwner() : $account;
+            $owner = ($share !== null && !$share->KeepOwner()) ? $parent->TryGetOwner() : $account;
             
             $newitem = $item->CopyToParent($owner, $parent, $overwrite);
-            return $newitem->GetClientObject(($owner === $account));
+            return $newitem->GetClientObject(owner:($owner === $account));
         }
         else 
         {
@@ -1076,7 +1067,7 @@ class FilesApp extends BaseApp
             
             $owner = $item->TryGetOwner();
             $item->SetParent($parent, $overwrite);
-            return $item->GetClientObject(($owner === $account));
+            return $item->GetClientObject(owner:($owner === $account));
         }
     }
     
@@ -1461,7 +1452,8 @@ class FilesApp extends BaseApp
         if ($actionlog !== null) 
             $actionlog->LogDetails('share',$share->ID()); 
         
-        $shares = array($share); $retval = $share->GetClientObject(false, true, $islink);
+        $shares = array($share); // maybe in future, send N items with 1 email?
+        $retval = $share->GetClientObject(false, true, $islink);
         
         if ($islink && $params->HasParam('email'))
         {
@@ -1479,7 +1471,7 @@ class FilesApp extends BaseApp
                 if ($url === null || $url === "") 
                     throw new Exceptions\ShareURLGenerateException();
                 
-                $cmdparams = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey());
+                $cmdparams = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey()); // @phpstan-ignore-line make public or use GetClientObject?
                 $cmdinput = (new Input('files','download',$cmdparams));
                 
                 return "<a href='".HTTP::GetRemoteURL($url, $cmdinput)."'>".$share->GetItem()->GetName()."</a>";
