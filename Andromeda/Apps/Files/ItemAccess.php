@@ -136,6 +136,16 @@ class ItemAccess
     }
     
     /**
+     * Same as ItemAccess::Authenticate() but returns null rather than client exceptions
+     * @see ItemAccess::Authenticate()
+     */
+    public static function TryAuthenticate(ObjectDatabase $database, SafeParams $params, ?Authenticator $authenticator, ?Item $item = null) : ?self
+    {
+        try { return static::Authenticate($database, $params, $authenticator, $item); }
+        catch (BaseExceptions\ClientException $e) { return null; }
+    }
+    
+    /**
      * Returns whether the given account can access the given item without a share.
      * 
      * The account must own either the item or one of its parents
@@ -151,15 +161,5 @@ class ItemAccess
             if ($item->TryGetOwnerID() === $account->ID()) return true;
         }
         while (($item = $item->TryGetParent()) !== null); return false;
-    }
-    
-    /**
-     * Same as ItemAccess::Authenticate() but returns null rather than client exceptions
-     * @see ItemAccess::Authenticate()
-     */
-    public static function TryAuthenticate(ObjectDatabase $database, SafeParams $params, ?Authenticator $authenticator, ?Item $item = null) : ?self
-    {
-        try { return static::Authenticate($database, $params, $authenticator, $item); }
-        catch (BaseExceptions\ClientException $e) { return null; }
     }
 }

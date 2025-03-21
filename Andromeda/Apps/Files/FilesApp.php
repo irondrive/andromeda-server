@@ -261,71 +261,40 @@ class FilesApp extends BaseApp
         if (!is_a($access->GetItem(), $class))
             self::UnknownItemException($class);
         
-        if ($actionlog !== null)
-            $actionlog->LogItemAccess($access->GetItem(), $access->TryGetShare()); 
-        
-        return $access;
-    }
-        
-    /** 
-     * Returns an ItemAccess authenticating the given item class/ID, returns null on failure 
-     * @param class-string<Item> $class item class to load
-     */
-    private function TryAuthenticateItemAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog, string $class, ?string $id) : ?ItemAccess 
-    {
-        $item = null; if ($id !== null)
-        {
-            $item = $class::TryLoadByID($this->database, $id);
-            if ($item === null) self::UnknownItemException($class);
-        }
-        
-        $access = ItemAccess::TryAuthenticate($this->database, $params, $auth, $item); 
-        if ($access !== null && !is_a($access->GetItem(), $class)) return null;
-        
-        if ($actionlog !== null && $access !== null) 
-            $actionlog->LogItemAccess($access->GetItem(), $access->TryGetShare());
-        
+        $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare()); 
         return $access;
     }
     
-    /** Returns an ItemAccess authenticating the given already-loaded object */
-    private function AuthenticateItemObjAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog, Item $item) : ItemAccess
-    {
-        $access = ItemAccess::Authenticate($this->database, $params, $auth, $item);
-        
-        if ($actionlog !== null)
-            $actionlog->LogItemAccess($access->GetItem(), $access->TryGetShare());
-        
-        return $access;
-    }
-
     /** Returns an ItemAccess authenticating the given file ID (or null to get from input), throws exceptions on failure */
-    private function AuthenticateFileAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog, ?string $id = null) : ItemAccess 
+    private function AuthenticateFileAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : ItemAccess 
     {
-        $id ??= $params->GetParam('file',SafeParams::PARAMLOG_NEVER)->GetRandstr();
+        $id = $params->GetParam('file',SafeParams::PARAMLOG_NEVER)->GetRandstr();
         return $this->AuthenticateItemAccess($params, $auth, $actionlog, File::class, $id);
     }
 
     /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), throws exceptions on failure */
-    private function AuthenticateFolderAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog, ?string $id = null) : ItemAccess 
+    private function AuthenticateFolderAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : ItemAccess 
     { 
-        $id ??= $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
+        $id = $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
         return $this->AuthenticateItemAccess($params, $auth, $actionlog, Folder::class, $id);
     }
-        
-    /** Returns an ItemAccess authenticating the given folder ID (or null to get from input), returns null on failure */
-    private function TryAuthenticateFolderAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog, ?string $id = null) : ?ItemAccess 
-    {
-        $id ??= $params->GetOptParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
-        return $this->TryAuthenticateItemAccess($params, $auth, $actionlog, Folder::class, $id);
-    }
+    
+    /** Returns an ItemAccess authenticating the given parent ID (or null to get from input), throws exceptions on failure */
+    private function AuthenticateParentAccess(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : ItemAccess 
+    { 
+        $id = $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr();
+        $paccess = $this->AuthenticateItemAccess($params, $auth, null, Folder::class, $id); // no log
 
+        $actionlog?->LogParentAccess($paccess->GetFolder(), $paccess->TryGetShare());
+        return $paccess;
+    }
+    
     /**
      * Gets config for this app
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function GetConfig(?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetConfig(?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
@@ -338,7 +307,7 @@ class FilesApp extends BaseApp
      * @return array Config
      * @see Config::GetClientObject()
      */
-    protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null)
             throw new AdminRequiredException();
@@ -355,14 +324,13 @@ class FilesApp extends BaseApp
      * @return array File newly created file
      * @see File::GetClientObject()
      */
-    protected function UploadFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function UploadFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $params = $input->GetParams();
         
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
-        $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
+        $paccess = $this->AuthenticateParentAccess($params, $authenticator, $actionlog);
         $parent = $paccess->GetFolder(); $share = $paccess->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
@@ -391,8 +359,7 @@ class FilesApp extends BaseApp
             fclose($handle);
         }
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('file',$fileobj->ID()); 
+        $actionlog?->LogDetails('file',$fileobj->ID()); 
         
         return $fileobj->GetClientObject(($owner === $account));
     }
@@ -444,8 +411,7 @@ class FilesApp extends BaseApp
         if ($fstart < 0 || $flast+1 < $fstart || $flast >= $fsize)
             throw new Exceptions\InvalidDLRangeException();
 
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('fstart',$fstart)->LogDetails('flast',$flast);
+        $actionlog?->LogDetails('fstart',$fstart)->LogDetails('flast',$flast);
         
         // check required bandwidth ahead of time
         $length = $flast-$fstart+1;
@@ -496,7 +462,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function WriteToFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function WriteToFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $params = $input->GetParams();
         
@@ -507,8 +473,7 @@ class FilesApp extends BaseApp
 
         $wstart = $params->GetOptParam('offset',$file->GetSize(),SafeParams::PARAMLOG_NEVER)->GetUint();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('wstart',$wstart);
+        $actionlog?->LogDetails('wstart',$wstart);
         
         $infile = $input->GetFile('data');
         
@@ -540,8 +505,7 @@ class FilesApp extends BaseApp
             if ($infile instanceof InputPath && $wlength !== $infile->GetSize())
                 throw new FileWriteFailedException();
             
-            if ($actionlog !== null) 
-                $actionlog->LogDetails('wlength',$wlength);
+            $actionlog?->LogDetails('wlength',$wlength);
             
             return $file->GetClientObject(($share === null));
         }
@@ -558,7 +522,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function TruncateFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function TruncateFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {        
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
@@ -586,7 +550,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function GetFileMeta(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFileMeta(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
@@ -608,13 +572,12 @@ class FilesApp extends BaseApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function GetFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $share = null;
         if ($params->HasParam('folder'))
         {
-            $fid = $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
-            $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $fid);
+            $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog);
             $folder = $access->GetFolder(); $share = $access->TryGetShare();
             
             if ($share !== null && !$share->CanRead()) 
@@ -636,8 +599,8 @@ class FilesApp extends BaseApp
                 
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
             
-            if ($actionlog !== null && $folder !== null) 
-                $actionlog->LogItemAccess($folder, null);
+            if ($folder !== null) 
+                $actionlog?->LogItemAccess($folder, null);
         }
 
         if ($folder === null) 
@@ -668,11 +631,14 @@ class FilesApp extends BaseApp
      * @see File::GetClientObject()
      * @see Folder::GetClientObject()
      */
-    protected function GetItemByPath(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetItemByPath(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
-        $share = null; if (($raccess = $this->TryAuthenticateFolderAccess($params, $authenticator, $actionlog)) !== null)
+        $share = null;
+        if ($params->HasParam('folder'))
         {
+            $raccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog);
             $folder = $raccess->GetFolder(); $share = $raccess->TryGetShare();
+            
             if ($share !== null && !$share->CanRead()) 
                 throw new Exceptions\ItemAccessDeniedException();
         }
@@ -692,8 +658,8 @@ class FilesApp extends BaseApp
             
             $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
 
-            if ($actionlog !== null && $folder !== null) 
-                $actionlog->LogItemAccess($folder, null);
+            if ($folder !== null) 
+                $actionlog?->LogItemAccess($folder, null);
         }        
         
         if ($folder === null) 
@@ -750,7 +716,7 @@ class FilesApp extends BaseApp
      * Edits file metadata
      * @see FilesApp::EditItemMeta()
      */
-    protected function EditFileMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function EditFileMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->EditItemMeta($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
     }
@@ -759,7 +725,7 @@ class FilesApp extends BaseApp
      * Edits folder metadata
      * @see FilesApp::EditItemMeta()
      */
-    protected function EditFolderMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function EditFolderMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->EditItemMeta($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
     }
@@ -771,7 +737,7 @@ class FilesApp extends BaseApp
      * @return array Item
      * @see Item::GetClientObject()
      */
-    private function EditItemMeta(ItemAccess $access, SafeParams $params) : array // @phpstan-ignore-line TODO GetClientObject
+    private function EditItemMeta(ItemAccess $access, SafeParams $params) : array
     {
         $item = $access->GetItem(); $share = $access->TryGetShare();
         
@@ -789,7 +755,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function OwnFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function OwnFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -803,8 +769,7 @@ class FilesApp extends BaseApp
         if ($file->isWorldAccess() || $file->GetParent()->TryGetOwner() !== $account)
             throw new Exceptions\ItemAccessDeniedException();
             
-        if ($actionlog !== null) 
-            $actionlog->LogItemAccess($file, null);
+        $actionlog?->LogItemAccess($file, null);
             
         $file->SetOwner($account);
         return $file->GetClientObject(true);
@@ -815,7 +780,7 @@ class FilesApp extends BaseApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function OwnFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function OwnFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -826,16 +791,12 @@ class FilesApp extends BaseApp
         $folder = Folder::TryLoadByID($this->database, $id);
         if ($folder === null) throw new Exceptions\UnknownFolderException();
         
-        if ($folder->isWorldAccess()) 
-            throw new Exceptions\ItemAccessDeniedException();
-        
-        if ($actionlog !== null) 
-            $actionlog->LogItemAccess($folder, null);
-        
         $parent = $folder->TryGetParent();
-        if ($parent === null || $parent->TryGetOwner() !== $account)
+        if ($folder->isWorldAccess() || $parent?->TryGetOwner() !== $account)
             throw new Exceptions\ItemAccessDeniedException();
             
+        $actionlog?->LogItemAccess($folder, null);
+    
         if ($params->GetOptParam('recursive',false)->GetBool())
             $folder->SetOwnerRecursive($account);
         else $folder->SetOwner($account); // TODO use a bool for recursive instead?
@@ -850,13 +811,12 @@ class FilesApp extends BaseApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function CreateFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function CreateFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
-        $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $access = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
-        $parent = $access->GetFolder(); $share = $access->TryGetShare();
+        $paccess = $this->AuthenticateParentAccess($params, $authenticator, $actionlog);
+        $parent = $paccess->GetFolder(); $share = $paccess->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
             throw new AuthenticationFailedException();
@@ -870,8 +830,7 @@ class FilesApp extends BaseApp
 
         $folder = SubFolder::Create($this->database, $parent, $owner, $name);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('folder',$folder->ID()); 
+        $actionlog?->LogDetails('folder',$folder->ID()); 
         
         return $folder->GetClientObject(($owner === $account));
     }
@@ -918,8 +877,7 @@ class FilesApp extends BaseApp
         if ($share !== null && !$share->CanModify())
             throw new Exceptions\ItemAccessDeniedException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('item', $itemobj->TryGetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('item', $itemobj->TryGetClientObject(), onlyFull:true);
 
         $itemobj->Delete();
     }
@@ -930,7 +888,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function RenameFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function RenameFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->RenameItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -941,7 +899,7 @@ class FilesApp extends BaseApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function RenameFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function RenameFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->RenameItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -953,7 +911,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\ItemAccessDeniedException if access via share and share upload/modify is not allowed
      * @throws AuthenticationFailedException if public access and public upload/modify is not allowed
      */
-    private function RenameItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    private function RenameItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $copy = $params->GetOptParam('copy',false)->GetBool();
 
@@ -969,9 +927,9 @@ class FilesApp extends BaseApp
         $name = $params->GetParam('name')->GetFSName();
         $overwrite = $params->GetOptParam('overwrite',false)->GetBool();
         
-        $paccess = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $item->GetParent(), true); // TODO AuthenticateParentAccess
-        
+        $paccess = ItemAccess::Authenticate($this->database, $params, $authenticator, $item->GetParent());
         $parent = $paccess->GetFolder(); $pshare = $paccess->TryGetShare();
+        $actionlog?->LogParentAccess($parent, $pshare);
         
         if ($copy)
         {
@@ -1005,7 +963,7 @@ class FilesApp extends BaseApp
      * @return array File
      * @see File::GetClientObject()
      */
-    protected function MoveFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function MoveFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->MoveItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -1016,7 +974,7 @@ class FilesApp extends BaseApp
      * @return array Folder
      * @see Folder::GetClientObject()
      */
-    protected function MoveFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function MoveFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->MoveItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -1028,14 +986,13 @@ class FilesApp extends BaseApp
      * @throws AuthenticationFailedException if public access and public modify/upload not allowed
      * @throws Exceptions\ItemAccessDeniedException if access via share and share modify/upload not allowed
      */
-    private function MoveItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    private function MoveItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $copy = $params->GetOptParam('copy',false)->GetBool();
         
         $itemid = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
         
-        $parentid = $params->HasParam('parent') ? $params->GetParam('parent',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $paccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog, $parentid, true); // TODO AuthenticateParentAccess
+        $paccess = $this->AuthenticateParentAccess($params, $authenticator, $actionlog);
         $parent = $paccess->GetFolder(); $pshare = $paccess->TryGetShare();
         
         if ($authenticator === null && !$parent->GetAllowPublicUpload())
@@ -1075,7 +1032,7 @@ class FilesApp extends BaseApp
      * Likes or dislikes a file 
      * @see FilesApp::LikeItem()
      */
-    protected function LikeFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array // @phpstan-ignore-line TODO GetClientObject
+    protected function LikeFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
         return $this->LikeItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -1084,7 +1041,7 @@ class FilesApp extends BaseApp
      * Likes or dislikes a folder
      * @see FilesApp::LikeItem()
      */
-    protected function LikeFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array // @phpstan-ignore-line TODO GetClientObject
+    protected function LikeFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
         return $this->LikeItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -1098,7 +1055,7 @@ class FilesApp extends BaseApp
      * @return array ?Like
      * @see Like::GetClientObject()
      */
-    private function LikeItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array // @phpstan-ignore-line TODO GetClientObject
+    private function LikeItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1122,7 +1079,7 @@ class FilesApp extends BaseApp
      * Adds a tag to a file
      * @see FilesApp::TagItem()
      */
-    protected function TagFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function TagFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->TagItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -1131,7 +1088,7 @@ class FilesApp extends BaseApp
      * Adds a tag to a folder
      * @see FilesApp::TagItem() 
      */
-    protected function TagFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function TagFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->TagItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -1145,7 +1102,7 @@ class FilesApp extends BaseApp
      * @return array Tag
      * @see Tag::GetClientObject()
      */
-    private function TagItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    private function TagItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1162,8 +1119,7 @@ class FilesApp extends BaseApp
         
         $tagobj = Tag::Create($this->database, $account, $itemobj, $tag);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('tag',$tagobj->ID()); 
+        $actionlog?->LogDetails('tag',$tagobj->ID()); 
         
         return $tagobj->GetClientObject();
     }
@@ -1183,15 +1139,15 @@ class FilesApp extends BaseApp
         $tag = Tag::TryLoadByID($this->database, $id);
         if ($tag === null) throw new Exceptions\UnknownItemException();
 
-        $access = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $tag->GetItem());
-        
+        $access = ItemAccess::Authenticate($this->database, $params, $authenticator, $tag->GetItem());
+        $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare());
+
         $share = $access->TryGetShare();
         
         if ($share !== null && !$share->CanModify()) 
             throw new Exceptions\ItemAccessDeniedException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('tag', $tag->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('tag', $tag->GetClientObject(), onlyFull:true);
         
         $tag->Delete();
     }
@@ -1200,7 +1156,7 @@ class FilesApp extends BaseApp
      * Adds a comment to a file
      * @see FilesApp::CommentItem()
      */
-    protected function CommentFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function CommentFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->CommentItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -1209,7 +1165,7 @@ class FilesApp extends BaseApp
      * Adds a comment to a folder
      * @see FilesApp::CommentFolder()
      */
-    protected function CommentFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function CommentFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->CommentItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -1223,7 +1179,7 @@ class FilesApp extends BaseApp
      * @return array Comment
      * @see Comment::GetClientObject()
      */
-    private function CommentItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    private function CommentItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1239,8 +1195,7 @@ class FilesApp extends BaseApp
         $comment = $params->GetParam('comment')->GetHTMLText();
         $cobj = Comment::Create($this->database, $account, $item, $comment);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('comment',$cobj->ID()); 
+        $actionlog?->LogDetails('comment',$cobj->ID()); 
         
         return $cobj->GetClientObject();
     }
@@ -1252,7 +1207,7 @@ class FilesApp extends BaseApp
      * @return array Comment
      * @see Comment::GetClientObject()
      */
-    protected function EditComment(SafeParams $params, ?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function EditComment(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1285,8 +1240,7 @@ class FilesApp extends BaseApp
         $cobj = Comment::TryLoadByAccountAndID($this->database, $account, $id);
         if ($cobj === null) throw new Exceptions\UnknownItemException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('comment', $cobj->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('comment', $cobj->GetClientObject(), onlyFull:true);
         
         $cobj->Delete();
     }
@@ -1295,7 +1249,7 @@ class FilesApp extends BaseApp
      * Returns comments on a file
      * @see FilesApp::GetItemComments()
      */
-    protected function GetFileComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFileComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->GetItemComments($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
     }
@@ -1304,7 +1258,7 @@ class FilesApp extends BaseApp
      * Returns comments on a folder
      * @see FilesApp::GetItemComments()
      */
-    protected function GetFolderComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFolderComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->GetItemComments($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
     }
@@ -1316,7 +1270,7 @@ class FilesApp extends BaseApp
      * @return array Comment
      * @see Comment::GetClientObject()
      */
-    private function GetItemComments(ItemAccess $access, SafeParams $params) : array // @phpstan-ignore-line TODO GetClientObject
+    private function GetItemComments(ItemAccess $access, SafeParams $params) : array
     {
         $item = $access->GetItem(); $share = $access->TryGetShare();
         
@@ -1335,7 +1289,7 @@ class FilesApp extends BaseApp
      * Returns likes on a file
      * @see FilesApp::GetItemLikes()
      */
-    protected function GetFileLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFileLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->GetItemLikes($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
     }
@@ -1344,7 +1298,7 @@ class FilesApp extends BaseApp
      * Returns likes on a folder
      * @see FilesApp::GetItemLikes()
      */
-    protected function GetFolderLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetFolderLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
         return $this->GetItemLikes($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
     }
@@ -1356,7 +1310,7 @@ class FilesApp extends BaseApp
      * @return array Like
      * @see Like::GetClientObject()
      */
-    private function GetItemLikes(ItemAccess $access, SafeParams $params) : array // @phpstan-ignore-line TODO GetClientObject
+    private function GetItemLikes(ItemAccess $access, SafeParams $params) : array
     {
         $item = $access->GetItem(); $share = $access->TryGetShare();
         
@@ -1377,7 +1331,7 @@ class FilesApp extends BaseApp
      * Creates shares for a file
      * @see FilesApp::ShareItem()
      */
-    protected function ShareFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function ShareFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->ShareItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
@@ -1386,7 +1340,7 @@ class FilesApp extends BaseApp
      * Creates shares for a folder
      * @see FilesApp::ShareItem()
      */
-    protected function ShareFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function ShareFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         return $this->ShareItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
     }
@@ -1404,7 +1358,7 @@ class FilesApp extends BaseApp
      * @return array Share
      * @see Share::GetClientObject()
      */
-    private function ShareItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    private function ShareItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1449,8 +1403,7 @@ class FilesApp extends BaseApp
         
         $share->SetOptions($params, $oldshare);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('share',$share->ID()); 
+        $actionlog?->LogDetails('share',$share->ID()); 
         
         $shares = array($share); // maybe in future, send N items with 1 email?
         $retval = $share->GetClientObject(false, true, $islink);
@@ -1497,7 +1450,7 @@ class FilesApp extends BaseApp
      * @return array Share
      * @see Share::GetClientObject()
      */
-    protected function EditShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function EditShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1508,7 +1461,9 @@ class FilesApp extends BaseApp
         if ($share === null) throw new Exceptions\UnknownItemException();        
         
         // allowed to edit the share if you have owner level access to the item, or own the share
-        $origshare = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $share->GetItem())->TryGetShare();
+        $access = ItemAccess::Authenticate($this->database, $params, $authenticator, $share->GetItem());
+        $actionlog?->LogItemAccess($access->GetItem(), $origshare = $access->TryGetShare());
+
         if ($origshare !== null && $share->GetOwner() !== $account)
             throw new Exceptions\ItemAccessDeniedException();
         
@@ -1535,13 +1490,14 @@ class FilesApp extends BaseApp
         // if you don't own the share, you must have owner-level access to the item        
         if ($share->GetOwner() !== $account)
         {
-            $access = $this->AuthenticateItemObjAccess($params, $authenticator, $actionlog, $share->GetItem());
+            $access = ItemAccess::Authenticate($this->database, $params, $authenticator, $share->GetItem());
+            $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare());
+
             if ($access->TryGetShare() !== null)
                 throw new Exceptions\ItemAccessDeniedException();
         }
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('share', $share->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('share', $share->GetClientObject(), onlyFull:true);
         
         $share->Delete();
     }
@@ -1551,12 +1507,10 @@ class FilesApp extends BaseApp
      * @return array Share
      * @see Share::GetClientObject()
      */
-    protected function ShareInfo(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function ShareInfo(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $access = ItemAccess::Authenticate($this->database, $params, $authenticator, null);
-        
-        if ($actionlog !== null) 
-            $actionlog->LogItemAccess($access->GetItem(), $access->TryGetShare());
+        $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare());
         
         return $access->GetShare()->GetClientObject(false, false);
     }
@@ -1569,7 +1523,7 @@ class FilesApp extends BaseApp
      * @return array [id:Share]
      * @see Share::GetClientObject()
      */
-    protected function GetShares(SafeParams $params, ?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetShares(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1618,7 +1572,7 @@ class FilesApp extends BaseApp
      * @return array Storage
      * @see Storage::GetClientObject()
      */
-    protected function GetStorage(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetStorage(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1634,8 +1588,7 @@ class FilesApp extends BaseApp
         if ($storage === null) 
             throw new Exceptions\UnknownStorageException();
 
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('storage',$storage->ID());
+        $actionlog?->LogDetails('storage',$storage->ID());
         
         $ispriv = $authenticator->isAdmin() || ($account === $storage->TryGetOwner());
         
@@ -1650,7 +1603,7 @@ class FilesApp extends BaseApp
      * @return array [id:Storage]
      * @see Storage::GetClientObject()
      */
-    protected function GetStorages(SafeParams $params, ?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function GetStorages(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
@@ -1678,7 +1631,7 @@ class FilesApp extends BaseApp
      * @return array Storage
      * @see Storage::GetClientObject()
      */
-    protected function CreateStorage(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function CreateStorage(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $params = $input->GetParams();
         
@@ -1694,8 +1647,7 @@ class FilesApp extends BaseApp
             
         $storage = Storage::Create($this->database, $input, $global ? null : $account);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('storage',$storage->ID()); 
+        $actionlog?->LogDetails('storage',$storage->ID()); 
         
         return $storage->GetClientObject(true);
     }
@@ -1707,7 +1659,7 @@ class FilesApp extends BaseApp
      * @return array Storage
      * @see Storage::GetClientObject()
      */
-    protected function EditStorage(Input $input, ?Authenticator $authenticator) : array // @phpstan-ignore-line TODO GetClientObject
+    protected function EditStorage(Input $input, ?Authenticator $authenticator) : array
     {
         $params = $input->GetParams();
         
@@ -1751,17 +1703,11 @@ class FilesApp extends BaseApp
         
         $unlink = $params->GetOptParam('unlink',false)->GetBool();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('storage', $storage->GetClientObject(true), onlyFull:true);
+        $actionlog?->LogDetails('storage', $storage->GetClientObject(true), onlyFull:true);
         
         $storage->Delete();// TODO RAY !! $unlink);
     }
     
-
-
-
-
-
     /**
      * Common function for loading and authenticating the limited object and limit class referred to by input
      * 
