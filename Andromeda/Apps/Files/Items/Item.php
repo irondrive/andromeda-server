@@ -12,6 +12,10 @@ use Andromeda\Apps\Files\Storage\Storage;
  * Like other objects, items are generally referred to by ID, not name path.
  * It is therefore somewhat like an object storage, except that every item
  * must have exactly one parent (other than the root folder).
+ * 
+ * @phpstan-import-type ShareJ from Social\Share
+ * @phpstan-import-type TagJ from Social\Tag
+ * @phpstan-type ItemJ array{id:string, isfile:bool, name:string, owner:?string, parent:?string, storage:string, description:?string, date_created:float, date_modified:?float, date_accessed?:?float, tags?:array<string, TagJ>, shares?:array<string, ShareJ>, count_likes?:int, count_dislikes?:int}
  */
 abstract class Item extends BaseObject
 {
@@ -23,8 +27,6 @@ abstract class Item extends BaseObject
     public static function GetChildMap(ObjectDatabase $database) : array { 
         return array(File::class, Folder::class); }
 
-    /** The disk space size of the item (bytes) */
-    protected FieldTypes\Counter $size; // TODO RAY !! separate into counter_size for folders, size for files
     /** 
      * The account that owns the item (null if on public external storage)
      * @var FieldTypes\NullObjectRefT<Account>
@@ -43,9 +45,9 @@ abstract class Item extends BaseObject
     /** The name of the item (null if isroot) */
     protected FieldTypes\NullStringType $name;
     /** True if this item is the filesystem root */
-    protected FieldTypes\BoolType $isroot;
+    protected FieldTypes\NullBoolType $isroot;
     /** True if this item has no owner */
-    protected FieldTypes\BoolType $ispublic;
+    protected FieldTypes\NullBoolType $ispublic;
     /** Timestamp when the item was created */
     protected FieldTypes\Timestamp $date_created;
     /** Timestamp when the item was last written */
@@ -58,13 +60,12 @@ abstract class Item extends BaseObject
     protected function CreateFields(): void
     {
         $fields = array();
-        $this->size = $fields[] = new FieldTypes\Counter('size');
         $this->owner = $fields[] = new FieldTypes\NullObjectRefT(Account::class, 'owner');
         $this->storage = $fields[] = new FieldTypes\ObjectRefT(Storage::class, 'storage');
         $this->parent = $fields[] = new FieldTypes\NullObjectRefT(Folder::class, 'parent');
         $this->name = $fields[] = new FieldTypes\NullStringType('name');
-        $this->isroot = $fields[] = new FieldTypes\BoolType('isroot');
-        $this->ispublic = $fields[] = new FieldTypes\BoolType('ispublic');
+        $this->isroot = $fields[] = new FieldTypes\NullBoolType('isroot');
+        $this->ispublic = $fields[] = new FieldTypes\NullBoolType('ispublic');
         $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
         $this->date_modified = $fields[] = new FieldTypes\NullTimestamp('date_modified',saveOnRollback:true);
         $this->date_accessed = $fields[] = new FieldTypes\NullTimestamp('date_accessed',saveOnRollback:true);
@@ -83,6 +84,8 @@ abstract class Item extends BaseObject
      */
     public static function TryLoadByParentAndName(ObjectDatabase $database, Folder $parent, string $name) : ?static
     {
+        $parent->Refresh(doContents:true);
+
         $q = new QueryBuilder(); 
         $where = $q->And($q->Equals('parent',$parent->ID()), $q->Equals('name',$name));        
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($where));
@@ -98,6 +101,7 @@ abstract class Item extends BaseObject
      */
     public static function LoadByParent(ObjectDatabase $database, Folder $parent, ?int $limit = null, ?int $offset = null) : array
     {
+        $parent->Refresh(doContents:true);
         return $database->LoadObjectsByKey(static::class, 'parent', $parent->ID(), $limit, $offset);
     }
     
@@ -123,7 +127,7 @@ abstract class Item extends BaseObject
      * @return array<string, static> items indexed by ID
      */
     public abstract static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array;
-    // TODO RAY base impl can be here...?
+    // TODO RAY !! base impl can be here...?
 
     /** 
      * Deletes objects with the given parent
@@ -132,6 +136,7 @@ abstract class Item extends BaseObject
      */
     public static function DeleteByParent(ObjectDatabase $database, Folder $parent) : int
     {
+        $parent->Refresh(doContents:true);
         return $database->DeleteObjectsByKey(static::class, 'parent', $parent->ID());
     }
     
@@ -141,18 +146,22 @@ abstract class Item extends BaseObject
      * @param Folder $parent the item's parent folder
      * @param Account $account the account owning this item
      * @param string $name the name of the item
+     * @param bool $refresh if true, force refresh from disk
      * @return static newly created object
      */
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $refresh = false) : static
     {
         $obj = $database->CreateObject(static::class);
+        $obj->date_created->SetTimeNow();
 
         $obj->storage->SetObject($parent->storage->GetObject());
         $obj->parent->SetObject($parent);
         $obj->owner->SetObject($account);
         $obj->name->SetValue($name);
 
-        //$obj->CountCreate(); // TODO limits
+        if ($refresh) $obj->Refresh();
+
+        //$obj->CountCreate(); // TODO LIMITS
         return $obj;
     }
 
@@ -160,9 +169,7 @@ abstract class Item extends BaseObject
     protected bool $refreshed = false;
 
     /** Updates the metadata of this item by scanning the object in the filesystem */
-    public abstract function Refresh() : void;
-    // TODO seems like Refresh semantics could use some work, maybe just make it immediate
-    // upon loading the object from the DB? would be ideal if this wasn't public?
+    protected abstract function Refresh() : void;
 
     /** Returns the owner of this item, or null if it's on an external FS */
     public function TryGetOwner() : ?Account { return $this->owner->TryGetObject(); }
@@ -182,17 +189,6 @@ abstract class Item extends BaseObject
         $name = $this->name->TryGetValue();
         if ($name !== null) return $name;
         else throw new Exceptions\InvalidRootOpException();
-    }
-    
-    /** 
-     * Returns the size of this item in bytes 
-     * @return non-negative-int
-     */
-    public function GetSize() : int
-    {
-        $size = $this->size->GetValue();
-        assert ($size >= 0); // DB CHECK CONSTRAINT
-        return $size;
     }
     
     /** Returns the parent folder of this item */
@@ -219,7 +215,7 @@ abstract class Item extends BaseObject
     public abstract function SetParent(Folder $parent, bool $overwrite = false) : bool;
     
     /** Returns this item's description */
-    public function GetDescription() : ?string { return $this->description->TryGetValue(); }
+    public function TryGetDescription() : ?string { return $this->description->TryGetValue(); }
     
     /** Sets this item's description to the given value */
     public function SetDescription(?string $val) : bool { return $this->description->SetValue($val); }
@@ -285,9 +281,7 @@ abstract class Item extends BaseObject
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?static
     {
-        $parent = $this->GetParent();
-        $parent->Refresh(true);
-        $item = static::TryLoadByParentAndName($this->database, $parent, $name);
+        $item = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
         
         if ($item !== null)
         {
@@ -316,7 +310,6 @@ abstract class Item extends BaseObject
         if ($parent->storage->GetObjectID() !== $this->storage->GetObjectID())
             throw new Exceptions\CrossFilesystemException();
 
-        $parent->Refresh(true);
         $item = static::TryLoadByParentAndName($this->database, $parent, $this->GetName());
         
         if ($item !== null)
@@ -340,22 +333,9 @@ abstract class Item extends BaseObject
         return $retval;
     }
     
-    /** 
-     * Returns the filesystem manager's implementor that stores this object 
-     * @param bool $requireExist if true the item must not be deleted
-     * 
-     * Refreshes the item from storage first to make sure it's ready to use.
-     * @throws Exceptions\DeletedByStorageException if requreExist and the item has been deleted
-     */
-    protected function GetFilesystem(bool $requireExist = true) : Filesystem 
+    /** Returns the filesystem manager's implementor that stores this object */
+    protected function GetFilesystem() : Filesystem 
     {
-        if ($requireExist)
-        {
-            $this->Refresh(); 
-            if ($this->isDeleted())
-                throw new Exceptions\DeletedByStorageException();
-        }
-        
         return $this->storage->GetObject()->GetFilesystem(); 
     }
     
@@ -390,13 +370,12 @@ abstract class Item extends BaseObject
             ? $this->date_modified->SetValue($time)
             : $this->date_modified->SetTimeNow();
     }
-    // TODO maybe times should be set within the filesystem, not files app
 
     /** 
      * Maps the given function to all applicable limit objects 
      * @return $this
      */
-    /*protected function MapToLimits(callable $func) : self
+    /*protected function MapToLimits(callable $func) : void
     {        
         return $this->MapToTotalLimits($func)->MapToTimedLimits($func);
     }*/
@@ -405,7 +384,7 @@ abstract class Item extends BaseObject
      * Maps the given function to all applicable total limit objects 
      * @return $this
      */
-    /*protected function MapToTotalLimits(callable $func) : self
+    /*protected function MapToTotalLimits(callable $func) : void
     {        
         $fslim = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem()); if ($fslim !== null) $func($fslim);
         
@@ -418,7 +397,7 @@ abstract class Item extends BaseObject
      * Maps the given function to all applicable timed limit objects 
      * @return $this
      */
-    /*protected function MapToTimedLimits(callable $func) : self
+    /*protected function MapToTimedLimits(callable $func) : void
     {        
         if (!Config::GetInstance($this->database)->GetAllowTimedStats()) return $this;
         
@@ -463,7 +442,7 @@ abstract class Item extends BaseObject
     }*/
     
     /** Adds this item's stats to the given limit, substracting if not $add */
-    //protected abstract function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void;
+    //protected abstract function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void;
     // TODO LIMITS
     
     /**
@@ -506,7 +485,7 @@ abstract class Item extends BaseObject
     public function NotifyPreDeleted() : void
     {
         //if (!$this->isDeleted())
-        //    $this->MapToLimits(function(Limits\Base $lim){ $lim->CountItem(false); }); // TODO LIMITS
+        //    $this->MapToLimits(function(Policy\Base $lim){ $lim->CountItem(false); }); // TODO LIMITS
         
         // TODO RAY !! need to delete likes, tags, comments, shares when deleting
     }
@@ -515,53 +494,37 @@ abstract class Item extends BaseObject
      * Returns a printable client object of this item
      * @param bool $owner if true, show owner-level details
      * @param bool $details if true, show tag and share objects
-     * @return ?array{} `{id:id, name:?string, owner:?string, parent:?string, filesystem:string, \
-         dates:{created:float, modified:?float}, counters:{pubdownloads:int, bandwidth:int, likes:int, dislikes:int, tags:int, comments:int}}` \
-         if $owner, add: `{counters:{shares:int}, dates:{accessed:?float}}`, \
-         if $details, add: `{tags:[id:Tag]}`, if $details && $owner, add `{shares:[id:Share]}`
-     * @see Tag::GetClientObject()
-     * @see Share::GetClientObject()
+     * @return ItemJ
      */
-    public function SubGetClientObject(bool $owner = false, bool $details = false) : ?array
+    public function GetClientObject(bool $owner, bool $details = false) : array
     {
-        /*$data = array(
+        $data = array(
             'id' => $this->ID(),
+            'isfile' => ($this instanceof File),
             'name' => $this->GetName(),
-            'owner' => $this->GetOwnerID(),
-            'parent' => $this->GetParentID(),
-            'filesystem' => $this->GetFilesystemID(),
-            'description' => $this->GetDescription(),            
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-                'modified' => $this->TryGetDate('modified')
-            ),
-            'counters' => array(
-                'pubdownloads' => $this->GetPublicDownloads(),
-                'bandwidth' => $this->GetBandwidth(),
-                'likes' => $this->GetCounter('likes'),
-                'dislikes' => $this->GetCounter('dislikes'),
-                'tags' => $this->CountObjectRefs('tags'),
-                'comments' => $this->CountObjectRefs('comments')
-            )
+            'owner' => $this->TryGetOwnerID(),
+            'parent' => $this->TryGetParentID(),
+            'storage' => $this->storage->GetObjectID(),
+            'description' => $this->TryGetDescription(),            
+            'date_created' => $this->date_created->GetValue(),
+            'date_modified' => $this->date_modified->TryGetValue()
         );
         
-        if ($owner) 
+        if ($owner)
+            $data['date_accessed'] = $this->date_accessed->TryGetValue();
+        
+        if ($details) 
         {
-            $data['dates']['accessed'] = $this->TryGetDate('accessed');
-            $data['counters']['shares'] = $this->GetNumShares();
+            $data['tags'] = array_map(function(Social\Tag $e) {
+                return $e->GetClientObject(); }, $this->GetTags());
+            $data['count_likes'] = Social\Like::CountByItem($this->database, $this, likeval:true);
+            $data['count_dislikes'] = Social\Like::CountByItem($this->database, $this, likeval:false);
         }
         
-        if ($details) $data['tags'] = array_map(function(Tag $e) {
-            return $e->GetClientObject(); }, $this->GetTags());
+        if ($owner && $details) 
+            $data['shares'] = array_map(function(Social\Share $e) {
+                return $e->GetClientObject(fullitem:false, owner:true, secret:false); }, $this->GetShares());
         
-        if ($owner && $details) $data['shares'] = array_map(function(Share $e) {
-            return $e->GetClientObject(); }, $this->GetShares());
-        
-        return $data;*/ return []; // TODO RAY !! get Client object
+        return $data;
     }
-    
-    /** @return array{} */
-    public abstract function GetClientObject(bool $owner = false, bool $full = false) : array;
-    /** @return array{} */
-    public abstract function TryGetClientObject(bool $owner = false, bool $full = false) : ?array;
 }

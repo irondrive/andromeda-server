@@ -58,4 +58,6 @@ trait BasePath
 
         return $this->path->GetValue().'/'.$path;
     }
+
+    // TODO RAY !! needs a GetClientObject
 }

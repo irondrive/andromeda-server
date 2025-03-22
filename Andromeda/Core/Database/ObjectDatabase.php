@@ -218,14 +218,14 @@ class ObjectDatabase
         if ($doSelf) // if concrete, do an actual load for this class
         {
             $query = clone $query; // GetSelectFromAndSetJoins may modify
-            $this->SetTypeFiltering($class, $baseClass, $query, false);
+            $this->SetTypeFiltering($class, $baseClass, $query, fullSelf:false); // handles LIMIT/OFFSET also
             $selstr = $this->GetSelectFromAndSetJoins($class, $query);
             $selstr = "SELECT $selstr $query";
             
             foreach ($this->db->read($selstr, $query->GetParams()) as $row)
             {
                 $object = $this->ConstructObject($class, $row, $castRows);
-                $objects[$object->ID()] = $object;
+                if ($object !== null) $objects[$object->ID()] = $object;
             }
         }
 
@@ -273,7 +273,7 @@ class ObjectDatabase
         foreach ($objects as $obj) $obj->NotifyPreDeleted();
 
         $query = clone $query; // GetSelectFromAndSetJoins may modify
-        $this->SetTypeFiltering($class, $class, $query, true); // no self filter
+        $this->SetTypeFiltering($class, $class, $query, fullSelf:true); // no self filter
         $this->GetSelectFromAndSetJoins($class, $query); // ignore retval
 
         $basetbl = $this->GetClassTableName($class::GetBaseTableClass());
@@ -471,9 +471,9 @@ class ObjectDatabase
      * @param array<string, ?scalar> $row row of data from DB
      * @param bool $upcast if true, upcast rows before constructing
      * @throws Exceptions\ObjectTypeException if already loaded a different type
-     * @return T instantiated object
+     * @return ?T instantiated object or null if it deleted itself
      */
-    private function ConstructObject(string $class, array $row, bool $upcast) : BaseObject
+    private function ConstructObject(string $class, array $row, bool $upcast) : ?BaseObject
     {
         $id = (string)$row['id'];
 
@@ -487,10 +487,14 @@ class ObjectDatabase
         {
             if ($upcast) $class = $class::GetRowClass($this,$row);
             
-            $retobj = new $class($this, $row, false);
+            $retobj = new $class($this, $row, created:false);
             $this->objectsByBase[$base][$id] = $retobj;
             $this->RegisterUniqueKeys($base);
             $this->SetUniqueKeysFromData($retobj, $row);
+
+            $retobj->PostConstruct(); // might delete self
+            if ($retobj->isDeleted()) return null;
+            // TODO RAY !! unit test - does it work if moving this before the setting data structures above? if so, can move back to object constructor
         }
         
         if (!($retobj instanceof $class))
@@ -527,8 +531,9 @@ class ObjectDatabase
         if ($this->isReadOnly())
             throw new Exceptions\DatabaseReadOnlyException();
     
-        $obj = new $class($this, array(), true);
+        $obj = new $class($this, array(), created:true);
         $this->created[spl_object_hash($obj)] = $obj;
+        $obj->PostConstruct(); // cannot delete self
         return $obj;
     }
 

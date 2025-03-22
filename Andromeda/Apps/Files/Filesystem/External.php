@@ -26,11 +26,11 @@ class External extends Filesystem
     protected function GetItemPath(Item $item, ?string $child = null) : string
     {
         $parent = $item->TryGetParent();
-        // TODO replace this with an iterative version, not recursive
+        // TODO RAY !! replace this with an iterative version, not recursive
         
         $path = ($parent === null) ? "" :
             $this->GetItemPath($parent, $item->GetName());
-            // TODO should do validation here in case the DB gets an invalid value (no . .. /)
+            // TODO RAY !! should do validation here in case the DB gets an invalid value (no . .. /)
         
         return $path.($child !== null ? '/'.$child :"");
     }
@@ -56,7 +56,7 @@ class External extends Filesystem
         $file->SetSize($stat->size,true);
 
         if ($stat->atime !== 0.0) $file->SetAccessed($stat->atime);
-        if ($stat->ctime !== 0.0) $file->SetCreated($stat->ctime); // TODO later will have separate atime/ctime/mtime
+        if ($stat->ctime !== 0.0) $file->SetCreated($stat->ctime);
         if ($stat->mtime !== 0.0) $file->SetModified($stat->mtime); 
         
         return $this;
@@ -108,12 +108,11 @@ class External extends Filesystem
                 {
                     $database = $this->GetStorage()->GetDatabase();
                     $owner = $this->GetStorage()->TryGetOwner();
-                    
+
                     $class = $isfile ? File::class : SubFolder::class;
-                    $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
-                    $dbitem->Refresh(); // update metadata
+                    $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname, refresh:true);
                     $dbitem->Save(); // insert to the DB immediately
-                    // TODO RAY catch DatabaseIntegrityExceptions here to catch threading issues, return 503
+                    // TODO RAY !! catch DatabaseIntegrityExceptions here to catch threading issues, return 503
                 }
             }
             

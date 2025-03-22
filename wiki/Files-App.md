@@ -1,5 +1,5 @@
-# TODO OUTDATED (ignore)
-TODO add table of contents
+# TODO RAY !! OUTDATED (ignore)
+TODO RAY !! add table of contents
 
 The files app provides the cloud filesystem implementation.  It includes general file/folder management, with byte-level read/write access.  It allows any number of filesystems that can be either global or user-private, and run on a number of backend storage drivers, possibly with server-side encryption.  It includes social features including file/folder likes and comments, granular sharing of content via public links or to users or group, and granular statistics (e.g. bandwidth) gathering and limits.  Using an account with CLI is generally required.
 

@@ -10,14 +10,6 @@ class CrossFilesystemException extends BaseExceptions\ClientErrorException
     }
 }
 
-/** Exception indicating that the item was deleted when refreshed from storage */
-class DeletedByStorageException extends BaseExceptions\ClientNotFoundException
-{
-    public function __construct(?string $details = null) {
-        parent::__construct("ITEM_DELETED_BY_STORAGE", $details);
-    }
-}
-
 /** Exception indicating that the item target name already exists */
 class DuplicateItemException extends BaseExceptions\ClientErrorException
 {

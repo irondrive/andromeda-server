@@ -71,9 +71,9 @@ abstract class BaseConfig extends SingletonObject
         parent::__construct($database, $data, $created);
     }
 
-    public function PostConstruct(bool $created) : void
+    public function PostConstruct() : void
     {
-        if (!$created) return; // early return
+        if (!$this->isCreated()) return; // early return
         $this->date_created->SetTimeNow();
         $this->version->SetValue(static::getVersion());
     }

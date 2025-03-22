@@ -78,7 +78,7 @@ class LDAP extends External
     }
     
     /** Checks for the existence of the LDAP extension */
-    public function PostConstruct(bool $created) : void
+    public function PostConstruct() : void
     {        
         if (!function_exists('ldap_bind')) 
             throw new Exceptions\LDAPExtensionException();

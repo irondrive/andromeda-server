@@ -9,8 +9,11 @@ use Andromeda\Apps\Files\Items\Item;
  * 
  * These are tracked per-like rather than as just counters
  * on items to prevent duplicates (and show who liked what)
+ * 
+ * @phpstan-import-type PublicAccountJ from Account
+ * @phpstan-type LikeJ array{owner:PublicAccountJ, item:string, value:bool, date_created:float}
  */
-class Like extends BaseObject // TODO was StandardObject
+class Like extends BaseObject
 {
     protected const IDLength = 16;
 
@@ -77,6 +80,22 @@ class Like extends BaseObject // TODO was StandardObject
     }
     
     /**
+     * Counts all likes for the given item
+     * @param ?bool $likeval if not null, count only this value (like vs. dislike)
+     */
+    public static function CountByItem(ObjectDatabase $database, Item $item, ?bool $likeval = null) : int
+    {
+        if ($likeval === null)
+            return $database->CountObjectsByKey(static::class, 'item', $item->ID());
+        else
+        {
+            $q = new QueryBuilder();
+            $q->Where($q->And($q->Equals('item',$item->ID()),$q->Equals('value',$likeval)));
+            return $database->CountObjectsByQuery(static::class, $q);
+        }
+    }
+
+    /**
      * Load all likes for the given item
      * @param ?non-negative-int $limit the max number of files to load 
      * @param ?non-negative-int $offset the offset to start loading from
@@ -89,17 +108,15 @@ class Like extends BaseObject // TODO was StandardObject
 
     /**
      * Returns a printable client object of this like
-     * @return array{} `{owner:id, item:id, value:bool, dates:{created:float}}`
+     * @return LikeJ
      */
     public function GetClientObject() : array
     {
         return array(
-            /*'owner' => $this->GetObject('owner'),
-            'item' => $this->GetObjectID('item'),
-            'value' => (bool)$this->GetScalar('value'),
-            'dates' => array(
-                'created' => $this->GetDateCreated()
-            ),*/
+            'owner' => $this->owner->GetObject()->GetPublicClientObject(),
+            'item' => $this->item->GetObjectID(),
+            'value' => $this->value->GetValue(),
+            'date_created' => $this->date_created->GetValue()
         );
     }
 }

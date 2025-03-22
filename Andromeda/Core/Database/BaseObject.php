@@ -164,14 +164,11 @@ abstract class BaseObject
         if ($created)
             $this->idfield->SetValue(static::GenerateID());
         
-        $this->PostConstruct($created);
+        $this->PostConstruct();
     }
     
-    /** 
-     * Performs any subclass-specific initialization
-     * @param bool $created true if this is a new object
-     */
-    protected function PostConstruct(bool $created) : void { }
+    /** Performs any subclass-specific initialization, can delete self only if not isCreated() */
+    public function PostConstruct() : void { }
 
     /**
      * Instantiates the object's database fields - subclasses should override!

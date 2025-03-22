@@ -1,6 +1,5 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Items; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Utilities;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\Database\Exceptions\BadPolyClassException;
 use Andromeda\Apps\Accounts\Account;
@@ -12,6 +11,11 @@ use Andromeda\Apps\Accounts\Account;
  * of subfiles, total folder size, etc., so retrieving these values is fast.
  * 
  * Every folder must have a name and exactly one parent, other than roots which have neither.
+ * 
+ * @phpstan-import-type ItemJ from Item
+ * @phpstan-import-type FileJ from File
+ *     NOTE we use ItemJ for folders because phpstan doesn't like circular definitions
+ * @phpstan-type FolderJ \Union<ItemJ, array{count_size:int, count_subfiles:int, count_subfolders:int, files?:array<string, FileJ>, folders?:array<string, ItemJ>}>
  */
 abstract class Folder extends Item
 {
@@ -25,7 +29,7 @@ abstract class Folder extends Item
 
     public static function GetWhereChild(ObjectDatabase $database, QueryBuilder $q, string $class) : string
     {
-        $table = $database->GetClassTableName(self::class);
+        $table = $database->GetClassTableName(Item::class);
         return match($class)
         {
             RootFolder::class => $q->IsNull("$table.parent",false),
@@ -40,6 +44,8 @@ abstract class Folder extends Item
         return ($row['parent'] === null) ? RootFolder::class : SubFolder::class;
     }
 
+    /** The total disk space size of the folder (bytes) */
+    protected FieldTypes\Counter $count_size;
     /** Running count of subfiles in this folder */
     protected FieldTypes\Counter $count_subfiles;
     /** Running count of subfolders in this folder */
@@ -48,7 +54,8 @@ abstract class Folder extends Item
     protected function CreateFields(): void
     {
         $fields = array();
-        $this->count_subfiles = $fields[] = new FieldTypes\Counter('count_subfolders');
+        $this->count_size = $fields[] = new FieldTypes\Counter('count_size');
+        $this->count_subfiles = $fields[] = new FieldTypes\Counter('count_subfiles');
         $this->count_subfolders = $fields[] = new FieldTypes\Counter('count_subfolders');
 
         $this->RegisterFields($fields, self::class);
@@ -74,7 +81,13 @@ abstract class Folder extends Item
 
         return array_filter(static::LoadByQuery($database, $q->Where($w)), 
             function(Folder $folder){ return !$folder->isWorldAccess(); });*/
-        return []; // TODO RAY work out the self join issue
+        return []; // TODO RAY !! work out the self join issue
+    }
+    
+    public function PostConstruct() : void
+    {
+        if (!$this->isCreated())
+            $this->GetFilesystem()->RefreshFolder($this, doContents:false);
     }
     
     /**
@@ -85,7 +98,6 @@ abstract class Folder extends Item
      */
     public function GetFiles(?int $limit = null, ?int $offset = null) : array
     { 
-        $this->Refresh(true); 
         return File::LoadByParent($this->database, $this, $limit, $offset);
     }
         
@@ -97,8 +109,18 @@ abstract class Folder extends Item
      */
     public function GetFolders(?int $limit = null, ?int $offset = null) : array
     { 
-        $this->Refresh(true); 
         return SubFolder::LoadByParent($this->database, $this, $limit, $offset);
+    }
+    
+    /** 
+     * Returns the size of this folder in bytes 
+     * @return non-negative-int
+     */
+    public function GetTotalSize() : int
+    {
+        $size = $this->count_size->GetValue();
+        assert ($size >= 0); // DB CHECK CONSTRAINT
+        return $size;
     }
     
     /** Returns the number of files in this folder (not recursive) (fast) */
@@ -115,17 +137,20 @@ abstract class Folder extends Item
     { 
         if (($parent = $this->TryGetParent()) !== null)
             $parent->DeltaSize($size);
-        $this->size->DeltaValue($size); 
+        $this->count_size->DeltaValue($size); 
     }
     
-    /** Sets this folder and its contents' owners to the given account */
-    public function SetOwnerRecursive(Account $account) : self
+    /** @param bool $recursive if true, set all children of this folder also */
+    public function SetOwner(Account $account, bool $recursive = true) : bool
     {
-        $this->SetOwner($account);
-        
-        //foreach (array_merge($this->GetFiles(), $this->GetFolders()) as $item) $item->SetOwner($account); // TODO no array merge
-       
-        return $this;
+
+        $retval = parent::SetOwner($account);
+        if ($recursive)
+        {
+            foreach ($this->GetFiles() as $file) $file->SetOwner($account);
+            foreach ($this->GetFolders() as $folder) $folder->SetOwner($account,recursive:true);
+        }
+        return $retval;
     }
     
     /** 
@@ -141,32 +166,41 @@ abstract class Folder extends Item
     }
     
     /**
-     * Adds the statistics from the given item to this folder
-     * @param Item $item the item to add stats from
+     * Adds the statistics from the given file to this folder
+     * @param File $file the file to add stats from
      * @param bool $add if true add, else subtract
      */
-    private function AddItemCounts(Item $item, bool $add = true) : void // @phpstan-ignore-line TODO RAY remove ignore later
+    private function AddFileCounts(File $file, bool $add = true) : void // @phpstan-ignore-line TODO RAY !! unused (remove later)
     {
-        $this->SetModified(); // TODO RAY seems like a dumb place to do this?
-        
-        $val = $add ? 1 : -1;
-        $this->size->DeltaValue($item->GetSize() * $val);        
+        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
+    
+        $val = $add ? 1 : -1;    
+        $this->count_size->DeltaValue($file->GetSize() * $val);    
+        $this->count_subfiles->DeltaValue($val);
 
-        if ($item instanceof File) 
-        {
-            $this->count_subfiles->DeltaValue($val);
-        }
-        else if ($item instanceof Folder) 
-        {
-            $this->count_subfiles->DeltaValue($item->GetNumFiles()*$val);
-            $this->count_subfolders->DeltaValue($item->GetNumFolders()*$val + $val); // +self
-        }
-        
         if (($parent = $this->TryGetParent()) !== null) 
-            $parent->AddItemCounts($item, $add);
+            $parent->AddFileCounts($file, $add);
     }
     
-    // TODO need to notify folder directly, can't override AddObjectRef/RemoveObjectRef
+    /**
+     * Adds the statistics from the given folder to this folder
+     * @param Folder $folder the folder to add stats from
+     * @param bool $add if true add, else subtract
+     */
+    private function AddFolderCounts(Folder $folder, bool $add = true) : void // @phpstan-ignore-line TODO RAY !! unused (remove later)
+    {
+        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
+        
+        $val = $add ? 1 : -1;    
+        $this->count_size->DeltaValue($folder->GetTotalSize() * $val);    
+        $this->count_subfiles->DeltaValue($folder->GetNumFiles()*$val);
+        $this->count_subfolders->DeltaValue($folder->GetNumFolders()*$val + $val); // +self
+
+        if (($parent = $this->TryGetParent()) !== null) 
+            $parent->AddFolderCounts($folder, $add);
+    }
+    
+    // TODO RAY !! need to notify folder directly, can't override AddObjectRef/RemoveObjectRef
     /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         $modified = parent::AddObjectRef($field, $object, $notification);
@@ -185,7 +219,7 @@ abstract class Folder extends Item
         return $modified;
     }*/
     
-    //protected function AddStatsToLimit(Limits\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
+    //protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
 
     /** True if the folder's contents have been refreshed */
     protected bool $subrefreshed = false;
@@ -194,29 +228,27 @@ abstract class Folder extends Item
      * Refreshes the folder's metadata from disk
      * @param bool $doContents if true, refresh all contents of the folder
      */
-    public function Refresh(bool $doContents = false) : void
+    protected function Refresh(bool $doContents = false) : void
     {
-        if ($this->isCreated() || $this->isDeleted()) return;
-        
         if (!$this->refreshed || (!$this->subrefreshed && $doContents)) 
         {
             $this->refreshed = true;
             $this->subrefreshed = $doContents;
-            $this->GetFilesystem(false)->RefreshFolder($this, $doContents);
+            $this->GetFilesystem()->RefreshFolder($this, doContents:false); // NOT recursive
         }
     }
     
     protected bool $fsDeleted = false;
-    // TODO RAY add comment
+    // TODO RAY !! add comment - rework delete
     public function isFSDeleted() : bool { return $this->fsDeleted; }
     
     /** Deletes all subfiles and subfolders, refresh if not isNotify */
     public function DeleteChildren(bool $isNotify = false) : void
     {
         $this->fsDeleted = $isNotify;
-        if (!$isNotify) $this->Refresh(true);
+        if (!$isNotify) $this->Refresh(doContents:true);
 
-        // TODO RAY don't we need to delete each subitem with NOTIFY also? maybe that is the point of fsDeleted?
+        // TODO RAY !! don't we need to delete each subitem with NOTIFY also? maybe that is the point of fsDeleted?
         File::DeleteByParent($this->database, $this);
         SubFolder::DeleteByParent($this->database, $this);
     }
@@ -237,16 +269,17 @@ abstract class Folder extends Item
      * @param ?non-negative-int $offset offset of items to load
      * @return array<string, Item> items indexed by ID
      */
-    private function RecursiveItems(?bool $files = true, ?bool $folders = true, ?int $limit = null, ?int $offset = null) : array // @phpstan-ignore-line TODO should have a client function for this?
+    private function RecursiveItems(?bool $files = true, ?bool $folders = true, ?int $limit = null, ?int $offset = null) : array
     {
         $items = array();
         if ($limit !== null && $offset !== null)
             $limit += $offset;
+        // TODO FUTURE this is not efficient, loads limit+offset items
         
         foreach ($this->GetFolders($limit) as $subfolder)
         {
             $subitems = $subfolder->RecursiveItems($files,$folders,$limit);
-            $items = array_merge($items, $subitems);            
+            $items += $subitems;
             if ($limit !== null)
                 $limit -= count($subitems);
             assert($limit >= 0); // RecursiveItems only returns up to limit
@@ -257,43 +290,21 @@ abstract class Folder extends Item
         return $items;
     }
 
-    /** 
-     * @see Folder::TryGetClientObjects()
-     * @throws Exceptions\DeletedByStorageException if the item is deleted 
-     * @return array{}
-     */
-    public function GetClientObject(bool $owner = false, bool $details = false,
-        bool $files = false, bool $folders = false, bool $recursive = false,
-        ?int $limit = null, ?int $offset = null) : array
-    {
-        return [];
-        /*$retval = $this->TryGetClientObject($owner,$details,$files,$folders,$recursive,$limit,$offset);
-        if ($retval !== null) return $retval;
-        else throw new Exceptions\DeletedByStorageException(); */
-    }
-    
     /**
      * Returns a printable client object of this folder
      * @param bool $files if true, show subfiles
      * @param bool $folders if true, show subfolders
      * @param bool $recursive if true, show recursive contents
-     * @param int $limit max number of items to show
-     * @param int $offset offset of items to show
-     * @return ?array{} null if deleted, else `{files:[id:File], folders:[id:Folder], \
-         counters:{size:int, pubvisits:int, subfiles:int, subfolders:int}}` \
-         if $owner, add: `{counters:{subshares:int}}`
-     * @see Item::SubGetClientObject()
+     * @param ?non-negative-int $limit max number of items to show
+     * @param ?non-negative-int $offset offset of items to show
+     * @return FolderJ
      */
-    public function TryGetClientObject(bool $owner = false, bool $details = false,
+    public function GetClientObject(bool $owner, bool $details = false,
         bool $files = false, bool $folders = false, bool $recursive = false, 
-        ?int $limit = null, ?int $offset = null) : ?array
+        ?int $limit = null, ?int $offset = null) : array
     {
-        return [];
-        /*$this->Refresh($files || $folders); 
-        
-        if ($this->isDeleted()) return null;
-        
-        $this->SetAccessed();
+        $data = parent::GetClientObject($owner,$details);
+        if ($files || $folders) $this->SetAccessed();
         
         if ($recursive && ($files || $folders))
         {
@@ -306,31 +317,27 @@ abstract class Folder extends Item
         {
             if ($folders)
             {
-                $subfolders = array_filter($this->GetFolders($limit,$offset), 
-                    function(Folder $folder){ return !$folder->Refresh()->isDeleted(); });
-                    // check isDeleted early so we have an accurate count for files
-            
-                $numitems = count($subfolders);
-                if ($offset !== null) $offset = max(0, $offset-$numitems);
-                if ($limit !== null) $limit = max(0, $limit-$numitems);
+                $subfolders = $this->GetFolders($limit,$offset);
+                if ($offset !== null) $offset = max(0, $offset-count($subfolders));
+                if ($limit !== null) $limit = max(0, $limit-count($subfolders));
             }
             
-            if ($files) $subfiles = $this->GetFiles($limit,$offset);
-        }
+            if ($files)
+                $subfiles = $this->GetFiles($limit,$offset);
+        }        
         
-        $data = parent::SubGetClientObject($owner,$details);
+        $data += array(
+            'count_size' => $this->count_size->GetValue(),
+            'count_subfolders' => $this->count_subfolders->GetValue(),
+            'count_subfiles' => $this->count_subfiles->GetValue()
+        );
         
-        if ($folders) $data['folders'] = array_filter(array_map(function(Folder $folder)use($owner){ 
-            return $folder->TryGetClientObject($owner); }, $subfolders));
+        if (isset($subfolders)) $data['folders'] = array_filter(array_map(function(Folder $folder)use($owner){ 
+            return $folder->GetClientObject(owner:$owner, details:false); }, $subfolders));
         
-        if ($files) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
-            return $file->TryGetClientObject($owner); }, $subfiles));
-        
-        $data['counters'] = Utilities::array_map_keys(function($p){ return $this->GetCounter($p); },
-            array('size','pubvisits','subfiles','subfolders'));
-        
-        if ($owner) $data['counters']['subshares'] = $this->GetCounter('subshares');
-        
-        return $data;*/
+        if (isset($subfiles)) $data['files'] = array_filter(array_map(function(File $file)use($owner){ 
+            return $file->GetClientObject(owner:$owner, details:false); }, $subfiles));
+
+        return $data;
     }
 }

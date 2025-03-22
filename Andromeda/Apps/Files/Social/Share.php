@@ -2,6 +2,7 @@
 
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
+use Andromeda\Core\Utilities;
 use Andromeda\Apps\Accounts\{Account, Group, PolicyBase};
 use Andromeda\Apps\Accounts\Crypto\AuthObject;
 use Andromeda\Apps\Files\Items\Item;
@@ -14,6 +15,12 @@ use Andromeda\Apps\Files\Items\Item;
  * passwords, and expire based on certain criteria.  Shares also
  * track specific permissions for the access (see functions).
  * Folder shares also share all content under them.
+ * 
+ * @phpstan-import-type ItemJ from Item
+ * @phpstan-import-type ScalarArray from Utilities
+ *     NOTE for item we use ScalarArray because phpstan doesn't like circular definitions
+ * @phpstan-type ShareJ array{id:string, owner:string, item:string|ScalarArray, islink:bool, needpass:bool, dest:?string, date_created:float, date_expires:?float, expired:bool, can_read:bool, can_upload:bool, can_modify:bool, can_social:bool, can_reshare:bool, can_keepowner:bool}
+ * @phpstan-type OwnerShareJ \Union<ShareJ, array{label:?string, date_accessed:?float, count_accessed:int, limit_accessed:?int, secret?:string}>
  */
 class Share extends BaseObject
 {
@@ -54,7 +61,7 @@ class Share extends BaseObject
     /** True if the share allows read access */
     protected FieldTypes\BoolType $can_read;
     /** True if the share allows upload access to the item */
-    protected FieldTypes\BoolType $can_upload; // TODO RAY what is the difference between upload/modify?
+    protected FieldTypes\BoolType $can_upload; // TODO RAY !! what is the difference between upload/modify?
     /** True if the share allows modifying the item */
     protected FieldTypes\BoolType $can_modify;
     /** True if the share allows creating new social objects on the item */
@@ -108,7 +115,10 @@ class Share extends BaseObject
     
     /** Returns the destination user/group of this share */
     public function TryGetDest() : ?PolicyBase { return $this->dest->TryGetObject(); }
-    
+
+    /** Returns the destination user/group ID of this share */
+    public function TryGetDestID() : ?string { return $this->dest->TryGetObjectID(); }
+
     /** Returns true if the share grants read access to the item */
     public function CanRead() : bool { return $this->can_read->GetValue(); }
     
@@ -144,10 +154,10 @@ class Share extends BaseObject
             throw new Exceptions\ShareExpiredException();
         $this->date_accessed->SetTimeNow();
         $this->count_accessed->DeltaValue();
-        // TODO  only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
+        // TODO RAY !! only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
     }
 
-    // TODO RAY get rid of share2everyone because you can just share to the default group
+    // TODO RAY !! get rid of share2everyone because you can just share to the default group
     // have a DB check constraint that you must have either dest or authkey
 
     /**
@@ -253,7 +263,7 @@ class Share extends BaseObject
     {
         if ($params->HasParam('read'))
             $this->can_read->SetValue($params->GetParam('read')->GetBool() && ($access === null || $access->CanRead()));
-        // TODO double check logic here, why allow setting to false? seems weird
+        // TODO RAY !! double check logic here, why allow setting to false? seems weird
     
         if ($params->HasParam('upload'))
             $this->can_upload->SetValue($params->GetParam('upload')->GetBool() && ($access === null || $access->CanUpload()));
@@ -307,7 +317,7 @@ class Share extends BaseObject
         
         //$q->Join($database, GroupJoin::class, 'objs_groups', self::class, 'obj_dest', Group::class);        
         //$q->Where($q->Equals($database->GetClassTableName(GroupJoin::class).'.objs_accounts', $account->ID()));
-        // TODO RAY figure out how to re-implement this
+        // TODO RAY !! figure out how to re-implement this
 
         $gshares = $database->LoadObjectsByQuery(static::class, $q);
 
@@ -372,59 +382,49 @@ class Share extends BaseObject
     
     /**
      * Returns a printable client object of this share
-     * @param bool $item if true, show the item client object
+     * @param bool $fullitem if true, show the item client object
      * @param bool $owner if true, we are showing the owner of the share
-     * @return array{} `{id:id, owner:id, item:Item|id, itemtype:enum, islink:bool, needpass:bool, dest:?id, desttype:?string, \
-        expired:bool, dates:{created:float, expires:?float}, config:{read:bool, upload:bool, modify:bool, social:bool, reshare:bool, keepowner:bool}}` \
-        if owner, add: `{label:text, dates:{accessed:?float}, counters:{accessed:int}, limits:{accessed:?int}}`
-     * @see Item::SubGetClientObject()
+     * @return ($owner is true ? OwnerShareJ : ShareJ)
      */
-    public function GetClientObject(bool $item = false, bool $owner = true, bool $secret = false) : array
+    public function GetClientObject(bool $fullitem, bool $owner, bool $secret = false) : array
     {
-        return [];/*
         $data = array(
             'id' => $this->ID(),
             'owner' => $this->GetOwnerID(),
-            
-            'item' => $item ? $this->GetItem()->GetClientObject() : $this->GetObjectID('item'),
-            'itemtype' => Utilities::ShortClassName($this->GetObjectType('item')),
-            
+            'item' => !$fullitem ? $this->GetItemID() :
+                $this->GetItem()->GetClientObject(owner:false,details:false),
+
             'islink' => $this->IsLink(),
             'needpass' => $this->NeedsPassword(),
+            'dest' => $this->TryGetDestID(),
+            // TODO FUTURE what can clients do with this info? should we return a basic client object here that includes the type?
+            // or should there be a accounts client function that can lookup an account OR group by ID?
             
-            'dest' => $this->TryGetObjectID('dest'),
-            'desttype' => Utilities::ShortClassName($this->TryGetObjectType('dest')),
-            
+            // TODO RAY !! non-owners shouldn't be able to get info on expired shares. should just not show up. also should we auto-delete them?
+            'date_created' => $this->date_created->GetValue(),
+            'date_expires' => $this->date_expires->TryGetValue(),
             'expired' => $this->isExpired(),
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-                'expires' => $this->TryGetDate('expires')
-            ),
-            'config' => array(
-                'read' => $this->CanRead(),
-                'upload' => $this->CanUpload(),
-                'modify' => $this->CanModify(),
-                'social '=> $this->CanSocial(),
-                'reshare' => $this->CanReshare(),
-                'keepowner' => $this->KeepOwner()
-            )
+
+            'can_read' => $this->CanRead(),
+            'can_upload' => $this->CanUpload(),
+            'can_modify' => $this->CanModify(),
+            'can_social' => $this->CanSocial(),
+            'can_reshare' => $this->CanReshare(),
+            'can_keepowner' => $this->KeepOwner()
         );
         
         if ($owner)
         {
-            $data['label'] = $this->TryGetScalar('label');
-            
-            $data['dates']['accessed'] = $this->TryGetDate('accessed');
-            
-            $data['counters'] = array(
-                'accessed' => $this->GetCounter('accessed'));
-            
-            $data['limits'] = array(
-                'accessed' => $this->TryGetCounterLimit('accessed'));
+            $data += array(
+                'label' => $this->label->TryGetValue(),
+                'date_accessed' => $this->date_accessed->TryGetValue(),
+                'count_accessed' => $this->count_accessed->GetValue(),
+                'limit_accessed' => $this->limit_accessed->TryGetValue()
+            );
         }
 
         if ($secret) $data['authkey'] = $this->GetAuthKey();
         
-        return $data;*/
+        return $data;
     }
 }

@@ -86,7 +86,7 @@ class SMB extends FWrapper
     }
     
     /** Checks for the SMB client extension */
-    public function PostConstruct(bool $created) : void // TODO RAY !! where do the auth sources chec kthis?
+    public function PostConstruct() : void // TODO RAY !! where do the auth sources chec kthis?
     {
         if (!function_exists('smbclient_version')) 
             throw new Exceptions\SMBExtensionException();

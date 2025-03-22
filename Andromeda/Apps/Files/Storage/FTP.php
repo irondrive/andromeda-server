@@ -46,7 +46,7 @@ class FTP extends FWrapper
      * @return array{id:string} `{hostname:string, port:?int, implssl:bool}`
      * @see Storage::GetClientObject()
      */
-    public function GetClientObject(bool $activate = false) : array // TODO RAY implement me
+    public function GetClientObject(bool $activate = false) : array // TODO RAY !! implement me
     {
         return parent::GetClientObject($activate)/* + array(
             'hostname' => $this->GetScalar('hostname'),
@@ -94,7 +94,7 @@ class FTP extends FWrapper
     }
     
     /** Check for the FTP extension */
-    public function PostConstruct(bool $created) : void
+    public function PostConstruct() : void
     {
         if (!function_exists('ftp_connect'))
             throw new Exceptions\FTPExtensionException();
@@ -170,10 +170,10 @@ class FTP extends FWrapper
     
     protected function SubReadFolder(string $path) : array
     {        
-        // TODO PHP Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters. 
+        // TODO RAY !! PHP Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters. 
         if (($list = ftp_nlist($this->GetConnection(), $this->GetPath($path))) === false)
             throw new Exceptions\FolderReadFailedException();
-        return array_map(function($item){ return basename($item); }, $list); // TODO why is basename needed? check on . and .. behavior
+        return array_map(function($item){ return basename($item); }, $list); // TODO RAY !! why is basename needed? check on . and .. behavior
     }    
     
     protected function SubCreateFolder(string $path) : self

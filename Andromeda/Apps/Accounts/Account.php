@@ -121,7 +121,7 @@ class Account extends PolicyBase implements IKeySource
      * Returns a list of all groups that the account belongs to
      * @return array<string, Group> groups indexed by ID
      */
-    public function GetGroups() : array { return array_merge($this->GetDefaultGroups(), $this->GetJoinedGroups()); }
+    public function GetGroups() : array { return $this->GetDefaultGroups() + $this->GetJoinedGroups(); }
     
     /**
      * Returns a list of all groups that the account explicitly belongs to
@@ -815,7 +815,7 @@ class Account extends PolicyBase implements IKeySource
      */
     public function GetAdminClientObject(bool $full = false) : array
     {
-        $retval = $this->GetUserClientObject($full);
+        $retval = $this->GetUserClientObject(full:$full);
 
         $retval += array(
             'comment' => $this->comment->TryGetValue(),

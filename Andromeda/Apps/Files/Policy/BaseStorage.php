@@ -1,27 +1,26 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Policy; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Policy; //if (!defined('Andromeda')) die(); // TODO FUTURE phpstan bug
 
-//use Andromeda\Core\Database\FieldTypes;
-//use Andromeda\Apps\Files\Storage\Storage;
-// TODO RAY see phpstan bug about use
+use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Apps\Files\Storage\Storage;
 
 trait BaseStorage
 {
     /** 
      * The storage that this policy is for 
-     * @var \Andromeda\Core\Database\FieldTypes\ObjectRefT<\Andromeda\Apps\Files\Storage\Storage>
+     * @var FieldTypes\ObjectRefT<Storage>
      */
-    protected \Andromeda\Core\Database\FieldTypes\ObjectRefT $storage;
+    protected FieldTypes\ObjectRefT $storage;
     /** Whether or not tracking item counts is enabled (enum) */
-    protected \Andromeda\Core\Database\FieldTypes\NullBoolType $track_items;
+    protected FieldTypes\NullBoolType $track_items;
     /** Whether or not tracking download stats is enabled (enum) */
-    protected \Andromeda\Core\Database\FieldTypes\NullBoolType $track_dlstats;
+    protected FieldTypes\NullBoolType $track_dlstats;
 
     protected function BaseStorageCreateFields() : void
     {
         $fields = array();
-        $this->storage = $fields[] = new \Andromeda\Core\Database\FieldTypes\ObjectRefT(\Andromeda\Apps\Files\Storage\Storage::class,'storage');
-        $this->track_items = $fields[] = new \Andromeda\Core\Database\FieldTypes\NullBoolType('track_items');
-        $this->track_dlstats = $fields[] = new \Andromeda\Core\Database\FieldTypes\NullBoolType('track_dlstats');
+        $this->storage = $fields[] = new FieldTypes\ObjectRefT(Storage::class,'storage');
+        $this->track_items = $fields[] = new FieldTypes\NullBoolType('track_items');
+        $this->track_dlstats = $fields[] = new FieldTypes\NullBoolType('track_dlstats');
         $this->RegisterChildFields($fields);
     }
     

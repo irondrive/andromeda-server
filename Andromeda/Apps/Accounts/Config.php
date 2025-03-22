@@ -9,7 +9,7 @@ use Andromeda\Apps\Accounts\Group;
 /** 
  * App config stored in the database
  * @phpstan-type ConfigJ array{create_account:key-of<self::CREATE_TYPES>, username_iscontact:bool, require_contact:key-of<self::CONTACT_TYPES>, default_auth:?string}
- * @phpstan-type AdminConfigJ array{date_created:float, default_group:?string}
+ * @phpstan-type AdminConfigJ \Union<ConfigJ, array{date_created:float, default_group:?string}>
  */
 class Config extends BaseConfig
 {
@@ -170,7 +170,7 @@ class Config extends BaseConfig
     /**
      * Gets the config as a printable client object
      * @param bool $admin if true, show sensitive admin-only values
-     * @return ($admin is true ? \Union<AdminConfigJ, ConfigJ> : ConfigJ)
+     * @return ($admin is true ? AdminConfigJ : ConfigJ)
      */
     public function GetClientObject(bool $admin = false) : array
     {

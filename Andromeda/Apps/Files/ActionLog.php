@@ -28,7 +28,7 @@ class ActionLog extends AuthActionLog
         $this->item = $fields[] = new FieldTypes\NullObjectRefT(Item::class, 'item');
         $this->parent = $fields[] = new FieldTypes\NullObjectRefT(Folder::class, 'parent');
         $this->item_share = $fields[] = new FieldTypes\NullObjectRefT(Share::class, 'item_share');
-        $this->parent_share = $fields[] = new FieldTypes\NullObjectRefT(Share::class, 'parent_share'); // TODO why not combine item and parent? unless both are used, test
+        $this->parent_share = $fields[] = new FieldTypes\NullObjectRefT(Share::class, 'parent_share');
         
         $this->RegisterFields($fields, self::class);
         
@@ -88,7 +88,7 @@ class ActionLog extends AuthActionLog
         
         if ($expand)
         {
-            // TODO fix me
+            // TODO RAY !! GetClientObject
         }
         else
         {

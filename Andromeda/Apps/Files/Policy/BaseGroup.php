@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Policy; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Files\Policy; //if (!defined('Andromeda')) die(); // TODO FUTURE phpstan bug
 
 interface IBaseGroup
 { 
@@ -13,28 +13,27 @@ interface IBaseGroup
         'wholegroup'=>self::TRACK_WHOLE_GROUP);  
 }
 
-//use Andromeda\Core\Database\{ObjectDatabase, FieldTypes};
-//use Andromeda\Apps\Accounts\Group;
-// TODO RAY see phpstan bug about use
+use Andromeda\Core\Database\FieldTypes;
+use Andromeda\Apps\Accounts\Group;
 
 trait BaseGroup
 {
     /** 
      * The group that this policy is for 
-     * @var \Andromeda\Core\Database\FieldTypes\ObjectRefT<\Andromeda\Apps\Accounts\Group>
+     * @var FieldTypes\ObjectRefT<Group>
      */
-    protected \Andromeda\Core\Database\FieldTypes\ObjectRefT $group;
+    protected FieldTypes\ObjectRefT $group;
     /** Whether or not tracking item counts is enabled (enum) */
-    protected \Andromeda\Core\Database\FieldTypes\NullIntType $track_items;
+    protected FieldTypes\NullIntType $track_items;
     /** Whether or not tracking download stats is enabled (enum) */
-    protected \Andromeda\Core\Database\FieldTypes\NullIntType $track_dlstats;
+    protected FieldTypes\NullIntType $track_dlstats;
 
     protected function BaseGroupCreateFields() : void
     {
         $fields = array();
-        $this->group = $fields[] = new \Andromeda\Core\Database\FieldTypes\ObjectRefT(\Andromeda\Apps\Accounts\Group::class,'group');
-        $this->track_items = $fields[] = new \Andromeda\Core\Database\FieldTypes\NullIntType('track_items');
-        $this->track_dlstats = $fields[] = new \Andromeda\Core\Database\FieldTypes\NullIntType('track_dlstats');
+        $this->group = $fields[] = new FieldTypes\ObjectRefT(Group::class,'group');
+        $this->track_items = $fields[] = new FieldTypes\NullIntType('track_items');
+        $this->track_dlstats = $fields[] = new FieldTypes\NullIntType('track_dlstats');
         $this->RegisterChildFields($fields);
     }
 

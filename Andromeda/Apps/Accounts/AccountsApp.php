@@ -212,7 +212,7 @@ class AccountsApp extends BaseApp
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
 
-        return $this->config->GetClientObject($admin);
+        return $this->config->GetClientObject(admin:$admin);
     }
     
     /**
@@ -226,7 +226,7 @@ class AccountsApp extends BaseApp
             throw new Exceptions\AdminRequiredException();        
         $authenticator->RequireAdmin();
         
-        return $this->config->SetConfig($params)->GetClientObject(true);
+        return $this->config->SetConfig($params)->GetClientObject(admin:true);
     }
     
     /**
@@ -243,7 +243,7 @@ class AccountsApp extends BaseApp
             return $m->GetEnabled() !== AuthSource\ExternalState::Disabled; });
         
         return array_map(function(AuthSource\External $m)use($admin){ 
-            return $m->GetClientObject($admin); }, $auths);
+            return $m->GetClientObject(admin:$admin); }, $auths);
     }
 
     /**
@@ -403,7 +403,7 @@ class AccountsApp extends BaseApp
         }
         else Session::DeleteByAccount($this->database, $account);
         
-        return array_map(function(RecoveryKey $key){ return $key->GetClientObject(true); },
+        return array_map(function(RecoveryKey $key){ return $key->GetClientObject(secret:true); },
             RecoveryKey::CreateSet($this->database, $account));
     }
     
@@ -484,8 +484,7 @@ class AccountsApp extends BaseApp
         if ($admin && $params->GetOptParam('admin',false)->GetBool())
             $account->SetAdmin(true);
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('account',$account->ID()); 
+        $actionlog?->LogDetails('account',$account->ID()); 
 
         return $account->GetUserClientObject();
     }
@@ -561,8 +560,7 @@ class AccountsApp extends BaseApp
         if ($account->isDisabled() !== 0) 
             throw new Exceptions\AccountDisabledException();
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('account',$account->ID()); 
+        $actionlog?->LogDetails('account',$account->ID()); 
         
         $interface = $this->API->GetInterface();
         
@@ -594,8 +592,7 @@ class AccountsApp extends BaseApp
             $client = Client::Create($interface, $this->database, $account, $cname)->Save(); // save now for Account GetClientObject
         }
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('client',$client->ID()); 
+        $actionlog?->LogDetails('client',$client->ID()); 
         
         /* unlock account crypto - failure means the password source must've changed without updating crypto */
         if ($account->hasCrypto())
@@ -629,12 +626,11 @@ class AccountsApp extends BaseApp
         Session::DeleteByClient($this->database, $client);
         $session = Session::Create($this->database, $account, $client)->Save(); // save now for Client GetClientObject
 
-        // TODO !! Don't like that session create has separate queries for set date active. Do earlier? Or why not in create? Or why set at all?
+        // TODO RAY !! Don't like that session create has separate queries for set date active. Do earlier? Or why not in create? Or why set at all?
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('session',$session->ID()); 
+        $actionlog?->LogDetails('session',$session->ID()); 
         
-        return array('client'=>$client->GetClientObject(true), 
+        return array('client'=>$client->GetClientObject(secret:true), 
                      'account'=>$account->GetUserClientObject());
     }
     
@@ -657,7 +653,7 @@ class AccountsApp extends BaseApp
         $keys = RecoveryKey::CreateSet($this->database, $account);
         
         return array_map(function(RecoveryKey $key){
-            return $key->GetClientObject(true); }, $keys);
+            return $key->GetClientObject(secret:true); }, $keys);
     }
     
     /**
@@ -681,17 +677,16 @@ class AccountsApp extends BaseApp
         
         $twofactor = TwoFactor::Create($this->database, $account, $comment);
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('twofactor',$twofactor->ID()); 
+        $actionlog?->LogDetails('twofactor',$twofactor->ID()); 
 
-        $retval = array('twofactor'=>$twofactor->GetClientObject(true));
+        $retval = array('twofactor'=>$twofactor->GetClientObject(secret:true));
         
         if (!$account->HasRecoveryKeys())
         {
             $keys = RecoveryKey::CreateSet($this->database, $account);
             
             $retval['recoverykeys'] = array_map(function(RecoveryKey $key){ 
-                return $key->GetClientObject(true); }, $keys);
+                return $key->GetClientObject(secret:true); }, $keys);
         }
         
         return $retval;
@@ -737,8 +732,7 @@ class AccountsApp extends BaseApp
 
         $contact = Contact::CreateFromPair($this->database, $account, $cpair, $verify);
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('contact',$contact->ID()); 
+        $actionlog?->LogDetails('contact',$contact->ID()); 
         
         return $contact->GetClientObject();
     }
@@ -776,8 +770,7 @@ class AccountsApp extends BaseApp
         
         $authenticator->RequirePassword();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('account', $account->GetAdminClientObject(true), onlyFull:true);
+        $actionlog?->LogDetails('account', $account->GetAdminClientObject(full:true), onlyFull:true);
         
         $account->Delete();
     }
@@ -807,8 +800,7 @@ class AccountsApp extends BaseApp
             if ($session === null) throw new Exceptions\UnknownSessionException();
         }
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('session', $session->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('session', $session->GetClientObject(), onlyFull:true);
         
         $session->Delete();
     }
@@ -838,8 +830,7 @@ class AccountsApp extends BaseApp
             if ($client === null) throw new Exceptions\UnknownClientException();
         }
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('client', $client->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('client', $client->GetClientObject(), onlyFull:true);
         
         $client->Delete();
     }
@@ -881,8 +872,7 @@ class AccountsApp extends BaseApp
         $twofactor = TwoFactor::TryLoadByAccountAndID($this->database, $account, $twofactorid); 
         if ($twofactor === null) throw new Exceptions\UnknownTwoFactorException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('twofactor', $twofactor->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('twofactor', $twofactor->GetClientObject(), onlyFull:true);
 
         $twofactor->Delete();
     }    
@@ -906,8 +896,7 @@ class AccountsApp extends BaseApp
         if ($this->config->GetRequireContact() !== 0 && $contact->GetIsValid() && count($account->GetContacts()) <= 1)
             throw new Exceptions\ContactRequiredException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('contact', $contact->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('contact', $contact->GetClientObject(), onlyFull:true);
     
         $contact->Delete();
     }
@@ -1049,10 +1038,9 @@ class AccountsApp extends BaseApp
 
         $group = Group::Create($this->database, $name, $priority);
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('group',$group->ID());
+        $actionlog?->LogDetails('group',$group->ID());
         
-        return $group->GetAdminClientObject(true);
+        return $group->GetAdminClientObject(accounts:true);
     }    
     
     /**
@@ -1073,7 +1061,7 @@ class AccountsApp extends BaseApp
         if ($group === null)
             throw new Exceptions\UnknownGroupException();
         
-        return $group->GetAdminClientObject(true);
+        return $group->GetAdminClientObject(accounts:true);
     }
 
     /**
@@ -1092,8 +1080,7 @@ class AccountsApp extends BaseApp
         $group = Group::TryLoadByID($this->database, $groupid);
         if ($group === null) throw new Exceptions\UnknownGroupException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('group', $group->GetAdminClientObject(true), onlyFull:true);
+        $actionlog?->LogDetails('group', $group->GetAdminClientObject(accounts:true), onlyFull:true);
             
         $group->Delete();
     }
@@ -1126,7 +1113,7 @@ class AccountsApp extends BaseApp
 
         GroupJoin::Create($this->database, $account, $group);
 
-        return $group->GetAdminClientObject(true);
+        return $group->GetAdminClientObject(accounts:true);
     }
     
     /**
@@ -1156,7 +1143,7 @@ class AccountsApp extends BaseApp
         if ($join !== null) $join->Delete();
         else throw new Exceptions\UnknownGroupMembershipException();
         
-        return $group->GetAdminClientObject(true);
+        return $group->GetAdminClientObject(accounts:true);
     }
     
     /**
@@ -1210,10 +1197,9 @@ class AccountsApp extends BaseApp
             $this->TestAuthSource($params, $authenticator);
         }
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('authsrc',$authsrc->ID()); 
+        $actionlog?->LogDetails('authsrc',$authsrc->ID()); 
         
-        return $authsrc->GetClientObject(true);
+        return $authsrc->GetClientObject(admin:true);
     }
     
     /**
@@ -1265,7 +1251,7 @@ class AccountsApp extends BaseApp
         if ($params->HasParam('test_username')) 
             $this->TestAuthSource($params, $authenticator);
         
-        return $authsrc->Edit($params)->GetClientObject(true);
+        return $authsrc->Edit($params)->GetClientObject(admin:true);
     }
     
     /**
@@ -1284,8 +1270,7 @@ class AccountsApp extends BaseApp
         $authsrc = AuthSource\External::TryLoadByID($this->database, $authsrc);
         if ($authsrc === null) throw new Exceptions\UnknownAuthSourceException();
         
-        if ($actionlog !== null)
-            $actionlog->LogDetails('authsrc', $authsrc->GetClientObject(true), onlyFull:true);
+        $actionlog?->LogDetails('authsrc', $authsrc->GetClientObject(admin:true), onlyFull:true);
         
         $authsrc->Delete();
     }
@@ -1343,7 +1328,7 @@ class AccountsApp extends BaseApp
         if ($params->HasParam('priority'))
             $group->SetPriority($params->GetParam("priority")->GetInt8());
         
-        return $group->SetPolicies($params)->GetAdminClientObject(true);
+        return $group->SetPolicies($params)->GetAdminClientObject(accounts:true);
     }
     
     /**

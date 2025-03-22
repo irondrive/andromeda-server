@@ -30,9 +30,9 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
         SFTP::DecryptAccount($database, $account); 
         SMB::DecryptAccount($database, $account); 
     }
-}*/ // TODO add storage account handlers
+}*/ // TODO RAY !! add storage account handlers
 
-// TODO add policy account handlers
+// TODO RAY !! add policy account handlers
 
 /**
  * App that provides user-facing filesystem services.
@@ -45,6 +45,16 @@ Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $accou
  * likes and comments, sharing of content via links or to users or groups,
  * configurable rules per-account or per-storage, and granular statistics
  * gathering and limiting for accounts/groups/storages.
+ * 
+ * @phpstan-import-type CommentJ from Comment
+ * @phpstan-import-type ConfigJ from Config
+ * @phpstan-import-type FileJ from File
+ * @phpstan-import-type FolderJ from Folder
+ * @phpstan-import-type ItemJ from Item
+ * @phpstan-import-type LikeJ from Like
+ * @phpstan-import-type ShareJ from Share
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type TagJ from Tag
  */
 class FilesApp extends BaseApp
 {
@@ -63,16 +73,17 @@ class FilesApp extends BaseApp
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
-            'upload (--file% path [name] | --file- name) --parent id [--overwrite bool]',
             'download --file id [--fstart uint] [--flast int] [--debugdl bool]',
-            'ftruncate --file id --size uint',
+            'upload (--file% path [name] | --file- name) --parent id [--overwrite bool]',
             'writefile (--data% path | --data-) --file id [--offset uint]',
+            'truncate --file id --size uint',
             'createfolder --parent id --name fsname',
-            'filemeta --file id [--details bool]',
-            'getfolder [--folder id | --storage id] [--files bool] [--folders bool] [--recursive bool] [--limit ?uint] [--offset ?uint] [--details bool]',
+            // TODO RAY !! need a just getItem function, some things like shares, etc. return just item as an ID
+            'getfile --file id [--details bool]',
+            'getfolder [--folder id | --storage id] [--details bool] [--files bool] [--folders bool] [--recursive bool] [--limit ?uint] [--offset ?uint]',
             'getitembypath --path fspath [--folder id | --storage id] [--isfile bool]',
-            'editfilemeta --file id [--description ?text]',
-            'editfoldermeta --folder id [--description ?text]',
+            'editfile --file id [--description ?text]',
+            'editfolder --folder id [--description ?text]',
             'ownfile --file id',
             'ownfolder --folder id',
 
@@ -163,20 +174,20 @@ class FilesApp extends BaseApp
             case 'getconfig': return $this->GetConfig($authenticator);
             case 'setconfig': return $this->SetConfig($params, $authenticator);
             
-            case 'upload':     return $this->UploadFile($input, $authenticator, $actionlog);  
             case 'download':   $this->DownloadFile($params, $authenticator, $actionlog); return null;
-            case 'ftruncate':  return $this->TruncateFile($params, $authenticator, $actionlog);
+            case 'upload':     return $this->UploadFile($input, $authenticator, $actionlog);  
             case 'writefile':  return $this->WriteToFile($input, $authenticator, $actionlog);
-            
+            case 'truncate':   return $this->TruncateFile($params, $authenticator, $actionlog);
             case 'createfolder':  return $this->CreateFolder($params, $authenticator, $actionlog);
-            case 'filemeta':      return $this->GetFileMeta($params, $authenticator, $actionlog);
-            case 'getfolder':     return $this->GetFolder($params, $authenticator, $actionlog);
+            
             case 'getitembypath': return $this->GetItemByPath($params, $authenticator, $actionlog);
+            case 'getfile':       return $this->GetFile($params, $authenticator, $actionlog);
+            case 'getfolder':     return $this->GetFolder($params, $authenticator, $actionlog);
+            case 'editfile':   return $this->EditFile($params, $authenticator, $actionlog);
+            case 'editfolder': return $this->EditFolder($params, $authenticator, $actionlog);
             case 'ownfile':   return $this->OwnFile($params, $authenticator, $actionlog);
             case 'ownfolder': return $this->OwnFolder($params, $authenticator, $actionlog);
-            case 'editfilemeta':   return $this->EditFileMeta($params, $authenticator, $actionlog);
-            case 'editfoldermeta': return $this->EditFolderMeta($params, $authenticator, $actionlog);
-            // TODO ownfile/folder could be combined with edit metadata
+            // TODO RAY !! ownfile/folder could be combined with edit metadata
            
             case 'deletefile':   $this->DeleteFile($params, $authenticator, $actionlog); return null;
             case 'deletefolder': $this->DeleteFolder($params, $authenticator, $actionlog); return null;
@@ -185,8 +196,8 @@ class FilesApp extends BaseApp
             case 'movefile':     return $this->MoveFile($params, $authenticator, $actionlog);
             case 'movefolder':   return $this->MoveFolder($params, $authenticator, $actionlog);
             
-            // TODO RAY most of these non-performance-critical ops can just be combined
-            // to a single item operatino now that Item base load stuff works
+            // TODO RAY !! most of these non-performance-critical ops can just be combined
+            // to a single item operation now that Item base load stuff works (like, tag, comment, share?)
 
             case 'likefile':      return $this->LikeFile($params, $authenticator, $actionlog);
             case 'likefolder':    return $this->LikeFolder($params, $authenticator, $actionlog);
@@ -201,7 +212,6 @@ class FilesApp extends BaseApp
             case 'getfolderlikes': return $this->GetFolderLikes($params, $authenticator, $actionlog);
             case 'getfilecomments':   return $this->GetFileComments($params, $authenticator, $actionlog);
             case 'getfoldercomments': return $this->GetFolderComments($params, $authenticator, $actionlog);
-            // TODO RAY combine get likes and get comments into one action? or just use flags with getfolder/getfilemeta
 
             case 'sharefile':    return $this->ShareFile($params, $authenticator, $actionlog);
             case 'sharefolder':  return $this->ShareFolder($params, $authenticator, $actionlog);
@@ -291,21 +301,19 @@ class FilesApp extends BaseApp
     
     /**
      * Gets config for this app
-     * @return array Config
-     * @see Config::GetClientObject()
+     * @return ConfigJ
      */
     protected function GetConfig(?Authenticator $authenticator) : array
     {
         $admin = $authenticator !== null && $authenticator->isAdmin();
         
-        return $this->config->GetClientObject($admin);
+        return $this->config->GetClientObject(admin:$admin);
     }
     
     /**
      * Sets config for this app
      * @throws AdminRequiredException if not admin
-     * @return array Config
-     * @see Config::GetClientObject()
+     * @return ConfigJ
      */
     protected function SetConfig(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -314,15 +322,15 @@ class FilesApp extends BaseApp
         
         $authenticator->RequireAdmin();
 
-        return $this->config->SetConfig($params)->GetClientObject(true);
+        $this->config->SetConfig($params);
+        return $this->config->GetClientObject(admin:true);
     }
     
     /**
      * Uploads a new file to the given folder. Bandwidth is counted.
      * @throws AuthenticationFailedException if not signed in and public upload not allowed
      * @throws Exceptions\ItemAccessDeniedException if accessing via share and share does not allow upload
-     * @return array File newly created file
-     * @see File::GetClientObject()
+     * @return FileJ newly created file
      */
     protected function UploadFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -361,7 +369,7 @@ class FilesApp extends BaseApp
         
         $actionlog?->LogDetails('file',$fileobj->ID()); 
         
-        return $fileobj->GetClientObject(($owner === $account));
+        return $fileobj->GetClientObject(owner:($owner === $account));
     }
     
     /**
@@ -459,8 +467,7 @@ class FilesApp extends BaseApp
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws Exceptions\RandomWriteDisabledException if random write is not allowed on the file
      * @throws Exceptions\ItemAccessDeniedException if acessing via share and share doesn't allow modify
-     * @return array File
-     * @see File::GetClientObject()
+     * @return FileJ
      */
     protected function WriteToFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -490,7 +497,7 @@ class FilesApp extends BaseApp
                 throw new Exceptions\ItemAccessDeniedException();
             
             $file->SetContents($infile);
-            return $file->GetClientObject(($share === null));
+            return $file->GetClientObject(owner:($share === null));
         }
         else
         {
@@ -507,7 +514,7 @@ class FilesApp extends BaseApp
             
             $actionlog?->LogDetails('wlength',$wlength);
             
-            return $file->GetClientObject(($share === null));
+            return $file->GetClientObject(owner:($share === null));
         }
     }
 
@@ -519,8 +526,7 @@ class FilesApp extends BaseApp
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws Exceptions\RandomWriteDisabledException if random writes are not enabled on the file
      * @throws Exceptions\ItemAccessDeniedException if access via share and share does not allow modify
-     * @return array File
-     * @see File::GetClientObject()
+     * @return FileJ
      */
     protected function TruncateFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {        
@@ -539,18 +545,17 @@ class FilesApp extends BaseApp
             throw new Exceptions\ItemAccessDeniedException();
 
         $file->SetSize($params->GetParam('size',SafeParams::PARAMLOG_ALWAYS)->GetUint()); 
-        // TODO shouldn't really log this ... also remove logging of file write offsets, download offsets, etc. 
+        // TODO RAY !! shouldn't really log this ... also remove logging of file write offsets, download offsets, etc. 
         
-        return $file->GetClientObject(($share === null));
+        return $file->GetClientObject(owner:($share === null));
     }
 
     /**
      * Returns file metadata
      * @throws Exceptions\ItemAccessDeniedException if accessing via share and reading is not allowed
-     * @return array File
-     * @see File::GetClientObject()
+     * @return FileJ
      */
-    protected function GetFileMeta(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    protected function GetFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $access = $this->AuthenticateFileAccess($params, $authenticator, $actionlog);
         $file = $access->GetFile(); $share = $access->TryGetShare();
@@ -560,7 +565,7 @@ class FilesApp extends BaseApp
         
         $details = $params->GetOptParam('details',false)->GetBool();
         
-        return $file->GetClientObject(($share === null), $details);
+        return $file->GetClientObject(owner:($share === null), details:$details);
     }
 
     /**
@@ -569,8 +574,7 @@ class FilesApp extends BaseApp
      * @throws AuthenticationFailedException if public access and no folder ID is given
      * @throws Exceptions\UnknownStorageException if the given storage does not exist
      * @throws Exceptions\UnknownFolderException if the given folder does not exist
-     * @return array Folder
-     * @see Folder::GetClientObject()
+     * @return FolderJ
      */
     protected function GetFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -627,9 +631,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\UnknownStorageException if the given storage is not found
      * @throws Exceptions\UnknownFolderException if the given folder is not found
      * @throws Exceptions\UnknownItemException if the given item path is invalid
-     * @return array File|Folder with {isfile:bool}
-     * @see File::GetClientObject()
-     * @see Folder::GetClientObject()
+     * @return ItemJ
      */
     protected function GetItemByPath(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -668,7 +670,7 @@ class FilesApp extends BaseApp
         $path = $params->GetParam('path')->GetFSPath();
         $path = array_filter(explode('/',$path)); $name = array_pop($path);
 
-        foreach ($path as $subfolder) // TODO specifically disallow . and ..
+        foreach ($path as $subfolder) // TODO RAY !! specifically disallow . and ..
         {
             $subfolder = Folder::TryLoadByParentAndName($this->database, $folder, $subfolder);
             
@@ -679,7 +681,7 @@ class FilesApp extends BaseApp
         
         $item = null;
         $isfile = $params->HasParam('isfile') ? $params->GetParam('isfile')->GetBool() : null;
-        // TODO can just load item here and get rid of --isfile input
+        // TODO RAY !! can just load item here and get rid of --isfile input
         
         if ($name === null) 
         {
@@ -702,42 +704,42 @@ class FilesApp extends BaseApp
         {
             $retval = $item->GetClientObject(owner:($share === null));
         }
-        else if ($item instanceof Folder) // @phpstan-ignore-line remove as per below comment // TODO
+        else if ($item instanceof Folder) // @phpstan-ignore-line remove as per below comment // TODO RAY !! 
         {
             $retval = $item->GetClientObject(owner:($share === null),details:false,files:true,folders:true);
         }
-        // TODO make folder client object default files/folders to true, just use Item->GetClientObject here
+        // TODO RAY !! make folder client object default files/folders to true, just use Item->GetClientObject here
         
-        $retval['isfile'] = ($item instanceof File);
         return $retval;
     }
     
     /**
      * Edits file metadata
-     * @see FilesApp::EditItemMeta()
+     * @see FilesApp:EditItem()
+     * @return ItemJ
      */
-    protected function EditFileMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
+    protected function EditFile(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
-        return $this->EditItemMeta($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
+        return $this->EditItem($this->AuthenticateFileAccess($params, $auth, $actionlog), $params);
     }
     
     /**
      * Edits folder metadata
-     * @see FilesApp::EditItemMeta()
+     * @see FilesApp:EditItem()
+     * @return ItemJ
      */
-    protected function EditFolderMeta(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
+    protected function EditFolder(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
-        return $this->EditItemMeta($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
+        return $this->EditItem($this->AuthenticateFolderAccess($params, $auth, $actionlog), $params);
     }
     
     /**
      * Edits item metadata
      * @param ItemAccess $access access object for item
      * @throws Exceptions\ItemAccessDeniedException if accessing via share and can't modify
-     * @return array Item
-     * @see Item::GetClientObject()
+     * @return ItemJ
      */
-    private function EditItemMeta(ItemAccess $access, SafeParams $params) : array
+    private function EditItem(ItemAccess $access, SafeParams $params) : array
     {
         $item = $access->GetItem(); $share = $access->TryGetShare();
         
@@ -747,13 +749,12 @@ class FilesApp extends BaseApp
         if ($params->HasParam('description')) 
             $item->SetDescription($params->GetParam('description')->GetNullHTMLText());
         
-        return $item->GetClientObject(($share === null));
+        return $item->GetClientObject(owner:($share === null));
     }    
     
     /**
      * Takes ownership of a file
-     * @return array File
-     * @see File::GetClientObject()
+     * @return FileJ
      */
     protected function OwnFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -772,13 +773,12 @@ class FilesApp extends BaseApp
         $actionlog?->LogItemAccess($file, null);
             
         $file->SetOwner($account);
-        return $file->GetClientObject(true);
+        return $file->GetClientObject(owner:true);
     }
     
     /**
      * Takes ownership of a folder
-     * @return array Folder
-     * @see Folder::GetClientObject()
+     * @return FolderJ
      */
     protected function OwnFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -797,19 +797,17 @@ class FilesApp extends BaseApp
             
         $actionlog?->LogItemAccess($folder, null);
     
-        if ($params->GetOptParam('recursive',false)->GetBool())
-            $folder->SetOwnerRecursive($account);
-        else $folder->SetOwner($account); // TODO use a bool for recursive instead?
+        $recursive = $params->GetOptParam('recursive',false)->GetBool();
+        $folder->SetOwner($account, recursive:$recursive);
 
-        return $folder->GetClientObject(true);
+        return $folder->GetClientObject(owner:true);
     }    
 
     /**
      * Creates a folder in the given parent
      * @throws AuthenticationFailedException if public access and public upload not allowed
      * @throws Exceptions\ItemAccessDeniedException if accessing via share and share upload not allowed
-     * @return array Folder
-     * @see Folder::GetClientObject()
+     * @return FolderJ
      */
     protected function CreateFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -832,7 +830,7 @@ class FilesApp extends BaseApp
         
         $actionlog?->LogDetails('folder',$folder->ID()); 
         
-        return $folder->GetClientObject(($owner === $account));
+        return $folder->GetClientObject(owner:($owner === $account));
     }
     
     /**
@@ -877,7 +875,7 @@ class FilesApp extends BaseApp
         if ($share !== null && !$share->CanModify())
             throw new Exceptions\ItemAccessDeniedException();
         
-        $actionlog?->LogDetails('item', $itemobj->TryGetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('item', $itemobj->GetClientObject(owner:false), onlyFull:true);
 
         $itemobj->Delete();
     }
@@ -885,8 +883,7 @@ class FilesApp extends BaseApp
     /**
      * Renames (or copies) a file
      * @see FilesApp::RenameItem()
-     * @return array File
-     * @see File::GetClientObject()
+     * @return ItemJ
      */
     protected function RenameFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -896,8 +893,7 @@ class FilesApp extends BaseApp
     /**
      * Renames (or copies) a folder
      * @see FilesApp::RenameItem()
-     * @return array Folder
-     * @see Folder::GetClientObject()
+     * @return ItemJ
      */
     protected function RenameFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -910,6 +906,7 @@ class FilesApp extends BaseApp
      * @param string $key input param for a single item
      * @throws Exceptions\ItemAccessDeniedException if access via share and share upload/modify is not allowed
      * @throws AuthenticationFailedException if public access and public upload/modify is not allowed
+     * @return ItemJ
      */
     private function RenameItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -921,7 +918,8 @@ class FilesApp extends BaseApp
         
         $account = ($authenticator === null) ? null : $authenticator->GetAccount();
         
-        if ($item instanceof RootFolder && ($account === null || !$item->isFSOwnedBy($account)))
+        // changing the name of a RootFolder changes the name of its storage object
+        if ($item instanceof RootFolder && ($account === null || $item->TryGetStorageOwner() !== $account))
             throw new Exceptions\ItemAccessDeniedException();
         
         $name = $params->GetParam('name')->GetFSName();
@@ -960,8 +958,7 @@ class FilesApp extends BaseApp
     /**
      * Moves (or copies) a file
      * @see FilesApp::MoveItem()
-     * @return array File
-     * @see File::GetClientObject()
+     * @return ItemJ
      */
     protected function MoveFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -971,8 +968,7 @@ class FilesApp extends BaseApp
     /**
      * Moves (or copies) a folder
      * @see FilesApp::MoveItem()
-     * @return array Folder
-     * @see Folder::GetClientObject()
+     * @return ItemJ
      */
     protected function MoveFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -985,6 +981,7 @@ class FilesApp extends BaseApp
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify/upload not allowed
      * @throws Exceptions\ItemAccessDeniedException if access via share and share modify/upload not allowed
+     * @return ItemJ
      */
     private function MoveItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1031,6 +1028,7 @@ class FilesApp extends BaseApp
     /** 
      * Likes or dislikes a file 
      * @see FilesApp::LikeItem()
+     * @return ?LikeJ
      */
     protected function LikeFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
@@ -1040,6 +1038,7 @@ class FilesApp extends BaseApp
     /** 
      * Likes or dislikes a folder
      * @see FilesApp::LikeItem()
+     * @return ?LikeJ
      */
     protected function LikeFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
@@ -1052,8 +1051,7 @@ class FilesApp extends BaseApp
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\ItemAccessDeniedException if access via share if social is not allowed
-     * @return array ?Like
-     * @see Like::GetClientObject()
+     * @return ?LikeJ
      */
     private function LikeItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : ?array
     {
@@ -1078,6 +1076,7 @@ class FilesApp extends BaseApp
     /** 
      * Adds a tag to a file
      * @see FilesApp::TagItem()
+     * @return TagJ
      */
     protected function TagFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1086,7 +1085,8 @@ class FilesApp extends BaseApp
     
     /** 
      * Adds a tag to a folder
-     * @see FilesApp::TagItem() 
+     * @see FilesApp::TagItem()
+     * @return TagJ
      */
     protected function TagFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1099,8 +1099,7 @@ class FilesApp extends BaseApp
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\ItemAccessDeniedException if access via share and share modify is not allowed
-     * @return array Tag
-     * @see Tag::GetClientObject()
+     * @return TagJ
      */
     private function TagItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1155,6 +1154,7 @@ class FilesApp extends BaseApp
     /**
      * Adds a comment to a file
      * @see FilesApp::CommentItem()
+     * @return CommentJ
      */
     protected function CommentFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1163,7 +1163,8 @@ class FilesApp extends BaseApp
     
     /**
      * Adds a comment to a folder
-     * @see FilesApp::CommentFolder()
+     * @see FilesApp::CommentItem()
+     * @return CommentJ
      */
     protected function CommentFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1176,8 +1177,7 @@ class FilesApp extends BaseApp
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\ItemAccessDeniedException if access via share and share social is not allowed
-     * @return array Comment
-     * @see Comment::GetClientObject()
+     * @return CommentJ
      */
     private function CommentItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1204,8 +1204,7 @@ class FilesApp extends BaseApp
      * Edits an existing comment properties
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\UnknownItemException if the comment is not found
-     * @return array Comment
-     * @see Comment::GetClientObject()
+     * @return CommentJ
      */
     protected function EditComment(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -1248,6 +1247,7 @@ class FilesApp extends BaseApp
     /**
      * Returns comments on a file
      * @see FilesApp::GetItemComments()
+     * @return array<string, CommentJ>
      */
     protected function GetFileComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
@@ -1257,6 +1257,7 @@ class FilesApp extends BaseApp
     /**
      * Returns comments on a folder
      * @see FilesApp::GetItemComments()
+     * @return array<string, CommentJ>
      */
     protected function GetFolderComments(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
@@ -1267,8 +1268,7 @@ class FilesApp extends BaseApp
      * Returns comments on an item
      * @param ItemAccess $access file or folder access object
      * @throws Exceptions\ItemAccessDeniedException if access via share and can't read
-     * @return array Comment
-     * @see Comment::GetClientObject()
+     * @return array<string, CommentJ>
      */
     private function GetItemComments(ItemAccess $access, SafeParams $params) : array
     {
@@ -1288,6 +1288,7 @@ class FilesApp extends BaseApp
     /**
      * Returns likes on a file
      * @see FilesApp::GetItemLikes()
+     * @return array<string, LikeJ>
      */
     protected function GetFileLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
@@ -1297,6 +1298,7 @@ class FilesApp extends BaseApp
     /**
      * Returns likes on a folder
      * @see FilesApp::GetItemLikes()
+     * @return array<string, LikeJ>
      */
     protected function GetFolderLikes(SafeParams $params, ?Authenticator $auth, ?ActionLog $actionlog) : array
     {
@@ -1307,8 +1309,7 @@ class FilesApp extends BaseApp
      * Returns likes on an item
      * @param ItemAccess $access file or folder access object
      * @throws Exceptions\ItemAccessDeniedException if access via share and can't read
-     * @return array Like
-     * @see Like::GetClientObject()
+     * @return array<string, LikeJ>
      */
     private function GetItemLikes(ItemAccess $access, SafeParams $params) : array
     {
@@ -1325,11 +1326,10 @@ class FilesApp extends BaseApp
         return array_map(function(Like $c){ return $c->GetClientObject(); }, $likes);
     }
 
-    // TODO seems like comments, likes, etc. should be combined into just a file get metadata function
-    
     /**
      * Creates shares for a file
      * @see FilesApp::ShareItem()
+     * @return ShareJ
      */
     protected function ShareFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1339,6 +1339,7 @@ class FilesApp extends BaseApp
     /**
      * Creates shares for a folder
      * @see FilesApp::ShareItem()
+     * @return ShareJ
      */
     protected function ShareFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1355,8 +1356,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\UnknownItemException if the given item to share is not found
      * @throws Exceptions\EmailShareDisabledException if emailing shares is not enabled
      * @throws Exceptions\ShareURLGenerateException if the URL to email could be not determined
-     * @return array Share
-     * @see Share::GetClientObject()
+     * @return ShareJ
      */
     private function ShareItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1406,7 +1406,7 @@ class FilesApp extends BaseApp
         $actionlog?->LogDetails('share',$share->ID()); 
         
         $shares = array($share); // maybe in future, send N items with 1 email?
-        $retval = $share->GetClientObject(false, true, $islink);
+        $retval = $share->GetClientObject(fullitem:false, owner:true, secret:$islink);
         
         if ($islink && $params->HasParam('email'))
         {
@@ -1447,8 +1447,7 @@ class FilesApp extends BaseApp
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\UnknownItemException if the given share is not found
      * @throws Exceptions\ItemAccessDeniedException if not allowed
-     * @return array Share
-     * @see Share::GetClientObject()
+     * @return ShareJ
      */
     protected function EditShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1468,7 +1467,7 @@ class FilesApp extends BaseApp
             throw new Exceptions\ItemAccessDeniedException();
         
         $share->SetOptions($params, $origshare);
-        return $share->GetClientObject();
+        return $share->GetClientObject(fullitem:false, owner:true);
     }
     
     /**
@@ -1497,31 +1496,29 @@ class FilesApp extends BaseApp
                 throw new Exceptions\ItemAccessDeniedException();
         }
         
-        $actionlog?->LogDetails('share', $share->GetClientObject(), onlyFull:true);
+        $actionlog?->LogDetails('share', $share->GetClientObject(fullitem:false,owner:true), onlyFull:true);
         
         $share->Delete();
     }
     
     /**
      * Retrieves metadata on a share object (from a link)
-     * @return array Share
-     * @see Share::GetClientObject()
+     * @return ShareJ
      */
     protected function ShareInfo(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $access = ItemAccess::Authenticate($this->database, $params, $authenticator, null);
         $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare());
         
-        return $access->GetShare()->GetClientObject(false, false);
+        return $access->GetShare()->GetClientObject(fullitem:false, owner:false);
     }
     
     /**
-     * Returns a list of shares
+     * Returns a list of shares across all relevant items
      * 
      * if $mine, show all shares we created, else show all shares we're the target of
      * @throws AuthenticationFailedException if not signed in
-     * @return array [id:Share]
-     * @see Share::GetClientObject()
+     * @return array<string, ShareJ>
      */
     protected function GetShares(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -1538,7 +1535,7 @@ class FilesApp extends BaseApp
             function(Share $sh){ return !$sh->isExpired(); });
         
         return array_map(function($share)use($mine){ 
-            return $share->GetClientObject(true, $mine); }, $shares);
+            return $share->GetClientObject(fullitem:true, owner:$mine); }, $shares);
     }
     
     /**
@@ -1546,9 +1543,7 @@ class FilesApp extends BaseApp
      * 
      * These are items that the user uploaded into someone else's folder, but owns
      * @throws AuthenticationFailedException if not signed in 
-     * @return array<mixed> `{files:[id:File],folders:[id:Folder]}`
-     * @see File::GetClientObject()
-     * @see Folder::GetClientObject()
+     * @return array{files:array<string,FileJ>, folders:array<string,FolderJ>}
      */
     protected function GetAdopted(?Authenticator $authenticator) : array
     {
@@ -1559,8 +1554,8 @@ class FilesApp extends BaseApp
         $files = File::LoadAdoptedByOwner($this->database, $account);
         $folders = Folder::LoadAdoptedByOwner($this->database, $account);
         
-        $files = array_map(function(File $file){ return $file->GetClientObject(true); }, $files);
-        $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(true); }, $folders);
+        $files = array_map(function(File $file){ return $file->GetClientObject(owner:true); }, $files);
+        $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(owner:true); }, $folders);
         
         return array('files'=>$files, 'folders'=>$folders);
     }
@@ -1569,8 +1564,7 @@ class FilesApp extends BaseApp
      * Returns storage metadata (default if none specified)
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\UnknownStorageException if no storage was specified or is the default
-     * @return array Storage
-     * @see Storage::GetClientObject()
+     * @return StorageJ
      */
     protected function GetStorage(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1591,17 +1585,15 @@ class FilesApp extends BaseApp
         $actionlog?->LogDetails('storage',$storage->ID());
         
         $ispriv = $authenticator->isAdmin() || ($account === $storage->TryGetOwner());
-        
         $activate = $params->GetOptParam('activate',false)->GetBool();
         
-        return [];//$storage->GetClientObject($ispriv, $activate);// TODO RAY !! GetClientObject
+        return $storage->GetClientObject(/*priv:$ispriv,*/ activate:$activate); // TODO RAY !! GetClientObject
     }
     
     /**
      * Returns a list of all storages available
      * @throws AuthenticationFailedException if not signed in
-     * @return array [id:Storage]
-     * @see Storage::GetClientObject()
+     * @return array<string, StorageJ>
      */
     protected function GetStorages(SafeParams $params, ?Authenticator $authenticator) : array
     {
@@ -1628,8 +1620,7 @@ class FilesApp extends BaseApp
      * Creates a new storage
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\UserStorageDisabledException if not admin and user storage is not allowed
-     * @return array Storage
-     * @see Storage::GetClientObject()
+     * @return StorageJ
      */
     protected function CreateStorage(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
@@ -1645,19 +1636,18 @@ class FilesApp extends BaseApp
         if (!Policy\StandardAccount::ForceLoadByAccount($this->database, $account)->GetAllowUserStorage() && !$global)
             throw new Exceptions\UserStorageDisabledException();
             
-        $storage = Storage::Create($this->database, $input, $global ? null : $account);
+        $storage = Storage::TypedCreate($this->database, $input, $global ? null : $account);
         
         $actionlog?->LogDetails('storage',$storage->ID()); 
         
-        return $storage->GetClientObject(true);
+        return $storage->GetClientObject(priv:true);
     }
 
     /**
      * Edits an existing storage
      * @throws AuthenticationFailedException if not signed in
      * @throws Exceptions\UnknownStorageException if the given storage is not found
-     * @return array Storage
-     * @see Storage::GetClientObject()
+     * @return StorageJ
      */
     protected function EditStorage(Input $input, ?Authenticator $authenticator) : array
     {
@@ -1676,7 +1666,7 @@ class FilesApp extends BaseApp
         if ($storage === null) 
             throw new Exceptions\UnknownStorageException();
 
-        return $storage->Edit($input)->GetClientObject(true);
+        return $storage->Edit($input)->GetClientObject(priv:true);
     }
 
     /**
@@ -1703,7 +1693,7 @@ class FilesApp extends BaseApp
         
         $unlink = $params->GetOptParam('unlink',false)->GetBool();
         
-        $actionlog?->LogDetails('storage', $storage->GetClientObject(true), onlyFull:true);
+        $actionlog?->LogDetails('storage', $storage->GetClientObject(priv:true), onlyFull:true);
         
         $storage->Delete();// TODO RAY !! $unlink);
     }
@@ -1722,7 +1712,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\UnknownObjectException if nothing valid was specified
      * @return array<mixed> `{class:string, obj:object, full:bool}`
      */
-    /*private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array // TODO fix limits functions
+    /*private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array // TODO LIMITS fix user functions
     {
         $obj = null; $admin = $authenticator->isAdmin();
 
@@ -1831,7 +1821,7 @@ class FilesApp extends BaseApp
             throw new AuthenticationFailedException();
         
         $lobj = $this->GetLimitObject($params, $authenticator, true, true, true);
-        $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full']; // TODO replace this with a class
+        $class = $lobj['class']; $obj = $lobj['obj']; $full = $lobj['full'];
         
         if ($obj !== null)
         {

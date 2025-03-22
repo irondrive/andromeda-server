@@ -6,7 +6,8 @@ use Andromeda\Apps\Files\Storage\Storage;
 
 /** A root folder has no parent or name */
 class RootFolder extends Folder
-{    use TableTypes\NoChildren;
+{    
+    use TableTypes\NoChildren;
 
     public function GetName() : string { return $this->storage->GetName(); }
     
@@ -14,24 +15,24 @@ class RootFolder extends Folder
     { 
         return $this->storage->GetObject()->SetName($name);
     }
-    
-    /** Returned if this root's filesystem is owned by $account */
-    public function isFSOwnedBy(Account $account) : bool
+
+    /** Returns the owner of the underlying storage */
+    public function TryGetStorageOwner() : ?Account
     {
-        return $this->storage->GetObject()->TryGetOwnerID() === $account->ID();
+        return $this->storage->GetObject()->TryGetOwner();
     }
     
     public function SetParent(Folder $folder, bool $overwrite = false) : bool                       { throw new Exceptions\InvalidRootOpException(); }
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static     { throw new Exceptions\InvalidRootOpException(); }
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : static { throw new Exceptions\InvalidRootOpException(); }
     
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static { throw new Exceptions\InvalidRootOpException(); }
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $refresh = false) : static { throw new Exceptions\InvalidRootOpException(); }
 
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
      * @param ObjectDatabase $database database reference
      * @param Account $account the owner of the root folder
-     * @param Storage $storage the filesystem of the root, or null to get the default
+     * @param Storage $storage the storage of the root, or null to get the default
      * @return ?static loaded folder or null if a default FS does not exist and none is given
      */
     public static function GetRootByAccountAndFS(ObjectDatabase $database, Account $account, ?Storage $storage = null) : ?static
@@ -39,7 +40,7 @@ class RootFolder extends Folder
         $storage ??= Storage::LoadDefaultByAccount($database, $account); 
         if ($storage === null) return null;
 
-        // TODO RAY check this still makes sense with the new schema
+        // TODO RAY !! check this still makes sense with the new schema
         $q = new QueryBuilder(); 
         $where = $q->And($q->Equals('storage',$storage->ID()), $q->IsNull('parent'),
             $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
@@ -48,14 +49,16 @@ class RootFolder extends Folder
         if ($loaded !== null) return $loaded;
         else
         {
-            $obj = $database->CreateObject(static::class); // insert new root
-            $obj->storage->SetObject($storage);
+            $root = $database->CreateObject(static::class); // insert new root
+            $root->isroot->SetValue(true);
+            $root->date_created->SetTimeNow();
+            $root->storage->SetObject($storage);
 
             $owner = $storage->isExternal() ? $storage->TryGetOwner() : $account;
-            $obj->owner->SetObject($owner);
+            $root->owner->SetObject($owner);
 
-            $obj->Refresh();
-            return $obj;
+            $root->Refresh();
+            return $root;
         }
     }
     
@@ -85,7 +88,7 @@ class RootFolder extends Folder
         return $database->LoadObjectsByQuery(static::class, $q);
     }
 
-    //TODO RootFolder - DeleteRoots is dumb, shouldn't load first, also Delete() should be the one to decide notify/not based on external!
+    //TODO RAY !! RootFolder - DeleteRoots is dumb, shouldn't load first, also Delete() should be the one to decide notify/not based on external!
     /** Deletes all root folders on the given filesystem - if the FS is external or $unlink, only remove DB objects */
     public static function DeleteRootsByStorage(ObjectDatabase $database, Storage $storage, bool $unlink = false) : void
     {

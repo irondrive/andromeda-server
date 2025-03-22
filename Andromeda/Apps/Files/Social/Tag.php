@@ -4,7 +4,11 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Files\Items\Item;
 
-/** A category tag placed on an item */
+/**
+ * A category tag placed on an item 
+ * @phpstan-import-type PublicAccountJ from Account
+ * @phpstan-type TagJ array{id:string, owner:PublicAccountJ, item:string, tag:string, date_created:float}
+ */
 class Tag extends BaseObject
 {
     protected const IDLength = 16;
@@ -80,18 +84,16 @@ class Tag extends BaseObject
 
     /**
      * Returns a printable client object of this tag
-     * @return array{} `{id:id, owner:id, item:id, tag:string, dates:{created:float}}`
+     * @return TagJ
      */
     public function GetClientObject() : array
     {
         return array(
-            /*'id' => $this->ID(),
-            'owner' => $this->GetObject('owner'),
-            'item' => $this->GetObjectID('item'),
-            'tag' => $this->GetScalar('tag'),
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-            )*/
+            'id' => $this->ID(),
+            'owner' => $this->owner->GetObject()->GetPublicClientObject(),
+            'item' => $this->item->GetObjectID(),
+            'tag' => $this->value->GetValue(),
+            'date_created' => $this->date_created->GetValue()
         );
     }
 }

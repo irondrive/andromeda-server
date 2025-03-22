@@ -132,7 +132,7 @@ class S3 extends FWrapper
     }
     
     /** Checks for the SMB client extension */
-    public function PostConstruct(bool $created) : void
+    public function PostConstruct() : void
     {
         if (!class_exists('\\Aws\\S3\\S3Client'))
             throw new Exceptions\S3AwsSdkException();

@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
+<?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; //if (!defined('Andromeda')) die(); // TODO FUTURE phpstan bug
 
 use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\{FieldTypes, QueryBuilder, ObjectDatabase};

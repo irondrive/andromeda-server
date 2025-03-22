@@ -151,7 +151,7 @@ class AccountTotal extends AuthEntityTotal
     }
     
     /** register a group change handler that updates this specific object's grouplim cache */
-    protected function PostConstruct() : void
+    protected function PostConstruct() : void // TODO LIMITS uh no this will register a new handler for every single object lmao
     {
         Account::RegisterGroupChangeHandler(function(ObjectDatabase $database, Account $account, Group $group, bool $added)
         {
@@ -261,7 +261,7 @@ class AccountTotal extends AuthEntityTotal
 /** A fake empty account limits that returns default property values */
 class AccountTotalDefault extends AccountTotal
 {
-    // TODO // public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
+    public function __construct(ObjectDatabase $database) { parent::__construct($database, array()); }
     
     protected function GetGroups() : array { return array(); }
 }

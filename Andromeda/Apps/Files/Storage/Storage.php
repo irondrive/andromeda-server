@@ -29,10 +29,14 @@ class ItemStat
  * 
  * Storages do not implement transactions and cannot rollback actions.
  * Any "expected" exceptions should always be checked before storage actions.
+ * 
+ * @phpstan-type StorageJ array{id:string}
  */
 abstract class Storage extends BaseObject
 {
     use TableTypes\TableLinkedChildren;
+    
+    protected const IDLength = 8;
     
     /** 
      * A map of all storage classes as $name=>$class 
@@ -40,7 +44,7 @@ abstract class Storage extends BaseObject
      */
     public const TYPES = array(
         'local' => Local::class, // FIRST
-        // TODO make the DB stop after the first table result when loading by unique for performance
+        // TODO RAY !! make sure the DB stops after the first table result when loading by unique for performance
         'smb' => SMB::class, 
         'sftp' => SFTP::class, 
         's3' => S3::class,
@@ -212,7 +216,7 @@ abstract class Storage extends BaseObject
     /** Returns the common command usage of Create() */
     public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::TYPES)).
         " [--fstype ".implode('|',array_keys(self::FSTYPES))."]".
-        " [--name ?name] [--global bool] [--readonly bool] [--chunksize uint]"; } // TODO let admin give owner ID, not just global
+        " [--name ?name] [--global bool] [--readonly bool] [--chunksize uint]"; } // TODO RAY !! let admin give owner ID, not just global
     
     /** 
      * Gets command usage specific to external authentication backends
@@ -227,11 +231,11 @@ abstract class Storage extends BaseObject
     }
     
     /** Creates and tests a new external auth backend based on the user input */
-    public static function TypedCreate(ObjectDatabase $database, SafeParams $params) : self
+    public static function TypedCreate(ObjectDatabase $database, Input $input, ?Account $owner) : self
     {
-        $type = $params->GetParam('sttype')->FromAllowlist(array_keys(self::TYPES));
+        $type = $input->GetParams()->GetParam('sttype')->FromAllowlist(array_keys(self::TYPES));
         
-        return self::TYPES[$type]::Create($database, $params);
+        return self::TYPES[$type]::Create($database, $input, $owner);
     }
 
     /**
@@ -317,7 +321,7 @@ abstract class Storage extends BaseObject
     {
         $retval = array(
             'id' => $this->ID()
-            // TODO RAY !! implement me fully
+            // TODO RAY !! implement me fully GetClientObject
         );
         
         /*if ($activate && $this->canGetFreeSpace())
@@ -355,7 +359,7 @@ abstract class Storage extends BaseObject
      * @throws Exceptions\InvalidFSTypeException if not valid
      */
     public function GetFilesystem() : Filesystem
-    // TODO RAY !! public function GetStorage(bool $activate = true) : Storage  - activate was an option before
+    // TODO RAY !! public function GetStorage(bool $activate = true) : Storage  - activate was an option before, look at usages for activate false
     {
         if (!isset($this->filesystem))
         {
@@ -392,7 +396,7 @@ abstract class Storage extends BaseObject
     public function supportsFolders() : bool { return true; }
     
     /** Returns whether or not the storage supports getting free space */
-    public function canGetFreeSpace() : bool { return false; } // TODO replace this with a general stat call, add total size to it
+    public function canGetFreeSpace() : bool { return false; } // TODO RAY !! replace this with a general stat call, add total size to it
     
     /** Returns the available space in bytes on the storage */
     public function GetFreeSpace() : int { throw new Exceptions\FreeSpaceFailedException(); }

@@ -228,7 +228,7 @@ class CoreApp extends BaseApp
         }
         else $mailer = Emailer::LoadAny($this->database);
         
-        if ($actionlog !== null) $actionlog->LogDetails('mailer',$mailer->ID());
+        $actionlog?->LogDetails('mailer',$mailer->ID());
         
         try { $mailer->SendMail($subject, $body, isHtml:false, recipients:$dests, usebcc:false); }
         catch (CoreExceptions\MailSendException $e) { 
@@ -292,7 +292,7 @@ class CoreApp extends BaseApp
      */
     protected function GetConfig(bool $isAdmin) : array
     {
-        return $this->config->GetClientObject($isAdmin);
+        return $this->config->GetClientObject(admin:$isAdmin);
     }
     
     /**
@@ -315,7 +315,7 @@ class CoreApp extends BaseApp
     {
         if (!$isAdmin) throw new Exceptions\AdminRequiredException();
         
-        return $this->config->SetConfig($params)->GetClientObject(true);
+        return $this->config->SetConfig($params)->GetClientObject(admin:true);
     }
     
     /**
@@ -351,7 +351,7 @@ class CoreApp extends BaseApp
             $this->TestMail($params, $isAdmin, $authenticator, $actionlog);
         }
 
-        if ($actionlog !== null) $actionlog->LogDetails('mailer',$emailer->ID()); 
+        $actionlog?->LogDetails('mailer',$emailer->ID()); 
         
         return $emailer->GetClientObject();
     }
@@ -370,8 +370,7 @@ class CoreApp extends BaseApp
         $mailer = Emailer::TryLoadByID($this->database, $mailid);
         if ($mailer === null) throw new Exceptions\UnknownMailerException();
         
-        if ($actionlog !== null) 
-            $actionlog->LogDetails('mailer', $mailer->GetClientObject(), true);
+        $actionlog?->LogDetails('mailer', $mailer->GetClientObject(), onlyFull:true);
         
         $mailer->Delete();
     }
@@ -412,7 +411,7 @@ class CoreApp extends BaseApp
         
         $expand = $params->GetOptParam('expand',false)->GetBool();
         
-        return array_map(function(BaseActionLog $e)use($expand){ return $e->GetClientObject($expand); },
+        return array_map(function(BaseActionLog $e)use($expand){ return $e->GetClientObject(expand:$expand); },
             BaseActionLog::LoadByParams($this->database, $params));
     }
     

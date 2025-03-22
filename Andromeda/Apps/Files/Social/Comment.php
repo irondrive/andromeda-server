@@ -4,8 +4,12 @@ use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilde
 use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Files\Items\Item;
 
-/** A user comment on an item */
-class Comment extends BaseObject // TODO was StandardObject
+/** 
+ * A user comment on an item 
+ * @phpstan-import-type PublicAccountJ from Account
+ * @phpstan-type CommentJ array{id:string, owner:PublicAccountJ, item:string, comment:string, date_created:float, date_modified:?float}
+ */
+class Comment extends BaseObject
 {
     protected const IDLength = 16;
     
@@ -87,19 +91,17 @@ class Comment extends BaseObject // TODO was StandardObject
     
     /**
      * Returns a printable client object of this comment
-     * @return array{} `{id:id,owner:id,item:id,comment:string,dates{created:float,modified:?float}}`
+     * @return CommentJ
      */
     public function GetClientObject() : array
     {
         return array(
-            /*'id' => $this->ID(),
-            'owner' => $this->GetObject('owner'),
-            'item' => $this->GetObjectID('item'),
-            'comment' => $this->GetScalar('comment'),
-            'dates' => array(
-                'created' => $this->GetDateCreated(),
-                'modified' => $this->TryGetDate('modified')
-            ),*/
+            'id' => $this->ID(),
+            'owner' => $this->owner->GetObject()->GetPublicClientObject(),
+            'item' => $this->item->GetObjectID(),
+            'comment' => $this->value->GetValue(),
+            'date_created' => $this->date_created->GetValue(),
+            'date_modified' => $this->date_modified->TryGetValue()
         );
     }
 }

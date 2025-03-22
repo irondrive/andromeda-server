@@ -13,7 +13,9 @@ class SubFolder extends Folder
         static::CheckName($name, $overwrite, false);
         
         $this->GetFilesystem()->RenameFolder($this, $name);
-        return $this->name->SetValue($name);
+        $retval = $this->name->SetValue($name);
+        $this->Save(); // FS is changed, save now for accurate loads
+        return $retval;
     }
     
     public function SetParent(Folder $parent, bool $overwrite = false) : bool
@@ -22,7 +24,9 @@ class SubFolder extends Folder
         static::CheckParent($parent, $overwrite, false); 
         
         $this->GetFilesystem()->MoveFolder($this, $parent);
-        return $this->parent->SetObject($parent);
+        $retval = $this->parent->SetObject($parent);
+        $this->Save(); // FS is changed, save now for accurate loads
+        return $retval;
     }
 
     /**
@@ -45,7 +49,7 @@ class SubFolder extends Folder
 
         $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFilesystem(false)->CreateFolder($folder); 
+        $this->GetFilesystem()->CreateFolder($folder); 
         
         $this->CopyToFolder($folder);
         return $folder;
@@ -60,16 +64,13 @@ class SubFolder extends Folder
     
         $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFilesystem(false)->CreateFolder($folder);
+        $this->GetFilesystem()->CreateFolder($folder);
         
         $this->CopyToFolder($folder);
         return $folder;
     }
     
-    /**
-     * Creates a new non-root folder both in DB and on disk
-     * @see Folder::NotifyCreate()
-     */
+    /** Creates a new non-root folder both in DB and on disk */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
     {
         if (static::TryLoadByParentAndName($database, $parent, $name) !== null)
@@ -77,12 +78,12 @@ class SubFolder extends Folder
 
         $folder = static::NotifyCreate($database, $parent, $account, $name);
         
-        $folder->GetFilesystem(false)->CreateFolder($folder);
+        $folder->GetFilesystem()->CreateFolder($folder);
         return $folder;
     }
     
     /** Deletes the folder and its contents from DB and disk */
-    public function Delete() : void // TODO RAY re-do all deletes
+    public function Delete() : void // TODO RAY !! re-do all deletes
     {
         if ($this->GetParent()->isFSDeleted())
             { $this->NotifyFSDeleted(); return; }
@@ -94,7 +95,7 @@ class SubFolder extends Folder
             
             if (!$this->isDeleted())
             {
-                $this->GetFilesystem(false)->DeleteFolder($this);
+                $this->GetFilesystem()->DeleteFolder($this);
             }
         }
 

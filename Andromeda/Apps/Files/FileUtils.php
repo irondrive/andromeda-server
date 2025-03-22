@@ -95,7 +95,7 @@ class FileUtils
             $file->CountBandwidth($rlen);
             $byte += $rlen;
             
-            if (!$debugdl) { echo $data; flush(); } // TODO take a stream here too instead of echo directly - debugdl can be a dummy stream (ofc check benchmark)
+            if (!$debugdl) { echo $data; flush(); } // TODO RAY !! take a stream here too instead of echo directly - debugdl can be a dummy stream (ofc check benchmark)
         }
     }
 

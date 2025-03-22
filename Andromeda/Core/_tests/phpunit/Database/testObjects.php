@@ -36,7 +36,7 @@ class EasyObject extends BaseObject
     }
     
     private bool $postConstruct = false;
-    protected function PostConstruct(bool $created) : void { $this->postConstruct = true; }
+    public function PostConstruct() : void { $this->postConstruct = true; }
     public function didPostConstruct() : bool { return $this->postConstruct; }
 
     private bool $preDeleted = false;

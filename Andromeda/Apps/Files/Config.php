@@ -4,7 +4,11 @@ use Andromeda\Core\{BaseConfig, Utilities, VersionInfo};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
  use Andromeda\Core\IOFormat\SafeParams;
 
-/** App config stored in the database */
+/** 
+ * App config stored in the database 
+ * @phpstan-type ConfigJ array{upload_maxbytes:?int, upload_maxfiles:?int}
+ * @phpstan-type AdminConfigJ \Union<ConfigJ, array{apiurl:?string, date_created:float, rwchunksize:int, crchunksize:int, upload_maxbytes_admin:?int, php_post_max_size:?int, php_upload_max_filesize:?int, periodicstats:bool}>
+ */
 class Config extends BaseConfig
 {
     public static function getAppname() : string { return 'files'; }
@@ -52,10 +56,10 @@ class Config extends BaseConfig
         "[--upload_maxsize ?uint] [--periodicstats bool] [--apiurl ?url]"; }
     
     /** Updates config with the parameters in the given input (see CLI usage) */
-    public function SetConfig(SafeParams $params) : self
+    public function SetConfig(SafeParams $params) : void
     {
         if ($params->HasParam('apiurl')) 
-            $this->apiurl->SetValue($params->GetParam('apiurl')->GetNullUTF8String()); // TODO add and use URL SafeParam?
+            $this->apiurl->SetValue($params->GetParam('apiurl')->GetNullUTF8String());
         
         if ($params->HasParam('rwchunksize')) 
             $this->rwchunksize->SetValue($params->GetParam('rwchunksize')->GetUint32());
@@ -68,8 +72,6 @@ class Config extends BaseConfig
         
         if ($params->HasParam('periodicstats')) 
             $this->periodicstats->SetValue($params->GetParam('periodicstats')->GetBool());
-        
-        return $this;
     }
 
     /** Returns the block size that should be used for file reads and writes */
@@ -104,10 +106,8 @@ class Config extends BaseConfig
 
     /**
      * Returns a printable client object for this config
-     * @param bool $admin if true, show admin-only values
-     * @return array<mixed> `{upload_maxbytes:?int, upload_maxfiles:int}` \
-        if admin, add `{rwchunksize:int, crchunksize:int, upload_maxsize:?int, \
-            date_created:float, apiurl:?string, config:{periodicstats:bool}}`
+     * @param bool $admin if true, show sensitive admin-only values
+     * @return ($admin is true ? AdminConfigJ : ConfigJ)
      */
     public function GetClientObject(bool $admin = false) : array
     {
