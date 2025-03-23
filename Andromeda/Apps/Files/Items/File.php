@@ -4,6 +4,7 @@ use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder, TableTypes, FieldType
 use Andromeda\Core\IOFormat\InputPath;
 use Andromeda\Core\Utilities;
 use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Files\Policy;
 
 /** 
  * Defines a user-stored file 
@@ -83,7 +84,7 @@ class File extends Item
         
         //$this->MapToLimits(function(Policy\Base $lim)use($delta,$notify){
         //    if (!$this->onOwnerStorage()) $lim->CountSize($delta,$notify); });
-        // TODO LIMITS move onOwnerStorage checks inside limits - account should not care, filesystems should
+        // TODO POLICY move onOwnerStorage checks inside limits - account should not care, filesystems should
         
         if (!$notify) 
             $this->GetFilesystem()->Truncate($this, $size);
@@ -145,10 +146,10 @@ class File extends Item
         /*$fs = $this->GetFilesystem();
         if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
-        return $this->MapToLimits(function(Policy\Base $lim)use($bytes){ $lim->AssertBandwidth($bytes); });*/ // TODO LIMITS
+        return $this->MapToLimits(function(Policy\Base $lim)use($bytes){ $lim->AssertBandwidth($bytes); });*/ // TODO POLICY
     }
     
-    //protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); } // TODO LIMITS
+    protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
     
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
     protected function Refresh() : void
@@ -233,7 +234,7 @@ class File extends Item
     {
         $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
         $file->GetFilesystem()->CreateFile($file);
-        $file->SetSize(0,notify:true);
+        $file->size->SetValue(0);
         return $file;
     }
     

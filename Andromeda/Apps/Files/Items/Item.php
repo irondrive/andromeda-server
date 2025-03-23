@@ -15,7 +15,7 @@ use Andromeda\Apps\Files\Storage\Storage;
  * 
  * @phpstan-import-type ShareJ from Social\Share
  * @phpstan-import-type TagJ from Social\Tag
- * @phpstan-type ItemJ array{id:string, isfile:bool, name:string, owner:?string, parent:?string, storage:string, description:?string, date_created:float, date_modified:?float, date_accessed?:?float, tags?:array<string, TagJ>, shares?:array<string, ShareJ>, count_likes?:int, count_dislikes?:int}
+ * @phpstan-type ItemJ array{id:string, name:string, owner:?string, parent:?string, storage:string, description:?string, date_created:float, date_modified:?float, date_accessed?:?float, tags?:array<string, TagJ>, shares?:array<string, ShareJ>, count_likes?:int, count_dislikes?:int}
  */
 abstract class Item extends BaseObject
 {
@@ -161,7 +161,7 @@ abstract class Item extends BaseObject
 
         if ($refresh) $obj->Refresh();
 
-        //$obj->CountCreate(); // TODO LIMITS
+        //$obj->CountCreate(); // TODO POLICY
         return $obj;
     }
 
@@ -442,8 +442,7 @@ abstract class Item extends BaseObject
     }*/
     
     /** Adds this item's stats to the given limit, substracting if not $add */
-    //protected abstract function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void;
-    // TODO LIMITS
+    protected abstract function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void;
     
     /**
      * Returns a config bool for the item by checking applicable limits
@@ -485,9 +484,12 @@ abstract class Item extends BaseObject
     public function NotifyPreDeleted() : void
     {
         //if (!$this->isDeleted())
-        //    $this->MapToLimits(function(Policy\Base $lim){ $lim->CountItem(false); }); // TODO LIMITS
-        
-        // TODO RAY !! need to delete likes, tags, comments, shares when deleting
+        //    $this->MapToLimits(function(Policy\Base $lim){ $lim->CountItem(false); }); // TODO POLICY
+
+        Social\Comment::DeleteByItem($this->database, $this);
+        Social\Like::DeleteByItem($this->database, $this);
+        Social\Share::DeleteByItem($this->database, $this);
+        Social\Tag::DeleteByItem($this->database, $this);
     }
     
     /**
@@ -500,7 +502,6 @@ abstract class Item extends BaseObject
     {
         $data = array(
             'id' => $this->ID(),
-            'isfile' => ($this instanceof File),
             'name' => $this->GetName(),
             'owner' => $this->TryGetOwnerID(),
             'parent' => $this->TryGetParentID(),

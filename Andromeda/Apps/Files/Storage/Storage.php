@@ -7,6 +7,7 @@ use Andromeda\Core\{Crypto, Utilities};
 use Andromeda\Apps\Accounts\Account;
 use Andromeda\Apps\Files\{Config, Policy};
 use Andromeda\Apps\Files\Filesystem\{Filesystem, Native, NativeCrypt, External};
+use Andromeda\Apps\Files\Items\RootFolder;
 
 /** Class representing a file stat result */
 class ItemStat
@@ -30,7 +31,8 @@ class ItemStat
  * Storages do not implement transactions and cannot rollback actions.
  * Any "expected" exceptions should always be checked before storage actions.
  * 
- * @phpstan-type StorageJ array{id:string}
+ * @phpstan-type StorageJ array{id:string, name:string, owner:?string, readonly:bool, external:bool, encrypted:bool, chunksize:?int, sttype:string}
+ * @phpstan-type PrivStorageJ \Union<StorageJ, array{date_created:float, freespace:int}>
  */
 abstract class Storage extends BaseObject
 {
@@ -170,13 +172,17 @@ abstract class Storage extends BaseObject
     /** Deletes this storage and all folder roots on it */
     public function NotifyPreDeleted() : void
     {
-        // - if $unlink, from DB only
-        $unlink = false; // TODO RAY !! how to do $unlink? probably need to override Delete still, but should we assume true when not running Delete()?e.g. with DeleteByAccount
-
-        //RootFolder::DeleteRootsByStorage($this->database, $this, $unlink); // TODO RAY !!
-        
         Policy\StandardStorage::DeleteByStorage($this->database, $this);
         Policy\PeriodicStorage::DeleteByStorage($this->database, $this);
+
+        RootFolder::DeleteByStorage($this->database, $this, unlink:false);
+    }
+
+    /** * @param bool $unlink if true, force not deleting filesystem content (automatic for external storage) */
+    public function Delete(bool $unlink = false) : void
+    {
+        RootFolder::DeleteByStorage($this->database, $this, unlink:$unlink);
+        parent::Delete(); // will Delete again but will find nothing
     }
 
     /** Returns true if this storage has an owner (not global) */
@@ -314,39 +320,32 @@ abstract class Storage extends BaseObject
 
     /**
      * Returns a printable client object of this storage
+     * @param bool $priv if true, show details for the owner
      * @param bool $activate if true, show details that require activation
-     * @return array{id:string}
+     * @return ($priv is true ? PrivStorageJ : StorageJ)
      */
-    public function GetClientObject(/*bool $priv = false,*/ bool $activate = false) : array
+    public function GetClientObject(bool $priv, bool $activate = false) : array
     {
+        if ($activate) $this->Activate();
+
         $retval = array(
-            'id' => $this->ID()
-            // TODO RAY !! implement me fully GetClientObject
-        );
-        
-        /*if ($activate && $this->canGetFreeSpace())
-            $retval['freespace'] = $this->Activate()->GetFreeSpace(); // TODO RAY !! should probably be admin only?
-    
-        $data = array(
             'id' => $this->ID(),
             'name' => $this->GetName(),
             'owner' => $this->TryGetOwnerID(),
+            'readonly' => $this->isReadOnly(),
             'external' => $this->isExternal(),
             'encrypted' => $this->isEncrypted(),
-            'readonly' => $this->isReadOnly(),
-            'sttype' => Utilities::ShortClassName($this->GetStorageType())
+            'chunksize' => $this->crypto_chunksize->TryGetValue(),
+            'sttype' => Utilities::ShortClassName(static::class)
         );
-        
-        if ($this->isEncrypted()) $data['chunksize'] = (int)$this->GetScalar('crypto_chunksize');
         
         if ($priv) 
         {
-            $data['dates'] = array(
-                'created' => $this->GetDateCreated()
-            );
-            
-            $data['storage'] = $this->GetStorage(false)->GetClientObject($activ);
-        }*/
+            $retval['date_created'] = $this->date_created->GetValue();
+
+            if ($activate && $this->canGetFreeSpace())
+                $retval['freespace'] = $this->GetFreeSpace();
+        }
         
         return $retval;
     }

@@ -7,7 +7,16 @@ use Andromeda\Apps\Accounts\AuthActionLog;
 use Andromeda\Apps\Files\Items\{Item, Folder};
 use Andromeda\Apps\Files\Social\Share;
 
-/** Access log for the files app */
+/** 
+ * Access log for the files app
+ * @phpstan-import-type AuthActionLogJ from ActionLog
+ * @phpstan-import-type ExpandAuthActionLogJ from ActionLog
+ * @phpstan-import-type FolderJ from Folder
+ * @phpstan-import-type ItemJ from Item
+ * @phpstan-import-type ShareJ from Share
+ * @phpstan-type FilesActionLogJ \Union<AuthActionLogJ, array{item:?string, parent:?string, item_share:?string, parent_share:?string}>
+ * @phpstan-type ExpandFilesActionLogJ \Union<ExpandAuthActionLogJ, array{item:?ItemJ, parent:?FolderJ, item_share:?ShareJ, parent_share:?ShareJ}>
+ */
 class ActionLog extends AuthActionLog
 {
     use TableTypes\TableNoChildren;
@@ -78,28 +87,33 @@ class ActionLog extends AuthActionLog
     }
     
     /**
-     * @return array{} add `{?file:id, ?folder:id, ?parent:id,
-        ?file_share:id, ?folder_share:id, ?parent_share:id}`
-       @see AuthActionLog::GetClientObject()
+     * Returns the printable client object of this AuthActionLog
+     * @param bool $expand if true, expand linked objects
+     * @return ($expand is true ? ExpandFilesActionLogJ : FilesActionLogJ)
      */
-    /*public function GetClientObject(bool $expand = false) : array
+    public function GetClientObject(bool $expand = false) : array // @phpstan-ignore-line unsure why return type is wrong
     {
         $retval = parent::GetClientObject($expand);
         
         if ($expand)
         {
-            // TODO RAY !! GetClientObject
+            $retval += array(
+                'item' => $this->item->TryGetObject()?->GetClientObject(owner:true),
+                'parent' => $this->parent->TryGetObject()?->GetClientObject(owner:true),
+                'item_share' => $this->item_share->TryGetObject()?->GetClientObject(fullitem:false,owner:false),
+                'parent_share' => $this->parent_share->TryGetObject()?->GetClientObject(fullitem:false,owner:false)
+            );
         }
         else
         {
-            
+            $retval += array(
+                'item' => $this->item->TryGetObjectID(),
+                'parent' => $this->parent->TryGetObjectID(),
+                'item_share' => $this->item_share->TryGetObjectID(),
+                'parent_share' => $this->parent_share->TryGetObjectID()
+            );
         }
-        
-        return $retval; 
-        
-        foreach (array('file','folder','parent','file_share','folder_share','parent_share') as $prop)
-            if (($id = $this->TryGetObjectID($prop)) !== null) $retval[$prop] = $id;
-        
-        return array_merge(parent::GetClientObject($expand), $retval);
-    }*/
+
+        return $retval;
+    }
 }

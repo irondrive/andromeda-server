@@ -1,6 +1,7 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
 use Andromeda\Core\{ApiPackage, BaseApp, Emailer, EmailRecipient};
+use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\IOFormat\{Input, InputPath, IOInterface, Output, OutputHandler, SafeParams};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
 use Andromeda\Core\Exceptions\UnknownActionException;
@@ -11,28 +12,28 @@ use Andromeda\Apps\Accounts\Exceptions\{AuthenticationFailedException, AdminRequ
 
 use Andromeda\Apps\Files\Items\{Item, File, Folder, RootFolder, SubFolder};
 use Andromeda\Apps\Files\Social\{Like, Share, Comment, Tag};
-use Andromeda\Apps\Files\Storage\Storage;
+use Andromeda\Apps\Files\Storage\{Storage, FTP, S3, SFTP, SMB};
 use Andromeda\Apps\Files\Storage\Exceptions\FileWriteFailedException;
 
 // when an account is deleted, need to delete files-related stuff also
-/*Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
+Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
 {
+    RootFolder::DeleteByAccount($database, $account); // faster to do now
     Storage::DeleteByAccount($database, $account);
-    RootFolder::DeleteRootsByAccount($database, $account);
 });
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init)
 { 
     if (!$init) // don't auto-encrypt
     {
-        FTP::DecryptAccount($database, $account); 
-        S3::DecryptAccount($database, $account); 
-        SFTP::DecryptAccount($database, $account); 
-        SMB::DecryptAccount($database, $account); 
+        FTP::SetEncryptedByAccount($database, $account, false); 
+        S3::SetEncryptedByAccount($database, $account, false); 
+        SFTP::SetEncryptedByAccount($database, $account, false); 
+        SMB::SetEncryptedByAccount($database, $account, false); 
     }
-}*/ // TODO RAY !! add storage account handlers
+});
 
-// TODO RAY !! add policy account handlers
+// TODO POLICY add policy account handlers
 
 /**
  * App that provides user-facing filesystem services.
@@ -78,7 +79,6 @@ class FilesApp extends BaseApp
             'writefile (--data% path | --data-) --file id [--offset uint]',
             'truncate --file id --size uint',
             'createfolder --parent id --name fsname',
-            // TODO RAY !! need a just getItem function, some things like shares, etc. return just item as an ID
             'getfile --file id [--details bool]',
             'getfolder [--folder id | --storage id] [--details bool] [--files bool] [--folders bool] [--recursive bool] [--limit ?uint] [--offset ?uint]',
             'getitembypath --path fspath [--folder id | --storage id] [--isfile bool]',
@@ -110,9 +110,9 @@ class FilesApp extends BaseApp
 
             'sharefile --file id (--link bool [--email email] | --account id | --group id) '.Share::GetSetOptionsUsage(),
             'sharefolder --folder id (--link bool [--email email] | --account id | --group id) '.Share::GetSetOptionsUsage(),
+            'getshare --sid id [--skey randstr] [--spassword raw]',
             'editshare --share id '.Share::GetSetOptionsUsage(),
             'deleteshare --share id',
-            'shareinfo --sid id [--skey randstr] [--spassword raw]',
             'getshares [--mine bool]',
             'getadopted',
 
@@ -124,7 +124,7 @@ class FilesApp extends BaseApp
             'editstorage --storage id '.Storage::GetEditUsage(),
             ...array_map(function($u){ return "(editstorage...) $u"; }, Storage::GetEditUsages()),
 
-            /*'getlimits [--account ?id | --group ?id | --storage ?id] [--limit ?uint] [--offset ?uint]',
+            /*'getlimits [--account ?id | --group ?id | --storage ?id] [--limit ?uint] [--offset ?uint]', // TODO POLICY
             'gettimedlimits [--account ?id | --group ?id | --storage ?id] [--limit ?uint] [--offset ?uint]',
             'gettimedstatsfor [--account id | --group id | --storage id] --timeperiod uint [--limit ?uint] [--offset ?uint]',
             'gettimedstatsat (--account ?id | --group ?id | --storage ?id) --timeperiod uint --matchtime uint [--limit ?uint] [--offset ?uint]',
@@ -196,9 +196,8 @@ class FilesApp extends BaseApp
             case 'movefile':     return $this->MoveFile($params, $authenticator, $actionlog);
             case 'movefolder':   return $this->MoveFolder($params, $authenticator, $actionlog);
             
-            // TODO RAY !! most of these non-performance-critical ops can just be combined
+            // TODO RAY !! most of these non-performance-critical social ops can just be combined
             // to a single item operation now that Item base load stuff works (like, tag, comment, share?)
-
             case 'likefile':      return $this->LikeFile($params, $authenticator, $actionlog);
             case 'likefolder':    return $this->LikeFolder($params, $authenticator, $actionlog);
             case 'tagfile':       return $this->TagFile($params, $authenticator, $actionlog);
@@ -215,9 +214,9 @@ class FilesApp extends BaseApp
 
             case 'sharefile':    return $this->ShareFile($params, $authenticator, $actionlog);
             case 'sharefolder':  return $this->ShareFolder($params, $authenticator, $actionlog);
+            case 'getshare':    return $this->GetShare($params, $authenticator, $actionlog);
             case 'editshare':    return $this->EditShare($params, $authenticator, $actionlog);
             case 'deleteshare':  $this->DeleteShare($params, $authenticator, $actionlog); return null;
-            case 'shareinfo':    return $this->ShareInfo($params, $authenticator, $actionlog);
             case 'getshares':   return $this->GetShares($params, $authenticator);
             case 'getadopted':  return $this->GetAdopted($authenticator);
             
@@ -234,7 +233,7 @@ class FilesApp extends BaseApp
             //case 'configlimits':      return $this->ConfigLimits($params, $authenticator);
             //case 'configtimedlimits': return $this->ConfigTimedLimits($params, $authenticator);
             //case 'purgelimits':      $this->PurgeLimits($params, $authenticator); return null;
-            //case 'purgetimedlimits': $this->PurgeTimedLimits($params, $authenticator); return null; // LIMITS
+            //case 'purgetimedlimits': $this->PurgeTimedLimits($params, $authenticator); return null; // TODO POLICY
             
             default: throw new UnknownActionException($input->GetAction());
         }
@@ -754,53 +753,49 @@ class FilesApp extends BaseApp
     
     /**
      * Takes ownership of a file
-     * @return FileJ
+     * @return ItemJ
      */
     protected function OwnFile(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
-        if ($authenticator === null) 
-            throw new AuthenticationFailedException();
-        $account = $authenticator->GetAccount();
-        
-        $id = $params->GetParam('file',SafeParams::PARAMLOG_NEVER)->GetRandstr();
-        
-        $file = File::TryLoadByID($this->database, $id);
-        if ($file === null) throw new Exceptions\UnknownFileException();
-        
-        if ($file->isWorldAccess() || $file->GetParent()->TryGetOwner() !== $account)
-            throw new Exceptions\ItemAccessDeniedException();
-            
-        $actionlog?->LogItemAccess($file, null);
-            
-        $file->SetOwner($account);
-        return $file->GetClientObject(owner:true);
+        return $this->OwnItem(File::class, 'file', $params, $authenticator, $actionlog);
     }
     
     /**
      * Takes ownership of a folder
-     * @return FolderJ
+     * @return ItemJ
      */
     protected function OwnFolder(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    {
+        return $this->OwnItem(Folder::class, 'folder', $params, $authenticator, $actionlog);
+    }    
+
+    /**
+     * Takes ownership of an item
+     * @param class-string<Item> $class item class
+     * @param string $key input param for a single item
+     * @return ItemJ
+     */
+    protected function OwnItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         if ($authenticator === null) 
             throw new AuthenticationFailedException();
         $account = $authenticator->GetAccount();
         
-        $id = $params->GetParam('folder',SafeParams::PARAMLOG_NEVER)->GetRandstr();
+        $item = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
+
+        $access = self::AuthenticateItemAccess($params, $authenticator, $actionlog, $class, $item);
+        $itemobj = $access->GetItem();
         
-        $folder = Folder::TryLoadByID($this->database, $id);
-        if ($folder === null) throw new Exceptions\UnknownFolderException();
-        
-        $parent = $folder->TryGetParent();
-        if ($folder->isWorldAccess() || $parent?->TryGetOwner() !== $account)
+        if ($itemobj->isWorldAccess() || $itemobj->GetParent()->TryGetOwner() !== $account)
             throw new Exceptions\ItemAccessDeniedException();
             
-        $actionlog?->LogItemAccess($folder, null);
-    
-        $recursive = $params->GetOptParam('recursive',false)->GetBool();
-        $folder->SetOwner($account, recursive:$recursive);
+        $actionlog?->LogItemAccess($itemobj, null);
 
-        return $folder->GetClientObject(owner:true);
+        if ($itemobj instanceof Folder && $params->GetOptParam('recursive',false)->GetBool())
+            $itemobj->SetOwner($account, recursive:true);
+        else $itemobj->SetOwner($account);
+    
+        return $itemobj->GetClientObject(owner:true);
     }    
 
     /**
@@ -863,7 +858,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\ItemAccessDeniedException if access via share and share modify is not allowed
      */
     private function DeleteItem(string $class, string $key, SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : void
-    {        
+    {
         $item = $params->GetParam($key,SafeParams::PARAMLOG_NEVER)->GetRandstr();
 
         $access = self::AuthenticateItemAccess($params, $authenticator, $actionlog, $class, $item);
@@ -1505,7 +1500,7 @@ class FilesApp extends BaseApp
      * Retrieves metadata on a share object (from a link)
      * @return ShareJ
      */
-    protected function ShareInfo(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    protected function GetShare(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $access = ItemAccess::Authenticate($this->database, $params, $authenticator, null);
         $actionlog?->LogItemAccess($access->GetItem(), $access->TryGetShare());
@@ -1586,8 +1581,9 @@ class FilesApp extends BaseApp
         
         $ispriv = $authenticator->isAdmin() || ($account === $storage->TryGetOwner());
         $activate = $params->GetOptParam('activate',false)->GetBool();
+        // TODO RAY !! need to catch exceptions here? see account auth source code
         
-        return $storage->GetClientObject(/*priv:$ispriv,*/ activate:$activate); // TODO RAY !! GetClientObject
+        return $storage->GetClientObject(priv:$ispriv, activate:$activate);
     }
     
     /**
@@ -1613,7 +1609,7 @@ class FilesApp extends BaseApp
         else $storages = Storage::LoadByAccount($this->database, $account);
         
         return array_map(function($storage){ 
-            return $storage->GetClientObject(); }, $storages);
+            return $storage->GetClientObject(priv:false); }, $storages);
     }
     
     /**
@@ -1691,13 +1687,14 @@ class FilesApp extends BaseApp
         if ($storage === null)
             throw new Exceptions\UnknownStorageException();
         
+        // NOTE unlink only has an effect on native storage, not external
         $unlink = $params->GetOptParam('unlink',false)->GetBool();
         
         $actionlog?->LogDetails('storage', $storage->GetClientObject(priv:true), onlyFull:true);
         
-        $storage->Delete();// TODO RAY !! $unlink);
+        $storage->Delete($unlink);
     }
-    
+
     /**
      * Common function for loading and authenticating the limited object and limit class referred to by input
      * 
@@ -1712,7 +1709,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\UnknownObjectException if nothing valid was specified
      * @return array<mixed> `{class:string, obj:object, full:bool}`
      */
-    /*private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array // TODO LIMITS fix user functions
+    /*private function GetLimitObject(SafeParams $params, ?Authenticator $authenticator, bool $allowAuto, bool $allowMany, bool $timed) : array // TODO POLICY fix user functions
     {
         $obj = null; $admin = $authenticator->isAdmin();
 
@@ -1771,7 +1768,7 @@ class FilesApp extends BaseApp
             throw new Exceptions\UnknownObjectException();
         
         return array('obj'=>$obj, 'class'=>$class, 'full'=>$full);
-    }*/ // LIMITS
+    }*/
     
     /**
      * Loads the total limit object or objects for the given objects
@@ -1804,7 +1801,7 @@ class FilesApp extends BaseApp
             return array_map(function(Policy\Total $obj)use($full){ 
                 return $obj->GetClientObject($full); }, array_values($lims));
         }
-    }*/ // LIMITS
+    }*/
     
     /**
      * Loads the timed limit object or objects for the given objects
@@ -1836,7 +1833,7 @@ class FilesApp extends BaseApp
 
         return array_map(function(Policy\Timed $lim)use($full){ 
             return $lim->GetClientObject($full); }, array_values($lims));
-    }*/ // LIMITS
+    }*/
     
     /**
      * Returns all stored time stats for an object
@@ -1865,7 +1862,7 @@ class FilesApp extends BaseApp
         
         return array_map(function(Policy\TimedStats $stats){ return $stats->GetClientObject(); },
             Policy\TimedStats::LoadAllByLimit($this->database, $lim, $count, $offset));        
-    }*/ // LIMITS
+    }*/
     
     /**
      * Returns timed stats for the given object or objects at the given time
@@ -1910,7 +1907,7 @@ class FilesApp extends BaseApp
             
             return $retval;
         }   
-    }*/ // LIMITS
+    }*/
 
     /**
      * Configures total limits for the given object
@@ -1929,7 +1926,7 @@ class FilesApp extends BaseApp
         $class = $lobj['class']; $obj = $lobj['obj'];
         
         return $class::ConfigLimits($this->database, $obj, $params)->GetClientObject(true);
-    }*/ // LIMITS
+    }*/
     
     /**
      * Configures timed limits for the given object
@@ -1948,7 +1945,7 @@ class FilesApp extends BaseApp
         $class = $lobj['class']; $obj = $lobj['obj'];
         
         return $class::ConfigLimits($this->database, $obj, $params)->GetClientObject(true);
-    }*/ // LIMITS
+    }*/
     
     /**
      * Deletes all total limits for the given object
@@ -1965,7 +1962,7 @@ class FilesApp extends BaseApp
         $class = $lobj['class']; $obj = $lobj['obj'];
         
         $class::DeleteByClient($this->database, $obj);
-    }   */ // LIMITS 
+    }*/
     
     /**
      * Deletes all timed limits for the given object
@@ -1983,6 +1980,6 @@ class FilesApp extends BaseApp
         
         $period = $params->GetParam('period')->GetUint();
         $class::DeleteClientAndPeriod($this->database, $obj, $period);
-    }*/ // LIMITS
+    }*/
 }
 

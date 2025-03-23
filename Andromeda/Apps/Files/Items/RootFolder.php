@@ -9,7 +9,7 @@ class RootFolder extends Folder
 {    
     use TableTypes\NoChildren;
 
-    public function GetName() : string { return $this->storage->GetName(); }
+    public function GetName() : string { return $this->storage->GetObject()->GetName(); }
     
     public function SetName(string $name, bool $overwrite = false) : bool
     { 
@@ -40,9 +40,8 @@ class RootFolder extends Folder
         $storage ??= Storage::LoadDefaultByAccount($database, $account); 
         if ($storage === null) return null;
 
-        // TODO RAY !! check this still makes sense with the new schema
         $q = new QueryBuilder(); 
-        $where = $q->And($q->Equals('storage',$storage->ID()), $q->IsNull('parent'),
+        $where = $q->And($q->Equals('storage',$storage->ID()),
             $q->Or($q->IsNull('owner'),$q->Equals('owner',$account->ID())));
         
         $loaded = $database->TryLoadUniqueByQuery(static::class, $q->Where($where));
@@ -68,10 +67,10 @@ class RootFolder extends Folder
      * @param Storage $storage the filesystem
      * @return array<string, RootFolder> folders indexed by ID
      */
-    public static function LoadRootsByStorage(ObjectDatabase $database, Storage $storage) : array
+    public static function LoadByStorage(ObjectDatabase $database, Storage $storage) : array
     {
         $q = new QueryBuilder(); 
-        $q->Where($q->And($q->Equals('storage',$storage->ID()), $q->IsNull('parent')));
+        $q->Where($q->And($q->Equals('storage',$storage->ID())));
         return $database->LoadObjectsByQuery(static::class, $q);
     }
     
@@ -81,35 +80,37 @@ class RootFolder extends Folder
      * @param Account $account folder owner
      * @return array<string, RootFolder> folders indexed by ID
      */
-    public static function LoadRootsByAccount(ObjectDatabase $database, Account $account) : array
+    public static function LoadByAccount(ObjectDatabase $database, Account $account) : array
     {
         $q = new QueryBuilder();
-        $q->Where($q->And($q->Equals('owner',$account->ID()), $q->IsNull('parent')));
+        $q->Where($q->And($q->Equals('owner',$account->ID())));
         return $database->LoadObjectsByQuery(static::class, $q);
     }
 
-    //TODO RAY !! RootFolder - DeleteRoots is dumb, shouldn't load first, also Delete() should be the one to decide notify/not based on external!
-    /** Deletes all root folders on the given filesystem - if the FS is external or $unlink, only remove DB objects */
-    public static function DeleteRootsByStorage(ObjectDatabase $database, Storage $storage, bool $unlink = false) : void
+    /** 
+     * Deletes all root folders on the given filesystem
+     * @param bool $unlink if true, force not deleting filesystem content (automatic for external storage)
+     */
+    public static function DeleteByStorage(ObjectDatabase $database, Storage $storage, bool $unlink) : void
     {
-        $unlink = $storage->isExternal() || $unlink;
-        $roots = static::LoadRootsByStorage($database, $storage);
-        
-        foreach ($roots as $folder)
+        $unlink = $unlink || $storage->isExternal();
+        foreach (static::LoadByStorage($database, $storage) as $folder)
         {
-            if ($unlink) 
-                $folder->NotifyFSDeleted(); 
+            if ($unlink) $folder->NotifyFSDeleted(); 
             else $folder->Delete();
         }
     }
     
-    /** Deletes all root folders for the given owner - if the FS is external, only remove DB objects */
-    public static function DeleteRootsByAccount(ObjectDatabase $database, Account $account) : void
+    /** 
+     * Deletes all root folders for the given account
+     * if the storage is external, don't delete filesystem content
+     */
+    public static function DeleteByAccount(ObjectDatabase $database, Account $account) : void
     {
-        foreach (static::LoadRootsByAccount($database, $account) as $folder)
+        foreach (static::LoadByAccount($database, $account) as $folder)
         {
-            if ($folder->storage->GetObject()->isExternal())
-                $folder->NotifyFSDeleted(); 
+            $unlink = $folder->storage->GetObject()->isExternal();
+            if ($unlink) $folder->NotifyFSDeleted(); 
             else $folder->Delete();
         }
     }

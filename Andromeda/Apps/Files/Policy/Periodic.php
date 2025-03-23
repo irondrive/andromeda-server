@@ -26,7 +26,7 @@ abstract class Periodic extends Base
 
 
 
-    // TODO RAY !! implement these
+    // TODO POLICY implement these
     protected function canTrackItems() : bool { return false; }
     protected function canTrackDLStats() : bool { return false; }
     public function GetSize() : int { return 0; }

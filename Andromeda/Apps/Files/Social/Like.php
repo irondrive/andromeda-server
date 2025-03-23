@@ -107,6 +107,15 @@ class Like extends BaseObject
     }
 
     /**
+     * Delete all likes for the given item
+     * @return int
+     */
+    public static function DeleteByItem(ObjectDatabase $database, Item $item) : int
+    {
+        return $database->DeleteObjectsByKey(static::class, 'item', $item->ID());
+    }
+
+    /**
      * Returns a printable client object of this like
      * @return LikeJ
      */

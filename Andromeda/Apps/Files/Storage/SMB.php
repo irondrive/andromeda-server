@@ -11,6 +11,12 @@ use Andromeda\Apps\Accounts\Crypto\CryptFields;
  * Uses PHP libsmbclient.  Mostly uses the PHP fwrapper
  * functions but some manual workarounds are needed.
  * Uses credcrypt to allow encrypting the username/password.
+ * 
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type PrivStorageJ from Storage
+ * @phpstan-import-type BasePathJ from BasePath
+ * @phpstan-import-type UserPassJ from UserPass
+ * @phpstan-type SMBJ \Union<PrivStorageJ, BasePathJ, UserPassJ, array{hostname:string, workgroup:?string}>
  */
 class SMB extends FWrapper
 {
@@ -38,19 +44,27 @@ class SMB extends FWrapper
 
     /**
      * Returns a printable client object of this SMB storage
-     * @return array{id:string} // TODO RAY !! types
-     * @see Storage::GetClientObject()
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activate if true, show details that require activation
+     * @return ($priv is true ? SMBJ : StorageJ)
      */
-    public function GetClientObject(bool $activate = false) : array
+    public function GetClientObject(bool $priv, bool $activate = false) : array
     {
-        return parent::GetClientObject($activate) + array(
-            'hostname' => $this->hostname->GetValue(), // TODO RAY !! priv only?
-            'workgroup' => $this->workgroup->TryGetValue()
-        );
+        $ret = parent::GetClientObject($priv,$activate);
+        if ($priv)
+        {
+            $ret += $this->GetBasePathClientObject();
+            $ret += $this->GetUserPassClientObject();
+            $ret += array(
+                'hostname' => $this->hostname->GetValue(),
+                'workgroup' => $this->workgroup->TryGetValue()
+            );
+        }
+        return $ret;
     }
     
     public static function GetCreateUsage() : string { 
-        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
+        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:false).
         " --hostname alphanum [--workgroup ?alphanum]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
@@ -62,12 +76,12 @@ class SMB extends FWrapper
         $obj->workgroup->SetValue($params->GetOptParam('workgroup',null)->CheckLength(255)->GetNullAlphanum());
 
         $obj->BasePathCreate($params);
-        $obj->UserPassCreate($params);
+        $obj->UserPassCreate($params,requireUsername:false);
         return $obj;
     }
     
     public static function GetEditUsage() : string { 
-        return static::GetBasePathEditUsage()." ".static::GetUserPassEditUsage().
+        return static::GetBasePathEditUsage()." ".static::GetUserPassEditUsage(requireUsername:false).
         " [--hostname alphanum] [--workgroup ?alphanum]"; }
     
     public function Edit(Input $input) : self
@@ -81,7 +95,7 @@ class SMB extends FWrapper
             $this->workgroup->SetValue($params->GetParam('workgroup')->CheckLength(255)->GetNullAlphanum());
         
         $this->BasePathEdit($params);
-        $this->UserPassEdit($params);
+        $this->UserPassEdit($params,requireUsername:false);
         return parent::Edit($input);
     }
     

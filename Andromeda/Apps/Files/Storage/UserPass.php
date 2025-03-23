@@ -4,7 +4,10 @@ use Andromeda\Core\Database\FieldTypes;
 use Andromeda\Core\IOFormat\SafeParams;
 use Andromeda\Apps\Accounts\Crypto\CryptFields;
 
-/** Trait for storage classes that store a possibly-encrypted username and password */
+/** 
+ * Trait for storage classes that store a possibly-encrypted username and password
+ * @phpstan-type UserPassJ array{username:?string, password:bool, iscrypt:bool}
+ */
 trait UserPass
 {
     use CryptFields\CryptObject;
@@ -32,51 +35,54 @@ trait UserPass
     protected function GetUserPassCryptFields() : array { return array($this->username, $this->password); }
 
     /** Returns the command usage for Create() */
-    public static function GetUserPassCreateUsage() : string { return "[--username ?alphanum] [--password ?raw] [--credcrypt bool]"; }
+    public static function GetUserPassCreateUsage(bool $requireUsername) : string { 
+        return ($requireUsername ? "--username alphanum" : "[--username ?alphanum]")." [--password ?raw] [--credcrypt bool]"; }
     
     /** Performs cred-crypt level initialization on a new storage */
-    public function UserPassCreate(SafeParams $params) : self
+    public function UserPassCreate(SafeParams $params, bool $requireUsername) : self
     {
         $this->SetEncrypted($params->GetOptParam('credcrypt',false)->GetBool());
-        $this->username->SetValue($params->GetOptParam('username',null)->CheckLength(255)->GetNullAlphanum());
         $this->password->SetValue($params->GetOptParam('password',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+
+        if ($requireUsername)
+            $username = $params->GetParam('username')->CheckLength(255)->GetAlphanum();
+        else $username = $params->GetOptParam('username',null)->CheckLength(255)->GetNullAlphanum();
+        $this->username->SetValue($username);
+
         return $this;
     }
     
     /** Returns the command usage for Edit() */
-    public static function GetUserPassEditUsage() : string { return "[--username ?alphanum] [--password ?raw] [--credcrypt bool]"; }
+    public static function GetUserPassEditUsage(bool $requireUsername) : string { 
+        return "[--username ".(!$requireUsername?"?":"")."alphanum] [--password ?raw] [--credcrypt bool]"; }
     
     /** Performs cred-crypt level edit on an existing storage */
-    public function UserPassEdit(SafeParams $params) : self
+    public function UserPassEdit(SafeParams $params, bool $requireUsername) : self
     {
         if ($params->HasParam('credcrypt'))
             $this->SetEncrypted($params->GetParam('credcrypt')->GetBool());
-        if ($params->HasParam('username')) 
-            $this->username->SetValue($params->GetParam('username')->CheckLength(255)->GetNullAlphanum());
         if ($params->HasParam('password')) 
             $this->password->SetValue($params->GetParam('password',SafeParams::PARAMLOG_NEVER)->GetNullRawString());
+
+        if ($params->HasParam('username')) 
+        {
+            $username = $params->GetParam('username')->CheckLength(255);
+            $this->username->SetValue($requireUsername ? $username->GetAlphanum() : $username->GetNullAlphanum());
+        }
+
         return $this;
     }
     
     /**
      * Returns the printable client object of this trait
-     * @return array{}
+     * @return UserPassJ
      */
-    public function GetUserPassClientObject() : array
+    public function GetUserPassClientObject() : array 
     {
-        /*$retval = array();
-        
-        foreach (static::getEncryptedFields() as $field)
-        {
-            $retval[$field."_iscrypt"] = $this->isFieldEncrypted($field);
-        }
-        
-        return $retval;*/
-        /*return parent::GetClientObject($activate) + $this->GetUserPassClientObject() + array(
-            'username' => $this->TryGetUsername(),
-            'password' => (bool)($this->TryGetPassword()),
-        );*/
-        // TODO RAY !! implement me - also should have username and password bool?
-        return array();
+        return array(
+            'iscrypt' => $this->username->isEncrypted(),
+            'username' => $this->username->TryGetValue(),
+            'password' => $this->password->GetDBValue() !== null
+        );
     }
 }

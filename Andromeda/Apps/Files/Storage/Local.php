@@ -8,6 +8,11 @@ use Andromeda\Apps\Accounts\Account;
  * A storage on local-disk on the server
  * 
  * Only admin can add storages of this type!
+ * 
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type PrivStorageJ from Storage
+ * @phpstan-import-type BasePathJ from BasePath
+ * @phpstan-type LocalJ \Union<PrivStorageJ, BasePathJ>
  */
 class Local extends FWrapper
 {
@@ -41,6 +46,19 @@ class Local extends FWrapper
         return parent::Edit($input);
     }
 
+    /**
+     * Returns a printable client object of this FTP storage
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activate if true, show details that require activation
+     * @return ($priv is true ? LocalJ : StorageJ)
+     */
+    public function GetClientObject(bool $priv, bool $activate = false) : array
+    {
+        $ret = parent::GetClientObject($priv,$activate);
+        if ($priv) $ret += $this->GetBasePathClientObject();
+        return $ret;
+    }
+    
     public function Activate() : self { return $this; }
     
     public function canGetFreeSpace() : bool { return true; }

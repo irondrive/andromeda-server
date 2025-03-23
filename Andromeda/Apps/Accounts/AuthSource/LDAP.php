@@ -8,7 +8,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * Uses an LDAP server for authentication
  * @phpstan-import-type ExternalJ from External
  * @phpstan-import-type AdminExternalJ from External
- * @phpstan-type LDAPJ array{hostname:string, secure:bool, userprefix:?string}
+ * @phpstan-type LDAPJ \Union<AdminExternalJ, array{hostname:string, secure:bool, userprefix:?string}>
  */
 class LDAP extends External
 {
@@ -66,7 +66,7 @@ class LDAP extends External
     
     /**
      * Returns a printable client object for this LDAP
-     * @return ($admin is true ? \Union<AdminExternalJ, LDAPJ> : ExternalJ)
+     * @return ($admin is true ? LDAPJ : ExternalJ)
      */
     public function GetClientObject(bool $admin) : array
     {

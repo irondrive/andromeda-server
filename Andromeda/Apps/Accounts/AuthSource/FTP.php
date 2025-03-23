@@ -8,7 +8,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * Uses an FTP server for authentication
  * @phpstan-import-type ExternalJ from External
  * @phpstan-import-type AdminExternalJ from External
- * @phpstan-type FTPJ array{hostname:string, port:?int, implssl:bool} 
+ * @phpstan-type FTPJ \Union<AdminExternalJ, array{hostname:string, port:?int, implssl:bool}>
  */
 class FTP extends External
 {
@@ -66,7 +66,7 @@ class FTP extends External
     
     /**
      * Returns a printable client object for this FTP
-     * @return ($admin is true ? \Union<AdminExternalJ, FTPJ> : ExternalJ)
+     * @return ($admin is true ? FTPJ : ExternalJ)
      */
     public function GetClientObject(bool $admin) : array
     {

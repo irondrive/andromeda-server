@@ -10,9 +10,14 @@ use Andromeda\Apps\Accounts\Crypto\CryptFields;
  * Allows using an S3-compatible server for backend storage
  * 
  * Uses credcrypt to allow encrypting the keys.
+ * 
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type PrivStorageJ from Storage
+ * @phpstan-type S3J \Union<PrivStorageJ, array{endpoint:string, path_style:?bool, port:?int, usetls:?bool, region:string, bucket:string, iscrypt:bool, accesskey:?string, secretkey:bool}>
  */
 class S3 extends FWrapper
 {
+    use CryptFields\CryptObject;
     use TableTypes\TableNoChildren;
 
     /** The endpoint of the S3 connection */
@@ -60,24 +65,29 @@ class S3 extends FWrapper
 
     /**
      * Returns a printable client object of this S3 storage
-     * @return array{id:string} `{endpoint:string, path_style:?bool, port:?int, usetls:bool, \
-           region:string, bucket:string, accesskey:string/bool, secretkey:bool}`
-     * @see Storage::GetClientObject()
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activate if true, show details that require activation
+     * @return ($priv is true ? S3J : StorageJ)
      */
-    public function GetClientObject(bool $activate = false) : array // TODO RAY !!
+    public function GetClientObject(bool $priv, bool $activate = false) : array
     {
-        //$accesskey = $this->isCryptoAvailable() ? $this->TryGetAccessKey() : (bool)($this->TryGetScalar('accesskey'));
-        
-        return parent::GetClientObject($activate) /*+ $this->GetFieldCryptClientObject() + array(
-            'endpoint' => $this->GetScalar('endpoint'),
-            'path_style' => $this->TryGetScalar('path_style'),
-            'port' => $this->TryGetScalar('port'),
-            'usetls' => $this->getUseTLS(),
-            'region' => $this->GetScalar('region'),
-            'bucket' => $this->GetScalar('bucket'),
-            'accesskey' => $accesskey,
-            'secretkey' => (bool)($this->TryGetScalar('secretkey'))
-        )*/;
+        $ret = parent::GetClientObject($priv,$activate);
+        if ($priv)
+        {
+            $ret += array(
+                'endpoint' => $this->endpoint->GetValue(),
+                'path_style' => $this->path_style->TryGetValue(),
+                'port' => $this->port->TryGetValue(),
+                'usetls' => $this->usetls->TryGetValue(),
+                'region' => $this->region->GetValue(),
+                'bucket' => $this->bucket->GetValue(),
+
+                'iscrypt' => $this->accesskey->isEncrypted(),
+                'accesskey' => $this->accesskey->TryGetValue(),
+                'secretkey' => $this->secretkey->GetDBValue() !== null,
+            );
+        }
+        return $ret;
     }
     
     public static function GetCreateUsage() : string { return
@@ -131,7 +141,7 @@ class S3 extends FWrapper
         return parent::Edit($input);
     }
     
-    /** Checks for the SMB client extension */
+    /** Checks for the S3client SDK */
     public function PostConstruct() : void
     {
         if (!class_exists('\\Aws\\S3\\S3Client'))

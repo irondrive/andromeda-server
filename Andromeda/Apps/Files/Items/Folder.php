@@ -3,6 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\Database\Exceptions\BadPolyClassException;
 use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Files\Policy;
 
 /** 
  * Defines a user-stored folder which groups other items 
@@ -15,7 +16,7 @@ use Andromeda\Apps\Accounts\Account;
  * @phpstan-import-type ItemJ from Item
  * @phpstan-import-type FileJ from File
  *     NOTE we use ItemJ for folders because phpstan doesn't like circular definitions
- * @phpstan-type FolderJ \Union<ItemJ, array{count_size:int, count_subfiles:int, count_subfolders:int, files?:array<string, FileJ>, folders?:array<string, ItemJ>}>
+ * @phpstan-type FolderJ \Union<ItemJ, array{isdir:true, total_size:int, count_subfiles:int, count_subfolders:int, files?:array<string, FileJ>, folders?:array<string, ItemJ>}>
  */
 abstract class Folder extends Item
 {
@@ -219,7 +220,7 @@ abstract class Folder extends Item
         return $modified;
     }*/
     
-    //protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
+    protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
 
     /** True if the folder's contents have been refreshed */
     protected bool $subrefreshed = false;
@@ -327,7 +328,8 @@ abstract class Folder extends Item
         }        
         
         $data += array(
-            'count_size' => $this->count_size->GetValue(),
+            'isdir' => true,
+            'total_size' => $this->count_size->GetValue(),
             'count_subfolders' => $this->count_subfolders->GetValue(),
             'count_subfiles' => $this->count_subfiles->GetValue()
         );

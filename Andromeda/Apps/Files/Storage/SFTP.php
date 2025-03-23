@@ -13,6 +13,12 @@ use \phpseclib3\Net\SFTP as SFTPConnection;
  * Allows using an SFTP server for backend storage using phpseclib
  * 
  * Uses credcrypt to allow encrypting the username/password.
+ * 
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type PrivStorageJ from Storage
+ * @phpstan-import-type BasePathJ from BasePath
+ * @phpstan-import-type UserPassJ from UserPass
+ * @phpstan-type SFTPJ \Union<PrivStorageJ, BasePathJ, UserPassJ, array{hostname:string, port:?int, hostkey:?string, privkey:bool, keypass:bool}>
  */
 class SFTP extends FWrapper
 {
@@ -55,22 +61,30 @@ class SFTP extends FWrapper
 
     /**
      * Returns a printable client object of this SFTP storage
-     * @return array{id:string} `{hostname:string, port:?int, pubkey:bool, keypass:bool}`
-     * @see Storage::GetClientObject()
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activate if true, show details that require activation
+     * @return ($priv is true ? SFTPJ : StorageJ)
      */
-    public function GetClientObject(bool $activate = false) : array
+    public function GetClientObject(bool $priv, bool $activate = false) : array
     {
-        /*return parent::GetClientObject($activate) + array(
-            'hostname' => $this->GetScalar('hostname'),
-            'port' => $this->TryGetScalar('port'),
-            'hostkey' => $this->TryGetHostKey(),
-            'privkey' => (bool)($this->TryGetScalar('privkey')),
-            'keypass' => (bool)($this->TryGetScalar('keypass')),
-        );*/ return parent::GetClientObject($activate); // TODO RAY !!
+        $ret = parent::GetClientObject($priv,$activate);
+        if ($priv)
+        {
+            $ret += $this->GetBasePathClientObject();
+            $ret += $this->GetUserPassClientObject();
+            $ret += array(
+                'hostname' => $this->hostname->GetValue(),
+                'port' => $this->port->TryGetValue(),
+                'hostkey' => $this->hostkey->TryGetValue(),
+                'privkey' => $this->privkey->GetDBValue() !== null,
+                'keypass' => $this->keypass->GetDBValue() !== null
+            );
+        }
+        return $ret;
     }
 
     public static function GetCreateUsage() : string { 
-        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
+        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:true).
         " --hostname alphanum [--port ?uint16] [--privkey% path | --privkey-] [--keypass ?raw]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
@@ -86,14 +100,12 @@ class SFTP extends FWrapper
         $obj->keypass->SetValue($params->GetOptParam('keypass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString());
         
         $obj->BasePathCreate($params);
-        $obj->UserPassCreate($params);
+        $obj->UserPassCreate($params,requireUsername:true);
         return $obj;
     }
 
-    // TODO RAY !! username for SFTP is mandatory, fix help text and create/edit functions
-
     public static function GetEditUsage() : string { 
-        return static::GetBasePathEditUsage()." ".static::GetUserPassEditUsage().
+        return static::GetBasePathEditUsage()." ".static::GetUserPassEditUsage(requireUsername:true).
         " [--hostname alphanum] [--port ?uint16] [--privkey% path | --privkey-] [--keypass ?raw] [--resethost bool]"; }
     
     public function Edit(Input $input) : self
@@ -114,7 +126,7 @@ class SFTP extends FWrapper
             $this->hostkey->SetValue(null);
         
         $this->BasePathEdit($params);
-        $this->UserPassEdit($params);
+        $this->UserPassEdit($params,requireUsername:true);
         return parent::Edit($input);
     }
 

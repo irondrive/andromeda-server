@@ -5,7 +5,7 @@ use Andromeda\Apps\Files\Items\{File, Folder};
 
 /** 
  * Common code for standard and periodic policy 
- * Not using an actual table for this, to reduce JOINs...  // TODO RAY !! copy over comments from old code as needed
+ * Not using an actual table for this, to reduce JOINs...  // TODO POLICY copy over comments from old code as needed
  */
 abstract class Base extends BaseObject
 {
@@ -38,7 +38,7 @@ abstract class Base extends BaseObject
     
     /** Checks if the given size delta would exceed the size limit */
     public abstract function AssertSize(int $delta) : void; 
-    // TODO RAY !! add @throws to Check and Count functions
+    // TODO POLICY add @throws to Check and Count functions
     
     /** Adds to the size counter, if item tracking is allowed */
     public abstract function CountSize(int $delta, bool $noLimit = false) : void;
@@ -72,7 +72,7 @@ abstract class Base extends BaseObject
         {
             $this->CountItems($mul,$noLimit);
 
-            if (!$file->onOwnerStorage()) // TODO RAY !! seems like we should not do this check? well, for filesystems it should apply, but for the account limit it should not
+            if (!$file->onOwnerStorage()) // TODO POLICY seems like we should not do this check? well, for filesystems it should apply, but for the account limit it should not
                 $this->CountSize($mul*$file->GetSize(),$noLimit);
         }
     }

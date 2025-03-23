@@ -3,7 +3,10 @@
 use Andromeda\Core\Database\FieldTypes;
 use Andromeda\Core\IOFormat\SafeParams;
 
-/** A storage that has a base path */
+/**
+ * A storage that has a base path
+ * @phpstan-type BasePathJ array{path:string}
+ */
 trait BasePath
 {
     /** The base path of the storage */
@@ -59,5 +62,12 @@ trait BasePath
         return $this->path->GetValue().'/'.$path;
     }
 
-    // TODO RAY !! needs a GetClientObject
+    /**
+     * Returns the printable client object of this trait
+     * @return BasePathJ
+     */
+    public function GetBasePathClientObject() : array
+    {
+        return array('path' => $this->path->GetValue());
+    }
 }

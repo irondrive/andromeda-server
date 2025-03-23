@@ -53,11 +53,11 @@ class StandardAccount extends Standard
         return $database->TryDeleteUniqueByKey(static::class, 'account', $account->ID());
     }
 
-    // TODO RAY !! account should always return non-null values, right?
-    // TODO RAY !! need to implement getting from group policy
+    // TODO POLICY account should always return non-null values, right?
+    // TODO POLICY need to implement getting from group policy
 
     /** Returns true if the limited object should allow sharing items */
-    public function GetAllowItemSharing() : bool { return $this->can_itemshare->TryGetValue() ?? false; } // TODO RAY !! remove ?? here, implement properly
+    public function GetAllowItemSharing() : bool { return $this->can_itemshare->TryGetValue() ?? false; } // TODO POLICY remove ?? here, implement properly
     
     /** Returns true if the limited object should allow sharing to groups */
     public function GetAllowShareToGroups() : bool { return $this->can_share2groups->TryGetValue() ?? false; }

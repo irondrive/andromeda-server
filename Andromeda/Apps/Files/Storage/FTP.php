@@ -12,6 +12,12 @@ use Andromeda\Apps\Accounts\Crypto\CryptFields;
  * functions, since the fwrapper functions create a new connection for
  * every call.  fwrapper functions are still used as fallbacks where needed.
  * Uses the credcrypt trait for optionally encrypting server credentials.
+ * 
+ * @phpstan-import-type StorageJ from Storage
+ * @phpstan-import-type PrivStorageJ from Storage
+ * @phpstan-import-type BasePathJ from BasePath
+ * @phpstan-import-type UserPassJ from UserPass
+ * @phpstan-type FTPJ \Union<PrivStorageJ, BasePathJ, UserPassJ, array{hostname:string, port:?int, implssl:bool}>
  */
 class FTP extends FWrapper
 {
@@ -43,20 +49,28 @@ class FTP extends FWrapper
 
     /**
      * Returns a printable client object of this FTP storage
-     * @return array{id:string} `{hostname:string, port:?int, implssl:bool}`
-     * @see Storage::GetClientObject()
+     * @param bool $priv if true, show details for the owner
+     * @param bool $activate if true, show details that require activation
+     * @return ($priv is true ? FTPJ : StorageJ)
      */
-    public function GetClientObject(bool $activate = false) : array // TODO RAY !! implement me
+    public function GetClientObject(bool $priv, bool $activate = false) : array
     {
-        return parent::GetClientObject($activate)/* + array(
-            'hostname' => $this->GetScalar('hostname'),
-            'port' => $this->TryGetScalar('port'),
-            'implssl' => $this->GetScalar('implssl'),
-        )*/;
+        $ret = parent::GetClientObject($priv,$activate);
+        if ($priv)
+        {
+            $ret += $this->GetBasePathClientObject();
+            $ret += $this->GetUserPassClientObject();
+            $ret += array(
+                'hostname' => $this->hostname->GetValue(),
+                'port' => $this->port->TryGetValue(),
+                'implssl' => $this->implssl->GetValue()
+            );
+        }
+        return $ret;
     }
     
     public static function GetCreateUsage() : string { 
-        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
+        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:false).
         " --hostname alphanum [--port ?uint16] [--implssl bool]"; }
     
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
@@ -69,12 +83,12 @@ class FTP extends FWrapper
         $obj->implssl->SetValue($params->GetOptParam('implssl',false)->GetBool());
             
         $obj->BasePathCreate($params);
-        $obj->UserPassCreate($params);
+        $obj->UserPassCreate($params,requireUsername:false);
         return $obj;
     }
     
     public static function GetEditUsage() : string {
-        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage().
+        return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:false).
         " [--hostname alphanum] [--port ?uint16] [--implssl bool]"; }
     
     public function Edit(Input $input) : self
@@ -89,7 +103,7 @@ class FTP extends FWrapper
             $this->implssl->SetValue($params->GetParam('implssl')->GetBool());
         
         $this->BasePathEdit($params);
-        $this->UserPassEdit($params);
+        $this->UserPassEdit($params,requireUsername:false);
         return parent::Edit($input);
     }
     

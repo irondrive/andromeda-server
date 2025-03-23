@@ -336,6 +336,15 @@ class Share extends BaseObject
     }
 
     /**
+     * Delete all likes for the given item
+     * @return int
+     */
+    public static function DeleteByItem(ObjectDatabase $database, Item $item) : int
+    {
+        return $database->DeleteObjectsByKey(static::class, 'item', $item->ID());
+    }
+
+    /**
      * Checks whether this share gives access to the given item to the given account
      * 
      * Access to the item is given if this share is for the item or one of its parents,

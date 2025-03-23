@@ -66,8 +66,8 @@ abstract class Standard extends Base
         $this->count_size->DeltaValue(-1*$this->count_size->GetValue());
     }  
 
-    // TODO RAY !! add Create functions
-    // TODO RAY !! add GetClientObject functions
+    // TODO POLICY add Create functions
+    // TODO POLICY add GetClientObject functions
 
     public function GetSize() : int { 
         return $this->count_size->GetValue(); }

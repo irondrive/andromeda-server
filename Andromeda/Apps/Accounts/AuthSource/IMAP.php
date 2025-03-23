@@ -8,7 +8,7 @@ use Andromeda\Core\IOFormat\SafeParams;
  * Uses an IMAP server for authentication
  * @phpstan-import-type ExternalJ from External
  * @phpstan-import-type AdminExternalJ from External
- * @phpstan-type IMAPJ array{protocol:key-of<self::PROTOCOLS>, hostname:string, port:?int, implssl:bool, anycert:bool, secauth:bool}
+ * @phpstan-type IMAPJ \Union<AdminExternalJ, array{protocol:key-of<self::PROTOCOLS>, hostname:string, port:?int, implssl:bool, anycert:bool, secauth:bool}>
  */
 class IMAP extends External
 {
@@ -99,7 +99,7 @@ class IMAP extends External
     
     /**
      * Returns a printable client object for this IMAP
-     * @return ($admin is true ? \Union<AdminExternalJ, IMAPJ> : ExternalJ)
+     * @return ($admin is true ? IMAPJ : ExternalJ)
      */
     public function GetClientObject(bool $admin) : array
     {
