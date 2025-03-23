@@ -154,7 +154,7 @@ class ObjectDatabase
      */
     public function DisambiguateKey(string $class, string $key) : string // TODO RAY !! unit test
     {
-        return $this->GetClassTableName($class).".\"$key\"";
+        return $this->GetClassTableName($class).".$key";
     }
 
     /**

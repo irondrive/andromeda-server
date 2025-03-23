@@ -156,9 +156,9 @@ class JoinObjectTest extends \PHPUnit\Framework\TestCase
 
         $qstr1 = "SELECT a2obj_core_database_testobject1.* FROM a2obj_core_database_testobject1 "
             ."JOIN a2obj_core_database_testjoinobject ON a2obj_core_database_testjoinobject.\"obj1\" = a2obj_core_database_testobject1.\"id\" WHERE \"obj2\" = :d0";
-        $qstr2 = 'SELECT a2obj_core_database_testobject1.* FROM a2obj_core_database_testobject1 WHERE a2obj_core_database_testobject1."id" = :d0';
+        $qstr2 = 'SELECT a2obj_core_database_testobject1.* FROM a2obj_core_database_testobject1 WHERE a2obj_core_database_testobject1.id = :d0';
         $qstr3 = 'SELECT a2obj_core_database_testjoinobject.* FROM a2obj_core_database_testjoinobject WHERE "obj2" = :d0';
-        $qstr4 = 'SELECT a2obj_core_database_testobject2.* FROM a2obj_core_database_testobject2 WHERE a2obj_core_database_testobject2."id" = :d0';
+        $qstr4 = 'SELECT a2obj_core_database_testobject2.* FROM a2obj_core_database_testobject2 WHERE a2obj_core_database_testobject2.id = :d0';
 
         $database->expects($this->exactly(4))->method('read')
             ->withConsecutive([$qstr1], [$qstr2], [$qstr3], [$qstr4])

@@ -112,7 +112,7 @@ class BaseObjectTest extends \PHPUnit\Framework\TestCase
 
         $id = "test123";
         $db->expects($this->exactly(1))->method('read')->with( // NOTE id is ambiguous so it has the table name
-            "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.\"id\" = :d0",
+            "SELECT a2obj_core_database_easyobject.* FROM a2obj_core_database_easyobject WHERE a2obj_core_database_easyobject.id = :d0",
             array('d0'=>$id))->willReturn([['id'=>$id]]);
 
         $obj = EasyObject::TryLoadByID($objdb, $id);
