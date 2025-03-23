@@ -108,7 +108,7 @@ class File extends Item
      * Counts a download by updating limits, and notifying parents if $public 
      * @param bool $public if false, only updates the timestamp and not limit counters
      */
-    public function CountDownload(bool $public = true) : void
+    public function CountDownload(bool $public) : void
     {
         /*if (Main::GetInstance()->GetConfig()->isReadOnly()) return $this;
         

@@ -292,7 +292,8 @@ CREATE TABLE `a2obj_apps_files_storage_storage` (
 ,  `crypto_chunksize` integer DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`owner`,`name`)
-,  CONSTRAINT `a2obj_apps_files_storage_fsmanager_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
+,  CONSTRAINT `a2obj_apps_files_storage_storage_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
+,  CONSTRAINT `CONSTRAINT_1` CHECK (`crypto_masterkey` is null and `crypto_chunksize` is null or `crypto_masterkey` is not null and `crypto_chunksize` is not null)
 );
 CREATE TABLE `a2obj_apps_files_storage_webdav` (
   `id` char(8) NOT NULL

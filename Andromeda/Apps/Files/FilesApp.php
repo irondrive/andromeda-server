@@ -596,7 +596,7 @@ class FilesApp extends BaseApp
             
             if ($storage !== null)
             {
-                $storage = Storage::TryLoadByAccountAndID($this->database, $account, $storage, true);  
+                $storage = Storage::TryLoadByAccountAndID($this->database, $account, $storage, public:true);  
                 if ($storage === null) throw new Exceptions\UnknownStorageException();
             }
                 

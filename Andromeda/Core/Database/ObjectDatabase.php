@@ -136,8 +136,7 @@ class ObjectDatabase
     
     /**
      * Return the database table name for a class
-     * @template T of BaseObject
-     * @param class-string<T> $class the class name for the table
+     * @param class-string<BaseObject> $class the class name for the table
      */
     public function GetClassTableName(string $class) : string
     {
@@ -146,6 +145,16 @@ class ObjectDatabase
         $table = "a2obj_".strtolower(implode('_', $class));
         
         return $this->db->UsePublicSchema() ? "public.$table" : $table;
+    }
+
+    /**
+     * Returns the disambiguated key name based on its class (table)
+     * @param class-string<BaseObject> $class the class of the table
+     * @param string $key the key name to disambiguate
+     */
+    public function DisambiguateKey(string $class, string $key) : string // TODO RAY !! unit test
+    {
+        return $this->GetClassTableName($class).".\"$key\"";
     }
 
     /**
@@ -856,8 +865,8 @@ class ObjectDatabase
 
         if (!array_key_exists($validx, $this->uniqueByKey[$class][$key]))
         {
-            $qkey = $ambiguousKey ? $this->GetClassTableName($class).".\"$key\"" : "\"$key\"";
-            $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value, false));
+            $qkey = $ambiguousKey ? $this->DisambiguateKey($class,$key) : "\"$key\"";
+            $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value, quotes:false));
             $objs = $this->LoadObjectsByQuery($class, $q);
             
             if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");

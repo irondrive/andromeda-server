@@ -37,7 +37,7 @@ trait AuthObjectFull
         
         if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix()) return null;
         
-        $q = new QueryBuilder(); $w = $q->Equals('id',$code[1]); 
+        $q = new QueryBuilder(); $w = $q->Equals($database->DisambiguateKey(self::class,'id'),$code[1],quotes:false); 
         
         if ($account !== null) $w = $q->And($w,$q->Equals('account',$account->ID()));
 

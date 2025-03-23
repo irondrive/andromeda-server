@@ -393,7 +393,8 @@ CREATE TABLE `a2obj_apps_files_storage_storage` (
   UNIQUE KEY `owner_name` (`owner`,`name`),
   KEY `owner` (`owner`),
   KEY `name` (`name`),
-  CONSTRAINT `a2obj_apps_files_storage_fsmanager_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`)
+  CONSTRAINT `a2obj_apps_files_storage_storage_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `a2obj_apps_accounts_account` (`id`),
+  CONSTRAINT `CONSTRAINT_1` CHECK (`crypto_masterkey` is null and `crypto_chunksize` is null or `crypto_masterkey` is not null and `crypto_chunksize` is not null)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

@@ -33,6 +33,11 @@ class Main():
     def __init__(self, configPath:str):
         """The method to run all tests with the given config path"""
 
+        # unset things that might interfere
+        for key in list(os.environ.keys()):
+            if key.startswith("andromeda_"):
+                del os.environ[key]
+
         # process command line args
         shortargs = "hvp:s:f:a:"
         longargs = ["help","verbose","phproot=","randseed=","filter=","apptest="]

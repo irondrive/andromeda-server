@@ -121,7 +121,7 @@ abstract class Storage extends BaseObject
         $ownerq = $q->Equals('owner',$owner->ID());
         if ($public) $ownerq = $q->Or($ownerq, $q->IsNull('owner'));
         
-        $q->Where($q->And($ownerq,$q->Equals('id',$id)));
+        $q->Where($q->And($ownerq,$q->Equals($database->DisambiguateKey(self::class,'id'),$id,quotes:false)));
         return $database->TryLoadUniqueByQuery(static::class, $q);
     }
     
@@ -338,7 +338,7 @@ abstract class Storage extends BaseObject
             'chunksize' => $this->crypto_chunksize->TryGetValue(),
             'sttype' => Utilities::ShortClassName(static::class)
         );
-        
+
         if ($priv) 
         {
             $retval['date_created'] = $this->date_created->GetValue();

@@ -107,7 +107,8 @@ abstract class Contact extends BaseObject
     /** Attempts to load a contact by the given ID for the given account */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?static
     {
-        $q = new QueryBuilder(); $w = $q->And($q->Equals('id',$id),$q->Equals('account',$account->ID()));
+        $q = new QueryBuilder(); $w = $q->And($q->Equals('account',$account->ID()),
+            $q->Equals($database->DisambiguateKey(self::class,'id'),$id,quotes:false));
         
         return $database->TryLoadUniqueByQuery(static::class, $q->Where($w));
     }

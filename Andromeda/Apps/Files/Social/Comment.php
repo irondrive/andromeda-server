@@ -73,8 +73,8 @@ class Comment extends BaseObject
     /** Tries to load a comment object by the given account and comment ID */
     public static function TryLoadByAccountAndID(ObjectDatabase $database, Account $account, string $id) : ?static
     {
-        $q = new QueryBuilder(); 
-        $q->Where($q->And($q->Equals('owner',$account->ID()),$q->Equals('id',$id)));
+        $q = new QueryBuilder(); $q->Where($q->And($q->Equals('owner',$account->ID()),
+            $q->Equals($database->DisambiguateKey(self::class,'id'),$id,quotes:false)));
         return $database->TryLoadUniqueByQuery(static::class, $q);
     }
 

@@ -67,8 +67,7 @@ trait TableTypedChildren
         if (!array_key_exists($class, $map))
             throw new Exceptions\BadPolyClassException($class);
         
-        $table = $database->GetClassTableName(self::class);
-        return $q->Equals("$table.type",$map[$class],false);
+        return $q->Equals($database->DisambiguateKey(self::class,'type'),$map[$class],quotes:false);
     }
     
     /** @return class-string<self> child class of row */
