@@ -152,7 +152,7 @@ class ObjectDatabase
      * @param class-string<BaseObject> $class the class of the table
      * @param string $key the key name to disambiguate
      */
-    public function DisambiguateKey(string $class, string $key) : string // TODO RAY !! unit test
+    public function DisambiguateKey(string $class, string $key) : string
     {
         return $this->GetClassTableName($class).".$key";
     }
@@ -438,7 +438,7 @@ class ObjectDatabase
      * @param class-string<T> $class to filter by
      * @return array<string, T>
      */
-    public function getLoadedObjects(string $class) : array // TODO RAY !! unit test
+    public function getLoadedObjects(string $class) : array
     {
         $base = $class::GetBaseTableClass();
         if (array_key_exists($base, $this->objectsByBase))

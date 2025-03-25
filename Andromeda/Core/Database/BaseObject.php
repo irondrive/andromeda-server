@@ -260,7 +260,8 @@ abstract class BaseObject
     /** Deletes the object from the database */
     public function Delete() : void
     {
-        $this->database->DeleteObject($this);
+        if (!$this->isDeleted)
+            $this->database->DeleteObject($this);
     }
     
     /** 

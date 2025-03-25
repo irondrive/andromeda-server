@@ -157,8 +157,7 @@ class Share extends BaseObject
         // TODO RAY !! only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
     }
 
-    // TODO RAY !! get rid of share2everyone because you can just share to the default group
-    // have a DB check constraint that you must have either dest or authkey
+    // TODO RAY !! have a DB check constraint that you must have either dest or authkey
 
     /**
      * Creates a new share to a share target

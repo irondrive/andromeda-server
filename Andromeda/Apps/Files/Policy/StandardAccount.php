@@ -57,7 +57,7 @@ class StandardAccount extends Standard
     // TODO POLICY need to implement getting from group policy
 
     /** Returns true if the limited object should allow sharing items */
-    public function GetAllowItemSharing() : bool { return $this->can_itemshare->TryGetValue() ?? false; } // TODO POLICY remove ?? here, implement properly
+    public function GetAllowItemSharing() : bool { return $this->can_itemshare->TryGetValue() ?? true; } // TODO POLICY remove ?? here, implement properly
     
     /** Returns true if the limited object should allow sharing to groups */
     public function GetAllowShareToGroups() : bool { return $this->can_share2groups->TryGetValue() ?? false; }
@@ -69,7 +69,7 @@ class StandardAccount extends Standard
     public function GetAllowPublicModify() : bool { return $this->can_publicmodify->TryGetValue() ?? false; } 
     
     /** Returns true if the limited object should allow random writes to files */
-    public function GetAllowRandomWrite() : bool { return $this->can_randomwrite->TryGetValue() ?? false; }
+    public function GetAllowRandomWrite() : bool { return $this->can_randomwrite->TryGetValue() ?? true; }
     
     /** Returns true if sending shared via server email is allowed */
     public function GetAllowEmailShare() : bool { return $this->can_emailshare->TryGetValue() ?? false; }

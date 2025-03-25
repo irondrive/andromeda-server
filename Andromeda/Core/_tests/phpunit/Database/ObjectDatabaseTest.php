@@ -23,6 +23,14 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             'public.a2obj_core_database_polyobject1',
             $objdb->GetClassTableName(PolyObject1::class));
     }
+
+    public function testDisambiguateKey() : void
+    {
+        $database = $this->createMock(PDODatabase::class);
+        $objdb = new ObjectDatabase($database);
+        $this->assertSame('a2obj_core_database_easyobject.mytest', 
+            $objdb->DisambiguateKey(EasyObject::class,'mytest'));
+    }
     
     public function testApiPackage() : void
     {
@@ -442,17 +450,17 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
         $database->expects($this->exactly(3))->method('read')
             ->withConsecutive(self::select1, self::select2, self::select3)
             ->willReturnOnConsecutiveCalls([self::row1], [self::row2], []);
-            
-        $database->expects($this->exactly(1))->method('write')->willReturn(1);
-            
         $q = new QueryBuilder(); $q->Where($q->GreaterThan('testprop1',3));
-        
-        $objdb->LoadObjectsByQuery(PolyObject3::class, $q);
-        $eid = EasyObject::Create($objdb)->Save()->ID();
+        $tobjs = $objdb->LoadObjectsByQuery(PolyObject3::class, $q);
+        $this->assertCount(2, $tobjs);
+
+        $database->expects($this->exactly(1))->method('write')->willReturn(1);
+        $eobj = EasyObject::Create($objdb)->Save();
+        $eid = $eobj->ID();
         
         $this->assertSame(3, $objdb->getLoadedCount());
         
-        $loaded = array(
+        $this->assertSame(array(
             PolyObject1::class => array(
                 self::id1 => PolyObject5aa::class,
                 self::id2 => PolyObject5b::class
@@ -460,9 +468,17 @@ class ObjectDatabaseTest extends \PHPUnit\Framework\TestCase
             EasyObject::class => array(
                 $eid => EasyObject::class
             )
-        );
+        ), $objdb->getLoadedObjectIDs());
+
+        $this->assertSame(array(), $objdb->getLoadedObjects(PolyObject5ab::class));
+
+        $this->assertSame(array(
+            $id1=self::row1['id'] => $tobjs[$id1],
+            $id2=self::row2['id'] => $tobjs[$id2]
+        ), $objdb->getLoadedObjects(PolyObject1::class));
         
-        $this->assertSame($loaded, $objdb->getLoadedObjectIDs());
+        $this->assertSame(array($eid => $eobj), 
+            $objdb->getLoadedObjects(EasyObject::class));
     }
     
     public function testEmptyKeyLoad() : void

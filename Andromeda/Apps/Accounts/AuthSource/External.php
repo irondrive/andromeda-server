@@ -7,14 +7,6 @@ use Andromeda\Core\Errors\BaseExceptions;
 
 use Andromeda\Apps\Accounts\{Account, Config, Group};
 
-/** Enum describing the "enabled" state of the External auth */
-enum ExternalState: int
-{
-    case Disabled = 0;    /** Cannot use this auth source */
-    case PreExisting = 1; /** Only allow users that already exist in the DB to sign in */
-    case FullEnable = 2;  /** Allow auto-creating new accounts for all external signins */
-}
-
 /** 
  * Manages configured external authentication sources 
  * 
@@ -61,7 +53,7 @@ abstract class External extends BaseObject implements IAuthSource
         $fields = array();
         
         $this->date_created =  $fields[] = new FieldTypes\Timestamp('date_created');
-        $this->enabled =       $fields[] = new FieldTypes\IntType('enabled', default:ExternalState::FullEnable->value);
+        $this->enabled =       $fields[] = new FieldTypes\IntType('enabled', default:self::ENABLED_FULLENABLE);
         $this->description =   $fields[] = new FieldTypes\NullStringType('description');
         $this->default_group = $fields[] = new FieldTypes\NullObjectRefT(Group::class, 'default_group');
 
@@ -207,15 +199,19 @@ abstract class External extends BaseObject implements IAuthSource
         return $this;
     }
 
+    /** Only allow users that already existi in the DB to sign in */
+    public const ENABLED_PREEXISTING = 1;
+    /** Allow auto-creating new accounts for all external signins */
+    public const ENABLED_FULLENABLE = 2;
+
     /** @var array<string,int> */
     private const ENABLED_TYPES = array(
-        'disable'=>ExternalState::Disabled->value, 
-        'preexist'=>ExternalState::PreExisting->value, 
-        'fullenable'=>ExternalState::FullEnable->value); // TODO RAY !! does not work with PHP 8.1
+        'disable'=>0,
+        'preexist'=>self::ENABLED_PREEXISTING, 
+        'fullenable'=>self::ENABLED_FULLENABLE);
     
     /** Returns the enum of how/if this is enabled */
-    public function GetEnabled() : ExternalState { 
-        return ExternalState::tryFrom($this->enabled->GetValue()) ?? ExternalState::Disabled; }
+    public function GetEnabled() : int { return $this->enabled->GetValue(); }
     
     /** Returns the description set for this auth source, or the class name if none is set */
     public function GetDescription() : string
@@ -240,7 +236,7 @@ abstract class External extends BaseObject implements IAuthSource
         if ($admin) 
         {
             $retval['type'] = $this->GetTypeName();
-            $retval['enabled'] = array_flip(self::ENABLED_TYPES)[$this->GetEnabled()->value];
+            $retval['enabled'] = array_flip(self::ENABLED_TYPES)[$this->GetEnabled()];
             $retval['default_group'] = $this->default_group->TryGetObjectID();
             $retval['date_created'] = $this->date_created->GetValue();
         }

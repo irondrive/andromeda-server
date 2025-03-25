@@ -53,7 +53,7 @@ class External extends Filesystem
 
         $stat = $storage->ItemStat($path); 
         assert($stat->size >= 0); // OS guarantee?
-        $file->SetSize($stat->size,true);
+        $file->SetSize($stat->size,notify:true);
 
         if ($stat->atime !== 0.0) $file->SetAccessed($stat->atime);
         if ($stat->ctime !== 0.0) $file->SetCreated($stat->ctime);

@@ -46,7 +46,7 @@ abstract class Storage extends BaseObject
      */
     public const TYPES = array(
         'local' => Local::class, // FIRST
-        // TODO RAY !! make sure the DB stops after the first table result when loading by unique for performance
+        // TODO RAY !! !! make sure the DB stops after the first table result when loading by unique for performance
         'smb' => SMB::class, 
         'sftp' => SFTP::class, 
         's3' => S3::class,
@@ -103,7 +103,7 @@ abstract class Storage extends BaseObject
      * @param bool $public if true, include public storages
      * @return array<string, static>
      */
-    public static function LoadByAccount(ObjectDatabase $database, Account $owner, bool $public = true) : array // TODO RAY !! what should default value of public be here and below?
+    public static function LoadByAccount(ObjectDatabase $database, Account $owner, bool $public = true) : array // TODO RAY !! what should default value of public be here and below? look at usages
     {
         $retval = $database->LoadObjectsByKey(static::class, 'owner', $owner->ID());
         if ($public) $retval += $database->LoadObjectsByKey(static::class, 'owner', null); // public storages
@@ -358,7 +358,6 @@ abstract class Storage extends BaseObject
      * @throws Exceptions\InvalidFSTypeException if not valid
      */
     public function GetFilesystem() : Filesystem
-    // TODO RAY !! public function GetStorage(bool $activate = true) : Storage  - activate was an option before, look at usages for activate false
     {
         if (!isset($this->filesystem))
         {
@@ -447,16 +446,15 @@ abstract class Storage extends BaseObject
     /**
      * Asserts that the storage is not read only
      * @throws Exceptions\ReadOnlyException if the storage or server are read only
-     * @return $this
      */
-    protected function AssertNotReadOnly() : self
+    protected function AssertNotReadOnly() : void
     {
         if ($this->readonly->GetValue() ||
             $this->GetApiPackage()->GetConfig()->isReadOnly())
             throw new Exceptions\ReadOnlyException();
         
-        $this->written = true;
-        return $this;
+        if (!$this->isDryRun())
+            $this->written = true;
     }
     
     /** Returns true if the server is set to dry run mode */
@@ -649,7 +647,7 @@ abstract class Storage extends BaseObject
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
         
-        if (!$this->isFile($path)) return $this;
+        if (!$this->isFile($path)) return $this; // TODO RAY !! seems like it should fail
         return $this->SubDeleteFile($path);
     }
     
@@ -681,7 +679,7 @@ abstract class Storage extends BaseObject
      */
     protected abstract function SubDeleteFolder(string $path) : self;
 
-    // TODO RAY !! check all storage types for correct folder overwrite behavior in rename/move
+    // TODO TESTS check all storage types for correct folder overwrite behavior in rename/move
     // actually maybe the default should be to NOT overwrite, since the higher level code always checks/deletes first, see CheckParent
 
     /** 

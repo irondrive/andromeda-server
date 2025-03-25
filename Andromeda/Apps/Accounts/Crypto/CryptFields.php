@@ -9,7 +9,7 @@ use Andromeda\Apps\Accounts\{Account, Authenticator};
 use Andromeda\Apps\Accounts\Crypto\Exceptions\CryptoUnlockRequiredException;
 
 /** Helper functions for an object with CryptFields */
-trait CryptObject // TODO RAY !! unit test
+trait CryptObject
 {
     /**
      * Returns a list of all CryptFields in this object

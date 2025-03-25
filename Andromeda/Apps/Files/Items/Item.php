@@ -127,7 +127,7 @@ abstract class Item extends BaseObject
      * @return array<string, static> items indexed by ID
      */
     public abstract static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array;
-    // TODO RAY !! base impl can be here...?
+    // TODO RAY !! base impl can be here...? need to test the self Join query used for adopted first, get that working
 
     /** 
      * Deletes objects with the given parent
@@ -158,6 +158,9 @@ abstract class Item extends BaseObject
         $obj->parent->SetObject($parent);
         $obj->owner->SetObject($account);
         $obj->name->SetValue($name);
+
+        if ($account === null)
+            $obj->ispublic->SetValue(true);
 
         if ($refresh) $obj->Refresh();
 
@@ -418,11 +421,11 @@ abstract class Item extends BaseObject
         if (!$this->GetOwnerID()) return;
         
         foreach (Limits\AccountTotal::LoadByAccountAll($this->database, $this->GetOwner()) as $limit)
-            $this->AddStatsToLimit($limit, $add);
+            $this->AddCountsToPolicy($limit, $add);
  
         if (Config::GetInstance($this->database)->GetAllowTimedStats())
             foreach (Limits\AccountTimed::LoadAllForAccountAll($this->database, $this->GetOwner()) as $limit)
-                $this->AddStatsToLimit($limit, $add);
+                $this->AddCountsToPolicy($limit, $add);
     }*/ 
 
     /**
@@ -434,15 +437,15 @@ abstract class Item extends BaseObject
     {        
         $total = Limits\FilesystemTotal::LoadByFilesystem($this->database, $this->GetFilesystem());
         
-        if ($total !== null) $this->AddStatsToLimit($total, $add);
+        if ($total !== null) $this->AddCountsToPolicy($total, $add);
         
         if (Config::GetInstance($this->database)->GetAllowTimedStats())
             foreach (Limits\FilesystemTimed::LoadAllForFilesystem($this->database, $this->GetFilesystem()) as $limit)
-                $this->AddStatsToLimit($limit, $add);
+                $this->AddCountsToPolicy($limit, $add);
     }*/
     
     /** Adds this item's stats to the given limit, substracting if not $add */
-    protected abstract function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void;
+    protected abstract function AddCountsToPolicy(Policy\Base $limit, bool $add = true) : void;
     
     /**
      * Returns a config bool for the item by checking applicable limits
@@ -478,20 +481,29 @@ abstract class Item extends BaseObject
     public function GetAllowShareToGroups(?Account $account) : bool {
         return $this->GetPolicyBool(function(Policy\Standard $p){ return $p->GetAllowShareToGroups(); }, $account); }
     
+    protected bool $fsDeleted = false;
+    public function isFSDeleted() : bool { return $this->fsDeleted; }
+    
     /** Deletes the item from the DB only */
-    public abstract function NotifyFSDeleted() : void;
+    public function NotifyFSDeleted() : void
+    {
+        $this->fsDeleted = true;
+        $this->Delete();
+    }
 
     public function NotifyPreDeleted() : void
     {
-        //if (!$this->isDeleted())
-        //    $this->MapToLimits(function(Policy\Base $lim){ $lim->CountItem(false); }); // TODO POLICY
-
+        if ($this->parent->TryGetObject()?->isFSDeleted() === true)
+            $this->fsDeleted = true;
+        
         Social\Comment::DeleteByItem($this->database, $this);
         Social\Like::DeleteByItem($this->database, $this);
         Social\Share::DeleteByItem($this->database, $this);
         Social\Tag::DeleteByItem($this->database, $this);
+
+        //$this->MapToLimits(function(Policy\Base $lim){ $lim->CountItem(false); }); // TODO POLICY
     }
-    
+
     /**
      * Returns a printable client object of this item
      * @param bool $owner if true, show owner-level details

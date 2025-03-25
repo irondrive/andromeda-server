@@ -239,8 +239,8 @@ class AccountsApp extends BaseApp
         
         $auths = AuthSource\External::LoadAll($this->database);
         
-        if (!$admin) $auths = array_filter($auths, function(AuthSource\External $m){ 
-            return $m->GetEnabled() !== AuthSource\ExternalState::Disabled; });
+        if (!$admin) $auths = array_filter($auths, 
+            function(AuthSource\External $m){ return $m->GetEnabled() > 0; });
         
         return array_map(function(AuthSource\External $m)use($admin){ 
             return $m->GetClientObject(admin:$admin); }, $auths);
@@ -539,7 +539,7 @@ class AccountsApp extends BaseApp
              /** check the requested authsrc matches, if given */
             if ($reqauthsrc !== null && $reqauthsrc !== $authsrc)
                 throw new Exceptions\AuthenticationFailedException();
-            if ($authsrc instanceof AuthSource\External && $authsrc->GetEnabled() === AuthSource\ExternalState::Disabled)
+            if ($authsrc instanceof AuthSource\External && $authsrc->GetEnabled() <= 0)
                 throw new Exceptions\AuthenticationFailedException();
             if (!$account->VerifyPassword($password))
                 throw new Exceptions\AuthenticationFailedException();
@@ -549,7 +549,7 @@ class AccountsApp extends BaseApp
             $authsrc = $reqauthsrc ?? $this->config->GetDefaultAuth();
             if ($authsrc === null) throw new Exceptions\AuthenticationFailedException();
             
-            if ($authsrc->GetEnabled() < AuthSource\ExternalState::FullEnable)
+            if ($authsrc->GetEnabled() < AuthSource\External::ENABLED_FULLENABLE)
                 throw new Exceptions\AuthenticationFailedException();
             if (!$authsrc->VerifyUsernamePassword($username, $password))
                 throw new Exceptions\AuthenticationFailedException();
@@ -557,10 +557,10 @@ class AccountsApp extends BaseApp
             $account = Account::CreateExternal($this->database, $username, $authsrc)->Save(); // save now
         }
         
+        $actionlog?->LogDetails('account',$account->ID()); 
+        
         if ($account->isDisabled() !== 0) 
             throw new Exceptions\AccountDisabledException();
-        
-        $actionlog?->LogDetails('account',$account->ID()); 
         
         $interface = $this->API->GetInterface();
         
@@ -576,6 +576,8 @@ class AccountsApp extends BaseApp
             $client = Client::TryLoadByID($this->database, $clientid);
             if ($client === null || !$client->CheckKeyMatch($interface, $clientkey)) 
                 throw new Exceptions\InvalidClientException();
+            
+            Session::DeleteByClient($this->database, $client);
         } 
         else /* if no clientkey, require either a recoverykey or twofactor, create a client */
         { 
@@ -589,7 +591,7 @@ class AccountsApp extends BaseApp
             else Authenticator::StaticTryRequireTwoFactor($params, $account);
             
             $cname = $params->GetOptParam('name',null)->GetNullName();
-            $client = Client::Create($interface, $this->database, $account, $cname)->Save(); // save now for Account GetClientObject
+            $client = Client::Create($interface, $this->database, $account, $cname);
         }
         
         $actionlog?->LogDetails('client',$client->ID()); 
@@ -619,17 +621,17 @@ class AccountsApp extends BaseApp
             $account->ChangePassword($new_password);
         }
         
+        // cleanup old/expired clients/sessions
         Client::PruneOldFor($this->database, $account);
         Session::PruneOldFor($this->database, $account);
         
         /* delete old session associated with this client, create a new one */
-        Session::DeleteByClient($this->database, $client);
-        $session = Session::Create($this->database, $account, $client)->Save(); // save now for Client GetClientObject
-
-        // TODO RAY !! Don't like that session create has separate queries for set date active. Do earlier? Or why not in create? Or why set at all?
-        
+        $session = Session::Create($this->database, $account, $client); 
         $actionlog?->LogDetails('session',$session->ID()); 
         
+        // save these now for the LoadBys in Client/Account GetClientObject
+        $client->Save(); $session->Save();
+
         return array('client'=>$client->GetClientObject(secret:true), 
                      'account'=>$account->GetUserClientObject());
     }

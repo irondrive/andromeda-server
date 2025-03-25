@@ -544,8 +544,7 @@ class FilesApp extends BaseApp
             throw new Exceptions\ItemAccessDeniedException();
 
         $file->SetSize($params->GetParam('size',SafeParams::PARAMLOG_ALWAYS)->GetUint()); 
-        // TODO RAY !! shouldn't really log this ... also remove logging of file write offsets, download offsets, etc. 
-        
+
         return $file->GetClientObject(owner:($share === null));
     }
 
@@ -703,7 +702,7 @@ class FilesApp extends BaseApp
         {
             $retval = $item->GetClientObject(owner:($share === null));
         }
-        else if ($item instanceof Folder) // @phpstan-ignore-line remove as per below comment // TODO RAY !! 
+        else if ($item instanceof Folder) // @phpstan-ignore-line // TODO RAY !! remove as per below comment
         {
             $retval = $item->GetClientObject(owner:($share === null),details:false,files:true,folders:true);
         }

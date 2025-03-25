@@ -82,7 +82,7 @@ abstract class Folder extends Item
 
         return array_filter(static::LoadByQuery($database, $q->Where($w)), 
             function(Folder $folder){ return !$folder->isWorldAccess(); });*/
-        return []; // TODO RAY !! work out the self join issue
+        return []; // TODO RAY !! !! work out the self join issue
     }
     
     public function PostConstruct() : void
@@ -201,7 +201,7 @@ abstract class Folder extends Item
             $parent->AddFolderCounts($folder, $add);
     }
     
-    // TODO RAY !! need to notify folder directly, can't override AddObjectRef/RemoveObjectRef
+    // TODO RAY !! !! need to notify folder directly, can't override AddObjectRef/RemoveObjectRef
     /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
     {
         $modified = parent::AddObjectRef($field, $object, $notification);
@@ -220,7 +220,7 @@ abstract class Folder extends Item
         return $modified;
     }*/
     
-    protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFolderCounts($this, $add); }
+    protected function AddCountsToPolicy(Policy\Base $policy, bool $add = true) : void { $policy->AddFolderCounts($this, $add); }
 
     /** True if the folder's contents have been refreshed */
     protected bool $subrefreshed = false;
@@ -235,33 +235,21 @@ abstract class Folder extends Item
         {
             $this->refreshed = true;
             $this->subrefreshed = $doContents;
-            $this->GetFilesystem()->RefreshFolder($this, doContents:false); // NOT recursive
+            $this->GetFilesystem()->RefreshFolder($this, doContents:$doContents);
         }
     }
     
-    protected bool $fsDeleted = false;
-    // TODO RAY !! add comment - rework delete
-    public function isFSDeleted() : bool { return $this->fsDeleted; }
-    
-    /** Deletes all subfiles and subfolders, refresh if not isNotify */
-    public function DeleteChildren(bool $isNotify = false) : void
+    public function NotifyPreDeleted() : void
     {
-        $this->fsDeleted = $isNotify;
-        if (!$isNotify) $this->Refresh(doContents:true);
+        parent::NotifyPreDeleted();
 
-        // TODO RAY !! don't we need to delete each subitem with NOTIFY also? maybe that is the point of fsDeleted?
+        if (!$this->isFSDeleted())
+            $this->Refresh(doContents:true);
+
         File::DeleteByParent($this->database, $this);
         SubFolder::DeleteByParent($this->database, $this);
     }
-    
-    /** Deletes this folder and its contents from the DB only */
-    public function NotifyFSDeleted() : void
-    {
-        $this->DeleteChildren(true);
-        
-        parent::Delete();
-    } 
-    
+
     /**
      * Recursively lists subitems in this folder
      * @param bool $files if true, load files
@@ -273,21 +261,13 @@ abstract class Folder extends Item
     private function RecursiveItems(?bool $files = true, ?bool $folders = true, ?int $limit = null, ?int $offset = null) : array
     {
         $items = array();
-        if ($limit !== null && $offset !== null)
-            $limit += $offset;
-        // TODO FUTURE this is not efficient, loads limit+offset items
-        
-        foreach ($this->GetFolders($limit) as $subfolder)
+        // TODO FUTURE implement limit/offset somehow
+        $items = $this->GetFiles();
+        foreach ($this->GetFolders() as $sid=>$subfolder)
         {
-            $subitems = $subfolder->RecursiveItems($files,$folders,$limit);
-            $items += $subitems;
-            if ($limit !== null)
-                $limit -= count($subitems);
-            assert($limit >= 0); // RecursiveItems only returns up to limit
+            $items[$sid] = $subfolder;
+            $items += $subfolder->RecursiveItems($files, $folders);
         }
-        
-        $items = array_merge($items, $this->GetFiles($limit));
-        if ($offset !== null) $items = array_slice($items, $offset);
         return $items;
     }
 

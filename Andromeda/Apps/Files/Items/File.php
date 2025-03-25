@@ -68,7 +68,7 @@ class File extends Item
     }
     
     /**
-     * Sets the size of the file and update stats
+     * Sets the size of the file and update stats (size must be initialized already!)
      * 
      * if $notify is false, this is a user call to actually change the size of the file.
      * The call will be sent to the filesystem and modify the on-disk object.  If $notify
@@ -79,8 +79,8 @@ class File extends Item
      */
     public function SetSize(int $size, bool $notify = false) : bool
     {
-        $delta = $size - $this->size->GetValue();
-        $this->GetParent()->DeltaSize($delta);        
+        $delta = $size - ($this->size->isInitialized() ? $this->size->GetValue() : 0);
+        $this->GetParent()->DeltaSize($delta);
         
         //$this->MapToLimits(function(Policy\Base $lim)use($delta,$notify){
         //    if (!$this->onOwnerStorage()) $lim->CountSize($delta,$notify); });
@@ -143,13 +143,13 @@ class File extends Item
      */
     public function AssertBandwidth(int $bytes) : void
     {
-        /*$fs = $this->GetFilesystem();
+        /*$fs = $this->GetFilesystem(); // NOTE just get storage directly here, not get filesystem...
         if ($fs->isUserOwned() && $fs->GetStorage()->usesBandwidth()) $bytes *= 2;
         
         return $this->MapToLimits(function(Policy\Base $lim)use($bytes){ $lim->AssertBandwidth($bytes); });*/ // TODO POLICY
     }
     
-    protected function AddStatsToLimit(Policy\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
+    protected function AddCountsToPolicy(Policy\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
     
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
     protected function Refresh() : void
@@ -163,7 +163,7 @@ class File extends Item
 
     public function SetName(string $name, bool $overwrite = false) : bool
     {
-        static::CheckName($name, $overwrite, false);
+        static::CheckName($name, $overwrite, reuse:false);
         
         $this->GetFilesystem()->RenameFile($this, $name); 
         $retval = $this->name->SetValue($name);
@@ -173,7 +173,7 @@ class File extends Item
     
     public function SetParent(Folder $parent, bool $overwrite = false) : bool
     {
-        static::CheckParent($parent, $overwrite, false);
+        static::CheckParent($parent, $overwrite, reuse:false);
         
         $this->GetFilesystem()->MoveFile($this, $parent);
         $retval = $this->parent->SetObject($parent);
@@ -183,8 +183,7 @@ class File extends Item
 
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static
     {
-        $file = static::CheckName($name, $overwrite, true);
-
+        $file = static::CheckName($name, $overwrite, reuse:true);
         $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
         
         $this->GetFilesystem()->CopyFile($this, $file);
@@ -194,8 +193,7 @@ class File extends Item
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static
     {
-        $file = static::CheckParent($parent, $overwrite, true);
-        
+        $file = static::CheckParent($parent, $overwrite, reuse:true);
         $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
         
         $this->GetFilesystem()->CopyFile($this, $file);
@@ -234,7 +232,7 @@ class File extends Item
     {
         $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
         $file->GetFilesystem()->CreateFile($file);
-        $file->size->SetValue(0);
+        $file->SetSize(0, notify:true);
         return $file;
     }
     
@@ -260,8 +258,9 @@ class File extends Item
      */
     public function SetContents(InputPath $infile) : void
     {
+        $size = $infile->GetSize(); // infile may get moved
         $this->GetFilesystem()->ImportFile($this, $infile);
-        $this->SetSize($infile->GetSize(), notify:true);
+        $this->SetSize($size, notify:true);
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
@@ -297,27 +296,22 @@ class File extends Item
         // TODO RAY !! should the Filesystem call SetSize notify?
         $this->SetSize($length, notify:true);         
     }    
-    
-    /** Deletes the file from the DB only */
-    public function NotifyFSDeleted() : void 
-    {
-        /*if (!$this->isDeleted())
-            $this->MapToLimits(function(Policy\Base $lim){
-                if (!$this->onOwnerStorage()) $lim->CountSize($this->GetSize()*-1); });
 
-        parent::Delete(); */
+    public function NotifyPreDeleted() : void
+    {
+        parent::NotifyPreDeleted();
+
+        /*$this->MapToLimits(function(Policy\Base $lim){
+            if (!$this->onOwnerStorage()) $lim->CountSize($this->GetSize()*-1); });*/ // TODO POLICY
     }
 
-    /** Deletes the file from both the DB and disk */
-    public function Delete() : void
+    public function NotifyPostDeleted(): void
     {
-        /*if (!$this->isDeleted() && !$this->GetParent()->isFSDeleted()) 
-        {
-            $this->GetFilesystem(false)->DeleteFile($this);
-        }
-        
-        $this->NotifyFSDeleted();*/ // TODO RAY !! delete semantics needs investigation/fixing - isFSDeleted logic seems odd, different between file/folder
-    }    
+        parent::NotifyPostDeleted();
+
+        if (!$this->isFSDeleted())
+            $this->GetFilesystem()->DeleteFile($this);
+    }
     
     /**
      * Returns a printable client object of the file

@@ -129,7 +129,7 @@ class NativeCrypt extends Native
         if ($start > $file->GetSize())
         {
             $this->Truncate($file, $start);
-            $file->SetSize($start, true);
+            $file->SetSize($start, notify:true);
         }
         
         $chunk0 = $this->GetChunkIndex($start);

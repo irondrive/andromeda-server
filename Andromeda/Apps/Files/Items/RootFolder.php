@@ -56,6 +56,9 @@ class RootFolder extends Folder
             $owner = $storage->isExternal() ? $storage->TryGetOwner() : $account;
             $root->owner->SetObject($owner);
 
+            if ($owner === null)
+                $root->ispublic->SetValue(true);
+
             $root->Refresh();
             return $root;
         }
@@ -113,14 +116,5 @@ class RootFolder extends Folder
             if ($unlink) $folder->NotifyFSDeleted(); 
             else $folder->Delete();
         }
-    }
-    
-    /** Deletes the folder and its contents from DB and disk */
-    public function Delete() : void
-    {
-        $this->DeleteChildren();
-        // no FS DeleteFolder on root
-
-        parent::Delete();
     }
 }

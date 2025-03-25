@@ -3,6 +3,7 @@
 use Andromeda\Core\Database\{BaseObject, ObjectDatabase};
 use Andromeda\Core\Database\FieldTypes\{NullStringType, NullObjectRefT};
 use Andromeda\Apps\Accounts\Account;
+use Andromeda\Apps\Accounts\Crypto\Exceptions\CryptoUnlockRequiredException;
 
 class CryptFieldsTest extends \PHPUnit\Framework\TestCase
 {
@@ -23,7 +24,6 @@ class CryptFieldsTest extends \PHPUnit\Framework\TestCase
         $account->method('isCryptoAvailable')->willReturn(false);
 
         $field = new NullCryptStringType('myfield',$accountf,$noncef);
-
         $this->assertFalse($field->isEncrypted());
         $this->assertTrue($field->isValueReady()); // not encrypted
         $this->assertNull($field->GetDBValue());
@@ -39,9 +39,28 @@ class CryptFieldsTest extends \PHPUnit\Framework\TestCase
 
         $field = new CryptStringType('myfield2',$accountf,$noncef);
         $this->assertFalse($field->isInitialized());
+        $this->assertTrue($field->isEncrypted()); // nonce is set
+        $this->assertFalse($field->isValueReady());
     }
 
-    // TODO RAY !! test null account
+    public function testNullAccount() : void
+    {
+        $database = $this->createMock(ObjectDatabase::class);
+        $parent = $this->createMock(BaseObject::class);
+        $parent->method('GetDatabase')->willReturn($database);
+        
+        $accountf = new NullObjectRefT(Account::class, 'account');
+        $noncef = new NullStringType('myfield_nonce');
+        $accountf->SetParent($parent);
+        $noncef->SetParent($parent);
+
+        $field = new CryptStringType('myfield',$accountf,$noncef);
+        $field->SetValue('mytest');
+        $this->assertNull($field->TryGetAccount());
+
+        $this->expectException(CryptoUnlockRequiredException::class);
+        $this->assertNull($field->SetEncrypted(true));
+    }
 
     public function testEncryptDecrypt() : void
     {
