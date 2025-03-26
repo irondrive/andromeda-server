@@ -60,8 +60,7 @@ class S3 extends FWrapper
     }
 
     /** @return list<CryptFields\CryptField> */
-    protected function GetCryptFields() : array { 
-        return array($this->accesskey, $this->secretkey); }
+    protected function GetCryptFields() : array { return array($this->accesskey, $this->secretkey); }
 
     /**
      * Returns a printable client object of this S3 storage

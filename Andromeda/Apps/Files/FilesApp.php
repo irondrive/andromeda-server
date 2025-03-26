@@ -1584,6 +1584,8 @@ class FilesApp extends BaseApp
         
         return $storage->GetClientObject(priv:$ispriv, activate:$activate);
     }
+
+    // TODO RAY !! Make sure missing storage never results in rootfolder delete. Should already be a comment about that.
     
     /**
      * Returns a list of all storages available
@@ -1607,8 +1609,11 @@ class FilesApp extends BaseApp
         }
         else $storages = Storage::LoadByAccount($this->database, $account);
         
-        return array_map(function($storage){ 
-            return $storage->GetClientObject(priv:false); }, $storages);
+        return array_map(function($storage)use($authenticator,$account)
+        { 
+            $ispriv = $authenticator->isAdmin() || ($account === $storage->TryGetOwner());
+            return $storage->GetClientObject(priv:$ispriv);
+        }, $storages);
     }
     
     /**

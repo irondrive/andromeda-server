@@ -44,8 +44,7 @@ class FTP extends FWrapper
     }
 
     /** @return list<CryptFields\CryptField> */
-    protected function GetCryptFields() : array { 
-        return $this->GetUserPassCryptFields(); }
+    protected function GetCryptFields() : array { return $this->GetUserPassCryptFields(); }
 
     /**
      * Returns a printable client object of this FTP storage

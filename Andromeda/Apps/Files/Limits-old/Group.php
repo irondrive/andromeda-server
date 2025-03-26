@@ -12,7 +12,7 @@ interface IGroupCommon
     public const TRACK_WHOLE_GROUP = 2;
     
     public const TRACK_TYPES = array('none'=>0,
-        'accounts'=>self::TRACK_ACCOUNTS, 
+        'peraccount'=>self::TRACK_ACCOUNTS, 
         'wholegroup'=>self::TRACK_WHOLE_GROUP);  
 }
 
