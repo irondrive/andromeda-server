@@ -46,7 +46,6 @@ abstract class Storage extends BaseObject
      */
     public const TYPES = array(
         'local' => Local::class, // FIRST
-        // TODO RAY !! !! make sure the DB stops after the first table result when loading by unique for performance
         'smb' => SMB::class, 
         'sftp' => SFTP::class, 
         's3' => S3::class,

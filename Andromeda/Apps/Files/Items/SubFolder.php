@@ -95,7 +95,7 @@ class SubFolder extends Folder
     {
         parent::NotifyPreDeleted();
 
-        if (!$this->isFSDeleted())
+        if (!$this->isFSDeleted()) // TODO RAY !! probably can just do recursive content counts? at this point, subcontent is deleted
             $this->GetParent()->AddFolderCounts($this, add:false); // NOT content counts
 
         /*$this->MapToLimits(function(Policy\Base $lim){

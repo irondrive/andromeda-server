@@ -1546,7 +1546,7 @@ class FilesApp extends BaseApp
         $account = $authenticator->GetAccount();
         
         $files = File::LoadAdoptedByOwner($this->database, $account);
-        $folders = Folder::LoadAdoptedByOwner($this->database, $account);
+        $folders = SubFolder::LoadAdoptedByOwner($this->database, $account);
         
         $files = array_map(function(File $file){ return $file->GetClientObject(owner:true); }, $files);
         $folders = array_map(function(Folder $folder){ return $folder->GetClientObject(owner:true); }, $folders);

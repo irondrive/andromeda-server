@@ -137,7 +137,12 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder(); $q->Join($objdb, EasyObject::class, 'propA', PolyObject0::class, 'propB');
         $this->testQuery($q, array(), "JOIN $tableA ON $tableA.\"propA\" = $tableB.\"propB\"");
         
-        $q = new QueryBuilder(); $q->SelfJoinWhere($objdb, EasyObject::class, 'propA', 'propB');
-        $this->testQuery($q, array(), ", $tableA _tmptable WHERE $tableA.\"propA\" = _tmptable.\"propB\"");
+        $q = new QueryBuilder(); $q->SelfJoinWhere($objdb, EasyObject::class, 'propA', 'propB', 'mytable');
+        $this->testQuery($q, array(), ", $tableA AS mytable WHERE $tableA.\"propA\" = mytable.\"propB\"");
+
+        $q = new QueryBuilder(); // with both, joins come before aliases
+        $q->SelfJoinWhere($objdb, EasyObject::class, 'propC', 'propD');
+        $q->Join($objdb, EasyObject::class, 'propA', PolyObject0::class, 'propB');
+        $this->testQuery($q, array(), "JOIN $tableA ON $tableA.\"propA\" = $tableB.\"propB\", $tableA AS _tmptable WHERE $tableA.\"propC\" = _tmptable.\"propD\"");
     }
 }

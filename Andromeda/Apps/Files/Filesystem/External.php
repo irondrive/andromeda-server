@@ -20,19 +20,15 @@ class External extends Filesystem
     /**
      * Returns the root-relative path of the given item
      * @param Item $item item to get (or null)
-     * @param string $child if not null, add the given path to the end of the result
-     * @return string path of the given item + $child
+     * @return string path of the given item
      */
-    protected function GetItemPath(Item $item, ?string $child = null) : string
+    protected function GetItemPath(Item $item) : string
     {
-        $parent = $item->TryGetParent();
-        // TODO RAY !! replace this with an iterative version, not recursive
-        
-        $path = ($parent === null) ? "" :
-            $this->GetItemPath($parent, $item->GetName());
-            // TODO RAY !! should do validation here in case the DB gets an invalid value (no . .. /)
-        
-        return $path.($child !== null ? '/'.$child :"");
+        // TODO RAY !! should do validation here in case the DB gets an invalid value (no . .. /)
+        $path = $item->GetName();
+        while (($item = $item->TryGetParent()) !== null)
+            $path = $item->GetName()."/$path";
+        return $path;
     }
     
     /** Get the root-relative path of the given file */
@@ -112,7 +108,7 @@ class External extends Filesystem
                     $class = $isfile ? File::class : SubFolder::class;
                     $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
                     $dbitem->Save(); // insert to the DB immediately
-                    // TODO RAY !! catch DatabaseIntegrityExceptions here to catch threading issues, return 503
+                    // TODO RAY !! catch DatabaseIntegrityExceptions here to catch threading issues, return 503 (to test, just create twice)
                 }
             }
             
@@ -175,7 +171,7 @@ class External extends Filesystem
     public function RenameFile(File $file, string $name) : self
     { 
         $oldpath = $this->GetItemPath($file);
-        $newpath = $this->GetItemPath($file->GetParent(),$name);
+        $newpath = $this->GetItemPath($file->GetParent())."/$name";
         $this->GetStorage()->RenameFile($oldpath, $newpath);
         return $this;
     }
@@ -183,7 +179,7 @@ class External extends Filesystem
     public function RenameFolder(Folder $folder, string $name) : self
     { 
         $oldpath = $this->GetItemPath($folder);
-        $newpath = $this->GetItemPath($folder->GetParent(),$name);
+        $newpath = $this->GetItemPath($folder->GetParent())."/$name";
         $this->GetStorage()->RenameFolder($oldpath, $newpath);
         return $this;
     }
@@ -191,7 +187,7 @@ class External extends Filesystem
     public function MoveFile(File $file, Folder $parent) : self
     { 
         $path = $this->GetItemPath($file);
-        $dest = $this->GetItemPath($parent,$file->GetName());
+        $dest = $this->GetItemPath($parent).'/'.$file->GetName();
         $this->GetStorage()->MoveFile($path, $dest);
         return $this;
     }
@@ -199,7 +195,7 @@ class External extends Filesystem
     public function MoveFolder(Folder $folder, Folder $parent) : self
     { 
         $path = $this->GetItemPath($folder);
-        $dest = $this->GetItemPath($parent,$folder->GetName());
+        $dest = $this->GetItemPath($parent).'/'.$folder->GetName();
         $this->GetStorage()->MoveFolder($path, $dest);
         return $this;
     }

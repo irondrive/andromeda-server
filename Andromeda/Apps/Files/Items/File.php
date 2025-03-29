@@ -30,26 +30,7 @@ class File extends Item
         $this->RegisterFields($fields, self::class);
         parent::CreateFields();
     }
-
-    /**
-     * Returns all items that account owns but that reside in a parent that they don't own
-     * Does not return items that are world accessible
-     * @param ObjectDatabase $database database reference
-     * @param Account $account the account that owns the items
-     * @return array<string, static> items indexed by ID
-     */
-    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
-    {
-        $q = new QueryBuilder();
-        
-        $q->Join($database, Folder::class, 'id', static::class, 'parent')->Where($q->And(
-            $q->Equals($database->GetClassTableName(File::class).'.owner', $account->ID()),
-            $q->NotEquals($database->GetClassTableName(Folder::class).'.owner', $account->ID())));
-
-        $objs = $database->LoadObjectsByQuery(static::class, $q);
-        return array_filter($objs, function(File $file){ return !$file->isWorldAccess(); });
-    }
-
+    
     public function PostConstruct() : void
     {
         if (!$this->isCreated())

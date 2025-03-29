@@ -17,11 +17,14 @@ class QueryBuilder
     /** Returns the compiled query as a string */
     public function GetText() : string 
     { 
-        $query = $this->fromalias ?? "";
+        $query = "";
 
         foreach ($this->joins as $joinstr)
             $query .= " JOIN $joinstr";
-        
+
+        foreach ($this->aliases as $alias)
+            $query .= ", $alias";
+
         if ($this->where !== null) 
             $query .= " WHERE $this->where";
 
@@ -42,7 +45,8 @@ class QueryBuilder
     
     public function __toString() : string { return $this->GetText(); }
     
-    private ?string $fromalias = null;
+    /** @var list<string> */
+    private array $aliases = array();
     /** @var list<string> */
     private array $joins = array();
     private ?string $where = null;
@@ -146,11 +150,12 @@ class QueryBuilder
      * Returns a query string asserting the given column is not equal to the given value 
      * @param string $key the name of the column to compare
      * @param ?scalar $val the column value to compare
+     * @param bool $quotes if true, surround key with "" // TODO RAY !! unit test
      */
-    public function NotEquals(string $key, $val) : string 
+    public function NotEquals(string $key, $val, bool $quotes = true) : string 
     { 
-        if ($val === null) return $this->Not($this->IsNull($key));
-        return "\"$key\" <> ".$this->AddParam($val);
+        if ($val === null) return $this->Not($this->IsNull($key, $quotes));
+        return ($quotes ? "\"$key\"" : $key)." <> ".$this->AddParam($val);
     }
     
     /**
@@ -284,22 +289,22 @@ class QueryBuilder
      * @param class-string<BaseObject> $joinclass the table to join to itself 
      * @param string $prop1 the column to match to prop2
      * @param string $prop2 the column to match to prop1
+     * @param string $tmptable the name of the temp table to join to (has prop2)
      * @param bool $quotes if true, surround key with ""
      * @return $this
      */
-    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2, bool $quotes = true) : self
+    public function SelfJoinWhere(ObjectDatabase $database, string $joinclass, string $prop1, string $prop2, string $tmptable = '_tmptable', bool $quotes = true) : self
     {
         $jointable = $database->GetClassTableName($joinclass); 
         
-        $this->fromalias = ", $jointable _tmptable"; // TODO RAY !! !! not likely to work correctly now - at least make this (fromalias) more general
-
+        $this->aliases[] = "$jointable AS $tmptable";
         if ($quotes)
         {
             $prop1 = "\"$prop1\"";
             $prop2 = "\"$prop2\"";
         }
         
-        return $this->Where("$jointable.$prop1 = _tmptable.$prop2");
+        return $this->Where("$jointable.$prop1 = $tmptable.$prop2");
     }
 }
 

@@ -120,15 +120,30 @@ abstract class Item extends BaseObject
     
     /**
      * Returns all items with a parent that is not owned by the item owner
-     * 
+     *
      * Does not return items that are world accessible
      * @param ObjectDatabase $database database reference
      * @param Account $account the account that owns the items
      * @return array<string, static> items indexed by ID
      */
-    public abstract static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array;
-    // TODO RAY !! base impl can be here...? need to test the self Join query used for adopted first, get that working
+    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
+    {
+        $q = new QueryBuilder();
+        $objs = $database->LoadObjectsByQuery(static::class, $q);
+        
+        $q->SelfJoinWhere($database, Item::class, 'parent', 'id', '_parent');
 
+        // TODO RAY !! this doesn't seem to work. seems to return everything. also needs testing across postgres and sqlite
+        
+        // load where the item's owner is us, but the item's parent's owner is not us
+        $q->Where($q->And($q->NotEquals('_parent.owner', $account->ID(), quotes:false),
+            $q->Equals($database->GetClassTableName(Item::class).'.owner', $account->ID(), quotes:false)));
+
+        $objs = $database->LoadObjectsByQuery(static::class, $q);
+        // items on shared external storage don't count as we don't need a share to put them there
+        return array_filter($objs, function(Item $item){ return !$item->isWorldAccess(); });
+    }
+    
     /** 
      * Deletes objects with the given parent
      * @param ObjectDatabase $database database reference
@@ -298,7 +313,7 @@ abstract class Item extends BaseObject
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?static
     {
-        $item = self::TryLoadByParentAndName($this->database, $this->GetParent(), $name); // self not static
+        $item = Item::TryLoadByParentAndName($this->database, $this->GetParent(), $name); // not static
         
         if ($item !== null)
         {
@@ -327,7 +342,7 @@ abstract class Item extends BaseObject
         if ($parent->storage->GetObjectID() !== $this->storage->GetObjectID())
             throw new Exceptions\CrossFilesystemException();
 
-        $item = self::TryLoadByParentAndName($this->database, $parent, $this->GetName()); // self not static
+        $item = Item::TryLoadByParentAndName($this->database, $parent, $this->GetName()); // not static
         
         if ($item !== null)
         {

@@ -63,28 +63,6 @@ abstract class Folder extends Item
         parent::CreateFields();
     }
 
-    /**
-     * Returns all items with a parent that is not owned by the item owner
-     *
-     * Does not return items that are world accessible
-     * @param ObjectDatabase $database database reference
-     * @param Account $account the account that owns the items
-     * @return array<string, static> items indexed by ID
-     */
-    public static function LoadAdoptedByOwner(ObjectDatabase $database, Account $account) : array
-    {
-        /*$q = new QueryBuilder();
-        
-        $q->SelfJoinWhere($database, Folder::class, 'obj_parent', 'id');
-        
-        $w = $q->And($q->GetWhere(), $q->NotEquals('_parent.obj_owner', $account->ID()),
-            $q->Equals($database->GetClassTableName(Folder::class).'.obj_owner', $account->ID()));
-
-        return array_filter(static::LoadByQuery($database, $q->Where($w)), 
-            function(Folder $folder){ return !$folder->isWorldAccess(); });*/
-        return []; // TODO RAY !! !! work out the self join issue
-    }
-    
     public function PostConstruct() : void
     {
         if (!$this->isCreated())
@@ -144,7 +122,6 @@ abstract class Folder extends Item
     /** @param bool $recursive if true, set all children of this folder also */
     public function SetOwner(Account $account, bool $recursive = true) : bool
     {
-
         $retval = parent::SetOwner($account);
         if ($recursive)
         {

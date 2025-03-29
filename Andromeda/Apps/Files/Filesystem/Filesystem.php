@@ -35,6 +35,9 @@ abstract class Filesystem
      * @param bool $doContents if true, sync folder contents also
      */
     public abstract function RefreshFolder(Folder $folder, bool $doContents = true) : self;
+
+    // TODO RAY !! issue with doing this in item construct - you have to load the storage object
+    // to do a refresh, even for native, so just loading files/folders requires the storage to load, not ideal...
     
     /** 
      * Creates the given folder on disk 

@@ -202,9 +202,10 @@ class ObjectDatabase
      * @param class-string<T> $class the class of the objects
      * @param QueryBuilder $query the query used to match objects
      * @param ?class-string<T> $baseClass the base class being loaded (internal ONLY!)
+     * @param bool $unique if true, stop doing queries after an object is found (faster)
      * @return array<string, T> array of objects indexed by their IDs
      */
-    public function LoadObjectsByQuery(string $class, QueryBuilder $query, ?string $baseClass = null) : array
+    public function LoadObjectsByQuery(string $class, QueryBuilder $query, ?string $baseClass = null, bool $unique = false) : array
     {
         $baseClass ??= $class;
         $childmap = $class::GetChildMap($this);
@@ -221,6 +222,7 @@ class ObjectDatabase
                 if ($child === $class) { $doSelf = true; continue; }
                 $objs = $this->LoadObjectsByQuery($child, $query, $baseClass);
                 foreach ($objs as $obj) $objects[$obj->ID()] = $obj; // merge
+                if ($unique && count($objects) > 0) return $objects; // TODO RAY !! unit test unique
             }
         }
         
@@ -310,7 +312,7 @@ class ObjectDatabase
      */
     public function TryLoadUniqueByQuery(string $class, QueryBuilder $query) : ?BaseObject
     {
-        $objs = $this->LoadObjectsByQuery($class, $query);
+        $objs = $this->LoadObjectsByQuery($class, $query, unique:true);
         if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException($class);
         return (count($objs) === 1) ? array_values($objs)[0] : null;
     }
@@ -867,7 +869,7 @@ class ObjectDatabase
         {
             $qkey = $ambiguousKey ? $this->DisambiguateKey($class,$key) : "\"$key\"";
             $q = new QueryBuilder(); $q->Where($q->Equals($qkey, $value, quotes:false));
-            $objs = $this->LoadObjectsByQuery($class, $q);
+            $objs = $this->LoadObjectsByQuery($class, $q, unique:true);
             
             if (count($objs) > 1) throw new Exceptions\MultipleUniqueKeyException("$class $key");
             $obj = (count($objs) === 1) ? array_values($objs)[0] : null;
