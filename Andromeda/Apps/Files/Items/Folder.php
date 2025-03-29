@@ -161,22 +161,6 @@ abstract class Folder extends Item
     }
     
     /**
-     * Adds the statistics from the given folder to this folder (folder itself only)
-     * @param Folder $folder the folder to add stats from
-     * @param bool $add if true add, else subtract
-     */
-    public function AddFolderCounts(Folder $folder, bool $add = true) : void
-    {
-        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
-        
-        $val = $add ? 1 : -1;     
-        $this->count_subfolders->DeltaValue($val);
-
-        if (($parent = $this->TryGetParent()) !== null) 
-            $parent->AddFolderCounts($folder, $add);
-    }
-
-    /**
      * Adds the statistics from the given folder to this folder (all substats)
      * @param Folder $folder the folder to add stats from
      * @param bool $add if true add, else subtract
