@@ -22,9 +22,12 @@ class SubFolder extends Folder
     {
         $this->AssertNotChildOrSelf($parent);
         static::CheckParent($parent, $overwrite, reuse:false); 
+
+        $this->AddCountsToParent($this->GetParent(),add:false);
+        $retval = $this->parent->SetObject($parent);
+        $this->AddCountsToParent($this->GetParent(),add:true);
         
         $this->GetFilesystem()->MoveFolder($this, $parent);
-        $retval = $this->parent->SetObject($parent);
         $this->Save(); // FS is changed, save now for accurate loads
         return $retval;
     }
@@ -47,8 +50,9 @@ class SubFolder extends Folder
         $folder = static::CheckName($name, $overwrite, reuse:true);
         //if ($folder !== null) $folder->DeleteChildren();// TODO RAY !! see below
 
-        $folder ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        $folder ??= static::CreateItem($this->database, $this->GetParent(), $owner, $name);
         
+        $this->AddCountsToParent($this->GetParent());
         $this->GetFilesystem()->CreateFolder($folder); 
         
         $this->CopyToFolder($folder);
@@ -63,10 +67,12 @@ class SubFolder extends Folder
         //if ($folder !== null) $folder->DeleteChildren();
         // TODO RAY !! the whole reuse thing seems stupid, why would you ever want to do that?
         // in fact the only case I can see is when uploading a new file over an old one, and we currently don't reuse for that, only in Copy
-    
-        $folder ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
+        // TODO RAY !! if reusing, also need to subtract counts? though not recursively as children will get deleted? or just remove concept here and don't solve
+
+        $folder ??= static::CreateItem($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFilesystem()->CreateFolder($folder);
+        $this->AddCountsToParent($parent);
+        $this->GetFilesystem()->CreateFolder($folder); 
         
         $this->CopyToFolder($folder);
         return $folder;
@@ -78,10 +84,22 @@ class SubFolder extends Folder
         if (static::TryLoadByParentAndName($database, $parent, $name) !== null)
             throw new Exceptions\DuplicateItemException();
 
-        $folder = static::NotifyCreate($database, $parent, $account, $name);
+        $folder = static::CreateItem($database, $parent, $account, $name);
         
+        $folder->AddCountsToParent($parent);
         $folder->GetFilesystem()->CreateFolder($folder);
         return $folder;
+    }
+
+    public function NotifyPreDeleted() : void
+    {
+        parent::NotifyPreDeleted();
+
+        if (!$this->isFSDeleted())
+            $this->GetParent()->AddFolderCounts($this, add:false); // NOT content counts
+
+        /*$this->MapToLimits(function(Policy\Base $lim){
+            if (!$this->onOwnerStorage()) $lim->CountSize($this->GetSize()*-1); });*/ // TODO POLICY
     }
 
     public function NotifyPostDeleted() : void

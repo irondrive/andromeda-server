@@ -110,7 +110,7 @@ class External extends Filesystem
                     $owner = $this->GetStorage()->TryGetOwner();
 
                     $class = $isfile ? File::class : SubFolder::class;
-                    $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname, refresh:true);
+                    $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
                     $dbitem->Save(); // insert to the DB immediately
                     // TODO RAY !! catch DatabaseIntegrityExceptions here to catch threading issues, return 503
                 }

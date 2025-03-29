@@ -171,10 +171,10 @@ abstract class Folder extends Item
      * @param File $file the file to add stats from
      * @param bool $add if true add, else subtract
      */
-    private function AddFileCounts(File $file, bool $add = true) : void // @phpstan-ignore-line TODO RAY !! unused (remove later)
+    public function AddFileCounts(File $file, bool $add = true) : void
     {
         $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
-    
+
         $val = $add ? 1 : -1;    
         $this->count_size->DeltaValue($file->GetSize() * $val);    
         $this->count_subfiles->DeltaValue($val);
@@ -184,11 +184,27 @@ abstract class Folder extends Item
     }
     
     /**
-     * Adds the statistics from the given folder to this folder
+     * Adds the statistics from the given folder to this folder (folder itself only)
      * @param Folder $folder the folder to add stats from
      * @param bool $add if true add, else subtract
      */
-    private function AddFolderCounts(Folder $folder, bool $add = true) : void // @phpstan-ignore-line TODO RAY !! unused (remove later)
+    public function AddFolderCounts(Folder $folder, bool $add = true) : void
+    {
+        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
+        
+        $val = $add ? 1 : -1;     
+        $this->count_subfolders->DeltaValue($val);
+
+        if (($parent = $this->TryGetParent()) !== null) 
+            $parent->AddFolderCounts($folder, $add);
+    }
+
+    /**
+     * Adds the statistics from the given folder to this folder (all substats)
+     * @param Folder $folder the folder to add stats from
+     * @param bool $add if true add, else subtract
+     */
+    public function AddFolderContentCounts(Folder $folder, bool $add = true) : void
     {
         $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
         
@@ -198,30 +214,13 @@ abstract class Folder extends Item
         $this->count_subfolders->DeltaValue($folder->GetNumFolders()*$val + $val); // +self
 
         if (($parent = $this->TryGetParent()) !== null) 
-            $parent->AddFolderCounts($folder, $add);
+            $parent->AddFolderContentCounts($folder, $add);
     }
-    
-    // TODO RAY !! !! need to notify folder directly, can't override AddObjectRef/RemoveObjectRef
-    /*protected function AddObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
-    {
-        $modified = parent::AddObjectRef($field, $object, $notification);
-        
-        if ($modified && ($field === 'files' || $field === 'folders')) $this->AddItemCounts($object, true);
-        
-        return $modified;
-    }
-    
-    protected function RemoveObjectRef(string $field, BaseObject $object, bool $notification = false) : bool
-    {
-        $modified = parent::RemoveObjectRef($field, $object, $notification);
-        
-        if ($modified && ($field === 'files' || $field === 'folders')) $this->AddItemCounts($object, false);
-        
-        return $modified;
-    }*/
-    
-    protected function AddCountsToPolicy(Policy\Base $policy, bool $add = true) : void { $policy->AddFolderCounts($this, $add); }
 
+    protected function AddCountsToPolicy(Policy\Base $policy, bool $add = true) : void { $policy->AddFolderContentCounts($this, $add); }
+
+    protected function AddCountsToParent(Folder $folder, bool $add = true) : void { $folder->AddFolderContentCounts($this, $add); }
+    
     /** True if the folder's contents have been refreshed */
     protected bool $subrefreshed = false;
     

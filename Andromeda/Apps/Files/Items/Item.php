@@ -146,10 +146,9 @@ abstract class Item extends BaseObject
      * @param Folder $parent the item's parent folder
      * @param Account $account the account owning this item
      * @param string $name the name of the item
-     * @param bool $refresh if true, force refresh from disk
      * @return static newly created object
      */
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $refresh = false) : static
+    protected static function CreateItem(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
     {
         $obj = $database->CreateObject(static::class);
         $obj->date_created->SetTimeNow();
@@ -162,9 +161,24 @@ abstract class Item extends BaseObject
         if ($account === null)
             $obj->ispublic->SetValue(true);
 
-        if ($refresh) $obj->Refresh();
-
         //$obj->CountCreate(); // TODO POLICY
+        return $obj;
+    }
+
+    /**
+     * Creates a new object in the database only (no filesystem call)
+     * Also refreshes it and adds counts to the parent
+     * @param ObjectDatabase $database database reference
+     * @param Folder $parent the item's parent folder
+     * @param Account $account the account owning this item
+     * @param string $name the name of the item
+     * @return static newly created object
+     */
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static
+    {
+        $obj = static::CreateItem($database, $parent, $account, $name);
+        $obj->Refresh();
+        $obj->AddCountsToParent($parent);
         return $obj;
     }
 
@@ -284,11 +298,11 @@ abstract class Item extends BaseObject
      */
     protected function CheckName(string $name, bool $overwrite, bool $reuse) : ?static
     {
-        $item = static::TryLoadByParentAndName($this->database, $this->GetParent(), $name);
+        $item = self::TryLoadByParentAndName($this->database, $this->GetParent(), $name); // self not static
         
         if ($item !== null)
         {
-            if ($overwrite && $item !== $this) 
+            if ($overwrite && $item !== $this && $item instanceof static) 
             {
                 if (!$reuse) $item->Delete();
                 else { $item->SetCreated(); return $item; }
@@ -313,11 +327,11 @@ abstract class Item extends BaseObject
         if ($parent->storage->GetObjectID() !== $this->storage->GetObjectID())
             throw new Exceptions\CrossFilesystemException();
 
-        $item = static::TryLoadByParentAndName($this->database, $parent, $this->GetName());
+        $item = self::TryLoadByParentAndName($this->database, $parent, $this->GetName()); // self not static
         
         if ($item !== null)
         {
-            if ($overwrite && $item !== $this)
+            if ($overwrite && $item !== $this && $item instanceof static)
             {
                 if (!$reuse) $item->Delete();
                 else { $item->SetCreated(); return $item; }
@@ -447,6 +461,9 @@ abstract class Item extends BaseObject
     /** Adds this item's stats to the given limit, substracting if not $add */
     protected abstract function AddCountsToPolicy(Policy\Base $limit, bool $add = true) : void;
     
+    /** Adds this item's stats to the given folder, substracting if not $add */
+    protected abstract function AddCountsToParent(Folder $folder, bool $add = true) : void;
+    
     /**
      * Returns a config bool for the item by checking applicable limits
      * @param callable $func the function returning the desired bool
@@ -493,9 +510,12 @@ abstract class Item extends BaseObject
 
     public function NotifyPreDeleted() : void
     {
-        if ($this->parent->TryGetObject()?->isFSDeleted() === true)
-            $this->fsDeleted = true;
-        
+        if (($parent = $this->parent->TryGetObject()) !== null)
+        {
+            if ($parent->isDeleted())
+                $this->fsDeleted = true;
+        }
+
         Social\Comment::DeleteByItem($this->database, $this);
         Social\Like::DeleteByItem($this->database, $this);
         Social\Share::DeleteByItem($this->database, $this);

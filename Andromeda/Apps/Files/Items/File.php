@@ -79,16 +79,23 @@ class File extends Item
      */
     public function SetSize(int $size, bool $notify = false) : bool
     {
-        $delta = $size - ($this->size->isInitialized() ? $this->size->GetValue() : 0);
-        $this->GetParent()->DeltaSize($delta);
+        if (!$this->size->isInitialized())
+            $this->size->SetValue(0);
         
         //$this->MapToLimits(function(Policy\Base $lim)use($delta,$notify){
         //    if (!$this->onOwnerStorage()) $lim->CountSize($delta,$notify); });
         // TODO POLICY move onOwnerStorage checks inside limits - account should not care, filesystems should
         
         if (!$notify) 
+        {
+            $this->AssertSize($size);
             $this->GetFilesystem()->Truncate($this, $size);
-        return $this->size->SetValue($size); 
+        }
+
+        $this->AddCountsToParent($this->GetParent(), add:false);
+        $retval = $this->size->SetValue($size); // AFTER Truncate
+        $this->AddCountsToParent($this->GetParent(), add:true);
+        return $retval;
     }
     
     /**
@@ -151,6 +158,8 @@ class File extends Item
     
     protected function AddCountsToPolicy(Policy\Base $limit, bool $add = true) : void { $limit->AddFileCounts($this, $add); }
     
+    protected function AddCountsToParent(Folder $folder, bool $add = true) : void { $folder->AddFileCounts($this, $add); }
+    
     /** Sends a RefreshFile() command to the filesystem to refresh metadata */
     protected function Refresh() : void
     {
@@ -165,8 +174,9 @@ class File extends Item
     {
         static::CheckName($name, $overwrite, reuse:false);
         
-        $this->GetFilesystem()->RenameFile($this, $name); 
         $retval = $this->name->SetValue($name);
+
+        $this->GetFilesystem()->RenameFile($this, $name); 
         $this->Save(); // FS is changed, save now for accurate loads
         return $retval;
     }
@@ -174,9 +184,12 @@ class File extends Item
     public function SetParent(Folder $parent, bool $overwrite = false) : bool
     {
         static::CheckParent($parent, $overwrite, reuse:false);
+
+        $this->AddCountsToParent($this->GetParent(),add:false);
+        $retval = $this->parent->SetObject($parent);
+        $this->AddCountsToParent($this->GetParent(),add:true);
         
         $this->GetFilesystem()->MoveFile($this, $parent);
-        $retval = $this->parent->SetObject($parent);
         $this->Save(); // FS is changed, save now for accurate loads
         return $retval;
     }
@@ -184,41 +197,27 @@ class File extends Item
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static
     {
         $file = static::CheckName($name, $overwrite, reuse:true);
-        $file ??= static::NotifyCreate($this->database, $this->GetParent(), $owner, $name);
+        if ($file !== null) $file->AddCountsToParent($this->GetParent(),add:false);
+        $file ??= static::CreateItem($this->database, $this->GetParent(), $owner, $name);
         
-        $this->GetFilesystem()->CopyFile($this, $file);
         $file->SetSize($this->GetSize(),notify:true);
+        $file->AddCountsToParent($this->GetParent());
+        $this->GetFilesystem()->CopyFile($this, $file);
         return $file;
     }
     
     public function CopyToParent(?Account $owner, Folder $parent, bool $overwrite = false) : static
     {
         $file = static::CheckParent($parent, $overwrite, reuse:true);
-        $file ??= static::NotifyCreate($this->database, $parent, $owner, $this->GetName());
+        if ($file !== null) $file->AddCountsToParent($parent,add:false);
+        $file ??= static::CreateItem($this->database, $parent, $owner, $this->GetName());
         
-        $this->GetFilesystem()->CopyFile($this, $file);
         $file->SetSize($this->GetSize(),notify:true);
+        $file->AddCountsToParent($parent);
+        $this->GetFilesystem()->CopyFile($this, $file);
         return $file;
     }
 
-    /**
-     * Creates a new empty file in the DB and checks for duplicates
-     * @param ObjectDatabase $database database reference
-     * @param Folder $parent the file's parent folder
-     * @param Account $account the account owning this file
-     * @param string $name the name for the file
-     * @param bool $overwrite if true (reuses the same object)
-     * @return static newly created object
-     */
-    protected static function BasicCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : static
-    {
-        $file = static::TryLoadByParentAndName($database, $parent, $name);
-        if ($file !== null && !$overwrite)
-            throw new Exceptions\DuplicateItemException();
-        
-        return $file ?? static::NotifyCreate($database, $parent, $account, $name);
-    }
-    
     /**
      * Creates a new empty file on disk and in the DB
      * @param ObjectDatabase $database database reference
@@ -230,9 +229,17 @@ class File extends Item
      */
     public static function Create(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $overwrite = false) : static
     {
-        $file = static::BasicCreate($database, $parent, $account, $name, $overwrite);
-        $file->GetFilesystem()->CreateFile($file);
+        $file = static::TryLoadByParentAndName($database, $parent, $name);
+        if ($file !== null)
+        {
+            if (!$overwrite) throw new Exceptions\DuplicateItemException();
+            else $file->AddCountsToParent($parent,add:false);
+        }
+        else $file = static::CreateItem($database, $parent, $account, $name);
+
         $file->SetSize(0, notify:true);
+        $file->AddCountsToParent($parent);
+        $file->GetFilesystem()->CreateFile($file);
         return $file;
     }
     
@@ -247,9 +254,17 @@ class File extends Item
      */
     public static function Import(ObjectDatabase $database, Folder $parent, ?Account $account, InputPath $infile, bool $overwrite = false) : static
     {
-        $obj = static::BasicCreate($database, $parent, $account, $infile->GetName(), $overwrite);
-        $obj->SetContents($infile);
-        return $obj;
+        $file = static::TryLoadByParentAndName($database, $parent, $infile->GetName());
+        if ($file !== null)
+        {
+            if (!$overwrite) throw new Exceptions\DuplicateItemException();
+            else $file->AddCountsToParent($parent,add:false);
+        }
+        else $file = static::CreateItem($database, $parent, $account, $infile->GetName());
+
+        $file->SetContents($infile);
+        $file->AddCountsToParent($parent);
+        return $file;
     }
     
     /**
@@ -258,9 +273,8 @@ class File extends Item
      */
     public function SetContents(InputPath $infile) : void
     {
-        $size = $infile->GetSize(); // infile may get moved
+        $this->SetSize($infile->GetSize(), notify:true);
         $this->GetFilesystem()->ImportFile($this, $infile);
-        $this->SetSize($size, notify:true);
     }
     
     /** Gets the preferred chunk size by the filesystem holding this file */
@@ -294,12 +308,15 @@ class File extends Item
         $this->AssertSize($length); 
         $this->GetFilesystem()->WriteBytes($this, $start, $data); 
         // TODO RAY !! should the Filesystem call SetSize notify?
-        $this->SetSize($length, notify:true);         
+        $this->SetSize($length, notify:true); // AFTER WriteBytes
     }    
 
     public function NotifyPreDeleted() : void
     {
         parent::NotifyPreDeleted();
+
+        if (!$this->isFSDeleted())
+            $this->GetParent()->AddFileCounts($this, add:false);
 
         /*$this->MapToLimits(function(Policy\Base $lim){
             if (!$this->onOwnerStorage()) $lim->CountSize($this->GetSize()*-1); });*/ // TODO POLICY

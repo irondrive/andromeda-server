@@ -1632,8 +1632,7 @@ class FilesApp extends BaseApp
         
         $global = $params->GetOptParam('global',false)->GetBool();
         if ($global) $authenticator->RequireAdmin();
-
-        if (!Policy\StandardAccount::ForceLoadByAccount($this->database, $account)->GetAllowUserStorage() && !$global)
+        else if (!Policy\StandardAccount::ForceLoadByAccount($this->database, $account)->GetAllowUserStorage())
             throw new Exceptions\UserStorageDisabledException();
             
         $storage = Storage::TypedCreate($this->database, $input, $global ? null : $account);

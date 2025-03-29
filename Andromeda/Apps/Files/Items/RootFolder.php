@@ -26,7 +26,7 @@ class RootFolder extends Folder
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static     { throw new Exceptions\InvalidRootOpException(); }
     public function CopyToParent(?Account $owner, Folder $folder, bool $overwrite = false) : static { throw new Exceptions\InvalidRootOpException(); }
     
-    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name, bool $refresh = false) : static { throw new Exceptions\InvalidRootOpException(); }
+    public static function NotifyCreate(ObjectDatabase $database, Folder $parent, ?Account $account, string $name) : static { throw new Exceptions\InvalidRootOpException(); }
 
     /**
      * Loads the root folder for given account and FS, creating it if it doesn't exist
