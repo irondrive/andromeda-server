@@ -287,8 +287,7 @@ class File extends Item
         $length = max($this->GetSize(), $start+strlen($data)); 
         
         $this->AssertSize($length); 
-        $this->GetFilesystem()->WriteBytes($this, $start, $data); 
-        // TODO RAY !! should the Filesystem call SetSize notify?
+        $this->GetFilesystem()->WriteBytes($this, $start, $data);
         $this->SetSize($length, notify:true); // AFTER WriteBytes
     }    
 

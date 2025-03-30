@@ -430,7 +430,7 @@ class SafeParam
     }
     
     /**
-     * A filesystem item name, forbids /\?*:;{}, directory traversal, max length 255, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW
+     * A filesystem item name, forbids /\?*:;{}, ./.., max length 255, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW
      * @throws SafeParamInvalidException if not valid
      */
     public function GetNullFSName() : ?string
@@ -456,7 +456,7 @@ class SafeParam
     }
     
     /**
-     * A filesystem path, forbids ?*;{}, :/, max length 65535, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW - ALLOWS ./..
+     * A filesystem path, forbids ?*:;{}, max length 65535, and FILTER_UNSAFE_RAW/FILTER_FLAG_STRIP_LOW, ALLOWS ./..
      * @throws SafeParamInvalidException if not valid
      */
     public function GetNullFSPath() : ?string
@@ -467,8 +467,7 @@ class SafeParam
             $this->CheckLength(65535);
             $value = trim($value);
             
-            if (preg_match("%[?*;{}]+%", $value) !== 0 || 
-                mb_strpos($value, ':/') !== false) // blacklist
+            if (preg_match("%[?*:;{}]+%", $value) !== 0) // blacklist
                 throw new SafeParamInvalidException($this->key, 'fspath');
             
             $value = filter_var($value0=$value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW);

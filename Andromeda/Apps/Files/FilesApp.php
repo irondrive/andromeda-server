@@ -81,7 +81,7 @@ class FilesApp extends BaseApp
             'createfolder --parent id --name fsname',
             'getfile --file id [--details bool]',
             'getfolder [--folder id | --storage id] [--details bool] [--files bool] [--folders bool] [--recursive bool] [--limit ?uint] [--offset ?uint]',
-            'getitembypath --path fspath [--folder id | --storage id] [--isfile bool]',
+            'getitembypath --path fspath [--root id | --storage id]',
             'editfile --file id [--description ?text]',
             'editfolder --folder id [--description ?text]',
             'ownfile --file id',
@@ -478,10 +478,7 @@ class FilesApp extends BaseApp
         $account = $authenticator?->GetAccount();
 
         $wstart = $params->GetOptParam('offset',$file->GetSize(),SafeParams::PARAMLOG_NEVER)->GetUint();
-        
         $actionlog?->LogDetails('wstart',$wstart);
-        
-        $infile = $input->GetFile('data');
         
         if ($account === null && !$file->GetAllowPublicModify())
             throw new AuthenticationFailedException();
@@ -489,6 +486,7 @@ class FilesApp extends BaseApp
         if ($share !== null && !$share->CanModify()) 
             throw new Exceptions\ItemAccessDeniedException();   
 
+        $infile = $input->GetFile('data');
         if ($infile instanceof InputPath && ($wstart === 0) && $infile->GetSize() >= $file->GetSize())
         {
             // for a full overwrite, we can call SetContents for efficiency
@@ -634,10 +632,10 @@ class FilesApp extends BaseApp
     protected function GetItemByPath(SafeParams $params, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $share = null;
-        if ($params->HasParam('folder'))
+        if ($params->HasParam('root'))
         {
             $raccess = $this->AuthenticateFolderAccess($params, $authenticator, $actionlog);
-            $folder = $raccess->GetFolder(); $share = $raccess->TryGetShare();
+            $root = $raccess->GetFolder(); $share = $raccess->TryGetShare();
             
             if ($share !== null && !$share->CanRead()) 
                 throw new Exceptions\ItemAccessDeniedException();
@@ -656,59 +654,38 @@ class FilesApp extends BaseApp
                 if ($storage === null) throw new Exceptions\UnknownStorageException();
             }
             
-            $folder = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
+            $root = RootFolder::GetRootByAccountAndFS($this->database, $account, $storage);
 
-            if ($folder !== null) 
-                $actionlog?->LogItemAccess($folder, null);
+            if ($root !== null) 
+                $actionlog?->LogItemAccess($root, null);
         }        
         
-        if ($folder === null) 
+        if ($root === null) 
             throw new Exceptions\UnknownFolderException();
-        
-        $path = $params->GetParam('path')->GetFSPath();
-        $path = array_filter(explode('/',$path)); $name = array_pop($path);
 
-        foreach ($path as $subfolder) // TODO RAY !! specifically disallow . and ..
-        {
-            $subfolder = Folder::TryLoadByParentAndName($this->database, $folder, $subfolder);
-            
-            if ($subfolder === null) 
-                throw new Exceptions\UnknownFolderException();
-            else $folder = $subfolder;
-        }
+        $path = $params->GetParam('path')->GetFSPath();
+        $path = array_filter(explode('/',$path)); 
         
-        $item = null;
-        $isfile = $params->HasParam('isfile') ? $params->GetParam('isfile')->GetBool() : null;
-        // TODO RAY !! can just load item here and get rid of --isfile input
-        
-        if ($name === null) 
-        {
-            if ($isfile === true)
-                throw new Exceptions\UnknownItemException();
-            else $item = $folder; // trailing / for folder
-        }
+        $name = array_pop($path);
+        if ($name === null) $item = $root;
         else
         {
-            if ($isfile !== false)
-                $item = File::TryLoadByParentAndName($this->database, $folder, $name);
-            if ($isfile !== true && $item === null)
-                $item = Folder::TryLoadByParentAndName($this->database, $folder, $name);
-        }
-        
-        if ($item === null) 
-            throw new Exceptions\UnknownItemException();
+            $parent = $root;
+            foreach ($path as $subpath)
+            {
+                $parent = Folder::TryLoadByParentAndName($this->database, $parent, $subpath);
+                if ($parent === null)
+                    throw new Exceptions\UnknownFolderException($subpath);
+            }
 
-        if ($item instanceof File) 
-        {
-            $retval = $item->GetClientObject(owner:($share === null));
+            $item = Item::TryLoadByParentAndName($this->database, $parent, $name);
+            if ($item === null)
+                throw new Exceptions\UnknownItemException($name);
         }
-        else if ($item instanceof Folder) // @phpstan-ignore-line // TODO RAY !! remove as per below comment
-        {
-            $retval = $item->GetClientObject(owner:($share === null),details:false,files:true,folders:true);
-        }
-        // TODO RAY !! make folder client object default files/folders to true, just use Item->GetClientObject here
-        
-        return $retval;
+
+        if ($item instanceof Folder)
+            return $item->GetClientObject(owner:($share === null),files:true,folders:true);
+        else return $item->GetClientObject(owner:($share === null));
     }
     
     /**
