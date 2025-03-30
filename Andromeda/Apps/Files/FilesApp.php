@@ -13,13 +13,16 @@ use Andromeda\Apps\Accounts\Exceptions\{AuthenticationFailedException, AdminRequ
 use Andromeda\Apps\Files\Items\{Item, File, Folder, RootFolder, SubFolder};
 use Andromeda\Apps\Files\Social\{Like, Share, Comment, Tag};
 use Andromeda\Apps\Files\Storage\{Storage, FTP, S3, SFTP, SMB};
-use Andromeda\Apps\Files\Storage\Exceptions\FileWriteFailedException;
+use Andromeda\Apps\Files\Storage\Exceptions\{FileReadFailedException, FileWriteFailedException};
+
+// TODO RAY !! need to add all @throws many places
 
 // when an account is deleted, need to delete files-related stuff also
 Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
 {
-    RootFolder::DeleteByAccount($database, $account); // faster to do now
+    RootFolder::DeleteByAccount($database, $account);
     Storage::DeleteByAccount($database, $account);
+    // TODO POLICY need to delete account policy too
 });
 
 Account::RegisterCryptoHandler(function(ObjectDatabase $database, Account $account, bool $init)
@@ -444,25 +447,24 @@ class FilesApp extends BaseApp
             header('Content-Transfer-Encoding: binary');
         }
 
-        // register the data output to happen after the main commit so that we don't get to the
-        // end of the download and then fail to insert a stats row and miss counting bandwidth
         $this->API->GetInterface()->SetOutputHandler(new OutputHandler(
-            function() use($debugdl,$length){ return $debugdl ? null : $length; },
             function(Output $output) use($file,$fstart,$length,$debugdl)
         {            
             set_time_limit(0); 
             ignore_user_abort(true);
             
-            FileUtils::ChunkedRead($this->database,$file,$fstart,$length,$debugdl);
-        }));
+            $stream = fopen($debugdl ? "php://memory" : "php://output",'a');
+            if (!is_resource($stream)) throw new FileReadFailedException();
+
+            FileUtils::ChunkedRead($this->database,$file,$fstart,$length,$stream);
+            @fclose($stream);
+        }, hasbytes:!$debugdl));
     }
         
     /**
      * Writes new data to an existing file - data is posted as a file
      * 
      * If no offset is given, the default is to append the file (offset = file size)
-     * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback writes.
-     * The FS will restore the original size of the file but writes within the original size are permanent.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws Exceptions\RandomWriteDisabledException if random write is not allowed on the file
      * @throws Exceptions\ItemAccessDeniedException if acessing via share and share doesn't allow modify
@@ -518,8 +520,6 @@ class FilesApp extends BaseApp
     /**
      * Truncates (resizes a file)
      * 
-     * DO NOT use this in a multi-action transaction as the underlying FS cannot fully rollback truncates.
-     * The FS will restore the original size of the file but if the file was shrunk, data will be zeroed.
      * @throws AuthenticationFailedException if public access and public modify is not allowed
      * @throws Exceptions\RandomWriteDisabledException if random writes are not enabled on the file
      * @throws Exceptions\ItemAccessDeniedException if access via share and share does not allow modify
@@ -825,9 +825,6 @@ class FilesApp extends BaseApp
     /**
      * Deletes an item.
      * 
-     * DO NOT use this in a multi-action transaction as the underlying FS cannot rollback deletes.
-     * If you delete an item and then do another action that results in an error, the content
-     * will still be deleted on disk though the database objects will remain.
      * @param class-string<Item> $class item class
      * @param string $key input param for a single item
      * @throws AuthenticationFailedException if public access and public modify is not allowed

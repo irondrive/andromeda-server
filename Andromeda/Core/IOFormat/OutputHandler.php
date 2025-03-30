@@ -3,26 +3,14 @@
 /** Class for custom app output routines */
 class OutputHandler
 {
-    /** @var callable() : ?non-negative-int */
-    private $getbytes; 
-    /** @var callable(Output) : void */
-    private $output;
-    
     /**
-     * @param callable() : ?non-negative-int $getbytes get the number of bytes that will be output (can be 0) or null if no output
      * @param callable(Output) : void $output function to display custom output
+     * @param bool $hasbytes true if the function might do output (can be true for 0 bytes)
      */
-    public function __construct(callable $getbytes, callable $output)
-    {
-        $this->getbytes = $getbytes;
-        $this->output = $output; 
-    }
+    public function __construct(private $output, private bool $hasbytes){ }
     
-    /** 
-     * Return the number of bytes that will be output
-     * @return ?non-negative-int 
-     */
-    public function GetBytes() : ?int { return ($this->getbytes)(); }
+    /** @return bool true if the function attempts to do output */
+    public function HasBytes() : bool { return $this->hasbytes; }
     
     /** Do the actual output routine */
     public function DoOutput(Output $output) : void { ($this->output)($output); }

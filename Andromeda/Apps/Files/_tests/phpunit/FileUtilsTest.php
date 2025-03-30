@@ -47,10 +47,10 @@ class FileUtilsTest extends \PHPUnit\Framework\TestCase
         
         $file->expects($this->exactly(count($reads)))->method('ReadBytes')->withConsecutive(...$reads);
         
-        $output = Utilities::CaptureOutput(function()use($file,$offset,$length,$chunksize,$align){ 
-            FileUtils::DoChunkedRead($file, $offset, $length, $chunksize, $align, false); });
-        
-        $this->assertSame($output, substr($data,$offset,$length));
+        $stream = fopen("php://memory",'r+'); assert(is_resource($stream));
+        FileUtils::DoChunkedRead($file, $offset, $length, $chunksize, $align, $stream);
+        fseek($stream, 0); $ret = stream_get_contents($stream);
+        $this->assertSame(substr($data,$offset,$length), $ret);
     }
     
     public function testChunkedRead() : void

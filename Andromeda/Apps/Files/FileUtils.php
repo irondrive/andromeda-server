@@ -71,10 +71,10 @@ class FileUtils
      * @param non-negative-int $length number of bytes to read
      * @param int $chunksize read chunk size
      * @param bool $align if true, align reads to chunk size multiples
-     * @param bool $debugdl if true, don't actually echo anything
+     * @param resource $stream stream to write data to
      * @throws FileReadFailedException if reading the file fails
      */
-    public static function DoChunkedRead(File $file, int $fstart, int $length, int $chunksize, bool $align, bool $debugdl = false) : void
+    public static function DoChunkedRead(File $file, int $fstart, int $length, int $chunksize, bool $align, $stream) : void
     {
         for ($byte = $fstart; $byte <= $fstart+$length-1; )
         {
@@ -94,8 +94,8 @@ class FileUtils
                 
             $file->CountBandwidth($rlen);
             $byte += $rlen;
-            
-            if (!$debugdl) { echo $data; flush(); } // TODO RAY !! take a stream here too instead of echo directly - debugdl can be a dummy stream (ofc check benchmark)
+
+            self::WriteStream($stream, $data);
         }
     }
 
@@ -157,16 +157,17 @@ class FileUtils
      * @param File $file file to read
      * @param non-negative-int $fstart byte offset to start reading
      * @param non-negative-int $length number of bytes to read
+     * @param resource $stream stream to write data to
      * @see self::DoChunkedRead()
      */
-    public static function ChunkedRead(ObjectDatabase $database, File $file, int $fstart, int $length, bool $debugdl = false) : void
+    public static function ChunkedRead(ObjectDatabase $database, File $file, int $fstart, int $length, $stream) : void
     {
         $rwsize = Config::GetInstance($database)->GetRWChunkSize();
         $fcsize = $file->GetChunkSize();
         $align = ($fcsize !== null);
         $chunksize = self::GetChunkSize($rwsize, $fcsize);
         
-        self::DoChunkedRead($file, $fstart, $length, $chunksize, $align, $debugdl);
+        self::DoChunkedRead($file, $fstart, $length, $chunksize, $align, $stream);
     }
     
     /**

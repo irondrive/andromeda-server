@@ -53,11 +53,14 @@ class QueryBuilderTest extends \PHPUnit\Framework\TestCase
         $q = new QueryBuilder(); $q->Where($q->Equals('mykey',null));
         $this->testQuery($q, array(), "WHERE \"mykey\" IS NULL");
         
-        $q = new QueryBuilder(); $q->Where($q->Equals('mykey',null,false));
+        $q = new QueryBuilder(); $q->Where($q->Equals('mykey',null,quotes:false));
         $this->testQuery($q, array(), "WHERE mykey IS NULL");
 
         $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey','myval'));
         $this->testQuery($q, array('myval'), "WHERE \"mykey\" <> :d0");
+
+        $q = new QueryBuilder(); $q->Where($q->NotEquals('mykey','myval',quotes:false));
+        $this->testQuery($q, array('myval'), "WHERE mykey <> :d0");
     }
     
     public function testLike() : void

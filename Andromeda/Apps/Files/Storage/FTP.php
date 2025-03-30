@@ -67,6 +67,8 @@ class FTP extends FWrapper
         }
         return $ret;
     }
+
+    // TODO RAY !! need to use @ for many functions? see FWrapper - see all other fopens?
     
     public static function GetCreateUsage() : string { 
         return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:false).

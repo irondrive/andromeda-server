@@ -90,7 +90,7 @@ abstract class IOInterface
      */
     public function SetOutputMode(int $mode) : self 
     {
-        if ($mode !== 0 && $this->userfunc !== null && $this->userfunc->GetBytes() !== null)
+        if ($mode !== 0 && $this->userfunc !== null && $this->userfunc->HasBytes())
             throw new Exceptions\MultiOutputException($mode);
 
         $this->outmode = $mode; return $this; 
@@ -109,7 +109,7 @@ abstract class IOInterface
         if ($f !== null && $this->userfunc !== null)
             throw new Exceptions\MultiOutputException();
 
-        if ($f !== null && $f->GetBytes() !== null)
+        if ($f !== null && $f->HasBytes())
             $this->outmode = 0;
         
         $this->userfunc = $f; return $this; 

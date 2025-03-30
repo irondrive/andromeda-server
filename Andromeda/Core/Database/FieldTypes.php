@@ -49,7 +49,7 @@ abstract class BaseField
     public function GetDelta() : int { return $this->delta; }
     
     /** @return bool true if was modified from DB */
-    public function isModified() : bool { return $this->delta !== 0; } // TODO RAY !! test < 0!
+    public function isModified() : bool { return $this->delta !== 0; }
     
     /** Returns true if this field should be saved on rollback */
     public function isAlwaysSave() : bool { return $this->alwaysSave; }

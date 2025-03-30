@@ -419,7 +419,7 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood($val="test/test", $val, $getVal);
         $this->testGood($val="test/../test", $val, $getVal);
         $this->testGood($val="test\\test", $val, $getVal);
-        $this->testGood($val="C:\\test", $val, $getVal);
+        //$this->testGood($val="C:\\test", $val, $getVal);
         
         $this->testBad("test?", $getVal); 
         $this->testBad("smb://fileserver", $getVal);

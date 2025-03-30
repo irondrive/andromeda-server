@@ -41,11 +41,11 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
             $this->assertSame($mode,$iface->SetOutputMode($mode)->GetOutputMode());
 
         $iface->SetOutputMode(IOInterface::OUTPUT_PLAIN);
-        $iface->SetOutputHandler(new OutputHandler(function(){ return null; },function(Output $output){ }));
+        $iface->SetOutputHandler(new OutputHandler(function(Output $output){ },hasbytes:false));
         $this->assertSame(IOInterface::OUTPUT_PLAIN, $iface->GetOutputMode()); // null bytes does not affect outmode
         
         $iface->SetOutputHandler(null); // reset
-        $iface->SetOutputHandler(new OutputHandler(function(){ return 0; },function(Output $output){ }));
+        $iface->SetOutputHandler(new OutputHandler(function(Output $output){ },hasbytes:true));
         $this->assertSame(0, $iface->GetOutputMode()); // 1st user func sets null
         
         $this->expectException(Exceptions\MultiOutputException::class);
@@ -62,7 +62,7 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         }));
 
         $outfunc = $this->createMock(OutputHandler::class);
-        $outfunc->method('GetBytes')->willReturn(null);
+        $outfunc->method('HasBytes')->willReturn(false);
         $called = false;
         $outfunc->method('DoOutput')->willReturnCallback(
             function()use(&$called){ $called = true; });
@@ -74,8 +74,8 @@ class IOInterfaceTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($called);
 
         $outfunc = $this->createMock(OutputHandler::class);
-        $outfunc->method('GetBytes')->willReturn($len=55);
-        $outdata = Utilities::Random($len);
+        $outfunc->method('HasBytes')->willReturn(true);
+        $outdata = Utilities::Random(55);
         $outfunc->method('DoOutput')->willReturnCallback(
             function()use($outdata){ echo $outdata; });
         $iface->SetOutputHandler(null); // reset

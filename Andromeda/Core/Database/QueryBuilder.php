@@ -150,7 +150,7 @@ class QueryBuilder
      * Returns a query string asserting the given column is not equal to the given value 
      * @param string $key the name of the column to compare
      * @param ?scalar $val the column value to compare
-     * @param bool $quotes if true, surround key with "" // TODO RAY !! unit test
+     * @param bool $quotes if true, surround key with ""
      */
     public function NotEquals(string $key, $val, bool $quotes = true) : string 
     { 
