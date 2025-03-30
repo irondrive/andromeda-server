@@ -11,22 +11,22 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_apps_core_actionlog` (
-  `id` char(20) NOT NULL,
+  `id` char(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `admin` tinyint(1) DEFAULT NULL,
-  `account` char(12) DEFAULT NULL,
-  `sudouser` char(12) DEFAULT NULL,
-  `client` char(12) DEFAULT NULL,
+  `account` char(12) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `sudouser` char(12) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `client` char(12) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `a2obj_apps_core_actionlog_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_core_config` (
-  `id` char(1) NOT NULL,
-  `version` varchar(255) NOT NULL,
+  `id` char(1) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `datadir` text DEFAULT NULL,
   `apps` text NOT NULL,
   `date_created` double NOT NULL,
@@ -44,27 +44,27 @@ CREATE TABLE `a2obj_core_config` (
   `enabled` tinyint(1) NOT NULL,
   `email` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_core_emailer` (
-  `id` char(8) NOT NULL,
+  `id` char(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `type` tinyint(4) NOT NULL,
   `hosts` text DEFAULT NULL,
   `username` varchar(255) DEFAULT NULL,
-  `password` text DEFAULT NULL,
+  `password` blob DEFAULT NULL,
   `from_address` varchar(255) NOT NULL,
   `from_name` varchar(255) DEFAULT NULL,
   `use_reply` tinyint(1) DEFAULT NULL,
   `date_created` double NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_core_errors_errorlog` (
-  `id` char(12) NOT NULL,
+  `id` char(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
@@ -85,12 +85,12 @@ CREATE TABLE `a2obj_core_errors_errorlog` (
   KEY `app` (`app`(191)),
   KEY `action` (`action`(191)),
   KEY `addr` (`addr`(191))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_core_logging_actionlog` (
-  `id` char(20) NOT NULL,
+  `id` char(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `time` double NOT NULL,
   `addr` varchar(255) NOT NULL,
   `agent` text NOT NULL,
@@ -106,13 +106,13 @@ CREATE TABLE `a2obj_core_logging_actionlog` (
   KEY `time` (`time`),
   KEY `addr` (`addr`),
   KEY `app_action` (`app`,`action`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `a2obj_core_logging_metricslog` (
-  `id` char(20) NOT NULL,
-  `actionlog` char(20) DEFAULT NULL,
+  `id` char(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `actionlog` char(20) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `date_created` double NOT NULL,
   `peak_memory` int(11) NOT NULL,
   `nincludes` smallint(6) NOT NULL,
@@ -157,7 +157,7 @@ CREATE TABLE `a2obj_core_logging_metricslog` (
   UNIQUE KEY `actionlog` (`actionlog`) USING BTREE,
   KEY `app_action` (`app`,`action`),
   CONSTRAINT `a2obj_core_logging_metricslog_ibfk_1` FOREIGN KEY (`actionlog`) REFERENCES `a2obj_core_logging_actionlog` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_as_cs;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

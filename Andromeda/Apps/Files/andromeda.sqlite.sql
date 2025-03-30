@@ -128,7 +128,7 @@ CREATE TABLE `a2obj_apps_files_policy_standard` (
 );
 CREATE TABLE `a2obj_apps_files_policy_standardaccount` (
   `id` char(12) NOT NULL
-,  `account` char(2) NOT NULL
+,  `account` char(12) NOT NULL
 ,  `can_emailshare` integer DEFAULT NULL
 ,  `can_userstorage` integer DEFAULT NULL
 ,  `track_items` integer DEFAULT NULL
@@ -257,7 +257,7 @@ CREATE TABLE `a2obj_apps_files_storage_sftp` (
 ,  `path` text NOT NULL
 ,  `hostname` varchar(255) NOT NULL
 ,  `port` integer DEFAULT NULL
-,  `hostkey` text DEFAULT NULL
+,  `hostkey` blob DEFAULT NULL
 ,  `username` varbinary(255) NOT NULL
 ,  `password` tinyblob DEFAULT NULL
 ,  `privkey` blob DEFAULT NULL

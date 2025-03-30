@@ -33,7 +33,7 @@ CREATE TABLE `a2obj_core_emailer` (
 ,  `type` integer NOT NULL
 ,  `hosts` text DEFAULT NULL
 ,  `username` varchar(255) DEFAULT NULL
-,  `password` text DEFAULT NULL
+,  `password` blob DEFAULT NULL
 ,  `from_address` varchar(255) NOT NULL
 ,  `from_name` varchar(255) DEFAULT NULL
 ,  `use_reply` integer DEFAULT NULL
