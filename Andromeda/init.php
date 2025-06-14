@@ -42,13 +42,13 @@ spl_autoload_register(function(string $class)
     
     // usually a file is a single class
     $path = ROOT.str_replace("\\","/",$class).'.php';
-    if (file_exists($path)) include_once($path);
+    if (file_exists($path)) require_once($path);
     else
     {    // a file can also be a namespace
         if (($lpos = strrpos($class, "\\")) !== false)
             $class = substr($class, 0, $lpos);
         $path = ROOT.str_replace("\\","/",$class).'.php';
-        if (file_exists($path)) include_once($path);
+        if (file_exists($path)) require_once($path);
     }
     global $autoloader_time;
     $autoloader_time += (hrtime(true)-$start_time)/1e9;
