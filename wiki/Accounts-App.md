@@ -118,7 +118,7 @@ To enable crypto on an account, use `accounts enablecrypto`.  This will delete a
 
 ## Password Recovery
 
-Firstly, note that recovery keys are deleted after they are used (single-use).  Password recovery is done using the `accounts changepassword` function when not signed in.  This requires a recovery key.  If you don't have a recovery key, you can use the `accounts emailrecovery` function to receive a new recovery key via email.  This will NOT work if a) you don't have contact information configured or b) account crypto is enabled.  For case A, an admin can change the password using `auth_sudouser`.  In case B, you are out of luck.   
+Firstly, note that recovery keys are deleted after they are used (single-use).  Password recovery is done using the `accounts changepassword` function when not signed in.  This requires a recovery key.  If you don't have a recovery key, you can use the `accounts emailrecovery` function to receive a new recovery key via email.  This email method will NOT work if a) you don't have contact information configured, b) account crypto is enabled, or c) the account has two factor enabled.  For case A, an admin can change the password using `auth_sudouser`.  In case B, you are out of luck.   
 
 ## Account/Group Search
 
