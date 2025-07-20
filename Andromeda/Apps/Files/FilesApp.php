@@ -1392,6 +1392,7 @@ class FilesApp extends BaseApp
                 if ($url === null || $url === "") 
                     throw new Exceptions\ShareURLGenerateException();
                 
+                // TODO this will be a problem, base64 has non-URL safe characters, see https://www.php.net/manual/en/function.base64-encode.php
                 $cmdparams = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey()); // @phpstan-ignore-line make public or use GetClientObject?
                 $cmdinput = (new Input('files','download',$cmdparams));
                 

@@ -3,9 +3,26 @@
 if (!function_exists('sodium_memzero')) 
     throw new Exceptions\MissingExtensionException('sodium');
 
-/** libsodium wrapper class for crypto */
+/** 
+ * libsodium wrapper class for crypto 
+ * Many functions here may throw \SodiumException if used improperly
+ */
 class Crypto
 {
+    /** Returns the given string encoded as base64, in constant time */
+    public static function base64_encode(string $input) : string {
+        return sodium_bin2base64($input, SODIUM_BASE64_VARIANT_ORIGINAL); }
+
+    /** 
+     * Returns the given string decoded from base64, in constant time 
+     * @return string|false false if the string is not valid base64
+     */
+    public static function base64_decode(string $input) : string|false
+    {
+        try { return sodium_base642bin($input, SODIUM_BASE64_VARIANT_ORIGINAL); }
+        catch (\SodiumException $e) { return false; }
+    }
+
     /** 
      * Returns the length of a salt returned by GenerateSalt()
      * @return positive-int
@@ -15,28 +32,70 @@ class Crypto
     /** Generates a salt for use with DeriveKey() */
     public static function GenerateSalt() : string
     {
-        return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
+        return random_bytes(static::SaltLength());
     }
     
-    private const FAST_OPS = 1;
-    private const FAST_MEMORY = 16*1024;
-    
     /**
-     * Generates an encryption key from a password 
+     * Generates an encryption key from a password or other input (deliberately slow)
      * @param string $password the password to derive the key from
      * @param string $salt a generated salt to use
      * @param int $bytes the number of bytes required to output
-     * @param bool $fast if true, does a very fast transformation (use only if the password is itself a key)
      * @return string the derived binary key
      */
-    public static function DeriveKey(string $password, string $salt, int $bytes, bool $fast = false) : string
+    public static function DeriveKey(string $password, string $salt, int $bytes) : string
     {
-        $key = sodium_crypto_pwhash(
-            $bytes, $password, $salt,
-            $fast ? self::FAST_OPS : SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            $fast ? self::FAST_MEMORY : SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+        $key = sodium_crypto_pwhash($bytes, $password, $salt,
+            SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
+            SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13 );
         sodium_memzero($password); return $key;
+    }
+
+    /** 
+     * Returns the length of a key for use with DeriveSubkey 
+     * @return positive-int
+     */
+    public static function SuperKeyLength() : int { return SODIUM_CRYPTO_KDF_KEYBYTES; }
+
+    /** 
+     * Returns the minimum size of the subkey to derive
+     * @return array{0:positive-int, 1:positive-int}
+     */
+    public static function SubkeySizeRange() : array { 
+        return [SODIUM_CRYPTO_KDF_BYTES_MIN, SODIUM_CRYPTO_KDF_BYTES_MAX]; }
+
+    /**
+     * Generates a subkey from an existing key (fast)
+     * @param string $superkey the key to derive a subkey from (length must be crypto_kdf_KEYBYTES)
+     * @param int $keyid the subkey "ID" to use
+     * @param literal-string $context the subkey label to use (must be crypto_kdf_CONTEXTBYTES aka 8 bytes)
+     * @param int $bytes the desired length of the subkey
+     */
+    public static function DeriveSubkey(string $superkey, int $keyid, string $context, int $bytes) : string
+    {
+        return sodium_crypto_kdf_derive_from_key($bytes, $keyid, $context, $superkey);
+    }
+
+    /**
+     * Returns the length of a key for use with FastHash
+     * @return positive-int
+     */
+    public static function FastHashKeyLength() : int { return SODIUM_CRYPTO_GENERICHASH_KEYBYTES; }
+
+    /** Generates a crypto key for use with FastHash */
+    public static function GenerateFastHashKey() : string { return random_bytes(static::FastHashKeyLength()); }
+
+    /**
+     * Generates a hash from an existing high-entropy key (fast)
+     * @param string $message the input to create a hash from
+     * @param int $bytes the number of bytes required to output
+     * @param string $key the key to use for the hash, creating a MAC (optional)
+     * @return string the derived binary key
+     */
+    public static function FastHash(string $message, int $bytes, string $key = "") : string
+    {
+        $hash = sodium_crypto_generichash($message, $key, $bytes);
+        sodium_memzero($message); sodium_memzero($key); return $hash;
     }
 
     /** 

@@ -104,7 +104,7 @@ def testSessionsInvalid(self):
     (username, password, account, client, session) = self.tempAccount()
 
     # test using the correct session ID but wrong key
-    self.util.assertError(self.interface.run(app='accounts',action='getaccount',params=self.withSession({'id':session['id'],'authkey':'this_is_wrong'})),403,'INVALID_SESSION')
+    self.util.assertError(self.interface.run(app='accounts',action='getaccount',params=self.withSession({'id':session['id'],'authkey':'thisiswrong2'})),403,'INVALID_SESSION')
 
     # test deleting a session/client that isn't this one (allowed with password)
     client2 = self.util.assertOk(self.interface.run(app='accounts',action='createsession',

@@ -134,7 +134,7 @@ class AppTests(BaseAppTest):
 
         res = self.util.assertOk(self.interface.run(app='accounts',action='getaccount',params=self.withSession(session,{"full":True})))
         self.util.assertNotIn('comment',res) # admin
-        self.util.assertSame(res['crypto'], False)
+        self.util.assertSame(res['ssenc'], False)
         self.util.assertType(res['date_created'],float)
         self.util.assertType(res['date_loggedon'],float)
         self.util.assertType(res['date_active'],float)

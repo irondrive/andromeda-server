@@ -5,9 +5,10 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `date_passwordset` double DEFAULT NULL
 ,  `date_loggedon` double DEFAULT NULL
 ,  `date_active` double DEFAULT NULL
-,  `master_key` binary(48) DEFAULT NULL
-,  `master_nonce` binary(24) DEFAULT NULL
-,  `master_salt` binary(16) DEFAULT NULL
+,  `ssenc_key` binary(48) DEFAULT NULL
+,  `ssenc_nonce` binary(24) DEFAULT NULL
+,  `ssenc_salt` binary(16) DEFAULT NULL
+,  `e2ee_pwsalt` binary(16) DEFAULT NULL
 ,  `password` text DEFAULT NULL
 ,  `authsource` char(8) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
@@ -63,6 +64,7 @@ CREATE TABLE `a2obj_apps_accounts_authsource_ldap` (
 CREATE TABLE `a2obj_apps_accounts_config` (
   `id` char(1) NOT NULL
 ,  `version` varchar(255) NOT NULL
+,  `pepper` binary(32) NOT NULL
 ,  `createaccount` integer NOT NULL
 ,  `usernameiscontact` integer NOT NULL
 ,  `requirecontact` integer NOT NULL
@@ -114,7 +116,7 @@ CREATE TABLE `a2obj_apps_accounts_policybase` (
 CREATE TABLE `a2obj_apps_accounts_resource_client` (
   `id` char(12) NOT NULL
 ,  `name` varchar(255) DEFAULT NULL
-,  `authkey` text NOT NULL
+,  `authkey` binary(32) NOT NULL
 ,  `lastaddr` varchar(255) NOT NULL
 ,  `useragent` text NOT NULL
 ,  `date_created` double NOT NULL
@@ -130,7 +132,7 @@ CREATE TABLE `a2obj_apps_accounts_resource_contact` (
 ,  `address` varchar(127) NOT NULL
 ,  `isfrom` integer DEFAULT NULL
 ,  `public` integer NOT NULL DEFAULT 0
-,  `authkey` text DEFAULT NULL
+,  `authkey` binary(16) DEFAULT NULL
 ,  `date_created` double NOT NULL
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
@@ -140,11 +142,10 @@ CREATE TABLE `a2obj_apps_accounts_resource_contact` (
 );
 CREATE TABLE `a2obj_apps_accounts_resource_recoverykey` (
   `id` char(12) NOT NULL
-,  `authkey` text NOT NULL
+,  `authkey` binary(32) NOT NULL
 ,  `date_created` double NOT NULL
-,  `master_key` binary(48) DEFAULT NULL
-,  `master_nonce` binary(24) DEFAULT NULL
-,  `master_salt` binary(16) DEFAULT NULL
+,  `ssenc_key` binary(48) DEFAULT NULL
+,  `ssenc_nonce` binary(24) DEFAULT NULL
 ,  `account` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)
 ,  CONSTRAINT `a2obj_apps_accounts_resource_recoverykey_ibfk_1` FOREIGN KEY (`account`) REFERENCES `a2obj_apps_accounts_account` (`id`)
@@ -159,12 +160,11 @@ CREATE TABLE `a2obj_apps_accounts_resource_registerallow` (
 );
 CREATE TABLE `a2obj_apps_accounts_resource_session` (
   `id` char(12) NOT NULL
-,  `authkey` text NOT NULL
+,  `authkey` binary(32) NOT NULL
 ,  `date_active` double DEFAULT NULL
 ,  `date_created` double NOT NULL
-,  `master_key` binary(48) DEFAULT NULL
-,  `master_nonce` binary(24) DEFAULT NULL
-,  `master_salt` binary(16) DEFAULT NULL
+,  `ssenc_key` binary(48) DEFAULT NULL
+,  `ssenc_nonce` binary(24) DEFAULT NULL
 ,  `account` char(12) NOT NULL
 ,  `client` char(12) NOT NULL
 ,  PRIMARY KEY (`id`)

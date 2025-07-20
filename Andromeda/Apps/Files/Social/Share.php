@@ -98,6 +98,9 @@ class Share extends BaseObject
         parent::CreateFields();
     }
 
+    /** @return positive-int */
+    protected static function GetKeyLength() : int { return 16; } // not cryptographic
+    
     /** Returns true if this share is via a link rather than to an account/group */
     public function IsLink() : bool { return $this->authkey->TryGetValue() !== null; }
     

@@ -2,10 +2,46 @@
 
 class CryptoTest extends \PHPUnit\Framework\TestCase
 {
+    public function testBase64Encode() : void
+    {
+        $this->assertSame(Crypto::base64_encode(""), "");
+        $this->assertSame(Crypto::base64_encode("a"), "YQ=="); // 2==
+        $this->assertSame(Crypto::base64_encode("ab"), "YWI="); // 1==
+        $this->assertSame(Crypto::base64_encode("abc"), "YWJj"); // 0==
+    
+        $this->assertSame(Crypto::base64_encode("What's in a name? That which we call a rose By any other word would smell as sweet."),
+            "V2hhdCdzIGluIGEgbmFtZT8gVGhhdCB3aGljaCB3ZSBjYWxsIGEgcm9zZSBCeSBhbnkgb3RoZXIgd29yZCB3b3VsZCBzbWVsbCBhcyBzd2VldC4=");
+    
+        $this->assertSame(Crypto::base64_encode("\x10\x00\x21\xD0\x9C\x61\xFF\x46"), "EAAh0Jxh/0Y=");
+    }
+
+    public function testBase64Decode() : void
+    {
+        $this->assertSame(Crypto::base64_decode(""), "");
+
+        $this->assertSame(Crypto::base64_decode("YQ=="), "a"); // 2==
+        $this->assertSame(Crypto::base64_decode("YWI="), "ab"); // 1==
+        $this->assertSame(Crypto::base64_decode("YWJj"), "abc"); // 0==
+
+        $this->assertSame(Crypto::base64_decode("V2hhdCdzIGluIGEgbmFtZT8gVGhhdCB3aGljaCB3ZSBjYWxsIGEgcm9zZSBCeSBhbnkgb3RoZXIgd29yZCB3b3VsZCBzbWVsbCBhcyBzd2VldC4="),
+            "What's in a name? That which we call a rose By any other word would smell as sweet.");
+
+        $this->assertSame(Crypto::base64_decode("EAAh0Jxh/0Y="), "\x10\x00\x21\xD0\x9C\x61\xFF\x46");
+
+        $this->assertFalse(Crypto::base64_decode(" "));
+        $this->assertFalse(Crypto::base64_decode("\0"));
+        $this->assertFalse(Crypto::base64_decode("YQ==\0"));
+        $this->assertFalse(Crypto::base64_decode("not valid")); // spaces
+        $this->assertFalse(Crypto::base64_decode("123456 ")); // spaces
+        $this->assertFalse(Crypto::base64_decode(" 123456")); // spaces
+        $this->assertFalse(Crypto::base64_decode("YWI")); // missing padding
+        $this->assertFalse(Crypto::base64_decode("YWIax")); // missing padding
+        $this->assertFalse(Crypto::base64_decode("YWIaxy")); // missing padding
+    }
+
     public function testGenerateSalt() : void
     {
         $this->assertSame(16, Crypto::SaltLength());
-        
         $salt = Crypto::GenerateSalt();
         $this->assertSame(16, strlen($salt));
     }
@@ -18,26 +54,50 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(
             "6bf2e7a99d16a81842bf694fc6aae064",
             bin2hex(Crypto::DeriveKey($password, $salt, 16)));
-            
-        $this->assertSame(
-            "7fcaae0ab5247d30e8eba8809455d3c3",
-            bin2hex(Crypto::DeriveKey($password, $salt, 16, true)));
-            
+        
         $this->assertSame(
             "0d347291ce9eca4b88e9be36af8a05aeac624c724bd17f5d",
             bin2hex(Crypto::DeriveKey($password, $salt, 24)));
         
         $this->assertSame(
-            "65fcdc118a5a9e49f134a703b66539fa5b494a2e3299c102",
-            bin2hex(Crypto::DeriveKey($password, $salt, 24, true)));
-            
-        $this->assertSame(
             "a49dd97a617acdc03bbd4f3003b9d5d494c7ff69bd22218495e6dde729f6f11f",
             bin2hex(Crypto::DeriveKey($password, $salt, 32)));
-        
-        $this->assertSame(
-            "1f291553177127a71e6e1597c75c098889dd5cf7bf08361214767cab1b358bae",
-            bin2hex(Crypto::DeriveKey($password, $salt, 32, true)));
+    }
+
+    public function testDeriveSubkey() : void
+    {
+        $this->assertSame([16,64], Crypto::SubkeySizeRange());
+        $this->assertSame(32, Crypto::SuperKeyLength());
+
+        $superkey = "0123456789ABCDEF0123456789ABCDEF"; // 32 bytes
+        $this->assertSame("197bd77d3169885c028473c3025bf0f8", 
+            bin2hex(Crypto::DeriveSubkey($superkey, 0, "ctx00000", 16)));
+        $this->assertSame("d80f682e475e007ea535b218b7109b34ca411084525ed42b",
+            bin2hex(Crypto::DeriveSubkey($superkey, 0, "ctx00000", 24)));
+        $this->assertSame("27a54c21da4873a538adde23022acc7d",
+            bin2hex(Crypto::DeriveSubkey($superkey, 1, "ctx00000", 16)));
+        $this->assertSame("c104bb011b4d5184c3ebb5f557f57b19",
+            bin2hex(Crypto::DeriveSubkey($superkey, 0, "ctx10000", 16)));
+    }
+
+    public function testFastHash() : void
+    {
+        $this->assertSame(32, Crypto::FastHashKeyLength());
+        $key = Crypto::GenerateFastHashKey();
+        $this->assertSame(32, strlen($key));
+
+        $this->assertSame("cae66941d9efbd404e4d88758ea67670",
+            bin2hex(Crypto::FastHash("", 16)));
+        $this->assertSame("8636a4e2cb8939774951ad4a760d12b3",
+            bin2hex(Crypto::FastHash("message123", 16)));
+        $this->assertSame("c7f56c49d29a82da86493b034de5f973ce5ad79852517fc8",
+            bin2hex(Crypto::FastHash("message123", 24)));
+        $this->assertSame("50d9da7dcdc5ea966b81f4a28cd9c738",
+            bin2hex(Crypto::FastHash("message1234", 16)));
+
+        $key = "0123456789ABCDEF0123456789ABCDEF"; // 32 bytes
+        $this->assertSame("8ce2781336fbb0df41619d52fac1e2ab",
+            bin2hex(Crypto::FastHash("message123", 16, $key)));
     }
 
     public function testCryptoSecret() : void

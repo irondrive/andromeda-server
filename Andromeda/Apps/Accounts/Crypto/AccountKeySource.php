@@ -76,7 +76,7 @@ trait AccountKeySource
         // check now since we are re-keying
         if ($this->hasCrypto()) throw new Exceptions\CryptoAlreadyInitializedException();
         
-        $this->master_raw = $this->GetAccount()->GetMasterKey();
+        $this->ssenc_rawkey = $this->GetAccount()->GetMasterKey();
         $this->BaseInitializeCrypto($wrappass, fast:$fast, rekey:true); // use rekey
         return $this;
     }

@@ -44,6 +44,8 @@ class Account extends PolicyBase implements IKeySource
     private FieldTypes\NullStringType $fullname;
     /** The password hash used for the account (null if external) */
     private FieldTypes\NullStringType $password;
+    /** The salt for clients to use to create a passkey from a password */
+    private FieldTypes\NullStringType $e2ee_pwsalt;
     /** 
      * @var FieldTypes\NullObjectRefT<External> 
      * The external auth source used for the account 
@@ -62,6 +64,7 @@ class Account extends PolicyBase implements IKeySource
         $this->username = $fields[] = new FieldTypes\StringType('username');
         $this->fullname = $fields[] = new FieldTypes\NullStringType('fullname');
         $this->password = $fields[] = new FieldTypes\NullStringType('password');
+        $this->e2ee_pwsalt = $fields[] = new FieldTypes\NullStringType('e2ee_pwsalt');
         $this->authsource = $fields[] = new FieldTypes\NullObjectRefT(External::class, 'authsource');
         $this->date_passwordset = $fields[] = new FieldTypes\NullTimestamp('date_passwordset');
         $this->date_loggedon = $fields[] = new FieldTypes\NullTimestamp('date_loggedon');
@@ -96,6 +99,9 @@ class Account extends PolicyBase implements IKeySource
      */
     public function SetFullName(string $name) : self { $this->fullname->SetValue($name); return $this; }
     
+    /** Returns the salt for clients to use to create a passkey from a password */
+    public function TryGetPasskeySalt() : ?string { return $this->e2ee_pwsalt->TryGetValue(); }
+
     /**
      * Loads the groups that the account implicitly belongs to
      * @return array<string, Group> groups indexed by ID
@@ -792,7 +798,7 @@ class Account extends PolicyBase implements IKeySource
 
         if ($full) $retval += array(
             'policy' => $this->GetPolicyClientObject(),
-            'crypto' => ($this->master_key->TryGetValue() !== null),
+            'ssenc' => ($this->ssenc_key->TryGetValue() !== null),
 
             'date_created' => $this->date_created->GetValue(),
             'date_loggedon' => $this->date_loggedon->TryGetValue(),

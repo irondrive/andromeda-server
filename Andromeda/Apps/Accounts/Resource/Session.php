@@ -170,7 +170,10 @@ class Session extends BaseObject implements IKeySource
      */
     public function InitializeCrypto() : self
     {
-        return $this->InitializeCryptoFromAccount($this->GetAuthKey(), true);
+        if (!isset($this->authkey_raw))
+            throw new RawKeyNotAvailableException();
+
+        return $this->InitializeCryptoFromAccount($this->authkey_raw, fast:true);
     }
     
     /**
@@ -185,7 +188,7 @@ class Session extends BaseObject implements IKeySource
             throw new RawKeyNotAvailableException();
 
         // should not throw DecryptionFailedException since authkey is known to match
-        $this->BaseUnlockCrypto($this->authkey_raw, true);
+        $this->BaseUnlockCrypto($this->authkey_raw, fast:true);
         $this->account->GetObject()->SetCryptoKeySource($this);
         return $this;
     }

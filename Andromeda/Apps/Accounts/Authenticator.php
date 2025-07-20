@@ -103,7 +103,7 @@ class Authenticator
         $params = $input->GetParams();
         
         $sessionid = $params->HasParam('auth_sessionid') ? $params->GetParam('auth_sessionid',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
-        $sessionkey = $params->HasParam('auth_sessionkey') ? $params->GetParam('auth_sessionkey',SafeParams::PARAMLOG_NEVER)->GetRandstr() : null;
+        $sessionkey = $params->HasParam('auth_sessionkey') ? $params->GetParam('auth_sessionkey',SafeParams::PARAMLOG_NEVER)->GetBase64() : null;
         
         if (($auth = $input->GetAuth()) !== null)
         {

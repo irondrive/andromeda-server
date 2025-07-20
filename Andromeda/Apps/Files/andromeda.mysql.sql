@@ -261,7 +261,7 @@ CREATE TABLE `a2obj_apps_files_social_share` (
   `owner` char(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `dest` char(12) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `label` text DEFAULT NULL,
-  `authkey` text CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `authkey` binary(16) DEFAULT NULL,
   `password` text CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `date_created` double NOT NULL,
   `date_accessed` double DEFAULT NULL,

@@ -475,15 +475,6 @@ class PDODatabase
         
         $doSavepoint = $this->RequiresSAVEPOINT();
 
-        if ($this->BinaryEscapeInput() && $params !== null)
-        {
-            foreach ($params as &$value)
-            {
-                if (is_string($value) && !Utilities::isUTF8($value))
-                    $value = pg_escape_bytea($value);
-            }
-        }
-
         try
         {
             if ($doSavepoint)
@@ -492,8 +483,19 @@ class PDODatabase
             $query = $this->connection->prepare($sql);
             assert($query !== false); // phpstan (we are in exception mode)
 
-            $query->execute($params ?? array());
-            // ignore return value as we are in exception mode
+            if ($this->BinaryEscapeInput())
+            {
+                foreach ($params ?? [] as $pkey=>$pval)
+                {
+                    $pval = (string)$pval;
+                    $query->bindValue($pkey, $pval,
+                        Utilities::isUTF8($pval) ? PDO::PARAM_STR : PDO::PARAM_LOB);
+                }
+                
+                $query->execute();
+            }
+            else $query->execute($params ?? []); // fast path
+            // ignore execute return value as we are in exception mode
 
             if ($doSavepoint)
                 $this->connection->exec("RELEASE SAVEPOINT a2save");

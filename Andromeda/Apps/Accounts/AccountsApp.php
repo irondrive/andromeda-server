@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{ApiPackage, BaseApp, Utilities};
+use Andromeda\Core\{ApiPackage, BaseApp, Crypto, Utilities};
 use Andromeda\Core\Database\QueryBuilder;
 use Andromeda\Core\Errors\BaseExceptions;
 use Andromeda\Core\Exceptions\{UnknownActionException, DecryptionFailedException};
@@ -45,7 +45,7 @@ class AccountsApp extends BaseApp
     public function getUsage() : array 
     { 
         return array(
-            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey randstr] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
+            '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey base64] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
 
@@ -61,9 +61,10 @@ class AccountsApp extends BaseApp
             'deleteaccount --auth_password raw',
             'createrecoverykeys --auth_password raw [--auth_twofactor int] [--replace bool]',
             
+            'getpwsalt (--username alphanum|email | '.Contact::GetFetchUsage().')',
             'createsession (--username alphanum|email | '.Contact::GetFetchUsage().') --auth_password raw [--authsrc id] [--old_password raw] [--new_password raw]',
             '(createsession... create client) [--auth_recoverykey utf8 | --auth_twofactor int] [--name ?name]',
-            '(createsession... reuse client) --auth_clientid id --auth_clientkey randstr',
+            '(createsession... reuse client) --auth_clientid id --auth_clientkey base64',
             'deletesession [--session id --auth_password raw]',
             'deleteclient [--client id --auth_password raw]',
             'deleteallclients --auth_password raw [--everyone bool]',
@@ -148,6 +149,7 @@ class AccountsApp extends BaseApp
             
             case 'sendrecovery':        $this->SendRecovery($params); return null;
             
+            case 'getpwsalt':           return $this->GetPasskeySalt($params);
             case 'createaccount':       return $this->CreateAccount($params, $authenticator, $actionlog);
             case 'createsession':       return $this->CreateSession($params, $authenticator, $actionlog);
             case 'enablecrypto':        return $this->EnableCrypto($params, $authenticator);
@@ -367,6 +369,7 @@ class AccountsApp extends BaseApp
         
         // TODO FUTURE - HTML - configure a directory where client templates reside
         
+        // TODO SendMessage needs to return a bool indicating if there are even any contacts we sent to
         $account->SendMessage($subject, null, $body);
     }
     
@@ -490,6 +493,40 @@ class AccountsApp extends BaseApp
     }
 
     /**
+     * Fetches the salt that clients should use to turn a password into an auth_passkey
+     * NOTE this function MUST not reveal which usernames are valid.  Fake hashes are returned for invalid users.
+     */
+    protected function GetPasskeySalt(SafeParams $params) : string
+    {
+        if ($params->HasParam('username'))
+        {
+            $username = self::getUsername($params->GetParam("username", SafeParams::PARAMLOG_ALWAYS));
+            $account = Account::TryLoadByUsername($this->database, $username);
+        }
+        else 
+        {
+            $pair = Contact::FetchPairFromParams($params);
+            $username = $pair['address'];
+
+            $contact = Contact::TryLoadFromPair($this->database, $pair);
+            $account = $contact?->GetAccount();
+        }
+
+        // return a fake salt derived from the username + our pepper to prevent username enumeration
+        // we compute this even if the account is valid, to prevent a timing difference
+        $salt = Crypto::FastHash($username, Crypto::SaltLength(), $this->config->GetPepper());
+
+        if ($account !== null)
+        {
+            // external auth accounts have no salt
+            $salt2 = $account->TryGetPasskeySalt();
+            if ($salt2 !== null) $salt = $salt2;
+        }
+
+        return Crypto::base64_encode($salt);
+    }
+
+    /**
      * Creates a new session, and possibly a new client for the account
      * 
      * The authentication source for the account must be provided if not local.
@@ -568,7 +605,7 @@ class AccountsApp extends BaseApp
         if ($params->HasParam('auth_clientid') && $params->HasParam('auth_clientkey'))
         {
             $clientid = $params->GetParam("auth_clientid", SafeParams::PARAMLOG_NEVER)->GetRandstr();
-            $clientkey = $params->GetParam("auth_clientkey", SafeParams::PARAMLOG_NEVER)->GetRandstr();
+            $clientkey = $params->GetParam("auth_clientkey", SafeParams::PARAMLOG_NEVER)->GetBase64();
             
             if ($account->GetForceUseTwoFactor() && $account->HasValidTwoFactor()) 
                 Authenticator::StaticTryRequireTwoFactor($params, $account);

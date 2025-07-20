@@ -59,13 +59,13 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertNotEquals($key, $obj->pubGetAuthHash());
         
         $this->assertTrue($obj->CheckKeyMatch($key));
-        
+
         $this->assertFalse($obj->CheckKeyMatch(""));
         $this->assertFalse($obj->CheckKeyMatch('0'));
         $this->assertFalse($obj->CheckKeyMatch("test"));
         $this->assertFalse($obj->CheckKeyMatch($key.'0'));
         $this->assertFalse($obj->CheckKeyMatch('0'.$key));
-        $this->assertFalse($obj->CheckKeyMatch(strtoupper($key)));
+        $this->assertFalse($obj->CheckKeyMatch(strtoupper($key)) && $obj->CheckKeyMatch(strtolower($key)));
     }
     
     public function testSetKey() : void
@@ -74,8 +74,8 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $obj = new AuthObjectTest_AuthObject($objdb, [], false);
         
         $key = "mytest123"; $obj->pubSetAuthKey($key);
-        $this->assertSame($key, $obj->pubTryGetAuthKey());
-        $this->assertTrue($obj->CheckKeyMatch($key));
+        $this->assertSame(base64_encode($key), $obj->pubTryGetAuthKey());
+        $this->assertTrue($obj->CheckKeyMatch(base64_encode($key)));
         
         $obj->pubSetAuthKey(null);
         $this->assertNull($obj->pubTryGetAuthKey());
@@ -83,36 +83,25 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testFromHash() : void
     {
-        $key = "1qo95feuuz5ixu9d4o530sxvbto8b99j";
-        $hash = '$argon2id$v=19$m=1024,t=1,p=1$SEREcGtDQ2hQaHRDcmZYcQ$rbYiVNjqfVeKKTrseQ0z+eiYGIGhHCzPCoe+5bfOknc';
+        $keyb64 = "Rcuq2uOKWQX8PDZKzvkG4JhqTqXNCnNQsGFqQtN1clM=";
+        $hash = base64_decode("pib/+unTgVADDTl1T7JdMOxZP9/1IhRVKrS5dqX1yPA=");
         
         $objdb = $this->createMock(ObjectDatabase::class);
         $obj = new AuthObjectTest_AuthObject($objdb, array('id'=>'test123','authkey'=>$hash), false);
+
+        //$obj->pubInitAuthKey();
+        //echo " ".$obj->pubTryGetAuthKey()."\n";
+        //echo " ".base64_encode($obj->pubGetAuthHash())."\n";
         
         $exc = false; try { $obj->pubTryGetAuthKey(); } // key not available yet
         catch (Exceptions\RawKeyNotAvailableException $e) { $exc = true; }
         $this->assertTrue($exc);
         
         $this->assertSame($hash, $obj->pubGetAuthHash());
-        $this->assertTrue($obj->CheckKeyMatch($key));
-        $this->assertSame($key, $obj->pubTryGetAuthKey()); // have key now
+        $this->assertTrue($obj->CheckKeyMatch($keyb64));
+        $this->assertSame($keyb64, $obj->pubTryGetAuthKey()); // have key now
     }
     
-    public function testRehash() : void
-    {
-        $key = "testKey123456789";
-        $hash = '$2y$10$JvPO9nS5Papx9Z4KrwLhAOc2DIkJm5kRm1hv8z/dGcMqH23MHEaFi';
-        
-        $objdb = $this->createMock(ObjectDatabase::class);
-        $obj = new AuthObjectTest_AuthObject($objdb, array('id'=>'test123','authkey'=>$hash), false);
-        
-        $this->assertSame($hash, $obj->pubGetAuthHash());
-        $this->assertTrue($obj->CheckKeyMatch($key));
-        
-        $this->assertNotEquals($hash, $obj->pubGetAuthHash()); // re-hash
-        $this->assertTrue($obj->CheckKeyMatch($key));
-    }
-
     public function testTryGetFullKey() : void
     {
         $objdb = $this->createMock(ObjectDatabase::class);

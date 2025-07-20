@@ -326,6 +326,28 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testBad("234a'", $getVal);
         $this->testBad("234a\"", $getVal);
     }
+
+    public function testBase64() : void
+    {
+        $getVal = function(SafeParam $p){ return $p->GetBase64(); };
+        $getValN = function(SafeParam $p){ return $p->GetNullBase64(); };
+        
+        $this->testNulls($getVal, $getValN);
+
+        $this->testGood($a="a===", $a, $getVal);
+        $this->testGood($a=" a=== ", "a===", $getVal); // trim
+        $this->testGood($a="ab==", $a, $getVal);
+        $this->testGood($a="abc=", $a, $getVal);
+        $this->testGood($a="abcd", $a, $getVal);
+        $this->testGood($a="abcd+/0=", $a, $getVal);
+        
+        $this->testBad("a", $getVal); // length
+        $this->testBad("abcde", $getVal); // length
+
+        $this->testBad("abc\x22", $getVal); // chars
+        $this->testBad("abcd\x22", $getVal); // chars
+        $this->testBad("ab d", $getVal); // chars
+    }
     
     public function testAlphanum() : void
     {

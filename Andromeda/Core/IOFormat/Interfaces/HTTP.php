@@ -82,7 +82,7 @@ class HTTP extends IOInterface
             if (mb_strpos($key,"HTTP_X_ANDROMEDA_") === 0)
             {
                 $key = explode("_",mb_strtolower($key),4)[3];
-                if (($val = base64_decode((string)$val,true)) !== false)
+                if (($val = base64_decode((string)$val,strict:true)) !== false)
                     $params->AddParam($key, $val);
                 else throw new Exceptions\Base64DecodeException($key);
             }

@@ -77,7 +77,7 @@ class Config extends BaseConfig
     /** Returns the block size that should be used for file reads and writes */
     public function GetRWChunkSize() : int { return $this->rwchunksize->GetValue(); }
     
-    /** Returns the default block size for encrypted filesystems */
+    /** Returns the default block size for new encrypted filesystems */
     public function GetCryptoChunkSize() : int { return $this->crchunksize->GetValue(); }
     
     /** Returns whether the periodic-stats system as a whole is enabled */

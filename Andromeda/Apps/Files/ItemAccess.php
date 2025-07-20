@@ -99,7 +99,7 @@ class ItemAccess
             
             if ($params->HasParam('skey'))
             {
-                $sharekey = $params->GetParam('skey',SafeParams::PARAMLOG_NEVER)->GetRandstr();
+                $sharekey = $params->GetParam('skey',SafeParams::PARAMLOG_NEVER)->GetBase64();
                 
                 if (!$share->AuthenticateByLink($sharekey, $item)) 
                     throw new Exceptions\ItemAccessDeniedException();            

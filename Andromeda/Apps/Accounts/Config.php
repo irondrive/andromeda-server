@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{BaseConfig, VersionInfo};
+use Andromeda\Core\{BaseConfig, Crypto, VersionInfo};
 use Andromeda\Core\Database\{FieldTypes, ObjectDatabase, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
  
@@ -20,6 +20,8 @@ class Config extends BaseConfig
     
     use TableTypes\TableNoChildren;
 
+    /** The server pepper to use for creating pwkey salts */
+    private FieldTypes\StringType $pepper;
     /** The setting for public account creation */
     private FieldTypes\IntType $create_account;
     /** The setting for requiring account contact info */
@@ -41,6 +43,7 @@ class Config extends BaseConfig
     {
         $fields = array();
 
+        $this->pepper = $fields[] =             new FieldTypes\StringType('pepper');
         $this->create_account = $fields[] =     new FieldTypes\IntType('createaccount', default:0);
         $this->require_contact = $fields[] =    new FieldTypes\IntType('requirecontact', default:0);
         $this->username_isContact = $fields[] = new FieldTypes\BoolType('usernameiscontact', default:false);
@@ -55,7 +58,9 @@ class Config extends BaseConfig
     /** Creates a new Config singleton */
     public static function Create(ObjectDatabase $database) : static
     {
-        return $database->CreateObject(static::class);
+        $obj = $database->CreateObject(static::class);
+        $obj->pepper->SetValue(Crypto::GenerateFastHashKey());
+        return $obj;
     }
     
     /** Returns the string detailing the CLI usage for SetConfig */
@@ -102,6 +107,9 @@ class Config extends BaseConfig
         
         return $this;
     }
+
+    /** Returns the server pepper to use for creating pwkey salts */
+    public function GetPepper() : string { return $this->pepper->GetValue(); }
     
     /** Returns the default group that all users are implicitly part of */
     public function GetDefaultGroup() : ?Group { return $this->default_group->TryGetObject(); }

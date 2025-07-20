@@ -64,7 +64,7 @@ class RecoveryKey extends BaseObject implements IKeySource
         $obj->date_created->SetTimeNow();
         
         $obj->AccountKeySourceCreate(
-            $account, $obj->InitAuthKey(), true);
+            $account, $obj->InitAuthKey(), fast:true);
 
         return $obj;
     }
@@ -77,7 +77,7 @@ class RecoveryKey extends BaseObject implements IKeySource
         if ($this->hasCrypto())
         {
             // should not throw DecryptionFailedException since authkey is known to match
-            $this->UnlockCrypto($key, true);
+            $this->UnlockCrypto($this->authkey_raw, fast:true);
             $this->account->GetObject()->SetCryptoKeySource($this);
         }
 

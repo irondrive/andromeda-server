@@ -1,12 +1,13 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Utilities;
+use Andromeda\Core\{Crypto, Utilities};
 use Andromeda\Core\Database\FieldTypes;
 
 /** 
  * Represents an object that holds an authentication code that can be checked 
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
+ * This is ONLY for hashing generated keys, not low-entropy passwords
  */
 trait AuthObject
 {
@@ -15,18 +16,6 @@ trait AuthObject
      * @return positive-int
      */
     protected static function GetKeyLength() : int { return 32; }
-    
-    /** 
-     * Return the time cost for the hashing algorithm
-     * @return positive-int
-     */
-    protected static function GetTimeCost() : int { return 1; }
-    
-    /** 
-     * Return the memory cost in KiB for the hashing algorithm
-     * @return positive-int
-     */
-    protected static function GetMemoryCost() : int { return 1024; }
     
     /** The hashed auth key stored in DB */
     private FieldTypes\NullStringType $authkey;
@@ -43,28 +32,30 @@ trait AuthObject
         $this->RegisterChildFields($fields);
     }
 
-    /** Returns true if the given key is valid, and stores it in memory for TryGetAuthKey() */
-    public function CheckKeyMatch(string $key) : bool
+    /** Returns the auth subkey of the given high-entropy key to store in the DB (fast) */
+    protected function GetFastHash(string $key) : string
+    {
+        $superkey = Crypto::FastHash($key, Crypto::SuperKeyLength());
+        $hashlen = max(Crypto::SubkeySizeRange()[0], static::GetKeyLength());
+        return Crypto::DeriveSubkey($superkey, 1, "a2authob", $hashlen);
+    }
+
+    /** Returns true if the given base64 key is valid, and stores it in memory for TryGetAuthKey() */
+    public function CheckKeyMatch(string $b64key) : bool
     {
         $hash = $this->authkey->TryGetValue();
-        
-        if ($hash === null || !password_verify($key, $hash)) return false;
+        if ($hash === null || strlen($hash) === 0) return false;
 
-        $this->authkey_raw = $key;
-        
-        $settings = array(
-            'time_cost'=>static::GetTimeCost(), 
-            'memory_cost'=>static::GetMemoryCost());
-        
-        if (password_needs_rehash($hash, $algo = PASSWORD_ARGON2ID, $settings))
-        {
-            $hash = password_hash($key, $algo, $settings);
-            $this->authkey->SetValue($hash);
-        }
-        
+        $keydec = Crypto::base64_decode($b64key);
+        if ($keydec === false) return false;
+
+        $hash2 = $this->GetFastHash($keydec);
+        if ($hash !== $hash2) return false;
+
+        $this->authkey_raw = $keydec;
         return true;
     }
-    
+
     /**
      * Returns the raw auth key if available or null if none
      * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory
@@ -77,30 +68,30 @@ trait AuthObject
     }
 
     /**
-     * Returns the raw auth key
+     * Returns the raw auth key as base64
      * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory or is null
      */
     protected function GetAuthKey() : string
     {
         if (!isset($this->authkey_raw))
             throw new Exceptions\RawKeyNotAvailableException();
-        return $this->authkey_raw;
+        return Crypto::base64_encode($this->authkey_raw);
     }
 
     /** 
-     * Sets the auth key to a new random value 
-     * @return string the new auth key
+     * Sets the auth key to a new random value
+     * @return string the new auth key (not base64)
      */
     protected function InitAuthKey() : string
     {
-        $key = Utilities::Random(static::GetKeyLength());
+        $key = random_bytes(static::GetKeyLength());
         $this->SetAuthKey($key);
         return $key;
     }
     
     /**
      * Sets the auth key to the given value and hashes it
-     * @param string $key new auth key
+     * @param string $key new auth key (not base64)
      * @return $this
      */
     protected function SetAuthKey(?string $key) : self 
@@ -111,13 +102,9 @@ trait AuthObject
             $hash = null;
         }
         else
-        {   
-            $settings = array(
-                'time_cost'=>static::GetTimeCost(),
-                'memory_cost'=>static::GetMemoryCost());
-            
+        {
+            $hash = $this->GetFastHash($key);
             $this->authkey_raw = $key;
-            $hash = password_hash($key, PASSWORD_ARGON2ID, $settings);
         }
         
         $this->authkey->SetValue($hash);

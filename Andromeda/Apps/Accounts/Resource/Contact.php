@@ -72,7 +72,7 @@ abstract class Contact extends BaseObject
     }
 
     /** @return positive-int */
-    protected static function GetKeyLength() : int { return 8; }
+    protected static function GetKeyLength() : int { return 8; } // not cryptographic
     
     public function CheckFullKey(string $code) : bool
     {
