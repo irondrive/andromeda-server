@@ -1,9 +1,11 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\EmailRecipient;
+use Andromeda\Core\{Crypto, EmailRecipient};
+use Andromeda\Core\Errors\BaseExceptions\ServerException;
 use Andromeda\Core\Exceptions\DecryptionFailedException;
 use Andromeda\Core\Database\{FieldTypes, FieldTypes\NullBaseField, ObjectDatabase, TableTypes, QueryBuilder};
 use Andromeda\Core\Database\Exceptions\CounterOverLimitException;
+use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
 use Andromeda\Apps\Accounts\AuthSource\External;
 use Andromeda\Apps\Accounts\Crypto\{KeySource, IKeySource};
@@ -101,6 +103,80 @@ class Account extends PolicyBase implements IKeySource
     
     /** Returns the salt for clients to use to create a passkey from a password */
     public function TryGetPasskeySalt() : ?string { return $this->e2ee_pwsalt->TryGetValue(); }
+
+    /**
+     * Returns true if a password or passkey param is given 
+     * @param SafeParams $params the param list to get input from
+     * @param ?string $prefix the input field name prefix, e.g. auth for auth_password
+     */
+    public function HasPasswordParam(SafeParams $params, ?string $prefix = null) : bool
+    {
+        $field = "password";
+        if ($prefix !== null)
+            $field = $prefix."_$field";
+
+        $field2 = "passkey";
+        if ($prefix !== null)
+            $field2 = $prefix."_$field2";
+    
+        return $params->HasParam($field) || $params->HasParam($field2);
+    }
+
+    /**
+     * Gets password input from the given input params
+     * If using external auth, the user must input a plain password, which will be returned. Otherwise, they must input a client-side hashed pass"key",
+     * which is returned.  If using CLI and not external auth, they can input a plain password, which will be hashed here, and the pass"key" is returned.
+     * @param SafeParams $params the param list to get input from
+     * @param IOInterface $iface the interface to check if CLI or not
+     * @param ?string $prefix the input field name prefix, e.g. auth for auth_password
+     * @param bool $newsalt if true, require the user to post a new salt, and set it for the account (or autogen if plain password)
+     * @return string plain password if external auth, else the client-side hashed passkey
+     */
+    public function GetPasswordParam(SafeParams $params, IOInterface $iface, ?string $prefix = null, bool $newsalt = false) : string
+    {
+        $field = "password";
+        if ($prefix !== null)
+            $field = $prefix."_$field";
+
+        if (!($this->GetAuthSource() instanceof AuthSource\Local))
+            return $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetRawString();
+
+        if ($params->HasParam($field))
+        {
+            if (!$iface->isPrivileged())
+                throw new Exceptions\PasskeyRequiredException();
+
+            if ($newsalt) 
+            {
+                $salt = Crypto::GenerateSalt();
+                $this->e2ee_pwsalt->SetValue($salt);
+            }
+            else if (($salt = $this->TryGetPasskeySalt()) === null)
+                throw new ServerException("salt is null", $this->ID());
+
+            $password = $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetRawString();
+
+            $superkey = Crypto::DeriveKey($password, $salt, Crypto::SuperKeyLength());
+            return Crypto::DeriveSubkey($superkey, 1, "a2pwauth", Crypto::SecretKeyLength());
+        }
+
+        $field = "passkey";
+        if ($prefix !== null)
+            $field = $prefix."_$field";
+
+        if ($newsalt)
+        {
+            $salt = $params->GetParam($field."_salt", SafeParams::PARAMLOG_NEVER)->GetBase64();
+            if (strlen($salt) !== Crypto::SaltLength())
+                throw new Exceptions\PasskeyRequiredException("salt wrong size");
+            $this->e2ee_pwsalt->SetValue($salt);
+        }
+
+        $passkey = $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetBase64();
+        if (strlen($passkey) < Crypto::SecretKeyLength())
+            throw new Exceptions\PasskeyRequiredException("key too short");
+        return $passkey;
+    }
 
     /**
      * Loads the groups that the account implicitly belongs to
@@ -507,15 +583,21 @@ class Account extends PolicyBase implements IKeySource
     }
         
     /**
-     * Creates a new user account
+     * Creates a new local user account
      * @param ObjectDatabase $database database reference
      * @param string $username the account's username
-     * @param string $password the account's password, if not external auth
+     * @param SafeParams $params params to get password input from
+     * @param IOInterface $iface interface being used (see GetPasswordParam)
      */
-    public static function Create(ObjectDatabase $database, string $username, string $password) : static
+    public static function CreateLocal(ObjectDatabase $database, string $username, SafeParams $params, IOInterface $iface) : static
     {
         $account = static::CreateCommon($database, $username);
+
+        $password = $account->GetPasswordParam($params, $iface, newsalt:true);
         $account->ChangePassword($password);
+
+        // TODO RAY !! passkey can/should use fast hash now, not argon.  use authsource trait?
+
         return $account;
     }
         

@@ -1,8 +1,8 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files\Social; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\{Crypto, Utilities};
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 use Andromeda\Core\IOFormat\SafeParams;
-use Andromeda\Core\Utilities;
 use Andromeda\Apps\Accounts\{Account, Group, PolicyBase};
 use Andromeda\Apps\Accounts\Crypto\AuthObject;
 use Andromeda\Apps\Files\Items\Item;
@@ -16,8 +16,8 @@ use Andromeda\Apps\Files\Items\Item;
  * track specific permissions for the access (see functions).
  * Folder shares also share all content under them.
  * 
- * @phpstan-import-type ItemJ from Item
  * @phpstan-import-type ScalarArray from Utilities
+ * @phpstan-import-type ItemJ from Item
  *     NOTE for item we use ScalarArray because phpstan doesn't like circular definitions
  * @phpstan-type ShareJ array{id:string, owner:string, item:string|ScalarArray, islink:bool, needpass:bool, dest:?string, date_created:float, date_expires:?float, expired:bool, can_read:bool, can_upload:bool, can_modify:bool, can_social:bool, can_reshare:bool, can_keepowner:bool}
  * @phpstan-type OwnerShareJ \Union<ShareJ, array{label:?string, date_accessed:?float, count_accessed:int, limit_accessed:?int, secret?:string}>
@@ -434,7 +434,7 @@ class Share extends BaseObject
             );
         }
 
-        if ($secret) $data['authkey'] = $this->GetAuthKey();
+        if ($secret) $data['authkey'] = Crypto::base64_encode($this->GetAuthKey());
         
         return $data;
     }

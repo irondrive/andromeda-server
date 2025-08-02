@@ -74,8 +74,8 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $obj = new AuthObjectTest_AuthObject($objdb, [], false);
         
         $key = "mytest123"; $obj->pubSetAuthKey($key);
-        $this->assertSame(base64_encode($key), $obj->pubTryGetAuthKey());
-        $this->assertTrue($obj->CheckKeyMatch(base64_encode($key)));
+        $this->assertSame($key, $obj->pubTryGetAuthKey());
+        $this->assertTrue($obj->CheckKeyMatch($key));
         
         $obj->pubSetAuthKey(null);
         $this->assertNull($obj->pubTryGetAuthKey());
@@ -83,7 +83,7 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
     
     public function testFromHash() : void
     {
-        $keyb64 = "Rcuq2uOKWQX8PDZKzvkG4JhqTqXNCnNQsGFqQtN1clM=";
+        $key = base64_decode("Rcuq2uOKWQX8PDZKzvkG4JhqTqXNCnNQsGFqQtN1clM=");
         $hash = base64_decode("pib/+unTgVADDTl1T7JdMOxZP9/1IhRVKrS5dqX1yPA=");
         
         $objdb = $this->createMock(ObjectDatabase::class);
@@ -98,8 +98,8 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($exc);
         
         $this->assertSame($hash, $obj->pubGetAuthHash());
-        $this->assertTrue($obj->CheckKeyMatch($keyb64));
-        $this->assertSame($keyb64, $obj->pubTryGetAuthKey()); // have key now
+        $this->assertTrue($obj->CheckKeyMatch($key));
+        $this->assertSame($key, $obj->pubTryGetAuthKey()); // have key now
     }
     
     public function testTryGetFullKey() : void
@@ -108,8 +108,8 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $obj = new AuthObjectTest_AuthObject($objdb, ['id'=>$id='test123'], false);
         $obj->pubInitAuthKey();
         
-        $key = $obj->pubTryGetAuthKey();
-        $this->assertSame("test:$id:$key", $obj->TryGetFullKey());
+        $keyb64 = base64_encode($obj->pubTryGetAuthKey()??"");
+        $this->assertSame("test:$id:$keyb64", $obj->TryGetFullKey());
         
         $obj->pubSetAuthKey(null);
         $this->assertNull($obj->TryGetFullKey());
@@ -124,8 +124,8 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $obj = new AuthObjectTest_AuthObject($objdb, ['id'=>$id='test123'], false);
         $obj->pubInitAuthKey();
         
-        $key = $obj->pubTryGetAuthKey();
-        $full = "test:$id:$key";
+        $keyb64 = base64_encode($obj->pubTryGetAuthKey()??"");
+        $full = "test:$id:$keyb64";
         
         $this->assertTrue($obj->CheckFullKey($full));
         $obj->pubSetAuthKey(null);

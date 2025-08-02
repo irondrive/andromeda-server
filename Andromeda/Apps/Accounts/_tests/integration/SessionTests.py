@@ -21,7 +21,7 @@ def testSessionsBasic(self):
     # test a custom client name
     name = self.util.randAlphanum(8)
     res = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password,'name':name}))
+        params={'username':username,'name':name}|self.getPassword(password)))
     self.util.assertSame(res['client']['name'],name) # test custom name
         
     # test deleting a session (no longer can be used)
@@ -30,7 +30,7 @@ def testSessionsBasic(self):
 
     # test creating a session from an existing client
     res = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password,'auth_clientid':client['id'],'auth_clientkey':client['authkey']}))
+        params={'username':username,'auth_clientid':client['id'],'auth_clientkey':client['authkey']}|self.getPassword(password)))
     self.util.assertSame(res['account']['id'], account['id']) # sanity check output
     self.util.assertSame(res['account']['username'], username)
     self.util.assertSame(res['client']['id'], client['id'])
@@ -41,7 +41,7 @@ def testSessionsBasic(self):
     self.util.assertOk(self.interface.run(app='accounts',action='deleteclient',params=self.withSession(session)))
     self.util.assertError(self.interface.run(app='accounts',action='getaccount',params=self.withSession(session)),403,'INVALID_SESSION')
     self.util.assertError(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password,'auth_clientid':client['id'],'auth_clientkey':client['authkey']}),403,'INVALID_CLIENT')
+        params={'username':username,'auth_clientid':client['id'],'auth_clientkey':client['authkey']}|self.getPassword(password)),403,'INVALID_CLIENT')
     
     self.deleteAccount(account)
 
@@ -79,11 +79,11 @@ def testSessionDeleteOther(self):
 
     # test deleting a session/client that isn't this one (allowed with password)
     client2 = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))['client']
+        params={'username':username}|self.getPassword(password)))['client']
     self.util.assertOk(self.interface.run(app='accounts',action='deletesession',
-        params=self.withSession(session, {'session':client2['session']['id'],'auth_password':password})))
+        params=self.withSession(session, {'session':client2['session']['id']}|self.getPassword(password))))
     self.util.assertOk(self.interface.run(app='accounts',action='deleteclient',
-        params=self.withSession(session, {'client':client2['id'],'auth_password':password})))
+        params=self.withSession(session, {'client':client2['id']}|self.getPassword(password))))
     self.util.assertError(self.interface.run(app='accounts',action='getaccount',
         params=self.withSession(client2['session'])),403,'INVALID_SESSION')
 
@@ -97,9 +97,9 @@ def testSessionsInvalid(self):
 
     # test creating a session with bad username/password
     self.util.assertError(self.interface.run(app='accounts',action='createsession',
-        params={'username':"bad_username",'auth_password':'wrong'}),403,'AUTHENTICATION_FAILED')
+        params={'username':"bad_username"}|self.getPassword('wrong')),403,'AUTHENTICATION_FAILED')
     self.util.assertError(self.interface.run(app='accounts',action='createsession',
-        params={'username':self.username,'auth_password':'wrong'}),403,'AUTHENTICATION_FAILED')
+        params={'username':self.username}|self.getPassword('wrong')),403,'AUTHENTICATION_FAILED')
     
     (username, password, account, client, session) = self.tempAccount()
 
@@ -108,23 +108,23 @@ def testSessionsInvalid(self):
 
     # test deleting a session/client that isn't this one (allowed with password)
     client2 = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))['client']
+        params={'username':username}|self.getPassword(password)))['client']
     self.util.assertError(self.interface.run(app='accounts',action='deletesession',
         params=self.withSession(session, {'session':client2['session']['id']})),403,'PASSWORD_REQUIRED')
     self.util.assertError(self.interface.run(app='accounts',action='deletesession',
-        params=self.withSession(session, {'session':client2['session']['id'],'auth_password':"this is wrong"})),403,'AUTHENTICATION_FAILED')
+        params=self.withSession(session, {'session':client2['session']['id']}|self.getPassword('this is wrong'))),403,'AUTHENTICATION_FAILED')
     self.util.assertError(self.interface.run(app='accounts',action='deleteclient',
         params=self.withSession(session, {'client':client2['id']})),403,'PASSWORD_REQUIRED')
     self.util.assertError(self.interface.run(app='accounts',action='deleteclient',
-        params=self.withSession(session, {'client':client2['id'],'auth_password':"this is wrong"})),403,'AUTHENTICATION_FAILED')
+        params=self.withSession(session, {'client':client2['id']}|self.getPassword('this is wrong'))),403,'AUTHENTICATION_FAILED')
     
     # test trying to delete a session for someone else's account (not allowed)
     (username2, password2, account2, client2, session2) = self.tempAccount()
 
     self.util.assertError(self.interface.run(app='accounts',action='deletesession',
-        params=self.withSession(session, {'session':session2['id'],'auth_password':password})),404,'UNKNOWN_SESSION')
+        params=self.withSession(session, {'session':session2['id']}|self.getPassword(password))),404,'UNKNOWN_SESSION')
     self.util.assertError(self.interface.run(app='accounts',action='deleteclient',
-        params=self.withSession(session, {'client':client2['id'],'auth_password':password})),404,'UNKNOWN_CLIENT')
+        params=self.withSession(session, {'client':client2['id']}|self.getPassword(password))),404,'UNKNOWN_CLIENT')
 
     self.deleteAccount(account2)
     self.deleteAccount(account)
@@ -137,18 +137,18 @@ def testDeleteAllClients(self):
     self.util.assertError(self.interface.run(app='accounts',action='deleteallclients',
         params=self.withSession(session)),403,'PASSWORD_REQUIRED')
     self.util.assertError(self.interface.run(app='accounts',action='deleteallclients',
-        params=self.withSession(session, {'auth_password':"this is wrong"})),403,'AUTHENTICATION_FAILED')
+        params=self.withSession(session, self.getPassword('this is wrong'))),403,'AUTHENTICATION_FAILED')
     
     # deleteallclients results in all clients being deleted (including the current)
     self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))
+        params={'username':username}|self.getPassword(password)))
     self.util.assertOk(self.interface.run(app='accounts',action='deleteallclients',
-        params=self.withSession(session,{'auth_password':password})))
+        params=self.withSession(session,self.getPassword(password))))
     
     self.util.assertError(self.interface.run(app='accounts',action='getaccount',params=self.withSession(session)),403,'INVALID_SESSION')
     
     res = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))
+        params={'username':username}|self.getPassword(password)))
     client = res['client']
     session = client['session']
 
@@ -158,11 +158,11 @@ def testDeleteAllClients(self):
 
     # can't run deleteallclients --everyone unless admin
     self.util.assertError(self.interface.run(app='accounts',action='deleteallclients',
-        params=self.withSession(session, {'everyone':True,'auth_password':password})),403,'ADMIN_REQUIRED')
+        params=self.withSession(session, {'everyone':True}|self.getPassword(password))),403,'ADMIN_REQUIRED')
 
     # deleteallclients as admin results in all existing clients being deleted
     self.util.assertOk(self.interface.run(app='accounts',action='deleteallclients',
-        params=self.asAdmin({'auth_password':self.password,'everyone':True})))
+        params=self.asAdmin({'everyone':True}|self.getPassword())))
 
     self.util.assertError(self.interface.run(app='accounts',action='getaccount',
         params=self.withSession(session)),403,'INVALID_SESSION')

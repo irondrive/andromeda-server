@@ -1,7 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\AuthSource; if (!defined('Andromeda')) die();
 
 use Andromeda\Apps\Accounts\Account;
-use Andromeda\Apps\Accounts\Exceptions;
 
 /** 
  * The regular internal authentication source

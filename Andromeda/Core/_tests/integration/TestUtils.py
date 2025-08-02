@@ -40,6 +40,9 @@ class TestUtils():
     def __init__(self, random:Random):
         self.random = random
 
+    def randMaybe(self):
+        """ Returns true or false randomly """
+        return self.random.choice([True,False])
 
     def randBytes(self, len):
         """ Returns random bytes """

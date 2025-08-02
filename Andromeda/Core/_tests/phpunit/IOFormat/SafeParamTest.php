@@ -34,14 +34,15 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->expectException(Exceptions\SafeParamInvalidException::class);
         new SafeParam("%test", null);
     }
-    
+
     /** 
      * @template T
      * @param ScalarOrArray|SafeParams $value
      * @param T $want
      * @param callable(SafeParam):T $func 
+     * @param NULL|callable(T):T|false $logfunc
      */
-    protected function testGood($value, $want, callable $func, bool $willlog = true) : void
+    protected function testGood($value, $want, callable $func, NULL|callable|false $logfunc = null) : void
     {
         $param = new SafeParam("key",$value);
         
@@ -49,8 +50,9 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         
         $this->assertSame($want, $func($param));
         
-        if (!$willlog) $this->assertEmpty($logarr); 
-        else $this->assertSame(array('key'=>$want),$logarr);
+        $logfunc ??= function($v){ return $v; };
+        if ($logfunc === false) $this->assertEmpty($logarr); 
+        else $this->assertSame(array('key'=>$logfunc($want)),$logarr);
     }
     
     /**
@@ -331,17 +333,17 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
     {
         $getVal = function(SafeParam $p){ return $p->GetBase64(); };
         $getValN = function(SafeParam $p){ return $p->GetNullBase64(); };
+        $logFunc = function(string $p){ return base64_encode($p); };
         
         $this->testNulls($getVal, $getValN);
 
-        $this->testGood($a="a===", $a, $getVal);
-        $this->testGood($a=" a=== ", "a===", $getVal); // trim
-        $this->testGood($a="ab==", $a, $getVal);
-        $this->testGood($a="abc=", $a, $getVal);
-        $this->testGood($a="abcd", $a, $getVal);
-        $this->testGood($a="abcd+/0=", $a, $getVal);
+        $this->testGood($a="abc=", base64_decode($a), $getVal, $logFunc);
+        $this->testGood($a=" abc= ", base64_decode(trim($a)), $getVal, $logFunc);
+        $this->testGood($a="abcd", base64_decode($a), $getVal, $logFunc);
+        $this->testGood($a="abcd+/0=", base64_decode($a), $getVal, $logFunc);
         
         $this->testBad("a", $getVal); // length
+        $this->testBad("a===", $getVal); // just bad
         $this->testBad("abcde", $getVal); // length
 
         $this->testBad("abc\x22", $getVal); // chars

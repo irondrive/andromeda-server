@@ -14,8 +14,12 @@ use Andromeda\Apps\Accounts\Resource\{Client, Session, RecoveryKey};
 class Authenticator
 {
     private SafeParams $params;
+    private IOInterface $interface;
     
     private ?Account $account = null;
+    
+    private function __construct(SafeParams $params, IOInterface $interface) { 
+        $this->params = $params; $this->interface = $interface; }
     
     /** @return list<self> */
     private static function &GetInstances(ObjectDatabase $database) : array
@@ -81,8 +85,6 @@ class Authenticator
     /** Returns true if the real account used for the request is an admin */
     public function isRealAdmin() : bool { return $this->realaccount === null || $this->realaccount->isAdmin(); }
     
-    private function __construct(SafeParams $params) { $this->params = $params; }
-    
     /**
      * The primary authentication routine
      *
@@ -114,7 +116,7 @@ class Authenticator
         $sudouser = $params->HasParam('auth_sudouser') ? AccountsApp::getUsername($params->GetParam('auth_sudouser',SafeParams::PARAMLOG_ALWAYS)) : null;
         $sudoacct = $params->HasParam('auth_sudoacct') ? $params->GetParam('auth_sudoacct',SafeParams::PARAMLOG_ALWAYS)->GetRandstr() : null;
         
-        $auth = new Authenticator($params);
+        $auth = new Authenticator($params, $interface);
         
         if ($sessionid !== null && $sessionkey !== null)
         {
@@ -171,15 +173,15 @@ class Authenticator
     {
         if ($this->realaccount === null) return $this;
         
-        static::StaticTryRequireTwoFactor($this->params, $this->realaccount, $this->session); return $this;
+        static::StaticTryRequireTwoFactor($this->params, $this->interface, $this->realaccount, $this->session); return $this;
     }
     
     /** @see Authenticator::TryRequireTwoFactor() */
-    public static function StaticTryRequireTwoFactor(SafeParams $params, Account $account, ?Session $session = null) : void
+    public static function StaticTryRequireTwoFactor(SafeParams $params, IOInterface $iface, Account $account, ?Session $session = null) : void
     {
         if (!$account->HasValidTwoFactor()) return; 
         
-        static::StaticTryRequireCrypto($params, $account, $session);
+        static::StaticTryRequireCrypto($params, $iface, $account, $session);
         
         if (!$params->HasParam('auth_twofactor')) 
             throw new Exceptions\TwoFactorRequiredException();
@@ -199,13 +201,13 @@ class Authenticator
     {
         if ($this->realaccount === null) return $this;
 
-        if (!$this->params->HasParam('auth_password')) 
+        if (!$this->realaccount->HasPasswordParam($this->params, "auth")) 
             throw new Exceptions\PasswordRequiredException();
         
-        $password = $this->params->GetParam('auth_password',SafeParams::PARAMLOG_NEVER)->GetRawString();
+        $password = $this->realaccount->GetPasswordParam($this->params, $this->interface, "auth");
 
         if (!$this->realaccount->VerifyPassword($password))
-                throw new Exceptions\AuthenticationFailedException();
+            throw new Exceptions\AuthenticationFailedException();
 
         return $this;
     }
@@ -225,9 +227,9 @@ class Authenticator
      * Same as StaticRequireCrypto() but does nothing if the account does not have crypto
      * @see Authenticator::StaticRequireCrypto()
      */
-    public static function StaticTryRequireCrypto(SafeParams $params, Account $account, ?Session $session = null) : void
+    public static function StaticTryRequireCrypto(SafeParams $params, IOInterface $iface, Account $account, ?Session $session = null) : void
     {
-        if ($account->hasCrypto()) static::StaticRequireCrypto($params, $account, $session);
+        if ($account->hasCrypto()) static::StaticRequireCrypto($params, $iface, $account, $session);
     }
     
     /**
@@ -241,11 +243,11 @@ class Authenticator
     {
         if ($this->account === null) throw new Exceptions\AccountRequiredException();
         
-        static::StaticRequireCrypto($this->params, $this->account, $this->session); return $this;    
+        static::StaticRequireCrypto($this->params, $this->interface, $this->account, $this->session); return $this;    
     }
     
     /** @see Authenticator::RequireCrypto() */
-    public static function StaticRequireCrypto(SafeParams $params, Account $account, ?Session $session = null) : void
+    public static function StaticRequireCrypto(SafeParams $params, IOInterface $iface, Account $account, ?Session $session = null) : void
     {
         if ($account->isCryptoAvailable()) return; // already available
         
@@ -262,9 +264,9 @@ class Authenticator
             if ($obj === null || !$obj->hasCrypto() || !$obj->CheckFullKey($recoverykey))
                 throw new Exceptions\AuthenticationFailedException();
         }
-        else if ($params->HasParam('auth_password'))
+        else if ($account->HasPasswordParam($params, "auth"))
         {
-            $password = $params->GetParam('auth_password',SafeParams::PARAMLOG_NEVER)->GetRawString();
+            $password = $account->GetPasswordParam($params, $iface, "auth");
             
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e) {

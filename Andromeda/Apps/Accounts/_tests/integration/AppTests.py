@@ -1,4 +1,10 @@
 
+import nacl.secret
+import nacl.hash
+import nacl.pwhash
+import nacl.encoding
+import base64
+
 from BaseTest import BaseAppTest
 from TestUtils import *
 
@@ -20,7 +26,7 @@ class AppTests(BaseAppTest):
     def getInstallParams(self) -> dict:
         self.username = self.util.randAlphanum(8)
         self.password = self.util.randBytes(8)
-        return {'username':self.username,'password':self.password}
+        return {'username':self.username}|self.getPassword(prefix=None,newsalt=True)
 
     def installSelf(self):
         return self.util.assertOk(self.interface.run(app='accounts',action='install',install=True,params=self.getInstallParams()))
@@ -36,17 +42,17 @@ class AppTests(BaseAppTest):
         if self.session is not None:
             return # already done
         res = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-            params={'username':self.username,'auth_password':self.password}))
+            params={'username':self.username}|self.getPassword()))
         session = res['client']['session']
         self.session = session
 
-    def asAdmin(self, params:dict = {}):
+    def asAdmin(self, params:dict = {}): # TODO migrate to | like getPassword
         """ Returns params with admin params added if not a private interface """
         if self.session is None:
             self.afterInstall() # make asAdmin available to other apps in afterInstall()
         params = params.copy()
         if self.interface.isPriv:
-            if self.util.random.choice([True,False]):
+            if self.util.randMaybe():
                 params['auth_sudouser'] = self.username
             else:
                 params['auth_sudoacct'] = self.account['id']
@@ -55,28 +61,47 @@ class AppTests(BaseAppTest):
             params['auth_sessionkey'] = self.session['authkey']
         return params
     
-    def withSession(self, session:dict, params:dict = {}):
+    def withSession(self, session:dict, params:dict = {}): # TODO migrate to | like getPassword
         """ Returns params with session params added """
         params = params.copy()
         params['auth_sessionid'] = session['id']
         params['auth_sessionkey'] = session['authkey']
         return params
     
+    def getPassword(self, password:str=None, prefix:str='auth', newsalt:bool=False):
+        """ Returns the given password as a password or passkey, as appropriate
+        Adds the prefix to the beginning of the field name, if not null
+        Also generates and send a new _salt if newsalt is True """
+        if password is None:
+            password = self.password
+        field = 'password' if self.interface.isPriv else 'passkey'
+        if prefix is not None:
+            field = prefix+'_'+field
+        if self.interface.isPriv:
+            # TODO RAY !! want to do and self.util.randMaybe(): but then the correct hashing below does matter...
+            return {field:password}
+        else:
+            # not bothering with the salt or the correct hashing process, doesn't matter
+            if type(password) is str: password = password.encode('utf-8')
+            ret = {field: nacl.hash.blake2b(password,encoder=nacl.encoding.Base64Encoder,digest_size=nacl.secret.SecretBox.KEY_SIZE)}
+            if newsalt: ret[field+'_salt'] = base64.b64encode(self.util.randBytes(nacl.pwhash.argon2id.SALTBYTES))
+            return ret
+    
     def tempAccount(self):
         """ Creates a new account/session for temporary use """
         username = self.util.randAlphanum(8)
         password = self.util.randBytes(8)
         account = self.util.assertOk(self.interface.run(app='accounts',action='createaccount',
-            params=self.asAdmin({'username':username,'password':password})))
+            params=self.asAdmin({'username':username}|self.getPassword(password,prefix=None,newsalt=True))))
         client = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-            params={'username':username,'auth_password':password}))['client']
+            params={'username':username}|self.getPassword(password)))['client']
         session = client['session']
         return (username, password, account, client, session)
     
     def deleteAccount(self, account:dict):
         """ Deletes an account with the given session and password """
         self.util.assertOk(self.interface.run(app='accounts',action='deleteaccount',
-            params=self.withSession(self.session, {'auth_sudoacct':account['id'],'auth_password':self.password})))
+            params=self.withSession(self.session, {'auth_sudoacct':account['id']}|self.getPassword())))
         
     def assertAccountRequired(self, res):
         if self.interface.isPriv:

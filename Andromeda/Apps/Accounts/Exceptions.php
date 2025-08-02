@@ -26,6 +26,14 @@ class ContactExistsException extends BaseExceptions\ClientErrorException
     }
 }
 
+/** Exception indicating that a passkey (not a raw password) must be provided */
+class PasskeyRequiredException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("PASSWORD_MUST_BE_PASSKEY", $details);
+    }
+}
+
 /** Exception indicating that creating accounts is not allowed */
 class AccountCreateDeniedException extends BaseExceptions\ClientDeniedException
 {

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Files; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\{ApiPackage, BaseApp, Emailer, EmailRecipient};
+use Andromeda\Core\{ApiPackage, BaseApp, Crypto, Emailer, EmailRecipient, Utilities};
 use Andromeda\Core\Database\ObjectDatabase;
 use Andromeda\Core\IOFormat\{Input, InputPath, IOInterface, Output, OutputHandler, SafeParams};
 use Andromeda\Core\IOFormat\Interfaces\HTTP;
@@ -78,7 +78,7 @@ class FilesApp extends BaseApp
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
             'download --file id [--fstart uint] [--flast int] [--debugdl bool]',
-            'upload (--file% path [name] | --file- name) --parent id [--overwrite bool]',
+            'createfile (--file% path [name] | --file- name) --parent id [--overwrite bool]',
             'writefile (--data% path | --data-) --file id [--offset uint]',
             'truncate --file id --size uint',
             'createfolder --parent id --name fsname',
@@ -178,7 +178,7 @@ class FilesApp extends BaseApp
             case 'setconfig': return $this->SetConfig($params, $authenticator);
             
             case 'download':   $this->DownloadFile($params, $authenticator, $actionlog); return null;
-            case 'upload':     return $this->UploadFile($input, $authenticator, $actionlog);  
+            case 'createfile': return $this->CreateFile($input, $authenticator, $actionlog);  
             case 'writefile':  return $this->WriteToFile($input, $authenticator, $actionlog);
             case 'truncate':   return $this->TruncateFile($params, $authenticator, $actionlog);
             case 'createfolder':  return $this->CreateFolder($params, $authenticator, $actionlog);
@@ -334,7 +334,7 @@ class FilesApp extends BaseApp
      * @throws Exceptions\ItemAccessDeniedException if accessing via share and share does not allow upload
      * @return FileJ newly created file
      */
-    protected function UploadFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
+    protected function CreateFile(Input $input, ?Authenticator $authenticator, ?ActionLog $actionlog) : array
     {
         $params = $input->GetParams();
         
@@ -1393,7 +1393,7 @@ class FilesApp extends BaseApp
                     throw new Exceptions\ShareURLGenerateException();
                 
                 // TODO this will be a problem, base64 has non-URL safe characters, see https://www.php.net/manual/en/function.base64-encode.php
-                $cmdparams = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',$share->GetAuthKey()); // @phpstan-ignore-line make public or use GetClientObject?
+                $cmdparams = (new SafeParams())->AddParam('sid',$share->ID())->AddParam('skey',Crypto::base64_encode($share->GetAuthKey())); // @phpstan-ignore-line make public or use GetClientObject?
                 $cmdinput = (new Input('files','download',$cmdparams));
                 
                 return "<a href='".HTTP::GetRemoteURL($url, $cmdinput)."'>".$share->GetItem()->GetName()."</a>";

@@ -6,9 +6,9 @@ def testTwoFactorBasic(self):
 
     # create a couple new two factor objects, test client output
     res = self.util.assertOk(self.interface.run(app='accounts',action='createtwofactor',
-        params=self.withSession(session,{'auth_password':password,'comment':'mycomment'})))
+        params=self.withSession(session,{'comment':'mycomment'}|self.getPassword(password))))
     res2 = self.util.assertOk(self.interface.run(app='accounts',action='createtwofactor',
-        params=self.withSession(session,{'auth_password':password})))
+        params=self.withSession(session,self.getPassword(password))))
     
     tf = res['twofactor']
     tf2 = res2['twofactor']
@@ -33,7 +33,7 @@ def testTwoFactorBasic(self):
 
     # test don't need two factor yet for sessions (not validated)
     self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))
+        params={'username':username}|self.getPassword(password)))
 
     # now we validate the new two factor, it becomes required for sessions
     self.util.assertError(self.interface.run(app='accounts',action='verifytwofactor',
@@ -41,17 +41,17 @@ def testTwoFactorBasic(self):
     self.util.assertOk(self.interface.run(app='accounts',action='verifytwofactor',
         params=self.withSession(session,{'auth_twofactor':pyotp.TOTP(tf['secret']).now()})))
     self.util.assertError(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}),403,'TWOFACTOR_REQUIRED')
+        params={'username':username}|self.getPassword(password)),403,'TWOFACTOR_REQUIRED')
 
     # delete the two factor again, no longer required for a session
     self.util.assertOk(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session,{'auth_password':password,'twofactor':tf['id']})))
+        params=self.withSession(session,{'twofactor':tf['id']}|self.getPassword(password))))
     self.util.assertError(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session,{'auth_password':password,'twofactor':tf['id']})),404,'UNKNOWN_TWOFACTOR')
+        params=self.withSession(session,{'twofactor':tf['id']}|self.getPassword(password))),404,'UNKNOWN_TWOFACTOR')
     self.util.assertOk(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session,{'auth_password':password,'twofactor':tf2['id']})))
+        params=self.withSession(session,{'twofactor':tf2['id']}|self.getPassword(password))))
     self.util.assertOk(self.interface.run(app='accounts',action='createsession',
-        params={'username':username,'auth_password':password}))
+        params={'username':username}|self.getPassword(password)))
 
     # TODO TESTS !! add test that twofactor is not required when using an existing session (unless config is set)
 
@@ -72,16 +72,16 @@ def testTwoFactorInvalid(self):
     
     # test deletetwofactor with an unknown object ID
     self.util.assertError(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session,{'auth_password':password,'twofactor':'unknown'})),404,'UNKNOWN_TWOFACTOR')
+        params=self.withSession(session,{'twofactor':'unknown'}|self.getPassword(password))),404,'UNKNOWN_TWOFACTOR')
     
     # test that you can't delete a two factor for someone else's account
     (username2, password2, account2, client2, session2) = self.tempAccount()
     res = self.util.assertOk(self.interface.run(app='accounts',action='createtwofactor',
-        params=self.withSession(session2,{'auth_password':password2})))
+        params=self.withSession(session2,self.getPassword(password2))))
     self.util.assertError(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session,{'auth_password':password,'twofactor':res['twofactor']['id']})),404,'UNKNOWN_TWOFACTOR')
+        params=self.withSession(session,{'twofactor':res['twofactor']['id']}|self.getPassword(password))),404,'UNKNOWN_TWOFACTOR')
     self.util.assertOk(self.interface.run(app='accounts',action='deletetwofactor',
-        params=self.withSession(session2,{'auth_password':password2,'twofactor':res['twofactor']['id']})))
+        params=self.withSession(session2,{'twofactor':res['twofactor']['id']}|self.getPassword(password2))))
 
     self.deleteAccount(account2)
     self.deleteAccount(account) 

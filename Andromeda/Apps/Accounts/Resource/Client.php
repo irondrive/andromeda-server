@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Crypto;
 use Andromeda\Core\IOFormat\IOInterface;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
@@ -211,7 +212,7 @@ class Client extends BaseObject
             'date_active' => $this->date_active->TryGetValue()
         );
         
-        if ($secret) $data['authkey'] = $this->GetAuthKey();
+        if ($secret) $data['authkey'] = Crypto::base64_encode($this->GetAuthKey());
         
         $session = Session::TryLoadByClient($this->database, $this);
         $data['session'] = ($session !== null) ? $session->GetClientObject($secret) : null;

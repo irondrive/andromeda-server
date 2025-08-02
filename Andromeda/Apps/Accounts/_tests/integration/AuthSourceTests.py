@@ -22,7 +22,7 @@ def testAuthSourceInvalid(self):
     self.util.assertError(self.interface.run(app='accounts',action='deleteauthsource',params=self.withSession(self.session)),403,'PASSWORD_REQUIRED')
     
     # edit, test, delete auth source with invalid ID
-    badparams = {'auth_password':self.password,'authsrc':'invalid'}
+    badparams = {'authsrc':'invalid'}|self.getPassword()
     self.util.assertError(self.interface.run(app='accounts',action='editauthsource',params=self.asAdmin(badparams)),404,'UNKNOWN_AUTHSOURCE')
     self.util.assertError(self.interface.run(app='accounts',action='testauthsource',params=self.asAdmin(badparams)),404,'UNKNOWN_AUTHSOURCE')
     self.util.assertError(self.interface.run(app='accounts',action='deleteauthsource',params=self.asAdmin(badparams)),404,'UNKNOWN_AUTHSOURCE')
@@ -99,6 +99,7 @@ def checkGeneralOutput(self, res, admin):
         for prop in ['enabled','default_group','date_created']:
             self.util.assertNotIn(prop, res)
 
+# TODO TESTS test that if signing in with password instead of passkey, and auth source is bad, we get the bad auth source error first
 # TODO TESTS find a way to test createsession --old_password (needs to have the script wait while admin changes the authsource password externally)
 # TODO TESTS should attempt create/edit with a bad hostname, shouldn't cause a server error
 # TODO TESTS !! test create/edit with createdefgroup, test description, test --enabled
@@ -116,7 +117,7 @@ def doTestAuthSource(self, type, checker):
 
     # create a new authsource according to config
     createparams = params.copy()
-    createparams.update({'type':type,'auth_password':self.password})
+    createparams.update({'type':type}|self.getPassword())
     res = self.util.assertOk(self.interface.run(app='accounts',action='createauthsource',params=self.asAdmin(createparams)))
     checker(self, params, res, True)
     authsrc = res['id']
@@ -135,6 +136,10 @@ def doTestAuthSource(self, type, checker):
     badparams = params.copy()
     badparams.update({'authsrc':authsrc,'test_password':self.util.randAscii(8)})
     self.util.assertError(self.interface.run(app='accounts',action='testauthsource',params=self.asAdmin(badparams)),400,'AUTHSOURCE_TEST_FAILED')
+
+    # test that the bad auth source error happens before require passkey
+    self.util.assertError(self.interface.run(app='accounts',action='createsession',
+        params={'username':params['test_username'],'auth_password':params['test_password'],'authsrc':'aaaaaa'}),400,'UNKNOWN_AUTHSOURCE')
 
     # now try signing in via the new auth source (creates a new account!)
     res = self.util.assertOk(self.interface.run(app='accounts',action='createsession',
@@ -161,7 +166,7 @@ def doTestAuthSource(self, type, checker):
     
     # delete the auth source, check that it also deleted the new account
     self.util.assertOk(self.interface.run(app='accounts',action='deleteauthsource',
-        params=self.asAdmin({'authsrc':authsrc,'auth_password':self.password})))
+        params=self.asAdmin({'authsrc':authsrc}|self.getPassword())))
     res = self.util.assertOk(self.interface.run(app='accounts',action='getaccounts',params=self.asAdmin()))
     self.util.assertNotIn(account['id'], res)
     self.util.assertIn(self.account['id'], res) # original admin

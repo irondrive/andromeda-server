@@ -4,7 +4,7 @@ use Andromeda\Core\{ApiPackage, BaseApp, Crypto, Utilities};
 use Andromeda\Core\Database\QueryBuilder;
 use Andromeda\Core\Errors\BaseExceptions;
 use Andromeda\Core\Exceptions\{UnknownActionException, DecryptionFailedException};
-use Andromeda\Core\IOFormat\{Input, SafeParam, SafeParams};
+use Andromeda\Core\IOFormat\{Input, SafeParam, SafeParams, IOInterface};
 use Andromeda\Core\IOFormat\Exceptions\SafeParamInvalidException;
 
 use Andromeda\Apps\Accounts\Resource\{Client, Contact, RecoveryKey, Session, TwoFactor, RegisterAllow};
@@ -46,6 +46,7 @@ class AccountsApp extends BaseApp
     { 
         return array(
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey base64] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
+            '- PASSWORD NOTE: --auth_password is expected to be pre-hashed --auth_passkey over HTTP (except external auth)',
             'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
 
@@ -194,6 +195,8 @@ class AccountsApp extends BaseApp
         }
     }
     
+    // --------------- UTILITY FUNCTIONS --------------- //
+
     /**
      * Get either an alphanum or email from the given param
      * @param SafeParam $param param to extract value from
@@ -205,6 +208,8 @@ class AccountsApp extends BaseApp
         catch (SafeParamInvalidException $e) {
             return $param->GetEmail(); }
     }
+
+    // --------------- ACTION HANDLERS BELOW --------------- //
 
     /**
      * Gets config for this app
@@ -315,12 +320,13 @@ class AccountsApp extends BaseApp
                 $authenticator->RequirePassword();
         }       
         
-        if (!$account->GetAuthSource() instanceof AuthSource\Local) 
+        if (!($account->GetAuthSource() instanceof AuthSource\Local)) 
             throw new Exceptions\ChangeExternalPasswordException();
 
-        $new_password = $params->GetParam('new_password', SafeParams::PARAMLOG_NEVER)->GetRawString();
+        $iface = $this->API->GetInterface();
+        $new_password = $account->GetPasswordParam($params, $iface, "new", newsalt:true);
 
-        Authenticator::StaticTryRequireCrypto($params, $account);
+        Authenticator::StaticTryRequireCrypto($params, $iface, $account);
         $account->ChangePassword($new_password);
     }
     
@@ -392,8 +398,8 @@ class AccountsApp extends BaseApp
             throw new Exceptions\CryptoNotAllowedException();
         
         $authenticator->RequirePassword()->TryRequireTwoFactor();
-        
-        $password = $params->GetParam('auth_password', SafeParams::PARAMLOG_NEVER)->GetRawString();
+
+        $password = $account->GetPasswordParam($params, $this->API->GetInterface(), "auth");
 
         RecoveryKey::DeleteByAccount($this->database, $account);
         
@@ -465,12 +471,10 @@ class AccountsApp extends BaseApp
                     throw new Exceptions\AccountRegisterAllowException();
         }
 
-        $password = $params->GetParam("password", SafeParams::PARAMLOG_NEVER)->GetRawString();
-        
         if (Account::TryLoadByUsername($this->database, $username) !== null)
             throw new Exceptions\AccountExistsException();
 
-        $account = Account::Create($this->database, $username, $password);
+        $account = Account::CreateLocal($this->database, $username, $params, $this->API->GetInterface());
        
         if (isset($cpair)) 
         {
@@ -560,8 +564,6 @@ class AccountsApp extends BaseApp
             $username = $account->GetUsername();
         }
         
-        $password = $params->GetParam("auth_password", SafeParams::PARAMLOG_NEVER)->GetRawString();
-        
         $reqauthsrc = null; if ($params->HasParam('authsrc'))
         {
             $srcid = $params->GetParam('authsrc', SafeParams::PARAMLOG_ALWAYS)->GetRandstr();
@@ -572,6 +574,8 @@ class AccountsApp extends BaseApp
         if ($account !== null) /** check password */
         {
             $authsrc = $account->GetAuthSource();
+
+            $password = $account->GetPasswordParam($params, $this->API->GetInterface(), "auth");
 
              /** check the requested authsrc matches, if given */
             if ($reqauthsrc !== null && $reqauthsrc !== $authsrc)
@@ -586,6 +590,8 @@ class AccountsApp extends BaseApp
             $authsrc = $reqauthsrc ?? $this->config->GetDefaultAuth();
             if ($authsrc === null) throw new Exceptions\AuthenticationFailedException();
             
+            $password = $params->GetParam("auth_password", SafeParams::PARAMLOG_NEVER)->GetRawString();
+        
             if ($authsrc->GetEnabled() < AuthSource\External::ENABLED_FULLENABLE)
                 throw new Exceptions\AuthenticationFailedException();
             if (!$authsrc->VerifyUsernamePassword($username, $password))
@@ -608,7 +614,7 @@ class AccountsApp extends BaseApp
             $clientkey = $params->GetParam("auth_clientkey", SafeParams::PARAMLOG_NEVER)->GetBase64();
             
             if ($account->GetForceUseTwoFactor() && $account->HasValidTwoFactor()) 
-                Authenticator::StaticTryRequireTwoFactor($params, $account);
+                Authenticator::StaticTryRequireTwoFactor($params, $interface, $account);
             
             $client = Client::TryLoadByID($this->database, $clientid);
             if ($client === null || !$client->CheckKeyMatch($interface, $clientkey)) 
@@ -625,7 +631,7 @@ class AccountsApp extends BaseApp
                 if (!$account->CheckRecoveryKey($recoverykey))
                     throw new Exceptions\AuthenticationFailedException();
             }
-            else Authenticator::StaticTryRequireTwoFactor($params, $account);
+            else Authenticator::StaticTryRequireTwoFactor($params, $interface, $account);
             
             $cname = $params->GetOptParam('name',null)->GetNullName();
             $client = Client::Create($interface, $this->database, $account, $cname);
@@ -639,9 +645,9 @@ class AccountsApp extends BaseApp
             try { $account->UnlockCryptoFromPassword($password); }
             catch (DecryptionFailedException $e)
             {
-                if (!$params->HasParam('old_password'))
+                if (!$account->HasPasswordParam($params, "old"))
                     throw new Exceptions\OldPasswordRequiredException();
-                $old_password = $params->GetParam("old_password",SafeParams::PARAMLOG_NEVER)->GetRawString();
+                $old_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "old");
                 $account->UnlockCryptoFromPassword($old_password);
                 
                 $account->ChangePassword($password);
@@ -651,9 +657,9 @@ class AccountsApp extends BaseApp
         /* check account password age, possibly require a new one */
         if (!$account->CheckPasswordAge())
         {
-            if (!$params->HasParam('new_password'))
+            if (!$account->HasPasswordParam($params, "new"))
                 throw new Exceptions\NewPasswordRequiredException();
-            $new_password = $params->GetParam('new_password',SafeParams::PARAMLOG_NEVER)->GetRawString();
+            $new_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "new");
             
             $account->ChangePassword($new_password);
         }

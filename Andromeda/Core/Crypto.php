@@ -73,7 +73,8 @@ class Crypto
      */
     public static function DeriveSubkey(string $superkey, int $keyid, string $context, int $bytes) : string
     {
-        return sodium_crypto_kdf_derive_from_key($bytes, $keyid, $context, $superkey);
+        $subkey = sodium_crypto_kdf_derive_from_key($bytes, $keyid, $context, $superkey);
+        sodium_memzero($superkey); return $subkey;
     }
 
     /**
@@ -157,6 +158,9 @@ class Crypto
         if ($output === false) throw new Exceptions\DecryptionFailedException();
         return $output;
     }
+
+    // NOTE we would use curve25519xchacha20poly1305 for public key crypto... but PHP doesn't have it
+    // it seems the default is curve25519xsalsa20poly1305 (XSalsa20 vs XChaCha20)
 
     /** 
      * Returns the length of a nonce for use with public crypto

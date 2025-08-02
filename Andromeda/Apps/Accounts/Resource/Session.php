@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Resource; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\{BaseObject, FieldTypes, ObjectDatabase, QueryBuilder, TableTypes};
 
 use Andromeda\Apps\Accounts\Account;
@@ -207,7 +208,7 @@ class Session extends BaseObject implements IKeySource
             'date_active' => $this->date_active->TryGetValue()
         );
         
-        if ($secret) $retval['authkey'] = $this->GetAuthKey();
+        if ($secret) $retval['authkey'] = Crypto::base64_encode($this->GetAuthKey());
         
         return $retval;
     }

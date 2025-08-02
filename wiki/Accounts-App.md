@@ -52,7 +52,9 @@ Sessions are the mechanism through which requests are authenticated as correspon
 
 To create a new session (or both a client and a session), use the `accounts createsession` command.  The standard parameters are `username` and `auth_password`, but you can also sign into an account using any of its registered contacts.  If you are reusing an existing client, use the `auth_clientid` and `auth_clientkey` parameters, else a new one will be created.  In that case, either an `auth_twofactor` code or an `auth_recoverykey` will be required (if configured).  The command returns the Account and Client object that you logged into.  The `client` field will contain the client ID and key, while the `client.session` field will contain the session ID and key.
 
-The `createsession` command takes an optional `authsource` parameter describing what authentication service to sign in to (see the admin section on external authentication).  The list of available auth sources can be fetched with `accounts getauthsources`.  See the [External Authentication](#external-authentication) section.
+For ALL actions that expect an `auth_password`, if using HTTP, it must be pre-hashed and provided as `auth_passkey` (see the andromeda-e2ee native client).  This is because the password may be used for end-to-end-encryption (e2ee) and should not be revealed to the server.  The CLI interface allows using a raw `auth_password`.  
+
+The `createsession` command takes an optional `authsource` parameter describing what authentication service to sign in to (see the admin section on external authentication).  The list of available auth sources can be fetched with `accounts getauthsources`.  See the [External Authentication](#external-authentication) section.  When using external authentication, a raw password must be provided (not a hashed passkey).  
 
 To be authenticated for subsequent requests, all requests must contain the `auth_sessionid` and `auth_sessionkey` fields.  Via HTTP, these must be in the POST body or cookies (or basic HTTP auth as username/password) and not the URL.  
 

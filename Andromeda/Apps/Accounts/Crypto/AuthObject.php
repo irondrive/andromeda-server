@@ -40,19 +40,16 @@ trait AuthObject
         return Crypto::DeriveSubkey($superkey, 1, "a2authob", $hashlen);
     }
 
-    /** Returns true if the given base64 key is valid, and stores it in memory for TryGetAuthKey() */
-    public function CheckKeyMatch(string $b64key) : bool
+    /** Returns true if the given key is valid, and stores it in memory for TryGetAuthKey() */
+    public function CheckKeyMatch(string $key) : bool
     {
-        $hash = $this->authkey->TryGetValue();
-        if ($hash === null || strlen($hash) === 0) return false;
+        $goodhash = $this->authkey->TryGetValue();
+        if ($goodhash === null || strlen($goodhash) === 0) return false;
 
-        $keydec = Crypto::base64_decode($b64key);
-        if ($keydec === false) return false;
+        $inhash = $this->GetFastHash($key);
+        if (sodium_memcmp($goodhash, $inhash) !== 0) return false;
 
-        $hash2 = $this->GetFastHash($keydec);
-        if ($hash !== $hash2) return false;
-
-        $this->authkey_raw = $keydec;
+        $this->authkey_raw = $key;
         return true;
     }
 
@@ -68,19 +65,19 @@ trait AuthObject
     }
 
     /**
-     * Returns the raw auth key as base64
+     * Returns the raw auth key 
      * @throws Exceptions\RawKeyNotAvailableException if the real key is not in memory or is null
      */
     protected function GetAuthKey() : string
     {
         if (!isset($this->authkey_raw))
             throw new Exceptions\RawKeyNotAvailableException();
-        return Crypto::base64_encode($this->authkey_raw);
+        return $this->authkey_raw;
     }
 
     /** 
      * Sets the auth key to a new random value
-     * @return string the new auth key (not base64)
+     * @return string the new auth key
      */
     protected function InitAuthKey() : string
     {
@@ -91,7 +88,7 @@ trait AuthObject
     
     /**
      * Sets the auth key to the given value and hashes it
-     * @param string $key new auth key (not base64)
+     * @param string $key new auth key
      * @return $this
      */
     protected function SetAuthKey(?string $key) : self 

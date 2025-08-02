@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Apps\Accounts\Crypto; if (!defined('Andromeda')) die();
 
+use Andromeda\Core\Crypto;
 use Andromeda\Core\Database\{ObjectDatabase, QueryBuilder};
 use Andromeda\Apps\Accounts\Account;
 
@@ -50,8 +51,11 @@ trait AuthObjectFull
         $code = explode(":", $code, 3);
         
         if (count($code) !== 3 || $code[0] !== static::GetFullKeyPrefix() || $code[1] !== $this->ID()) return false;
+
+        $key = Crypto::base64_decode($code[2]);
+        if ($key === false) return false;
         
-        return $this->CheckKeyMatch($code[2]);
+        return $this->CheckKeyMatch($key);
     }
     
     /**
@@ -75,6 +79,7 @@ trait AuthObjectFull
      */
     public function GetFullKey() : string
     {
-        return implode(":",array(static::GetFullKeyPrefix(), $this->ID(), $this->GetAuthKey()));
+        return implode(":",array(static::GetFullKeyPrefix(), $this->ID(), 
+            Crypto::base64_encode($this->GetAuthKey())));
     }
 }

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); namespace Andromeda\Core\IOFormat; if (!defined('Andromeda')) die();
 
-use Andromeda\Core\Utilities;
+use Andromeda\Core\{Crypto, Utilities};
 use Andromeda\Core\Exceptions\JSONException;
 use Andromeda\Core\IOFormat\Exceptions\{SafeParamInvalidException, SafeParamNullValueException};
 
@@ -381,15 +381,14 @@ class SafeParam
         if ($value !== null)
         {
             $value = trim($value);
-            
-            if (preg_match("%^[a-zA-Z0-9+\/=]+$%", $value) !== 1)
-                throw new SafeParamInvalidException($this->key, 'base64');
 
-            if ((strlen($value) % 4) !== 0)
+            if (($value2 = Crypto::base64_decode($value)) === false)
                 throw new SafeParamInvalidException($this->key, 'base64');
+            $this->LogValue($value); // log the encoded value
+            $value = $value2;
         }
-        
-        $this->LogValue($value); return $value;
+        else $this->LogValue(null);
+        return $value;
     }
     
     /**
