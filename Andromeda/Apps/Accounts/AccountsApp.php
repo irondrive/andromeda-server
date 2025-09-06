@@ -320,7 +320,7 @@ class AccountsApp extends BaseApp
                 $authenticator->RequirePassword();
         }       
         
-        if (!($account->GetAuthSource() instanceof AuthSource\Local)) 
+        if ($account->isExternalAuth())
             throw new Exceptions\ChangeExternalPasswordException();
 
         $iface = $this->API->GetInterface();
@@ -574,8 +574,7 @@ class AccountsApp extends BaseApp
         
         if ($account !== null) /** check password */
         {
-            $authsrc = $account->GetAuthSource();
-
+            $authsrc = $account->TryGetAuthSource();
             $password = $account->GetPasswordParam($params, $this->API->GetInterface(), "auth");
 
              /** check the requested authsrc matches, if given */

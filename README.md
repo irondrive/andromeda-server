@@ -89,14 +89,14 @@ Andromeda has its own debug logging system and captures its own exceptions/backt
 * It is mildly *better* to only do install/upgrades via CLI if possible, and not have `install.php` available on the web.  Install/upgrade commands are not authenticated and are allowed by any user on any interface when required.  Or, you can disallow external access to the web server when beginning an install or upgrade (also good practice).
 
 #### Database Config
-The `./andromeda-install core dbconf` command is used to create and test database configuration. The `--outfile` option controls where to write the configuration file.  Using `--outfile` as a flag will store the configuration file (`DBConfig.php`) in the `Andromeda/` folder.  Using `--outfile -` will return the config string as output.  Otherwise, using `--outfile fspath` will store the config at the specified path.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda-server/`, `/usr/local/etc/andromeda-server/` and `/etc/andromeda-server/` in that order for `DBConfig.php`.  Remember that DBConfig.php will contain database credentials and should be protected from other users appropriately.
+The `./andromeda-install core dbconf` command is used to create and test database configuration. The `--outfile` option controls where to write the configuration file.  Excluding `--outfile` will store the configuration file (`DBConfig.php`) in the `Andromeda/` folder.  Using `--outfile null` will return the config string as output.  Otherwise, using `--outfile fspath` will store the config at the specified path.  When Andromeda runs it checks its `./Andromeda/`, `~/.config/andromeda-server/`, `/usr/local/etc/andromeda-server/` and `/etc/andromeda-server/` in that order for `DBConfig.php`.  Remember that DBConfig.php will contain database credentials and should be protected from other users appropriately.
 
-For example to create and use an SQLite database and save the config file in the default location, run `./andromeda-install core dbconf --driver sqlite --dbpath mydata.s3db --outfile`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
+For example to create and use an SQLite database and save the config file in the default location, run `./andromeda-install core dbconf --driver sqlite --dbpath mydata.s3db`.  SQLite is only recommended for testing or tiny deployments as it does not support concurrent access.
 
 ### Example CLI Install Steps
 Use the `./andromeda-install core usage` command to see options for all available install commands.  `./andromeda-install core scanapps` will list apps that exist for install.
 
-1. Run `./andromeda-install core dbconf --outfile` to generate and write database configuration to the default location.
+1. Run `./andromeda-install core dbconf` to generate and write database configuration to the default location.
 2. Run `./andromeda-install core setupall` to install database tables for and enable all apps that exist. It returns a list of all installed apps mapped their specific install output.  The `core setupall` command can take any parameter needed by an individual app.  Apps can also be installed and enabled separately, e.g. `./andromeda-install accounts install; ./andromeda-server core enableapp --appname accounts`.  Apps can have database dependencies that may dictate installation order.
 
 Note that MySQL does not support transactions for queries that modify table structure.  If an install/upgrade fails midway, the database may be left in an inconsistent state.

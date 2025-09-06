@@ -8,8 +8,8 @@ use Andromeda\Core\Database\Exceptions\CounterOverLimitException;
 use Andromeda\Core\IOFormat\{IOInterface, SafeParams};
 
 use Andromeda\Apps\Accounts\AuthSource\External;
-use Andromeda\Apps\Accounts\Crypto\{KeySource, IKeySource};
-use Andromeda\Apps\Accounts\Crypto\Exceptions\{CryptoAlreadyInitializedException, CryptoNotInitializedException, CryptoUnlockRequiredException};
+use Andromeda\Apps\Accounts\Crypto\{AuthObject, KeySource, IKeySource};
+use Andromeda\Apps\Accounts\Crypto\Exceptions\{AuthKeyLengthException, CryptoAlreadyInitializedException, CryptoNotInitializedException, CryptoUnlockRequiredException};
 use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey, Session, TwoFactor};
 
 /**
@@ -30,8 +30,10 @@ use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey
  */
 class Account extends PolicyBase implements IKeySource
 {
+    use AuthObject; // for passkey
     use KeySource 
     { 
+        // override these as we have other key sources
         isCryptoAvailable as BaseIsCryptoAvailable;
         EncryptSecret as BaseEncryptSecret;
         DecryptSecret as BaseDecryptSecret;
@@ -44,8 +46,6 @@ class Account extends PolicyBase implements IKeySource
     private FieldTypes\StringType $username;
     /** The user-set full descriptive name of the user */
     private FieldTypes\NullStringType $fullname;
-    /** The password hash used for the account (null if external) */
-    private FieldTypes\NullStringType $password;
     /** The salt for clients to use to create a passkey from a password */
     private FieldTypes\NullStringType $e2ee_pwsalt;
     /** 
@@ -65,7 +65,6 @@ class Account extends PolicyBase implements IKeySource
         $fields = array();
         $this->username = $fields[] = new FieldTypes\StringType('username');
         $this->fullname = $fields[] = new FieldTypes\NullStringType('fullname');
-        $this->password = $fields[] = new FieldTypes\NullStringType('password');
         $this->e2ee_pwsalt = $fields[] = new FieldTypes\NullStringType('e2ee_pwsalt');
         $this->authsource = $fields[] = new FieldTypes\NullObjectRefT(External::class, 'authsource');
         $this->date_passwordset = $fields[] = new FieldTypes\NullTimestamp('date_passwordset');
@@ -73,6 +72,7 @@ class Account extends PolicyBase implements IKeySource
         $this->date_active = $fields[] = new FieldTypes\NullTimestamp('date_active', saveOnRollback:true);
         $this->RegisterFields($fields, self::class);
         
+        $this->AuthObjectCreateFields();
         $this->KeySourceCreateFields();
         parent::CreateFields();
     }
@@ -138,7 +138,7 @@ class Account extends PolicyBase implements IKeySource
         if ($prefix !== null)
             $field = $prefix."_$field";
 
-        if (!($this->GetAuthSource() instanceof AuthSource\Local))
+        if ($this->isExternalAuth())
             return $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetRawString();
 
         if ($params->HasParam($field))
@@ -164,6 +164,10 @@ class Account extends PolicyBase implements IKeySource
         if ($prefix !== null)
             $field = $prefix."_$field";
 
+        $passkey = $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetBase64(); // check first
+        if (strlen($passkey) < Crypto::SecretKeyLength())
+            throw new Exceptions\PasskeyRequiredException("key too short");
+        
         if ($newsalt)
         {
             $salt = $params->GetParam($field."_salt", SafeParams::PARAMLOG_NEVER)->GetBase64();
@@ -171,10 +175,6 @@ class Account extends PolicyBase implements IKeySource
                 throw new Exceptions\PasskeyRequiredException("salt wrong size");
             $this->e2ee_pwsalt->SetValue($salt);
         }
-
-        $passkey = $params->GetParam($field, SafeParams::PARAMLOG_NEVER)->GetBase64();
-        if (strlen($passkey) < Crypto::SecretKeyLength())
-            throw new Exceptions\PasskeyRequiredException("key too short");
         return $passkey;
     }
 
@@ -189,10 +189,10 @@ class Account extends PolicyBase implements IKeySource
         $default = Config::GetInstance($this->database)->GetDefaultGroup();
         if ($default !== null) $retval[$default->ID()] = $default;
         
-        $authman = $this->GetAuthSource();
-        if ($authman instanceof AuthSource\External) 
+        $authsrc = $this->TryGetAuthSource();
+        if ($authsrc !== null) 
         {
-            $default = $authman->GetDefaultGroup();
+            $default = $authsrc->GetDefaultGroup();
             if ($default !== null) $retval[$default->ID()] = $default;
         }
         
@@ -276,14 +276,12 @@ class Account extends PolicyBase implements IKeySource
         return ($group !== null) ? $group : null;
     }
 
-    /** Returns the auth source the account authenticates against */
-    public function GetAuthSource() : AuthSource\IAuthSource
-    { 
-        $authsource = $this->authsource->TryGetObject();
-        if ($authsource !== null) return $authsource;
-        else return (new AuthSource\Local());
-    }
-    
+    /** Returns true if the account uses external authentication */
+    public function isExternalAuth() : bool { return $this->authsource->TryGetObjectID() !== null; }
+
+    /** Returns the auth source the account authenticates against (null if local) */
+    public function TryGetAuthSource() : ?AuthSource\External { return $this->authsource->TryGetObject(); }
+
     /**
      * Returns an array of clients registered to the account
      * @return array<string, Client> clients indexed by ID
@@ -596,8 +594,6 @@ class Account extends PolicyBase implements IKeySource
         $password = $account->GetPasswordParam($params, $iface, newsalt:true);
         $account->ChangePassword($password);
 
-        // TODO RAY !! passkey can/should use fast hash now, not argon.  use authsource trait?
-
         return $account;
     }
         
@@ -685,16 +681,19 @@ class Account extends PolicyBase implements IKeySource
         return ($obj === null) ? false : $obj->CheckFullKey($fullkey);
     }
     
-    /** Returns true if the given password is correct for this account */
+    /** Returns true if the given passkey or password is correct for this account */
     public function VerifyPassword(string $password) : bool
     {
-        return $this->GetAuthSource()->VerifyAccountPassword($this, $password);
+        $authsrc = $this->TryGetAuthSource();
+        if ($authsrc !== null)
+            return $authsrc->VerifyAccountPassword($this, $password);
+        else return $this->CheckKeyMatch($password); // local auth
     }    
     
     /** Returns true if the account's password is not out of date, or is using external auth */
     public function CheckPasswordAge() : bool
     {
-        if (!($this->GetAuthSource() instanceof AuthSource\Local)) return true;
+        if ($this->isExternalAuth()) return true;
         
         $date = $this->GetPasswordDate(); 
         $max = $this->GetMaxPasswordAge();
@@ -706,24 +705,19 @@ class Account extends PolicyBase implements IKeySource
     /** 
      * Re-keys the account's crypto if it exists, and re-hashes its password (if using local auth)
      * @throws CryptoUnlockRequiredException if crypto has not been unlocked
+     * @throws AuthKeyLengthException if too short (must be a passkey if local auth)
      */
     public function ChangePassword(string $new_password) : Account
     {
         if ($this->hasCrypto())
             $this->InitializeCrypto($new_password, rekey:true); // keeps same key
         
-        if ($this->GetAuthSource() instanceof AuthSource\Local)
-            AuthSource\Local::SetPassword($this, $new_password);
+        if (!$this->isExternalAuth())
+            $this->SetAuthKey($new_password); // enforces passkey length
 
         $this->date_passwordset->SetTimeNow(); 
         return $this;
     }
-    
-    /** Gets the account's password hash (null if external auth) */
-    public function TryGetPasswordHash() : ?string { return $this->password->TryGetValue(); }
-    
-    /** Sets the account's password hash to the given value */
-    public function SetPasswordHash(string $hash) : self { $this->password->SetValue($hash); return $this; }
     
     /** Alternate available key source */
     private IKeySource $keysource;

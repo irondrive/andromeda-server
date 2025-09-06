@@ -17,7 +17,7 @@ use Andromeda\Apps\Accounts\{Account, Config, Group};
  * @phpstan-type ExternalJ array{id:string, description:string}
  * @phpstan-type AdminExternalJ \Union<ExternalJ, array{type:string, enabled:key-of<self::ENABLED_TYPES>, default_group:?string, date_created:float}>
  */
-abstract class External extends BaseObject implements IAuthSource
+abstract class External extends BaseObject
 {
     protected const IDLength = 8;
 

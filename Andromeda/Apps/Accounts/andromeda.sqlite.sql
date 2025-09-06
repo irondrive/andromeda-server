@@ -9,7 +9,7 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `ssenc_nonce` binary(24) DEFAULT NULL
 ,  `ssenc_salt` binary(16) DEFAULT NULL
 ,  `e2ee_pwsalt` binary(16) DEFAULT NULL
-,  `password` text DEFAULT NULL
+,  `authkey` binary(32) DEFAULT NULL
 ,  `authsource` char(8) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)

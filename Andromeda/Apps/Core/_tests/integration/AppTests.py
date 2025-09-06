@@ -163,7 +163,8 @@ class AppTests(BaseAppTest):
         res = self.util.assertOk(self.interface.run(app='core',action='getdbconfig',params=self.asAdmin()))
         self.util.assertType(res['DRIVER'], str)
         self.util.assertType(res['CONNECT'], str)
-        self.util.assertType(res['PERSISTENT'], bool)
+        if 'PERSISTENT' in res:
+            self.util.assertType(res['PERSISTENT'], bool)
         if 'USERNAME' in res:
             self.util.assertType(res['USERNAME'], str)
         if 'PASSWORD' in res:

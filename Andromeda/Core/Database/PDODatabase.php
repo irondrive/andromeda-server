@@ -106,7 +106,7 @@ class PDODatabase
     }
 
     /** Returns a string with the primary CLI usage for Install() */
-    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile fspath|-]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile ?fspath]"; }
     
     /** 
      * Returns the CLI usages specific to each driver 
@@ -181,9 +181,9 @@ class PDODatabase
         }
         
         $output = "<?php if (!defined('Andromeda')) die(); return ".var_export($config,true).";";
-        $outnam = $params->GetOptParam('outfile',default:null)->GetNullFSPath() ?? self::CONFIG_PATHS[0];
+        $outnam = $params->GetOptParam('outfile',default:self::CONFIG_PATHS[0])->GetNullFSPath();
 
-        if ($outnam === "-") // return directly
+        if ($outnam === null) // return directly
             return $output;
         else 
         {

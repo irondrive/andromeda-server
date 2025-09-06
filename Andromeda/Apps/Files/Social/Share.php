@@ -99,7 +99,7 @@ class Share extends BaseObject
     }
 
     /** @return positive-int */
-    protected static function GetKeyLength() : int { return 16; } // not cryptographic
+    protected static function GetAuthKeyLength() : int { return 16; } // not cryptographic
     
     /** Returns true if this share is via a link rather than to an account/group */
     public function IsLink() : bool { return $this->authkey->TryGetValue() !== null; }
@@ -248,6 +248,7 @@ class Share extends BaseObject
         else
         {
             $oldpw = $this->password->TryGetValue();
+            // TODO move this to AuthObject, make it take a param with the field name (since we use it twice), and support $false=false, use LocalTest.php.old
             if (!$check || $oldpw === null || password_needs_rehash($oldpw, PASSWORD_ARGON2ID))
                 $this->password->SetValue(password_hash($password, PASSWORD_ARGON2ID));
         }

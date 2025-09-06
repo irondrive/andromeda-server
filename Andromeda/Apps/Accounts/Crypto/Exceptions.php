@@ -18,6 +18,14 @@ class CryptoAlreadyInitializedException extends BaseExceptions\ServerException
     }
 }
 
+/** Exception indicating the given key is not long enough */
+class AuthKeyLengthException extends BaseExceptions\ServerException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("AUTHKEY_TOO_SHORT_FOR_FASTHASH", $details);
+    }
+}
+
 /** Exception indicating that crypto must be unlocked by the client */
 class CryptoUnlockRequiredException extends BaseExceptions\ServerException
 {

@@ -7,7 +7,7 @@ use Andromeda\Core\Database\FieldTypes;
  * Represents an object that holds an authentication code that can be checked 
  * 
  * The key is stored as a hash and cannot be retrieved unless provided
- * This is ONLY for hashing generated keys, not low-entropy passwords
+ * This is ONLY for hashing generated keys, not low-entropy passwords (not $fast)
  */
 trait AuthObject
 {
@@ -15,7 +15,7 @@ trait AuthObject
      * Return the string length of the auth key
      * @return positive-int
      */
-    protected static function GetKeyLength() : int { return 32; }
+    protected static function GetAuthKeyLength() : int { return 32; }
     
     /** The hashed auth key stored in DB */
     private FieldTypes\NullStringType $authkey;
@@ -36,7 +36,8 @@ trait AuthObject
     protected function GetFastHash(string $key) : string
     {
         $superkey = Crypto::FastHash($key, Crypto::SuperKeyLength());
-        $hashlen = max(Crypto::SubkeySizeRange()[0], static::GetKeyLength());
+        $hashlen = max(Crypto::SubkeySizeRange()[0], static::GetAuthKeyLength());
+        // we derive a subkey so that classes can use both AuthObject and KeySource
         return Crypto::DeriveSubkey($superkey, 1, "a2authob", $hashlen);
     }
 
@@ -81,7 +82,7 @@ trait AuthObject
      */
     protected function InitAuthKey() : string
     {
-        $key = random_bytes(static::GetKeyLength());
+        $key = random_bytes(static::GetAuthKeyLength());
         $this->SetAuthKey($key);
         return $key;
     }
@@ -90,6 +91,7 @@ trait AuthObject
      * Sets the auth key to the given value and hashes it
      * @param string $key new auth key
      * @return $this
+     * @throws Exceptions\AuthKeyLengthException if it's shorter than AuthKeyLength
      */
     protected function SetAuthKey(?string $key) : self 
     {
@@ -100,6 +102,8 @@ trait AuthObject
         }
         else
         {
+            if (strlen($key) < static::GetAuthKeyLength())
+                throw new Exceptions\AuthKeyLengthException();
             $hash = $this->GetFastHash($key);
             $this->authkey_raw = $key;
         }

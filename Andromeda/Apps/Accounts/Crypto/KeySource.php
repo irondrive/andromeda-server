@@ -74,6 +74,7 @@ trait KeySource
     protected function GetFastKey(string $wrapkey) : string
     {
         $superkey = Crypto::FastHash($wrapkey, Crypto::SuperKeyLength());
+        // we derive a subkey so that classes can use both AuthObject and KeySource
         return Crypto::DeriveSubkey($superkey, 0, "a2keysrc", Crypto::SecretKeyLength());
     }
 

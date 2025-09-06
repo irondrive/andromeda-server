@@ -17,7 +17,10 @@ class AuthObjectTest_AuthObject extends BaseObject
         $this->AuthObjectCreateFields();
         
         parent::CreateFields();
-    }        
+    }
+
+    public static function pubGetAuthKeyLength() : int {
+        return static::GetAuthKeyLength(); }
     
     public function pubGetAuthHash() : ?string {
         return $this->authkey->TryGetValue(); }
@@ -73,12 +76,16 @@ class AuthObjectTest extends \PHPUnit\Framework\TestCase
         $objdb = $this->createMock(ObjectDatabase::class);
         $obj = new AuthObjectTest_AuthObject($objdb, [], false);
         
-        $key = "mytest123"; $obj->pubSetAuthKey($key);
+        $key = str_repeat("a",$obj->pubGetAuthKeyLength());
+        $obj->pubSetAuthKey($key);
         $this->assertSame($key, $obj->pubTryGetAuthKey());
         $this->assertTrue($obj->CheckKeyMatch($key));
         
         $obj->pubSetAuthKey(null);
         $this->assertNull($obj->pubTryGetAuthKey());
+
+        $this->expectException(Exceptions\AuthKeyLengthException::class);
+        $obj->pubSetAuthKey("test123");
     }
     
     public function testFromHash() : void

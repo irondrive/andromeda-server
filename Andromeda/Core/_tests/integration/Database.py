@@ -23,17 +23,14 @@ class Database():
         if 'password' in params:
             params['dbpass'] = params['password']
             del params['password']
-
-        util.assertError(interface.run(app='core',action='dbconf',
-            params=params,install=True), 400, "SAFEPARAM_KEY_MISSING: outfile")
         
-        params['outfile'] = "-" # return to stdout
+        params['outfile'] = None # return to stdout
         conf = util.assertOk(interface.run(app='core',action='dbconf',
             params=params,install=True))
         util.assertIn('?php', conf)
         util.assertIn('DRIVER', conf)
 
-        params['outfile'] = None # store to default
+        del params['outfile'] # store to default
         util.assertOk(interface.run(app='core',action='dbconf',
             params=params,install=True))
         atexit.register(self.deinstall)

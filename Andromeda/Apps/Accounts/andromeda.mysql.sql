@@ -23,7 +23,7 @@ CREATE TABLE `a2obj_apps_accounts_account` (
   `ssenc_nonce` binary(24) DEFAULT NULL,
   `ssenc_salt` binary(16) DEFAULT NULL,
   `e2ee_pwsalt` binary(16) DEFAULT NULL,
-  `password` text CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `authkey` binary(32) DEFAULT NULL,
   `authsource` char(8) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
