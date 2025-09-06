@@ -10,7 +10,7 @@ unset andromeda_auth_sessionid
 unset andromeda_auth_sudouser
 
 ./andromeda-install core dbconf --driver sqlite --outfile $TEMPCONF --dbpath $TEMPDB > /dev/null
-./andromeda-install --dbconf $TEMPCONF core install-all > /dev/null
+./andromeda-install --dbconf $TEMPCONF core setupall > /dev/null
 ./andromeda-server --dbconf $TEMPCONF core scanapps --enable > /dev/null
 
 format_usage () {

@@ -19,7 +19,7 @@ use PDO; use PDOStatement; use PDOException;
  * statistics and queries are tracked as a stack, but transactions cannot be nested.
  * Queries made must always be compatible with all supported drivers.
  * @phpstan-type PDODatabaseInfoJ array{driver:string, cversion:string, sversion:string, sinfo?:string}
- * @phpstan-type PDODatabaseConfigJ array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:true}
+ * @phpstan-type PDODatabaseConfigJ array{DRIVER:string, CONNECT:string, PERSISTENT?:bool, USERNAME?:string, PASSWORD?:true}
  */
 class PDODatabase
 {
@@ -28,7 +28,7 @@ class PDODatabase
     
     /** 
      * $config associative array of config for connecting PDO 
-     * @var array{DRIVER:string, CONNECT:string, PERSISTENT:bool, USERNAME?:string, PASSWORD?:string}
+     * @var array{DRIVER:string, CONNECT:string, PERSISTENT?:bool, USERNAME?:string, PASSWORD?:string}
      */
     private array $config;
     
@@ -106,7 +106,7 @@ class PDODatabase
     }
 
     /** Returns a string with the primary CLI usage for Install() */
-    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite --outfile [fspath|-]"; }
+    public static function GetInstallUsage() : string { return "--driver mysql|pgsql|sqlite [--outfile fspath|-]"; }
     
     /** 
      * Returns the CLI usages specific to each driver 
@@ -116,7 +116,7 @@ class PDODatabase
     {
         return array(
             "--driver mysql --dbname alphanum (--unix_socket fspath | (--host hostname [--port uint16])) [--dbuser name] [--dbpass raw] [--persistent bool]",
-            "--driver pgsql --dbname alphanum --host hostname [--port ?uint16] [--dbuser ?name] [--dbpass ?raw] [--persistent ?bool]",
+            "--driver pgsql --dbname alphanum --host hostname [--port ?uint16] [--dbuser ?name] [--dbpass ?raw] [--persistent bool]",
             "--driver sqlite --dbpath fspath"
         );
     }
@@ -155,9 +155,11 @@ class PDODatabase
             if ($driver === 'mysql') $connect .= ";charset=utf8mb4";
             
             $config['CONNECT'] = $connect;
-            $config['PERSISTENT'] = $params->GetOptParam('persistent',null)->GetNullBool();
             $config['USERNAME'] = $params->GetOptParam('dbuser',null)->GetNullName();
             $config['PASSWORD'] = $params->GetOptParam('dbpass',null,SafeParams::PARAMLOG_NEVER)->GetNullRawString();
+
+            if ($params->HasParam('persistent'))
+                $config['PERSISTENT'] = $params->GetParam('persistent')->GetBool();
         }
         else if ($driver === 'sqlite') // @phpstan-ignore-line harmless always true (for now)
         {
@@ -179,7 +181,7 @@ class PDODatabase
         }
         
         $output = "<?php if (!defined('Andromeda')) die(); return ".var_export($config,true).";";
-        $outnam = $params->GetParam('outfile')->GetNullFSPath() ?? self::CONFIG_PATHS[0];
+        $outnam = $params->GetOptParam('outfile',default:null)->GetNullFSPath() ?? self::CONFIG_PATHS[0];
 
         if ($outnam === "-") // return directly
             return $output;
@@ -217,13 +219,14 @@ class PDODatabase
         
         $this->config = array(
             'DRIVER' => $config['DRIVER'], 
-            'CONNECT' => $config['CONNECT'],
-            'PERSISTENT' => array_key_exists('PERSISTENT',$config) ? (bool)$config['PERSISTENT'] : false
+            'CONNECT' => $config['CONNECT']
         );
         if (array_key_exists('USERNAME',$config) && is_string($config['USERNAME'])) 
             $this->config['USERNAME'] = $config['USERNAME'];
         if (array_key_exists('PASSWORD',$config) && is_string($config['PASSWORD'])) 
             $this->config['PASSWORD'] = $config['PASSWORD'];
+        if (array_key_exists('PERSISTENT',$config))
+            $this->config['PERSISTENT'] = (bool)$config['PERSISTENT'];
 
         $driver = $this->config['DRIVER'];
         if (!array_key_exists($driver, self::DRIVERS))
@@ -235,11 +238,13 @@ class PDODatabase
         try
         {
             $options = array(
-                PDO::ATTR_PERSISTENT => $this->config['PERSISTENT'],
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_STRINGIFY_FETCHES => false
             );
+
+            if (array_key_exists('PERSISTENT',$this->config))
+                $options[PDO::ATTR_PERSISTENT] = $this->config['PERSISTENT'];
             
             // match rowCount behavior of postgres and sqlite
             if ($this->driver === self::DRIVER_MYSQL)

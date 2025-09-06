@@ -364,6 +364,7 @@ class AccountsApp extends BaseApp
         
         if ($account === null)
             throw new Exceptions\UnknownAccountException();
+        // TODO this is a username enumeration issue, obviously, and also ChangePassword
         
         if ($account->hasCrypto() || $account->HasValidTwoFactor()) 
             throw new Exceptions\RecoveryKeyCreateException();
