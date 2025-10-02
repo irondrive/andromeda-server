@@ -237,7 +237,7 @@ abstract class ActivateException extends StorageException { }
 class TestReadFailedException extends ActivateException
 {
     public function __construct(?StorageException $ex = null) {
-        parent::__construct("STORAGE_TEST_READ_FAILED"); // TODO RAY !! is append right here, or should we use copy?
+        parent::__construct("STORAGE_TEST_READ_FAILED"); // TODO DBREVAMP is append right here, or should we use copy?
         if ($ex !== null) $this->AppendException($ex,true);
     }
 }
@@ -304,7 +304,7 @@ class SSHConnectionFailure extends ActivateException
 {
     public function __construct(?\RuntimeException $ex = null) {
         parent::__construct("SSH_CONNECTION_FAILURE");
-        if ($ex !== null) $this->AppendException($ex,true); // TODO RAY !! append or copy?
+        if ($ex !== null) $this->AppendException($ex,true); // TODO DBREVAMP append or copy?
     }
 }
 
@@ -313,7 +313,7 @@ class SSHAuthenticationFailure extends ActivateException
 {
     public function __construct(?\RuntimeException $ex = null) {
         parent::__construct("SSH_AUTHENTICATION_FAILURE");
-        if ($ex !== null) $this->AppendException($ex,true); // TODO RAY !! append or copy?
+        if ($ex !== null) $this->AppendException($ex,true); // TODO DBREVAMP append or copy?
     }
 }
 

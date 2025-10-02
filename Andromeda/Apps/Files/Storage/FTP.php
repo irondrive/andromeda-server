@@ -68,7 +68,7 @@ class FTP extends FWrapper
         return $ret;
     }
 
-    // TODO RAY !! need to use @ for many functions? see FWrapper - see all other fopens?
+    // TODO DBREVAMP need to use @ for many functions? see FWrapper - see all other fopens?
     
     public static function GetCreateUsage() : string { 
         return static::GetBasePathCreateUsage()." ".static::GetUserPassCreateUsage(requireUsername:false).
@@ -185,10 +185,10 @@ class FTP extends FWrapper
     
     protected function SubReadFolder(string $path) : array
     {        
-        // TODO RAY !! PHP Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters. 
+        // TODO DBREVAMP PHP Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters. 
         if (($list = ftp_nlist($this->GetConnection(), $this->GetPath($path))) === false)
             throw new Exceptions\FolderReadFailedException();
-        return array_map(function($item){ return basename($item); }, $list); // TODO RAY !! why is basename needed? check on . and .. behavior
+        return array_map(function($item){ return basename($item); }, $list); // TODO DBREVAMP why is basename needed? check on . and .. behavior
     }    
     
     protected function SubCreateFolder(string $path) : self

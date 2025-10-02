@@ -61,7 +61,7 @@ class Share extends BaseObject
     /** True if the share allows read access */
     protected FieldTypes\BoolType $can_read;
     /** True if the share allows upload access to the item */
-    protected FieldTypes\BoolType $can_upload; // TODO RAY !! what is the difference between upload/modify?
+    protected FieldTypes\BoolType $can_upload; // TODO DBREVAMP what is the difference between upload/modify?
     /** True if the share allows modifying the item */
     protected FieldTypes\BoolType $can_modify;
     /** True if the share allows creating new social objects on the item */
@@ -154,10 +154,10 @@ class Share extends BaseObject
             throw new Exceptions\ShareExpiredException();
         $this->date_accessed->SetTimeNow();
         $this->count_accessed->DeltaValue();
-        // TODO RAY !! only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
+        // TODO DBREVAMP only delta the access counter when downloading byte 0 of a file (to replace old file pubdownloads)
     }
 
-    // TODO RAY !! have a DB check constraint that you must have either dest or authkey
+    // TODO DBREVAMP have a DB check constraint that you must have either dest or authkey
 
     /**
      * Creates a new share to a share target
@@ -262,7 +262,7 @@ class Share extends BaseObject
     {
         if ($params->HasParam('read'))
             $this->can_read->SetValue($params->GetParam('read')->GetBool() && ($access === null || $access->CanRead()));
-        // TODO RAY !! double check logic here, why allow setting to false? seems weird
+        // TODO DBREVAMP double check logic here, why allow setting to false? seems weird
     
         if ($params->HasParam('upload'))
             $this->can_upload->SetValue($params->GetParam('upload')->GetBool() && ($access === null || $access->CanUpload()));
@@ -316,7 +316,7 @@ class Share extends BaseObject
         
         //$q->Join($database, GroupJoin::class, 'objs_groups', self::class, 'obj_dest', Group::class);        
         //$q->Where($q->Equals($database->GetClassTableName(GroupJoin::class).'.objs_accounts', $account->ID()));
-        // TODO RAY !! figure out how to re-implement this
+        // TODO DBREVAMP figure out how to re-implement this
 
         $gshares = $database->LoadObjectsByQuery(static::class, $q);
 
@@ -408,7 +408,7 @@ class Share extends BaseObject
             // TODO FUTURE what can clients do with this info? should we return a basic client object here that includes the type?
             // or should there be a accounts client function that can lookup an account OR group by ID?
             
-            // TODO RAY !! non-owners shouldn't be able to get info on expired shares. should just not show up. also should we auto-delete them?
+            // TODO DBREVAMP non-owners shouldn't be able to get info on expired shares. should just not show up. also should we auto-delete them?
             'date_created' => $this->date_created->GetValue(),
             'date_expires' => $this->date_expires->TryGetValue(),
             'expired' => $this->isExpired(),

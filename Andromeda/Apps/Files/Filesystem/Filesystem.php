@@ -4,7 +4,7 @@ use Andromeda\Core\IOFormat\InputPath;
 use Andromeda\Apps\Files\Items\{File, Folder};
 use Andromeda\Apps\Files\Storage\Storage;
 
-// TODO RAY !! missing @throws
+// TODO DBREVAMP missing @throws
 
 /**
  * Abstract class for a filesystem implementation
@@ -36,7 +36,7 @@ abstract class Filesystem
      */
     public abstract function RefreshFolder(Folder $folder, bool $doContents = true) : self;
 
-    // TODO RAY !! issue with doing this in item construct - you have to load the storage object
+    // TODO DBREVAMP issue with doing this in item construct - you have to load the storage object
     // to do a refresh, even for native, so just loading files/folders requires the storage to load, not ideal...
     
     /** 

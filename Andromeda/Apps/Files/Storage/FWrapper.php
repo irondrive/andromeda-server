@@ -25,7 +25,7 @@ abstract class FWrapper extends Storage
     {
         if (array_key_exists($path, $this->contexts))
         {
-            // TODO RAY !! will fstat work in remote storage? could do ClosePath
+            // TODO DBREVAMP will fstat work in remote storage? could do ClosePath
             $data = @fstat($this->contexts[$path]->handle);
         }
         else 
@@ -216,7 +216,7 @@ abstract class FWrapper extends Storage
             throw new Exceptions\FileOpenFailedException($path);
         
         if (@fseek($handle, $offset) !== 0)
-            throw new Exceptions\FileSeekFailedException($path); // TODO RAY !! replace these with just return false then throw read/write failed
+            throw new Exceptions\FileSeekFailedException($path); // TODO DBREVAMP replace these with just return false then throw read/write failed
         
         return new FileContext($handle, $offset, false);
     }
