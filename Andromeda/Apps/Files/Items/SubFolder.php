@@ -48,7 +48,7 @@ class SubFolder extends Folder
     public function CopyToName(?Account $owner, string $name, bool $overwrite = false) : static
     {
         $folder = static::CheckName($name, $overwrite, reuse:true);
-        //if ($folder !== null) $folder->DeleteChildren();// TODO RAY !! see below
+        //if ($folder !== null) $folder->DeleteChildren();// TODO DBREVAMP see below
 
         $folder ??= static::CreateItem($this->database, $this->GetParent(), $owner, $name);
         
@@ -65,9 +65,9 @@ class SubFolder extends Folder
         
         $folder = static::CheckParent($parent, $overwrite, reuse:true);
         //if ($folder !== null) $folder->DeleteChildren();
-        // TODO RAY !! the whole reuse thing seems stupid, why would you ever want to do that?
+        // TODO DBREVAMP the whole reuse thing seems stupid, why would you ever want to do that?
         // in fact the only case I can see is when uploading a new file over an old one, and we currently don't reuse for that, only in Copy
-        // TODO RAY !! if reusing, also need to subtract counts? though not recursively as children will get deleted? or just remove concept here and don't solve
+        // TODO DBREVAMP if reusing, also need to subtract counts? though not recursively as children will get deleted? or just remove concept here and don't solve
 
         $folder ??= static::CreateItem($this->database, $parent, $owner, $this->GetName());
         

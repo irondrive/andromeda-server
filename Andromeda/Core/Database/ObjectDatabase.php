@@ -222,7 +222,7 @@ class ObjectDatabase
                 if ($child === $class) { $doSelf = true; continue; }
                 $objs = $this->LoadObjectsByQuery($child, $query, $baseClass);
                 foreach ($objs as $obj) $objects[$obj->ID()] = $obj; // merge
-                if ($unique && count($objects) > 0) return $objects; // TODO RAY !! unit test unique
+                if ($unique && count($objects) > 0) return $objects; // TODO DBREVAMP unit test unique
             }
         }
         
@@ -505,7 +505,7 @@ class ObjectDatabase
 
             $retobj->PostConstruct(); // might delete self
             if ($retobj->isDeleted()) return null;
-            // TODO RAY !! unit test - does it work if moving this before the setting data structures above? if so, can move back to object constructor
+            // TODO DBREVAMP unit test - does it work if moving this before the setting data structures above? if so, can move back to object constructor
         }
         
         if (!($retobj instanceof $class))
@@ -804,8 +804,8 @@ class ObjectDatabase
                 $this->objectsKeyValues[spl_object_hash($obj)][$key] = $validx;
         }
 
-        // TODO RAY !! unit test limit/offset here and below
-        // TODO RAY !! need to consider limit/offset in the cached case
+        // TODO DBREVAMP unit test limit/offset here and below
+        // TODO DBREVAMP need to consider limit/offset in the cached case
 
         return $this->objectsByKey[$class][$key][$validx]; // @phpstan-ignore-line missing class-map feature
     }

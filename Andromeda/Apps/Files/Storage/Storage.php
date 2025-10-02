@@ -19,7 +19,7 @@ class ItemStat
         public int $size = 0) {}
 }
 
-// TODO RAY !! missing @throws (here and filesystem)
+// TODO DBREVAMP missing @throws (here and filesystem)
 
 /** 
  * A Storage implements the on-disk functions that actually store data.
@@ -102,7 +102,7 @@ abstract class Storage extends BaseObject
      * @param bool $public if true, include public storages
      * @return array<string, static>
      */
-    public static function LoadByAccount(ObjectDatabase $database, Account $owner, bool $public = true) : array // TODO RAY !! what should default value of public be here and below? look at usages
+    public static function LoadByAccount(ObjectDatabase $database, Account $owner, bool $public = true) : array // TODO DBREVAMP what should default value of public be here and below? look at usages
     {
         $retval = $database->LoadObjectsByKey(static::class, 'owner', $owner->ID());
         if ($public) $retval += $database->LoadObjectsByKey(static::class, 'owner', null); // public storages
@@ -221,7 +221,7 @@ abstract class Storage extends BaseObject
     /** Returns the common command usage of Create() */
     public static function GetCreateUsage() : string { return "--sttype ".implode('|',array_keys(self::TYPES)).
         " [--fstype ".implode('|',array_keys(self::FSTYPES))."]".
-        " [--name ?name] [--global bool] [--readonly bool] [--chunksize uint]"; } // TODO RAY !! let admin give owner ID, not just global
+        " [--name ?name] [--global bool] [--readonly bool] [--chunksize uint]"; } // TODO DBREVAMP let admin give owner ID, not just global
     
     /** 
      * Gets command usage specific to external authentication backends
@@ -250,7 +250,7 @@ abstract class Storage extends BaseObject
      */
     public static function Create(ObjectDatabase $database, Input $input, ?Account $owner) : static
     {
-        // TODO RAY !! we used to Test() here too, but now do not. caller should do it (see auth source)
+        // TODO DBREVAMP we used to Test() here too, but now do not. caller should do it (see auth source)
         $params = $input->GetParams();
         
         $name = $params->GetOptParam('name',null)->CheckLength(127)->GetNullName();
@@ -303,7 +303,7 @@ abstract class Storage extends BaseObject
     /** 
      * Edits an existing storage with the given values 
      * @return $this
-     */ // TODO RAY !! not testing anymore, caller needs to (see auth source)
+     */ // TODO DBREVAMP not testing anymore, caller needs to (see auth source)
     public function Edit(Input $input) : self
     {
         $params = $input->GetParams();
@@ -393,7 +393,7 @@ abstract class Storage extends BaseObject
     public function supportsFolders() : bool { return true; }
     
     /** Returns whether or not the storage supports getting free space */
-    public function canGetFreeSpace() : bool { return false; } // TODO RAY !! replace this with a general stat call, add total size to it
+    public function canGetFreeSpace() : bool { return false; } // TODO DBREVAMP replace this with a general stat call, add total size to it
     
     /** Returns the available space in bytes on the storage */
     public function GetFreeSpace() : int { throw new Exceptions\FreeSpaceFailedException(); }
@@ -646,7 +646,7 @@ abstract class Storage extends BaseObject
         $this->AssertNotReadOnly();
         if ($this->isDryRun()) return $this;
         
-        if (!$this->isFile($path)) return $this; // TODO RAY !! seems like it should fail
+        if (!$this->isFile($path)) return $this; // TODO DBREVAMP seems like it should fail
         return $this->SubDeleteFile($path);
     }
     

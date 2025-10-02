@@ -56,7 +56,7 @@ trait BasePath
         $path = self::cleanPath($path);
         if (str_contains("/$path/", "/../"))
         {
-            die('bad'); // TODO RAY !! add exception, unit test
+            die('bad'); // TODO DBREVAMP add exception, unit test
         }
 
         return $this->path->GetValue().'/'.$path;

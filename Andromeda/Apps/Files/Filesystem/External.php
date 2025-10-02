@@ -24,7 +24,7 @@ class External extends Filesystem
      */
     protected function GetItemPath(Item $item) : string
     {
-        // TODO RAY !! should do validation here in case the DB gets an invalid value (no . .. /)
+        // TODO DBREVAMP should do validation here in case the DB gets an invalid value (no . .. /)
         $path = $item->GetName();
         while (($item = $item->TryGetParent()) !== null)
             $path = $item->GetName()."/$path";
@@ -108,7 +108,7 @@ class External extends Filesystem
                     $class = $isfile ? File::class : SubFolder::class;
                     $dbitem = $class::NotifyCreate($database, $folder, $owner, $fsname);
                     $dbitem->Save(); // insert to the DB immediately
-                    // TODO RAY !! catch DatabaseIntegrityExceptions here to catch threading issues, return 503 (to test, just create twice)
+                    // TODO DBREVAMP catch DatabaseIntegrityExceptions here to catch threading issues, return 503 (to test, just create twice)
                 }
             }
             

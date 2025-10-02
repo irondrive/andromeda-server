@@ -133,7 +133,7 @@ abstract class Item extends BaseObject
         
         $q->SelfJoinWhere($database, Item::class, 'parent', 'id', '_parent');
 
-        // TODO RAY !! this doesn't seem to work. seems to return everything. also needs testing across postgres and sqlite
+        // TODO DBREVAMP this doesn't seem to work. seems to return everything. also needs testing across postgres and sqlite
         
         // load where the item's owner is us, but the item's parent's owner is not us
         $q->Where($q->And($q->NotEquals('_parent.owner', $account->ID(), quotes:false),
