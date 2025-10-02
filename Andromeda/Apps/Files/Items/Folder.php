@@ -150,7 +150,7 @@ abstract class Folder extends Item
      */
     public function AddFileCounts(File $file, bool $add = true) : void
     {
-        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
+        $this->SetModified(); // TODO DBREVAMP seems like a dumb place to do this?
 
         $val = $add ? 1 : -1;    
         $this->count_size->DeltaValue($file->GetSize() * $val);    
@@ -167,7 +167,7 @@ abstract class Folder extends Item
      */
     public function AddFolderContentCounts(Folder $folder, bool $add = true) : void
     {
-        $this->SetModified(); // TODO RAY !! seems like a dumb place to do this?
+        $this->SetModified(); // TODO DBREVAMP seems like a dumb place to do this?
         
         $val = $add ? 1 : -1;    
         $this->count_size->DeltaValue($folder->GetTotalSize() * $val);    

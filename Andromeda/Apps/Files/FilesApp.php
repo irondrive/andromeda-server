@@ -15,7 +15,7 @@ use Andromeda\Apps\Files\Social\{Like, Share, Comment, Tag};
 use Andromeda\Apps\Files\Storage\{Storage, FTP, S3, SFTP, SMB};
 use Andromeda\Apps\Files\Storage\Exceptions\{FileReadFailedException, FileWriteFailedException};
 
-// TODO RAY !! need to add all @throws many places
+// TODO DBREVAMP need to add all @throws many places
 
 // when an account is deleted, need to delete files-related stuff also
 Account::RegisterDeleteHandler(function(ObjectDatabase $database, Account $account)
@@ -190,7 +190,7 @@ class FilesApp extends BaseApp
             case 'editfolder': return $this->EditFolder($params, $authenticator, $actionlog);
             case 'ownfile':   return $this->OwnFile($params, $authenticator, $actionlog);
             case 'ownfolder': return $this->OwnFolder($params, $authenticator, $actionlog);
-            // TODO RAY !! ownfile/folder could be combined with edit metadata
+            // TODO DBREVAMP ownfile/folder could be combined with edit metadata
            
             case 'deletefile':   $this->DeleteFile($params, $authenticator, $actionlog); return null;
             case 'deletefolder': $this->DeleteFolder($params, $authenticator, $actionlog); return null;
@@ -199,7 +199,7 @@ class FilesApp extends BaseApp
             case 'movefile':     return $this->MoveFile($params, $authenticator, $actionlog);
             case 'movefolder':   return $this->MoveFolder($params, $authenticator, $actionlog);
             
-            // TODO RAY !! most of these non-performance-critical social ops can just be combined
+            // TODO DBREVAMP most of these non-performance-critical social ops can just be combined
             // to a single item operation now that Item base load stuff works (like, tag, comment, share?)
             case 'likefile':      return $this->LikeFile($params, $authenticator, $actionlog);
             case 'likefolder':    return $this->LikeFolder($params, $authenticator, $actionlog);
@@ -1554,12 +1554,12 @@ class FilesApp extends BaseApp
         
         $ispriv = $authenticator->isAdmin() || ($account === $storage->TryGetOwner());
         $activate = $params->GetOptParam('activate',false)->GetBool();
-        // TODO RAY !! need to catch exceptions here? see account auth source code
+        // TODO DBREVAMP need to catch exceptions here? see account auth source code
         
         return $storage->GetClientObject(priv:$ispriv, activate:$activate);
     }
 
-    // TODO RAY !! Make sure missing storage never results in rootfolder delete. Should already be a comment about that.
+    // TODO DBREVAMP Make sure missing storage never results in rootfolder delete. Should already be a comment about that.
     
     /**
      * Returns a list of all storages available
