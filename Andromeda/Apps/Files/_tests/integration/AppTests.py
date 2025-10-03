@@ -25,8 +25,8 @@ class AppTests(BaseAppTest):
     #################################################
     
     def testGetConfig(self):
-        """ Tests the getconfig command """
-        res = self.util.assertOk(self.interface.run(app='files',action='getconfig'))
+        """ Tests the getappconfig command """
+        res = self.util.assertOk(self.interface.run(app='core',action='getappconfig'))['files']
 
         if not self.interface.isPriv: # normie output
             self.util.assertNotIn('date_created',res)

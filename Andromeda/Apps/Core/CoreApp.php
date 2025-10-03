@@ -22,6 +22,7 @@ use Andromeda\Apps\Accounts\Authenticator;
  * @phpstan-import-type ErrorLogJ from ErrorLog
  * @phpstan-import-type PDODatabaseInfoJ from PDODatabase
  * @phpstan-import-type PDODatabaseConfigJ from PDODatabase
+ * @phpstan-import-type ScalarArrayN1 from Utilities
  */
 class CoreApp extends BaseApp
 {
@@ -43,7 +44,7 @@ class CoreApp extends BaseApp
             'scanapps',
             'enableapp --appname alphanum',
             'disableapp --appname alphanum',
-            'getconfig',
+            'getappconfig',
             'getdbconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             'testmail [--mailid id] [--dest email] [--testkey int]',
@@ -107,7 +108,7 @@ class CoreApp extends BaseApp
             case 'enableapp':   return $this->EnableApp($params, $isAdmin);
             case 'disableapp':  return $this->DisableApp($params, $isAdmin);
             
-            case 'getconfig':   return $this->GetConfig($isAdmin);
+            case 'getappconfig':   return $this->GetAppsConfig($isAdmin);
             case 'getdbconfig': return $this->GetDBConfig($isAdmin);
             case 'setconfig':   return $this->SetConfig($params, $isAdmin);
             
@@ -286,12 +287,22 @@ class CoreApp extends BaseApp
     }
     
     /**
-     * Loads server config
+     * Gets config for this app
      * @return ConfigJ
      */
-    protected function GetConfig(bool $isAdmin) : array
+    public function GetConfigJ(bool $isAdmin) : array
     {
         return $this->config->GetClientObject(admin:$isAdmin);
+    }
+    
+    /**
+     * Loads server config
+     * @return array<string,ScalarArrayN1>
+     */
+    protected function GetAppsConfig(bool $isAdmin) : array
+    {
+        return array_filter(array_map(function(BaseApp $app)use($isAdmin){ 
+            return $app->GetConfigJ($isAdmin); }, $this->API->GetAppRunner()->GetApps()));
     }
     
     /**

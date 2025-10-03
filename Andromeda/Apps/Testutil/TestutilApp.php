@@ -55,6 +55,12 @@ class TestutilApp extends BaseApp
         }
     }
 
+    /**
+     * Gets config for this app
+     * @return array<string>
+     */
+    public function GetConfigJ(bool $isAdmin) : array { return ["test"]; }
+    
     /** Returns a random string with default length 16 */
     protected function Random(SafeParams $params) : string
     {

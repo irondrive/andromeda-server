@@ -46,7 +46,7 @@ class AppTests(BaseAppTest):
         session = res['client']['session']
         self.session = session
 
-    def asAdmin(self, params:dict = {}): # TODO migrate to | like getPassword
+    def asAdmin(self, params:dict = {}): # TODO RAY !! migrate to | like getPassword
         """ Returns params with admin params added if not a private interface """
         if self.session is None:
             self.afterInstall() # make asAdmin available to other apps in afterInstall()
@@ -61,7 +61,7 @@ class AppTests(BaseAppTest):
             params['auth_sessionkey'] = self.session['authkey']
         return params
     
-    def withSession(self, session:dict, params:dict = {}): # TODO migrate to | like getPassword
+    def withSession(self, session:dict, params:dict = {}): # TODO RAY !! migrate to | like getPassword
         """ Returns params with session params added """
         params = params.copy()
         params['auth_sessionid'] = session['id']
@@ -78,7 +78,7 @@ class AppTests(BaseAppTest):
         if prefix is not None:
             field = prefix+'_'+field
         if self.interface.isPriv:
-            # TODO RAY !! want to do and self.util.randMaybe(): but then the correct hashing below does matter...
+            # TODO TESTS want to do and self.util.randMaybe(): but then the correct hashing below does matter...
             return {field:password}
         else:
             # not bothering with the salt or the correct hashing process, doesn't matter
@@ -112,8 +112,8 @@ class AppTests(BaseAppTest):
     #################################################
     
     def testGetConfig(self):
-        """ Tests the getconfig command """
-        res = self.util.assertOk(self.interface.run(app='accounts',action='getconfig'))
+        """ Tests the getappconfig command """
+        res = self.util.assertOk(self.interface.run(app='core',action='getappconfig'))['accounts']
         self.util.assertType(res['username_iscontact'], bool)
         self.util.assertType(res['create_account'], str)
         self.util.assertType(res['require_contact'], str)

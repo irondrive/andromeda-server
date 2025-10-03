@@ -74,7 +74,6 @@ class FilesApp extends BaseApp
     public function getUsage() : array 
     { 
         return array(
-            'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
             '- AUTH for shared items: --sid id [--skey randstr] [--spassword raw]',
             'download --file id [--fstart uint] [--flast int] [--debugdl bool]',
@@ -127,6 +126,7 @@ class FilesApp extends BaseApp
             'editstorage --storage id '.Storage::GetEditUsage(),
             ...array_map(function($u){ return "(editstorage...) $u"; }, Storage::GetEditUsages()),
 
+            // TODO if running getlimits with no args, should show for the current account ID
             /*'getlimits [--account ?id | --group ?id | --storage ?id] [--limit ?uint] [--offset ?uint]', // TODO POLICY
             'gettimedlimits [--account ?id | --group ?id | --storage ?id] [--limit ?uint] [--offset ?uint]',
             'gettimedstatsfor [--account id | --group id | --storage id] --timeperiod uint [--limit ?uint] [--offset ?uint]',
@@ -174,7 +174,6 @@ class FilesApp extends BaseApp
         $params = $input->GetParams();
         switch($input->GetAction())
         {
-            case 'getconfig': return $this->GetConfig($authenticator);
             case 'setconfig': return $this->SetConfig($params, $authenticator);
             
             case 'download':   $this->DownloadFile($params, $authenticator, $actionlog); return null;
@@ -305,11 +304,9 @@ class FilesApp extends BaseApp
      * Gets config for this app
      * @return ConfigJ
      */
-    protected function GetConfig(?Authenticator $authenticator) : array
+    public function GetConfigJ(bool $isAdmin) : array
     {
-        $admin = $authenticator !== null && $authenticator->isAdmin();
-        
-        return $this->config->GetClientObject(admin:$admin);
+        return $this->config->GetClientObject(admin:$isAdmin);
     }
     
     /**

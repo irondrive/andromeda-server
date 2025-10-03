@@ -19,7 +19,7 @@ class InstallTests():
         util.assertOk(interface.run(app='core',action='usage',install=True))
         appInstallList = util.assertOk(interface.run(app='core',action='scanapps',install=True))
         util.assertError(interface.run(app='core',action='install',install=True), 503, 'DATABASE_CONFIG_MISSING')
-        util.assertError(interface.run(app='core',action='getconfig'), 503, 'DATABASE_CONFIG_MISSING')
+        util.assertError(interface.run(app='core',action='getappconfig'), 503, 'DATABASE_CONFIG_MISSING')
         
         for appname, appTest in appTests.items():
             if appTest.requiresInstall():
@@ -31,7 +31,7 @@ class InstallTests():
         if not interface.isPriv:
             util.assertError(interface.run(app='core',action='dbconf',install=True), 403, 'ADMIN_REQUIRED')
             util.assertError(interface.run(app='core',action='scanapps',install=True), 403, 'ADMIN_REQUIRED')
-        util.assertError(interface.run(app='core',action='getconfig'), 503, 'INSTALL_REQUIRED: core')
+        util.assertError(interface.run(app='core',action='getappconfig'), 503, 'INSTALL_REQUIRED: core')
         
         # TEST installing apps separately (priv interfaces only) + reset when done
         if interface.isPriv:
@@ -59,4 +59,4 @@ class InstallTests():
         util.assertError(interface.run(app='core',action='setupall',install=True), 400, 'INSTALLED_ALREADY: core')
         util.assertError(interface.run(app='core',action='upgrade',install=True), 400, 'UPGRADED_ALREADY: core')
         util.assertError(interface.run(app='core',action='upgradeall',install=True), 400, 'UPGRADED_ALREADY: core')
-        util.assertOk(interface.run(app='core',action='getconfig'))
+        util.assertOk(interface.run(app='core',action='getappconfig'))

@@ -7,6 +7,7 @@ use Andromeda\Core\Database\ObjectDatabase;
 
 /** 
  * The base class from which apps must inherit
+ * @phpstan-import-type ScalarArrayN1 from Utilities
  * @phpstan-import-type ScalarOrArray from Utilities
  */
 abstract class BaseApp
@@ -42,6 +43,12 @@ abstract class BaseApp
     
     /** @return string the app's version string */
     public abstract function getVersion() : string;
+
+    /** 
+     * @param bool $isAdmin true if the request is admin-level
+     * @return ?ScalarArrayN1 app config client object 
+     */
+    public function GetConfigJ(bool $isAdmin) : ?array { return null; }
     
     /** 
      * Return this app's ActionLog extension class name, if used (or null)

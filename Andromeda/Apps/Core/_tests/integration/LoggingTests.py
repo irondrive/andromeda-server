@@ -21,7 +21,7 @@ def testActionLogging(self):
     filelogs = 0 # number of log entries added to the file
     
     self.util.assertOk(self.interface.run(app='testutil',action='clearactions'))
-    res = self.util.assertOk(self.interface.run(app='core',action='getconfig',params=self.asAdmin())) # admin only
+    res = self.util.assertOk(self.interface.run(app='core',action='getappconfig',params=self.asAdmin()))['core'] # admin only
     self.util.assertSame(res['actionlog_db'], False) # default
     self.util.assertSame(res['actionlog_file'], False) # default
     self.util.assertSame(res['actionlog_details'], 'basic') # default
@@ -33,7 +33,7 @@ def testActionLogging(self):
         self.util.assertCount(actions, 2) # ordered by newest first
         self.util.assertGreaterOrEqual(actions[0]['time'], actions[1]['time'])
         self.util.assertSame(actions[0]['app'], 'testutil'); self.util.assertSame(actions[0]['action'], 'random')
-        self.util.assertSame(actions[1]['app'], 'core'); self.util.assertSame(actions[1]['action'], 'getconfig')
+        self.util.assertSame(actions[1]['app'], 'core'); self.util.assertSame(actions[1]['action'], 'getappconfig')
         for i in range(0, 2):
             self.util.assertType(actions[i]['addr'], str)
             self.util.assertType(actions[i]['agent'], str)
@@ -45,7 +45,7 @@ def testActionLogging(self):
 
     # test logging to db only and basic getactions/countactions
     self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='setconfig',params=self.asAdmin({'actionlog_db':True})))['actionlog_db'], True)
-    self.util.assertOk(self.interface.run(app='core',action='getconfig')); dblogs += 1
+    self.util.assertOk(self.interface.run(app='core',action='getappconfig')); dblogs += 1
     self.util.assertOk(self.interface.run(app='testutil',action='random')); dblogs += 1
     checkTwoActions(list(self.util.assertOk(self.interface.run(app='core',action='getactions',params=self.asAdmin())).values())); dblogs += 1
     self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='countactions',params=self.asAdmin())), dblogs); dblogs += 1
@@ -54,7 +54,7 @@ def testActionLogging(self):
     params = self.asAdmin({'datadir':self.config['datadir'],'actionlog_file':True}) # now logging to both
     # ... setconfig will actually save to the log immediately, because DB log is enabled so the actionlog object exists during the request!
     self.util.assertSame(self.util.assertOk(self.interface.run(app='core',action='setconfig',params=params))['actionlog_file'], True); dblogs += 1; filelogs += 1
-    self.util.assertOk(self.interface.run(app='core',action='getconfig')); dblogs += 1; filelogs += 1
+    self.util.assertOk(self.interface.run(app='core',action='getappconfig')); dblogs += 1; filelogs += 1
     self.util.assertOk(self.interface.run(app='testutil',action='random')); dblogs += 1; filelogs += 1
     with open(self.config['datadir']+'/actions.log','r') as logfile:
         actions = list(map(lambda line: json.loads(line), logfile))
@@ -128,7 +128,7 @@ def testErrorLogging(self):
     file = self.config['datadir']+"/errors.log"
     if os.path.exists(file): os.remove(file)
 
-    res = self.util.assertOk(self.interface.run(app='core',action='getconfig',params=self.asAdmin())) # admin only
+    res = self.util.assertOk(self.interface.run(app='core',action='getappconfig',params=self.asAdmin()))['core'] # admin only
     self.util.assertSame(res['debug'], 'errors') # default
     self.util.assertSame(res['debug_dblog'], True) # default
     self.util.assertSame(res['debug_filelog'], False) # default
@@ -158,7 +158,7 @@ def testMetricsLogging(self):
 
     filelogs = 0 # number of log entries added to the file
 
-    res = self.util.assertOk(self.interface.run(app='core',action='getconfig',params=self.asAdmin())) # admin only
+    res = self.util.assertOk(self.interface.run(app='core',action='getappconfig',params=self.asAdmin()))['core'] # admin only
     self.util.assertSame(res['metrics'], "none") # default
     self.util.assertSame(res['metrics_dblog'], False) # default
     self.util.assertSame(res['metrics_filelog'], False) # default
@@ -167,11 +167,11 @@ def testMetricsLogging(self):
     # ALSO do actual inspection of what's logged to file also like action log above
     params = self.asAdmin({'datadir':self.config['datadir'],'metrics':'basic','metrics_dblog':True,'metrics_filelog':True})
     for res in [self.util.assertOk(self.interface.run(app='core',action='setconfig',params=params)), 
-                self.util.assertOk(self.interface.run(app='core',action='getconfig',params=self.asAdmin()))]:
+                self.util.assertOk(self.interface.run(app='core',action='getappconfig',params=self.asAdmin()))['core']]:
         self.util.assertSame(res['metrics'], 'basic')
         self.util.assertSame(res['metrics_dblog'], True)
         self.util.assertSame(res['metrics_filelog'], True)
-    filelogs += 1 # from getconfig
+    filelogs += 1 # from getapconfig
     self.util.assertOk(self.interface.run(app='testutil',action='random')); filelogs += 1
     
     params['metrics'] = 'extended'

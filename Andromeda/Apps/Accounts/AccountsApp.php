@@ -47,7 +47,6 @@ class AccountsApp extends BaseApp
         return array(
             '- GENERAL AUTH: [--auth_sessionid id --auth_sessionkey base64] [--auth_sudouser alphanum|email | --auth_sudoacct id]',
             '- PASSWORD NOTE: --auth_password is expected to be pre-hashed --auth_passkey over HTTP (except external auth)',
-            'getconfig',
             'setconfig '.Config::GetSetConfigUsage(),
 
             'getaccount [--account id] [--full bool]',
@@ -135,7 +134,6 @@ class AccountsApp extends BaseApp
         $params = $input->GetParams();
         switch($input->GetAction())
         {
-            case 'getconfig':           return $this->GetConfig($authenticator);
             case 'setconfig':           return $this->SetConfig($params, $authenticator);
             
             case 'getauthsources':      return $this->GetAuthSources($authenticator);
@@ -215,11 +213,9 @@ class AccountsApp extends BaseApp
      * Gets config for this app
      * @return ConfigJ
      */
-    protected function GetConfig(?Authenticator $authenticator) : array
+    public function GetConfigJ(bool $isAdmin) : array
     {
-        $admin = $authenticator !== null && $authenticator->isAdmin();
-
-        return $this->config->GetClientObject(admin:$admin);
+        return $this->config->GetClientObject(admin:$isAdmin);
     }
     
     /**
