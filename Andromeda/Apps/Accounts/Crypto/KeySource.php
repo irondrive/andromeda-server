@@ -124,7 +124,6 @@ trait KeySource
         if (isset($this->ssenc_rawkey)) return $this; // already unlocked
         
         $key = $this->ssenc_key->TryGetValue();
-        $ssenc_salt = $this->ssenc_salt->TryGetValue();
         $ssenc_nonce = $this->ssenc_nonce->TryGetValue();
 
         if ($key === null || $ssenc_nonce === null)
@@ -133,7 +132,7 @@ trait KeySource
         if ($fast) $wrapkey = $this->GetFastKey($wrapkey);
         else
         {
-            if ($ssenc_salt === null)
+            if (($ssenc_salt = $this->ssenc_salt->TryGetValue()) === null)
                 throw new Exceptions\CryptoNotInitializedException();
             $wrapkey = Crypto::DeriveKey($wrapkey, $ssenc_salt, Crypto::SecretKeyLength());
         }

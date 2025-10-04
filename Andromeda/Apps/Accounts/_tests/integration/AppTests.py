@@ -46,7 +46,7 @@ class AppTests(BaseAppTest):
         session = res['client']['session']
         self.session = session
 
-    def asAdmin(self, params:dict = {}): # TODO RAY !! migrate to | like getPassword
+    def asAdmin(self, params:dict = {}): # TODO TESTS !! migrate to | like getPassword
         """ Returns params with admin params added if not a private interface """
         if self.session is None:
             self.afterInstall() # make asAdmin available to other apps in afterInstall()
@@ -61,7 +61,7 @@ class AppTests(BaseAppTest):
             params['auth_sessionkey'] = self.session['authkey']
         return params
     
-    def withSession(self, session:dict, params:dict = {}): # TODO RAY !! migrate to | like getPassword
+    def withSession(self, session:dict, params:dict = {}): # TODO TESTS !! migrate to | like getPassword
         """ Returns params with session params added """
         params = params.copy()
         params['auth_sessionid'] = session['id']
@@ -153,13 +153,13 @@ class AppTests(BaseAppTest):
         self.util.assertSame(res['username'], username)
         self.util.assertSame(res['dispname'], None)
         self.util.assertNotIn('date_created',res) # full
-        self.util.assertNotIn('date_modified',res) # admin
+        self.util.assertNotIn('date_pmodified',res) # admin
         self.util.assertNotIn('comment',res) # admin
         self.util.assertNotIn('groups',res) # admin
 
         res = self.util.assertOk(self.interface.run(app='accounts',action='getaccount',params=self.withSession(session,{"full":True})))
         self.util.assertNotIn('comment',res) # admin
-        self.util.assertSame(res['ssenc'], False)
+        self.util.assertSame(res['has_ssenc'], False)
         self.util.assertType(res['date_created'],float)
         self.util.assertType(res['date_loggedon'],float)
         self.util.assertType(res['date_active'],float)
@@ -189,6 +189,7 @@ class AppTests(BaseAppTest):
 
         # TODO TESTS test admin output (with --account)
         # TODO TESTS test full admin output (with --account)
+        # TODO TESTS e2ee key output
 
         self.deleteAccount(account)
 

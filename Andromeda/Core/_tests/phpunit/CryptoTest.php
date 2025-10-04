@@ -137,6 +137,8 @@ class CryptoTest extends \PHPUnit\Framework\TestCase
     
     public function testCryptoPublic() : void
     {
+        $this->assertSame(32, Crypto::PublicKeyLength());
+        $this->assertSame(32, Crypto::PrivateKeyLength());
         $this->assertSame(24, Crypto::PublicNonceLength());
         $this->assertSame(16, Crypto::PublicOutputOverhead());
         $this->assertSame(24, strlen(Crypto::GeneratePublicNonce()));

@@ -7,10 +7,12 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `date_active` double DEFAULT NULL
 ,  `ssenc_key` binary(48) DEFAULT NULL
 ,  `ssenc_nonce` binary(24) DEFAULT NULL
-,  `ssenc_salt` binary(16) DEFAULT NULL
-,  `e2ee_pwsalt` binary(16) DEFAULT NULL
+,  `passkey_salt` binary(16) DEFAULT NULL
 ,  `authkey` binary(32) DEFAULT NULL
 ,  `authsource` char(8) DEFAULT NULL
+,  `e2ee_master` binary(48) DEFAULT NULL
+,  `e2ee_private` binary(48) DEFAULT NULL
+,  `e2ee_public` binary(32) DEFAULT NULL
 ,  PRIMARY KEY (`id`)
 ,  UNIQUE (`username`)
 ,  CONSTRAINT `a2obj_apps_accounts_account_ibfk_1` FOREIGN KEY (`id`) REFERENCES `a2obj_apps_accounts_policybase` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -97,7 +99,7 @@ CREATE TABLE `a2obj_apps_accounts_policybase` (
   `id` char(12) NOT NULL
 ,  `comment` text DEFAULT NULL
 ,  `date_created` double NOT NULL
-,  `date_modified` double DEFAULT NULL
+,  `date_pmodified` double DEFAULT NULL
 ,  `admin` integer DEFAULT NULL
 ,  `disabled` integer DEFAULT NULL
 ,  `forcetf` integer DEFAULT NULL

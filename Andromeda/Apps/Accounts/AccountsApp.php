@@ -50,11 +50,11 @@ class AccountsApp extends BaseApp
             'setconfig '.Config::GetSetConfigUsage(),
 
             'getaccount [--account id] [--full bool]',
-            'setfullname --fullname name',
+            'editaccount [--fullname name] [--e2ee_public base64 --e2ee_private base64] [--e2ee_master ?base64]',
 
             'enablecrypto --auth_password raw [--auth_twofactor int]',
             'disablecrypto --auth_password raw',
-            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8)',
+            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8) [--e2ee_master base64]',
             'sendrecovery (--username alphanum|email | '.Contact::GetFetchUsage().')',
 
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
@@ -89,8 +89,8 @@ class AccountsApp extends BaseApp
             'addgroupmember --account id --group id',
             'removegroupmember --account id --group id',
             'getmembership --account id --group id',
-            'editaccount --account id [--expirepw bool] '.PolicyBase::GetPropUsage(),
-            'editgroup --group id  [--name name] [--priority int8] '.PolicyBase::GetPropUsage(),
+            'editaccountpolicy --account id [--expirepw bool] '.PolicyBase::GetPropUsage(),
+            'editgrouppolicy --group id  [--name name] [--priority int8] '.PolicyBase::GetPropUsage(),
             'sendmessage (--account id | --group id) --subject utf8 --text text [--html raw]',
 
             'getauthsources',
@@ -143,7 +143,7 @@ class AccountsApp extends BaseApp
             case 'deleteauthsource':    $this->DeleteAuthSource($params, $authenticator, $actionlog); return null;
             
             case 'getaccount':          return $this->GetAccount($params, $authenticator);
-            case 'setfullname':         $this->SetFullName($params, $authenticator); return null;
+            case 'editaccount':         $this->EditAccount($params, $authenticator); return null;
             case 'changepassword':      $this->ChangePassword($params, $authenticator); return null;
             
             case 'sendrecovery':        $this->SendRecovery($params); return null;
@@ -180,8 +180,8 @@ class AccountsApp extends BaseApp
             case 'removegroupmember':   return $this->RemoveGroupMember($params, $authenticator);
             case 'getmembership':       return $this->GetMembership($params, $authenticator);
             
-            case 'editaccount':     return $this->EditAccount($params, $authenticator);
-            case 'editgroup':       return $this->EditGroup($params, $authenticator);
+            case 'editaccountpolicy':     return $this->EditAccountPolicy($params, $authenticator);
+            case 'editgrouppolicy':       return $this->EditGroupPolicy($params, $authenticator);
             
             case 'sendmessage':         $this->SendMessage($params, $authenticator); return null;
             
@@ -322,22 +322,41 @@ class AccountsApp extends BaseApp
         $iface = $this->API->GetInterface();
         $new_password = $account->GetPasswordParam($params, $iface, "new", newsalt:true);
 
+        $e2ee_master = (!$account->HasE2eeMaster()) ? null :
+            $params->GetParam('e2ee_master',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+
         Authenticator::StaticTryRequireCrypto($params, $iface, $account);
-        $account->ChangePassword($new_password);
+        $account->ChangePassword($new_password, $e2ee_master);
     }
     
     /**
-     * Sets the user's full (real) name
+     * Edit the account's client metadata (full name, e2ee init, etc.)
      * @throws Exceptions\AuthenticationFailedException if not logged in
      */
-    protected function SetFullName(SafeParams $params, ?Authenticator $authenticator) : void
+    protected function EditAccount(SafeParams $params, ?Authenticator $authenticator) : void
     {
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
-        
-        $fullname = Utilities::CapitalizeWords($params->GetParam('fullname')->GetName());
-        
-        $authenticator->GetAccount()->SetFullName($fullname);
+        $account = $authenticator->GetAccount();
+
+        if ($params->HasParam('fullname'))
+        {
+            $fullname = Utilities::CapitalizeWords($params->GetParam('fullname')->GetName());
+            $account->SetFullName($fullname);
+        }
+
+        if ($params->HasParam('e2ee_public') || $params->HasParam('e2ee_private'))
+        {
+            $pub = $params->GetParam('e2ee_public',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+            $priv = $params->GetParam('e2ee_private',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+            $account->InitializeE2ee(private:$priv, public:$pub);
+        }
+
+        if ($params->HasParam('e2ee_master'))
+        {
+            $key = $params->GetParam('e2ee_master',minlog:SafeParams::PARAMLOG_NEVER)->GetNullBase64();
+            $account->SetE2eeMaster($key);
+        }
     }
     
     /**
@@ -1322,7 +1341,7 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\UnknownAccountException if the account is not found
      * @return AdminAccountJ
      */
-    protected function EditAccount(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function EditAccountPolicy(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new Exceptions\AdminRequiredException();
@@ -1345,7 +1364,7 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\UnknownGroupException if the group is not found
      * @return AdminGroupJ
      */
-    protected function EditGroup(SafeParams $params, ?Authenticator $authenticator) : array
+    protected function EditGroupPolicy(SafeParams $params, ?Authenticator $authenticator) : array
     {
         if ($authenticator === null) 
             throw new Exceptions\AdminRequiredException();

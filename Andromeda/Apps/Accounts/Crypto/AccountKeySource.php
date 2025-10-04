@@ -53,7 +53,7 @@ trait AccountKeySource
         $this->account->SetObject($account);
         
         if ($account->hasCrypto())
-            $this->InitializeCryptoFromAccount($wrappass, $fast);
+            $this->InitializeCryptoFromAccount($wrappass, fast:$fast);
         
         return $this;
     }

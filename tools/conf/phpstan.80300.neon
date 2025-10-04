@@ -3,3 +3,4 @@ includes:
 parameters:
     phpVersion: 80300
     tmpDir: /tmp/phpstan-tmp-80300
+# TODO would like to use $TMPDIR somehow

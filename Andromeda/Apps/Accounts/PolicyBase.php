@@ -21,7 +21,7 @@ abstract class PolicyBase extends BaseObject
     /** Timestamp that the object was created */
     protected FieldTypes\Timestamp $date_created;
     /** Timestamp these properties were last modified */
-    protected FieldTypes\NullTimestamp $date_modified;
+    protected FieldTypes\NullTimestamp $date_pmodified;
     /** Admin-added comment for this policy entity */
     protected FieldTypes\NullStringType $comment;
     /** True if this entity is granted admin privileges */
@@ -55,7 +55,7 @@ abstract class PolicyBase extends BaseObject
     {
         $fields = array();
         $this->date_created = $fields[] = new FieldTypes\Timestamp('date_created');
-        $this->date_modified = $fields[] = new FieldTypes\NullTimestamp('date_modified');
+        $this->date_pmodified = $fields[] = new FieldTypes\NullTimestamp('date_pmodified');
         $this->comment = $fields[] = new FieldTypes\NullStringType('comment');
         $this->admin = $fields[] = new FieldTypes\NullBoolType('admin');
         $this->disabled = $fields[] = new FieldTypes\NullIntType('disabled');
@@ -102,7 +102,7 @@ abstract class PolicyBase extends BaseObject
             if ($params->HasParam($field->GetName())) 
                 $field->SetValue($params->GetParam($field->GetName())->GetNullBool());
     
-        $this->date_modified->SetTimeNow();
+        $this->date_pmodified->SetTimeNow();
         return $this;
     }
 

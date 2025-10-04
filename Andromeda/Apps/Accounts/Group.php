@@ -12,7 +12,7 @@ use Andromeda\Apps\Accounts\Resource\Contact;
  * 
  * @phpstan-import-type PolicyBaseJ from PolicyBase
  * @phpstan-type PublicGroupJ array{id:string, name:string}
- * @phpstan-type AdminGroupJ array{priority:int, comment:?string, date_created:float, date_modified:?float, accounts?:list<string>, policy:PolicyBaseJ}
+ * @phpstan-type AdminGroupJ array{priority:int, comment:?string, date_created:float, date_pmodified:?float, accounts?:list<string>, policy:PolicyBaseJ}
  */
 class Group extends PolicyBase
 {
@@ -215,7 +215,7 @@ class Group extends PolicyBase
             'priority' => $this->priority->GetValue(),
             'comment' => $this->comment->TryGetValue(),
             'date_created' => $this->date_created->GetValue(),
-            'date_modified' => $this->date_modified->TryGetValue(),
+            'date_pmodified' => $this->date_pmodified->TryGetValue(),
             'policy' => array(
                 'session_timeout' => $this->session_timeout->TryGetValue(),
                 'client_timeout' => $this->client_timeout->TryGetValue(),

@@ -24,9 +24,9 @@ use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey
  * @phpstan-import-type TwoFactorJ from TwoFactor
  * @phpstan-import-type ContactJ from Contact
  * @phpstan-import-type ClientJ from Client
- * @phpstan-type PublicAccountJ array{id:string, username:string, dispname:?string, contacts:list<string>}
- * @phpstan-type UserAccountJ array{id:string, username:string, dispname:?string, crypto?:bool, policy?:PolicyBaseJ, date_created?:float, date_loggedon?:?float, date_active?:?float, date_passwordset?:?float, recoverykeys?:array<string,RecoveryKeyJ>, twofactors?:array<string,TwoFactorJ>, contacts?:array<string,ContactJ>, clients?:array<string,ClientJ>}
- * @phpstan-type AdminAccountJ array{comment:?string, date_modified:?float, groups:list<string>, policy_from?:array{session_timeout:?string, client_timeout:?string, max_password_age:?string, limit_clients:?string, limit_contacts:?string, limit_recoverykeys:?string, admin:?string, disabled:?string, forcetf:?string, allowcrypto:?string, userdelete:?string, account_search:?string, group_search:?string}}
+ * @phpstan-type PublicAccountJ array{id:string, username:string, dispname:?string, contacts:list<string>, e2ee_public:?string}
+ * @phpstan-type UserAccountJ array{id:string, username:string, dispname:?string, e2ee_master:?string, e2ee_private:?string, has_ssenc?:bool, policy?:PolicyBaseJ, date_created?:float, date_loggedon?:?float, date_active?:?float, date_passwordset?:?float, recoverykeys?:array<string,RecoveryKeyJ>, twofactors?:array<string,TwoFactorJ>, contacts?:array<string,ContactJ>, clients?:array<string,ClientJ>}
+ * @phpstan-type AdminAccountJ array{comment:?string, groups:list<string>, date_pmodified?:?float, policy_from?:array{session_timeout:?string, client_timeout:?string, max_password_age:?string, limit_clients:?string, limit_contacts:?string, limit_recoverykeys:?string, admin:?string, disabled:?string, forcetf:?string, allowcrypto:?string, userdelete:?string, account_search:?string, group_search:?string}}
  */
 class Account extends PolicyBase implements IKeySource
 {
@@ -47,7 +47,7 @@ class Account extends PolicyBase implements IKeySource
     /** The user-set full descriptive name of the user */
     private FieldTypes\NullStringType $fullname;
     /** The salt for clients to use to create a passkey from a password */
-    private FieldTypes\NullStringType $e2ee_pwsalt;
+    private FieldTypes\NullStringType $passkey_salt;
     /** 
      * @var FieldTypes\NullObjectRefT<External> 
      * The external auth source used for the account 
@@ -60,16 +60,26 @@ class Account extends PolicyBase implements IKeySource
     /** The date the account last was active (made any request) */
     private FieldTypes\NullTimestamp $date_active;
 
+    /** E2ee master key wrapped by the password client side (optional) */
+    private FieldTypes\NullStringType $e2ee_master;
+    /** Private e2ee key used for sharing items */
+    private FieldTypes\NullStringType $e2ee_private;
+    /** Public e2ee key used for sharing items */
+    private FieldTypes\NullStringType $e2ee_public;
+
     protected function CreateFields() : void
     {
         $fields = array();
         $this->username = $fields[] = new FieldTypes\StringType('username');
         $this->fullname = $fields[] = new FieldTypes\NullStringType('fullname');
-        $this->e2ee_pwsalt = $fields[] = new FieldTypes\NullStringType('e2ee_pwsalt');
+        $this->passkey_salt = $fields[] = new FieldTypes\NullStringType('passkey_salt');
         $this->authsource = $fields[] = new FieldTypes\NullObjectRefT(External::class, 'authsource');
         $this->date_passwordset = $fields[] = new FieldTypes\NullTimestamp('date_passwordset');
         $this->date_loggedon = $fields[] = new FieldTypes\NullTimestamp('date_loggedon');
         $this->date_active = $fields[] = new FieldTypes\NullTimestamp('date_active', saveOnRollback:true);
+        $this->e2ee_master = $fields[] = new FieldTypes\NullStringType('e2ee_master');
+        $this->e2ee_private = $fields[] = new FieldTypes\NullStringType('e2ee_private');
+        $this->e2ee_public = $fields[] = new FieldTypes\NullStringType('e2ee_public');
         $this->RegisterFields($fields, self::class);
         
         $this->AuthObjectCreateFields();
@@ -102,7 +112,7 @@ class Account extends PolicyBase implements IKeySource
     public function SetFullName(string $name) : self { $this->fullname->SetValue($name); return $this; }
     
     /** Returns the salt for clients to use to create a passkey from a password */
-    public function TryGetPasskeySalt() : ?string { return $this->e2ee_pwsalt->TryGetValue(); }
+    public function TryGetPasskeySalt() : ?string { return $this->passkey_salt->TryGetValue(); }
 
     /**
      * Returns true if a password or passkey param is given 
@@ -149,7 +159,7 @@ class Account extends PolicyBase implements IKeySource
             if ($newsalt) 
             {
                 $salt = Crypto::GenerateSalt();
-                $this->e2ee_pwsalt->SetValue($salt);
+                $this->passkey_salt->SetValue($salt);
             }
             else if (($salt = $this->TryGetPasskeySalt()) === null)
                 throw new ServerException("salt is null", $this->ID());
@@ -173,7 +183,7 @@ class Account extends PolicyBase implements IKeySource
             $salt = $params->GetParam($field."_salt", SafeParams::PARAMLOG_NEVER)->GetBase64();
             if (strlen($salt) !== Crypto::SaltLength())
                 throw new Exceptions\PasskeyRequiredException("salt wrong size");
-            $this->e2ee_pwsalt->SetValue($salt);
+            $this->passkey_salt->SetValue($salt);
         }
         return $passkey;
     }
@@ -704,11 +714,19 @@ class Account extends PolicyBase implements IKeySource
     
     /** 
      * Re-keys the account's crypto if it exists, and re-hashes its password (if using local auth)
+     * @param ?string $e2ee_master the e2ee master key wrapped by the new password
      * @throws CryptoUnlockRequiredException if crypto has not been unlocked
      * @throws AuthKeyLengthException if too short (must be a passkey if local auth)
      */
-    public function ChangePassword(string $new_password) : Account
+    public function ChangePassword(string $new_password, ?string $e2ee_master = null) : Account
     {
+        if ($this->e2ee_master->TryGetValue() !== null)
+        {
+            if ($e2ee_master === null)
+                throw new Exceptions\E2eeMasterKeyRequired();
+            $this->e2ee_master->SetValue($e2ee_master);
+        }
+
         if ($this->hasCrypto())
             $this->InitializeCrypto($new_password, rekey:true); // keeps same key
         
@@ -791,7 +809,7 @@ class Account extends PolicyBase implements IKeySource
      * @throws CryptoUnlockRequiredException if crypto is not unlocked
      * @throws CryptoAlreadyInitializedException if crypto already exists and not re-keying
      */
-    public function InitializeCrypto(string $password, bool $rekey = false) : self
+    public function InitializeCrypto(string $password, bool $rekey = false) : void
     {
         $this->BaseInitializeCrypto($password, rekey:$rekey);
 
@@ -800,12 +818,10 @@ class Account extends PolicyBase implements IKeySource
         
         foreach (self::$crypto_handlers as $func) 
             $func($this->database, $this, true);
-        
-        return $this;
     }
     
     /** Disables crypto on the account (and all subobjects), decrypting things, stripping all keys */
-    public function DestroyCrypto() : self
+    public function DestroyCrypto() : void
     {
         foreach (self::$crypto_handlers as $func) 
             $func($this->database, $this, false);
@@ -815,7 +831,39 @@ class Account extends PolicyBase implements IKeySource
         foreach ($this->GetRecoveryKeys() as $recoverykey) $recoverykey->DestroyCrypto();
 
         $this->BaseDestroyCrypto();
-        return $this;
+    }
+
+    /** Initializes e2ee by adding the public/private keypair */
+    public function InitializeE2ee(string $private, string $public) : void
+    {
+        if ($this->e2ee_private->TryGetValue() !== null)
+            throw new Exceptions\E2eeAlreadyExistsException();
+
+        if (strlen($private) !== Crypto::PrivateKeyLength()+Crypto::PublicOutputOverhead()) // wrapped
+            throw new Exceptions\E2eeKeyLengthException('private');
+        if (strlen($public) !== Crypto::PublicKeyLength()) // not wrapped
+            throw new Exceptions\E2eeKeyLengthException('public');
+
+        $this->e2ee_private->SetValue($private);
+        $this->e2ee_public->SetValue($public);
+    }
+
+    /** Returns true if the account has an e2ee master key wrapped by the password */
+    public function HasE2eeMaster() : bool { return $this->e2ee_master->TryGetValue() !== null; }
+
+    /** Sets or unsets the password-wrapped e2ee master key */
+    public function SetE2eeMaster(?string $master) : void
+    {
+        if ($master !== null)
+        {
+            if ($this->e2ee_private->TryGetValue() === null)
+                throw new Exceptions\E2eeMissingException();
+
+            if (strlen($master) !== Crypto::SecretKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
+                throw new Exceptions\E2eeKeyLengthException('master');
+        }
+
+        $this->e2ee_master->SetValue($master);
     }
 
     /**
@@ -851,11 +899,14 @@ class Account extends PolicyBase implements IKeySource
         $contacts = array_values(array_filter($this->GetContacts(), 
             function(Contact $c){ return $c->GetIsPublic(); }));
 
+        $pubkey = $this->e2ee_public->TryGetValue();
+
         return array(
             'id' => $this->ID(),
             'username' => $this->username->GetValue(),
             'dispname' => $this->fullname->TryGetValue(),
-            'contacts' => array_map(function(Contact $c){ return $c->GetAddress(); }, $contacts)
+            'contacts' => array_map(function(Contact $c){ return $c->GetAddress(); }, $contacts),
+            'e2ee_public' => ($pubkey !== null) ? Crypto::base64_encode($pubkey) : null
         );
     }
 
@@ -866,15 +917,20 @@ class Account extends PolicyBase implements IKeySource
      */
     public function GetUserClientObject(bool $full = false) : array
     {
+        $masterkey = $this->e2ee_master->TryGetValue();
+        $privkey = $this->e2ee_private->TryGetValue();
+
         $retval = array(
             'id' => $this->ID(),
             'username' => $this->username->GetValue(),
-            'dispname' => $this->fullname->TryGetValue()
+            'dispname' => $this->fullname->TryGetValue(),
+            'e2ee_master' => ($masterkey !== null) ? Crypto::base64_encode($masterkey) : null,
+            'e2ee_private' => ($privkey !== null) ? Crypto::base64_encode($privkey) : null
         );
 
         if ($full) $retval += array(
             'policy' => $this->GetPolicyClientObject(),
-            'ssenc' => ($this->ssenc_key->TryGetValue() !== null),
+            'has_ssenc' => ($this->ssenc_key->TryGetValue() !== null),
 
             'date_created' => $this->date_created->GetValue(),
             'date_loggedon' => $this->date_loggedon->TryGetValue(),
@@ -901,12 +957,13 @@ class Account extends PolicyBase implements IKeySource
 
         $retval += array(
             'comment' => $this->comment->TryGetValue(),
-            'date_modified' => $this->date_modified->TryGetValue(),
             'groups' => array_keys($this->GetGroups())
         );
 
         if ($full)
         {
+            $retval['date_pmodified'] = $this->date_pmodified->TryGetValue();
+
             $session_timeout = $this->GetInheritableSource(function(PolicyBase $b){ return $b->session_timeout; });
             $client_timeout = $this->GetInheritableSource(function(PolicyBase $b){ return $b->client_timeout; });
             $max_password_age = $this->GetInheritableSource(function(PolicyBase $b){ return $b->max_password_age; });

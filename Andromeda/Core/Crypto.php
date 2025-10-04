@@ -163,6 +163,18 @@ class Crypto
     // it seems the default is curve25519xsalsa20poly1305 (XSalsa20 vs XChaCha20)
 
     /** 
+     * Returns the length of a public key for use with public crypto
+     * @return positive-int
+     */
+    public static function PublicKeyLength() : int { return SODIUM_CRYPTO_BOX_PUBLICKEYBYTES; }
+
+    /** 
+     * Returns the length of a private key for use with public crypto
+     * @return positive-int
+     */
+    public static function PrivateKeyLength() : int { return SODIUM_CRYPTO_BOX_SECRETKEYBYTES; }
+
+    /** 
      * Returns the length of a nonce for use with public crypto
      * @return positive-int
      */

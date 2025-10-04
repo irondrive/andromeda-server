@@ -139,6 +139,38 @@ class AuthSourceTestFailException extends BaseExceptions\ClientErrorException
     }
 }
 
+/** Exception indicating the account already has e2ee keys */
+class E2eeAlreadyExistsException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("ALREADY_HAS_E2EE_KEYPAIR", $details);
+    }
+}
+
+/** Exception indicating the account is missing an e2ee keypair */
+class E2eeMissingException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("MISSING_E2EE_KEYPAIR", $details);
+    }
+}
+
+/** Exception indicating the e2ee key has an invalid length */
+class E2eeKeyLengthException extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("INVALID_E2EE_KEY_LENGTH", $details);
+    }
+}
+
+/** Exception indicating a new wrapped e2ee master key is required */
+class E2eeMasterKeyRequired extends BaseExceptions\ClientErrorException
+{
+    public function __construct(?string $details = null) {
+        parent::__construct("REQUIRE_REWRAP_E2EE_MASTER", $details);
+    }
+}
+
 /** Exception indicating that an unknown authentication source was given */
 class UnknownAuthSourceException extends BaseExceptions\ClientNotFoundException
 {
