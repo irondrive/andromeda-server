@@ -19,7 +19,7 @@ class RecoveryKey extends BaseObject implements IKeySource
     
     use AccountKeySource, AuthObjectFull { CheckKeyMatch as BaseCheckKeyMatch; }
 
-    protected static function GetFullKeyPrefix() : string { return "rk"; } 
+    protected static function GetFullKeyPrefix() : string { return "pwrk"; } 
     
     public const SET_SIZE = 8;
     

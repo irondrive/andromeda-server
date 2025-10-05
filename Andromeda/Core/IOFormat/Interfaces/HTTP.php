@@ -63,6 +63,8 @@ class HTTP extends IOInterface
         $app = $get['_app']; unset($req['_app']); // app
         $act = $get['_act']; unset($req['_act']); // action
 
+        unset($get['api']); unset($req['api']);
+
         if (!is_string($app) || !is_string($act))
             throw new Exceptions\MissingAppActionException('invalid');
         

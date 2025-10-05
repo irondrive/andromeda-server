@@ -16,7 +16,7 @@ abstract class Contact extends BaseObject
     
     use AuthObjectFull { CheckFullKey as BaseCheckFullKey; }
     
-    protected static function GetFullKeyPrefix() : string { return "ci"; }
+    protected static function GetFullKeyPrefix() : string { return "conv"; }
     
     public const TYPE_EMAIL = 0;
     

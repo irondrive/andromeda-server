@@ -164,7 +164,7 @@ class E2eeKeyLengthException extends BaseExceptions\ClientErrorException
 }
 
 /** Exception indicating a new wrapped e2ee master key is required */
-class E2eeMasterKeyRequired extends BaseExceptions\ClientErrorException
+class E2eePwMasterKeyRequired extends BaseExceptions\ClientErrorException
 {
     public function __construct(?string $details = null) {
         parent::__construct("REQUIRE_REWRAP_E2EE_MASTER", $details);

@@ -25,7 +25,7 @@ use Andromeda\Apps\Accounts\Resource\{Contact, EmailContact, Client, RecoveryKey
  * @phpstan-import-type ContactJ from Contact
  * @phpstan-import-type ClientJ from Client
  * @phpstan-type PublicAccountJ array{id:string, username:string, dispname:?string, contacts:list<string>, e2ee_public:?string}
- * @phpstan-type UserAccountJ array{id:string, username:string, dispname:?string, e2ee_master:?string, e2ee_private:?string, has_ssenc?:bool, policy?:PolicyBaseJ, date_created?:float, date_loggedon?:?float, date_active?:?float, date_passwordset?:?float, recoverykeys?:array<string,RecoveryKeyJ>, twofactors?:array<string,TwoFactorJ>, contacts?:array<string,ContactJ>, clients?:array<string,ClientJ>}
+ * @phpstan-type UserAccountJ array{id:string, username:string, dispname:?string, e2ee_pwmaster:?string, e2ee_rkmaster:?string, e2ee_private:?string, has_ssenc?:bool, policy?:PolicyBaseJ, date_created?:float, date_loggedon?:?float, date_active?:?float, date_passwordset?:?float, recoverykeys?:array<string,RecoveryKeyJ>, twofactors?:array<string,TwoFactorJ>, contacts?:array<string,ContactJ>, clients?:array<string,ClientJ>}
  * @phpstan-type AdminAccountJ array{comment:?string, groups:list<string>, date_pmodified?:?float, policy_from?:array{session_timeout:?string, client_timeout:?string, max_password_age:?string, limit_clients:?string, limit_contacts:?string, limit_recoverykeys:?string, admin:?string, disabled:?string, forcetf:?string, allowcrypto:?string, userdelete:?string, account_search:?string, group_search:?string}}
  */
 class Account extends PolicyBase implements IKeySource
@@ -61,7 +61,9 @@ class Account extends PolicyBase implements IKeySource
     private FieldTypes\NullTimestamp $date_active;
 
     /** E2ee master key wrapped by the password client side (optional) */
-    private FieldTypes\NullStringType $e2ee_master;
+    private FieldTypes\NullStringType $e2ee_pwmaster;
+    /** E2ee master key wrapped by the recovery key client side */
+    private FieldTypes\NullStringType $e2ee_rkmaster;
     /** Private e2ee key used for sharing items */
     private FieldTypes\NullStringType $e2ee_private;
     /** Public e2ee key used for sharing items */
@@ -77,7 +79,8 @@ class Account extends PolicyBase implements IKeySource
         $this->date_passwordset = $fields[] = new FieldTypes\NullTimestamp('date_passwordset');
         $this->date_loggedon = $fields[] = new FieldTypes\NullTimestamp('date_loggedon');
         $this->date_active = $fields[] = new FieldTypes\NullTimestamp('date_active', saveOnRollback:true);
-        $this->e2ee_master = $fields[] = new FieldTypes\NullStringType('e2ee_master');
+        $this->e2ee_pwmaster = $fields[] = new FieldTypes\NullStringType('e2ee_pwmaster');
+        $this->e2ee_rkmaster = $fields[] = new FieldTypes\NullStringType('e2ee_rkmaster');
         $this->e2ee_private = $fields[] = new FieldTypes\NullStringType('e2ee_private');
         $this->e2ee_public = $fields[] = new FieldTypes\NullStringType('e2ee_public');
         $this->RegisterFields($fields, self::class);
@@ -602,7 +605,7 @@ class Account extends PolicyBase implements IKeySource
         $account = static::CreateCommon($database, $username);
 
         $password = $account->GetPasswordParam($params, $iface, newsalt:true);
-        $account->ChangePassword($password);
+        $account->ChangePassword($password, null);
 
         return $account;
     }
@@ -714,17 +717,18 @@ class Account extends PolicyBase implements IKeySource
     
     /** 
      * Re-keys the account's crypto if it exists, and re-hashes its password (if using local auth)
-     * @param ?string $e2ee_master the e2ee master key wrapped by the new password
+     * @param ?string $e2ee_pwmaster the e2ee master key wrapped by the new password, might be required
      * @throws CryptoUnlockRequiredException if crypto has not been unlocked
      * @throws AuthKeyLengthException if too short (must be a passkey if local auth)
+     * @throws Exceptions\E2eePwMasterKeyRequired if a new e2ee pwmaster is required and not given
      */
-    public function ChangePassword(string $new_password, ?string $e2ee_master = null) : Account
+    public function ChangePassword(string $new_password, ?string $e2ee_pwmaster) : Account
     {
-        if ($this->e2ee_master->TryGetValue() !== null)
+        if ($this->e2ee_pwmaster->TryGetValue() !== null)
         {
-            if ($e2ee_master === null)
-                throw new Exceptions\E2eeMasterKeyRequired();
-            $this->e2ee_master->SetValue($e2ee_master);
+            if ($e2ee_pwmaster === null)
+                throw new Exceptions\E2eePwMasterKeyRequired();
+            $this->e2ee_pwmaster->SetValue($e2ee_pwmaster);
         }
 
         if ($this->hasCrypto())
@@ -833,26 +837,57 @@ class Account extends PolicyBase implements IKeySource
         $this->BaseDestroyCrypto();
     }
 
-    /** Initializes e2ee by adding the public/private keypair */
-    public function InitializeE2ee(string $private, string $public) : void
-    {
-        if ($this->e2ee_private->TryGetValue() !== null)
-            throw new Exceptions\E2eeAlreadyExistsException();
+    /** Returns true if the account has e2ee */
+    public function HasE2eeKeys() : bool { return $this->e2ee_rkmaster->TryGetValue() !== null; }
 
-        if (strlen($private) !== Crypto::PrivateKeyLength()+Crypto::PublicOutputOverhead()) // wrapped
+    /** 
+     * Initializes e2ee by adding the reqiured keys
+     * @param string $rkmaster master key wrapped by the recovery key
+     * @throws Exceptions\E2eeAlreadyExistsException if e2ee is already initialized
+     * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
+     */
+    public function InitializeE2ee(string $rkmaster, string $private, string $public) : void
+    {
+        //if ($this->e2ee_private->TryGetValue() !== null) // TODO RAY !! uncomment me
+        //    throw new Exceptions\E2eeAlreadyExistsException();
+
+        if (strlen($rkmaster) !== Crypto::SecretKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
+            throw new Exceptions\E2eeKeyLengthException('rkmaster');
+        if (strlen($private) !== Crypto::PrivateKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
             throw new Exceptions\E2eeKeyLengthException('private');
         if (strlen($public) !== Crypto::PublicKeyLength()) // not wrapped
             throw new Exceptions\E2eeKeyLengthException('public');
 
+        $this->e2ee_rkmaster->SetValue($rkmaster);
         $this->e2ee_private->SetValue($private);
         $this->e2ee_public->SetValue($public);
     }
 
-    /** Returns true if the account has an e2ee master key wrapped by the password */
-    public function HasE2eeMaster() : bool { return $this->e2ee_master->TryGetValue() !== null; }
+    /** 
+     * Sets or unsets the recovery key-wrapped e2ee master key
+     * @throws Exceptions\E2eeMissingException if no e2ee keys exist
+     * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
+     */
+    public function SetE2eeRkMaster(string $master) : void
+    {
+        if ($this->e2ee_private->TryGetValue() === null)
+            throw new Exceptions\E2eeMissingException();
 
-    /** Sets or unsets the password-wrapped e2ee master key */
-    public function SetE2eeMaster(?string $master) : void
+        if (strlen($master) !== Crypto::SecretKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
+            throw new Exceptions\E2eeKeyLengthException('rkmaster');
+
+        $this->e2ee_rkmaster->SetValue($master);
+    }
+
+    /** Returns true if the account has an e2ee master key wrapped by the password */
+    public function HasE2eePwMaster() : bool { return $this->e2ee_pwmaster->TryGetValue() !== null; }
+
+    /** 
+     * Sets or unsets the password-wrapped e2ee master key 
+     * @throws Exceptions\E2eeMissingException if no e2ee keys exist
+     * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
+     */
+    public function SetE2eePwMaster(?string $master) : void
     {
         if ($master !== null)
         {
@@ -860,10 +895,10 @@ class Account extends PolicyBase implements IKeySource
                 throw new Exceptions\E2eeMissingException();
 
             if (strlen($master) !== Crypto::SecretKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
-                throw new Exceptions\E2eeKeyLengthException('master');
+                throw new Exceptions\E2eeKeyLengthException('pwmaster');
         }
 
-        $this->e2ee_master->SetValue($master);
+        $this->e2ee_pwmaster->SetValue($master);
     }
 
     /**
@@ -917,14 +952,16 @@ class Account extends PolicyBase implements IKeySource
      */
     public function GetUserClientObject(bool $full = false) : array
     {
-        $masterkey = $this->e2ee_master->TryGetValue();
+        $masterpwkey = $this->e2ee_pwmaster->TryGetValue();
+        $masterrkkey = $this->e2ee_rkmaster->TryGetValue();
         $privkey = $this->e2ee_private->TryGetValue();
 
         $retval = array(
             'id' => $this->ID(),
             'username' => $this->username->GetValue(),
             'dispname' => $this->fullname->TryGetValue(),
-            'e2ee_master' => ($masterkey !== null) ? Crypto::base64_encode($masterkey) : null,
+            'e2ee_pwmaster' => ($masterpwkey !== null) ? Crypto::base64_encode($masterpwkey) : null,
+            'e2ee_rkmaster' => ($masterrkkey !== null) ? Crypto::base64_encode($masterrkkey) : null,
             'e2ee_private' => ($privkey !== null) ? Crypto::base64_encode($privkey) : null
         );
 

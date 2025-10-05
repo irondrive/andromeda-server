@@ -10,7 +10,8 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `passkey_salt` binary(16) DEFAULT NULL
 ,  `authkey` binary(32) DEFAULT NULL
 ,  `authsource` char(8) DEFAULT NULL
-,  `e2ee_master` binary(48) DEFAULT NULL
+,  `e2ee_pwmaster` binary(48) DEFAULT NULL
+,  `e2ee_rkmaster` binary(48) DEFAULT NULL
 ,  `e2ee_private` binary(48) DEFAULT NULL
 ,  `e2ee_public` binary(32) DEFAULT NULL
 ,  PRIMARY KEY (`id`)

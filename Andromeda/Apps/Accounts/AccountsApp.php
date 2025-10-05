@@ -50,11 +50,12 @@ class AccountsApp extends BaseApp
             'setconfig '.Config::GetSetConfigUsage(),
 
             'getaccount [--account id] [--full bool]',
-            'editaccount [--fullname name] [--e2ee_public base64 --e2ee_private base64] [--e2ee_master ?base64]',
+            'editaccount [--fullname name] [--e2ee_pwmaster ?base64] [--e2ee_rkmaster base64]',
+            'inite2ee --private base64 --public base64 --rkmaster base64',
 
-            'enablecrypto --auth_password raw [--auth_twofactor int]',
-            'disablecrypto --auth_password raw',
-            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8) [--e2ee_master base64]',
+            'enablessenc --auth_password raw [--auth_twofactor int]',
+            'disablessenc --auth_password raw',
+            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8) [--e2ee_pwmaster base64]',
             'sendrecovery (--username alphanum|email | '.Contact::GetFetchUsage().')',
 
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
@@ -144,6 +145,7 @@ class AccountsApp extends BaseApp
             
             case 'getaccount':          return $this->GetAccount($params, $authenticator);
             case 'editaccount':         $this->EditAccount($params, $authenticator); return null;
+            case 'inite2ee':            $this->InitE2ee($params, $authenticator); return null;
             case 'changepassword':      $this->ChangePassword($params, $authenticator); return null;
             
             case 'sendrecovery':        $this->SendRecovery($params); return null;
@@ -151,8 +153,8 @@ class AccountsApp extends BaseApp
             case 'getpwsalt':           return $this->GetPasskeySalt($params);
             case 'createaccount':       return $this->CreateAccount($params, $authenticator, $actionlog);
             case 'createsession':       return $this->CreateSession($params, $authenticator, $actionlog);
-            case 'enablecrypto':        return $this->EnableCrypto($params, $authenticator);
-            case 'disablecrypto':       $this->DisableCrypto($authenticator); return null;
+            case 'enablessenc':         return $this->EnableSsenc($params, $authenticator);
+            case 'disablessenc':        $this->DisableSsenc($authenticator); return null;
             
             case 'createrecoverykeys':  return $this->CreateRecoveryKeys($params, $authenticator);
             case 'createtwofactor':     return $this->CreateTwoFactor($params, $authenticator, $actionlog);
@@ -322,16 +324,19 @@ class AccountsApp extends BaseApp
         $iface = $this->API->GetInterface();
         $new_password = $account->GetPasswordParam($params, $iface, "new", newsalt:true);
 
-        $e2ee_master = (!$account->HasE2eeMaster()) ? null :
-            $params->GetParam('e2ee_master',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+        $e2ee_pwmaster = (!$account->HasE2eePwMaster()) ? null :
+            $params->GetParam('e2ee_pwmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
 
         Authenticator::StaticTryRequireCrypto($params, $iface, $account);
-        $account->ChangePassword($new_password, $e2ee_master);
+        $account->ChangePassword($new_password, $e2ee_pwmaster);
     }
-    
+
     /**
-     * Edit the account's client metadata (full name, e2ee init, etc.)
+     * Edit the account's client metadata (full name, e2ee master keys, etc.)
      * @throws Exceptions\AuthenticationFailedException if not logged in
+     * @throws Exceptions\E2eeMissingException if no e2ee keys exist
+     * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
+     * @throws Exceptions\E2eePwMasterKeyRequired if both pwmaster and rkmaster are set to null
      */
     protected function EditAccount(SafeParams $params, ?Authenticator $authenticator) : void
     {
@@ -345,18 +350,37 @@ class AccountsApp extends BaseApp
             $account->SetFullName($fullname);
         }
 
-        if ($params->HasParam('e2ee_public') || $params->HasParam('e2ee_private'))
+        if ($params->HasParam('e2ee_pwmaster'))
         {
-            $pub = $params->GetParam('e2ee_public',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
-            $priv = $params->GetParam('e2ee_private',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
-            $account->InitializeE2ee(private:$priv, public:$pub);
+            $key = $params->GetParam('e2ee_pwmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetNullBase64();
+            $account->SetE2eePwMaster($key);
         }
 
-        if ($params->HasParam('e2ee_master'))
+        if ($params->HasParam('e2ee_rkmaster'))
         {
-            $key = $params->GetParam('e2ee_master',minlog:SafeParams::PARAMLOG_NEVER)->GetNullBase64();
-            $account->SetE2eeMaster($key);
+            $key = $params->GetParam('e2ee_rkmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+            $account->SetE2eeRkMaster($key);
         }
+    }
+
+    /**
+     * Initializes e2ee for the account, requiring a public/private keypair and either an rkmaster or pwmaster
+     * //@throws Exceptions\AutheticationFailedException if not logged in
+     * //@throws Exceptions\E2eeAlreadyExistsException if e2ee is already initialized
+     * //@throws Exceptions\E2eeKeyLengthException if the keys are not the right length
+     * //@throws Exceptions\E2eePwMasterKeyRequired if both pwmaster and rkmaster are set to null // TODO RAY !!
+     */
+    protected function InitE2ee(SafeParams $params, ?Authenticator $authenticator) : void
+    {
+        if ($authenticator === null) 
+            throw new Exceptions\AuthenticationFailedException();
+        $account = $authenticator->GetAccount();
+
+        $rkm = $params->GetParam('rkmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+        $pub = $params->GetParam('public',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+        $priv = $params->GetParam('private',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+
+        $account->InitializeE2ee(rkmaster:$rkm, private:$priv, public:$pub);
     }
     
     /**
@@ -402,7 +426,7 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\AuthenticationFailedException if not signed in
      * @return ?list<RecoveryKeyJ> if crypto was not enabled
      */
-    protected function EnableCrypto(SafeParams $params, ?Authenticator $authenticator) : ?array
+    protected function EnableSsenc(SafeParams $params, ?Authenticator $authenticator) : ?array
     {
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
@@ -436,7 +460,7 @@ class AccountsApp extends BaseApp
      * Disables server side crypto for an account
      * @throws Exceptions\AuthenticationFailedException if not signed in
      */
-    protected function DisableCrypto(?Authenticator $authenticator) : void
+    protected function DisableSsenc(?Authenticator $authenticator) : void
     {
         if ($authenticator === null) 
             throw new Exceptions\AuthenticationFailedException();
@@ -665,7 +689,8 @@ class AccountsApp extends BaseApp
                 $old_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "old");
                 $account->UnlockCryptoFromPassword($old_password);
                 
-                $account->ChangePassword($password);
+                // TODO RAY !! e2ee master key check
+                $account->ChangePassword($password, null);
             }
         }
         
@@ -676,7 +701,8 @@ class AccountsApp extends BaseApp
                 throw new Exceptions\NewPasswordRequiredException();
             $new_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "new");
             
-            $account->ChangePassword($new_password);
+            // TODO RAY !! e2ee master key check
+            $account->ChangePassword($new_password, null);
         }
         
         // cleanup old/expired clients/sessions
