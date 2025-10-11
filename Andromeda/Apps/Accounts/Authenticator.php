@@ -229,7 +229,8 @@ class Authenticator
      */
     public static function StaticTryRequireCrypto(SafeParams $params, IOInterface $iface, Account $account, ?Session $session = null) : void
     {
-        if ($account->hasCrypto()) static::StaticRequireCrypto($params, $iface, $account, $session);
+        if ($account->hasCrypto())
+            static::StaticRequireCrypto($params, $iface, $account, $session);
     }
     
     /**
@@ -241,7 +242,8 @@ class Authenticator
      */
     public function RequireCrypto() : self
     {
-        if ($this->account === null) throw new Exceptions\AccountRequiredException();
+        if ($this->account === null)
+            throw new Exceptions\AccountRequiredException();
         
         static::StaticRequireCrypto($this->params, $this->interface, $this->account, $this->session); return $this;    
     }

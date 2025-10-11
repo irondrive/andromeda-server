@@ -7,6 +7,7 @@ CREATE TABLE `a2obj_apps_accounts_account` (
 ,  `date_active` double DEFAULT NULL
 ,  `ssenc_key` binary(48) DEFAULT NULL
 ,  `ssenc_nonce` binary(24) DEFAULT NULL
+,  `ssenc_salt` binary(16) DEFAULT NULL
 ,  `passkey_salt` binary(16) DEFAULT NULL
 ,  `authkey` binary(32) DEFAULT NULL
 ,  `authsource` char(8) DEFAULT NULL

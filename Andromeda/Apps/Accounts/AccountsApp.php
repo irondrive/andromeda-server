@@ -41,7 +41,7 @@ class AccountsApp extends BaseApp
     
     /** @return class-string<ActionLog> */
     public function getLogClass() : string { return ActionLog::class; }
-    
+
     public function getUsage() : array 
     { 
         return array(
@@ -51,11 +51,11 @@ class AccountsApp extends BaseApp
 
             'getaccount [--account id] [--full bool]',
             'editaccount [--fullname name] [--e2ee_pwmaster ?base64] [--e2ee_rkmaster base64]',
-            'inite2ee --private base64 --public base64 --rkmaster base64',
+            'inite2ee --private base64 --public base64 --rkmaster base64 [--force bool]',
 
             'enablessenc --auth_password raw [--auth_twofactor int]',
             'disablessenc --auth_password raw',
-            'changepassword --new_password raw ((--username alphanum|email --auth_password raw) | --auth_recoverykey utf8) [--e2ee_pwmaster base64]',
+            'changepassword ((--username alphanum|email --auth_recoverykey utf8) | --auth_password raw) --new_password raw [--e2ee_pwmaster base64]',
             'sendrecovery (--username alphanum|email | '.Contact::GetFetchUsage().')',
 
             'createaccount (--username alphanum | '.Contact::GetFetchUsage().') --password raw [--admin bool]',
@@ -63,7 +63,7 @@ class AccountsApp extends BaseApp
             'createrecoverykeys --auth_password raw [--auth_twofactor int] [--replace bool]',
             
             'getpwsalt (--username alphanum|email | '.Contact::GetFetchUsage().')',
-            'createsession (--username alphanum|email | '.Contact::GetFetchUsage().') --auth_password raw [--authsrc id] [--old_password raw] [--new_password raw]',
+            'createsession (--username alphanum|email | '.Contact::GetFetchUsage().') --auth_password raw [--authsrc id] [--old_password raw] [--new_password raw] [--e2ee_pwmaster base64]',
             '(createsession... create client) [--auth_recoverykey utf8 | --auth_twofactor int] [--name ?name]',
             '(createsession... reuse client) --auth_clientid id --auth_clientkey base64',
             'deletesession [--session id --auth_password raw]',
@@ -298,7 +298,7 @@ class AccountsApp extends BaseApp
         $recoverykey = $params->HasParam('auth_recoverykey') ? 
             $params->GetParam('auth_recoverykey',SafeParams::PARAMLOG_NEVER)->GetUTF8String() : null;
         
-        if ($recoverykey !== null)
+        if ($recoverykey !== null) // forgot password
         {
             $username = self::getUsername($params->GetParam("username", SafeParams::PARAMLOG_ALWAYS));
             $account = Account::TryLoadByUsername($this->database, $username);
@@ -308,7 +308,7 @@ class AccountsApp extends BaseApp
             if (!$account->CheckRecoveryKey($recoverykey)) 
                 throw new Exceptions\AuthenticationFailedException();
         }
-        else
+        else // change while logged in
         {
             if ($authenticator === null)
                 throw new Exceptions\AuthenticationFailedException();
@@ -336,7 +336,6 @@ class AccountsApp extends BaseApp
      * @throws Exceptions\AuthenticationFailedException if not logged in
      * @throws Exceptions\E2eeMissingException if no e2ee keys exist
      * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
-     * @throws Exceptions\E2eePwMasterKeyRequired if both pwmaster and rkmaster are set to null
      */
     protected function EditAccount(SafeParams $params, ?Authenticator $authenticator) : void
     {
@@ -365,10 +364,9 @@ class AccountsApp extends BaseApp
 
     /**
      * Initializes e2ee for the account, requiring a public/private keypair and either an rkmaster or pwmaster
-     * //@throws Exceptions\AutheticationFailedException if not logged in
-     * //@throws Exceptions\E2eeAlreadyExistsException if e2ee is already initialized
-     * //@throws Exceptions\E2eeKeyLengthException if the keys are not the right length
-     * //@throws Exceptions\E2eePwMasterKeyRequired if both pwmaster and rkmaster are set to null // TODO RAY !!
+     * @throws Exceptions\AuthenticationFailedException if not logged in
+     * @throws Exceptions\E2eeAlreadyExistsException if e2ee is already initialized and not force
+     * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
      */
     protected function InitE2ee(SafeParams $params, ?Authenticator $authenticator) : void
     {
@@ -380,7 +378,8 @@ class AccountsApp extends BaseApp
         $pub = $params->GetParam('public',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
         $priv = $params->GetParam('private',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
 
-        $account->InitializeE2ee(rkmaster:$rkm, private:$priv, public:$pub);
+        $account->InitializeE2ee(rkmaster:$rkm, private:$priv, public:$pub,
+            force:$params->GetOptParam('force',false)->GetBool());
     }
     
     /**
@@ -440,10 +439,9 @@ class AccountsApp extends BaseApp
         $authenticator->RequirePassword()->TryRequireTwoFactor();
 
         $password = $account->GetPasswordParam($params, $this->API->GetInterface(), "auth");
+        $account->InitializeCrypto($password);
 
         RecoveryKey::DeleteByAccount($this->database, $account);
-        
-        $account->InitializeCrypto($password);
         
         if (($session = $authenticator->TryGetSession()) !== null)
         {
@@ -686,11 +684,13 @@ class AccountsApp extends BaseApp
             {
                 if (!$account->HasPasswordParam($params, "old"))
                     throw new Exceptions\OldPasswordRequiredException();
-                $old_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "old");
+                $old_password = $account->GetPasswordParam($params, $interface, "old");
                 $account->UnlockCryptoFromPassword($old_password);
-                
-                // TODO RAY !! e2ee master key check
-                $account->ChangePassword($password, null);
+
+                $e2ee_pwmaster = (!$account->HasE2eePwMaster()) ? null :
+                    $params->GetParam('e2ee_pwmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+
+                $account->ChangePassword($password, $e2ee_pwmaster);
             }
         }
         
@@ -699,10 +699,13 @@ class AccountsApp extends BaseApp
         {
             if (!$account->HasPasswordParam($params, "new"))
                 throw new Exceptions\NewPasswordRequiredException();
-            $new_password = $account->GetPasswordParam($params, $this->API->GetInterface(), "new");
+            $new_password = $account->GetPasswordParam($params, $interface, "new");
             
-            // TODO RAY !! e2ee master key check
-            $account->ChangePassword($new_password, null);
+            $e2ee_pwmaster = (!$account->HasE2eePwMaster()) ? null :
+                $params->GetParam('e2ee_pwmaster',minlog:SafeParams::PARAMLOG_NEVER)->GetBase64();
+
+            Authenticator::StaticTryRequireCrypto($params, $interface, $account);
+            $account->ChangePassword($new_password, $e2ee_pwmaster);
         }
         
         // cleanup old/expired clients/sessions

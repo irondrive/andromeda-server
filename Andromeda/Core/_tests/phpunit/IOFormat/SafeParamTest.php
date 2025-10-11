@@ -203,13 +203,13 @@ class SafeParamTest extends \PHPUnit\Framework\TestCase
         $this->testGood("null", true, $getVal);
         $this->testGood("null", null, $getValN);
         
-        foreach (array("true", "1", "yes ", true, 1) as $val)
+        foreach (array("true", "1", "yes ", "on", true, 1) as $val)
         {
             $this->testGood($val, true, $getVal);
             $this->testGood($val, true, $getValN);
         }
         
-        foreach (array("false", "0", " no", false, 0) as $val)
+        foreach (array("false", "0", " no", "off", false, 0) as $val)
         {
             $this->testGood($val, false, $getVal);
             $this->testGood($val, false, $getValN);

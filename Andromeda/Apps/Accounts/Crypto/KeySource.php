@@ -87,7 +87,7 @@ trait KeySource
      * @throws Exceptions\CryptoAlreadyInitializedException if crypto already exists and not re-keying
      * @return $this
      */
-    protected function BaseInitializeCrypto(string $wrapkey, bool $fast = false, bool $rekey = false) : self
+    protected function BaseInitializeCrypto(string $wrapkey, bool $fast, bool $rekey = false) : self
     {
         if (!$rekey && $this->hasCrypto())
             throw new Exceptions\CryptoAlreadyInitializedException();
@@ -119,7 +119,7 @@ trait KeySource
      * @throws DecryptionFailedException if decryption fails (password is wrong)
      * @return $this
      */
-    protected function UnlockCrypto(string $wrapkey, bool $fast = false) : self
+    protected function UnlockCrypto(string $wrapkey, bool $fast) : self
     {
         if (isset($this->ssenc_rawkey)) return $this; // already unlocked
         

@@ -724,6 +724,9 @@ class Account extends PolicyBase implements IKeySource
      */
     public function ChangePassword(string $new_password, ?string $e2ee_pwmaster) : Account
     {
+        // when using CLI, we could prompt old_password instead (like GetPasswordParam above)
+        // and re-wrap the new key ourselves, but bin/andromeda-e2ee does the same thing
+
         if ($this->e2ee_pwmaster->TryGetValue() !== null)
         {
             if ($e2ee_pwmaster === null)
@@ -761,7 +764,7 @@ class Account extends PolicyBase implements IKeySource
      * @throws CryptoNotInitializedException if no key material exists
      */
     public function UnlockCryptoFromPassword(string $password) : self {
-        return $this->UnlockCrypto($password); }
+        return $this->UnlockCrypto($password, fast:!$this->isExternalAuth()); }
 
     /**
      * Encrypts a value using the account's crypto
@@ -815,7 +818,7 @@ class Account extends PolicyBase implements IKeySource
      */
     public function InitializeCrypto(string $password, bool $rekey = false) : void
     {
-        $this->BaseInitializeCrypto($password, rekey:$rekey);
+        $this->BaseInitializeCrypto($password, fast:!$this->isExternalAuth(), rekey:$rekey);
 
         foreach ($this->GetTwoFactors() as $twofactor) 
             $twofactor->InitializeCrypto();
@@ -843,13 +846,16 @@ class Account extends PolicyBase implements IKeySource
     /** 
      * Initializes e2ee by adding the reqiured keys
      * @param string $rkmaster master key wrapped by the recovery key
+     * @param string $private private key wrapped by the master key
+     * @param string $public public key (plain text)
+     * @param bool $force if true, force overwrite existing keys
      * @throws Exceptions\E2eeAlreadyExistsException if e2ee is already initialized
      * @throws Exceptions\E2eeKeyLengthException if the keys are not the right length
      */
-    public function InitializeE2ee(string $rkmaster, string $private, string $public) : void
+    public function InitializeE2ee(string $rkmaster, string $private, string $public, bool $force = false) : void
     {
-        //if ($this->e2ee_private->TryGetValue() !== null) // TODO RAY !! uncomment me
-        //    throw new Exceptions\E2eeAlreadyExistsException();
+        if (!$force && $this->e2ee_private->TryGetValue() !== null)
+            throw new Exceptions\E2eeAlreadyExistsException();
 
         if (strlen($rkmaster) !== Crypto::SecretKeyLength()+Crypto::SecretOutputOverhead()) // wrapped
             throw new Exceptions\E2eeKeyLengthException('rkmaster');
@@ -858,6 +864,7 @@ class Account extends PolicyBase implements IKeySource
         if (strlen($public) !== Crypto::PublicKeyLength()) // not wrapped
             throw new Exceptions\E2eeKeyLengthException('public');
 
+        $this->e2ee_pwmaster->SetValue(null);
         $this->e2ee_rkmaster->SetValue($rkmaster);
         $this->e2ee_private->SetValue($private);
         $this->e2ee_public->SetValue($public);
